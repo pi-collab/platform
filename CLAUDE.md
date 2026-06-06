@@ -1,0 +1,81 @@
+# CLAUDE.md
+
+> Persistent project context for Claude Code. Loaded automatically at the start of every session.
+> Keep this file lean (well under 200 lines). Deep context lives in `/docs` and is imported at the bottom.
+
+## What we're building
+
+A **creator-first workflow platform** for brand–creator deals in India (working name TBD). It replaces the WhatsApp / Instagram-DM / email / Drive / bank-transfer mess that a single brand–creator collaboration currently splinters across, collapsing the whole thing — offer, negotiation, deliverables, approval, payment — into one structured flow. Founders: Palak Jain (product), Utkarsh Verma (creator + distribution), Chandreyee Majumder (UX/UI + research).
+
+## Core model: the Deal
+
+The `Deal` is the central object — **one collaboration between one brand and one creator** — and everything hangs off it.
+
+A Deal holds: structured terms (`deliverables`, `price`, `timeline`, `revision_count`, `usage_rights`, `payment_terms`), the negotiation/chat thread, deliverable files + versions, payment status, and an append-only audit log of every state change.
+
+Lifecycle: `negotiating → agreed → delivered → revision → approved → paid → complete`.
+
+- **The `events` audit log is written automatically by a Postgres trigger on the `deals` table** — every status change already produces an event row at the DB level. App code does NOT need to write events manually for status changes. Do not remove or bypass this trigger; the event history is the product's moat.
+- `messages`, `deliverables`, and `payments` all belong to a Deal. The brand web app and the creator app are two clients over the *same* Deal.
+
+## Tech stack (do not substitute without flagging)
+
+- **Supabase (Postgres)** — DB, auth, storage, realtime. Single source of truth. **The schema already exists and is deployed** (see `supabase/schema.sql`).
+- **Next.js (React) on Vercel** — marketing site + brand workflow + the thin web accept-page.
+- **Expo (React Native)** — creator app. Same JS/React, same Supabase backend.
+- **WhatsApp Business API via Interakt** + **Expo push** — notifications.
+- **Razorpay Payment Links** — payment status tracking only.
+- **TypeScript everywhere.** Define the `Deal` type once in `packages/shared` and import it in both clients — never redefine it.
+
+## Hard rules (WHAT / WHY)
+
+- **No held escrow in v1.** Payments are *tracked* via Razorpay Payment Links — we never hold/release funds. WHY: holding funds is RBI payment-aggregator territory, out of scope, and the #1 timeline risk.
+- **Notifications over WhatsApp, never Instagram DM.** WHY: the IG API can't send unsolicited DMs; only WhatsApp outbound works.
+- **No discovery/search engine.** Brands act on creators from an onboarded list. WHY: we host transactions between people who already know each other; matching is a cold-start trap.
+- **Money is stored as integer paise (`bigint`), never float.** WHY: floating-point currency silently corrupts totals. The schema already follows this — keep it.
+- **`managed_by` (nullable) is already modelled on the `users` table.** WHY: lets agencies / influencer-managers be added later as a delegated-access permission layer, not a rewrite. Never hard-code one-creator-one-login.
+- **Row-Level Security (RLS) is NOT yet enabled.** The DB is currently open for development. RLS is a release-blocker that must be designed deliberately before any real user touches the system — a brand must never read another brand's deals; a creator must only see their own. Flag before shipping anything user-facing without it.
+- **Stay inside the v1 scope below.** If a task drifts into the defer-list, stop and flag it — don't build it.
+
+## v1 scope vs deferred
+
+**Build (v1):**
+- Marketing site — brand page, creator page, web accept-page.
+- Brand workflow — signup, structured offer builder, select onboarded creator, send offer, negotiation thread, review/approve/revision, payment link + status, one-tap re-engage past creator, deal timeline.
+- Creator app — onboarding + self-entered rate card, deal inbox, offer card (accept/counter/decline), chat, deliverable upload with versions, status pipeline, payment status, push.
+
+**Do NOT build (deferred):** discovery/search · Instagram Graph API auto-stats · fake-follower scoring · held escrow + KYC/Route · Aadhaar eSign · GST invoicing · frame-by-frame video review · analytics dashboards · agency portal · influencer-manager role · multi-creator campaigns.
+
+## Intended repo structure (adjust if you scaffold differently)
+
+Monorepo (pnpm workspaces):
+
+- `apps/web` — Next.js (marketing + brand workflow + web accept-page)
+- `apps/creator` — Expo (creator app)
+- `packages/shared` — shared TS types incl. the `Deal` model + generated Supabase types
+- `supabase/` — migrations, schema (`schema.sql` is the deployed source of truth), seed data
+- `docs/` — project context (imported below)
+
+## Working conventions (HOW)
+
+- Small, focused commits with clear messages.
+- Don't add a new dependency, external service, or API without flagging why first.
+- Generate Supabase types from the live schema and commit them to `packages/shared`; import shared types — don't duplicate model definitions.
+- Status changes auto-log via the DB trigger. For non-status events worth auditing (e.g. a revision request, a payment link sent), write an explicit `events` row.
+- When a decision is ambiguous or risks scope creep, **flag it and propose options rather than guessing.**
+- Prefer boring, standard patterns over clever ones.
+- Secrets live in `.env` (gitignored), never in this file or any committed file. The Supabase **service-role key bypasses all RLS** — it stays server-side / local only, never in the Expo app or any client bundle.
+
+## Deeper context (imported — these must exist as markdown in `/docs`)
+
+- See @docs/handoff-brief.md for full project state and decision history.
+- See @docs/build-plan.md for the 30-day week-by-week schedule.
+- See @docs/strategy-memo.md for market sizing, competitor analysis, business model, and GTM.
+
+(For the marketing site's visual design, read `docs/design-patterns.pdf` — Chandreyee's landing-page pattern teardown — on demand; it's a binary, so it isn't auto-imported.)
+
+## Current status
+
+Schema is built, deployed, and verified (audit trigger confirmed firing). Dev accounts: GitHub + Supabase project live; Vercel + Expo not yet connected. **Brand name not yet locked** (this blocks the WhatsApp BSP verification queue — top priority, 48-hour task; does not block the build).
+
+**Next build task:** scaffold the pnpm monorepo (`apps/web`, `apps/creator`, `packages/shared`, `supabase/`), wire both clients to the existing Supabase project via env vars, generate + commit shared Supabase/Deal types, and deploy `apps/web` to Vercel. Do NOT rebuild the schema — it already exists.
