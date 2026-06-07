@@ -1,5 +1,7 @@
 # Strategy & Market Memo
 
+> **Note:** Background market research from June 3, representing earlier and broader thinking. Where anything here conflicts with the handoff brief or CLAUDE.md — e.g. escrow, serving agencies, or discovery — the handoff brief and CLAUDE.md are the source of truth and win.
+
 > Source: ICOP Research & Startup Memo (June 3, 2026). Reconstructed as markdown so `@docs/strategy-memo.md` resolves for Claude Code. Founders: Utkarsh Verma (marketing/creator), Palak Jain (product).
 
 ## Executive thesis

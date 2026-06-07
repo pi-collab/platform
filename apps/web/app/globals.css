@@ -1,0 +1,141 @@
+/* ================================================================
+   DESIGN TOKEN SYSTEM
+
+   HOW SWAPPING WORKS:
+   · Global change: edit a Layer 1 primitive → flows everywhere.
+   · Per-page override: add rules under [data-page="x"] in Layer 3.
+   · Per-section override: add a class and override tokens in its scope.
+   · Font swap: reassign --font-heading / --font-body in any scope.
+================================================================ */
+
+/* ── LAYER 1: PRIMITIVES ──────────────────────────────────────── */
+:root {
+  /* Warm cream palette */
+  --_cream-50:   #FDFAF6;
+  --_cream-100:  #F6F0E5;
+  --_cream-200:  #EDE4D4;
+  --_cream-300:  #DDD3BE;
+  --_cream-400:  #C8BBА8;
+
+  /* Warm neutrals */
+  --_warm-400:   #9B8E82;
+  --_warm-500:   #7A6D61;
+  --_warm-600:   #5C5048;
+  --_warm-700:   #3D342C;
+  --_warm-800:   #271E17;
+  --_warm-900:   #16100B;
+
+  /* Accent warm brown (for labels, badges, stat values) */
+  --_amber-600:  #92400E;
+  --_amber-700:  #78350F;
+
+  /* White */
+  --_white: #FFFFFF;
+
+  /* Font stack primitives */
+  --_font-sans:    system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --_font-display: Georgia, 'Times New Roman', serif;
+  /* To use a web font later: change --_font-display here after adding <link> to layout.tsx */
+  /* e.g. --_font-display: 'Playfair Display', Georgia, serif; */
+}
+
+/* ── LAYER 2: SEMANTIC ROLE TOKENS ───────────────────────────── */
+:root {
+  /* Brand identity */
+  --brand-primary:       var(--_warm-900);
+  --brand-primary-hover: var(--_warm-800);
+  --brand-primary-dark:  var(--_warm-700);
+  --brand-tint:          var(--_cream-200);
+  --brand-tint-strong:   var(--_cream-300);
+
+  /* Accent — used for labels, eyebrows, stat values */
+  --accent:       var(--_amber-600);
+  --accent-hover: var(--_amber-700);
+
+  /* Section backgrounds */
+  --section-bg:      var(--_cream-50);
+  --section-bg-alt:  var(--_cream-100);
+  --section-bg-dark: var(--_warm-900);
+  --section-bg-tint: var(--_cream-200);
+
+  /* Typography */
+  --color-heading: var(--_warm-900);
+  --color-body:    var(--_warm-700);
+  --color-muted:   var(--_warm-500);
+  --color-subtle:  var(--_warm-400);
+  --color-on-dark: var(--_white);
+  --color-border:  var(--_cream-300);
+
+  /* Font roles */
+  --font-heading: var(--_font-display);
+  --font-body:    var(--_font-sans);
+
+  /* Shape */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-pill: 9999px;
+
+  /* Layout */
+  --container-width: 1200px;
+  --container-pad:   clamp(1rem, 4vw, 2rem);
+  --nav-height:      64px;
+}
+
+/* ── LAYER 3: PAGE-SPECIFIC OVERRIDES ────────────────────────── */
+/* Override any Layer 2 token here per page. Components untouched.
+   Examples:
+     [data-page="creator"] { --accent: #059669; }
+     [data-page="brand"]   { --font-heading: 'Sora', sans-serif; }
+*/
+[data-page="brand"] {
+  --section-bg-tint: var(--_cream-200);
+}
+
+[data-page="creator"] {
+  --section-bg-tint: var(--_cream-200);
+}
+
+/* ── BASE RESET ────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-body);
+  background: var(--section-bg);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img, video { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+
+/* ── SCROLL ANIMATIONS ─────────────────────────────────────────── */
+/* Elements with [data-animate] start hidden; AnimationProvider.tsx
+   adds .in-view when they enter the viewport. */
+[data-animate] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity   0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-animate].in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays — set via data-delay="100" etc. (ms, applied by JS) */

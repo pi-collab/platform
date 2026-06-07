@@ -71,6 +71,7 @@ Monorepo (pnpm workspaces):
 - See @docs/handoff-brief.md for full project state and decision history.
 - See @docs/build-plan.md for the 30-day week-by-week schedule.
 - See @docs/strategy-memo.md for market sizing, competitor analysis, business model, and GTM.
+- See @docs/roadmap.md for deliberate post-v1 ideas — do NOT build any of these in v1.
 
 (For the marketing site's visual design, read `docs/design-patterns.pdf` — Chandreyee's landing-page pattern teardown — on demand; it's a binary, so it isn't auto-imported.)
 
