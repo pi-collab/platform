@@ -20,6 +20,32 @@
 
 ---
 
+## AI creator search / matching for brands
+
+**The idea:** Let brands search for the right creators via an AI prompt — "find me a finance creator who does explainer Reels for a Gen-Z audience" — matched against the data we hold on creators (niche, content style, types of Reels they make, deal history, reliability, performance).
+
+**CRITICAL guardrail — why this is NOT v1 and must not creep in:** This is *discovery*, which v1 deliberately excludes (see CLAUDE.md). v1 is a transactions platform between people who already know each other; matching reintroduces the two-sided cold-start trap we're avoiding. This feature is only allowed in **after** v1's transaction model is proven AND we have accumulated enough proprietary creator/deal data for the search to be defensible.
+
+**Why it's strong *later*:** Search built on our proprietary behavioral data (real deal history, reliability, actual content patterns) is a genuine moat — data no competitor has. Search built on scraped follower counts is just another crowded discovery tool (exactly what the research warns against). The trigger for building this is **data accumulation**, not a date.
+
+**Dependency:** Requires structured creator data (content style, Reel types, history) — shares this prerequisite with AI script generation below.
+
+---
+
+## AI script generation for brands
+
+**The idea:** Auto-draft a content script/brief for a brand based on their goal, the selected creator's profile and personality/style, and patterns from what competitors are doing — reducing the time a brand spends briefing.
+
+**Why it fits the thesis:** It's a time-saving tool, and "faster than the alternative" is the core product requirement. Briefing a creator is real manual work; auto-drafting a strong starting script genuinely reduces it. No conflict with v1 rules — but still post-v1 (a power feature, not core workflow).
+
+**Honest caveats:**
+- Depends on structured creator data (style, personality, past Reels) — same prerequisite as AI search above.
+- "Based on what competitors are doing" implies pulling/analyzing competitor content — a non-trivial sub-piece with external-data and ToS/scraping considerations. Not a free add-on.
+
+**Status:** directional, post-PMF, gated on creator-data accumulation.
+
+---
+
 ## (Other future items — add as they come up)
 
 - (Reserved for future roadmap ideas. Keep this file for deliberate "build later" items; keep the CLAUDE.md defer-list for "do not build in v1.")
