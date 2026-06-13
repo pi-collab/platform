@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 
 type Result = {
   test:     string
@@ -23,6 +23,8 @@ type Result = {
 }
 
 export default async function TestRLSPage() {
+  if (process.env.NODE_ENV === 'production') notFound()
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
