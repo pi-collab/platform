@@ -52,13 +52,13 @@
   --accent:       var(--_amber-600);
   --accent-hover: var(--_amber-700);
 
-  /* Section backgrounds */
+  /* Section backgrounds — warm cream */
   --section-bg:      var(--_cream-50);
   --section-bg-alt:  var(--_cream-100);
   --section-bg-dark: var(--_warm-900);
   --section-bg-tint: var(--_cream-200);
 
-  /* Typography */
+  /* Typography — dark on light */
   --color-heading: var(--_warm-900);
   --color-body:    var(--_warm-700);
   --color-muted:   var(--_warm-500);
@@ -81,6 +81,14 @@
   --container-width: 1200px;
   --container-pad:   clamp(1rem, 4vw, 2rem);
   --nav-height:      64px;
+
+  /* ── Liquid glass utilities (bright/pastel) ── */
+  --glass-bg:        rgba(255, 255, 255, 0.62);
+  --glass-bg-hover:  rgba(255, 255, 255, 0.78);
+  --glass-border:    rgba(255, 255, 255, 0.78);
+  --glass-blur:      blur(20px);
+  --glass-shadow:    0 8px 40px rgba(22, 16, 11, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --glass-shadow-sm: 0 4px 20px rgba(22, 16, 11, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.90);
 }
 
 /* ── LAYER 3: PAGE-SPECIFIC OVERRIDES ────────────────────────── */
@@ -116,6 +124,12 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide cursor only on devices with a fine pointer (mouse/trackpad) */
+@media (pointer: fine) {
+  body { cursor: none; }
+  a, button, [role="button"], input, textarea, select, label { cursor: none; }
 }
 
 img, video { max-width: 100%; display: block; }

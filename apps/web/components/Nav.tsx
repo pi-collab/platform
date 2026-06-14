@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BRAND_NAME, nav } from '@/lib/content'
+import { nav } from '@/lib/content'
+import Logo from '@/components/Logo'
 
 interface NavProps {
   /** Which CTA to show in the top-right. Defaults to brandCta. */
@@ -19,7 +20,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
       <nav className="nav">
         <div className="nav__inner">
           <Link href="/" className="nav__logo">
-            {BRAND_NAME}
+            <Logo size={34} />
           </Link>
 
           {/* Desktop links */}

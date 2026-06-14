@@ -1,14 +1,30 @@
 import Link from 'next/link'
-import { BRAND_NAME, footer } from '@/lib/content'
+import { footer } from '@/lib/content'
+import Logo from '@/components/Logo'
 
 export default function Footer() {
   return (
     <footer className="footer">
       <div className="footer__inner">
+        {/* Video reel */}
+        <div className="footer__video-wrap">
+          <video
+            className="footer__video"
+            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260405_171521_25968ba2-b594-4b32-aab7-f6b69398a6fa.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
+          <div className="footer__video-overlay">
+            <p className="footer__video-label">Watch this space.</p>
+          </div>
+        </div>
+
         <div className="footer__top">
           {/* Brand column */}
           <div className="footer__brand">
-            <span className="footer__logo">{BRAND_NAME}</span>
+            <span className="footer__logo"><Logo size={40} /></span>
             <p className="footer__tagline">{footer.tagline}</p>
             <div className="footer__social">
               {footer.social.map((s) => (

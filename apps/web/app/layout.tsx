@@ -3,6 +3,7 @@ import './marketing.css'
 import { BRAND_NAME } from '@/lib/content'
 import AnimationProvider from '@/components/AnimationProvider'
 import MouseGlow from '@/components/MouseGlow'
+import CustomCursor from '@/components/CustomCursor'
 
 export const metadata = {
   title:       BRAND_NAME,
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AnimationProvider />
         <MouseGlow />
+        <CustomCursor />
         {children}
       </body>
     </html>

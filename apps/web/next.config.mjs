@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Required: transpile the shared package (raw TypeScript, not pre-built)
-  transpilePackages: ['@platform/shared'],
+  // Required: transpile ESM-only packages and the shared workspace package
+  transpilePackages: ['@platform/shared', '@paper-design/shaders-react', '@paper-design/shaders'],
 }
 
 export default nextConfig

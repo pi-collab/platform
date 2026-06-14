@@ -1,6 +1,6 @@
 import Nav from '@/components/Nav'
-import Hero from '@/components/Hero'
 import StatsRow from '@/components/StatsRow'
+import ContainerScroll from '@/components/ContainerScroll'
 import FeatureZigzag from '@/components/FeatureZigzag'
 import FeatureGrid from '@/components/FeatureGrid'
 import Testimonials from '@/components/Testimonials'
@@ -8,6 +8,8 @@ import MidCTA from '@/components/MidCTA'
 import FinalCTA from '@/components/FinalCTA'
 import MobileBottomCTA from '@/components/MobileBottomCTA'
 import Footer from '@/components/Footer'
+import MeshGradientBackground from '@/components/MeshGradientBackground'
+import AIHero from '@/components/BrandAIHero'
 import { brandPage, BRAND_NAME } from '@/lib/content'
 
 export const metadata = {
@@ -209,22 +211,30 @@ export default function BrandPage() {
 
   return (
     <div data-page="brand">
+      <MeshGradientBackground colors={[
+        '#c0b8e8', // pale lavender
+        '#e8b8d0', // soft pink
+        '#f0a8c0', // warm rose
+        '#ffc090', // peach-orange
+        '#f0a060', // warm amber
+        '#d0b8e8', // lilac
+      ]} />
       <Nav audience="brand" />
 
       <main>
-        <Hero
-          badge={brandPage.hero.badge}
-          headline={brandPage.hero.headline}
-          subheadline={brandPage.hero.subheadline}
-          ctaText={brandPage.hero.ctaText}
-          ctaHref={brandPage.hero.ctaHref}
-          microcopy={brandPage.hero.microcopy}
-          visual={<DealCardMock />}
-        />
+        <AIHero />
 
         <StatsRow stats={brandPage.stats} />
 
-        <FeatureZigzag features={features} />
+        <ContainerScroll
+          titleComponent={
+            <h2 className="container-scroll__title">
+              Everything you need to run deals directly
+            </h2>
+          }
+        >
+          <FeatureZigzag features={features} />
+        </ContainerScroll>
 
         <MidCTA
           headline={brandPage.midCta.headline}

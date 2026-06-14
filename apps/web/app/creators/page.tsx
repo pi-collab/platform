@@ -1,6 +1,8 @@
 import Nav from '@/components/Nav'
 import Hero from '@/components/Hero'
+import DealDisplayCards from '@/components/DealDisplayCards'
 import StatsRow from '@/components/StatsRow'
+import ContainerScroll from '@/components/ContainerScroll'
 import FeatureZigzag from '@/components/FeatureZigzag'
 import FeatureGrid from '@/components/FeatureGrid'
 import Testimonials from '@/components/Testimonials'
@@ -8,6 +10,7 @@ import MidCTA from '@/components/MidCTA'
 import FinalCTA from '@/components/FinalCTA'
 import MobileBottomCTA from '@/components/MobileBottomCTA'
 import Footer from '@/components/Footer'
+import MeshGradientBackground from '@/components/MeshGradientBackground'
 import { creatorPage, BRAND_NAME } from '@/lib/content'
 
 export const metadata = {
@@ -132,53 +135,6 @@ function CreatorPaymentMock() {
   )
 }
 
-// ── HERO VISUAL ─────────────────────────────────────────────────────────────
-
-function OfferCardMock() {
-  return (
-    <div className="deal-card">
-      <div className="deal-card__header">
-        <span className="deal-card__eyebrow">New offer</span>
-        <span className="deal-card__status-pill">
-          <span className="deal-card__status-dot" />
-          Review
-        </span>
-      </div>
-
-      <div className="deal-card__parties">Groww sent you an offer</div>
-      <div className="deal-card__niche">Finance campaign · Instagram Reel</div>
-
-      <hr className="deal-card__divider" />
-
-      <div className="deal-card__terms">
-        <div className="deal-card__term">
-          <span className="deal-card__term-icon">📹</span>
-          1 Reel · 60 seconds
-        </div>
-        <div className="deal-card__term">
-          <span className="deal-card__term-icon">📅</span>
-          14 days · 2 revisions
-        </div>
-        <div className="deal-card__term">
-          <span className="deal-card__term-icon">💳</span>
-          50% upfront · 50% on approval
-        </div>
-      </div>
-
-      <div className="deal-card__amount">₹45,000</div>
-
-      <div className="deal-card__actions">
-        <span className="btn btn--ghost btn--sm" style={{ flex: 1, justifyContent: 'center' }}>
-          Counter
-        </span>
-        <span className="btn btn--primary btn--sm" style={{ flex: 1, justifyContent: 'center' }}>
-          Accept →
-        </span>
-      </div>
-    </div>
-  )
-}
-
 // ── PAGE ────────────────────────────────────────────────────────────────────
 
 const visualMap = {
@@ -195,6 +151,7 @@ export default function CreatorPage() {
 
   return (
     <div data-page="creator">
+      <MeshGradientBackground />
       <Nav audience="creator" />
 
       <main>
@@ -205,12 +162,20 @@ export default function CreatorPage() {
           ctaText={creatorPage.hero.ctaText}
           ctaHref={creatorPage.hero.ctaHref}
           microcopy={creatorPage.hero.microcopy}
-          visual={<OfferCardMock />}
+          visual={<DealDisplayCards />}
         />
 
         <StatsRow stats={creatorPage.stats} />
 
-        <FeatureZigzag features={features} />
+        <ContainerScroll
+          titleComponent={
+            <h2 className="container-scroll__title">
+              Your deals, managed in one place
+            </h2>
+          }
+        >
+          <FeatureZigzag features={features} />
+        </ContainerScroll>
 
         <MidCTA
           headline={creatorPage.midCta.headline}

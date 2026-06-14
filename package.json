@@ -5,5 +5,10 @@
   "scripts": {
     "dev:web": "pnpm --filter web dev",
     "dev:creator": "pnpm --filter creator start"
+  },
+  "pnpm": {
+    "overrides": {
+      "@splinetool/runtime": "0.9.490"
+    }
   }
 }
