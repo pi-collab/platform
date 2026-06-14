@@ -1,6 +1,6 @@
-import { redirect } from 'next/navigation'
+import { redirect }     from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import SignOutButton from '@/components/SignOutButton'
+import SignOutButton    from '@/components/SignOutButton'
 
 export const metadata = {
   title: 'Dashboard',
@@ -9,15 +9,27 @@ export const metadata = {
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
   if (!user) redirect('/login')
 
-  // Fetch the corresponding row from our users table
+  // Fetch our internal user row
   const { data: profile } = await supabase
     .from('users')
     .select('id, full_name, email, role, created_at')
     .eq('auth_id', user.id)
     .maybeSingle()
+
+  // Check brand membership — redirect to onboarding if not yet set up
+  const { data: membership } = profile
+    ? await supabase
+        .from('brand_members')
+        .select('is_admin, brands(id, name, category, company_size, website, contact_name, social_accounts)')
+        .eq('user_id', profile.id)
+        .maybeSingle()
+    : { data: null }
+
+  if (!membership) redirect('/onboarding')
+
+  const brand = (membership as any)?.brands ?? null
 
   return (
     <main style={styles.main}>
@@ -28,7 +40,36 @@ export default async function DashboardPage() {
         </div>
 
         <p style={styles.label}>Signed in as</p>
-        <p style={styles.email}>{user.email}</p>
+        <p style={styles.value}>{user.email}</p>
+
+        <hr style={styles.divider} />
+
+        <p style={styles.label}>Brand</p>
+        <div style={styles.brandCard}>
+          <p style={styles.brandName}>{brand?.name}</p>
+          <div style={styles.brandMeta}>
+            {brand?.category    && <span style={styles.tag}>{brand.category}</span>}
+            {brand?.company_size && <span style={styles.tag}>{brand.company_size} people</span>}
+            {(membership as any)?.is_admin && <span style={{ ...styles.tag, background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' }}>Admin</span>}
+          </div>
+          {brand?.website && (
+            <p style={styles.brandDetail}>
+              <span style={styles.metaLabel}>Website</span> {brand.website}
+            </p>
+          )}
+          {brand?.contact_name && (
+            <p style={styles.brandDetail}>
+              <span style={styles.metaLabel}>Contact</span> {brand.contact_name}
+            </p>
+          )}
+          {(brand?.social_accounts?.instagram || brand?.social_accounts?.linkedin) && (
+            <p style={styles.brandDetail}>
+              <span style={styles.metaLabel}>Social</span>
+              {brand.social_accounts.instagram && ` IG: ${brand.social_accounts.instagram}`}
+              {brand.social_accounts.linkedin   && `  LI: ${brand.social_accounts.linkedin}`}
+            </p>
+          )}
+        </div>
 
         <hr style={styles.divider} />
 
@@ -75,19 +116,60 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize:      '0.75rem',
     fontWeight:    700,
     letterSpacing: '0.06em',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase' as const,
     color:         '#9B8E82',
     margin:        '0 0 0.375rem',
   },
-  email: {
+  metaLabel: {
+    fontWeight:    700,
+    color:         '#9B8E82',
+    marginRight:   '0.375rem',
+  },
+  value: {
     fontSize: '0.9375rem',
     color:    '#16100B',
     margin:   '0 0 1.25rem',
   },
   divider: {
-    border:       'none',
-    borderTop:    '1px solid #DDD3BE',
-    margin:       '1.25rem 0',
+    border:    'none',
+    borderTop: '1px solid #DDD3BE',
+    margin:    '1.25rem 0',
+  },
+  brandCard: {
+    background:   '#F6F0E5',
+    border:       '1px solid #DDD3BE',
+    borderRadius: 8,
+    padding:      '1rem',
+    display:      'flex',
+    flexDirection: 'column' as const,
+    gap:          '0.5rem',
+    marginBottom: '0.25rem',
+  },
+  brandName: {
+    fontFamily: 'Georgia, serif',
+    fontSize:   '1.125rem',
+    fontWeight: 700,
+    color:      '#16100B',
+    margin:     0,
+  },
+  brandMeta: {
+    display: 'flex',
+    gap:     '0.5rem',
+    flexWrap: 'wrap' as const,
+  },
+  tag: {
+    fontSize:     '0.75rem',
+    fontWeight:   600,
+    padding:      '0.25rem 0.625rem',
+    borderRadius: 9999,
+    background:   '#fff',
+    border:       '1px solid #DDD3BE',
+    color:        '#3D342C',
+  },
+  brandDetail: {
+    fontSize: '0.8125rem',
+    color:    '#3D342C',
+    margin:   0,
   },
   pre: {
     background:   '#F6F0E5',
