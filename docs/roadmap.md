@@ -32,20 +32,43 @@
 
 ---
 
-## AI script generation for brands
+## AI content-assist for brands (scripts, hooks, competitor analysis)
 
-**The idea:** Auto-draft a content script/brief for a brand based on their goal, the selected creator's profile and personality/style, and patterns from what competitors are doing — reducing the time a brand spends briefing.
+**The idea:** A family of time-saving AI tools for brands at the briefing and strategy stage:
+- **Script/brief drafting:** Auto-draft a content script or brief based on the brand's goal, the selected creator's profile and personality/style, and patterns from what's performed well — reducing the time a brand spends briefing.
+- **Competitor and hook analysis:** Surface high-performing hooks, angles, and content formats in the brand's category, drawn from competitor content patterns — helping brands brief smarter without manual research.
 
-**Why it fits the thesis:** It's a time-saving tool, and "faster than the alternative" is the core product requirement. Briefing a creator is real manual work; auto-drafting a strong starting script genuinely reduces it. No conflict with v1 rules — but still post-v1 (a power feature, not core workflow).
+**Why it fits the thesis:** "Faster than the alternative" is the core product requirement. Briefing a creator is real manual work; auto-drafting a strong starting point genuinely reduces it. Competitor/hook analysis is the same fit — a time-saving layer that makes the brand's side of the deal easier, without touching the transaction model.
 
 **Honest caveats:**
 - Depends on structured creator data (style, personality, past Reels) — same prerequisite as AI search above.
-- "Based on what competitors are doing" implies pulling/analyzing competitor content — a non-trivial sub-piece with external-data and ToS/scraping considerations. Not a free add-on.
+- Competitor analysis implies pulling and analyzing external content — a non-trivial sub-piece with external-data acquisition, ToS, and scraping considerations. Not a free add-on; the data pipeline is its own project.
+- Both features are power tools, not core workflow — only after v1 is proven.
 
 **Status:** directional, post-PMF, gated on creator-data accumulation.
 
 ---
 
-## (Other future items — add as they come up)
+## External agent discoverability (agent-to-agent distribution)
 
-- (Reserved for future roadmap ideas. Keep this file for deliberate "build later" items; keep the CLAUDE.md defer-list for "do not build in v1.")
+**The idea:** Make the platform discoverable and actionable by external AI agents (e.g. ChatGPT or other assistants) — so when a brand asks an external agent to "find finance influencers in India," our platform can be queried or handed the request, routing the invite/lead back to us (similar to how job platforms surface into other tools). Likely via emerging agent-interop standards (e.g. MCP).
+
+**Why it fits:** A distribution channel that meets brands where they increasingly start (asking an AI agent), without us building discovery ourselves.
+
+**Caveats / gate:** This is externally-driven discovery — only valuable once we have vetted creator supply worth surfacing AND the external-agent ecosystem is mature enough to drive real traffic. Shares the "needs supply + data first" gate. Directional, post-PMF.
+
+---
+
+## [OFF-CORE-THESIS — capture only, strategic risk noted] AI characters / AI influencers
+
+**The idea:** Let brands create a character or choose from our AI influencers / AI-generated characters to produce content.
+
+**STRATEGIC RISK — read before ever acting on this:** This contradicts the core thesis. Our defensibility rests on REAL creators trusting us (creator-first, anti-agency; Utkarsh's network is our supply bootstrap). AI influencers replace the creator entirely — competing with our own supply side. If it becomes known (roadmaps leak to investors/hires/creators) that we plan AI influencers, it undermines creator trust, which is the moat. This is arguably a DIFFERENT business with an adversarial relationship to our creators, not an extension of this product.
+
+**Status:** captured at founder's request for possible far-future consideration. NOT to be built or signaled while creator trust is the core asset. Revisit only if/when the business model fundamentally changes. Keep OFF any external-facing roadmap.
+
+---
+
+## Build practices to follow (ref: Anthropic Founder's Playbook)
+
+For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.
