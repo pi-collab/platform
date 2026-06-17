@@ -69,6 +69,58 @@
 
 ---
 
+## Full internal operations portal (post-v1)
+
+v1 ships a THIN ops console only (add creators, vet creators, view brands/creators — internal, service-role, locked to founders). The full ops portal is deferred: support ticketing, payment-receipt management, analytics/reporting dashboards, automated IG-based vetting (gated on the same Instagram-API limits as auto-stats — manual vetting is the v1 reality), CRM, and ops-team role management. Build later when pilot volume actually demands it; for a handful of brands and ~20 creators, manual handling (email/WhatsApp for support, Razorpay dashboard for receipts) is sufficient.
+
+---
+
+## Brand-invites-trigger-vetting (Model C, post-v1)
+
+Let brands send an offer to a creator NOT yet in our roster by entering their handle; the invite triggers vetting (manual first, automated later) before the offer proceeds. Keeps the vetting moat while letting brands drive supply growth. CAVEATS: automated IG vetting hits the same Instagram-API wall as auto-stats (manual review is the v1-and-near-term reality, not a quick automation); needs a "pending vetting" state + founder review queue; and the first-contact phone-number problem is unsolved (how to WhatsApp an invited creator whose number we don't have). Stays invite-a-specific-known-creator, NOT browse/search strangers (not discovery). v1 = vetted roster only; this is the next layer.
+
+---
+
+## Campaign layer — grouping over independent deals (post-v1)
+
+A Campaign is a GROUPING container over multiple independent single-creator Deals — NOT a multi-creator deal. The Deal model stays one-brand-one-creator; Campaign sits on top as organization only. This keeps us clear of the "multi-creator campaigns" defer-list item (which meant the dangerous one-deal-many-creators version).
+
+Features: (a) bulk-create — select multiple creators, create a separate deal for each at once from shared starting terms; (b) per-deal overrides — each deal independently adjustable (different script, price, deliverables per creator); (c) grouped dashboard view — see all a campaign's deals together; (d) campaign type as a display/organizational TAG (single / multi / collaboration) — "collaboration" (creators shooting together) is structurally identical to "multi" (separate deals, separate payments), just a creative-linkage label, not a structural difference.
+
+PAYMENT — read carefully:
+- "Pay each creator separately" = N individual Razorpay links = SAFE, consistent with v1 payment-tracking model.
+- "Pay for all at once, we split to creators" = fund-splitting / payment-aggregator territory = GATED ON THE SAME regulated-payments work as held escrow (Razorpay Route + per-creator KYC). This is NOT a convenience checkbox; it's a regulated-money feature. Do not treat as easy.
+
+Schema hook: add a nullable `campaign_id` to the `deals` table when we next touch the schema, so deals can be grouped later without a rewrite (same cheap-nullable-stub pattern as `managed_by`).
+
+Timing: after the basic single-deal flow is proven (v1.5-ish).
+
+---
+
+## Listen to the draft / contract (text-to-speech) (post-v1)
+
+Let creators (or brands) listen to a draft offer/contract instead of reading — people don't always want to read. Browser text-to-speech is cheap to add. Depends on the deal/contract screens existing. Small, easy, later.
+
+---
+
+## AI contract/offer summarization (post-v1)
+
+AI-generated plain-language summary of an offer's terms. On-thesis (reduces friction). Folds into the AI-assist feature family. Depends on terms existing + an AI call. Roadmap.
+
+---
+
+## Expected-delivery-date visibility / shoot scheduling (post-v1)
+
+Creator sets when they'll shoot/deliver (we already have a `timeline_date` field on deals); brand sees it / gets notified, to set expectations and reduce "when's it coming?" anxiety (a core pain from the research). LIGHT version (date + brand visibility/notification) could be a small future addition. RICH version (calendar integration, reminders, notification orchestration) is bigger — roadmap that.
+
+---
+
+## Ops/outreach automation & agents (post-v1) — folds with existing entries
+
+Automate cold email, support ticketing, ticket handling, and calls via agentic workflows. Mostly overlaps the existing "full internal operations portal" and "agentic AI delegated agents" roadmap entries — see those. NEW/distinct piece: automated cold email for BRAND acquisition (note: creator outreach is WhatsApp/Utkarsh, not cold email). CAVEAT: cold email automation carries deliverability, spam-law (e.g. anti-spam regulations), and sender-reputation risks — "later, and carefully," not a quick add.
+
+---
+
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.

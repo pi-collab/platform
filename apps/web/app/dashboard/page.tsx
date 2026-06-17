@@ -4,6 +4,7 @@ import SignOutButton    from '@/components/SignOutButton'
 
 export const metadata = {
   title: 'Dashboard',
+  robots: { index: false, follow: false },
 }
 
 export default async function DashboardPage() {
@@ -27,7 +28,17 @@ export default async function DashboardPage() {
         .maybeSingle()
     : { data: null }
 
-  if (!membership) redirect('/onboarding')
+  // Founders without a brand → send to /ops, not onboarding
+  if (!membership) {
+    const allowedRaw = process.env.OPS_ALLOWED_EMAILS
+    if (allowedRaw && user.email) {
+      const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
+      if (allowed.has(user.email.toLowerCase())) {
+        redirect('/ops')
+      }
+    }
+    redirect('/onboarding')
+  }
 
   const brand = (membership as any)?.brands ?? null
 

@@ -34,7 +34,7 @@ Lifecycle: `negotiating → agreed → delivered → revision → approved → p
 - **No discovery/search engine.** Brands act on creators from an onboarded list. WHY: we host transactions between people who already know each other; matching is a cold-start trap.
 - **Money is stored as integer paise (`bigint`), never float.** WHY: floating-point currency silently corrupts totals. The schema already follows this — keep it.
 - **`managed_by` (nullable) is already modelled on the `users` table.** WHY: lets agencies / influencer-managers be added later as a delegated-access permission layer, not a rewrite. Never hard-code one-creator-one-login.
-- **Row-Level Security (RLS) is NOT yet enabled.** The DB is currently open for development. RLS is a release-blocker that must be designed deliberately before any real user touches the system — a brand must never read another brand's deals; a creator must only see their own. Flag before shipping anything user-facing without it.
+- **Row-Level Security (RLS) is enabled, enforced, and tested on all tables.** Policies are defined in `supabase/rls.sql` and deployed. A brand can only see its own deals/brand row; a creator can only see their own deals/profile; vetted creators are visible to all authenticated users (the "pick a creator" list). The audit trigger (`audit_deal`) is `SECURITY DEFINER` so it can write events regardless of caller context. Adversarially tested: Brand B confirmed unable to see Brand A's deal. The service-role key bypasses RLS — keep it server-side only.
 - **Stay inside the v1 scope below.** If a task drifts into the defer-list, stop and flag it — don't build it.
 
 ## v1 scope vs deferred

@@ -6,10 +6,10 @@
  *   - Search for PLACEHOLDER to find copy that needs real content.
  *   - CTAs link to "#brand-signup" / "#creator-signup" — replace with real URLs when auth is wired.
  *
- * BRAND_NAME is used as a placeholder until the brand name is locked.
+ * BRAND_NAME is the locked brand name used across the site.
  */
 
-export const BRAND_NAME = '[BRAND]'
+export const BRAND_NAME = 'Guapd'
 
 // ── NAV ────────────────────────────────────────────────────────────────────
 

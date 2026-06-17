@@ -12,9 +12,19 @@ import MeshGradientBackground from '@/components/MeshGradientBackground'
 import AIHero from '@/components/BrandAIHero'
 import { brandPage, BRAND_NAME } from '@/lib/content'
 
-export const metadata = {
-  title: `For Brands — ${BRAND_NAME}`,
-  description: 'Stop overpaying for creator deals. Run every collaboration directly — from structured offer to final payment — without an agency in the middle.',
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'For Brands',
+  description:
+    'Stop overpaying for creator deals. Run every collaboration directly — from structured offer to final payment — without an agency in the middle.',
+  openGraph: {
+    title: `For Brands — ${BRAND_NAME}`,
+    description:
+      'Stop overpaying for creator deals. Run every collaboration directly — from structured offer to final payment — without an agency in the middle.',
+    url: '/brands',
+  },
+  alternates: { canonical: '/brands' },
 }
 
 // ── CSS-ONLY FEATURE VISUALS ───────────────────────────────────────────────

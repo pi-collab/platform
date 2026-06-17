@@ -4,6 +4,7 @@ import SignInButton from '@/components/SignInButton'
 
 export const metadata = {
   title: 'Brand login',
+  robots: { index: false, follow: false },
 }
 
 export default async function LoginPage({

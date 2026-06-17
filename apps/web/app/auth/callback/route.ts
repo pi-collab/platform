@@ -78,5 +78,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Founders go straight to /ops — skip brand onboarding entirely
+  if (user?.email) {
+    const allowedRaw = process.env.OPS_ALLOWED_EMAILS
+    if (allowedRaw) {
+      const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
+      if (allowed.has(user.email.toLowerCase())) {
+        return NextResponse.redirect(`${origin}/ops`)
+      }
+    }
+  }
+
   return NextResponse.redirect(`${origin}/dashboard`)
 }

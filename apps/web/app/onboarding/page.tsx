@@ -2,7 +2,7 @@ import { redirect }     from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import OnboardingForm   from './OnboardingForm'
 
-export const metadata = { title: 'Set up your brand' }
+export const metadata = { title: 'Set up your brand', robots: { index: false, follow: false } }
 
 export default async function OnboardingPage() {
   const supabase = createClient()
