@@ -121,6 +121,28 @@ Automate cold email, support ticketing, ticket handling, and calls via agentic w
 
 ---
 
+## Guapd-mediated payment terms / creator financing (post-v1, regulated)
+
+**The idea:** Guapd sets the payment rule for all deals on the platform — e.g. brand pays Guapd upfront, Guapd pays the creator after X days. If the creator wants instant payout, Guapd advances it for an extra X% fee.
+
+**WHY DEFERRED — this IS the #1 deferred problem in a new costume:** Holding a brand's money and releasing to the creator on a schedule = held escrow / fund-routing = RBI payment-aggregator / PSS-Act territory (needs Razorpay Route + per-creator KYC). The "instant payout for a fee" piece is a financing/factoring product — even more heavily regulated. This is potentially a strong revenue model later, but it's exactly what v1 avoids.
+
+**v1 reality:** Payment TERMS are a recorded agreement only (e.g. "30 days after delivery"); the brand pays the creator directly via Razorpay payment link; Guapd tracks status but does NOT hold or route funds.
+
+**Gate:** The same regulated-payments infrastructure work as held escrow. Decide deliberately later; do not let it creep into v1.
+
+---
+
+## Creator stub-claim mechanism (pre-launch, required before creator self-signup)
+
+When a creator signs up, they must be able to LINK to their existing ops-created stub row (matched by phone and/or handle), populating `user_id`, rather than creating a duplicate creator profile. This is the bridge between ops-seeded profiles and creator self-management.
+
+**Why critical:** Without this, a stub creator who signs up creates a second, separate profile — orphaning their products, deal history, and vetting status on the original stub. The claim flow must: (1) match the incoming signup to an existing stub (by phone or handle), (2) set `user_id` on the matched stub, (3) give the creator immediate ownership of their profile, products, and deal history. If no stub matches, create a new creator row as normal.
+
+**Timing:** Must be built BEFORE creator self-signup goes live. Does not block ops-seeded pilot (all creators are stubs managed by ops). Build alongside or just before the Expo creator app onboarding flow.
+
+---
+
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.

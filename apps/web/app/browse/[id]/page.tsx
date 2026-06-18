@@ -12,20 +12,52 @@ interface SocialAccount {
   verified: boolean
 }
 
+interface Product {
+  id: string
+  platform: string
+  handle: string
+  product_type: string
+  description: string | null
+  price_paise: number
+  display_price: boolean
+  is_active: boolean
+}
+
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
   await verifyApprovedBrand()
 
   const supabase = createClient()
-  const { data: creator, error } = await supabase
-    .from('creators')
-    .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card')
-    .eq('id', params.id)
-    .maybeSingle()
+
+  const [{ data: creator, error }, { data: products }] = await Promise.all([
+    supabase
+      .from('creators')
+      .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card')
+      .eq('id', params.id)
+      .maybeSingle(),
+    supabase
+      .from('creator_products')
+      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active')
+      .eq('creator_id', params.id),
+  ])
 
   if (error || !creator) notFound()
 
   const c = creator as BrowseCreator & { portfolio_links: string[] | null }
   const socials = (c.social_accounts ?? []) as SocialAccount[]
+  const activeProducts = (products ?? []).filter((p) => p.is_active)
+
+  // Group products by platform+handle
+  const productsByAccount = new Map<string, Product[]>()
+  for (const p of activeProducts) {
+    const key = `${p.platform}::${p.handle}`
+    if (!productsByAccount.has(key)) productsByAccount.set(key, [])
+    productsByAccount.get(key)!.push(p)
+  }
+
+  // Match social account info for each product group
+  function findSocial(platform: string, handle: string): SocialAccount | undefined {
+    return socials.find((sa) => sa.platform === platform && sa.handle === handle)
+  }
 
   return (
     <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
@@ -57,14 +89,69 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       </div>
 
       {/* CTA */}
-      <Link
-        href={`/deals/new?creator=${c.id}`}
-        style={ctaBtn}
-      >
+      <Link href={`/deals/new?creator=${c.id}`} style={ctaBtn}>
         Start a deal with {c.full_name.split(' ')[0]}
       </Link>
 
-      {/* Sections grid */}
+      {/* ── Products storefront ────────────────────────────────── */}
+      {productsByAccount.size > 0 && (
+        <div style={{ marginTop: '2.5rem' }}>
+          <h2 style={sectionTitle}>Products</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {Array.from(productsByAccount.entries()).map(([key, prods]) => {
+              const [platform, handle] = key.split('::')
+              const sa = findSocial(platform, handle)
+              return (
+                <div key={key}>
+                  {/* Account header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
+                    <span style={platformBadge}>{platform}</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>@{handle}</span>
+                    {sa?.follower_count != null && sa.follower_count > 0 && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
+                        {formatFollowers(sa.follower_count)} followers
+                      </span>
+                    )}
+                    {sa?.verified && (
+                      <span style={{ fontSize: '0.6rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#dcfce7', color: '#166534' }}>Verified</span>
+                    )}
+                  </div>
+                  {/* Product rows */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {prods.map((p) => (
+                      <div key={p.id} style={productRow}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-heading)', margin: 0 }}>
+                            {p.product_type}
+                          </p>
+                          {p.description && (
+                            <p style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', margin: '0.15rem 0 0' }}>
+                              {p.description}
+                            </p>
+                          )}
+                        </div>
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          {p.display_price ? (
+                            <span style={{ fontSize: '0.875rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)' }}>
+                              {formatRupees(p.price_paise)}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontStyle: 'italic' }}>
+                              Price on request
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Details sections ───────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginTop: '2.5rem' }}>
         {/* Social Accounts */}
         {socials.length > 0 && (
@@ -91,31 +178,6 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Rate Card */}
-        {c.rate_card && Object.keys(c.rate_card).length > 0 && (
-          <div>
-            <h2 style={sectionTitle}>Rate Card</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Deliverable</th>
-                  <th style={{ ...thStyle, textAlign: 'right' }}>Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(c.rate_card).map(([key, paise]) => (
-                  <tr key={key}>
-                    <td style={tdStyle}>{key.replace(/_/g, ' ')}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>
-                      ₹{(paise / 100).toLocaleString('en-IN')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         )}
 
@@ -153,6 +215,13 @@ function formatFollowers(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(0)}K`
   return n.toLocaleString('en-IN')
+}
+
+function formatRupees(paise: number): string {
+  const rupees = paise / 100
+  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
+  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
+  return `₹${rupees.toLocaleString('en-IN')}`
 }
 
 /* ── Styles ─────────────────────────────────────────────────────── */
@@ -215,6 +284,28 @@ const sectionTitle: React.CSSProperties = {
   letterSpacing: '0.03em',
 }
 
+const platformBadge: React.CSSProperties = {
+  fontSize: '0.6875rem',
+  fontWeight: 700,
+  textTransform: 'capitalize',
+  padding: '0.15rem 0.5rem',
+  borderRadius: 'var(--radius-pill)',
+  background: 'var(--section-bg-alt)',
+  border: '1px solid var(--color-border)',
+  color: 'var(--color-heading)',
+}
+
+const productRow: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '0.75rem 1rem',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-sm)',
+  background: '#fff',
+  gap: '1rem',
+}
+
 const socialCard: React.CSSProperties = {
   padding: '0.75rem',
   border: '1px solid var(--color-border)',
@@ -226,22 +317,6 @@ const metaText: React.CSSProperties = {
   fontSize: '0.8125rem',
   color: 'var(--color-muted)',
   margin: '0.125rem 0 0',
-}
-
-const thStyle: React.CSSProperties = {
-  textAlign: 'left',
-  padding: '0.5rem 0.75rem',
-  borderBottom: '2px solid var(--color-border)',
-  fontSize: '0.75rem',
-  fontWeight: 600,
-  color: 'var(--color-muted)',
-  textTransform: 'uppercase',
-}
-
-const tdStyle: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
-  borderBottom: '1px solid var(--color-border)',
-  textTransform: 'capitalize',
 }
 
 const brandPill: React.CSSProperties = {

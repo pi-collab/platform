@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { vetCreator, rejectCreator } from '../../actions'
+import { vetCreator, rejectCreator, addProduct, editProduct } from '../../actions'
 import { useRouter } from 'next/navigation'
+import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 
 interface SocialAccount {
   platform: string
@@ -10,6 +11,18 @@ interface SocialAccount {
   url: string | null
   follower_count: number | null
   verified: boolean
+}
+
+interface Product {
+  id: string
+  platform: string
+  handle: string
+  product_type: string
+  description: string | null
+  price_paise: number
+  display_price: boolean
+  is_active: boolean
+  created_at: string
 }
 
 interface Creator {
@@ -29,10 +42,10 @@ interface Creator {
   updated_at: string
 }
 
-const TABS = ['Basic Details', 'Social Accounts', 'Rate Card', 'Portfolio & Brands'] as const
+const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Rate Card (legacy)', 'Portfolio & Brands'] as const
 type Tab = typeof TABS[number]
 
-export default function CreatorTabs({ creator }: { creator: Creator }) {
+export default function CreatorTabs({ creator, products }: { creator: Creator; products: Product[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -69,7 +82,7 @@ export default function CreatorTabs({ creator }: { creator: Creator }) {
       )}
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         {TABS.map((t) => (
           <button
             key={t}
@@ -94,7 +107,8 @@ export default function CreatorTabs({ creator }: { creator: Creator }) {
       {/* Tab content */}
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
-      {tab === 'Rate Card' && <RateCard rateCard={creator.rate_card} />}
+      {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
+      {tab === 'Rate Card (legacy)' && <RateCard rateCard={creator.rate_card} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
     </div>
   )
@@ -161,6 +175,218 @@ function SocialAccounts({ accounts }: { accounts: SocialAccount[] | null }) {
   )
 }
 
+/* ── Products tab ──────────────────────────────────────────────── */
+
+function Products({ creatorId, accounts, products }: { creatorId: string; accounts: SocialAccount[] | null; products: Product[] }) {
+  const router = useRouter()
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  const activeProducts = products.filter((p) => p.is_active)
+  const inactiveProducts = products.filter((p) => !p.is_active)
+  const hasAccounts = accounts && accounts.length > 0
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      {!hasAccounts && (
+        <p style={{ ...emptyStyle, marginBottom: '1rem' }}>Add social accounts first before creating products.</p>
+      )}
+
+      {/* Product list */}
+      {activeProducts.length === 0 && inactiveProducts.length === 0 && (
+        <p style={emptyStyle}>No products yet.</p>
+      )}
+
+      {activeProducts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          {activeProducts.map((p) => (
+            editingId === p.id
+              ? <ProductForm key={p.id} creatorId={creatorId} accounts={accounts!} existing={p} onDone={() => { setEditingId(null); router.refresh() }} />
+              : <ProductRow key={p.id} product={p} onEdit={() => setEditingId(p.id)} />
+          ))}
+        </div>
+      )}
+
+      {inactiveProducts.length > 0 && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <p style={{ ...labelStyle, marginBottom: '0.5rem' }}>Inactive</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', opacity: 0.6 }}>
+            {inactiveProducts.map((p) => (
+              editingId === p.id
+                ? <ProductForm key={p.id} creatorId={creatorId} accounts={accounts!} existing={p} onDone={() => { setEditingId(null); router.refresh() }} />
+                : <ProductRow key={p.id} product={p} onEdit={() => setEditingId(p.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add form */}
+      {showForm && hasAccounts ? (
+        <ProductForm creatorId={creatorId} accounts={accounts!} onDone={() => { setShowForm(false); router.refresh() }} />
+      ) : (
+        hasAccounts && (
+          <button onClick={() => setShowForm(true)} style={addBtnStyle}>+ Add product</button>
+        )
+      )}
+    </div>
+  )
+}
+
+function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => void }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fafafa' }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+          <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>{p.product_type}</span>
+          <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#6b7280', textTransform: 'capitalize' }}>{p.platform}</span>
+          {!p.display_price && <span style={{ fontSize: '0.6rem', color: '#888' }}>Price hidden</span>}
+        </div>
+        <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
+          @{p.handle} &middot; ₹{(p.price_paise / 100).toLocaleString('en-IN')}
+          {p.description && <> &middot; {p.description}</>}
+        </p>
+      </div>
+      <button onClick={onEdit} style={{ background: 'none', border: '1px solid #d5d5d5', borderRadius: 4, padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontWeight: 600, color: '#555', cursor: 'pointer' }}>
+        Edit
+      </button>
+    </div>
+  )
+}
+
+function ProductForm({ creatorId, accounts, existing, onDone }: {
+  creatorId: string
+  accounts: SocialAccount[]
+  existing?: Product
+  onDone: () => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // For new products, default to first account
+  const [accountIdx, setAccountIdx] = useState(() => {
+    if (existing) {
+      const idx = accounts.findIndex((a) => a.platform === existing.platform && a.handle === existing.handle)
+      return idx >= 0 ? idx : 0
+    }
+    return 0
+  })
+  const [productType, setProductType] = useState(existing?.product_type ?? '')
+
+  const selectedPlatform = accounts[accountIdx]?.platform ?? 'other'
+  const availableTypes = PRODUCT_TYPES_BY_PLATFORM[selectedPlatform] ?? PRODUCT_TYPES
+  const [description, setDescription] = useState(existing?.description ?? '')
+  const [priceRupees, setPriceRupees] = useState(existing ? String(existing.price_paise / 100) : '')
+  const [displayPrice, setDisplayPrice] = useState(existing?.display_price ?? true)
+  const [isActive, setIsActive] = useState(existing?.is_active ?? true)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+
+    const paise = Math.round(parseFloat(priceRupees) * 100)
+    if (isNaN(paise) || paise < 0) {
+      setError('Price must be a non-negative number')
+      setLoading(false)
+      return
+    }
+
+    if (existing) {
+      const res = await editProduct({
+        id: existing.id,
+        creator_id: creatorId,
+        product_type: productType,
+        description: description || undefined,
+        price_paise: paise,
+        display_price: displayPrice,
+        is_active: isActive,
+      })
+      setLoading(false)
+      if (res?.error) setError(res.error)
+      else onDone()
+    } else {
+      const account = accounts[accountIdx]
+      const res = await addProduct({
+        creator_id: creatorId,
+        platform: account.platform,
+        handle: account.handle,
+        product_type: productType,
+        description: description || undefined,
+        price_paise: paise,
+        display_price: displayPrice,
+      })
+      setLoading(false)
+      if (res?.error) setError(res.error)
+      else onDone()
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ padding: '1rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fff', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {error && <div style={{ color: '#dc2626', fontSize: '0.8125rem', padding: '0.375rem', background: '#fef2f2', borderRadius: 4 }}>{error}</div>}
+
+      {/* Account selector (only for new products) */}
+      {!existing && (
+        <label style={formLabelStyle}>
+          <span style={formLabelTextStyle}>Social account</span>
+          <select style={formInputStyle} value={accountIdx} onChange={(e) => { setAccountIdx(parseInt(e.target.value, 10)); setProductType('') }}>
+            {accounts.map((a, i) => (
+              <option key={i} value={i}>{a.platform} — @{a.handle}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {existing && (
+        <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
+          Account: <strong style={{ textTransform: 'capitalize' }}>{existing.platform}</strong> — @{existing.handle}
+        </p>
+      )}
+
+      <label style={formLabelStyle}>
+        <span style={formLabelTextStyle}>Product type</span>
+        <select style={formInputStyle} value={productType} onChange={(e) => setProductType(e.target.value)} required>
+          <option value="">Select...</option>
+          {availableTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </label>
+
+      <label style={formLabelStyle}>
+        <span style={formLabelTextStyle}>Description (optional)</span>
+        <input style={formInputStyle} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. 30s product demo reel" />
+      </label>
+
+      <label style={formLabelStyle}>
+        <span style={formLabelTextStyle}>Price (₹)</span>
+        <input style={formInputStyle} type="number" min="0" step="1" value={priceRupees} onChange={(e) => setPriceRupees(e.target.value)} placeholder="e.g. 50000" required />
+      </label>
+
+      <div style={{ display: 'flex', gap: '1.5rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
+          <input type="checkbox" checked={displayPrice} onChange={(e) => setDisplayPrice(e.target.checked)} />
+          Show price publicly
+        </label>
+        {existing && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
+            Active
+          </label>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button type="submit" disabled={loading} style={{ padding: '0.4rem 1rem', background: loading ? '#999' : '#111', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, fontSize: '0.8125rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          {loading ? 'Saving...' : existing ? 'Save' : 'Add product'}
+        </button>
+        <button type="button" onClick={onDone} style={{ padding: '0.4rem 1rem', background: '#fff', color: '#555', border: '1px solid #d5d5d5', borderRadius: 4, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/* ── Legacy Rate Card tab ──────────────────────────────────────── */
+
 function RateCard({ rateCard }: { rateCard: Record<string, number> | null }) {
   if (!rateCard || Object.keys(rateCard).length === 0) {
     return <p style={emptyStyle}>No rate card set.</p>
@@ -168,6 +394,7 @@ function RateCard({ rateCard }: { rateCard: Record<string, number> | null }) {
 
   return (
     <div style={{ maxWidth: 400 }}>
+      <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.75rem' }}>Legacy flat rate card. Being replaced by per-account products above.</p>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
         <thead>
           <tr>
@@ -236,6 +463,8 @@ function DetailField({ label, value }: { label: string; value: string | null | u
   )
 }
 
+/* ── Styles ─────────────────────────────────────────────────────── */
+
 const labelStyle: React.CSSProperties = {
   fontSize: '0.7rem',
   fontWeight: 600,
@@ -257,4 +486,35 @@ const actionBtn: React.CSSProperties = {
   fontSize: '0.8125rem',
   fontWeight: 600,
   cursor: 'pointer',
+}
+
+const addBtnStyle: React.CSSProperties = {
+  background: 'none',
+  border: '1px dashed #ccc',
+  borderRadius: 4,
+  padding: '0.5rem 0.75rem',
+  fontSize: '0.8125rem',
+  fontWeight: 600,
+  color: '#666',
+  cursor: 'pointer',
+  width: '100%',
+}
+
+const formLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.25rem',
+}
+
+const formLabelTextStyle: React.CSSProperties = {
+  fontSize: '0.8125rem',
+  fontWeight: 600,
+}
+
+const formInputStyle: React.CSSProperties = {
+  padding: '0.5rem 0.625rem',
+  border: '1px solid #d5d5d5',
+  borderRadius: 4,
+  fontSize: '0.875rem',
+  outline: 'none',
 }

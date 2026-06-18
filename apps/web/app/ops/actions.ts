@@ -236,6 +236,83 @@ export async function rejectBrand(brandId: string) {
   return { success: true }
 }
 
+// ── Add creator product ──────────────────────────────────────────────────────
+
+interface AddProductInput {
+  creator_id: string
+  platform: string
+  handle: string
+  product_type: string
+  description?: string
+  price_paise: number
+  display_price?: boolean
+}
+
+export async function addProduct(input: AddProductInput) {
+  const user = await verifyOpsAccess()
+  if (!user) return { error: 'Not authorized' }
+
+  const { creator_id, platform, handle, product_type, description, price_paise, display_price } = input
+  if (!platform.trim()) return { error: 'Platform is required' }
+  if (!handle.trim()) return { error: 'Handle is required' }
+  if (!product_type.trim()) return { error: 'Product type is required' }
+  if (!Number.isInteger(price_paise) || price_paise < 0) return { error: 'Price must be a non-negative integer (paise)' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('creator_products').insert({
+    creator_id,
+    platform: platform.trim(),
+    handle: handle.trim(),
+    product_type,
+    description: description?.trim() || null,
+    price_paise,
+    display_price: display_price ?? true,
+  })
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/ops/creators/${creator_id}`)
+  return { success: true }
+}
+
+// ── Edit creator product ─────────────────────────────────────────────────────
+
+interface EditProductInput {
+  id: string
+  creator_id: string
+  product_type: string
+  description?: string
+  price_paise: number
+  display_price?: boolean
+  is_active?: boolean
+}
+
+export async function editProduct(input: EditProductInput) {
+  const user = await verifyOpsAccess()
+  if (!user) return { error: 'Not authorized' }
+
+  const { id, creator_id, product_type, description, price_paise, display_price, is_active } = input
+  if (!product_type.trim()) return { error: 'Product type is required' }
+  if (!Number.isInteger(price_paise) || price_paise < 0) return { error: 'Price must be a non-negative integer (paise)' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('creator_products')
+    .update({
+      product_type,
+      description: description?.trim() || null,
+      price_paise,
+      display_price: display_price ?? true,
+      is_active: is_active ?? true,
+    })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/ops/creators/${creator_id}`)
+  return { success: true }
+}
+
 // ── Edit brand ───────────────────────────────────────────────────────────────
 
 interface EditBrandInput {
