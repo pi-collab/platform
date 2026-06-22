@@ -143,6 +143,38 @@ When a creator signs up, they must be able to LINK to their existing ops-created
 
 ---
 
+## Global / multi-currency (roadmap; adopt hygiene NOW)
+
+Ambition: operate globally → need country + currency selection per brand/creator/deal, localized formatting.
+
+NOW (cheap, do as we build): keep money as integer minor-units; keep deals.currency populated (default 'INR'); route money formatting through a single currency-aware helper (INR-only today) so adding currencies later isn't surgery — don't scatter hard-coded "₹"/×100.
+
+LATER: full multi-currency/country support. Minor-unit assumptions vary (e.g. JPY has none) — handle when building.
+
+DISCIPLINE: don't BLOCK global, but don't BUILD global in v1 — India/finance wedge first.
+
+---
+
+## Ship physical products / product-as-payment (roadmap)
+
+Brands often send product to creators to feature. Two valid framings: (a) a logistics/deliverable step in the deal (brand ships → creator receives → shoots); (b) an in-kind payment type (cash + product value). "Connect-your-own-commerce-API" so the brand's own stack (e.g. Shopify) places the order — we trigger, don't fulfill. Adds addresses, order APIs, in-kind accounting. Post-v1.
+
+---
+
+## Multi-person / team workflow + assignment + internal approval (roadmap — this is the deferred delegated-access layer)
+
+Teams collaborate inside one brand/agency before content reaches the creator: e.g. writer drafts → manager reviews/approves internally → then shared to creator. Features: assign a stage to a person for approval, notify, reassign on approval to proceed, internal comments, and a "my pending tasks" board.
+
+FRAMING: this is the fleshed-out deferred delegated-access / agency-portal / influencer-manager layer (managed_by stub is the hook). NOT v1.
+
+PRINCIPLE (product value): the product must let ONE person run a deal end-to-end (never REQUIRE a team), while SUPPORTING teams where they exist. Build for the solo operator; teams opt in.
+
+DIRECTION: AI agents + Slack integration to reduce coordination overhead over time (connects to deferred AI-assist roadmap).
+
+GATE: validate with real pilot brands before building — do finance pilots actually have multi-person approval chains, or is that an enterprise assumption? Build only if pilot users ask. A task board is heavy build for unproven need.
+
+---
+
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.

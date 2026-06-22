@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import DealThread from './DealThread'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -29,7 +30,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   // Fetch deal + events in parallel. RLS deals_read restricts to brand's own deals.
   // If another brand guesses the URL, .maybeSingle() returns null → notFound().
-  const [{ data: deal, error: dealError }, { data: events }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, deliverables, price_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
@@ -38,6 +39,11 @@ export default async function DealDetailPage({ params }: { params: { id: string 
     supabase
       .from('events')
       .select('id, event_type, detail, created_at')
+      .eq('deal_id', params.id)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('messages')
+      .select('id, sender_party, body, created_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
   ])
@@ -77,13 +83,14 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           )}
         </div>
 
-        {deal.price_paise != null && deal.price_paise > 0 && (
-          <div style={{ textAlign: 'right' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {deal.price_paise != null && deal.price_paise > 0 && (
             <p style={{ fontFamily: 'monospace', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
               {formatRupees(deal.price_paise)}
             </p>
-          </div>
-        )}
+          )}
+          <DealThread dealId={deal.id} initialMessages={(messages ?? []) as { id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
+        </div>
       </div>
 
       {/* Deal details grid */}
@@ -163,12 +170,6 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             </>
           )}
         </div>
-      </div>
-
-      {/* Placeholder for negotiation thread */}
-      <div style={{ padding: '2rem', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', textAlign: 'center', color: 'var(--color-muted)' }}>
-        <p style={{ fontSize: '0.875rem', fontWeight: 600, margin: '0 0 0.25rem' }}>Negotiation thread</p>
-        <p style={{ fontSize: '0.8125rem', margin: 0 }}>Messages and counter-offers will appear here.</p>
       </div>
 
       {/* Metadata */}
