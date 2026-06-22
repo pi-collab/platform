@@ -1,5 +1,5 @@
 /* ================================================================
-   DESIGN TOKEN SYSTEM
+   DESIGN TOKEN SYSTEM — Liquid Glass
 
    HOW SWAPPING WORKS:
    · Global change: edit a Layer 1 primitive → flows everywhere.
@@ -10,14 +10,40 @@
 
 /* ── LAYER 1: PRIMITIVES ──────────────────────────────────────── */
 :root {
-  /* Warm cream palette */
+  /* White / ice canvas */
+  --_white:      #FFFFFF;
+  --_ice-50:     #F8FAFC;
+  --_ice-100:    #F1F5F9;
+  --_ice-200:    #E2E8F0;
+  --_ice-300:    #CBD5E1;
+
+  /* Atmospheric pastels */
+  --_sky:        #E3F2FD;
+  --_lavender:   #F3E5F5;
+  --_blush:      #FCE4EC;
+  --_citron:     #FFFDE7;
+
+  /* Dark charcoal text scale */
+  --_charcoal-900: #181C24;
+  --_charcoal-800: #1E293B;
+  --_charcoal-700: #334155;
+  --_charcoal-600: #475569;
+  --_charcoal-500: #64748B;
+  --_charcoal-400: #94A3B8;
+  --_charcoal-300: #CBD5E1;
+
+  /* Neon accent */
+  --_neon-green:      #DAFE0C;
+  --_neon-green-dim:  #C8E60B;
+  --_neon-green-glow: rgba(218, 254, 12, 0.25);
+
+  /* Legacy warm cream (kept for backward compat, no longer primary) */
   --_cream-50:   #FDFAF6;
   --_cream-100:  #F6F0E5;
   --_cream-200:  #EDE4D4;
   --_cream-300:  #DDD3BE;
-  --_cream-400:  #C8BBА8;
+  --_cream-400:  #C8BBA8;
 
-  /* Warm neutrals */
   --_warm-400:   #9B8E82;
   --_warm-500:   #7A6D61;
   --_warm-600:   #5C5048;
@@ -25,84 +51,99 @@
   --_warm-800:   #271E17;
   --_warm-900:   #16100B;
 
-  /* Accent warm brown (for labels, badges, stat values) */
   --_amber-600:  #92400E;
   --_amber-700:  #78350F;
 
-  /* White */
-  --_white: #FFFFFF;
-
   /* Font stack primitives */
-  --_font-sans:    system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --_font-display: Georgia, 'Times New Roman', serif;
-  /* To use a web font later: change --_font-display here after adding <link> to layout.tsx */
-  /* e.g. --_font-display: 'Playfair Display', Georgia, serif; */
+  --_font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --_font-display: 'Sora', system-ui, -apple-system, sans-serif;
 }
 
 /* ── LAYER 2: SEMANTIC ROLE TOKENS ───────────────────────────── */
 :root {
-  /* Brand identity */
-  --brand-primary:       var(--_warm-900);
-  --brand-primary-hover: var(--_warm-800);
-  --brand-primary-dark:  var(--_warm-700);
-  --brand-tint:          var(--_cream-200);
-  --brand-tint-strong:   var(--_cream-300);
+  /* Brand identity — neon green accent on white */
+  --brand-primary:       var(--_charcoal-900);
+  --brand-primary-hover: var(--_charcoal-800);
+  --brand-primary-dark:  var(--_charcoal-700);
+  --brand-tint:          var(--_ice-100);
+  --brand-tint-strong:   var(--_ice-200);
 
-  /* Accent — used for labels, eyebrows, stat values */
-  --accent:       var(--_amber-600);
-  --accent-hover: var(--_amber-700);
+  /* Neon accent — CTAs, highlights, mascot */
+  --accent:           var(--_neon-green);
+  --accent-hover:     var(--_neon-green-dim);
+  --accent-glow:      var(--_neon-green-glow);
+  --accent-text:      var(--_charcoal-900); /* dark text on neon bg for contrast */
 
-  /* Section backgrounds — warm cream */
-  --section-bg:      var(--_cream-50);
-  --section-bg-alt:  var(--_cream-100);
-  --section-bg-dark: var(--_warm-900);
-  --section-bg-tint: var(--_cream-200);
+  /* Section backgrounds — white/ice world */
+  --section-bg:      var(--_white);
+  --section-bg-alt:  var(--_ice-50);
+  --section-bg-dark: var(--_charcoal-900);
+  --section-bg-tint: var(--_ice-100);
 
-  /* Typography — dark on light */
-  --color-heading: var(--_warm-900);
-  --color-body:    var(--_warm-700);
-  --color-muted:   var(--_warm-500);
-  --color-subtle:  var(--_warm-400);
+  /* Atmospheric pastel backgrounds */
+  --bg-sky:      var(--_sky);
+  --bg-lavender: var(--_lavender);
+  --bg-blush:    var(--_blush);
+  --bg-citron:   var(--_citron);
+
+  /* Typography — dark charcoal on white */
+  --color-heading: var(--_charcoal-900);
+  --color-body:    var(--_charcoal-700);
+  --color-muted:   var(--_charcoal-500);
+  --color-subtle:  var(--_charcoal-400);
   --color-on-dark: var(--_white);
-  --color-border:  var(--_cream-300);
+  --color-border:  var(--_ice-200);
 
   /* Font roles */
   --font-heading: var(--_font-display);
   --font-body:    var(--_font-sans);
 
-  /* Shape */
-  --radius-sm:   6px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
-  --radius-xl:   24px;
+  /* Shape — soft geometry, 24px preferred */
+  --radius-sm:   8px;
+  --radius-md:   16px;
+  --radius-lg:   24px;
+  --radius-xl:   32px;
   --radius-pill: 9999px;
 
   /* Layout */
   --container-width: 1200px;
-  --container-pad:   clamp(1rem, 4vw, 2rem);
+  --container-pad:   clamp(1.25rem, 4vw, 5rem);
   --nav-height:      64px;
 
-  /* ── Liquid glass utilities (bright/pastel) ── */
-  --glass-bg:        rgba(255, 255, 255, 0.62);
-  --glass-bg-hover:  rgba(255, 255, 255, 0.78);
-  --glass-border:    rgba(255, 255, 255, 0.78);
-  --glass-blur:      blur(20px);
-  --glass-shadow:    0 8px 40px rgba(22, 16, 11, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.90);
-  --glass-shadow-sm: 0 4px 20px rgba(22, 16, 11, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  /* ── Liquid glass utilities ── */
+  --glass-bg:        rgba(255, 255, 255, 0.55);
+  --glass-bg-hover:  rgba(255, 255, 255, 0.72);
+  --glass-border:    rgba(255, 255, 255, 0.6);
+  --glass-stroke:    1px solid rgba(255, 255, 255, 0.4);
+  --glass-blur:      blur(25px);
+  --glass-shadow:    0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --glass-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* Spacing base (8pt grid) */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
 }
 
 /* ── LAYER 3: PAGE-SPECIFIC OVERRIDES ────────────────────────── */
-/* Override any Layer 2 token here per page. Components untouched.
-   Examples:
-     [data-page="creator"] { --accent: #059669; }
-     [data-page="brand"]   { --font-heading: 'Sora', sans-serif; }
-*/
 [data-page="brand"] {
-  --section-bg-tint: var(--_cream-200);
+  --section-bg-tint: var(--_ice-100);
 }
 
 [data-page="creator"] {
-  --section-bg-tint: var(--_cream-200);
+  --section-bg-tint: var(--_ice-100);
 }
 
 /* ── BASE RESET ────────────────────────────────────────────────── */
@@ -119,6 +160,7 @@ html {
 
 body {
   font-family: var(--font-body);
+  font-size: 1rem;
   color: var(--color-body);
   background: var(--section-bg);
   line-height: 1.6;
@@ -137,19 +179,15 @@ a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: inherit; }
 
 /* ── SCROLL ANIMATIONS ─────────────────────────────────────────── */
-/* Elements with [data-animate] start hidden; AnimationProvider.tsx
-   adds .in-view when they enter the viewport. */
 [data-animate] {
   opacity: 0;
   transform: translateY(28px);
   transition:
-    opacity   0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity   0.6s var(--ease-out),
+    transform 0.6s var(--ease-out);
 }
 
 [data-animate].in-view {
   opacity: 1;
   transform: translateY(0);
 }
-
-/* Stagger delays — set via data-delay="100" etc. (ms, applied by JS) */

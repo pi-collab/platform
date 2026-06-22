@@ -370,10 +370,10 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
         disabled={loading || selectedCount === 0 || hasMissingPrice}
         style={{
           padding: '0.75rem 1.5rem',
-          background: loading || selectedCount === 0 || hasMissingPrice ? '#999' : 'var(--color-heading)',
-          color: '#fff',
+          background: loading || selectedCount === 0 || hasMissingPrice ? 'var(--color-subtle)' : 'var(--accent)',
+          color: loading || selectedCount === 0 || hasMissingPrice ? '#fff' : 'var(--accent-text)',
           border: 'none',
-          borderRadius: 'var(--radius-sm)',
+          borderRadius: 'var(--radius-lg)',
           fontWeight: 700,
           fontSize: '0.9375rem',
           cursor: loading || selectedCount === 0 || hasMissingPrice ? 'not-allowed' : 'pointer',
@@ -405,12 +405,12 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 'var(--radius-sm)',
   fontSize: '0.875rem',
   outline: 'none',
-  background: '#fff',
+  background: 'rgba(255,255,255,0.2)',
 }
 
 const fieldsetStyle: React.CSSProperties = {
   border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 'var(--radius-md)',
   padding: '1rem',
   margin: 0,
 }
@@ -428,8 +428,8 @@ const platformBadge: React.CSSProperties = {
   textTransform: 'capitalize',
   padding: '0.1rem 0.5rem',
   borderRadius: 9999,
-  background: '#f3f4f6',
-  border: '1px solid #e5e5e5',
+  background: 'var(--section-bg-alt)',
+  border: '1px solid var(--color-border)',
 }
 
 const productRow: React.CSSProperties = {
@@ -438,8 +438,8 @@ const productRow: React.CSSProperties = {
   alignItems: 'center',
   padding: '0.625rem 0.75rem',
   border: '1px solid var(--color-border)',
-  borderRadius: 6,
-  background: '#fff',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--glass-bg)',
   gap: '0.75rem',
   transition: 'border-color 0.15s',
 }
@@ -450,13 +450,13 @@ const stepperBtn: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  border: '1px solid #d5d5d5',
-  borderRadius: 4,
-  background: '#fff',
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-sm)',
+  background: 'var(--glass-bg)',
   fontSize: '1rem',
   fontWeight: 700,
   cursor: 'pointer',
-  color: '#333',
+  color: 'var(--color-heading)',
 }
 
 const errorBox: React.CSSProperties = {
@@ -464,6 +464,6 @@ const errorBox: React.CSSProperties = {
   fontSize: '0.8125rem',
   padding: '0.5rem 0.75rem',
   background: '#fef2f2',
-  borderRadius: 6,
+  borderRadius: 'var(--radius-sm)',
   border: '1px solid #fecaca',
 }

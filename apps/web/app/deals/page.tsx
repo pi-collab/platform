@@ -42,7 +42,7 @@ export default async function DealsListPage() {
           <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)', margin: '0.25rem 0 1rem' }}>
             Browse creators and start your first deal.
           </p>
-          <Link href="/browse" style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}>
+          <Link href="/browse" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-heading)', textDecoration: 'none' }}>
             Browse creators &rarr;
           </Link>
         </div>

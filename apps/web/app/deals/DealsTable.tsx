@@ -75,8 +75,8 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
                 fontWeight: active ? 700 : 500,
                 borderRadius: 9999,
                 border: active ? '1.5px solid var(--color-heading)' : '1px solid var(--color-border)',
-                background: active ? 'var(--color-heading)' : '#fff',
-                color: active ? '#fff' : 'var(--color-muted)',
+                background: active ? 'var(--color-heading)' : 'var(--glass-bg)',
+                color: active ? 'var(--_white, #fff)' : 'var(--color-muted)',
                 cursor: 'pointer',
                 textTransform: 'capitalize',
               }}
@@ -196,7 +196,7 @@ function DealRow({ deal: d }: { deal: Deal }) {
       <td style={{ padding: '0.625rem 0.75rem', whiteSpace: 'nowrap' }}>
         <Link
           href={`/deals/${d.id}`}
-          style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb', textDecoration: 'none' }}
+          style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-heading)', textDecoration: 'none' }}
         >
           View details
         </Link>
@@ -214,7 +214,7 @@ function MobileCard({ deal: d }: { deal: Deal }) {
       style={{
         display: 'block',
         padding: '0.875rem 1rem',
-        background: '#fff',
+        background: 'var(--glass-bg)',
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-md)',
         textDecoration: 'none',

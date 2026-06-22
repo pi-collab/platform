@@ -69,7 +69,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           {creator && (
             <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)', margin: 0 }}>
               with{' '}
-              <Link href={`/browse/${creator.id}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+              <Link href={`/browse/${creator.id}`} style={{ color: 'var(--color-heading)', textDecoration: 'none', fontWeight: 600 }}>
                 {creator.full_name}
               </Link>
               {creator.handle && <span style={{ color: 'var(--color-muted)' }}> · {creator.handle}</span>}
@@ -142,7 +142,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                             {parsed.label}
                           </p>
                           {isCurrent && (
-                            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#111', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: 9999, background: 'var(--color-heading)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                               Current
                             </span>
                           )}
@@ -152,7 +152,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                             {parsed.description}
                           </p>
                         )}
-                        <p style={{ fontSize: '0.6875rem', color: '#aaa', margin: '0.2rem 0 0' }}>
+                        <p style={{ fontSize: '0.6875rem', color: 'var(--color-subtle)', margin: '0.2rem 0 0' }}>
                           {new Date(ev.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -172,7 +172,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       </div>
 
       {/* Metadata */}
-      <div style={{ marginTop: '2rem', fontSize: '0.75rem', color: '#aaa' }}>
+      <div style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--color-subtle)' }}>
         <p style={{ margin: '0.15rem 0' }}>Created: {new Date(deal.created_at).toLocaleString('en-IN')}</p>
         <p style={{ margin: '0.15rem 0' }}>Updated: {new Date(deal.updated_at).toLocaleString('en-IN')}</p>
         {deal.agreed_at && <p style={{ margin: '0.15rem 0' }}>Agreed: {new Date(deal.agreed_at).toLocaleString('en-IN')}</p>}

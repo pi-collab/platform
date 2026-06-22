@@ -275,7 +275,7 @@ const filterInput: React.CSSProperties = {
   borderRadius: 'var(--radius-sm)',
   fontSize: '0.8125rem',
   outline: 'none',
-  background: '#fff',
+  background: 'var(--glass-bg)',
   minWidth: 120,
   flex: 1,
 }
@@ -302,7 +302,7 @@ const cardStyle: React.CSSProperties = {
   display: 'flex',
   gap: '1rem',
   padding: '1.25rem',
-  background: '#fff',
+  background: 'var(--glass-bg)',
   border: '1px solid var(--color-border)',
   borderRadius: 'var(--radius-md)',
   textDecoration: 'none',

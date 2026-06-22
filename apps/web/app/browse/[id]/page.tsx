@@ -171,7 +171,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                     <p style={metaText}>{formatFollowers(sa.follower_count)} followers</p>
                   )}
                   {sa.url && (
-                    <a href={sa.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all' }}>
+                    <a href={sa.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: 'var(--color-heading)', wordBreak: 'break-all' }}>
                       {sa.url}
                     </a>
                   )}
@@ -199,7 +199,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
             <h2 style={sectionTitle}>Portfolio</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
               {c.portfolio_links.map((link, i) => (
-                <a key={i} href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all' }}>
+                <a key={i} href={link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: 'var(--color-heading)', wordBreak: 'break-all' }}>
                   {link}
                 </a>
               ))}
@@ -265,9 +265,9 @@ const nicheBadge: React.CSSProperties = {
 const ctaBtn: React.CSSProperties = {
   display: 'inline-block',
   padding: '0.625rem 1.5rem',
-  background: 'var(--color-heading)',
-  color: '#fff',
-  borderRadius: 'var(--radius-sm)',
+  background: 'var(--accent)',
+  color: 'var(--accent-text)',
+  borderRadius: 'var(--radius-lg)',
   fontWeight: 700,
   fontSize: '0.875rem',
   textDecoration: 'none',
@@ -302,15 +302,15 @@ const productRow: React.CSSProperties = {
   padding: '0.75rem 1rem',
   border: '1px solid var(--color-border)',
   borderRadius: 'var(--radius-sm)',
-  background: '#fff',
+  background: 'var(--glass-bg)',
   gap: '1rem',
 }
 
 const socialCard: React.CSSProperties = {
   padding: '0.75rem',
   border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-sm)',
-  background: '#fff',
+  borderRadius: 'var(--radius-md)',
+  background: 'var(--glass-bg)',
 }
 
 const metaText: React.CSSProperties = {
