@@ -10,13 +10,17 @@ export default function OpsIndex() {
           <strong>Creators</strong>
           <span style={{ fontSize: '0.8125rem', color: '#666' }}>View, vet, and manage creators</span>
         </Link>
-        <Link href="/ops/creators/new" style={cardStyle}>
-          <strong>Add Creator</strong>
-          <span style={{ fontSize: '0.8125rem', color: '#666' }}>Manually add a vetted creator</span>
-        </Link>
         <Link href="/ops/brands" style={cardStyle}>
           <strong>Brands</strong>
           <span style={{ fontSize: '0.8125rem', color: '#666' }}>View registered brands</span>
+        </Link>
+        <Link href="/ops/deals" style={cardStyle}>
+          <strong>Deals</strong>
+          <span style={{ fontSize: '0.8125rem', color: '#666' }}>Monitor all deals across the platform</span>
+        </Link>
+        <Link href="/ops/offers" style={cardStyle}>
+          <strong>Offer Links</strong>
+          <span style={{ fontSize: '0.8125rem', color: '#666' }}>Generate signed offer links</span>
         </Link>
         <Link href="/ops/access" style={cardStyle}>
           <strong>Access</strong>

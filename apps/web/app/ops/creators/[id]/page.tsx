@@ -17,11 +17,18 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
 
   if (error || !creator) notFound()
 
-  const { data: products } = await admin
-    .from('creator_products')
-    .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, created_at')
-    .eq('creator_id', params.id)
-    .order('created_at', { ascending: false })
+  const [{ data: products }, { data: deals }] = await Promise.all([
+    admin
+      .from('creator_products')
+      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, created_at')
+      .eq('creator_id', params.id)
+      .order('created_at', { ascending: false }),
+    admin
+      .from('deals')
+      .select('id, title, status, price_paise, created_at, brands(name)')
+      .eq('creator_id', params.id)
+      .order('created_at', { ascending: false }),
+  ])
 
   return (
     <div>
@@ -58,7 +65,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </Link>
       </div>
 
-      <CreatorTabs creator={creator} products={products ?? []} />
+      <CreatorTabs creator={creator} products={products ?? []} deals={deals ?? []} />
     </div>
   )
 }

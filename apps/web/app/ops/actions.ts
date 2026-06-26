@@ -2,6 +2,7 @@
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { generateOfferToken } from '@/lib/offer-token'
 import { revalidatePath } from 'next/cache'
 
 // ── Add creator ──────────────────────────────────────────────────────────────
@@ -198,6 +199,31 @@ export async function editCreator(input: EditCreatorInput) {
 
   revalidatePath('/ops/creators')
   return { success: true }
+}
+
+// ── Generate offer token ─────────────────────────────────────────────────────
+
+export async function generateOfferLink(dealId: string) {
+  const user = await verifyOpsAccess()
+  if (!user) return { error: 'Not authorized' }
+
+  if (!dealId?.trim()) return { error: 'Deal ID is required' }
+
+  const admin = createAdminClient()
+  const { data: deal } = await admin
+    .from('deals')
+    .select('id, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { error: 'Deal not found' }
+  if (deal.status !== 'negotiating') return { error: `Deal status is "${deal.status}" — can only generate links for negotiating deals` }
+
+  const token = generateOfferToken(dealId)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001'
+  const link = `${baseUrl}/offer/${encodeURIComponent(token)}`
+
+  return { success: true, link, token }
 }
 
 // ── Approve brand ────────────────────────────────────────────────────────────

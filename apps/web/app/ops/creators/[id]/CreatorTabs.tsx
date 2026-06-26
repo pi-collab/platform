@@ -42,10 +42,19 @@ interface Creator {
   updated_at: string
 }
 
-const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Rate Card (legacy)', 'Portfolio & Brands'] as const
+interface Deal {
+  id: string
+  title: string | null
+  status: string
+  price_paise: number | null
+  created_at: string
+  brands: unknown
+}
+
+const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Rate Card (legacy)', 'Portfolio & Brands'] as const
 type Tab = typeof TABS[number]
 
-export default function CreatorTabs({ creator, products }: { creator: Creator; products: Product[] }) {
+export default function CreatorTabs({ creator, products, deals }: { creator: Creator; products: Product[]; deals: Deal[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -108,6 +117,7 @@ export default function CreatorTabs({ creator, products }: { creator: Creator; p
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
       {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
+      {tab === 'Deals' && <DealsTab deals={deals} />}
       {tab === 'Rate Card (legacy)' && <RateCard rateCard={creator.rate_card} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
     </div>
@@ -450,6 +460,58 @@ function PortfolioBrands({ workedWith, portfolioLinks }: { workedWith: string[] 
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+const DEAL_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  negotiating: { bg: '#dbeafe', color: '#1e40af' },
+  agreed:      { bg: '#dcfce7', color: '#166534' },
+  delivered:   { bg: '#fef9c3', color: '#854d0e' },
+  revision:    { bg: '#ffedd5', color: '#9a3412' },
+  approved:    { bg: '#dcfce7', color: '#166534' },
+  paid:        { bg: '#d1fae5', color: '#065f46' },
+  complete:    { bg: '#f3f4f6', color: '#374151' },
+  declined:    { bg: '#fee2e2', color: '#991b1b' },
+  cancelled:   { bg: '#f3f4f6', color: '#6b7280' },
+}
+
+function DealsTab({ deals }: { deals: Deal[] }) {
+  if (deals.length === 0) return <p style={emptyStyle}>No deals yet.</p>
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <p style={{ fontSize: '0.8125rem', color: '#666', marginBottom: '0.75rem' }}>{deals.length} deal{deals.length !== 1 ? 's' : ''}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {deals.map((d) => {
+          const brand = (d.brands as any)?.name ?? '—'
+          const sc = DEAL_STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+          return (
+            <a
+              key={d.id}
+              href={`/ops/deals/${d.id}`}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fafafa', textDecoration: 'none', color: '#111' }}
+            >
+              <div>
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>{d.title || 'Untitled'}</span>
+                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.1rem 0 0' }}>
+                  {brand} &middot; {new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {d.price_paise != null && d.price_paise > 0 && (
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'monospace' }}>
+                    {'\u20B9'}{(d.price_paise / 100).toLocaleString('en-IN')}
+                  </span>
+                )}
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
+                  {d.status}
+                </span>
+              </div>
+            </a>
+          )
+        })}
+      </div>
     </div>
   )
 }

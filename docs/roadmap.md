@@ -175,6 +175,45 @@ GATE: validate with real pilot brands before building — do finance pilots actu
 
 ---
 
+## VISION: Guap'd as the creator's end-to-end work + deal management home
+
+Long-term, Guap'd is ONE place where creators (all types, over time) manage deals and work end-to-end — and where brands run those deals. Rich features beyond the core loop (below) are part of this vision AND serve growth: they attract more creators and brands onto the platform. The roadmap below is expansive by intent.
+
+SEQUENCING PRINCIPLE (non-negotiable): the expansive vision is reachable ONLY by first proving the core — one real brand–creator deal completing on-platform. Vision = broad; next BUILD = the one thin loop. Features below wait their turn behind a working, proven loop. Don't let vision-scope set build-priority.
+
+WEDGE NOTE: product/tooling is creator-type-universal; GTM stays finance/BFSI-first until that niche is won. "All creators" is the vision, not the launch.
+
+---
+
+## Creator portfolio / media-kit page (roadmap — part of the vision)
+
+A rich, shareable creator page (hero intro, brands-worked-with, categorized work samples/video portfolio, contact) — shown to brands on-platform AND shareable by the creator (bio/DM/email) to pull brands in. Two layers:
+
+(a) Richer brand-facing profile: upgrade the existing /browse/[id] storefront toward this media-kit feel (work samples, polished visuals). Enhancement of an existing page.
+
+(b) Creator-created shareable page: let creators build/customize their page and share it.
+
+GROWTH RATIONALE: shareable creator pages drive brand acquisition (creator sends link → brand lands on Guap'd → deal happens on-platform). This is a real acquisition loop, part of the vision.
+
+TETHER (important): keep the shareable page funneling INTO Guap'd's deal loop — its job is to bring brands onto the platform to transact, not to be a creator's standalone external website (avoid drifting into pure creator-website-builder / Beacons territory where brands aren't the customer). Build the version that feeds the transaction loop.
+
+GATE: after the core loop works; validate demand with pilot creators.
+
+---
+
+## NORTH STAR (the big vision)
+
+Guap'd becomes THE place every influencer deal happens — across all creator tiers, from finance micro-creators to A-list (athletes, actors, global celebrities).
+
+- For brands: not just a workflow tool but an intelligence layer — who to work with, what to pay (benchmarks), expected and actual ROI/ROAS, performance attribution. Ease + richness that makes running deals here obviously better than anywhere else.
+- For creators: one app to manage ALL their deals and work, end-to-end, regardless of creator type.
+
+PATH DISCIPLINE (the hard truth this roadmap exists to protect): this north star is earned ONLY by first proving the boring core — ONE real brand–creator deal completing on-platform (brief→accept→deliver→approve→pay). A-list creators, ROI tools, and scale are CONSEQUENCES of nailing the first ordinary deals, never the path to them. The brand intelligence/ROI layer specifically REQUIRES completed deals + platform performance data (deferred API) — it cannot exist before deals flow.
+
+Build narrow; dream wide. The next build is always "close/strengthen the loop," not "reach for the north star."
+
+---
+
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.
