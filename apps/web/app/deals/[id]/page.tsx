@@ -3,6 +3,7 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import DealThread from './DealThread'
+import ItemReview from './ItemReview'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -40,7 +41,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -67,6 +68,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
   const hasItems = items && items.length > 0
   const itemsSubmitted = hasItems ? items.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length : 0
+  const canReview = hasItems && (deal.status === 'delivered' || deal.status === 'revision')
 
   return (
     <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
@@ -98,61 +100,95 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {deal.price_paise != null && deal.price_paise > 0 && (
-            <p style={{ fontFamily: 'monospace', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
-              {formatRupees(deal.price_paise)}
-            </p>
-          )}
+          {deal.price_paise != null && deal.price_paise > 0 && (() => {
+            const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+            const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+            const total = deal.price_paise + overage
+            return (
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontFamily: 'monospace', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
+                  {formatRupees(total)}
+                </p>
+                {overage > 0 && (
+                  <p style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--color-muted)', margin: '0.15rem 0 0' }}>
+                    {formatRupees(deal.price_paise)} + {extra} extra rev × {formatRupees(deal.price_per_extra_revision_paise)}
+                  </p>
+                )}
+              </div>
+            )
+          })()}
           <DealThread dealId={deal.id} initialMessages={(messages ?? []) as { id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
         </div>
       </div>
 
-      {/* Deliverable Items */}
+      {/* Deliverable Items — interactive review when delivered/revision, read-only otherwise */}
       {hasItems && (
         <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <h2 style={{ ...sectionTitle, margin: 0 }}>Deliverable Items</h2>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)' }}>
-              {itemsSubmitted} of {items.length} submitted
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--color-border, #e5e5e5)', overflow: 'hidden' }}>
-              <div style={{ width: `${(itemsSubmitted / items.length) * 100}%`, height: '100%', background: '#16a34a', borderRadius: 3, transition: 'width 0.3s' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {items.map((item) => {
-              const isc = ITEM_STATUS_COLORS[item.item_status] ?? ITEM_STATUS_COLORS.pending
-              const displayHandle = item.handle.startsWith('@') ? item.handle : `@${item.handle}`
-              return (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0.75rem', border: '1px solid var(--color-border, #e5e5e5)', borderRadius: 'var(--radius-sm, 6px)', background: 'var(--glass-bg, #fafafa)' }}>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>{item.label}</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
-                      {item.platform} {displayHandle}
-                    </span>
-                    {item.external_url && (
-                      <a
-                        href={item.external_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: '0.75rem', color: '#2563eb', wordBreak: 'break-all', display: 'block', marginTop: '0.2rem' }}
-                      >
-                        {item.external_url.length > 50 ? item.external_url.slice(0, 50) + '...' : item.external_url}
-                      </a>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 9999,
-                    background: isc.bg, color: isc.color, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                    {item.item_status}{item.version > 1 ? ` v${item.version}` : ''}
-                  </span>
+          <h2 style={{ ...sectionTitle, marginBottom: '0.75rem' }}>
+            {canReview ? 'Review Deliverables' : 'Deliverable Items'}
+          </h2>
+          {canReview ? (
+            <ItemReview
+              dealId={deal.id}
+              items={items.map((i) => ({
+                id: i.id,
+                label: i.label,
+                platform: i.platform,
+                handle: i.handle,
+                item_status: i.item_status,
+                external_url: i.external_url,
+                version: i.version,
+                price_paise: i.price_paise,
+              }))}
+              revisionsUsed={deal.revisions_used ?? 0}
+              revisionLimit={deal.revision_limit}
+              dealStatus={deal.status}
+              pricePerExtraRevisionPaise={deal.price_per_extra_revision_paise ?? 0}
+            />
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--color-border, #e5e5e5)', overflow: 'hidden' }}>
+                  <div style={{ width: `${(itemsSubmitted / items.length) * 100}%`, height: '100%', background: '#16a34a', borderRadius: 3, transition: 'width 0.3s' }} />
                 </div>
-              )
-            })}
-          </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)' }}>
+                  {itemsSubmitted} of {items.length} submitted
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {items.map((item) => {
+                  const isc = ITEM_STATUS_COLORS[item.item_status] ?? ITEM_STATUS_COLORS.pending
+                  const displayHandle = item.handle.startsWith('@') ? item.handle : `@${item.handle}`
+                  return (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0.75rem', border: '1px solid var(--color-border, #e5e5e5)', borderRadius: 'var(--radius-sm, 6px)', background: 'var(--glass-bg, #fafafa)' }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>{item.label}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
+                          {item.platform} {displayHandle}
+                        </span>
+                        {item.external_url && (
+                          <a
+                            href={item.external_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '0.75rem', color: '#2563eb', wordBreak: 'break-all', display: 'block', marginTop: '0.2rem' }}
+                          >
+                            {item.external_url.length > 50 ? item.external_url.slice(0, 50) + '...' : item.external_url}
+                          </a>
+                        )}
+                      </div>
+                      <span style={{
+                        fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 9999,
+                        background: isc.bg, color: isc.color, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0,
+                      }}>
+                        {item.item_status}{item.version > 1 ? ` v${item.version}` : ''}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -193,6 +229,21 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             )}
             <DetailField label="Delivery date" value={deal.timeline_date ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
             <DetailField label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit} used`} />
+            {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
+              <DetailField label="Per extra revision" value={formatRupees(deal.price_per_extra_revision_paise)} />
+            )}
+            {(deal.revisions_used ?? 0) > (deal.revision_limit ?? 0) && (deal.price_per_extra_revision_paise ?? 0) > 0 && (() => {
+              const extra = (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0)
+              const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+              return (
+                <div>
+                  <p style={labelStyle}>Amount owed</p>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
+                    Base {formatRupees(deal.price_paise)} + {extra} extra revision{extra !== 1 ? 's' : ''} × {formatRupees(deal.price_per_extra_revision_paise)} = {formatRupees(deal.price_paise + overage)}
+                  </p>
+                </div>
+              )
+            })()}
             <DetailField label="Usage rights" value={deal.usage_rights} />
             <DetailField label="Payment terms" value={deal.payment_terms} />
             <DetailField label="Last offer by" value={deal.last_offer_by ? (deal.last_offer_by as string).charAt(0).toUpperCase() + (deal.last_offer_by as string).slice(1) : null} />

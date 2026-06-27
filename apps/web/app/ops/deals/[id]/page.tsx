@@ -20,7 +20,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const [{ data: deal }, { data: events }, { data: messages }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name), creators(id, full_name, handle)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name), creators(id, full_name, handle)')
       .eq('id', params.id)
       .single(),
     admin
@@ -40,7 +40,10 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const brand = (deal.brands as any)?.name ?? '—'
   const creator = (deal.creators as any) ?? null
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
-  const price = deal.price_paise ? `\u20B9${(deal.price_paise / 100).toLocaleString('en-IN')}` : '—'
+  const extraRevisions = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+  const overage = extraRevisions * (deal.price_per_extra_revision_paise ?? 0)
+  const totalPaise = (deal.price_paise ?? 0) + overage
+  const price = deal.price_paise ? `\u20B9${(totalPaise / 100).toLocaleString('en-IN')}` : '—'
 
   return (
     <div>
@@ -73,6 +76,17 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
             <Field label="Deliverables" value={deal.deliverables} />
             <Field label="Timeline" value={deal.timeline_date ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
             <Field label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit}`} />
+            {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
+              <Field label="Per extra revision" value={`\u20B9${((deal.price_per_extra_revision_paise ?? 0) / 100).toLocaleString('en-IN')}`} />
+            )}
+            {overage > 0 && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.1rem' }}>Amount owed</p>
+                <p style={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
+                  Base \u20B9{(deal.price_paise / 100).toLocaleString('en-IN')} + {extraRevisions} extra rev × \u20B9{((deal.price_per_extra_revision_paise ?? 0) / 100).toLocaleString('en-IN')} = \u20B9{(totalPaise / 100).toLocaleString('en-IN')}
+                </p>
+              </div>
+            )}
             <Field label="Usage rights" value={deal.usage_rights} />
             <Field label="Payment terms" value={deal.payment_terms} />
             <Field label="Last offer by" value={deal.last_offer_by} />

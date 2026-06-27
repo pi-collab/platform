@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createDeal } from '../actions'
 import { useRouter } from 'next/navigation'
 
@@ -21,6 +21,8 @@ interface Product {
   price_paise: number
   display_price: boolean
   is_active: boolean
+  included_revisions: number
+  price_per_extra_revision_paise: number
 }
 
 interface Creator {
@@ -69,6 +71,7 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
   const [title, setTitle] = useState(`Deal with ${creator.full_name}`)
   const [timelineDate, setTimelineDate] = useState('')
   const [revisionLimit, setRevisionLimit] = useState('1')
+  const [pricePerExtraRevision, setPricePerExtraRevision] = useState('0')
   const [usageRights, setUsageRights] = useState('')
   const [customUsage, setCustomUsage] = useState('')
   const [paymentTerms, setPaymentTerms] = useState('')
@@ -121,6 +124,27 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
 
     return { totalPaise: total, selectedCount: count, deliverablesSummary: lines.join(' + '), hasMissingPrice: missingPrice }
   }, [products, selections])
+
+  // Pre-fill revision terms from selected products (min included, max per-extra)
+  const { defaultIncluded, defaultExtraPaise } = useMemo(() => {
+    const selectedProducts = products.filter((p) => {
+      const s = selections[p.id]
+      return s && s.qty > 0
+    })
+    if (selectedProducts.length === 0) return { defaultIncluded: 1, defaultExtraPaise: 0 }
+    return {
+      defaultIncluded: Math.min(...selectedProducts.map((p) => p.included_revisions)),
+      defaultExtraPaise: Math.max(...selectedProducts.map((p) => p.price_per_extra_revision_paise)),
+    }
+  }, [products, selections])
+
+  // Auto-update revision fields when product selection changes
+  useEffect(() => {
+    if (selectedCount > 0) {
+      setRevisionLimit(String(defaultIncluded))
+      setPricePerExtraRevision(String(defaultExtraPaise / 100))
+    }
+  }, [defaultIncluded, defaultExtraPaise, selectedCount])
 
   // Final price: override if set, else computed total
   const finalPaise = priceOverride.trim()
@@ -177,6 +201,8 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
       }
     }
 
+    const extraRevPaise = Math.round(parseFloat(pricePerExtraRevision || '0') * 100)
+
     const res = await createDeal({
       creator_id: creator.id,
       title,
@@ -184,6 +210,7 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
       price_paise: finalPaise,
       timeline_date: timelineDate || undefined,
       revision_limit: parseInt(revisionLimit, 10) || 0,
+      price_per_extra_revision_paise: isNaN(extraRevPaise) ? 0 : extraRevPaise,
       usage_rights: resolvedUsage || undefined,
       payment_terms: resolvedPayment || undefined,
       message: message || undefined,
@@ -337,10 +364,64 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
         <input style={inputStyle} type="date" value={timelineDate} onChange={(e) => setTimelineDate(e.target.value)} />
       </Field>
 
-      {/* Revision limit */}
-      <Field label="Revision limit" hint="How many revision rounds the creator gets">
-        <input style={inputStyle} type="number" min="0" value={revisionLimit} onChange={(e) => setRevisionLimit(e.target.value)} />
-      </Field>
+      {/* Revision terms — prominent, pre-filled from creator's products */}
+      <fieldset style={{ ...fieldsetStyle, borderColor: selectedCount > 0 ? 'var(--color-heading)' : 'var(--color-border)' }}>
+        <legend style={legendStyle}>Revision terms</legend>
+        {selectedCount > 0 && (() => {
+          const selectedProducts = products.filter((p) => {
+            const s = selections[p.id]
+            return s && s.qty > 0
+          })
+          const hasVariation = selectedProducts.length > 1 && (
+            new Set(selectedProducts.map((p) => p.included_revisions)).size > 1 ||
+            new Set(selectedProducts.map((p) => p.price_per_extra_revision_paise)).size > 1
+          )
+          return (
+            <div style={{ fontSize: '0.75rem', color: '#666', margin: '0 0 0.75rem', padding: '0.5rem 0.625rem', background: 'var(--section-bg-alt)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+              <p style={{ margin: '0 0 0.25rem', fontWeight: 600, color: '#888', fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                Creator&apos;s product defaults
+              </p>
+              {selectedProducts.map((p) => {
+                const displayHandle = p.handle.startsWith('@') ? p.handle : `@${p.handle}`
+                const extraPrice = p.price_per_extra_revision_paise
+                return (
+                  <p key={p.id} style={{ margin: '0.15rem 0 0', lineHeight: 1.4 }}>
+                    <span style={{ fontWeight: 600 }}>{p.product_type}</span>{' '}
+                    <span style={{ color: '#888' }}>({p.platform} {displayHandle})</span>
+                    {' — '}
+                    {p.included_revisions} rev incl
+                    {extraPrice > 0 && <>, {formatRupees(extraPrice)}/extra</>}
+                    {extraPrice === 0 && <>, free extras</>}
+                  </p>
+                )
+              })}
+              {hasVariation && (
+                <p style={{ margin: '0.35rem 0 0', color: '#b45309', fontStyle: 'italic' }}>
+                  Products have different revision terms — deal uses min included ({defaultIncluded}) and max per-extra ({formatRupees(defaultExtraPaise)}).
+                </p>
+              )}
+              {!hasVariation && (
+                <p style={{ margin: '0.25rem 0 0', color: '#888', fontStyle: 'italic' }}>
+                  Adjust below if needed.
+                </p>
+              )}
+            </div>
+          )
+        })()}
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Field label="Included revisions" hint="Free revision rounds in this deal">
+            <input style={{ ...inputStyle, width: 100 }} type="number" min="0" value={revisionLimit} onChange={(e) => setRevisionLimit(e.target.value)} />
+          </Field>
+          <Field label="Per extra revision (₹)" hint="Cost per revision beyond the included count">
+            <input style={{ ...inputStyle, width: 140 }} type="number" min="0" step="1" value={pricePerExtraRevision} onChange={(e) => setPricePerExtraRevision(e.target.value)} placeholder="0" />
+          </Field>
+        </div>
+        {parseFloat(pricePerExtraRevision) > 0 && (
+          <p style={{ fontSize: '0.75rem', color: '#555', margin: '0.5rem 0 0' }}>
+            {parseInt(revisionLimit, 10) || 0} revision{(parseInt(revisionLimit, 10) || 0) !== 1 ? 's' : ''} included, then ₹{parseFloat(pricePerExtraRevision).toLocaleString('en-IN')} per extra
+          </p>
+        )}
+      </fieldset>
 
       {/* Usage rights */}
       <Field label="Usage rights">

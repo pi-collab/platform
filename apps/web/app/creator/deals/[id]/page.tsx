@@ -32,7 +32,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -42,7 +42,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .order('version', { ascending: false }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at')
+      .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
   ])
@@ -103,9 +103,24 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
           ) : (
             deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
           )}
-          {deal.price_paise != null && deal.price_paise > 0 && (
-            <Term label="Total Price" value={formatRupees(deal.price_paise)} />
-          )}
+          {deal.price_paise != null && deal.price_paise > 0 && (() => {
+            const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+            const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+            const total = deal.price_paise + overage
+            return overage > 0 ? (
+              <div>
+                <p style={termLabel}>Total Price</p>
+                <p style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
+                  {formatRupees(total)}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.15rem 0 0' }}>
+                  {formatRupees(deal.price_paise)} base + {extra} extra rev × {formatRupees(deal.price_per_extra_revision_paise)}
+                </p>
+              </div>
+            ) : (
+              <Term label="Total Price" value={formatRupees(deal.price_paise)} />
+            )
+          })()}
           {deal.timeline_date && (
             <Term
               label="Delivery by"
@@ -113,6 +128,21 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             />
           )}
           <Term label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit}`} />
+          {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
+            <Term label="Per extra revision" value={formatRupees(deal.price_per_extra_revision_paise)} />
+          )}
+          {(deal.revisions_used ?? 0) > (deal.revision_limit ?? 0) && (deal.price_per_extra_revision_paise ?? 0) > 0 && (() => {
+            const extra = (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0)
+            const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+            return (
+              <div>
+                <p style={termLabel}>Amount owed</p>
+                <p style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
+                  Base {formatRupees(deal.price_paise)} + {extra} extra revision{extra !== 1 ? 's' : ''} × {formatRupees(deal.price_per_extra_revision_paise)} = {formatRupees(deal.price_paise + overage)}
+                </p>
+              </div>
+            )
+          })()}
           {deal.usage_rights && <Term label="Usage rights" value={deal.usage_rights} />}
           {deal.payment_terms && <Term label="Payment terms" value={deal.payment_terms} />}
         </div>

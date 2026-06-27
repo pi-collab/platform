@@ -22,6 +22,8 @@ interface Product {
   price_paise: number
   display_price: boolean
   is_active: boolean
+  included_revisions: number
+  price_per_extra_revision_paise: number
   created_at: string
 }
 
@@ -254,6 +256,8 @@ function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => vo
         <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
           {p.handle?.startsWith('@') ? p.handle : `@${p.handle}`} &middot; ₹{(p.price_paise / 100).toLocaleString('en-IN')}
           {p.description && <> &middot; {p.description}</>}
+          {' '}&middot; {p.included_revisions} rev incl
+          {p.price_per_extra_revision_paise > 0 && <>, ₹{(p.price_per_extra_revision_paise / 100).toLocaleString('en-IN')}/extra</>}
         </p>
       </div>
       <button onClick={onEdit} style={{ background: 'none', border: '1px solid #d5d5d5', borderRadius: 4, padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontWeight: 600, color: '#555', cursor: 'pointer' }}>
@@ -288,6 +292,8 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
   const [priceRupees, setPriceRupees] = useState(existing ? String(existing.price_paise / 100) : '')
   const [displayPrice, setDisplayPrice] = useState(existing?.display_price ?? true)
   const [isActive, setIsActive] = useState(existing?.is_active ?? true)
+  const [includedRevisions, setIncludedRevisions] = useState(String(existing?.included_revisions ?? 1))
+  const [extraRevisionRupees, setExtraRevisionRupees] = useState(existing ? String(existing.price_per_extra_revision_paise / 100) : '0')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -301,6 +307,20 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
       return
     }
 
+    const parsedIncluded = parseInt(includedRevisions, 10)
+    if (isNaN(parsedIncluded) || parsedIncluded < 0) {
+      setError('Included revisions must be 0 or more')
+      setLoading(false)
+      return
+    }
+
+    const extraPaise = Math.round(parseFloat(extraRevisionRupees || '0') * 100)
+    if (isNaN(extraPaise) || extraPaise < 0) {
+      setError('Price per extra revision must be non-negative')
+      setLoading(false)
+      return
+    }
+
     if (existing) {
       const res = await editProduct({
         id: existing.id,
@@ -310,6 +330,8 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         price_paise: paise,
         display_price: displayPrice,
         is_active: isActive,
+        included_revisions: parsedIncluded,
+        price_per_extra_revision_paise: extraPaise,
       })
       setLoading(false)
       if (res?.error) setError(res.error)
@@ -324,6 +346,8 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         description: description || undefined,
         price_paise: paise,
         display_price: displayPrice,
+        included_revisions: parsedIncluded,
+        price_per_extra_revision_paise: extraPaise,
       })
       setLoading(false)
       if (res?.error) setError(res.error)
@@ -369,6 +393,17 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         <span style={formLabelTextStyle}>Price (₹)</span>
         <input style={formInputStyle} type="number" min="0" step="1" value={priceRupees} onChange={(e) => setPriceRupees(e.target.value)} placeholder="e.g. 50000" required />
       </label>
+
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <label style={formLabelStyle}>
+          <span style={formLabelTextStyle}>Included revisions</span>
+          <input style={{ ...formInputStyle, width: 80 }} type="number" min="0" value={includedRevisions} onChange={(e) => setIncludedRevisions(e.target.value)} />
+        </label>
+        <label style={formLabelStyle}>
+          <span style={formLabelTextStyle}>Per extra revision (₹)</span>
+          <input style={{ ...formInputStyle, width: 120 }} type="number" min="0" step="1" value={extraRevisionRupees} onChange={(e) => setExtraRevisionRupees(e.target.value)} placeholder="0" />
+        </label>
+      </div>
 
       <div style={{ display: 'flex', gap: '1.5rem' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', cursor: 'pointer' }}>

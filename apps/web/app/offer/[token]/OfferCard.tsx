@@ -12,6 +12,7 @@ interface Deal {
   currency: string
   timeline_date: string | null
   revision_limit: number
+  price_per_extra_revision_paise: number
   usage_rights: string | null
   payment_terms: string | null
   brand_name: string
@@ -222,6 +223,9 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
           />
         )}
         <Term label="Revisions included" value={String(deal.revision_limit)} />
+        {deal.price_per_extra_revision_paise > 0 && (
+          <Term label="Per extra revision" value={formatMoney(deal.price_per_extra_revision_paise, deal.currency)} />
+        )}
         {deal.usage_rights && <Term label="Usage rights" value={deal.usage_rights} />}
         {deal.payment_terms && <Term label="Payment terms" value={deal.payment_terms} />}
       </div>

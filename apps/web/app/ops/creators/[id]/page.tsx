@@ -20,7 +20,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   const [{ data: products }, { data: deals }] = await Promise.all([
     admin
       .from('creator_products')
-      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, created_at')
+      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
       .eq('creator_id', params.id)
       .order('created_at', { ascending: false }),
     admin

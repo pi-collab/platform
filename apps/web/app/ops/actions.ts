@@ -272,13 +272,15 @@ interface AddProductInput {
   description?: string
   price_paise: number
   display_price?: boolean
+  included_revisions?: number
+  price_per_extra_revision_paise?: number
 }
 
 export async function addProduct(input: AddProductInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { creator_id, platform, handle, product_type, description, price_paise, display_price } = input
+  const { creator_id, platform, handle, product_type, description, price_paise, display_price, included_revisions, price_per_extra_revision_paise } = input
   if (!platform.trim()) return { error: 'Platform is required' }
   if (!handle.trim()) return { error: 'Handle is required' }
   if (!product_type.trim()) return { error: 'Product type is required' }
@@ -293,6 +295,8 @@ export async function addProduct(input: AddProductInput) {
     description: description?.trim() || null,
     price_paise,
     display_price: display_price ?? true,
+    included_revisions: included_revisions ?? 1,
+    price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
   })
 
   if (error) return { error: error.message }
@@ -311,13 +315,15 @@ interface EditProductInput {
   price_paise: number
   display_price?: boolean
   is_active?: boolean
+  included_revisions?: number
+  price_per_extra_revision_paise?: number
 }
 
 export async function editProduct(input: EditProductInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { id, creator_id, product_type, description, price_paise, display_price, is_active } = input
+  const { id, creator_id, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise } = input
   if (!product_type.trim()) return { error: 'Product type is required' }
   if (!Number.isInteger(price_paise) || price_paise < 0) return { error: 'Price must be a non-negative integer (paise)' }
 
@@ -330,6 +336,8 @@ export async function editProduct(input: EditProductInput) {
       price_paise,
       display_price: display_price ?? true,
       is_active: is_active ?? true,
+      included_revisions: included_revisions ?? 1,
+      price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
     })
     .eq('id', id)
 

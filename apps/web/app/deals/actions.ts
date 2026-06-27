@@ -18,6 +18,7 @@ interface CreateDealInput {
   price_paise: number
   timeline_date?: string
   revision_limit: number
+  price_per_extra_revision_paise?: number
   usage_rights?: string
   payment_terms?: string
   message?: string // stored later when send/notification is built
@@ -27,7 +28,7 @@ interface CreateDealInput {
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, usage_rights, payment_terms, items } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -49,6 +50,7 @@ export async function createDeal(input: CreateDealInput) {
       price_paise,
       timeline_date: timeline_date || null,
       revision_limit,
+      price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
       usage_rights: usage_rights?.trim() || null,
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',

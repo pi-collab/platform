@@ -12,6 +12,7 @@ interface Item {
   external_url: string | null
   version: number
   submitted_at: string | null
+  revision_note: string | null
 }
 
 const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -125,6 +126,14 @@ export default function DeliverableItems({
                   {item.item_status}{item.version > 1 ? ` v${item.version}` : ''}
                 </span>
               </div>
+
+              {/* Revision feedback from brand */}
+              {item.item_status === 'revision' && item.revision_note && (
+                <div style={{ margin: '0.375rem 0', padding: '0.5rem 0.625rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 6 }}>
+                  <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#9a3412', margin: '0 0 0.2rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Revision feedback</p>
+                  <p style={{ fontSize: '0.8125rem', color: '#78350f', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.revision_note}</p>
+                </div>
+              )}
 
               {/* Show existing link for submitted/approved items */}
               {item.external_url && (item.item_status === 'submitted' || item.item_status === 'approved') && (

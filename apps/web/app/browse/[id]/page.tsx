@@ -21,6 +21,8 @@ interface Product {
   price_paise: number
   display_price: boolean
   is_active: boolean
+  included_revisions: number
+  price_per_extra_revision_paise: number
 }
 
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
@@ -36,7 +38,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       .maybeSingle(),
     supabase
       .from('creator_products')
-      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active')
+      .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
       .eq('creator_id', params.id),
   ])
 
@@ -140,6 +142,9 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                               Price on request
                             </span>
                           )}
+                          <p style={{ fontSize: '0.6875rem', color: 'var(--color-muted)', margin: '0.2rem 0 0' }}>
+                            {p.included_revisions} rev incl{p.price_per_extra_revision_paise > 0 && <>, {formatRupees(p.price_per_extra_revision_paise)}/extra</>}
+                          </p>
                         </div>
                       </div>
                     ))}

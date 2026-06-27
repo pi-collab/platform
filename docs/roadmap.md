@@ -2,6 +2,39 @@
 
 > Parking lot for **serious, deliberate ideas we intend to build later** — not the v1 defer-list (that's "don't build now" inside CLAUDE.md). Items here are directional, unscheduled, and to be revisited only after v1 proves the manual workflow works and is used.
 
+## Change-order flow for extra revisions (post-v1)
+
+**The idea:** When a brand exceeds the agreed revision limit, the current v1 behavior is warn-but-allow — the brand sees a warning ("this exceeds the agreed revision limit — extra revisions should be renegotiated with the creator") but can still request the revision. The real answer is a **change-order flow**: when the limit is hit, the brand can propose a paid amendment (extra revisions at a renegotiated price), the creator accepts/declines, and only then does the revision proceed. This turns revision overruns from a trust issue into a structured, auditable transaction.
+
+**v1 reality:** Warn-but-allow. The warning text explicitly frames the overrun as exceeding agreed terms. Revision count is tracked per review round (deal `delivered → revision` transition), not per item, to prevent inflation.
+
+**What the change-order flow needs:**
+- A "propose amendment" action from the brand (extra revisions + price delta)
+- Creator accept/decline on the amendment (reuses the offer-card pattern)
+- Amendment recorded as an event in the audit log
+- Updated `revision_limit` on the deal after acceptance
+- Optional: payment for the amendment (ties into the payment-tracking flow)
+
+**Gate:** Build after v1, once real pilot deals surface revision-limit friction. The warn-but-allow mechanism is sufficient for early deals with known creators.
+
+---
+
+## Revision overage pricing — creator default + per-deal override (the proper revision-limit answer)
+
+Replaces v1's warn-but-allow. Model:
+- DEFAULT (creator policy, product-level): each creator_product carries included_revisions + price_per_extra_revision (e.g. "₹60k, 2 revisions included, ₹5k per extra"). Set once by the creator, applies to all their deals. No negotiation needed by default.
+- OFFER surfaces it: when the brand builds the offer, the creator's revision terms are shown and pre-filled into the deal.
+- PER-DEAL OVERRIDE (negotiable): the brand can propose different revision terms for THIS deal (e.g. "3 free revisions"); the creator can agree/edit for that deal. → This requires the COUNTER-OFFER / negotiation capability (currently only accept/decline exists — counter is deferred). Revision-terms negotiation is a slice of the general counter-offer flow.
+- ENFORCEMENT: when revisions exceed the agreed-for-this-deal included count, the pre-agreed per-extra price AUTO-ADDS to the amount owed — no later negotiation, just an updated total. → Touches the PAYMENT flow (also unbuilt).
+
+DEPENDENCIES: needs (a) counter-offer/negotiation flow, (b) payment flow. Build in the payment+negotiation phase, NOT before the basic loop closes.
+
+WHY IT'S GOOD: default = zero-friction (creator's standing terms); override = flexibility when either side wants different terms. Gets both no-negotiation-by-default AND per-deal flexibility. This is the real answer to revision scope-creep (protects creator) without trapping the brand.
+
+v1 INTERIM: warn-but-allow + informal chat. This model replaces it later.
+
+---
+
 ## Agentic AI: delegated agents for brands and creators
 
 **The idea (PJ, captured Day 1):** Once the platform has replaced agencies and managers as the *workflow*, go a step further and replace them as the *labor* — AI agents that act on behalf of a brand or a creator to run deals end to end: negotiation, coordination, deliverable chasing, status management, and (where legally possible) payment. Brands and creators would configure an agent to act for them within set bounds. (Agent naming/branding TBD.)

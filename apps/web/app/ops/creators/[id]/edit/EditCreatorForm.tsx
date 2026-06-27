@@ -226,6 +226,10 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
         </div>
       </fieldset>
 
+      <p style={{ fontSize: '0.75rem', color: '#888', background: '#f9fafb', padding: '0.5rem 0.75rem', borderRadius: 6, border: '1px solid #eee', margin: 0 }}>
+        Products, pricing, and revision terms are managed on the <a href={`/ops/creators/${creator.id}`} style={{ color: '#2563eb', fontWeight: 600 }}>creator detail page → Products tab</a>.
+      </p>
+
       <div style={{ display: 'flex', gap: '0.75rem' }}>
         <button type="submit" disabled={loading} style={{ padding: '0.625rem 1.25rem', background: loading ? '#999' : '#111', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: '0.875rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Saving...' : 'Save changes'}
