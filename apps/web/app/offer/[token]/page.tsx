@@ -32,7 +32,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
   const [{ data: deal }, { data: items }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, status, brands(name), creators(full_name)')
+      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, usage_rights, payment_terms, status, brands(name), creators(full_name)')
       .eq('id', parsed.dealId)
       .single(),
     admin
@@ -86,6 +86,8 @@ export default async function OfferPage({ params }: { params: { token: string } 
           timeline_date: deal.timeline_date,
           revision_limit: deal.revision_limit,
           price_per_extra_revision_paise: deal.price_per_extra_revision_paise ?? 0,
+          fee_percent: deal.fee_percent ?? 0,
+          fee_mode: (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top',
           usage_rights: deal.usage_rights,
           payment_terms: deal.payment_terms,
           brand_name: brandName,

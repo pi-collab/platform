@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createDeal } from '../actions'
 import { useRouter } from 'next/navigation'
+import { calculateFee } from '@/lib/fee'
 
 interface SocialAccount {
   platform: string
@@ -59,7 +60,7 @@ function formatFollowers(n: number): string {
   return n.toLocaleString('en-IN')
 }
 
-export default function DealForm({ creator, products }: { creator: Creator; products: Product[] }) {
+export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top' }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted' }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -359,6 +360,33 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
         )}
       </Field>
 
+      {/* Fee breakdown */}
+      {selectedCount > 0 && platformFeePercent > 0 && finalPaise > 0 && (() => {
+        const fee = calculateFee(finalPaise, platformFeePercent, feeMode)
+        return (
+          <div style={{ padding: '0.75rem 1rem', background: 'var(--section-bg-alt)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', fontSize: '0.8125rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+              <span style={{ color: 'var(--color-muted)' }}>Deliverables total</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{formatRupees(fee.base_paise)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+              <span style={{ color: 'var(--color-muted)' }}>Platform fee ({platformFeePercent}%){feeMode === 'deducted' ? ' — deducted' : ''}</span>
+              <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{feeMode === 'on_top' ? '+' : '−'}{formatRupees(fee.fee_paise)}</span>
+            </div>
+            <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '0.375rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontWeight: 700, color: 'var(--color-heading)' }}>You pay</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-heading)' }}>{formatRupees(fee.brand_pays_paise)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--color-muted)' }}>Creator receives</span>
+                <span style={{ fontFamily: 'monospace', color: 'var(--color-muted)' }}>{formatRupees(fee.creator_receives_paise)}</span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Timeline */}
       <Field label="Delivery date">
         <input style={inputStyle} type="date" value={timelineDate} onChange={(e) => setTimelineDate(e.target.value)} />
@@ -474,7 +502,7 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
           alignSelf: 'flex-start',
         }}
       >
-        {loading ? 'Creating...' : `Create offer · ${formatRupees(finalPaise)}`}
+        {loading ? 'Creating...' : `Create offer · ${formatRupees(platformFeePercent > 0 && feeMode === 'on_top' ? calculateFee(finalPaise, platformFeePercent, feeMode).brand_pays_paise : finalPaise)}`}
       </button>
     </form>
   )

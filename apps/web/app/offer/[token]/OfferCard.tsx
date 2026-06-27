@@ -13,6 +13,8 @@ interface Deal {
   timeline_date: string | null
   revision_limit: number
   price_per_extra_revision_paise: number
+  fee_percent: number
+  fee_mode: 'on_top' | 'deducted'
   usage_rights: string | null
   payment_terms: string | null
   brand_name: string
@@ -211,9 +213,25 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
         ) : (
           deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
         )}
-        {deal.price_paise != null && deal.price_paise > 0 && (
-          <Term label="Total Price" value={formatMoney(deal.price_paise, deal.currency)} />
-        )}
+        {deal.price_paise != null && deal.price_paise > 0 && (() => {
+          const isDeducted = deal.fee_mode === 'deducted' && deal.fee_percent > 0
+          if (isDeducted) {
+            const feePaise = Math.round(deal.price_paise * deal.fee_percent / 100)
+            const netPaise = deal.price_paise - feePaise
+            return (
+              <div>
+                <p style={termLabel}>You receive</p>
+                <p style={{ ...termValue, fontSize: '1.0625rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {formatMoney(netPaise, deal.currency)}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-muted, #888)', margin: '0.15rem 0 0' }}>
+                  {formatMoney(deal.price_paise, deal.currency)} deal value − {formatMoney(feePaise, deal.currency)} platform fee ({deal.fee_percent}%)
+                </p>
+              </div>
+            )
+          }
+          return <Term label="Total Price" value={formatMoney(deal.price_paise, deal.currency)} />
+        })()}
         {deal.timeline_date && (
           <Term
             label="Delivery by"

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
+import { calculateFee } from '@/lib/fee'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   negotiating: { bg: '#dbeafe', color: '#1e40af' },
@@ -32,7 +33,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -104,17 +105,21 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
           )}
           {deal.price_paise != null && deal.price_paise > 0 && (() => {
+            const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
             const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
             const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
-            const total = deal.price_paise + overage
-            return overage > 0 ? (
+            const creatorTotal = fee.creator_receives_paise + overage
+            const hasDeductions = fee.fee_paise > 0 || overage > 0
+            return hasDeductions ? (
               <div>
-                <p style={termLabel}>Total Price</p>
+                <p style={termLabel}>You receive</p>
                 <p style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
-                  {formatRupees(total)}
+                  {formatRupees(creatorTotal)}
                 </p>
                 <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.15rem 0 0' }}>
-                  {formatRupees(deal.price_paise)} base + {extra} extra rev × {formatRupees(deal.price_per_extra_revision_paise)}
+                  {formatRupees(deal.price_paise)} base
+                  {fee.fee_paise > 0 && ` − ${formatRupees(fee.fee_paise)} platform fee (${fee.fee_percent}%)`}
+                  {overage > 0 && ` + ${extra} extra rev × ${formatRupees(deal.price_per_extra_revision_paise)}`}
                 </p>
               </div>
             ) : (

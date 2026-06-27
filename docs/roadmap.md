@@ -270,3 +270,19 @@ GATE: build when proven worth the storage+bandwidth cost; the deliverables data 
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.
+
+---
+
+## OPEN DECISION (cofounders): platform revenue model — needs math, don't lock from competitor screenshots
+
+Passionfroot appears to run MULTIPLE streams stacked: brand subscription TIERS (Starter $199 / Scale $499 / Enterprise — flat monthly SaaS) AND a per-deal take-rate. "The Passionfroot model" is a combination, not one lever.
+
+Our levers to decide (combine, don't just pick one — our research memo framed these as layers):
+- Per-deal take-rate (% of each deal). If DEDUCTED from creator = charging creators (cuts against supply-first thesis); if ON TOP = brand pays more (deals look pricier).
+- Brand subscription tiers (flat monthly MRR) — clean, but brands won't pay until platform is proven (post-pilot).
+- Who bears the per-deal fee: brand-on-top vs creator-deducted. PJ leaning toward Passionfroot-style DEDUCT (from creator) — note this contradicts the stated "creators free / 100% to creator" position; conscious cofounder call needed.
+- Creator plans/slabs + add-on features (later creator-side revenue).
+
+DECISION NEEDED with cofounders + real unit-economics math (where's the margin, what does each lever cost in adoption). Tied to the open finance-first-vs-open-wedge question too.
+
+BUILD IS NOT BLOCKED: fee stored as structured components (base / fee% / mode / who-bears / brand-pays / creator-receives) + per-brand ops setting → any decided model is a config/calc change, not a rebuild. Decide the model deliberately; the foundation flexes to it.

@@ -357,26 +357,32 @@ interface EditBrandInput {
   website?: string
   contact_name?: string
   social_accounts?: Record<string, string>
+  platform_fee_percent?: number
+  fee_mode?: 'on_top' | 'deducted'
 }
 
 export async function editBrand(input: EditBrandInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { id, name, category, company_size, website, contact_name, social_accounts } = input
+  const { id, name, category, company_size, website, contact_name, social_accounts, platform_fee_percent, fee_mode } = input
   if (!name.trim()) return { error: 'Brand name is required' }
+
+  const update: Record<string, unknown> = {
+    name: name.trim(),
+    category: category?.trim() || null,
+    company_size: company_size?.trim() || null,
+    website: website?.trim() || null,
+    contact_name: contact_name?.trim() || null,
+    social_accounts: social_accounts ?? {},
+  }
+  if (platform_fee_percent != null) update.platform_fee_percent = platform_fee_percent
+  if (fee_mode) update.fee_mode = fee_mode
 
   const admin = createAdminClient()
   const { error } = await admin
     .from('brands')
-    .update({
-      name: name.trim(),
-      category: category?.trim() || null,
-      company_size: company_size?.trim() || null,
-      website: website?.trim() || null,
-      contact_name: contact_name?.trim() || null,
-      social_accounts: social_accounts ?? {},
-    })
+    .update(update)
     .eq('id', id)
 
   if (error) return { error: error.message }

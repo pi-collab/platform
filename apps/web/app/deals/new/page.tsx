@@ -20,7 +20,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
 
   const supabase = createClient()
 
-  const [{ data: creator, error }, { data: products }] = await Promise.all([
+  const [{ data: creator, error }, { data: products }, { data: brandRow }] = await Promise.all([
     supabase
       .from('creators')
       .select('id, full_name, niches, handle, profile_photo_url, social_accounts')
@@ -30,6 +30,11 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
       .eq('creator_id', creatorId),
+    supabase
+      .from('brands')
+      .select('platform_fee_percent, fee_mode')
+      .eq('id', brand.brandId)
+      .single(),
   ])
 
   if (error || !creator) notFound()
@@ -49,6 +54,8 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
       <DealForm
         creator={creator}
         products={activeProducts}
+        platformFeePercent={brandRow?.platform_fee_percent ?? 0}
+        feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
       />
     </section>
   )

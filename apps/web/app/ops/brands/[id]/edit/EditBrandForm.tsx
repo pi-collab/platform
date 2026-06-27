@@ -12,6 +12,8 @@ interface Brand {
   website: string | null
   contact_name: string | null
   social_accounts: Record<string, string> | null
+  platform_fee_percent: number
+  fee_mode: string
 }
 
 export default function EditBrandForm({ brand }: { brand: Brand }) {
@@ -29,6 +31,8 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
       ? JSON.stringify(brand.social_accounts, null, 2)
       : ''
   )
+  const [feePercent, setFeePercent] = useState(String(brand.platform_fee_percent ?? 15))
+  const [feeMode, setFeeMode] = useState(brand.fee_mode ?? 'on_top')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -54,6 +58,8 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
       website: website || undefined,
       contact_name: contactName || undefined,
       social_accounts: Object.keys(social).length > 0 ? social : undefined,
+      platform_fee_percent: parseFloat(feePercent) || 0,
+      fee_mode: feeMode as 'on_top' | 'deducted',
     })
 
     setLoading(false)
@@ -97,6 +103,27 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
           placeholder='{"instagram": "@handle"}'
         />
       </Field>
+
+      {/* Platform Fee */}
+      <fieldset style={fieldsetStyle}>
+        <legend style={legendStyle}>Platform fee</legend>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Field label="Fee %" hint="Applied to deal base price">
+            <input style={{ ...inputStyle, width: 100 }} type="number" min="0" max="100" step="0.1" value={feePercent} onChange={(e) => setFeePercent(e.target.value)} />
+          </Field>
+          <Field label="Fee mode">
+            <select style={{ ...inputStyle, width: 160 }} value={feeMode} onChange={(e) => setFeeMode(e.target.value)}>
+              <option value="on_top">On top (brand pays more)</option>
+              <option value="deducted">Deducted (from creator)</option>
+            </select>
+          </Field>
+        </div>
+        <p style={{ fontSize: '0.7rem', color: '#888', margin: '0.5rem 0 0' }}>
+          {feeMode === 'on_top'
+            ? 'Brand pays base + fee. Creator receives full base.'
+            : 'Brand pays base. Creator receives base − fee.'}
+        </p>
+      </fieldset>
 
       <div style={{ display: 'flex', gap: '0.75rem' }}>
         <button
@@ -153,3 +180,5 @@ const inputStyle: React.CSSProperties = {
   fontSize: '0.875rem',
   outline: 'none',
 }
+const fieldsetStyle: React.CSSProperties = { border: '1px solid #e5e5e5', borderRadius: 6, padding: '1rem', margin: 0 }
+const legendStyle: React.CSSProperties = { fontSize: '0.8125rem', fontWeight: 600, padding: '0 0.25rem' }

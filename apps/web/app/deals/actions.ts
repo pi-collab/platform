@@ -36,8 +36,15 @@ export async function createDeal(input: CreateDealInput) {
   if (!Number.isInteger(price_paise) || price_paise <= 0) return { error: 'Price must be greater than ₹0' }
   if (!Number.isInteger(revision_limit) || revision_limit < 0) return { error: 'Revision limit must be 0 or more' }
 
-  // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
+  // Fetch brand's fee defaults for snapshot
   const supabase = createClient()
+  const { data: brandFee } = await supabase
+    .from('brands')
+    .select('platform_fee_percent, fee_mode')
+    .eq('id', brand.brandId)
+    .single()
+
+  // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
   const { data, error } = await supabase
     .from('deals')
     .insert({
@@ -54,6 +61,8 @@ export async function createDeal(input: CreateDealInput) {
       usage_rights: usage_rights?.trim() || null,
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
+      fee_percent: brandFee?.platform_fee_percent ?? 0,
+      fee_mode: brandFee?.fee_mode ?? 'on_top',
     })
     .select('id')
     .single()

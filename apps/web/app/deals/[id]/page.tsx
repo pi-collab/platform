@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import DealThread from './DealThread'
 import ItemReview from './ItemReview'
+import { calculateFee } from '@/lib/fee'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -41,7 +42,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -103,15 +104,18 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           {deal.price_paise != null && deal.price_paise > 0 && (() => {
             const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
             const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
-            const total = deal.price_paise + overage
+            const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+            const brandTotal = fee.brand_pays_paise + overage
             return (
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontFamily: 'monospace', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
-                  {formatRupees(total)}
+                  {formatRupees(brandTotal)}
                 </p>
-                {overage > 0 && (
+                {(fee.fee_paise > 0 || overage > 0) && (
                   <p style={{ fontFamily: 'monospace', fontSize: '0.6875rem', color: 'var(--color-muted)', margin: '0.15rem 0 0' }}>
-                    {formatRupees(deal.price_paise)} + {extra} extra rev × {formatRupees(deal.price_per_extra_revision_paise)}
+                    {formatRupees(deal.price_paise)} base
+                    {fee.fee_paise > 0 && ` + ${formatRupees(fee.fee_paise)} fee`}
+                    {overage > 0 && ` + ${extra} extra rev`}
                   </p>
                 )}
               </div>
@@ -219,14 +223,31 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             ) : (
               <DetailField label="Deliverables" value={deal.deliverables} />
             )}
-            {deal.price_paise != null && deal.price_paise > 0 && (
-              <div>
-                <p style={labelStyle}>Total Price</p>
-                <p style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
-                  {formatRupees(deal.price_paise)}
-                </p>
-              </div>
-            )}
+            {deal.price_paise != null && deal.price_paise > 0 && (() => {
+              const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+              return (
+                <>
+                  <div>
+                    <p style={labelStyle}>Base Price</p>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
+                      {formatRupees(deal.price_paise)}
+                    </p>
+                  </div>
+                  {fee.fee_paise > 0 && (
+                    <>
+                      <DetailField label={`Platform fee (${fee.fee_percent}%, ${fee.fee_mode === 'on_top' ? 'on top' : 'deducted'})`} value={formatRupees(fee.fee_paise)} />
+                      <div>
+                        <p style={labelStyle}>You pay</p>
+                        <p style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
+                          {formatRupees(fee.brand_pays_paise)}
+                        </p>
+                      </div>
+                      <DetailField label="Creator receives" value={formatRupees(fee.creator_receives_paise)} />
+                    </>
+                  )}
+                </>
+              )
+            })()}
             <DetailField label="Delivery date" value={deal.timeline_date ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
             <DetailField label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit} used`} />
             {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
