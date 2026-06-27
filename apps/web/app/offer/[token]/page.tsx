@@ -29,11 +29,18 @@ export default async function OfferPage({ params }: { params: { token: string } 
 
   const admin = createAdminClient()
 
-  const { data: deal } = await admin
-    .from('deals')
-    .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, usage_rights, payment_terms, status, brands(name), creators(full_name)')
-    .eq('id', parsed.dealId)
-    .single()
+  const [{ data: deal }, { data: items }] = await Promise.all([
+    admin
+      .from('deals')
+      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, usage_rights, payment_terms, status, brands(name), creators(full_name)')
+      .eq('id', parsed.dealId)
+      .single(),
+    admin
+      .from('deal_deliverable_items')
+      .select('id, label, platform, handle, price_paise')
+      .eq('deal_id', parsed.dealId)
+      .order('created_at', { ascending: true }),
+  ])
 
   if (!deal) {
     return (
@@ -83,6 +90,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
           brand_name: brandName,
           creator_name: creatorName,
         }}
+        items={(items ?? []).map((i) => ({ id: i.id, label: i.label, platform: i.platform, handle: i.handle, price_paise: i.price_paise }))}
       />
     </main>
   )

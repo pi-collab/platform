@@ -252,7 +252,7 @@ function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => vo
           {!p.display_price && <span style={{ fontSize: '0.6rem', color: '#888' }}>Price hidden</span>}
         </div>
         <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
-          @{p.handle} &middot; ₹{(p.price_paise / 100).toLocaleString('en-IN')}
+          {p.handle?.startsWith('@') ? p.handle : `@${p.handle}`} &middot; ₹{(p.price_paise / 100).toLocaleString('en-IN')}
           {p.description && <> &middot; {p.description}</>}
         </p>
       </div>
@@ -341,14 +341,14 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
           <span style={formLabelTextStyle}>Social account</span>
           <select style={formInputStyle} value={accountIdx} onChange={(e) => { setAccountIdx(parseInt(e.target.value, 10)); setProductType('') }}>
             {accounts.map((a, i) => (
-              <option key={i} value={i}>{a.platform} — @{a.handle}</option>
+              <option key={i} value={i}>{a.platform} — {a.handle?.startsWith('@') ? a.handle : `@${a.handle}`}</option>
             ))}
           </select>
         </label>
       )}
       {existing && (
         <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
-          Account: <strong style={{ textTransform: 'capitalize' }}>{existing.platform}</strong> — @{existing.handle}
+          Account: <strong style={{ textTransform: 'capitalize' }}>{existing.platform}</strong> — {existing.handle?.startsWith('@') ? existing.handle : `@${existing.handle}`}
         </p>
       )}
 

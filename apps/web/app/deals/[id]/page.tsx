@@ -11,6 +11,13 @@ function formatRupees(paise: number): string {
   return `₹${rupees.toLocaleString('en-IN')}`
 }
 
+const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  pending:   { bg: '#f3f4f6', color: '#6b7280' },
+  submitted: { bg: '#fef9c3', color: '#854d0e' },
+  revision:  { bg: '#ffedd5', color: '#9a3412' },
+  approved:  { bg: '#dcfce7', color: '#166534' },
+}
+
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   negotiating: { bg: '#dbeafe', color: '#1e40af' },
   agreed: { bg: '#dcfce7', color: '#166534' },
@@ -30,7 +37,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   // Fetch deal + events in parallel. RLS deals_read restricts to brand's own deals.
   // If another brand guesses the URL, .maybeSingle() returns null → notFound().
-  const [{ data: deal, error: dealError }, { data: events }, { data: messages }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, deliverables, price_paise, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
@@ -46,6 +53,11 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .select('id, sender_party, body, created_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
+    supabase
+      .from('deal_deliverable_items')
+      .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, approved_at')
+      .eq('deal_id', params.id)
+      .order('created_at', { ascending: true }),
   ])
 
   if (dealError || !deal) notFound()
@@ -53,6 +65,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const creatorArr = deal.creators as unknown as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null }[] | null
   const creator = creatorArr?.[0] ?? null
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const hasItems = items && items.length > 0
+  const itemsSubmitted = hasItems ? items.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length : 0
 
   return (
     <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
@@ -93,13 +107,90 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         </div>
       </div>
 
+      {/* Deliverable Items */}
+      {hasItems && (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <h2 style={{ ...sectionTitle, margin: 0 }}>Deliverable Items</h2>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)' }}>
+              {itemsSubmitted} of {items.length} submitted
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--color-border, #e5e5e5)', overflow: 'hidden' }}>
+              <div style={{ width: `${(itemsSubmitted / items.length) * 100}%`, height: '100%', background: '#16a34a', borderRadius: 3, transition: 'width 0.3s' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {items.map((item) => {
+              const isc = ITEM_STATUS_COLORS[item.item_status] ?? ITEM_STATUS_COLORS.pending
+              const displayHandle = item.handle.startsWith('@') ? item.handle : `@${item.handle}`
+              return (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.625rem 0.75rem', border: '1px solid var(--color-border, #e5e5e5)', borderRadius: 'var(--radius-sm, 6px)', background: 'var(--glass-bg, #fafafa)' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>{item.label}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
+                      {item.platform} {displayHandle}
+                    </span>
+                    {item.external_url && (
+                      <a
+                        href={item.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: '0.75rem', color: '#2563eb', wordBreak: 'break-all', display: 'block', marginTop: '0.2rem' }}
+                      >
+                        {item.external_url.length > 50 ? item.external_url.slice(0, 50) + '...' : item.external_url}
+                      </a>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 9999,
+                    background: isc.bg, color: isc.color, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    {item.item_status}{item.version > 1 ? ` v${item.version}` : ''}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Deal details grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
         {/* Terms */}
         <div>
           <h2 style={sectionTitle}>Deal Terms</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <DetailField label="Deliverables" value={deal.deliverables} />
+            {hasItems ? (
+              <div>
+                <p style={labelStyle}>Deliverables</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {items.map((item) => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--color-heading)' }}>
+                        {item.label} <span style={{ color: 'var(--color-muted)', fontSize: '0.75rem' }}>({item.platform} {item.handle.startsWith('@') ? item.handle : `@${item.handle}`})</span>
+                      </span>
+                      {item.price_paise != null && item.price_paise > 0 && (
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                          {formatRupees(item.price_paise)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <DetailField label="Deliverables" value={deal.deliverables} />
+            )}
+            {deal.price_paise != null && deal.price_paise > 0 && (
+              <div>
+                <p style={labelStyle}>Total Price</p>
+                <p style={{ fontSize: '1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
+                  {formatRupees(deal.price_paise)}
+                </p>
+              </div>
+            )}
             <DetailField label="Delivery date" value={deal.timeline_date ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null} />
             <DetailField label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit} used`} />
             <DetailField label="Usage rights" value={deal.usage_rights} />

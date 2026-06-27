@@ -106,7 +106,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                   {/* Account header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.625rem' }}>
                     <span style={platformBadge}>{platform}</span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>@{handle}</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>{handle?.startsWith('@') ? handle : `@${handle}`}</span>
                     {sa?.follower_count != null && sa.follower_count > 0 && (
                       <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
                         {formatFollowers(sa.follower_count)} followers
@@ -166,7 +166,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                       <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#dcfce7', color: '#166534' }}>Verified</span>
                     )}
                   </div>
-                  {sa.handle && <p style={metaText}>@{sa.handle}</p>}
+                  {sa.handle && <p style={metaText}>{sa.handle.startsWith('@') ? sa.handle : `@${sa.handle}`}</p>}
                   {sa.follower_count != null && sa.follower_count > 0 && (
                     <p style={metaText}>{formatFollowers(sa.follower_count)} followers</p>
                   )}

@@ -4,6 +4,13 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+interface DeliverableItem {
+  label: string
+  platform: string
+  handle: string
+  price_paise?: number
+}
+
 interface CreateDealInput {
   creator_id: string
   title: string
@@ -14,12 +21,13 @@ interface CreateDealInput {
   usage_rights?: string
   payment_terms?: string
   message?: string // stored later when send/notification is built
+  items?: DeliverableItem[]
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, usage_rights, payment_terms } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, usage_rights, payment_terms, items } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -49,6 +57,27 @@ export async function createDeal(input: CreateDealInput) {
     .single()
 
   if (error) return { error: error.message }
+
+  // Insert structured deliverable items — atomic with the deal.
+  // If items insert fails, delete the deal so we don't leave a deal with missing items.
+  if (items && items.length > 0) {
+    const rows = items.map((item) => ({
+      deal_id: data.id,
+      label: item.label,
+      platform: item.platform,
+      handle: item.handle,
+      price_paise: item.price_paise ?? null,
+    }))
+    const { error: itemsErr } = await supabase
+      .from('deal_deliverable_items')
+      .insert(rows)
+
+    if (itemsErr) {
+      // Roll back: cancel the deal we just created (no DELETE RLS policy, so use UPDATE)
+      await supabase.from('deals').update({ status: 'cancelled' }).eq('id', data.id)
+      return { error: `Failed to create deliverable items: ${itemsErr.message}` }
+    }
+  }
 
   // TODO: Insert input.message as first message in the deal thread (messages table)
   // when the send/notification piece is built.

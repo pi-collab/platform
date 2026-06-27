@@ -26,7 +26,15 @@ type ViewState =
   | { step: 'done'; action: 'accepted' | 'declined' }
   | { step: 'error'; message: string }
 
-export default function OfferCard({ deal, token }: { deal: Deal; token: string }) {
+interface ItemInfo {
+  id: string
+  label: string
+  platform: string
+  handle: string
+  price_paise: number | null
+}
+
+export default function OfferCard({ deal, token, items = [] }: { deal: Deal; token: string; items?: ItemInfo[] }) {
   const [view, setView] = useState<ViewState>({ step: 'offer' })
   const [pendingAction, setPendingAction] = useState<'accept' | 'decline' | null>(null)
 
@@ -178,9 +186,32 @@ export default function OfferCard({ deal, token }: { deal: Deal; token: string }
 
       {/* Terms */}
       <div style={termsGrid}>
-        {deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />}
+        {items.length > 0 ? (
+          <div>
+            <p style={termLabel}>Deliverables</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {items.map((item) => {
+                const displayHandle = item.handle.startsWith('@') ? item.handle : `@${item.handle}`
+                return (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--color-heading, #111)' }}>
+                      {item.label} <span style={{ color: 'var(--color-muted, #888)', fontSize: '0.8125rem' }}>({item.platform} {displayHandle})</span>
+                    </span>
+                    {item.price_paise != null && item.price_paise > 0 && (
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading, #111)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                        {formatMoney(item.price_paise, deal.currency)}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
+        )}
         {deal.price_paise != null && deal.price_paise > 0 && (
-          <Term label="Price" value={formatMoney(deal.price_paise, deal.currency)} />
+          <Term label="Total Price" value={formatMoney(deal.price_paise, deal.currency)} />
         )}
         {deal.timeline_date && (
           <Term

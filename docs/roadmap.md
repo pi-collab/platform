@@ -214,6 +214,26 @@ Build narrow; dream wide. The next build is always "close/strengthen the loop," 
 
 ---
 
+## Open strategic question: launch wedge (finance-first vs. open to all creators)
+
+The locked strategy was finance/BFSI-first as the defensible wedge (biggest budgets, SEBI angle, underserved, Utkarsh's network). PJ has since signaled this is soft — partly because Utkarsh isn't a pure-finance creator.
+
+DECISION NEEDED (deliberately, with Utkarsh — don't let it drift): keep finance-first as the launch wedge, or go open to all creator types from launch?
+
+TRADE: niche-first = defensible, avoids two-sided cold-start (the research's core argument). Open = bigger TAM but the classic marketplace cold-start risk. Product/tooling is creator-type-agnostic either way; this is purely a GO-TO-MARKET decision. Resolve before pilot outreach, since it determines who Utkarsh recruits first.
+
+---
+
+## On-platform deliverable storage (later — as a FEATURE, not just infra)
+
+v1: deliverables are submitted as LINKS (creator pastes Drive/WeTransfer/etc. URL) — zero storage cost, closes the loop.
+
+Later: host deliverables on Guap'd, framed as a feature with tiers — free storage allowance per creator/deal + paid storage upgrades. Vision extension: creators store their reels/content on Guap'd → content lives on-platform (stronger moat, stickiness, a revenue line).
+
+GATE: build when proven worth the storage+bandwidth cost; the deliverables data model should carry either an external_url (v1) OR a hosted file_path (later) so the upgrade is additive, not a rewrite.
+
+---
+
 ## Build practices to follow (ref: Anthropic Founder's Playbook)
 
 For any AI-generated feature, follow good architecture/scope/security hygiene to avoid technical debt: small scoped pieces, propose-before-build, security designed and TESTED before features sit on top (as done with RLS), keep CLAUDE.md context current, and distinguish real product-market-fit signals from early hype when the pilot runs. Apply these wherever relevant going forward.

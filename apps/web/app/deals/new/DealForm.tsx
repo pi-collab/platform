@@ -166,6 +166,17 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
     const resolvedUsage = usageRights === 'Custom' ? customUsage : usageRights
     const resolvedPayment = paymentTerms === 'Custom' ? customPayment : paymentTerms
 
+    // Build structured items array: one row per unit (qty 2 → 2 rows)
+    const items: { label: string; platform: string; handle: string; price_paise: number }[] = []
+    for (const p of products) {
+      const sel = selections[p.id]
+      if (!sel || sel.qty <= 0) continue
+      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      for (let i = 0; i < sel.qty; i++) {
+        items.push({ label: p.product_type, platform: p.platform, handle: p.handle, price_paise: unitPaise })
+      }
+    }
+
     const res = await createDeal({
       creator_id: creator.id,
       title,
@@ -176,6 +187,7 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
       usage_rights: resolvedUsage || undefined,
       payment_terms: resolvedPayment || undefined,
       message: message || undefined,
+      items,
     })
 
     setLoading(false)
@@ -234,7 +246,7 @@ export default function DealForm({ creator, products }: { creator: Creator; prod
                   {/* Channel header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <span style={platformBadge}>{platform}</span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>@{handle}</span>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{handle?.startsWith('@') ? handle : `@${handle}`}</span>
                     {sa?.follower_count != null && sa.follower_count > 0 && (
                       <span style={{ fontSize: '0.75rem', color: '#888' }}>{formatFollowers(sa.follower_count)}</span>
                     )}
