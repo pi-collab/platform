@@ -5,27 +5,28 @@ import { NextRequest, NextResponse } from 'next/server'
 /**
  * Creator OAuth callback.
  *
- * Separate from /auth/callback (brand path) so creators get role='creator'
- * in the users table. Accepts a `next` query param to redirect back to
- * the offer page after auth.
+ * Two entry points land here:
+ * 1. OFFER FLOW: /offer/[token] triggers sign-in with next=/offer/[token].
+ *    The offer page handles its own auth state — we just redirect back.
+ * 2. RETURNING CREATOR: /login/creator triggers sign-in with next=/creator/deals.
+ *    We verify the user has a claimed creator profile before redirecting.
  *
- * NOTE: The users row may also be created by the accept/decline server
- * action (via service-role) if the user didn't exist yet. This callback
- * only creates the row if the action hasn't already — the action is the
- * authoritative creator-row creator because it also handles the stub claim.
+ * This callback NEVER creates users or brand_member rows — that's the
+ * brand callback's job (/auth/callback). Creator users rows are created
+ * by the offer accept/decline action (which also handles stub claiming).
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const next = searchParams.get('next') || '/'
+  const next = searchParams.get('next') || '/creator/deals'
 
   if (error) {
-    return NextResponse.redirect(`${origin}${next}?auth_error=${encodeURIComponent(error)}`)
+    return NextResponse.redirect(`${origin}/login/creator?error=${encodeURIComponent(error)}`)
   }
 
   if (!code) {
-    return NextResponse.redirect(`${origin}${next}?auth_error=no_code`)
+    return NextResponse.redirect(`${origin}/login/creator?error=no_code`)
   }
 
   const cookieStore = cookies()
@@ -49,10 +50,41 @@ export async function GET(request: NextRequest) {
 
   if (exchangeError) {
     console.error('[auth/creator/callback] exchangeCodeForSession failed:', exchangeError.message)
-    return NextResponse.redirect(`${origin}${next}?auth_error=exchange_failed`)
+    return NextResponse.redirect(`${origin}/login/creator?error=exchange_failed`)
   }
 
-  // Redirect back to the offer page — the accept/decline action will
-  // handle creating the users row and claiming the stub.
+  // Offer flow: redirect straight to the offer page (it handles its own auth)
+  if (next.startsWith('/offer/')) {
+    return NextResponse.redirect(`${origin}${next}`)
+  }
+
+  // Returning creator: verify they have a claimed creator profile
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.redirect(`${origin}/login/creator?error=no_session`)
+  }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!profile) {
+    return NextResponse.redirect(`${origin}/login/creator?error=no_account`)
+  }
+
+  const { data: creator } = await supabase
+    .from('creators')
+    .select('id')
+    .eq('user_id', profile.id)
+    .maybeSingle()
+
+  if (!creator) {
+    return NextResponse.redirect(`${origin}/login/creator?error=no_account`)
+  }
+
+  // Verified creator — send to /creator/deals (or whatever next was)
   return NextResponse.redirect(`${origin}${next}`)
 }

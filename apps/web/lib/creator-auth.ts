@@ -16,7 +16,7 @@ interface CreatorContext {
 export async function verifyCreator(): Promise<CreatorContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/creator')
 
   const { data: profile } = await supabase
     .from('users')
