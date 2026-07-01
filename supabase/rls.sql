@@ -118,10 +118,22 @@ CREATE POLICY users_update_own
 -- Brands are created/modified via service role only.
 
 DROP POLICY IF EXISTS brands_read_own ON brands;
+DROP POLICY IF EXISTS brands_read_via_deal ON brands;
 
 CREATE POLICY brands_read_own
   ON brands FOR SELECT
   USING (id = my_brand_id());
+
+-- Creators can see brands they have deals with (for brand name display)
+CREATE POLICY brands_read_via_deal
+  ON brands FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM deals
+      WHERE deals.brand_id = brands.id
+        AND deals.creator_id = my_creator_id()
+    )
+  );
 
 
 -- ── brand_members ─────────────────────────────────────────────────

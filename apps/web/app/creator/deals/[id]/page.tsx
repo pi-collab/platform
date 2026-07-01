@@ -56,7 +56,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   if (dealError || !deal) notFound()
 
-  const brand = (deal.brands as any)?.name ?? 'A brand'
+  const rawBrand = deal.brands as unknown
+  const brand = (Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name) ?? 'Unknown brand'
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
   const canSubmit = deal.status === 'agreed' || deal.status === 'revision'
   const hasStructuredItems = items && items.length > 0
