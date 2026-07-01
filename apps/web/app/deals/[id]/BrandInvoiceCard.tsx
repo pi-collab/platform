@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { acceptInvoice } from './invoice-actions'
+import { acceptInvoice, markAsPaid } from './invoice-actions'
 import { formatDueStatus } from '@/lib/invoice'
 
 interface Invoice {
@@ -35,6 +35,14 @@ export default function BrandInvoiceCard({ dealId, invoice }: { dealId: string; 
     setError(null)
     setLoading(true)
     const res = await acceptInvoice(dealId)
+    setLoading(false)
+    if (res.status === 'error') setError(res.message)
+  }
+
+  async function handlePay() {
+    setError(null)
+    setLoading(true)
+    const res = await markAsPaid(dealId)
     setLoading(false)
     if (res.status === 'error') setError(res.message)
   }
@@ -97,10 +105,17 @@ export default function BrandInvoiceCard({ dealId, invoice }: { dealId: string; 
         </button>
       )}
 
-      {/* Accepted: confirmation */}
+      {/* Accepted: pay button */}
       {invoice.status === 'accepted' && (
-        <p style={{ fontSize: '0.8125rem', color: '#166534', fontWeight: 600, margin: '0.5rem 0 0' }}>
-          Invoice accepted — payment due
+        <button onClick={handlePay} disabled={loading} style={{ ...payBtn, opacity: loading ? 0.6 : 1, marginTop: '0.5rem' }}>
+          {loading ? 'Processing...' : `Pay ${formatRupees(invoice.brand_pays_paise)}`}
+        </button>
+      )}
+
+      {/* Paid: confirmation */}
+      {invoice.status === 'paid' && (
+        <p style={{ fontSize: '0.8125rem', color: '#065f46', fontWeight: 600, margin: '0.5rem 0 0' }}>
+          Paid — deal complete
         </p>
       )}
     </div>
@@ -136,6 +151,18 @@ const actionBtn: React.CSSProperties = {
   width: '100%',
   padding: '0.625rem',
   background: '#111',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 8,
+  fontSize: '0.875rem',
+  fontWeight: 700,
+  cursor: 'pointer',
+}
+
+const payBtn: React.CSSProperties = {
+  width: '100%',
+  padding: '0.625rem',
+  background: '#16a34a',
   color: '#fff',
   border: 'none',
   borderRadius: 8,

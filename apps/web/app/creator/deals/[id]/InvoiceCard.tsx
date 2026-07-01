@@ -125,6 +125,20 @@ export default function InvoiceCard({ dealId, invoice }: { dealId: string; invoi
           Waiting for brand to accept
         </p>
       )}
+
+      {/* Accepted: waiting for payment */}
+      {invoice.status === 'accepted' && (
+        <p style={{ fontSize: '0.8125rem', color: '#166534', fontWeight: 600, margin: '0.5rem 0 0' }}>
+          Invoice accepted — awaiting payment
+        </p>
+      )}
+
+      {/* Paid: done */}
+      {invoice.status === 'paid' && (
+        <p style={{ fontSize: '0.8125rem', color: '#065f46', fontWeight: 600, margin: '0.5rem 0 0' }}>
+          Paid — {formatRupees(invoice.creator_receives_paise)} received
+        </p>
+      )}
     </div>
   )
 }
