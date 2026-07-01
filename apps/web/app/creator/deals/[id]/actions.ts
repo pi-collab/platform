@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { calculateFee } from '@/lib/fee'
+import { parsePaymentTermsDays } from '@/lib/invoice'
 
 export type DeliverableResult =
   | { status: 'success' }
@@ -291,5 +293,101 @@ export async function submitDeliverable(dealId: string, formData: FormData): Pro
   }
 
   revalidatePath(`/creator/deals/${dealId}`)
+  return { status: 'success' }
+}
+
+/**
+ * Generate an invoice for an approved deal (lazy-create by creator).
+ * Creates the invoice in 'draft' status with snapshotted amounts.
+ */
+export async function generateInvoice(dealId: string): Promise<DeliverableResult> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { status: 'error', message: 'Not authenticated.' }
+
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, status, price_paise, revisions_used, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, payment_terms')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { status: 'error', message: 'Deal not found.' }
+  if (deal.status !== 'approved') {
+    return { status: 'error', message: `Cannot generate invoice for a deal that is "${deal.status}".` }
+  }
+
+  const { data: existing } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('deal_id', dealId)
+    .maybeSingle()
+
+  if (existing) {
+    return { status: 'error', message: 'Invoice already exists for this deal.' }
+  }
+
+  const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+  const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+  const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+  const dueDays = parsePaymentTermsDays(deal.payment_terms)
+
+  const { error: insertErr } = await supabase
+    .from('invoices')
+    .insert({
+      deal_id: dealId,
+      status: 'draft',
+      base_paise: deal.price_paise,
+      overage_paise: overage,
+      fee_paise: fee.fee_paise,
+      fee_percent: fee.fee_percent,
+      fee_mode: fee.fee_mode,
+      brand_pays_paise: fee.brand_pays_paise + overage,
+      creator_receives_paise: fee.creator_receives_paise + overage,
+      payment_terms: deal.payment_terms,
+      payment_due_days: dueDays,
+    })
+
+  if (insertErr) {
+    return { status: 'error', message: `Failed to create invoice: ${insertErr.message}` }
+  }
+
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { status: 'success' }
+}
+
+/**
+ * Issue an invoice to the brand (draft → issued).
+ */
+export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { status: 'error', message: 'Not authenticated.' }
+
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('id, status')
+    .eq('deal_id', dealId)
+    .maybeSingle()
+
+  if (!invoice) return { status: 'error', message: 'Invoice not found.' }
+  if (invoice.status !== 'draft') {
+    return { status: 'error', message: `Cannot issue an invoice that is "${invoice.status}".` }
+  }
+
+  const { error: updateErr } = await supabase
+    .from('invoices')
+    .update({
+      status: 'issued',
+      issued_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', invoice.id)
+
+  if (updateErr) {
+    return { status: 'error', message: `Failed to issue invoice: ${updateErr.message}` }
+  }
+
+  revalidatePath(`/creator/deals/${dealId}`)
+  revalidatePath(`/deals/${dealId}`)
   return { status: 'success' }
 }

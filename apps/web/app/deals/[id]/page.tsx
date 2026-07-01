@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import DealThread from './DealThread'
 import ItemReview from './ItemReview'
+import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
 
 function formatRupees(paise: number): string {
@@ -39,7 +40,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   // Fetch deal + events in parallel. RLS deals_read restricts to brand's own deals.
   // If another brand guesses the URL, .maybeSingle() returns null → notFound().
-  const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
@@ -60,6 +61,11 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, approved_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
+    supabase
+      .from('invoices')
+      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
+      .eq('deal_id', params.id)
+      .maybeSingle(),
   ])
 
   if (dealError || !deal) notFound()
@@ -193,6 +199,13 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Invoice — show when invoice exists (issued, accepted, paid) */}
+      {invoice && (
+        <div style={{ marginBottom: '2rem' }}>
+          <BrandInvoiceCard dealId={deal.id} invoice={invoice} />
         </div>
       )}
 

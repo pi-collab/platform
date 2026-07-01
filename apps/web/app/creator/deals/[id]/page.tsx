@@ -5,6 +5,7 @@ import Link from 'next/link'
 import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
+import InvoiceCard from './InvoiceCard'
 import { calculateFee } from '@/lib/fee'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -30,7 +31,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   await verifyCreator()
   const supabase = createClient()
 
-  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
@@ -46,6 +47,11 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
+    supabase
+      .from('invoices')
+      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
+      .eq('deal_id', params.id)
+      .maybeSingle(),
   ])
 
   if (dealError || !deal) notFound()
@@ -206,6 +212,13 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
           )}
 
           {canSubmit && <SubmitDeliverable dealId={deal.id} />}
+        </div>
+      )}
+
+      {/* Invoice — show when deal is approved (or later) */}
+      {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
+        <div style={{ marginTop: '1.5rem' }}>
+          <InvoiceCard dealId={deal.id} invoice={invoice} />
         </div>
       )}
     </main>
