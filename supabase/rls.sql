@@ -214,7 +214,14 @@ CREATE POLICY messages_read
 
 CREATE POLICY messages_insert
   ON messages FOR INSERT
-  WITH CHECK (can_access_deal(deal_id));
+  WITH CHECK (
+    can_access_deal(deal_id)
+    AND EXISTS (
+      SELECT 1 FROM deals
+      WHERE deals.id = deal_id
+        AND deals.status NOT IN ('complete', 'declined', 'cancelled')
+    )
+  );
 
 
 -- ── deliverables ──────────────────────────────────────────────────

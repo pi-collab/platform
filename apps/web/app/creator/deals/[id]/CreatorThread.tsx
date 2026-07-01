@@ -12,7 +12,7 @@ interface Message {
 
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 
-export default function DealThread({
+export default function CreatorThread({
   dealId,
   dealStatus,
   initialMessages,
@@ -29,16 +29,13 @@ export default function DealThread({
   const [open, setOpen] = useState(false)
   const [emojiOpen, setEmojiOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const emojiRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const emojiRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (open) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
+    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, open])
 
-  // Close on Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -52,7 +49,6 @@ export default function DealThread({
     }
   }, [open, emojiOpen])
 
-  // Close emoji picker on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
@@ -74,10 +70,9 @@ export default function DealThread({
     setSending(true)
 
     const supabase = createClient()
-
     const { data, error: insertError } = await supabase
       .from('messages')
-      .insert({ deal_id: dealId, body: trimmed, sender_party: 'brand' })
+      .insert({ deal_id: dealId, body: trimmed, sender_party: 'creator' })
       .select('id, sender_party, body, created_at')
       .single()
 
@@ -92,24 +87,18 @@ export default function DealThread({
     setBody('')
   }
 
-  const hasMessages = messages.length > 0
+  const unread = messages.filter((m) => m.sender_party === 'brand').length
 
   return (
     <>
-      {/* CTA Button */}
-      <button
-        onClick={() => setOpen(true)}
-        style={ctaButton}
-      >
+      <button onClick={() => setOpen(true)} style={ctaButton}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
-        {hasMessages ? `Messages (${messages.length})` : 'Start conversation'}
+        {messages.length > 0 ? `Messages (${messages.length})` : 'Message brand'}
       </button>
 
-      {/* No full-screen backdrop — panel sits alongside content like LinkedIn/Facebook chat */}
-
-      {/* Slide-out panel */}
+      {/* Chat panel */}
       <div style={{
         ...panel,
         transform: open ? 'scale(1)' : 'scale(0.95)',
@@ -117,11 +106,8 @@ export default function DealThread({
         visibility: open ? 'visible' : 'hidden',
         transformOrigin: 'bottom right',
       }}>
-        {/* Panel header */}
         <div style={panelHeader}>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
-            Messages
-          </h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111', margin: 0 }}>Messages</h2>
           <button onClick={() => setOpen(false)} style={closeBtn} aria-label="Close chat">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -130,33 +116,21 @@ export default function DealThread({
           </button>
         </div>
 
-        {/* Messages area */}
         <div style={messagesArea}>
           {messages.length === 0 ? (
-            <p style={emptyState}>No messages yet — start the conversation.</p>
+            <p style={emptyState}>No messages yet — send a message to the brand.</p>
           ) : (
             <div style={messageList}>
               {messages.map((msg) => {
-                const isBrand = msg.sender_party === 'brand'
+                const isCreator = msg.sender_party === 'creator'
                 return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex',
-                      justifyContent: isBrand ? 'flex-end' : 'flex-start',
-                    }}
-                  >
-                    <div style={isBrand ? bubbleBrand : bubbleCreator}>
-                      <p style={bubbleLabel}>
-                        {isBrand ? 'You' : 'Creator'}
-                      </p>
+                  <div key={msg.id} style={{ display: 'flex', justifyContent: isCreator ? 'flex-end' : 'flex-start' }}>
+                    <div style={isCreator ? bubbleMine : bubbleTheirs}>
+                      <p style={bubbleLabel}>{isCreator ? 'You' : 'Brand'}</p>
                       <p style={bubbleBody}>{msg.body}</p>
                       <p style={bubbleTime}>
                         {new Date(msg.created_at).toLocaleString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
+                          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                         })}
                       </p>
                     </div>
@@ -168,7 +142,6 @@ export default function DealThread({
           )}
         </div>
 
-        {/* Compose */}
         <div style={composeArea}>
           {isTerminal ? (
             <p style={closedNotice}>This deal is {dealStatus} — messaging is closed.</p>
@@ -235,9 +208,7 @@ export default function DealThread({
                 </button>
               </form>
               {error && (
-                <p style={{ fontSize: '0.75rem', color: '#dc2626', margin: '0.375rem 0 0' }}>
-                  {error}
-                </p>
+                <p style={{ fontSize: '0.75rem', color: '#dc2626', margin: '0.375rem 0 0' }}>{error}</p>
               )}
             </>
           )}
@@ -247,20 +218,17 @@ export default function DealThread({
   )
 }
 
-/* ── Styles ─────────────────────────────────────────────────────── */
-
 const ctaButton: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '0.5rem',
   padding: '0.5rem 1rem',
-  background: 'var(--brand-primary)',
+  background: '#111',
   color: '#fff',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 8,
   fontSize: '0.8125rem',
   fontWeight: 700,
-  fontFamily: 'var(--font-body)',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
 }
@@ -269,18 +237,18 @@ const panel: React.CSSProperties = {
   position: 'fixed',
   bottom: 16,
   right: 16,
-  width: 380,
+  width: 360,
   maxWidth: 'calc(100vw - 32px)',
-  height: 520,
+  height: 480,
   maxHeight: 'calc(100vh - 32px)',
-  background: 'var(--section-bg, #fff)',
-  border: '1px solid var(--color-border)',
+  background: '#fff',
+  border: '1px solid #e5e5e5',
   borderRadius: 12,
   zIndex: 999,
   display: 'flex',
   flexDirection: 'column',
   transition: 'transform 0.2s ease, opacity 0.2s ease, visibility 0.2s ease',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
   overflow: 'hidden',
 }
 
@@ -289,7 +257,7 @@ const panelHeader: React.CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '1rem 1.25rem',
-  borderBottom: '1px solid var(--color-border)',
+  borderBottom: '1px solid #e5e5e5',
   flexShrink: 0,
 }
 
@@ -297,12 +265,12 @@ const closeBtn: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--color-muted)',
+  color: '#888',
   padding: '0.25rem',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 6,
 }
 
 const messagesArea: React.CSSProperties = {
@@ -319,7 +287,7 @@ const messageList: React.CSSProperties = {
 
 const emptyState: React.CSSProperties = {
   fontSize: '0.8125rem',
-  color: 'var(--color-muted)',
+  color: '#888',
   textAlign: 'center',
   padding: '3rem 1rem',
   margin: 0,
@@ -328,23 +296,23 @@ const emptyState: React.CSSProperties = {
 const bubbleBase: React.CSSProperties = {
   maxWidth: '80%',
   padding: '0.5rem 0.75rem',
-  borderRadius: 'var(--radius-md)',
+  borderRadius: 12,
   fontSize: '0.8125rem',
   lineHeight: 1.5,
 }
 
-const bubbleBrand: React.CSSProperties = {
+const bubbleMine: React.CSSProperties = {
   ...bubbleBase,
-  background: 'var(--brand-primary)',
+  background: '#111',
   color: '#fff',
   borderBottomRightRadius: 4,
 }
 
-const bubbleCreator: React.CSSProperties = {
+const bubbleTheirs: React.CSSProperties = {
   ...bubbleBase,
-  background: 'var(--section-bg-alt, #f5f5f5)',
-  color: 'var(--color-body)',
-  border: '1px solid var(--color-border)',
+  background: '#f5f5f5',
+  color: '#111',
+  border: '1px solid #e5e5e5',
   borderBottomLeftRadius: 4,
 }
 
@@ -371,7 +339,7 @@ const bubbleTime: React.CSSProperties = {
 
 const composeArea: React.CSSProperties = {
   padding: '0.75rem 1.25rem',
-  borderTop: '1px solid var(--color-border)',
+  borderTop: '1px solid #e5e5e5',
   flexShrink: 0,
 }
 
@@ -383,31 +351,38 @@ const composeForm: React.CSSProperties = {
 const composeInput: React.CSSProperties = {
   flex: 1,
   padding: '0.5rem 0.75rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-sm)',
+  border: '1px solid #e5e5e5',
+  borderRadius: 8,
   fontSize: '0.875rem',
   outline: 'none',
-  background: 'rgba(255, 255, 255, 0.2)',
+  background: '#fff',
   minHeight: 40,
 }
 
 const sendBtn: React.CSSProperties = {
   padding: '0.5rem 1rem',
-  background: 'var(--brand-primary)',
+  background: '#111',
   color: '#fff',
   border: 'none',
-  borderRadius: 'var(--radius-sm)',
+  borderRadius: 8,
   fontSize: '0.8125rem',
   fontWeight: 700,
-  fontFamily: 'var(--font-body)',
   whiteSpace: 'nowrap',
+}
+
+const closedNotice: React.CSSProperties = {
+  fontSize: '0.8125rem',
+  color: '#888',
+  textAlign: 'center',
+  margin: 0,
+  padding: '0.25rem 0',
 }
 
 const emojiToggle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: 'var(--color-muted)',
+  color: '#888',
   padding: '0.25rem',
   display: 'flex',
   alignItems: 'center',
@@ -417,7 +392,7 @@ const emojiToggle: React.CSSProperties = {
 
 const emojiPicker: React.CSSProperties = {
   padding: '0.5rem 0.75rem 0.25rem',
-  borderBottom: '1px solid var(--color-border)',
+  borderBottom: '1px solid #e5e5e5',
   maxHeight: 200,
   overflowY: 'auto',
 }
@@ -427,7 +402,7 @@ const emojiGroupLabel: React.CSSProperties = {
   fontWeight: 700,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
-  color: 'var(--color-muted)',
+  color: '#888',
   margin: '0.25rem 0',
 }
 
@@ -449,14 +424,6 @@ const emojiBtn: React.CSSProperties = {
   justifyContent: 'center',
   borderRadius: 6,
   padding: 0,
-}
-
-const closedNotice: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: 'var(--color-muted)',
-  textAlign: 'center',
-  margin: 0,
-  padding: '0.25rem 0',
 }
 
 const EMOJI_GROUPS = [

@@ -120,7 +120,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               </div>
             )
           })()}
-          <DealThread dealId={deal.id} initialMessages={(messages ?? []) as { id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
+          <DealThread dealId={deal.id} dealStatus={deal.status} initialMessages={(messages ?? []) as { id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
         </div>
       </div>
 

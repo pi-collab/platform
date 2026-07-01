@@ -6,6 +6,7 @@ import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
 import InvoiceCard from './InvoiceCard'
+import CreatorThread from './CreatorThread'
 import { calculateFee } from '@/lib/fee'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -31,7 +32,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   await verifyCreator()
   const supabase = createClient()
 
-  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
@@ -52,6 +53,11 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
       .eq('deal_id', params.id)
       .maybeSingle(),
+    supabase
+      .from('messages')
+      .select('id, sender_party, body, created_at')
+      .eq('deal_id', params.id)
+      .order('created_at', { ascending: true }),
   ])
 
   if (dealError || !deal) notFound()
@@ -226,6 +232,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
           <InvoiceCard dealId={deal.id} invoice={invoice} />
         </div>
       )}
+
+      {/* Chat thread */}
+      <CreatorThread dealId={deal.id} dealStatus={deal.status} initialMessages={messages ?? []} />
     </main>
   )
 }
