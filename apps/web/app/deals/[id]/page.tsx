@@ -70,8 +70,10 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   if (dealError || !deal) notFound()
 
-  const creatorArr = deal.creators as unknown as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null }[] | null
-  const creator = creatorArr?.[0] ?? null
+  const rawCreator = deal.creators as unknown
+  const creator = Array.isArray(rawCreator)
+    ? (rawCreator[0] as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null } | undefined) ?? null
+    : (rawCreator as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null } | null)
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
   const hasItems = items && items.length > 0
   const itemsSubmitted = hasItems ? items.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length : 0

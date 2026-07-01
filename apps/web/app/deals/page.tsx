@@ -7,10 +7,15 @@ export default async function DealsListPage() {
   await verifyApprovedBrand()
 
   const supabase = createClient()
-  const { data: deals, error } = await supabase
-    .from('deals')
-    .select('id, title, deliverables, price_paise, status, created_at, creators(id, full_name, profile_photo_url)')
-    .order('created_at', { ascending: false })
+  const [{ data: deals, error }, { data: invoices }] = await Promise.all([
+    supabase
+      .from('deals')
+      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, created_at, creators(id, full_name, profile_photo_url)')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('invoices')
+      .select('deal_id, status, due_date'),
+  ])
 
   if (error) {
     return (
@@ -20,9 +25,19 @@ export default async function DealsListPage() {
     )
   }
 
+  // Index invoices by deal_id for quick lookup
+  const invoiceMap = new Map<string, { status: string; due_date: string | null }>()
+  for (const inv of invoices ?? []) {
+    invoiceMap.set(inv.deal_id, { status: inv.status, due_date: inv.due_date })
+  }
+
   const all = (deals ?? []).map((d) => {
-    const creatorArr = d.creators as unknown as { id: string; full_name: string; profile_photo_url: string | null }[] | null
-    return { ...d, creator: creatorArr?.[0] ?? null }
+    // Supabase returns the joined creator as an object (not array) for a non-null FK,
+    // but the type comes back as unknown — handle both shapes defensively
+    const raw = d.creators as unknown
+    const creator = Array.isArray(raw) ? raw[0] ?? null : (raw as { id: string; full_name: string; profile_photo_url: string | null } | null)
+    const inv = invoiceMap.get(d.id) ?? null
+    return { ...d, creator, invoiceStatus: inv?.status ?? null, invoiceDueDate: inv?.due_date ?? null }
   })
 
   return (

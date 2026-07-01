@@ -2,27 +2,81 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { calculateFee } from '@/lib/fee'
 
 interface Deal {
   id: string
   title: string | null
   deliverables: string | null
   price_paise: number | null
+  fee_percent: number | null
+  fee_mode: string | null
+  price_per_extra_revision_paise: number | null
+  revisions_used: number | null
+  revision_limit: number | null
   status: string
   created_at: string
   creator: { id: string; full_name: string; profile_photo_url: string | null } | null
+  invoiceStatus: string | null
+  invoiceDueDate: string | null
+}
+
+function brandTotal(d: Deal): number | null {
+  if (d.price_paise == null || d.price_paise <= 0) return null
+  const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+  const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
+  const overage = extra * (d.price_per_extra_revision_paise ?? 0)
+  return fee.brand_pays_paise + overage
 }
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  negotiating: { bg: '#fef3c7', color: '#92400e' },
-  agreed:      { bg: '#dbeafe', color: '#1e40af' },
-  delivered:   { bg: '#e0e7ff', color: '#3730a3' },
-  revision:    { bg: '#ffedd5', color: '#9a3412' },
-  approved:    { bg: '#dcfce7', color: '#166534' },
-  paid:        { bg: '#d1fae5', color: '#065f46' },
-  complete:    { bg: '#f3f4f6', color: '#374151' },
-  declined:    { bg: '#fee2e2', color: '#991b1b' },
-  cancelled:   { bg: '#f3f4f6', color: '#6b7280' },
+  negotiating:       { bg: '#fef3c7', color: '#92400e' },
+  agreed:            { bg: '#dbeafe', color: '#1e40af' },
+  delivered:         { bg: '#e0e7ff', color: '#3730a3' },
+  revision:          { bg: '#ffedd5', color: '#9a3412' },
+  approved:          { bg: '#dcfce7', color: '#166534' },
+  'invoice to accept': { bg: '#fef9c3', color: '#854d0e' },
+  'payment due':     { bg: '#fef9c3', color: '#854d0e' },
+  overdue:           { bg: '#fee2e2', color: '#991b1b' },
+  paid:              { bg: '#d1fae5', color: '#065f46' },
+  complete:          { bg: '#f3f4f6', color: '#374151' },
+  declined:          { bg: '#fee2e2', color: '#991b1b' },
+  cancelled:         { bg: '#f3f4f6', color: '#6b7280' },
+}
+
+/**
+ * Derive an actionable display status from deal status + invoice status.
+ * Does NOT change deal enum — purely a UI label.
+ */
+function deriveDisplayStatus(d: Deal): string {
+  if (d.status === 'approved') {
+    if (!d.invoiceStatus || d.invoiceStatus === 'draft') return 'approved'
+    if (d.invoiceStatus === 'issued') return 'invoice to accept'
+    if (d.invoiceStatus === 'accepted') {
+      if (d.invoiceDueDate) {
+        const due = new Date(d.invoiceDueDate + 'T00:00:00')
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        if (diffDays < 0) return 'overdue'
+        return `payment due`
+      }
+      return 'payment due'
+    }
+    if (d.invoiceStatus === 'paid') return 'paid'
+  }
+  return d.status
+}
+
+function dueLabel(d: Deal): string | null {
+  if (d.status !== 'approved' || d.invoiceStatus !== 'accepted' || !d.invoiceDueDate) return null
+  const due = new Date(d.invoiceDueDate + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
+  if (diffDays === 0) return 'today'
+  return `${diffDays}d`
 }
 
 const STATUSES = ['all', 'negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled'] as const
@@ -143,7 +197,9 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
 }
 
 function DealRow({ deal: d }: { deal: Deal }) {
-  const sc = STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const displayStatus = deriveDisplayStatus(d)
+  const sc = STATUS_COLORS[displayStatus] ?? STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const due = dueLabel(d)
 
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -177,14 +233,22 @@ function DealRow({ deal: d }: { deal: Deal }) {
 
       {/* Price */}
       <td style={{ padding: '0.625rem 0.75rem', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-heading)', whiteSpace: 'nowrap' }}>
-        {d.price_paise != null && d.price_paise > 0 ? formatRupees(d.price_paise) : '\u2014'}
+        {(() => {
+          const total = brandTotal(d)
+          return total != null ? formatRupees(total) : '\u2014'
+        })()}
       </td>
 
       {/* Status */}
       <td style={{ padding: '0.625rem 0.75rem' }}>
         <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
-          {d.status}
+          {displayStatus}
         </span>
+        {due && (
+          <span style={{ fontSize: '0.625rem', fontWeight: 600, color: displayStatus === 'overdue' ? '#991b1b' : '#854d0e', marginLeft: '0.375rem' }}>
+            {due}
+          </span>
+        )}
       </td>
 
       {/* Created */}
@@ -206,7 +270,8 @@ function DealRow({ deal: d }: { deal: Deal }) {
 }
 
 function MobileCard({ deal: d }: { deal: Deal }) {
-  const sc = STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const displayStatus = deriveDisplayStatus(d)
+  const sc = STATUS_COLORS[displayStatus] ?? STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
 
   return (
     <Link
@@ -240,7 +305,7 @@ function MobileCard({ deal: d }: { deal: Deal }) {
           </div>
         </div>
         <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', flexShrink: 0 }}>
-          {d.status}
+          {displayStatus}
         </span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -248,11 +313,14 @@ function MobileCard({ deal: d }: { deal: Deal }) {
           {d.deliverables || '\u2014'}
         </p>
         <div style={{ textAlign: 'right' }}>
-          {d.price_paise != null && d.price_paise > 0 && (
-            <p style={{ fontWeight: 700, fontSize: '0.8125rem', fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
-              {formatRupees(d.price_paise)}
-            </p>
-          )}
+          {(() => {
+            const total = brandTotal(d)
+            return total != null ? (
+              <p style={{ fontWeight: 700, fontSize: '0.8125rem', fontFamily: 'monospace', color: 'var(--color-heading)', margin: 0 }}>
+                {formatRupees(total)}
+              </p>
+            ) : null
+          })()}
           <p style={{ fontSize: '0.6875rem', color: 'var(--color-muted)', margin: 0 }}>
             {new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
           </p>
