@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
+import { deriveDisplayStatus, dueLabel } from '@/lib/deal-status'
 
 interface Deal {
   id: string
@@ -29,55 +30,6 @@ function brandTotal(d: Deal): number | null {
   return fee.brand_pays_paise + overage
 }
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  negotiating:       { bg: '#fef3c7', color: '#92400e' },
-  agreed:            { bg: '#dbeafe', color: '#1e40af' },
-  delivered:         { bg: '#e0e7ff', color: '#3730a3' },
-  revision:          { bg: '#ffedd5', color: '#9a3412' },
-  approved:          { bg: '#dcfce7', color: '#166534' },
-  'invoice to accept': { bg: '#fef9c3', color: '#854d0e' },
-  'payment due':     { bg: '#fef9c3', color: '#854d0e' },
-  overdue:           { bg: '#fee2e2', color: '#991b1b' },
-  paid:              { bg: '#d1fae5', color: '#065f46' },
-  complete:          { bg: '#f3f4f6', color: '#374151' },
-  declined:          { bg: '#fee2e2', color: '#991b1b' },
-  cancelled:         { bg: '#f3f4f6', color: '#6b7280' },
-}
-
-/**
- * Derive an actionable display status from deal status + invoice status.
- * Does NOT change deal enum — purely a UI label.
- */
-function deriveDisplayStatus(d: Deal): string {
-  if (d.status === 'approved') {
-    if (!d.invoiceStatus || d.invoiceStatus === 'draft') return 'approved'
-    if (d.invoiceStatus === 'issued') return 'invoice to accept'
-    if (d.invoiceStatus === 'accepted') {
-      if (d.invoiceDueDate) {
-        const due = new Date(d.invoiceDueDate + 'T00:00:00')
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        if (diffDays < 0) return 'overdue'
-        return `payment due`
-      }
-      return 'payment due'
-    }
-    if (d.invoiceStatus === 'paid') return 'paid'
-  }
-  return d.status
-}
-
-function dueLabel(d: Deal): string | null {
-  if (d.status !== 'approved' || d.invoiceStatus !== 'accepted' || !d.invoiceDueDate) return null
-  const due = new Date(d.invoiceDueDate + 'T00:00:00')
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`
-  if (diffDays === 0) return 'today'
-  return `${diffDays}d`
-}
 
 const STATUSES = ['all', 'negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled'] as const
 
@@ -197,9 +149,9 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
 }
 
 function DealRow({ deal: d }: { deal: Deal }) {
-  const displayStatus = deriveDisplayStatus(d)
-  const sc = STATUS_COLORS[displayStatus] ?? STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
-  const due = dueLabel(d)
+  const derived = deriveDisplayStatus(d.status, d.invoiceStatus, d.invoiceDueDate)
+  const sc = derived.color
+  const due = dueLabel(d.status, d.invoiceStatus, d.invoiceDueDate)
 
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -242,10 +194,10 @@ function DealRow({ deal: d }: { deal: Deal }) {
       {/* Status */}
       <td style={{ padding: '0.625rem 0.75rem' }}>
         <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
-          {displayStatus}
+          {derived.label}
         </span>
         {due && (
-          <span style={{ fontSize: '0.625rem', fontWeight: 600, color: displayStatus === 'overdue' ? '#991b1b' : '#854d0e', marginLeft: '0.375rem' }}>
+          <span style={{ fontSize: '0.625rem', fontWeight: 600, color: derived.label === 'overdue' ? '#991b1b' : '#854d0e', marginLeft: '0.375rem' }}>
             {due}
           </span>
         )}
@@ -270,8 +222,8 @@ function DealRow({ deal: d }: { deal: Deal }) {
 }
 
 function MobileCard({ deal: d }: { deal: Deal }) {
-  const displayStatus = deriveDisplayStatus(d)
-  const sc = STATUS_COLORS[displayStatus] ?? STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const derived = deriveDisplayStatus(d.status, d.invoiceStatus, d.invoiceDueDate)
+  const sc = derived.color
 
   return (
     <Link
@@ -305,7 +257,7 @@ function MobileCard({ deal: d }: { deal: Deal }) {
           </div>
         </div>
         <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', flexShrink: 0 }}>
-          {displayStatus}
+          {derived.label}
         </span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

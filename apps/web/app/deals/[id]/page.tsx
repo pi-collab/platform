@@ -6,6 +6,7 @@ import DealThread from './DealThread'
 import ItemReview from './ItemReview'
 import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
+import { deriveDisplayStatus } from '@/lib/deal-status'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -21,17 +22,6 @@ const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   approved:  { bg: '#dcfce7', color: '#166534' },
 }
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  negotiating: { bg: '#dbeafe', color: '#1e40af' },
-  agreed: { bg: '#dcfce7', color: '#166534' },
-  delivered: { bg: '#fef9c3', color: '#854d0e' },
-  revision: { bg: '#ffedd5', color: '#9a3412' },
-  approved: { bg: '#dcfce7', color: '#166534' },
-  paid: { bg: '#d1fae5', color: '#065f46' },
-  complete: { bg: '#f3f4f6', color: '#374151' },
-  declined: { bg: '#fee2e2', color: '#991b1b' },
-  cancelled: { bg: '#f3f4f6', color: '#6b7280' },
-}
 
 export default async function DealDetailPage({ params }: { params: { id: string } }) {
   await verifyApprovedBrand()
@@ -74,7 +64,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const creator = Array.isArray(rawCreator)
     ? (rawCreator[0] as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null } | undefined) ?? null
     : (rawCreator as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null } | null)
-  const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
+  const derived = deriveDisplayStatus(deal.status, invoice?.status ?? null, invoice?.due_date ?? null)
+  const sc = derived.color
   const hasItems = items && items.length > 0
   const itemsSubmitted = hasItems ? items.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length : 0
   const canReview = hasItems && (deal.status === 'delivered' || deal.status === 'revision')
@@ -94,7 +85,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               {deal.title || 'Untitled deal'}
             </h1>
             <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
-              {deal.status}
+              {derived.label}
             </span>
           </div>
           {creator && (
