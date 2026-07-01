@@ -70,20 +70,19 @@ export default function InvoiceCard({ dealId, invoice }: { dealId: string; invoi
         <span style={{ ...statusBadge, ...STATUS_STYLES[invoice.status] }}>{invoice.status}</span>
       </div>
 
-      {/* Line items */}
+      {/* Line items — fee only shown to creator when deducted (it affects their payout) */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' }}>
         <Row label="Deliverables" value={formatRupees(invoice.base_paise)} />
         {invoice.overage_paise > 0 && (
           <Row label="Revision overage" value={formatRupees(invoice.overage_paise)} />
         )}
-        {invoice.fee_paise > 0 && (
+        {invoice.fee_paise > 0 && invoice.fee_mode === 'deducted' && (
           <Row
-            label={`Platform fee (${invoice.fee_percent}%, ${invoice.fee_mode === 'on_top' ? 'on top' : 'deducted'})`}
-            value={`${invoice.fee_mode === 'on_top' ? '+' : '\u2212'}${formatRupees(invoice.fee_paise)}`}
+            label={`Platform fee (${invoice.fee_percent}%)`}
+            value={`\u2212${formatRupees(invoice.fee_paise)}`}
           />
         )}
         <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: '0.375rem', marginTop: '0.15rem' }}>
-          <Row label="Brand pays" value={formatRupees(invoice.brand_pays_paise)} bold />
           <Row label="You receive" value={formatRupees(invoice.creator_receives_paise)} bold />
         </div>
       </div>
