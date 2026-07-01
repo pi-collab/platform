@@ -62,7 +62,8 @@ export default async function CreatorDealsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {all.map((d) => {
-            const brand = (d.brands as any)?.name ?? 'A brand'
+            const rawBrand = d.brands as unknown
+            const brand = Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name ?? null
             const sc = STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
             return (
               <Link
@@ -70,15 +71,19 @@ export default async function CreatorDealsPage() {
                 href={`/creator/deals/${d.id}`}
                 style={card}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.375rem' }}>
-                  <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#111', margin: 0 }}>
-                    {d.title || 'Untitled deal'}
-                  </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#111', margin: 0 }}>
+                      {d.title || 'Untitled deal'}
+                    </p>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#555', margin: '0.15rem 0 0' }}>
+                      {brand || 'Unknown brand'}
+                    </p>
+                  </div>
                   <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0 }}>
                     {d.status}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 0.375rem' }}>from {brand}</p>
                 {d.deliverables && (
                   <p style={{ fontSize: '0.75rem', color: '#555', margin: '0 0 0.375rem' }}>{d.deliverables}</p>
                 )}
