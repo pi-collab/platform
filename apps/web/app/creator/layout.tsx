@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import SignOutButton from '@/components/SignOutButton'
 
 export default async function CreatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -33,7 +34,10 @@ export default async function CreatorLayout({ children }: { children: React.Reac
           <Link href="/creator/deals" style={logoLink}>
             Guapd <span style={creatorBadge}>Creator</span>
           </Link>
-          <span style={userLabel}>{creatorName}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={userLabel}>{creatorName}</span>
+            <SignOutButton redirectTo="/login/creator" />
+          </div>
         </div>
       </header>
       {children}
