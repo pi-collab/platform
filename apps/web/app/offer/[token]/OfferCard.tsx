@@ -85,9 +85,17 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
           </h2>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 0' }}>
             {accepted
-              ? 'The deal terms are locked. Download the app to manage deliverables and chat.'
+              ? 'The deal terms are locked. Sign in to manage deliverables and chat.'
               : 'The brand has been notified.'}
           </p>
+          {accepted && (
+            <a
+              href="/login/creator"
+              style={{ display: 'inline-block', marginTop: '1rem', padding: '0.5rem 1.25rem', background: '#111', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}
+            >
+              Go to my deals
+            </a>
+          )}
         </div>
       </div>
     )

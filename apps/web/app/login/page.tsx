@@ -15,8 +15,8 @@ export default async function LoginPage({
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Already logged in — send straight to dashboard
-  if (user) redirect('/dashboard')
+  // Already logged in — send to deals
+  if (user) redirect('/deals')
 
   return (
     <main style={styles.main}>

@@ -58,7 +58,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
   const brandName = (deal.brands as any)?.name ?? 'A brand'
   const creatorName = (deal.creators as any)?.full_name ?? 'you'
 
-  // If already acted on, show a simple status page
+  // If already acted on, show a simple status page with a link to the app
   if (deal.status !== 'negotiating') {
     return (
       <main style={wrapper}>
@@ -66,8 +66,15 @@ export default async function OfferPage({ params }: { params: { token: string } 
           <h1 style={errorHeading}>Offer already {deal.status}</h1>
           <p style={errorText}>
             This offer from {brandName} has already been {deal.status}.
-            {deal.status === 'agreed' && ' Download the app to manage your deal.'}
           </p>
+          {(deal.status === 'agreed' || deal.status === 'delivered' || deal.status === 'revision' || deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
+            <a
+              href="/creator/deals"
+              style={{ display: 'inline-block', marginTop: '1rem', padding: '0.5rem 1.25rem', background: '#111', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}
+            >
+              Go to my deals
+            </a>
+          )}
         </div>
       </main>
     )

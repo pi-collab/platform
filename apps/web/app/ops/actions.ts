@@ -101,7 +101,7 @@ export async function vetCreator(creatorId: string) {
   const admin = createAdminClient()
   const { error } = await admin
     .from('creators')
-    .update({ is_vetted: true })
+    .update({ is_vetted: true, is_rejected: false })
     .eq('id', creatorId)
 
   if (error) return { error: error.message }
@@ -119,10 +119,65 @@ export async function rejectCreator(creatorId: string) {
   const admin = createAdminClient()
   const { error } = await admin
     .from('creators')
-    .update({ is_vetted: false })
+    .update({ is_vetted: false, is_rejected: true })
     .eq('id', creatorId)
 
   if (error) return { error: error.message }
+
+  revalidatePath('/ops/creators')
+  return { success: true }
+}
+
+// ── Delete creator (hard delete — removes creator, products, and linked auth/users rows) ──
+
+export async function deleteCreator(creatorId: string) {
+  const user = await verifyOpsAccess()
+  if (!user) return { error: 'Not authorized' }
+
+  const admin = createAdminClient()
+
+  // Check for active deals — block deletion if any non-terminal deals exist
+  const { data: activeDeals } = await admin
+    .from('deals')
+    .select('id')
+    .eq('creator_id', creatorId)
+    .not('status', 'in', '("declined","cancelled")')
+    .limit(1)
+
+  if (activeDeals && activeDeals.length > 0) {
+    return { error: 'Cannot delete a creator with active deals. Cancel or complete deals first.' }
+  }
+
+  // Get the creator to find user_id for cleanup
+  const { data: creator } = await admin
+    .from('creators')
+    .select('id, user_id')
+    .eq('id', creatorId)
+    .maybeSingle()
+
+  if (!creator) return { error: 'Creator not found.' }
+
+  // Delete creator_products (CASCADE should handle this, but be explicit)
+  await admin.from('creator_products').delete().eq('creator_id', creatorId)
+
+  // Delete the creator row
+  const { error: delErr } = await admin.from('creators').delete().eq('id', creatorId)
+  if (delErr) return { error: delErr.message }
+
+  // Clean up linked users row + auth user if they exist
+  if (creator.user_id) {
+    const { data: profile } = await admin
+      .from('users')
+      .select('auth_id')
+      .eq('id', creator.user_id)
+      .maybeSingle()
+
+    await admin.from('users').delete().eq('id', creator.user_id)
+
+    if (profile?.auth_id) {
+      await admin.auth.admin.deleteUser(profile.auth_id)
+    }
+  }
 
   revalidatePath('/ops/creators')
   return { success: true }

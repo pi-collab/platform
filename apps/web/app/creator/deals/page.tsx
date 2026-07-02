@@ -54,9 +54,10 @@ export default async function CreatorDealsPage() {
 
       {all.length === 0 ? (
         <div style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📬</p>
           <p style={{ fontSize: '1rem', fontWeight: 600, color: '#111' }}>No deals yet</p>
-          <p style={{ fontSize: '0.875rem', color: '#888', margin: '0.25rem 0 0' }}>
-            When a brand sends you an offer, it will appear here.
+          <p style={{ fontSize: '0.875rem', color: '#888', margin: '0.5rem 0 0', lineHeight: 1.6 }}>
+            When a brand sends you an offer, it will appear here. Make sure your profile is complete so brands can find you.
           </p>
         </div>
       ) : (

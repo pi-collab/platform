@@ -286,3 +286,19 @@ Our levers to decide (combine, don't just pick one — our research memo framed 
 DECISION NEEDED with cofounders + real unit-economics math (where's the margin, what does each lever cost in adoption). Tied to the open finance-first-vs-open-wedge question too.
 
 BUILD IS NOT BLOCKED: fee stored as structured components (base / fee% / mode / who-bears / brand-pays / creator-receives) + per-brand ops setting → any decided model is a config/calc change, not a rebuild. Decide the model deliberately; the foundation flexes to it.
+
+---
+
+## Relationship-scoped Inbox (v2 — gated on payment protection)
+
+Passionfroot-style persistent brand↔creator Inbox: one ongoing conversation before/during/after deals, deal-events threaded in (proposal sent, invoice paid), proposals-from-chat, attachments, archiving. Matches the repeat-deals moat.
+
+GATE: this OPENS the disintermediation surface (a free always-on channel makes taking deals off-platform easier). Only build AFTER payment protection (Route/escrow, post company-registration) makes staying on-platform valuable enough to offset the open channel. Until then, keep messaging DEAL-SCOPED (anchored to an on-platform deal) — the lower-leak model.
+
+NOTE: messaging design does NOT solve disintermediation; the transaction experience + payment protection do. Don't build messaging restrictions AS an anti-leak defense.
+
+---
+
+## Unread-message notification (v1-appropriate, gated on Interakt)
+
+Passionfroot emails a partner if a message goes unread. Our channel is WhatsApp (Interakt), not email, and not built (gated on company registration). Version: unread message → WhatsApp notification. Activates when Interakt lands.

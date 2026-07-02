@@ -1,5 +1,4 @@
-import Nav from '@/components/Nav'
-import Footer from '@/components/Footer'
+import BrandNav from '@/components/BrandNav'
 
 export const metadata = {
   title: 'Browse Creators',
@@ -8,12 +7,11 @@ export const metadata = {
 
 export default function BrowseLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div data-page="brand">
-      <Nav audience="brand" />
-      <main style={{ minHeight: '100vh', paddingTop: 'var(--nav-height)' }}>
+    <div>
+      <BrandNav />
+      <main style={{ minHeight: 'calc(100vh - 56px)' }}>
         {children}
       </main>
-      <Footer />
     </div>
   )
 }

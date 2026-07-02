@@ -16,16 +16,57 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     .maybeSingle()
 
   let creatorName: string | null = null
+  let isVetted = false
+  let isRejected = false
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('full_name')
+      .select('full_name, is_vetted, is_rejected')
       .eq('user_id', profile.id)
       .maybeSingle()
     creatorName = creator?.full_name ?? null
+    isVetted = creator?.is_vetted ?? false
+    isRejected = creator?.is_rejected ?? false
   }
 
   if (!creatorName) redirect('/')
+
+  // Vetting gate: unvetted creators see a pending or rejected interstitial
+  if (!isVetted) {
+    return (
+      <div>
+        <header style={headerStyle}>
+          <div style={headerInner}>
+            <span style={logoLink}>
+              Guapd <span style={creatorBadge}>Creator</span>
+            </span>
+            <SignOutButton redirectTo="/login/creator" />
+          </div>
+        </header>
+        <main style={{ padding: '3rem 1rem', textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
+          {isRejected ? (
+            <>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', marginBottom: '0.75rem' }}>
+                Your application wasn&apos;t approved this time
+              </h1>
+              <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
+                We weren&apos;t able to approve your profile right now, but don&apos;t worry — we&apos;re always looking for talented creators like you. Reach out to us and we&apos;d love to reconsider.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', marginBottom: '0.75rem' }}>
+                Your account is under review
+              </h1>
+              <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
+                We&apos;ll notify you when you&apos;re approved. This usually takes 24-48 hours.
+              </p>
+            </>
+          )}
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div>

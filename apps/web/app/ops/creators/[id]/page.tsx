@@ -11,7 +11,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   const admin = createAdminClient()
   const { data: creator, error } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, created_at, updated_at')
+    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, created_at, updated_at')
     .eq('id', params.id)
     .maybeSingle()
 
@@ -39,6 +39,8 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
             <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{creator.full_name}</h1>
             {creator.is_vetted ? (
               <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>Vetted</span>
+            ) : creator.is_rejected ? (
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>Rejected</span>
             ) : (
               <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>Pending</span>
             )}

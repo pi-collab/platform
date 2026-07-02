@@ -222,9 +222,10 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
 
     if (res?.error) {
       setError(res.error)
+    } else if (res?.dealId) {
+      router.push(`/deals/${res.dealId}`)
     } else {
-      // TODO: navigate to /deals/[id] once deal detail page exists
-      router.push('/browse')
+      router.push('/deals')
     }
   }
 

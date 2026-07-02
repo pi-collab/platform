@@ -42,13 +42,21 @@ export default async function DealsListPage() {
 
   return (
     <section style={container}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-heading)', margin: '0 0 0.375rem' }}>
-          Your Deals
-        </h1>
-        <p style={{ color: 'var(--color-muted)', fontSize: '0.9375rem', margin: 0 }}>
-          {all.length} deal{all.length !== 1 ? 's' : ''}
-        </p>
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-heading)', margin: '0 0 0.375rem' }}>
+            Your Deals
+          </h1>
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.9375rem', margin: 0 }}>
+            {all.length} deal{all.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <Link
+          href="/browse"
+          style={{ padding: '0.5rem 1rem', background: '#111', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none', whiteSpace: 'nowrap' }}
+        >
+          + New Deal
+        </Link>
       </div>
 
       {all.length === 0 ? (

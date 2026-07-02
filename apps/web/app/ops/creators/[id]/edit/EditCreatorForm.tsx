@@ -23,7 +23,6 @@ interface Creator {
   social_accounts: Array<{ platform: string; handle: string; url: string | null; follower_count: number | null; verified: boolean }> | null
   worked_with: string[] | null
   portfolio_links: string[] | null
-  rate_card: Record<string, number> | null
 }
 
 const PLATFORMS = ['instagram', 'youtube', 'twitter', 'linkedin', 'other'] as const
@@ -42,10 +41,6 @@ function emptySocial(): SocialEntry {
   return { platform: 'instagram', handle: '', url: '', follower_count: '' }
 }
 
-function paiseToRupee(paise: number | undefined): string {
-  return paise != null ? String(paise / 100) : ''
-}
-
 export default function EditCreatorForm({ creator }: { creator: Creator }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -62,12 +57,6 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
   const [workedWith, setWorkedWith] = useState<string[]>(creator.worked_with ?? [])
   const [portfolioLinks, setPortfolioLinks] = useState<string[]>(creator.portfolio_links ?? [])
 
-  const rc = creator.rate_card ?? {}
-  const [reelPrice, setReelPrice] = useState(paiseToRupee(rc.reel))
-  const [storyPrice, setStoryPrice] = useState(paiseToRupee(rc.story))
-  const [postPrice, setPostPrice] = useState(paiseToRupee(rc.post))
-  const [ytShortPrice, setYtShortPrice] = useState(paiseToRupee(rc.yt_short))
-
   function updateSocial(i: number, field: keyof SocialEntry, value: string) {
     setSocials((prev) => prev.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)))
   }
@@ -76,12 +65,6 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
     e.preventDefault()
     setError(null)
     setLoading(true)
-
-    const rateCard: Record<string, number> = {}
-    if (reelPrice.trim()) rateCard.reel = Math.round(parseFloat(reelPrice) * 100)
-    if (storyPrice.trim()) rateCard.story = Math.round(parseFloat(storyPrice) * 100)
-    if (postPrice.trim()) rateCard.post = Math.round(parseFloat(postPrice) * 100)
-    if (ytShortPrice.trim()) rateCard.yt_short = Math.round(parseFloat(ytShortPrice) * 100)
 
     const socialAccounts = socials
       .filter((s) => s.handle.trim() || s.url.trim())
@@ -107,7 +90,6 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
       social_accounts: socialAccounts.length > 0 ? socialAccounts : undefined,
       worked_with: worked.length > 0 ? worked : undefined,
       portfolio_links: portfolio.length > 0 ? portfolio : undefined,
-      rate_card: Object.keys(rateCard).length > 0 ? rateCard : undefined,
     })
 
     setLoading(false)
@@ -214,21 +196,6 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
         ))}
         <button type="button" onClick={() => setPortfolioLinks((prev) => [...prev, ''])} style={addBtnStyle}>+ Add link</button>
       </fieldset>
-
-      {/* Rate Card */}
-      <fieldset style={fieldsetStyle}>
-        <legend style={legendStyle}>Rate card (₹)</legend>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-          <Field label="Reel (₹)"><input style={inputStyle} type="number" step="1" min="0" value={reelPrice} onChange={(e) => setReelPrice(e.target.value)} /></Field>
-          <Field label="Story (₹)"><input style={inputStyle} type="number" step="1" min="0" value={storyPrice} onChange={(e) => setStoryPrice(e.target.value)} /></Field>
-          <Field label="Post (₹)"><input style={inputStyle} type="number" step="1" min="0" value={postPrice} onChange={(e) => setPostPrice(e.target.value)} /></Field>
-          <Field label="YT Short (₹)"><input style={inputStyle} type="number" step="1" min="0" value={ytShortPrice} onChange={(e) => setYtShortPrice(e.target.value)} /></Field>
-        </div>
-      </fieldset>
-
-      <p style={{ fontSize: '0.75rem', color: '#888', background: '#f9fafb', padding: '0.5rem 0.75rem', borderRadius: 6, border: '1px solid #eee', margin: 0 }}>
-        Products, pricing, and revision terms are managed on the <a href={`/ops/creators/${creator.id}`} style={{ color: '#2563eb', fontWeight: 600 }}>creator detail page → Products tab</a>.
-      </p>
 
       <div style={{ display: 'flex', gap: '0.75rem' }}>
         <button type="submit" disabled={loading} style={{ padding: '0.625rem 1.25rem', background: loading ? '#999' : '#111', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: '0.875rem', cursor: loading ? 'not-allowed' : 'pointer' }}>

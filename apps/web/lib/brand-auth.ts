@@ -18,7 +18,7 @@ interface BrandContext {
  * Gate logic:
  *   1. No auth session → /login
  *   2. No users row / no brand_members row → /onboarding (or /ops for founders)
- *   3. brand_status !== 'approved' → /dashboard (they'll see pending state there)
+ *   3. brand_status !== 'approved' → /brand/pending (pending approval interstitial)
  *   4. Approved → return context
  */
 export async function verifyApprovedBrand(): Promise<BrandContext> {
@@ -52,7 +52,7 @@ export async function verifyApprovedBrand(): Promise<BrandContext> {
 
   const brand = (membership as any)?.brands
   if (!brand || brand.brand_status !== 'approved') {
-    redirect('/dashboard')
+    redirect('/brand/pending')
   }
 
   return {

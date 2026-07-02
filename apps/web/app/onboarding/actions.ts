@@ -108,5 +108,5 @@ export async function submitOnboarding(
     return { error: `Failed to link brand member: ${memberErr.message}` }
   }
 
-  redirect('/dashboard')
+  redirect('/deals')
 }

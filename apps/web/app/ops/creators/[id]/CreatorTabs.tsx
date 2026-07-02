@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { vetCreator, rejectCreator, addProduct, editProduct } from '../../actions'
+import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 
@@ -40,6 +40,7 @@ interface Creator {
   portfolio_links: string[] | null
   rate_card: Record<string, number> | null
   is_vetted: boolean
+  is_rejected: boolean
   created_at: string
   updated_at: string
 }
@@ -53,7 +54,7 @@ interface Deal {
   brands: unknown
 }
 
-const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Rate Card (legacy)', 'Portfolio & Brands'] as const
+const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Portfolio & Brands'] as const
 type Tab = typeof TABS[number]
 
 export default function CreatorTabs({ creator, products, deals }: { creator: Creator; products: Product[]; deals: Deal[] }) {
@@ -78,19 +79,33 @@ export default function CreatorTabs({ creator, products, deals }: { creator: Cre
     setActionLoading(false)
   }
 
+  async function handleDelete() {
+    if (!confirm('Permanently delete this creator, their products, and their account? This cannot be undone.')) return
+    setActionLoading(true)
+    const res = await deleteCreator(creator.id)
+    if (res.error) alert(res.error)
+    else router.push('/ops/creators')
+    setActionLoading(false)
+  }
+
   return (
     <div>
       {/* Vet/Reject actions */}
-      {!creator.is_vetted && (
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          <button onClick={handleVet} disabled={actionLoading} style={{ ...actionBtn, background: '#16a34a', color: '#fff' }}>
-            {actionLoading ? '...' : 'Approve'}
-          </button>
-          <button onClick={handleReject} disabled={actionLoading} style={{ ...actionBtn, background: '#dc2626', color: '#fff' }}>
-            {actionLoading ? '...' : 'Reject'}
-          </button>
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        {!creator.is_vetted && (
+          <>
+            <button onClick={handleVet} disabled={actionLoading} style={{ ...actionBtn, background: '#16a34a', color: '#fff' }}>
+              {actionLoading ? '...' : 'Approve'}
+            </button>
+            <button onClick={handleReject} disabled={actionLoading} style={{ ...actionBtn, background: '#dc2626', color: '#fff' }}>
+              {actionLoading ? '...' : 'Reject'}
+            </button>
+          </>
+        )}
+        <button onClick={handleDelete} disabled={actionLoading} style={{ ...actionBtn, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}>
+          {actionLoading ? '...' : 'Delete'}
+        </button>
+      </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -120,7 +135,6 @@ export default function CreatorTabs({ creator, products, deals }: { creator: Cre
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
       {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
       {tab === 'Deals' && <DealsTab deals={deals} />}
-      {tab === 'Rate Card (legacy)' && <RateCard rateCard={creator.rate_card} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
     </div>
   )
@@ -427,36 +441,6 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         </button>
       </div>
     </form>
-  )
-}
-
-/* ── Legacy Rate Card tab ──────────────────────────────────────── */
-
-function RateCard({ rateCard }: { rateCard: Record<string, number> | null }) {
-  if (!rateCard || Object.keys(rateCard).length === 0) {
-    return <p style={emptyStyle}>No rate card set.</p>
-  }
-
-  return (
-    <div style={{ maxWidth: 400 }}>
-      <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '0.75rem' }}>Legacy flat rate card. Being replaced by per-account products above.</p>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '2px solid #e5e5e5', fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase' }}>Deliverable</th>
-            <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', borderBottom: '2px solid #e5e5e5', fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase' }}>Rate (₹)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(rateCard).map(([key, paise]) => (
-            <tr key={key}>
-              <td style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f0f0f0', textTransform: 'capitalize' }}>{key.replace('_', ' ')}</td>
-              <td style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #f0f0f0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 600 }}>₹{(paise / 100).toLocaleString('en-IN')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   )
 }
 

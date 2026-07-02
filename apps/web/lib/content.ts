@@ -4,7 +4,8 @@
  * All marketing copy lives here. To update any text:
  *   - Find the relevant export below and edit the string.
  *   - Search for PLACEHOLDER to find copy that needs real content.
- *   - CTAs link to "#brand-signup" / "#creator-signup" — replace with real URLs when auth is wired.
+ *   - Brand CTAs → /login (Google OAuth handles signup + login; onboarding IS the signup experience)
+ *   - Creator CTAs → /signup/creator (phone OTP signup)
  *
  * BRAND_NAME is the locked brand name used across the site.
  */
@@ -19,9 +20,9 @@ export const nav = {
     { label: 'For creators',  href: '/creators' },
     { label: 'How it works',  href: '#how-it-works' },
   ],
-  login:      { label: 'Log in',          href: '#login'          },
-  brandCta:   { label: 'Get early access', href: '#brand-signup'  },
-  creatorCta: { label: 'Join as creator',  href: '#creator-signup' },
+  login:      { label: 'Log in',           href: '/login'           },
+  brandCta:   { label: 'Get access',       href: '/login'           },
+  creatorCta: { label: 'Join as creator',  href: '/signup/creator'  },
 }
 
 // ── HOME PAGE ───────────────────────────────────────────────────────────────
@@ -132,8 +133,8 @@ export const homePage = {
 
   homeFinalCta: {
     headline:     'The deal platform India\'s creators and brands have been waiting for.',
-    brandCta:     { label: 'Get early access', href: '#brand-signup'  },
-    creatorCta:   { label: 'Join as a creator', href: '#creator-signup' },
+    brandCta:     { label: 'Get early access', href: '/login'  },
+    creatorCta:   { label: 'Join as a creator', href: '/signup/creator' },
     microcopy:    'Free for creators · No agency required',
   },
 }
@@ -146,7 +147,7 @@ export const brandPage = {
     headline:    'Stop overpaying for creator deals',
     subheadline: 'Run every collaboration directly — structured offer to final payment — without an agency taking 20% for work you can do yourself.',
     ctaText:     'Request early access',
-    ctaHref:     '#brand-signup',
+    ctaHref:     '/login',
     microcopy:   'Free to start · No commitment',
   },
 
@@ -194,7 +195,7 @@ export const brandPage = {
   midCta: {
     headline: 'Stop running campaigns over WhatsApp.',
     ctaText:  'Request early access',
-    ctaHref:  '#brand-signup',
+    ctaHref:  '/login',
   },
 
   // PLACEHOLDER: replace with real testimonials when available
@@ -224,13 +225,13 @@ export const brandPage = {
     headline:  'Ready to run deals without the agency?',
     sub:       'Join brands already managing creator campaigns directly.',
     ctaText:   'Request early access',
-    ctaHref:   '#brand-signup',
+    ctaHref:   '/login',
     microcopy: 'Free to start · No agency required',
   },
 
   mobileCta: {
     ctaText: 'Get early access',
-    ctaHref: '#brand-signup',
+    ctaHref: '/login',
   },
 }
 
@@ -242,7 +243,7 @@ export const creatorPage = {
     headline:    'One inbox for every brand deal',
     subheadline: 'Stop managing collaborations across DMs, email, and WhatsApp. Accept offers, negotiate terms, upload deliverables, and track payment — all in one place.',
     ctaText:     'Join as a creator',
-    ctaHref:     '#creator-signup',
+    ctaHref:     '/signup/creator',
     microcopy:   'Free for creators · Always',
   },
 
@@ -290,7 +291,7 @@ export const creatorPage = {
   midCta: {
     headline: 'Your next deal should not live in someone\'s DMs.',
     ctaText:  'Join as a creator',
-    ctaHref:  '#creator-signup',
+    ctaHref:  '/signup/creator',
   },
 
   // PLACEHOLDER: replace with real testimonials when available
@@ -320,13 +321,13 @@ export const creatorPage = {
     headline:  'Your deals, your inbox, your terms.',
     sub:       'Join creators who are done managing collaborations over DMs.',
     ctaText:   'Join as a creator',
-    ctaHref:   '#creator-signup',
+    ctaHref:   '/signup/creator',
     microcopy: 'Free for creators · Always',
   },
 
   mobileCta: {
     ctaText: 'Join as a creator',
-    ctaHref: '#creator-signup',
+    ctaHref: '/signup/creator',
   },
 }
 

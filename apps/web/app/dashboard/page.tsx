@@ -19,11 +19,12 @@ export default async function DashboardPage() {
     .eq('auth_id', user.id)
     .maybeSingle()
 
-  // Check brand membership — redirect to onboarding if not yet set up
+  // Redirect to the real brand home — /dashboard is deprecated
+  // Check brand membership first to route correctly
   const { data: membership } = profile
     ? await supabase
         .from('brand_members')
-        .select('is_admin, brands(id, name, category, company_size, website, contact_name, social_accounts)')
+        .select('id')
         .eq('user_id', profile.id)
         .maybeSingle()
     : { data: null }
@@ -39,6 +40,9 @@ export default async function DashboardPage() {
     }
     redirect('/onboarding')
   }
+
+  // Onboarded brand → deals
+  redirect('/deals')
 
   const brand = (membership as any)?.brands ?? null
 

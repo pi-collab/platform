@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CreatorSignInButton from '@/components/CreatorSignInButton'
+import PhoneLogin from './PhoneLogin'
 
 export const metadata = {
   title: 'Creator login — Guapd',
@@ -41,21 +42,40 @@ export default async function CreatorLoginPage({
         <p style={styles.sub}>Sign in to manage your deals.</p>
 
         {searchParams.error === 'no_account' && (
-          // TEMPORARY: v1 creators only exist via offer-accept (no self-signup).
-          // When creator self-signup + vetting is built, replace this dead-end
-          // with a "No account? Sign up as a creator →" link to the signup flow.
           <p style={styles.error}>
-            No creator account found. You&apos;ll get access when a brand sends you an offer.
+            No creator account found.{' '}
+            <a href="/signup/creator" style={{ color: '#854d0e', fontWeight: 600 }}>
+              Sign up as a creator &rarr;
+            </a>
           </p>
         )}
 
-        {searchParams.error && searchParams.error !== 'no_account' && (
+        {searchParams.error === 'account_exists' && (
+          <p style={styles.error}>
+            This phone is already registered. Sign in below.
+          </p>
+        )}
+
+        {searchParams.error && searchParams.error !== 'no_account' && searchParams.error !== 'account_exists' && (
           <p style={styles.error}>
             Sign-in failed ({searchParams.error}). Please try again.
           </p>
         )}
 
+        <PhoneLogin />
+
+        <div style={styles.divider}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <span style={styles.dividerLine} />
+        </div>
+
         <CreatorSignInButton />
+
+        <p style={styles.footer}>
+          Don&apos;t have an account?{' '}
+          <a href="/signup/creator" style={styles.footerLink}>Sign up as a creator</a>
+        </p>
       </div>
     </main>
   )
@@ -79,6 +99,8 @@ const styles: Record<string, React.CSSProperties> = {
     border:        '1px solid #e5e5e5',
     borderRadius:  16,
     minWidth:      320,
+    maxWidth:      380,
+    width:         '100%',
   },
   heading: {
     fontSize:     '1.5rem',
@@ -101,5 +123,31 @@ const styles: Record<string, React.CSSProperties> = {
     margin:       0,
     textAlign:    'center',
     lineHeight:   1.5,
+  },
+  divider: {
+    display:    'flex',
+    alignItems: 'center',
+    gap:        '0.75rem',
+    width:      '100%',
+  },
+  dividerLine: {
+    flex:       1,
+    height:     1,
+    background: '#e5e5e5',
+  },
+  dividerText: {
+    fontSize:   '0.75rem',
+    color:      '#bbb',
+    fontWeight: 500,
+    textTransform: 'uppercase',
+  },
+  footer: {
+    fontSize:   '0.8125rem',
+    color:      '#888',
+    margin:     0,
+  },
+  footerLink: {
+    color:      '#111',
+    fontWeight: 600,
   },
 }

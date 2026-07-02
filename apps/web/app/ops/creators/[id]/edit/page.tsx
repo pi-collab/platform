@@ -10,7 +10,7 @@ export default async function EditCreatorPage({ params }: { params: { id: string
   const admin = createAdminClient()
   const { data: creator, error } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted')
+    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected')
     .eq('id', params.id)
     .maybeSingle()
 
@@ -23,6 +23,8 @@ export default async function EditCreatorPage({ params }: { params: { id: string
         Editing: <strong>{creator.full_name}</strong>
         {creator.is_vetted
           ? <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#166534', background: '#dcfce7', padding: '0.125rem 0.5rem', borderRadius: 9999 }}>Vetted</span>
+          : creator.is_rejected
+          ? <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#991b1b', background: '#fee2e2', padding: '0.125rem 0.5rem', borderRadius: 9999 }}>Rejected</span>
           : <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#92400e', background: '#fef3c7', padding: '0.125rem 0.5rem', borderRadius: 9999 }}>Pending</span>
         }
       </p>
