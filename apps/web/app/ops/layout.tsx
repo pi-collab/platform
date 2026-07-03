@@ -1,12 +1,48 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import SignInButton from '@/components/SignInButton'
+import SignOutButton from '@/components/SignOutButton'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Ops Console', robots: { index: false, follow: false } }
 
 export default async function OpsLayout({ children }: { children: React.ReactNode }) {
-  const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Check if user is an allowed ops email
+  const allowedRaw = process.env.OPS_ALLOWED_EMAILS
+  const allowedEmails = allowedRaw
+    ? new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean))
+    : new Set<string>()
+
+  const isOps = user?.email && allowedEmails.has(user.email.toLowerCase())
+
+  if (!isOps) {
+    return (
+      <div style={{ fontFamily: 'system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#fafafa' }}>
+        <div style={{ textAlign: 'center', padding: '3rem 2rem', background: '#fff', border: '1px solid #e5e5e5', borderRadius: 16, maxWidth: 380 }}>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', margin: '0 0 0.5rem' }}>Ops Console</h1>
+          {user ? (
+            <>
+              <p style={{ fontSize: '0.875rem', color: '#888', margin: '0 0 1rem' }}>
+                Signed in as {user.email} — this account doesn&apos;t have ops access. Sign out first, then sign in with an authorized Google account.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                <SignOutButton redirectTo="/ops" />
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.875rem', color: '#888', margin: '0 0 1.5rem' }}>
+                Sign in with an authorized Google account.
+              </p>
+              <SignInButton />
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 960, margin: '0 auto', padding: '1rem' }}>

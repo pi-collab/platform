@@ -83,10 +83,19 @@ export async function verifyAndSignIn(rawPhone: string, inputCode: string): Prom
   const syntheticEmail = `creator_${phone.replace('+', '')}@auth.guapd.internal`
   const password = crypto.randomBytes(32).toString('hex')
 
-  const { error: updateErr } = await admin.auth.admin.updateUserById(profile.auth_id, {
-    password,
-    email: syntheticEmail,
-  })
+  // Check if the auth user has a real email (e.g. from Google OAuth) — don't overwrite it
+  const { data: authUserData } = await admin.auth.admin.getUserById(profile.auth_id)
+  const existingEmail = authUserData?.user?.email
+  const hasSyntheticEmail = existingEmail?.endsWith('@auth.guapd.internal')
+  const loginEmail = (existingEmail && !hasSyntheticEmail) ? existingEmail : syntheticEmail
+
+  const updatePayload: { password: string; email?: string } = { password }
+  // Only set email if user doesn't have one, or already has a synthetic one
+  if (!existingEmail || hasSyntheticEmail) {
+    updatePayload.email = syntheticEmail
+  }
+
+  const { error: updateErr } = await admin.auth.admin.updateUserById(profile.auth_id, updatePayload)
 
   if (updateErr) {
     console.error('[LOGIN] Failed to update auth user:', updateErr.message)
@@ -95,7 +104,7 @@ export async function verifyAndSignIn(rawPhone: string, inputCode: string): Prom
 
   const supabase = createClient()
   const { error: signInErr } = await supabase.auth.signInWithPassword({
-    email: syntheticEmail,
+    email: loginEmail,
     password,
   })
 

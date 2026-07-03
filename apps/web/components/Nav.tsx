@@ -76,6 +76,13 @@ export default function Nav({ audience = 'brand' }: NavProps) {
                   >
                     Brand login
                   </Link>
+                  <Link
+                    href="/ops"
+                    style={{ ...dropdownItemStyle, borderTop: '1px solid #e5e5e5', fontSize: '0.8125rem', color: '#888' }}
+                    onClick={() => setLoginOpen(false)}
+                  >
+                    Ops
+                  </Link>
                 </div>
               )}
             </div>
@@ -152,6 +159,9 @@ export default function Nav({ audience = 'brand' }: NavProps) {
           </Link>
           <Link href="/login" className="btn btn--ghost" onClick={() => setOpen(false)}>
             Brand login
+          </Link>
+          <Link href="/ops" className="btn btn--ghost" style={{ fontSize: '0.8125rem', color: '#888' }} onClick={() => setOpen(false)}>
+            Ops
           </Link>
           {audience === 'none' ? (
             <>

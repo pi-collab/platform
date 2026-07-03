@@ -9,7 +9,7 @@ export default function SignOutButton({ redirectTo = '/login' }: { redirectTo?: 
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push(redirectTo)
+    window.location.href = redirectTo
   }
 
   return (

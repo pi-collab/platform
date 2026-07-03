@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 export default function SignInButton() {
   const handleSignIn = async () => {
     const supabase = createClient()
+    // Clear any existing session first so OAuth creates a fresh one
+    await supabase.auth.signOut()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
