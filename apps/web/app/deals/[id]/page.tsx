@@ -100,6 +100,14 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {['complete', 'paid', 'approved'].includes(deal.status) && (
+            <Link
+              href={`/deals/new?from=${deal.id}`}
+              style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: 'var(--radius-lg)', fontWeight: 700, fontSize: '0.8125rem', textDecoration: 'none', fontFamily: 'var(--font-heading)', whiteSpace: 'nowrap' }}
+            >
+              New deal, same terms
+            </Link>
+          )}
           {deal.price_paise != null && deal.price_paise > 0 && (() => {
             const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
             const overage = extra * (deal.price_per_extra_revision_paise ?? 0)

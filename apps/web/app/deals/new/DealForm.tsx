@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { createDeal } from '../actions'
 import { useRouter } from 'next/navigation'
 import { calculateFee } from '@/lib/fee'
+import type { DealPrefill } from './page'
 
 interface SocialAccount {
   platform: string
@@ -60,25 +61,82 @@ function formatFollowers(n: number): string {
   return n.toLocaleString('en-IN')
 }
 
-export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top' }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted' }) {
+export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [droppedItems, setDroppedItems] = useState<string[]>([])
+
+  // Build initial selections from prefill (match items to current products)
+  const prefillResult = useMemo<{ sel: Record<string, { qty: number; customPricePaise: number | null }>; dropped: string[] }>(() => {
+    const sel: Record<string, { qty: number; customPricePaise: number | null }> = {}
+    const dropped: string[] = []
+    if (!prefill?.items?.length) return { sel, dropped }
+
+    // Count occurrences of each item by label+platform+handle
+    const itemCounts = new Map<string, { count: number; price_paise: number }>()
+    for (const item of prefill.items) {
+      const key = `${item.label}::${item.platform}::${item.handle}`
+      const existing = itemCounts.get(key)
+      if (existing) {
+        existing.count++
+      } else {
+        itemCounts.set(key, { count: 1, price_paise: item.price_paise })
+      }
+    }
+
+    // Match to current products
+    Array.from(itemCounts.entries()).forEach(([key, { count, price_paise }]) => {
+      const [label, platform, handle] = key.split('::')
+      const product = products.find((p) => p.product_type === label && p.platform === platform && p.handle === handle)
+      if (product) {
+        sel[product.id] = {
+          qty: count,
+          customPricePaise: !product.display_price ? price_paise : null,
+        }
+      } else {
+        dropped.push(`${label} (${platform} ${handle.startsWith('@') ? handle : `@${handle}`})`)
+      }
+    })
+
+    return { sel, dropped }
+  }, [prefill, products])
 
   // Product selections: productId → { qty, customPricePaise (for display_price=false) }
-  const [selections, setSelections] = useState<Record<string, { qty: number; customPricePaise: number | null }>>({})
+  const [selections, setSelections] = useState<Record<string, { qty: number; customPricePaise: number | null }>>(prefillResult.sel)
+
+  // Set dropped items notice on mount
+  const didSetDropped = useRef(false)
+  useEffect(() => {
+    if (!didSetDropped.current && prefillResult.dropped.length > 0) {
+      setDroppedItems(prefillResult.dropped)
+      didSetDropped.current = true
+    }
+  }, [prefillResult.dropped])
+
+  // Resolve prefill usage/payment — check if it matches a preset or is custom
+  function resolvePreset(value: string | null | undefined, presets: readonly string[]): { select: string; custom: string } {
+    if (!value) return { select: '', custom: '' }
+    if (presets.includes(value as any)) return { select: value, custom: '' }
+    return { select: 'Custom', custom: value }
+  }
+
+  const prefillUsage = resolvePreset(prefill?.usage_rights, USAGE_PRESETS)
+  const prefillPayment = resolvePreset(prefill?.payment_terms, PAYMENT_PRESETS)
 
   // Deal fields
-  const [title, setTitle] = useState(`Deal with ${creator.full_name}`)
+  const [title, setTitle] = useState(prefill?.title || `Deal with ${creator.full_name}`)
   const [timelineDate, setTimelineDate] = useState('')
-  const [revisionLimit, setRevisionLimit] = useState('1')
-  const [pricePerExtraRevision, setPricePerExtraRevision] = useState('0')
-  const [usageRights, setUsageRights] = useState('')
-  const [customUsage, setCustomUsage] = useState('')
-  const [paymentTerms, setPaymentTerms] = useState('')
-  const [customPayment, setCustomPayment] = useState('')
+  const [revisionLimit, setRevisionLimit] = useState(prefill ? String(prefill.revision_limit) : '1')
+  const [pricePerExtraRevision, setPricePerExtraRevision] = useState(prefill ? String(prefill.price_per_extra_revision_paise / 100) : '0')
+  const [usageRights, setUsageRights] = useState(prefillUsage.select)
+  const [customUsage, setCustomUsage] = useState(prefillUsage.custom)
+  const [paymentTerms, setPaymentTerms] = useState(prefillPayment.select)
+  const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
   const [message, setMessage] = useState('')
   const [priceOverride, setPriceOverride] = useState('')
+  // Track whether revision fields have been auto-updated by product selection
+  const prefillRevisionLock = useRef(!!prefill)
 
   // Group products by platform+handle
   const grouped = useMemo(() => {
@@ -140,7 +198,12 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   }, [products, selections])
 
   // Auto-update revision fields when product selection changes
+  // Skip on first render if prefill provided (prefill values take priority initially)
   useEffect(() => {
+    if (prefillRevisionLock.current) {
+      prefillRevisionLock.current = false
+      return
+    }
     if (selectedCount > 0) {
       setRevisionLimit(String(defaultIncluded))
       setPricePerExtraRevision(String(defaultExtraPaise / 100))
@@ -216,6 +279,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       payment_terms: resolvedPayment || undefined,
       message: message || undefined,
       items,
+      reengaged_from: prefill?.reengaged_from,
     })
 
     setLoading(false)
@@ -238,6 +302,12 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {error && <div style={errorBox}>{error}</div>}
+
+      {droppedItems.length > 0 && (
+        <div style={{ fontSize: '0.8125rem', padding: '0.625rem 0.75rem', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 'var(--radius-sm)', color: '#854d0e' }}>
+          <strong>Heads up:</strong> {droppedItems.length === 1 ? 'One item' : `${droppedItems.length} items`} from the previous deal {droppedItems.length === 1 ? 'is' : 'are'} no longer offered by this creator and {droppedItems.length === 1 ? 'was' : 'were'} not pre-filled: {droppedItems.join(', ')}. Review before sending.
+        </div>
+      )}
 
       {/* Creator (read-only) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--section-bg-alt)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>

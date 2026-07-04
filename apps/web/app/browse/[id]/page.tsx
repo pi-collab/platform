@@ -26,11 +26,11 @@ interface Product {
 }
 
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
-  await verifyApprovedBrand()
+  const brand = await verifyApprovedBrand()
 
   const supabase = createClient()
 
-  const [{ data: creator, error }, { data: products }] = await Promise.all([
+  const [{ data: creator, error }, { data: products }, { data: lastDeal }] = await Promise.all([
     supabase
       .from('creators')
       .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card')
@@ -40,6 +40,14 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
       .eq('creator_id', params.id),
+    supabase
+      .from('deals')
+      .select('id')
+      .eq('brand_id', brand.brandId)
+      .eq('creator_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (error || !creator) notFound()
@@ -91,9 +99,16 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       </div>
 
       {/* CTA */}
-      <Link href={`/deals/new?creator=${c.id}`} style={ctaBtn}>
-        Start a deal with {c.full_name.split(' ')[0]}
-      </Link>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <Link href={`/deals/new?creator=${c.id}`} style={ctaBtn}>
+          Start a deal with {c.full_name.split(' ')[0]}
+        </Link>
+        {lastDeal && (
+          <Link href={`/deals/new?from=${lastDeal.id}`} style={reengageBtn}>
+            Re-engage {c.full_name.split(' ')[0]}
+          </Link>
+        )}
+      </div>
 
       {/* ── Products storefront ────────────────────────────────── */}
       {productsByAccount.size > 0 && (
@@ -272,6 +287,19 @@ const ctaBtn: React.CSSProperties = {
   padding: '0.625rem 1.5rem',
   background: 'var(--accent)',
   color: 'var(--accent-text)',
+  borderRadius: 'var(--radius-lg)',
+  fontWeight: 700,
+  fontSize: '0.875rem',
+  textDecoration: 'none',
+  fontFamily: 'var(--font-heading)',
+}
+
+const reengageBtn: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '0.625rem 1.5rem',
+  background: 'transparent',
+  color: 'var(--color-heading)',
+  border: '1px solid var(--color-border)',
   borderRadius: 'var(--radius-lg)',
   fontWeight: 700,
   fontSize: '0.875rem',

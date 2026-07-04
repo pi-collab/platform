@@ -23,12 +23,13 @@ interface CreateDealInput {
   payment_terms?: string
   message?: string // stored later when send/notification is built
   items?: DeliverableItem[]
+  reengaged_from?: string
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -63,6 +64,7 @@ export async function createDeal(input: CreateDealInput) {
       last_offer_by: 'brand',
       fee_percent: brandFee?.platform_fee_percent ?? 0,
       fee_mode: brandFee?.fee_mode ?? 'on_top',
+      reengaged_from: reengaged_from || null,
     })
     .select('id')
     .single()

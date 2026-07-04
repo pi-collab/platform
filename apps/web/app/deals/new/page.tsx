@@ -12,13 +12,62 @@ interface SocialAccount {
   verified: boolean
 }
 
-export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string } }) {
+export interface DealPrefill {
+  title: string
+  deliverables: string
+  price_paise: number
+  revision_limit: number
+  price_per_extra_revision_paise: number
+  usage_rights: string | null
+  payment_terms: string | null
+  reengaged_from: string
+  items: { label: string; platform: string; handle: string; price_paise: number }[]
+}
+
+export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string } }) {
   const brand = await verifyApprovedBrand()
-
-  const creatorId = searchParams.creator
-  if (!creatorId) redirect('/browse')
-
   const supabase = createClient()
+
+  // If ?from= is set, fetch source deal for pre-fill and derive creator from it
+  let prefill: DealPrefill | undefined
+  let creatorId = searchParams.creator
+
+  if (searchParams.from) {
+    const [{ data: sourceDeal }, { data: sourceItems }] = await Promise.all([
+      supabase
+        .from('deals')
+        .select('id, creator_id, title, deliverables, price_paise, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms')
+        .eq('id', searchParams.from)
+        .eq('brand_id', brand.brandId)
+        .maybeSingle(),
+      supabase
+        .from('deal_deliverable_items')
+        .select('label, platform, handle, price_paise')
+        .eq('deal_id', searchParams.from),
+    ])
+
+    if (sourceDeal) {
+      creatorId = sourceDeal.creator_id
+      prefill = {
+        title: sourceDeal.title ?? '',
+        deliverables: sourceDeal.deliverables ?? '',
+        price_paise: sourceDeal.price_paise ?? 0,
+        revision_limit: sourceDeal.revision_limit ?? 1,
+        price_per_extra_revision_paise: sourceDeal.price_per_extra_revision_paise ?? 0,
+        usage_rights: sourceDeal.usage_rights,
+        payment_terms: sourceDeal.payment_terms,
+        reengaged_from: sourceDeal.id,
+        items: (sourceItems ?? []).map((i) => ({
+          label: i.label,
+          platform: i.platform,
+          handle: i.handle,
+          price_paise: i.price_paise ?? 0,
+        })),
+      }
+    }
+  }
+
+  if (!creatorId) redirect('/browse')
 
   const [{ data: creator, error }, { data: products }, { data: brandRow }] = await Promise.all([
     supabase
@@ -48,7 +97,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
       </Link>
 
       <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: '0 0 2rem' }}>
-        Create an offer for {creator.full_name}
+        {prefill ? `New deal with ${creator.full_name}` : `Create an offer for ${creator.full_name}`}
       </h1>
 
       <DealForm
@@ -56,6 +105,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
         products={activeProducts}
         platformFeePercent={brandRow?.platform_fee_percent ?? 0}
         feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
+        prefill={prefill}
       />
     </section>
   )
