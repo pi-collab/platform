@@ -25,7 +25,7 @@ export default async function EditBrandPage({ params }: { params: { id: string }
   const [{ data: brand, error }, { data: deals }] = await Promise.all([
     admin
       .from('brands')
-      .select('id, name, category, company_size, website, contact_name, social_accounts, platform_fee_percent, fee_mode')
+      .select('id, name, category, company_size, website, contact_name, contact_email, social_accounts, platform_fee_percent, fee_mode')
       .eq('id', params.id)
       .maybeSingle(),
     admin

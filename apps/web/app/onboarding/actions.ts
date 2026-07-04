@@ -92,7 +92,7 @@ export async function submitOnboarding(
 
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .insert({ name, category, company_size, website, contact_name, social_accounts })
+    .insert({ name, category, company_size, website, contact_name, contact_email: user.email ?? null, social_accounts })
     .select('id')
     .single()
 

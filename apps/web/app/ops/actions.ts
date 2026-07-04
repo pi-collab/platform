@@ -411,6 +411,7 @@ interface EditBrandInput {
   company_size?: string
   website?: string
   contact_name?: string
+  contact_email?: string
   social_accounts?: Record<string, string>
   platform_fee_percent?: number
   fee_mode?: 'on_top' | 'deducted'
@@ -420,7 +421,7 @@ export async function editBrand(input: EditBrandInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { id, name, category, company_size, website, contact_name, social_accounts, platform_fee_percent, fee_mode } = input
+  const { id, name, category, company_size, website, contact_name, contact_email, social_accounts, platform_fee_percent, fee_mode } = input
   if (!name.trim()) return { error: 'Brand name is required' }
 
   const update: Record<string, unknown> = {
@@ -429,6 +430,7 @@ export async function editBrand(input: EditBrandInput) {
     company_size: company_size?.trim() || null,
     website: website?.trim() || null,
     contact_name: contact_name?.trim() || null,
+    contact_email: contact_email?.trim() || null,
     social_accounts: social_accounts ?? {},
   }
   if (platform_fee_percent != null) update.platform_fee_percent = platform_fee_percent

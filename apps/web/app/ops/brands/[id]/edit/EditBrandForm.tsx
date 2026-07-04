@@ -11,6 +11,7 @@ interface Brand {
   company_size: string | null
   website: string | null
   contact_name: string | null
+  contact_email: string | null
   social_accounts: Record<string, string> | null
   platform_fee_percent: number
   fee_mode: string
@@ -26,6 +27,7 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
   const [companySize, setCompanySize] = useState(brand.company_size ?? '')
   const [website, setWebsite] = useState(brand.website ?? '')
   const [contactName, setContactName] = useState(brand.contact_name ?? '')
+  const [contactEmail, setContactEmail] = useState(brand.contact_email ?? '')
   const [socialJson, setSocialJson] = useState(
     brand.social_accounts && Object.keys(brand.social_accounts).length > 0
       ? JSON.stringify(brand.social_accounts, null, 2)
@@ -57,6 +59,7 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
       company_size: companySize || undefined,
       website: website || undefined,
       contact_name: contactName || undefined,
+      contact_email: contactEmail || undefined,
       social_accounts: Object.keys(social).length > 0 ? social : undefined,
       platform_fee_percent: parseFloat(feePercent) || 0,
       fee_mode: feeMode as 'on_top' | 'deducted',
@@ -93,6 +96,10 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
 
       <Field label="Contact name">
         <input style={inputStyle} value={contactName} onChange={(e) => setContactName(e.target.value)} />
+      </Field>
+
+      <Field label="Contact email">
+        <input style={inputStyle} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="brand@example.com" />
       </Field>
 
       <Field label="Social accounts (JSON)" hint='e.g. {"instagram": "@groww", "linkedin": "groww-india"}'>
