@@ -7,11 +7,9 @@ export const metadata = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div>
+    <>
       <BrandNav />
-      <main style={{ minHeight: 'calc(100vh - 56px)' }}>
-        {children}
-      </main>
-    </div>
+      <main className="brand-main">{children}</main>
+    </>
   )
 }

@@ -191,3 +191,43 @@ button { cursor: pointer; font-family: inherit; }
   opacity: 1;
   transform: translateY(0);
 }
+
+/* ── Sidebar layout ── */
+.brand-main,
+.creator-main {
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .brand-main,
+  .creator-main {
+    margin-left: 220px;
+  }
+}
+
+/* ── Inbox split-pane ── */
+/* Mobile: show thread list OR chat, not both */
+@media (max-width: 767px) {
+  .inbox-left {
+    width: 100% !important;
+  }
+  .inbox-right {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+  }
+  .inbox-right-open {
+    transform: translateX(0);
+  }
+  .inbox-back-btn {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .inbox-back-btn {
+    display: none !important;
+  }
+}

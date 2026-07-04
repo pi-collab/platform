@@ -93,7 +93,7 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
   // 1. Invoice → paid
   const { error: invoiceErr } = await supabase
     .from('invoices')
-    .update({ status: 'paid', updated_at: now })
+    .update({ status: 'paid', paid_at: now, updated_at: now })
     .eq('id', invoice.id)
 
   if (invoiceErr) {

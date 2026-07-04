@@ -252,7 +252,7 @@ function Term({ label, value }: { label: string; value: string }) {
 
 const wrapper: React.CSSProperties = {
   padding: '1.5rem 1rem',
-  maxWidth: 480,
+  maxWidth: 900,
   margin: '0 auto',
 }
 

@@ -108,8 +108,8 @@ export default async function CreatorDealsPage() {
 }
 
 const wrapper: React.CSSProperties = {
-  padding: '1.5rem 1rem',
-  maxWidth: 480,
+  padding: '2rem clamp(1rem, 3vw, 2.5rem)',
+  maxWidth: 900,
   margin: '0 auto',
 }
 
