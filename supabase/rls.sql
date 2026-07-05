@@ -5,6 +5,10 @@
 -- Prerequisites: schema.sql already deployed.
 -- Safe to re-run: uses CREATE OR REPLACE for functions,
 -- and DROP POLICY IF EXISTS before each CREATE POLICY.
+--
+-- RULE: every new table MUST have its RLS policies added here at
+-- creation time. This file is the single source of truth — if a
+-- policy is not here, it should not exist in the live DB.
 -- ================================================================
 
 
@@ -32,7 +36,8 @@ SET search_path = public AS $$
 $$;
 
 -- Returns true if the current user is a party to the given deal.
--- Used by messages, deliverables, payments, events policies.
+-- Used by messages, deliverables, payments, events, invoices,
+-- deal_deliverable_items policies.
 CREATE OR REPLACE FUNCTION can_access_deal(p_deal_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public AS $$
@@ -81,24 +86,29 @@ END $$;
 
 -- ── ENABLE RLS ON ALL TABLES ─────────────────────────────────────
 
-ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brands          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE brand_members   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE creators        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE deals           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE messages        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE deliverables    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payments        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brands                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_members         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creators              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deliverables          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
 -- Each user can only read/write their own row, matched by auth_id.
 -- The auth callback INSERT and dashboard SELECT both rely on these.
 
-DROP POLICY IF EXISTS users_read_own   ON users;
-DROP POLICY IF EXISTS users_insert_own ON users;
-DROP POLICY IF EXISTS users_update_own ON users;
+DROP POLICY IF EXISTS users_read_own    ON users;
+DROP POLICY IF EXISTS users_insert_own  ON users;
+DROP POLICY IF EXISTS users_update_own  ON users;
+DROP POLICY IF EXISTS users_deny_delete ON users;
 
 CREATE POLICY users_read_own
   ON users FOR SELECT
@@ -112,12 +122,16 @@ CREATE POLICY users_update_own
   ON users FOR UPDATE
   USING (auth_id = auth.uid());
 
+CREATE POLICY users_deny_delete
+  ON users FOR DELETE
+  USING (false);
+
 
 -- ── brands ────────────────────────────────────────────────────────
 -- A brand member can see only their own brand.
 -- Brands are created/modified via service role only.
 
-DROP POLICY IF EXISTS brands_read_own ON brands;
+DROP POLICY IF EXISTS brands_read_own      ON brands;
 DROP POLICY IF EXISTS brands_read_via_deal ON brands;
 
 CREATE POLICY brands_read_own
@@ -149,7 +163,7 @@ CREATE POLICY brand_members_read_own_brand
 
 
 -- ── creators ──────────────────────────────────────────────────────
--- SELECT: three cases allowed:
+-- SELECT: three cases allowed (AUTHENTICATED ONLY — anon cannot read):
 --   1. Any authenticated user can see vetted creators (is_vetted=true)
 --      — the "pick a creator" list for brands.
 --   2. A creator can always see their own profile, even if not yet vetted.
@@ -157,25 +171,39 @@ CREATE POLICY brand_members_read_own_brand
 --      even if unvetted — covers in-progress relationships.
 -- UPDATE: creators can update their own profile only.
 -- INSERT/DELETE: service role only (manual onboarding in v1).
+--
+-- NOTE: phone numbers are a column on this table. RLS cannot filter
+-- columns, so the policy cannot hide phone. Protection is at two layers:
+--   (a) This policy requires auth.role() = 'authenticated', blocking anon.
+--   (b) App queries for public-facing pages (browse) omit phone from SELECT.
+-- Phone is only selected in ops (service-role) and auth flows (service-role).
 
 DROP POLICY IF EXISTS creators_read       ON creators;
 DROP POLICY IF EXISTS creators_update_own ON creators;
+DROP POLICY IF EXISTS creators_deny_delete ON creators;
 
 CREATE POLICY creators_read
   ON creators FOR SELECT
   USING (
-    is_vetted = true
-    OR user_id = my_user_id()
-    OR EXISTS (
-      SELECT 1 FROM deals
-      WHERE deals.creator_id = creators.id
-        AND deals.brand_id   = my_brand_id()
+    auth.role() = 'authenticated'
+    AND (
+      is_vetted = true
+      OR user_id = my_user_id()
+      OR EXISTS (
+        SELECT 1 FROM deals
+        WHERE deals.creator_id = creators.id
+          AND deals.brand_id   = my_brand_id()
+      )
     )
   );
 
 CREATE POLICY creators_update_own
   ON creators FOR UPDATE
   USING (user_id = my_user_id());
+
+CREATE POLICY creators_deny_delete
+  ON creators FOR DELETE
+  USING (false);
 
 
 -- ── deals ─────────────────────────────────────────────────────────
@@ -187,6 +215,7 @@ CREATE POLICY creators_update_own
 DROP POLICY IF EXISTS deals_read         ON deals;
 DROP POLICY IF EXISTS deals_insert_brand ON deals;
 DROP POLICY IF EXISTS deals_update       ON deals;
+DROP POLICY IF EXISTS deals_deny_delete  ON deals;
 
 CREATE POLICY deals_read
   ON deals FOR SELECT
@@ -199,6 +228,10 @@ CREATE POLICY deals_insert_brand
 CREATE POLICY deals_update
   ON deals FOR UPDATE
   USING (brand_id = my_brand_id() OR creator_id = my_creator_id());
+
+CREATE POLICY deals_deny_delete
+  ON deals FOR DELETE
+  USING (false);
 
 
 -- ── messages ──────────────────────────────────────────────────────
@@ -248,6 +281,7 @@ CREATE POLICY deliverables_insert
 DROP POLICY IF EXISTS payments_read         ON payments;
 DROP POLICY IF EXISTS payments_insert_brand ON payments;
 DROP POLICY IF EXISTS payments_update_brand ON payments;
+DROP POLICY IF EXISTS payments_deny_delete  ON payments;
 
 CREATE POLICY payments_read
   ON payments FOR SELECT
@@ -265,6 +299,10 @@ CREATE POLICY payments_update_brand
     deal_id IN (SELECT id FROM deals WHERE brand_id = my_brand_id())
   );
 
+CREATE POLICY payments_deny_delete
+  ON payments FOR DELETE
+  USING (false);
+
 
 -- ── events ────────────────────────────────────────────────────────
 -- SELECT only — both parties can see the full audit log for their deal.
@@ -276,6 +314,107 @@ DROP POLICY IF EXISTS events_read ON events;
 CREATE POLICY events_read
   ON events FOR SELECT
   USING (can_access_deal(deal_id));
+
+
+-- ── invoices ────────────────────────────────────────────────────────
+-- MONEY TABLE. Both parties can read invoices for their deals.
+-- Creator can insert (issue an invoice). Both can update (accept/pay).
+-- No client-side delete ever.
+
+DROP POLICY IF EXISTS invoices_read        ON invoices;
+DROP POLICY IF EXISTS invoices_insert      ON invoices;
+DROP POLICY IF EXISTS invoices_update      ON invoices;
+DROP POLICY IF EXISTS invoices_deny_delete ON invoices;
+
+CREATE POLICY invoices_read
+  ON invoices FOR SELECT
+  USING (can_access_deal(deal_id));
+
+CREATE POLICY invoices_insert
+  ON invoices FOR INSERT
+  WITH CHECK (can_access_deal(deal_id));
+
+CREATE POLICY invoices_update
+  ON invoices FOR UPDATE
+  USING (can_access_deal(deal_id));
+
+CREATE POLICY invoices_deny_delete
+  ON invoices FOR DELETE
+  USING (false);
+
+
+-- ── deal_deliverable_items ──────────────────────────────────────────
+-- Per-item deliverables within a deal. Same scoping as deliverables.
+-- Both parties read; creator submits (insert/update); brand reviews (update).
+
+DROP POLICY IF EXISTS deal_deliverable_items_read   ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_insert ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_update ON deal_deliverable_items;
+
+CREATE POLICY deal_deliverable_items_read
+  ON deal_deliverable_items FOR SELECT
+  USING (can_access_deal(deal_id));
+
+CREATE POLICY deal_deliverable_items_insert
+  ON deal_deliverable_items FOR INSERT
+  WITH CHECK (can_access_deal(deal_id));
+
+CREATE POLICY deal_deliverable_items_update
+  ON deal_deliverable_items FOR UPDATE
+  USING (can_access_deal(deal_id));
+
+
+-- ── creator_products ────────────────────────────────────────────────
+-- A creator's product catalog (rate card items).
+-- SELECT: authenticated users can see active products of vetted creators
+--         (for browse/deal-builder). Creator always sees their own.
+-- INSERT/UPDATE: creator can manage their own products only.
+-- No client-side delete.
+
+DROP POLICY IF EXISTS creator_products_read       ON creator_products;
+DROP POLICY IF EXISTS creator_products_insert_own ON creator_products;
+DROP POLICY IF EXISTS creator_products_update_own ON creator_products;
+DROP POLICY IF EXISTS creator_products_deny_delete ON creator_products;
+
+CREATE POLICY creator_products_read
+  ON creator_products FOR SELECT
+  USING (
+    auth.role() = 'authenticated'
+    AND (
+      creator_id = my_creator_id()
+      OR (
+        is_active = true
+        AND EXISTS (
+          SELECT 1 FROM creators
+          WHERE creators.id = creator_products.creator_id
+            AND creators.is_vetted = true
+        )
+      )
+    )
+  );
+
+CREATE POLICY creator_products_insert_own
+  ON creator_products FOR INSERT
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY creator_products_update_own
+  ON creator_products FOR UPDATE
+  USING (creator_id = my_creator_id());
+
+CREATE POLICY creator_products_deny_delete
+  ON creator_products FOR DELETE
+  USING (false);
+
+
+-- ── phone_verifications ─────────────────────────────────────────────
+-- Contains phone numbers + OTP codes. NO client access at all.
+-- All operations go through service role (server actions only).
+-- RLS enabled + zero policies = default-deny for all client access.
+
+DROP POLICY IF EXISTS phone_verifications_deny_all ON phone_verifications;
+
+-- No SELECT/INSERT/UPDATE/DELETE policies = default deny.
+-- Explicit note: service-role bypasses RLS and is the only access path.
 
 
 -- ================================================================
