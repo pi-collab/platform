@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyOfferToken } from '@/lib/offer-token'
+import { notifyDealParty } from '@/lib/notifications'
 
 export type OfferActionResult =
   | { status: 'success' }
@@ -117,6 +118,9 @@ export async function acceptOffer(token: string): Promise<OfferActionResult> {
     return { status: 'error', message: 'This offer has already been responded to.' }
   }
 
+  // Notify brand: deal agreed (via offer link)
+  notifyDealParty(deal.id, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`)
+
   return { status: 'success' }
 }
 
@@ -223,6 +227,9 @@ export async function declineOffer(token: string, reason?: string): Promise<Offe
   if (!updated) {
     return { status: 'error', message: 'This offer has already been responded to.' }
   }
+
+  // Notify brand: offer declined (via offer link)
+  notifyDealParty(deal.id, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`)
 
   // 5. Log decline reason if provided
   if (reason?.trim()) {

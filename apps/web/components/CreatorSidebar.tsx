@@ -19,12 +19,16 @@ const NAV_LINKS = [
     icon: (c: string) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
   },
   {
+    label: 'Notifications', href: '/creator/notifications',
+    icon: (c: string) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>,
+  },
+  {
     label: 'Payments', href: '/creator/payments',
     icon: (c: string) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
   },
 ]
 
-export default function CreatorSidebar({ creatorName }: { creatorName: string }) {
+export default function CreatorSidebar({ creatorName, unreadCount = 0 }: { creatorName: string; unreadCount?: number }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -65,6 +69,9 @@ export default function CreatorSidebar({ creatorName }: { creatorName: string })
             >
               {link.icon(active ? '#111' : '#888')}
               {link.label}
+              {link.href === '/creator/notifications' && unreadCount > 0 && (
+                <span style={notifBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
             </Link>
           )
         })}
@@ -96,7 +103,10 @@ export default function CreatorSidebar({ creatorName }: { creatorName: string })
         <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111' }}>
           Guapd <span style={{ ...badgeStyle, marginLeft: 4 }}>Creator</span>
         </span>
-        <div style={{ width: 32 }} /> {/* Spacer for centering */}
+        <Link href="/creator/notifications" style={{ position: 'relative', padding: '0.25rem' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+          {unreadCount > 0 && <span style={mobileBellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+        </Link>
       </header>
 
       {/* ── Mobile drawer overlay ─────────────────────── */}
@@ -199,4 +209,15 @@ const hamburgerBtn: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
+}
+
+const notifBadge: React.CSSProperties = {
+  fontSize: '0.625rem', fontWeight: 700, color: '#fff', background: '#dc2626',
+  borderRadius: 9999, padding: '0.05rem 0.35rem', marginLeft: 'auto', lineHeight: 1.4,
+}
+
+const mobileBellBadge: React.CSSProperties = {
+  position: 'absolute', top: -2, right: -4,
+  fontSize: '0.5625rem', fontWeight: 700, color: '#fff', background: '#dc2626',
+  borderRadius: 9999, padding: '0.05rem 0.3rem', lineHeight: 1.3, minWidth: 14, textAlign: 'center',
 }

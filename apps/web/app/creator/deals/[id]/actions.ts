@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { parsePaymentTermsDays } from '@/lib/invoice'
+import { notifyDealParty, notifyOtherParty } from '@/lib/notifications'
 
 export type DeliverableResult =
   | { status: 'success' }
@@ -37,6 +38,9 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
   if (updateErr) {
     return { status: 'error', message: `Failed to accept deal: ${updateErr.message}` }
   }
+
+  // Notify brand: deal agreed
+  notifyDealParty(dealId, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`)
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -88,6 +92,9 @@ export async function declineDeal(dealId: string, reason?: string): Promise<Deli
       })
     }
   }
+
+  // Notify brand: offer declined
+  notifyDealParty(dealId, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`)
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -216,6 +223,9 @@ export async function submitForReview(dealId: string): Promise<DeliverableResult
     return { status: 'error', message: `Failed to update deal status: ${updateErr.message}` }
   }
 
+  // Notify brand: deliverables submitted for review
+  notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`)
+
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
 }
@@ -291,6 +301,9 @@ export async function submitDeliverable(dealId: string, formData: FormData): Pro
   if (updateErr) {
     return { status: 'error', message: `Deliverable saved but failed to update deal status: ${updateErr.message}` }
   }
+
+  // Notify brand: deliverable submitted
+  notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`)
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -386,6 +399,9 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   if (updateErr) {
     return { status: 'error', message: `Failed to issue invoice: ${updateErr.message}` }
   }
+
+  // Notify brand: invoice issued
+  notifyDealParty(dealId, 'brand', 'invoice_issued', (t) => `Invoice received for ${t}`)
 
   revalidatePath(`/creator/deals/${dealId}`)
   revalidatePath(`/deals/${dealId}`)

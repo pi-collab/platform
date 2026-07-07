@@ -99,6 +99,7 @@ ALTER TABLE invoices              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -415,6 +416,30 @@ DROP POLICY IF EXISTS phone_verifications_deny_all ON phone_verifications;
 
 -- No SELECT/INSERT/UPDATE/DELETE policies = default deny.
 -- Explicit note: service-role bypasses RLS and is the only access path.
+
+
+-- ── notifications ─────────────────────────────────────────────────
+-- Per-user notification feed. Each user sees only their own.
+-- INSERT: service-role only (server actions create notifications).
+-- UPDATE: user can mark their own as read (read_at only).
+-- No client-side delete.
+
+DROP POLICY IF EXISTS notifications_read_own    ON notifications;
+DROP POLICY IF EXISTS notifications_update_own  ON notifications;
+DROP POLICY IF EXISTS notifications_deny_delete ON notifications;
+
+CREATE POLICY notifications_read_own
+  ON notifications FOR SELECT
+  USING (user_id = my_user_id());
+
+CREATE POLICY notifications_update_own
+  ON notifications FOR UPDATE
+  USING (user_id = my_user_id())
+  WITH CHECK (user_id = my_user_id());
+
+CREATE POLICY notifications_deny_delete
+  ON notifications FOR DELETE
+  USING (false);
 
 
 -- ================================================================

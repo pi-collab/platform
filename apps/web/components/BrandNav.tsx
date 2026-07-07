@@ -6,6 +6,8 @@ export default async function BrandNav() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let brandName: string | null = null
+  let unreadCount = 0
+
   if (user) {
     const { data: profile } = await supabase
       .from('users')
@@ -21,8 +23,17 @@ export default async function BrandNav() {
         .maybeSingle()
 
       brandName = (membership as any)?.brands?.name ?? null
+
+      // Unread notification count
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .is('read_at', null)
+
+      unreadCount = count ?? 0
     }
   }
 
-  return <BrandSidebar brandName={brandName} />
+  return <BrandSidebar brandName={brandName} unreadCount={unreadCount} />
 }

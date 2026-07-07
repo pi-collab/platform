@@ -3,6 +3,7 @@
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { notifyDealParty } from '@/lib/notifications'
 
 type InvoiceResult =
   | { status: 'success' }
@@ -47,6 +48,9 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
   if (updateErr) {
     return { status: 'error', message: `Failed to accept invoice: ${updateErr.message}` }
   }
+
+  // Notify creator: invoice accepted
+  notifyDealParty(dealId, 'creator', 'invoice_accepted', (t) => `Invoice accepted for ${t}`)
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)
@@ -121,6 +125,9 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
   if (completeErr) {
     return { status: 'error', message: `Deal marked paid but failed to complete: ${completeErr.message}` }
   }
+
+  // Notify creator: payment received
+  notifyDealParty(dealId, 'creator', 'payment_paid', (t) => `Payment received for ${t}`)
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)

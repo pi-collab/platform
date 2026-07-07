@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { revalidatePath } from 'next/cache'
+import { notifyDealParty } from '@/lib/notifications'
 
 type ReviewResult =
   | { status: 'success' }
@@ -57,6 +58,9 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
       .update({ status: 'approved' })
       .eq('id', dealId)
       .in('status', ['delivered', 'revision'])
+
+    // Notify creator: deal approved
+    notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`)
   }
 
   revalidatePath(`/deals/${dealId}`)
@@ -126,6 +130,9 @@ export async function requestItemRevision(dealId: string, itemId: string, note?:
       return { status: 'error', message: `Item marked for revision but deal status failed to update: ${dealErr.message}` }
     }
   }
+
+  // Notify creator: revision requested
+  notifyDealParty(dealId, 'creator', 'revision_requested', (t) => `Revision requested on ${t}`)
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)

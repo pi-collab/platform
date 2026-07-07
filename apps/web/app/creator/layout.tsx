@@ -31,6 +31,17 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   if (!creatorName) redirect('/')
 
+  // Unread notification count
+  let unreadCount = 0
+  if (profile && isVetted) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id)
+      .is('read_at', null)
+    unreadCount = count ?? 0
+  }
+
   // Vetting gate: unvetted creators see a pending or rejected interstitial
   if (!isVetted) {
     return (
@@ -68,7 +79,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   return (
     <>
-      <CreatorSidebar creatorName={creatorName} />
+      <CreatorSidebar creatorName={creatorName} unreadCount={unreadCount} />
       <main className="creator-main">{children}</main>
     </>
   )

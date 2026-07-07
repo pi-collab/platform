@@ -3,6 +3,7 @@
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { notifyDealParty } from '@/lib/notifications'
 
 interface DeliverableItem {
   label: string
@@ -94,6 +95,9 @@ export async function createDeal(input: CreateDealInput) {
 
   // TODO: Insert input.message as first message in the deal thread (messages table)
   // when the send/notification piece is built.
+
+  // Notify creator: new offer
+  notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`)
 
   revalidatePath('/deals')
   return { success: true, dealId: data.id }

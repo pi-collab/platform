@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { sendMessage } from './actions'
 
 interface Thread {
   dealId: string
@@ -78,21 +78,16 @@ export default function BrandInboxView({
     setError(null)
     setSending(true)
 
-    const supabase = createClient()
-    const { data, error: insertError } = await supabase
-      .from('messages')
-      .insert({ deal_id: selected, body: trimmed, sender_party: 'brand' })
-      .select('id, deal_id, sender_party, body, created_at')
-      .single()
+    const result = await sendMessage(selected, trimmed, 'brand')
 
     setSending(false)
 
-    if (insertError) {
-      setError(insertError.message)
+    if (result.status === 'error') {
+      setError(result.message ?? 'Failed to send')
       return
     }
 
-    const msg = data as Message
+    const msg = { id: result.data!.id, deal_id: selected, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
     setMessagesByDeal((prev) => ({
       ...prev,
       [selected]: [...(prev[selected] ?? []), msg],

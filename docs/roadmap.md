@@ -302,3 +302,22 @@ NOTE: messaging design does NOT solve disintermediation; the transaction experie
 ## Unread-message notification (v1-appropriate, gated on Interakt)
 
 Passionfroot emails a partner if a message goes unread. Our channel is WhatsApp (Interakt), not email, and not built (gated on company registration). Version: unread message → WhatsApp notification. Activates when Interakt lands.
+
+---
+
+## Roadmap items (from PJ braindump — captured, NOT building now; notification/liveness build in progress)
+
+NEAR-TERM (completes the deal loop's meaning):
+- POSTED state: workflow state after the creator posts the content (with live link). "Done" = posted, not just paid. Prerequisite for any future performance tracking. Small; fold into polish.
+
+V1.5 (on-thesis workflow value):
+- CAMPAIGNS: one campaign → many deals (e.g. "Summer Drop" = 10 creators = 10 deals). Campaign-level rollup metrics + per-deal. Strong fit (multi-deal operations = the pain). Interacts with deferred multi-influencer campaigns + analytics. Build after single-deal loop is polished + real.
+- SHIPMENT TRACKING: brand adds product shipment status + tracking link; creator sees delivery ETA; gate "start recording/deliverable" on product delivered. Adds a lifecycle state. Real gap for PRODUCT deals.
+- REEL TYPE + RIGHTS: collab vs non-collab; boosting rights (yes/no + duration in months); structured terms fields. Record + timestamp creator confirmation of granted rights → this audit trail is the creator's EVIDENCE if content is used beyond granted rights. NOTE: platform RECORDS rights + confirmations; ENFORCEMENT of "used without confirmation → creator has rights" is CONTRACTUAL/legal, backed by the audit log — not software enforcement.
+- USAGE-RIGHTS END DATE: display when usage rights expire (buildable now — already capture usage rights). EXTENSION flow: brand extends rights (esp. for well-performing creators) = a new mini-deal/payment (rides payment rails, stubbed now / real post-registration). "Performing creators" targeting needs real metrics (deferred analytics).
+
+OPERATIONAL/SECURITY (near-term when headcount grows):
+- ROLE-BASED ACCESS: the moment a 4th person (dev/employee) touches the system — proper RBAC. Ops portal is currently founder-gated by HARDCODED email (doesn't scale). Least-privilege GitHub + Supabase (service-role keys are dangerous — who gets them?), secrets hygiene. SECURITY-CRITICAL given RLS was just hardened; adding broad-access people undoes it. Not a feature — a necessity. (Brief already flags: no named engineering owner.)
+
+POST-PILOT SCALING (biggest scope-expansion — GATED on core deal-loop proven with real users):
+- CREATOR-TOOLS FUNNEL: free/low-fee creator productivity tools (reel planning, calendar) as a supply-side ACQUISITION play → convert creators to "Guap'd money" (brand deals through the platform), initially deals-only-through-us. Clever supply-growth wedge BUT: it's a SECOND product (creator-productivity, ≠ deal-workflow), and building it before the core loop is validated with real users splits focus (research explicitly chose NOT to be Beacons/creator-OS). Does NOT violate "no discovery marketplace" (good), but IS the scope-creep the brief warns against. Roadmap post-pilot, gated on the deal-loop being proven. Do NOT pull forward.

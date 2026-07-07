@@ -16,7 +16,7 @@ A **creator-first workflow platform** for brand–creator deals in India. It rep
 
 - **Creator-first. Host transactions, don't manufacture matches.** The platform runs deals between a brand and a creator who already found each other. It is **not** a discovery/search marketplace in v1 — that avoids the two-sided cold-start problem.
 - **Disintermediate agencies.** Remove the opaque middleman so brand and creator deal directly and transparently. Agencies are *not* in the main model, but the architecture should let them (and influencer-managers) use the workflow later for a fee — as a delegated-access role, not a rewrite.
-- **Win one niche first: finance / BFSI creators.** Biggest budgets, SEBI-compliance angle, underserved. A follower threshold is a supply filter, not a wedge — the niche focus is what makes it defensible.
+- **Build for ALL creator types — the platform/tooling is niche-agnostic.** Whether to LAUNCH finance-first (or any niche) is a go-to-market decision made AT LAUNCH, not a build-time constraint. Do not scope features to a single niche.
 - **The wedge is recurring deals.** An agency earns its cut on the first match and nothing on the fourth repeat deal, yet still takes it and still runs it through DMs. Make the repeat deal one tap. Recurring is where you win.
 - **Win on "easier than DMs," not just "safer than DMs."** If running deal #2 on-platform is even slightly more friction than a WhatsApp message, users leak back off-platform. Easier-than-the-alternative is the actual product requirement.
 
