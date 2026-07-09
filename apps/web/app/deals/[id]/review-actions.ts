@@ -53,15 +53,15 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
   const allApproved = allItems && allItems.length > 0 && allItems.every((i) => i.item_status === 'approved')
 
   if (allApproved) {
-    const { count } = await supabase
+    const { data: updated } = await supabase
       .from('deals')
       .update({ status: 'approved' })
       .eq('id', dealId)
       .in('status', ['delivered', 'revision'])
-      .select('id', { count: 'exact', head: true })
+      .select('id')
 
     // Only notify if the deal actually transitioned (prevents double-notify on concurrent approvals)
-    if (count && count > 0) {
+    if (updated && updated.length > 0) {
       notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`)
     }
   }
