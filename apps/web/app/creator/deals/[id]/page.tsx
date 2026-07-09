@@ -46,7 +46,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .order('version', { ascending: false }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, revision_note')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, submitted_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase

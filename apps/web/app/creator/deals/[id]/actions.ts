@@ -162,6 +162,8 @@ export async function submitItem(dealId: string, itemId: string, externalUrl: st
     .update({
       item_status: 'submitted',
       external_url: rawUrl,
+      storage_path: null,
+      file_name: null,
       version: nextVersion,
       submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

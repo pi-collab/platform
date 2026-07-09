@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { approveItem, requestItemRevision } from './review-actions'
+import { getSignedUrl } from '@/app/creator/deals/[id]/upload-actions'
 
 interface Item {
   id: string
@@ -10,6 +11,8 @@ interface Item {
   handle: string
   item_status: string
   external_url: string | null
+  storage_path: string | null
+  file_name: string | null
   version: number
   price_paise: number | null
 }
@@ -48,6 +51,7 @@ export default function ItemReview({
   const [doneMessage, setDoneMessage] = useState<string | null>(null)
   const [revisingItemId, setRevisingItemId] = useState<string | null>(null)
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({})
+  const [viewingFile, setViewingFile] = useState<string | null>(null)
 
   const reviewed = items.filter((i) => i.item_status === 'approved' || i.item_status === 'revision').length
   const submitted = items.filter((i) => i.item_status === 'submitted').length
@@ -71,6 +75,17 @@ export default function ItemReview({
     if (result.status === 'error') setError(result.message)
     else if (items.filter((i) => i.item_status === 'submitted').length === 1) {
       setDoneMessage('All deliverables approved!')
+    }
+  }
+
+  async function handleViewFile(dealId: string, itemId: string) {
+    setViewingFile(itemId)
+    const result = await getSignedUrl(dealId, itemId)
+    setViewingFile(null)
+    if (result.status === 'success') {
+      window.open(result.url, '_blank')
+    } else {
+      setError(result.message)
     }
   }
 
@@ -148,7 +163,7 @@ export default function ItemReview({
                 </span>
               </div>
 
-              {/* Link */}
+              {/* Link or uploaded file */}
               {item.external_url && (
                 <a
                   href={item.external_url}
@@ -158,6 +173,20 @@ export default function ItemReview({
                 >
                   {item.external_url.length > 55 ? item.external_url.slice(0, 55) + '...' : item.external_url}
                 </a>
+              )}
+              {item.storage_path && item.file_name && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--color-heading)', fontWeight: 500 }}>
+                    {item.file_name}
+                  </span>
+                  <button
+                    onClick={() => handleViewFile(dealId, item.id)}
+                    disabled={viewingFile === item.id}
+                    style={{ ...viewFileBtn, opacity: viewingFile === item.id ? 0.5 : 1, cursor: viewingFile === item.id ? 'not-allowed' : 'pointer' }}
+                  >
+                    {viewingFile === item.id ? 'Loading...' : 'View file'}
+                  </button>
+                </div>
               )}
 
               {/* Actions for submitted items */}
@@ -316,6 +345,16 @@ const warningBox: React.CSSProperties = {
   background: '#fffbeb',
   border: '2px solid #f59e0b',
   borderRadius: 8,
+}
+
+const viewFileBtn: React.CSSProperties = {
+  padding: '0.25rem 0.5rem',
+  background: '#eff6ff',
+  color: '#2563eb',
+  border: '1px solid #bfdbfe',
+  borderRadius: 5,
+  fontSize: '0.6875rem',
+  fontWeight: 600,
 }
 
 const successBox: React.CSSProperties = {

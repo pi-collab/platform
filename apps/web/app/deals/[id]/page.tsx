@@ -49,7 +49,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, version, price_paise, submitted_at, approved_at')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, submitted_at, approved_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -151,6 +151,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 handle: i.handle,
                 item_status: i.item_status,
                 external_url: i.external_url,
+                storage_path: i.storage_path,
+                file_name: i.file_name,
                 version: i.version,
                 price_paise: i.price_paise,
               }))}
@@ -189,6 +191,11 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                           >
                             {item.external_url.length > 50 ? item.external_url.slice(0, 50) + '...' : item.external_url}
                           </a>
+                        )}
+                        {item.storage_path && item.file_name && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-heading)', display: 'block', marginTop: '0.2rem' }}>
+                            {item.file_name}
+                          </span>
                         )}
                       </div>
                       <span style={{
