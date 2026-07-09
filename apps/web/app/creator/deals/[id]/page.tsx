@@ -8,6 +8,7 @@ import AcceptDecline from './AcceptDecline'
 import InvoiceCard from './InvoiceCard'
 import CreatorThread from './CreatorThread'
 import { calculateFee } from '@/lib/fee'
+import RealtimeDealListener from '@/components/RealtimeDealListener'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   negotiating: { bg: '#dbeafe', color: '#1e40af' },
@@ -55,7 +56,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .maybeSingle(),
     supabase
       .from('messages')
-      .select('id, sender_party, body, created_at')
+      .select('id, deal_id, sender_party, body, created_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
   ])
@@ -70,6 +71,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   return (
     <main style={wrapper}>
+      <RealtimeDealListener dealId={deal.id} />
+
       <Link href="/creator/deals" style={backLink}>
         &larr; My deals
       </Link>

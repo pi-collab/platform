@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
+import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 
 interface DealRow {
   id: string
@@ -120,6 +121,7 @@ export default async function DashboardPage() {
 
   return (
     <section style={container}>
+      <RealtimeDashboardListener />
       <h1 style={heading}>Dashboard</h1>
 
       {/* ── NEEDS ATTENTION ───────────────────────────── */}

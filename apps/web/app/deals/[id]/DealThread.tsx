@@ -1,10 +1,13 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { sendMessage } from '@/app/inbox/actions'
+import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
+import { playGuapSound } from '@/lib/sounds'
 
 interface Message {
   id: string
+  deal_id: string
   sender_party: 'brand' | 'creator'
   body: string | null
   created_at: string
@@ -31,6 +34,20 @@ export default function DealThread({
   const bottomRef = useRef<HTMLDivElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Dedupe: track all known message ids so realtime skips sender's own echo
+  const knownIdsRef = useRef(new Set(initialMessages.map((m) => m.id)))
+
+  // Realtime: subscribe to new messages on this deal
+  useRealtimeMessages(
+    dealId,
+    (msg) => {
+      knownIdsRef.current.add(msg.id)
+      setMessages((prev) => [...prev, msg as Message])
+      playGuapSound()
+    },
+    knownIdsRef,
+  )
 
   useEffect(() => {
     if (open) {
@@ -73,22 +90,18 @@ export default function DealThread({
     setError(null)
     setSending(true)
 
-    const supabase = createClient()
-
-    const { data, error: insertError } = await supabase
-      .from('messages')
-      .insert({ deal_id: dealId, body: trimmed, sender_party: 'brand' })
-      .select('id, sender_party, body, created_at')
-      .single()
+    const result = await sendMessage(dealId, trimmed, 'brand')
 
     setSending(false)
 
-    if (insertError) {
-      setError(insertError.message)
+    if (result.status === 'error') {
+      setError(result.message ?? 'Failed to send')
       return
     }
 
-    setMessages((prev) => [...prev, data as Message])
+    const msg = { id: result.data!.id, deal_id: dealId, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
+    knownIdsRef.current.add(msg.id)
+    setMessages((prev) => [...prev, msg])
     setBody('')
   }
 

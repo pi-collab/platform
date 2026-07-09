@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import SignOutButton from '@/components/SignOutButton'
+import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
 
 const NAV_LINKS = [
   {
@@ -28,9 +29,10 @@ const NAV_LINKS = [
   },
 ]
 
-export default function CreatorSidebar({ creatorName, unreadCount = 0 }: { creatorName: string; unreadCount?: number }) {
+export default function CreatorSidebar({ creatorName, unreadCount: initialUnread = 0 }: { creatorName: string; unreadCount?: number }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const unreadCount = useRealtimeNotifications(initialUnread)
 
   const initials = creatorName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 

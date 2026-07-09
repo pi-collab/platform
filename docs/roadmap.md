@@ -321,3 +321,15 @@ OPERATIONAL/SECURITY (near-term when headcount grows):
 
 POST-PILOT SCALING (biggest scope-expansion — GATED on core deal-loop proven with real users):
 - CREATOR-TOOLS FUNNEL: free/low-fee creator productivity tools (reel planning, calendar) as a supply-side ACQUISITION play → convert creators to "Guap'd money" (brand deals through the platform), initially deals-only-through-us. Clever supply-growth wedge BUT: it's a SECOND product (creator-productivity, ≠ deal-workflow), and building it before the core loop is validated with real users splits focus (research explicitly chose NOT to be Beacons/creator-OS). Does NOT violate "no discovery marketplace" (good), but IS the scope-creep the brief warns against. Roadmap post-pilot, gated on the deal-loop being proven. Do NOT pull forward.
+
+---
+
+## Deliverable upload + storage (decision captured)
+
+Current: link-submission (creator pastes Drive/YouTube/Loom URL) — zero storage cost. Schema already supports hosted: deliverables.storage_path (nullable) alongside external_url.
+
+V1 add (when prioritized): UPLOAD as an OPTION ALONGSIDE links (not replacing) — Supabase Storage, 500MB/file cap, RLS-scoped bucket (only deal parties access). Keeps link-users free (no egress); upload for those who prefer it.
+
+Cost reality: storage is cheap (~$0.021/GB/mo); EGRESS (viewing) is the real cost (~$0.09/GB) — a video watched repeatedly during review drives cost, not storage. At pilot scale: a few dollars. Cap + monitor; a paid "more storage" tier is a possible later model.
+
+DEFERRED (defer-list): Loom-style TIMESTAMPED video review (brand comments pinned to exact timecodes). This is NOT "just upload" — it's a frame-accurate review tool (video player + timecode-anchored comment threads + resolve/resubmit), weeks-long build. Free-text-notes-per-item works for pilot. Creators can paste Loom links today. Real differentiator for later, not now.

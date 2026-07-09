@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
+import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Dashboard — Guapd Creator' }
@@ -113,6 +114,7 @@ export default async function CreatorDashboardPage() {
 
   return (
     <main style={wrapper}>
+      <RealtimeDashboardListener />
       <h1 style={heading}>Dashboard</h1>
 
       {/* ── NEEDS ATTENTION ───────────────────────────── */}

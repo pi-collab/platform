@@ -7,6 +7,7 @@ import ItemReview from './ItemReview'
 import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
 import { deriveDisplayStatus } from '@/lib/deal-status'
+import RealtimeDealListener from '@/components/RealtimeDealListener'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -43,7 +44,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('messages')
-      .select('id, sender_party, body, created_at')
+      .select('id, deal_id, sender_party, body, created_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -72,6 +73,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   return (
     <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
+      <RealtimeDealListener dealId={deal.id} />
+
       {/* Back */}
       <Link href="/deals" style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
         &larr; Back to deals
@@ -128,7 +131,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               </div>
             )
           })()}
-          <DealThread dealId={deal.id} dealStatus={deal.status} initialMessages={(messages ?? []) as { id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
+          <DealThread dealId={deal.id} dealStatus={deal.status} initialMessages={(messages ?? []) as { id: string; deal_id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
         </div>
       </div>
 

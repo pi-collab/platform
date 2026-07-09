@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { sendMessage } from '@/app/inbox/actions'
+import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
+import { playGuapSound } from '@/lib/sounds'
 
 interface Thread {
   dealId: string
@@ -49,6 +51,23 @@ export default function CreatorInboxView({
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Dedupe: track all known message ids so realtime skips sender's own echo
+  const knownIdsRef = useRef(new Set(allMessages.map((m) => m.id)))
+
+  // Realtime: subscribe to new messages on the selected deal
+  useRealtimeMessages(
+    selected,
+    (msg) => {
+      knownIdsRef.current.add(msg.id)
+      setMessagesByDeal((prev) => ({
+        ...prev,
+        [msg.deal_id]: [...(prev[msg.deal_id] ?? []), msg],
+      }))
+      playGuapSound()
+    },
+    knownIdsRef,
+  )
+
   const selectedThread = threads.find((t) => t.dealId === selected)
   const selectedMessages = selected ? (messagesByDeal[selected] ?? []) : []
   const isTerminal = selectedThread ? TERMINAL_STATUSES.includes(selectedThread.dealStatus) : false
@@ -86,6 +105,7 @@ export default function CreatorInboxView({
     }
 
     const msg = { id: result.data!.id, deal_id: selected, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
+    knownIdsRef.current.add(msg.id)
     setMessagesByDeal((prev) => ({
       ...prev,
       [selected]: [...(prev[selected] ?? []), msg],
