@@ -91,39 +91,29 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
 
   // ── STUB: simulate successful payment (no real money moves) ──
   // In production, this block executes only after Razorpay webhook confirms payment.
+  //
+  // Atomic: invoice→paid + deal→paid + deal→complete in a single Postgres
+  // transaction via SECURITY DEFINER function (see 010_robustness_functions.sql).
 
-  const now = new Date().toISOString()
+  const { data: result, error: rpcErr } = await supabase.rpc('mark_deal_paid', {
+    p_deal_id: dealId,
+  })
 
-  // 1. Invoice → paid
-  const { error: invoiceErr } = await supabase
-    .from('invoices')
-    .update({ status: 'paid', paid_at: now, updated_at: now })
-    .eq('id', invoice.id)
-
-  if (invoiceErr) {
-    return { status: 'error', message: `Failed to update invoice: ${invoiceErr.message}` }
+  if (rpcErr) {
+    return { status: 'error', message: `Payment failed: ${rpcErr.message}` }
   }
 
-  // 2. Deal → paid (audit trigger fires)
-  const { error: paidErr } = await supabase
-    .from('deals')
-    .update({ status: 'paid' })
-    .eq('id', dealId)
-    .eq('status', 'approved')
+  const res = result as { status: string; message?: string; already?: boolean }
 
-  if (paidErr) {
-    return { status: 'error', message: `Failed to update deal to paid: ${paidErr.message}` }
+  if (res.status === 'error') {
+    return { status: 'error', message: res.message ?? 'Unknown error.' }
   }
 
-  // 3. Deal → complete (audit trigger fires again — two events logged)
-  const { error: completeErr } = await supabase
-    .from('deals')
-    .update({ status: 'complete', completed_at: now })
-    .eq('id', dealId)
-    .eq('status', 'paid')
-
-  if (completeErr) {
-    return { status: 'error', message: `Deal marked paid but failed to complete: ${completeErr.message}` }
+  // Idempotent: if already paid/complete, skip notification
+  if (res.already) {
+    revalidatePath(`/deals/${dealId}`)
+    revalidatePath(`/creator/deals/${dealId}`)
+    return { status: 'success' }
   }
 
   // Notify creator: payment received

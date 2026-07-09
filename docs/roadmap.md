@@ -333,3 +333,9 @@ V1 add (when prioritized): UPLOAD as an OPTION ALONGSIDE links (not replacing) �
 Cost reality: storage is cheap (~$0.021/GB/mo); EGRESS (viewing) is the real cost (~$0.09/GB) — a video watched repeatedly during review drives cost, not storage. At pilot scale: a few dollars. Cap + monitor; a paid "more storage" tier is a possible later model.
 
 DEFERRED (defer-list): Loom-style TIMESTAMPED video review (brand comments pinned to exact timecodes). This is NOT "just upload" — it's a frame-accurate review tool (video player + timecode-anchored comment threads + resolve/resubmit), weeks-long build. Free-text-notes-per-item works for pilot. Creators can paste Loom links today. Real differentiator for later, not now.
+
+---
+
+## Deploy notes
+
+REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

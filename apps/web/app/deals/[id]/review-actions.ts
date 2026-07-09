@@ -53,14 +53,17 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
   const allApproved = allItems && allItems.length > 0 && allItems.every((i) => i.item_status === 'approved')
 
   if (allApproved) {
-    await supabase
+    const { count } = await supabase
       .from('deals')
       .update({ status: 'approved' })
       .eq('id', dealId)
       .in('status', ['delivered', 'revision'])
+      .select('id', { count: 'exact', head: true })
 
-    // Notify creator: deal approved
-    notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`)
+    // Only notify if the deal actually transitioned (prevents double-notify on concurrent approvals)
+    if (count && count > 0) {
+      notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`)
+    }
   }
 
   revalidatePath(`/deals/${dealId}`)
@@ -115,19 +118,20 @@ export async function requestItemRevision(dealId: string, itemId: string, note?:
     return { status: 'error', message: `Failed to update item: ${itemErr.message}` }
   }
 
-  // Transition deal to 'revision' + increment revisions_used (only from 'delivered')
+  // Transition deal to 'revision' + atomically increment revisions_used
+  // (only fires if deal is currently 'delivered' — safe no-op otherwise).
+  // Uses SECURITY DEFINER function to avoid read-then-write race on counter.
   if (deal.status === 'delivered') {
-    const { error: dealErr } = await supabase
-      .from('deals')
-      .update({
-        status: 'revision',
-        revisions_used: (deal.revisions_used ?? 0) + 1,
-      })
-      .eq('id', dealId)
-      .eq('status', 'delivered')
+    const { data: rowsAffected, error: rpcErr } = await supabase.rpc('request_deal_revision', {
+      p_deal_id: dealId,
+    })
 
-    if (dealErr) {
-      return { status: 'error', message: `Item marked for revision but deal status failed to update: ${dealErr.message}` }
+    if (rpcErr) {
+      return { status: 'error', message: `Item marked for revision but deal status failed to update: ${rpcErr.message}` }
+    }
+
+    if (rowsAffected === 0) {
+      // Deal was no longer 'delivered' (concurrent transition) — item is still marked, which is fine
     }
   }
 
