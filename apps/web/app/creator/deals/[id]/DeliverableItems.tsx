@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { submitItem, submitForReview } from './actions'
-import { getUploadPath, submitItemWithUpload, deleteOrphanedUpload } from './upload-actions'
+import { getUploadPath, submitItemWithUpload, getSignedUrl, deleteOrphanedUpload } from './upload-actions'
 import { createClient } from '@/lib/supabase/client'
 
 interface Item {
@@ -26,7 +26,7 @@ const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   approved:  { bg: '#dcfce7', color: '#166534' },
 }
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB (Supabase free tier limit; raise to 500MB after Pro upgrade)
 const ACCEPTED_TYPES = 'video/mp4,video/quicktime,video/webm,video/x-msvideo,image/jpeg,image/png,image/webp,image/gif,application/pdf,audio/mpeg,audio/wav,audio/mp4,application/zip,application/x-zip-compressed'
 
 export default function DeliverableItems({
@@ -53,6 +53,7 @@ export default function DeliverableItems({
   const [uploadMode, setUploadMode] = useState<Record<string, 'link' | 'upload'>>({})
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const [viewingFile, setViewingFile] = useState<string | null>(null)
 
   const submitted = items.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length
   const total = items.length
@@ -88,7 +89,7 @@ export default function DeliverableItems({
 
     // Client-side size check
     if (file.size > MAX_FILE_SIZE) {
-      setError(`File too large (${formatFileSize(file.size)}). Maximum is 500MB.`)
+      setError(`File too large (${formatFileSize(file.size)}). Maximum is 50MB.`)
       return
     }
 
@@ -145,6 +146,17 @@ export default function DeliverableItems({
       setError(result.message)
     } else {
       setSuccessMsg('Submitted for review! The brand has been notified.')
+    }
+  }
+
+  async function handleViewFile(itemId: string) {
+    setViewingFile(itemId)
+    const result = await getSignedUrl(dealId, itemId)
+    setViewingFile(null)
+    if (result.status === 'success') {
+      window.open(result.url, '_blank')
+    } else {
+      setError(result.message)
     }
   }
 
@@ -222,6 +234,14 @@ export default function DeliverableItems({
                     <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                       <span style={uploadBadge}>uploaded</span>
                       <span style={{ wordBreak: 'break-all' }}>{item.file_name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleViewFile(item.id)}
+                        disabled={viewingFile === item.id}
+                        style={{ ...viewFileBtn, opacity: viewingFile === item.id ? 0.5 : 1, cursor: viewingFile === item.id ? 'not-allowed' : 'pointer' }}
+                      >
+                        {viewingFile === item.id ? 'Loading...' : 'View file'}
+                      </button>
                     </div>
                   )}
                 </>
@@ -315,7 +335,7 @@ export default function DeliverableItems({
                             Choose file
                           </button>
                           <p style={{ fontSize: '0.6875rem', color: '#888', margin: '0.25rem 0 0' }}>
-                            Video, image, PDF, audio, or ZIP. Max 500MB.
+                            Video, image, PDF, audio, or ZIP. Max 50MB.
                           </p>
                         </div>
                       )}
@@ -481,6 +501,17 @@ const modeTabActive: React.CSSProperties = {
   background: '#111',
   color: '#fff',
   borderColor: '#111',
+}
+
+const viewFileBtn: React.CSSProperties = {
+  padding: '0.15rem 0.4rem',
+  background: '#eff6ff',
+  color: '#2563eb',
+  border: '1px solid #bfdbfe',
+  borderRadius: 4,
+  fontSize: '0.625rem',
+  fontWeight: 600,
+  flexShrink: 0,
 }
 
 const uploadBadge: React.CSSProperties = {

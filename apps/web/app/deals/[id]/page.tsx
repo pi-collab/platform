@@ -8,6 +8,7 @@ import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
+import ViewFileButton from './ViewFileButton'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -193,9 +194,10 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                           </a>
                         )}
                         {item.storage_path && item.file_name && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-heading)', display: 'block', marginTop: '0.2rem' }}>
-                            {item.file_name}
-                          </span>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-heading)', display: 'flex', alignItems: 'center', gap: '0.375rem', marginTop: '0.2rem' }}>
+                            <span style={{ wordBreak: 'break-all' }}>{item.file_name}</span>
+                            <ViewFileButton dealId={deal.id} itemId={item.id} />
+                          </div>
                         )}
                       </div>
                       <span style={{
