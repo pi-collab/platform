@@ -135,6 +135,43 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
   const [message, setMessage] = useState('')
   const [priceOverride, setPriceOverride] = useState('')
+  const [requiresShipment, setRequiresShipment] = useState(false)
+  // Rights fields
+  const [usageRightsEndDate, setUsageRightsEndDate] = useState(prefill?.usage_rights_end_date ?? '')
+  // Per-item reel types + boosting: productId → value
+  const [reelTypes, setReelTypes] = useState<Record<string, 'collab' | 'non_collab' | ''>>(() => {
+    const rt: Record<string, 'collab' | 'non_collab' | ''> = {}
+    if (prefill?.items) {
+      for (const item of prefill.items) {
+        if (!item.reel_type) continue
+        const product = products.find((p) => p.product_type === item.label && p.platform === item.platform && p.handle === item.handle)
+        if (product) rt[product.id] = item.reel_type as 'collab' | 'non_collab'
+      }
+    }
+    return rt
+  })
+  const [itemBoostingRights, setItemBoostingRights] = useState<Record<string, boolean | null>>(() => {
+    const br: Record<string, boolean | null> = {}
+    if (prefill?.items) {
+      for (const item of prefill.items) {
+        if (item.boosting_rights == null) continue
+        const product = products.find((p) => p.product_type === item.label && p.platform === item.platform && p.handle === item.handle)
+        if (product) br[product.id] = item.boosting_rights
+      }
+    }
+    return br
+  })
+  const [itemBoostingDuration, setItemBoostingDuration] = useState<Record<string, string>>(() => {
+    const bd: Record<string, string> = {}
+    if (prefill?.items) {
+      for (const item of prefill.items) {
+        if (!item.boosting_duration_months) continue
+        const product = products.find((p) => p.product_type === item.label && p.platform === item.platform && p.handle === item.handle)
+        if (product) bd[product.id] = String(item.boosting_duration_months)
+      }
+    }
+    return bd
+  })
   // Track whether revision fields have been auto-updated by product selection
   const prefillRevisionLock = useRef(!!prefill)
 
@@ -255,13 +292,21 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     const resolvedPayment = paymentTerms === 'Custom' ? customPayment : paymentTerms
 
     // Build structured items array: one row per unit (qty 2 → 2 rows)
-    const items: { label: string; platform: string; handle: string; price_paise: number }[] = []
+    const items: { label: string; platform: string; handle: string; price_paise: number; reel_type?: 'collab' | 'non_collab'; boosting_rights?: boolean; boosting_duration_months?: number }[] = []
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
       const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const rt = reelTypes[p.id]
+      const br = itemBoostingRights[p.id]
+      const bd = itemBoostingDuration[p.id]
       for (let i = 0; i < sel.qty; i++) {
-        items.push({ label: p.product_type, platform: p.platform, handle: p.handle, price_paise: unitPaise })
+        items.push({
+          label: p.product_type, platform: p.platform, handle: p.handle, price_paise: unitPaise,
+          ...(rt ? { reel_type: rt } : {}),
+          ...(br != null ? { boosting_rights: br } : {}),
+          ...(br && bd ? { boosting_duration_months: parseInt(bd, 10) } : {}),
+        })
       }
     }
 
@@ -280,6 +325,8 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       message: message || undefined,
       items,
       reengaged_from: prefill?.reengaged_from,
+      requires_shipment: requiresShipment,
+      usage_rights_end_date: usageRightsEndDate || undefined,
     })
 
     setLoading(false)
@@ -373,6 +420,106 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                               <span style={{ fontSize: '0.875rem', fontWeight: 700, minWidth: 20, textAlign: 'center' }}>{qty}</span>
                               <button type="button" onClick={() => setQty(p.id, qty + 1)} style={stepperBtn}>+</button>
                             </div>
+
+                            {/* Reel type toggle — Instagram items only */}
+                            {qty > 0 && p.platform.toLowerCase() === 'instagram' && (
+                              <select
+                                value={reelTypes[p.id] ?? ''}
+                                onChange={(e) => setReelTypes((prev) => ({ ...prev, [p.id]: e.target.value as any }))}
+                                style={{ ...inputStyle, width: 120, fontSize: '0.7rem', padding: '0.2rem 0.375rem' }}
+                              >
+                                <option value="">Reel type...</option>
+                                <option value="collab">Collab post</option>
+                                <option value="non_collab">Non-collab</option>
+                              </select>
+                            )}
+
+                            {/* Per-item boosting rights */}
+                            {qty > 0 && (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-end' }}>
+                                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                  {([
+                                    [true, 'Boost'],
+                                    [false, 'No boost'],
+                                  ] as const).map(([val, label]) => {
+                                    const checked = itemBoostingRights[p.id] === val
+                                    return (
+                                      <button
+                                        key={String(val)}
+                                        type="button"
+                                        onClick={() => {
+                                          setItemBoostingRights((prev) => ({ ...prev, [p.id]: val }))
+                                          if (!val) setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))
+                                        }}
+                                        style={{
+                                          padding: '0.15rem 0.4rem',
+                                          fontSize: '0.65rem',
+                                          fontWeight: checked ? 700 : 500,
+                                          borderRadius: 9999,
+                                          border: checked ? '1.5px solid var(--color-heading)' : '1px solid var(--color-border)',
+                                          background: checked ? 'var(--color-heading)' : 'var(--glass-bg)',
+                                          color: checked ? '#fff' : 'var(--color-muted)',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        {label}
+                                      </button>
+                                    )
+                                  })}
+                                  {itemBoostingRights[p.id] != null && (
+                                    <button
+                                      type="button"
+                                      onClick={() => { setItemBoostingRights((prev) => ({ ...prev, [p.id]: null })); setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' })) }}
+                                      style={{ fontSize: '0.6rem', color: 'var(--color-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                                {itemBoostingRights[p.id] === true && (
+                                  <div style={{ display: 'flex', gap: '0.2rem', flexWrap: 'wrap' }}>
+                                    {['1', '3', '6', '12'].map((m) => {
+                                      const active = itemBoostingDuration[p.id] === m
+                                      return (
+                                        <button
+                                          key={m}
+                                          type="button"
+                                          onClick={() => setItemBoostingDuration((prev) => ({ ...prev, [p.id]: m }))}
+                                          style={{
+                                            padding: '0.1rem 0.35rem',
+                                            fontSize: '0.6rem',
+                                            fontWeight: active ? 700 : 500,
+                                            borderRadius: 9999,
+                                            border: active ? '1.5px solid var(--color-heading)' : '1px solid var(--color-border)',
+                                            background: active ? 'var(--section-bg-alt)' : 'var(--glass-bg)',
+                                            color: active ? 'var(--color-heading)' : 'var(--color-muted)',
+                                            cursor: 'pointer',
+                                          }}
+                                        >
+                                          {m}mo
+                                        </button>
+                                      )
+                                    })}
+                                    <button
+                                      type="button"
+                                      onClick={() => setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))}
+                                      style={{
+                                        padding: '0.1rem 0.35rem',
+                                        fontSize: '0.6rem',
+                                        fontWeight: !itemBoostingDuration[p.id] ? 700 : 500,
+                                        borderRadius: 9999,
+                                        border: !itemBoostingDuration[p.id] ? '1.5px solid var(--color-heading)' : '1px solid var(--color-border)',
+                                        background: !itemBoostingDuration[p.id] ? 'var(--section-bg-alt)' : 'var(--glass-bg)',
+                                        color: !itemBoostingDuration[p.id] ? 'var(--color-heading)' : 'var(--color-muted)',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      ∞
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
 
                             {/* Custom price input for display_price=false products */}
                             {!p.display_price && qty > 0 && (
@@ -534,6 +681,17 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
         )}
       </Field>
 
+      {/* Content rights — deal-level fields only (boosting is per-item, set above in product rows) */}
+      <fieldset style={fieldsetStyle}>
+        <legend style={legendStyle}>Content rights</legend>
+        <p style={{ fontSize: '0.7rem', color: '#888', margin: '0 0 0.5rem' }}>
+          Boosting rights are set per deliverable above. Usage rights expiry applies to the whole deal.
+        </p>
+        <Field label="Usage rights expire on" hint="When do all content usage rights end? Leave blank for perpetual.">
+          <input style={inputStyle} type="date" value={usageRightsEndDate} onChange={(e) => setUsageRightsEndDate(e.target.value)} />
+        </Field>
+      </fieldset>
+
       {/* Payment terms */}
       <Field label="Payment terms">
         <select style={inputStyle} value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)}>
@@ -545,6 +703,24 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
           <input style={{ ...inputStyle, marginTop: '0.375rem' }} value={customPayment} onChange={(e) => setCustomPayment(e.target.value)} placeholder="Describe payment terms..." />
         )}
       </Field>
+
+      {/* Product shipment */}
+      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={requiresShipment}
+          onChange={(e) => setRequiresShipment(e.target.checked)}
+          style={{ width: 16, height: 16, accentColor: 'var(--color-heading)' }}
+        />
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>
+          This deal includes a product shipment
+        </span>
+      </label>
+      {requiresShipment && (
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', margin: '-0.75rem 0 0 1.5rem' }}>
+          You&apos;ll be able to add tracking info after the creator accepts.
+        </p>
+      )}
 
       {/* Message */}
       <Field label="Message to creator (optional)" hint="Will be sent as the first message in the deal thread">

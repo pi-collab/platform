@@ -10,7 +10,7 @@ export default async function DealsListPage() {
   const [{ data: deals, error }, { data: invoices }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, created_at, creators(id, full_name, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)')
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')

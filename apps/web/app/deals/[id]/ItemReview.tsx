@@ -15,6 +15,9 @@ interface Item {
   file_name: string | null
   version: number
   price_paise: number | null
+  reel_type: string | null
+  boosting_rights: boolean | null
+  boosting_duration_months: number | null
 }
 
 const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -149,6 +152,16 @@ export default function ItemReview({
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
                     {item.platform} {displayHandle(item.handle)}
                   </span>
+                  {item.reel_type && (
+                    <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.375rem' }}>
+                      {item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}
+                    </span>
+                  )}
+                  {item.boosting_rights && (
+                    <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.375rem' }}>
+                      Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}
+                    </span>
+                  )}
                   {item.price_paise != null && item.price_paise > 0 && (
                     <span style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading)', marginLeft: '0.5rem' }}>
                       {formatRupees(item.price_paise)}

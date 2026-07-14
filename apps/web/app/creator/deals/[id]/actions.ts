@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { parsePaymentTermsDays } from '@/lib/invoice'
@@ -18,26 +19,54 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
 
-  const { data: deal } = await supabase
-    .from('deals')
-    .select('id, status')
-    .eq('id', dealId)
-    .maybeSingle()
+  const [{ data: deal }, { data: items }] = await Promise.all([
+    supabase
+      .from('deals')
+      .select('id, status, usage_rights, usage_rights_end_date')
+      .eq('id', dealId)
+      .maybeSingle(),
+    supabase
+      .from('deal_deliverable_items')
+      .select('id, label, platform, handle, reel_type, boosting_rights, boosting_duration_months')
+      .eq('deal_id', dealId),
+  ])
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
   if (deal.status !== 'negotiating') {
     return { status: 'error', message: `Cannot accept a deal that is "${deal.status}".` }
   }
 
+  const now = new Date().toISOString()
+
   const { error: updateErr } = await supabase
     .from('deals')
-    .update({ status: 'agreed' })
+    .update({ status: 'agreed', rights_confirmed_at: now })
     .eq('id', dealId)
     .eq('status', 'negotiating')
 
   if (updateErr) {
     return { status: 'error', message: `Failed to accept deal: ${updateErr.message}` }
   }
+
+  // Snapshot rights terms in an audit event — survives future edits (e.g. extensions)
+  const admin = createAdminClient()
+  await admin.from('events').insert({
+    deal_id: dealId,
+    event_type: 'deal.rights_confirmed',
+    detail: {
+      confirmed_at: now,
+      usage_rights: deal.usage_rights,
+      usage_rights_end_date: deal.usage_rights_end_date,
+      items: (items ?? [])
+        .filter((i) => i.reel_type || i.boosting_rights != null)
+        .map((i) => ({
+          id: i.id, label: i.label, platform: i.platform, handle: i.handle,
+          reel_type: i.reel_type,
+          boosting_rights: i.boosting_rights,
+          boosting_duration_months: i.boosting_duration_months,
+        })),
+    },
+  })
 
   // Notify brand: deal agreed
   notifyDealParty(dealId, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`)

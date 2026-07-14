@@ -21,7 +21,8 @@ export interface DealPrefill {
   usage_rights: string | null
   payment_terms: string | null
   reengaged_from: string
-  items: { label: string; platform: string; handle: string; price_paise: number }[]
+  items: { label: string; platform: string; handle: string; price_paise: number; reel_type: string | null; boosting_rights: boolean | null; boosting_duration_months: number | null }[]
+  usage_rights_end_date: string | null
 }
 
 export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string } }) {
@@ -36,13 +37,13 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     const [{ data: sourceDeal }, { data: sourceItems }] = await Promise.all([
       supabase
         .from('deals')
-        .select('id, creator_id, title, deliverables, price_paise, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms')
+        .select('id, creator_id, title, deliverables, price_paise, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, usage_rights_end_date')
         .eq('id', searchParams.from)
         .eq('brand_id', brand.brandId)
         .maybeSingle(),
       supabase
         .from('deal_deliverable_items')
-        .select('label, platform, handle, price_paise')
+        .select('label, platform, handle, price_paise, reel_type, boosting_rights, boosting_duration_months')
         .eq('deal_id', searchParams.from),
     ])
 
@@ -62,7 +63,11 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           platform: i.platform,
           handle: i.handle,
           price_paise: i.price_paise ?? 0,
+          reel_type: i.reel_type ?? null,
+          boosting_rights: i.boosting_rights ?? null,
+          boosting_duration_months: i.boosting_duration_months ?? null,
         })),
+        usage_rights_end_date: sourceDeal.usage_rights_end_date ?? null,
       }
     }
   }

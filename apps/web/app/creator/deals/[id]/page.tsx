@@ -7,6 +7,7 @@ import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
 import InvoiceCard from './InvoiceCard'
 import CreatorThread from './CreatorThread'
+import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 
@@ -36,7 +37,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, brands(name)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -46,7 +47,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .order('version', { ascending: false }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, submitted_at, revision_note')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -107,6 +108,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: '#111' }}>
                       {item.label} <span style={{ color: '#888', fontSize: '0.8125rem' }}>({item.platform} {item.handle.startsWith('@') ? item.handle : `@${item.handle}`})</span>
+                      {item.reel_type && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.25rem' }}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>}
+                      {item.boosting_rights && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.25rem' }}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}</span>}
                     </span>
                     {item.price_paise != null && item.price_paise > 0 && (
                       <span style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace', color: '#111', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
@@ -169,7 +172,27 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             )
           })()}
           {deal.usage_rights && <Term label="Usage rights" value={deal.usage_rights} />}
+          {deal.usage_rights_end_date && (
+            <Term
+              label="Usage rights expire"
+              value={new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            />
+          )}
+          {deal.rights_confirmed_at && (
+            <Term
+              label="Rights confirmed"
+              value={new Date(deal.rights_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            />
+          )}
           {deal.payment_terms && <Term label="Payment terms" value={deal.payment_terms} />}
+          {deal.requires_shipment && (
+            <div>
+              <p style={termLabel}>Product shipment</p>
+              <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: '#111', margin: 0 }}>
+                The brand will ship a product to you
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -233,6 +256,70 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
         <div style={{ marginTop: '1.5rem' }}>
           <InvoiceCard dealId={deal.id} invoice={invoice} />
+        </div>
+      )}
+
+      {/* Shipment info (read-only for creator) */}
+      {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
+        <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #e5e5e5', borderRadius: 12, background: '#fafafa' }}>
+          <h2 style={sectionTitle}>Product Shipment</h2>
+          {deal.shipment_status === 'pending' && (
+            <p style={{ fontSize: '0.8125rem', color: '#888', margin: 0 }}>
+              The brand will ship the product to you.
+            </p>
+          )}
+          {deal.shipment_status === 'shipped' && (
+            <div>
+              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#2563eb', margin: '0 0 0.25rem' }}>
+                Product shipped{deal.shipped_at && ` on ${new Date(deal.shipped_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
+              </p>
+              {deal.tracking_link && (
+                <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all', display: 'block' }}>
+                  Track shipment
+                </a>
+              )}
+              {deal.carrier_note && <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.25rem 0 0' }}>{deal.carrier_note}</p>}
+              {canSubmit && (
+                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.5rem 0 0', fontStyle: 'italic' }}>
+                  You can start recording once your product arrives.
+                </p>
+              )}
+            </div>
+          )}
+          {deal.shipment_status === 'delivered' && (
+            <div>
+              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#16a34a', margin: '0 0 0.25rem' }}>
+                Product delivered
+              </p>
+              {deal.tracking_link && (
+                <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#2563eb', wordBreak: 'break-all', display: 'block' }}>
+                  Tracking link
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Posted — creator marks content as live */}
+      {(['approved', 'paid', 'complete'].includes(deal.status)) && !deal.is_posted && (
+        <div style={{ marginTop: '1.5rem' }}>
+          <PostedCard dealId={deal.id} />
+        </div>
+      )}
+      {deal.is_posted && deal.posted_url && (
+        <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #bbf7d0', borderRadius: 12, background: '#f0fdf4' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#16a34a', margin: '0 0 0.25rem' }}>
+            Content Posted
+          </p>
+          <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all' }}>
+            {deal.posted_url.length > 60 ? deal.posted_url.slice(0, 60) + '...' : deal.posted_url}
+          </a>
+          {deal.posted_at && (
+            <p style={{ fontSize: '0.6875rem', color: '#888', margin: '0.25rem 0 0' }}>
+              Posted {new Date(deal.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          )}
         </div>
       )}
 

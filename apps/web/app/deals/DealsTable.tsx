@@ -16,6 +16,7 @@ interface Deal {
   revisions_used: number | null
   revision_limit: number | null
   status: string
+  is_posted: boolean | null
   created_at: string
   creator: { id: string; full_name: string; profile_photo_url: string | null } | null
   invoiceStatus: string | null
@@ -42,11 +43,19 @@ function formatRupees(paise: number): string {
 
 export default function DealsTable({ deals }: { deals: Deal[] }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [postedFilter, setPostedFilter] = useState<'all' | 'posted' | 'awaiting'>('all')
 
-  const filtered = useMemo(
-    () => statusFilter === 'all' ? deals : deals.filter((d) => d.status === statusFilter),
-    [deals, statusFilter],
-  )
+  const filtered = useMemo(() => {
+    let result = statusFilter === 'all' ? deals : deals.filter((d) => d.status === statusFilter)
+    if (postedFilter !== 'all') {
+      const completedStatuses = new Set(['approved', 'paid', 'complete'])
+      result = result.filter((d) => {
+        if (!completedStatuses.has(d.status)) return true
+        return postedFilter === 'posted' ? d.is_posted : !d.is_posted
+      })
+    }
+    return result
+  }, [deals, statusFilter, postedFilter])
 
   // Count per status for filter pills
   const counts = useMemo(() => {
@@ -54,6 +63,13 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
     for (const d of deals) m[d.status] = (m[d.status] ?? 0) + 1
     return m
   }, [deals])
+
+  // Posted counts (among completed deals)
+  const completedStatuses = new Set(['approved', 'paid', 'complete'])
+  const completedDeals = deals.filter((d) => completedStatuses.has(d.status))
+  const postedCount = completedDeals.filter((d) => d.is_posted).length
+  const awaitingCount = completedDeals.length - postedCount
+  const showPostedFilter = completedDeals.length > 0
 
   return (
     <>
@@ -92,6 +108,36 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
           )
         })}
       </div>
+
+      {/* Posted sub-filter — shown when completed deals exist */}
+      {showPostedFilter && (
+        <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1.25rem', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.25rem' }}>
+            Posted:
+          </span>
+          {([['all', `All (${completedDeals.length})`], ['posted', `Posted (${postedCount})`], ['awaiting', `Awaiting (${awaitingCount})`]] as const).map(([key, label]) => {
+            const active = postedFilter === key
+            return (
+              <button
+                key={key}
+                onClick={() => setPostedFilter(key)}
+                style={{
+                  padding: '0.2rem 0.5rem',
+                  fontSize: '0.6875rem',
+                  fontWeight: active ? 700 : 500,
+                  borderRadius: 9999,
+                  border: active ? '1.5px solid #16a34a' : '1px solid var(--color-border)',
+                  background: active ? '#dcfce7' : 'var(--glass-bg)',
+                  color: active ? '#166534' : 'var(--color-muted)',
+                  cursor: 'pointer',
+                }}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div className="deals-table-wrap">
         {/* Desktop table */}
@@ -201,6 +247,15 @@ function DealRow({ deal: d }: { deal: Deal }) {
             {due}
           </span>
         )}
+        {new Set(['approved', 'paid', 'complete']).has(d.status) && (
+          <span style={{
+            fontSize: '0.5625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, marginLeft: '0.375rem',
+            background: d.is_posted ? '#dcfce7' : '#fef9c3',
+            color: d.is_posted ? '#166534' : '#854d0e',
+          }}>
+            {d.is_posted ? 'Posted' : 'Awaiting post'}
+          </span>
+        )}
       </td>
 
       {/* Created */}
@@ -256,9 +311,20 @@ function MobileCard({ deal: d }: { deal: Deal }) {
             </p>
           </div>
         </div>
-        <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize', flexShrink: 0 }}>
-          {derived.label}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
+            {derived.label}
+          </span>
+          {new Set(['approved', 'paid', 'complete']).has(d.status) && (
+            <span style={{
+              fontSize: '0.5625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999,
+              background: d.is_posted ? '#dcfce7' : '#fef9c3',
+              color: d.is_posted ? '#166534' : '#854d0e',
+            }}>
+              {d.is_posted ? 'Posted' : 'Awaiting post'}
+            </span>
+          )}
+        </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>

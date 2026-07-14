@@ -9,6 +9,7 @@ import { calculateFee } from '@/lib/fee'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import ViewFileButton from './ViewFileButton'
+import ShipmentCard from './ShipmentCard'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -35,7 +36,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -50,7 +51,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, submitted_at, approved_at')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -156,6 +157,9 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 file_name: i.file_name,
                 version: i.version,
                 price_paise: i.price_paise,
+                reel_type: i.reel_type ?? null,
+                boosting_rights: i.boosting_rights ?? null,
+                boosting_duration_months: i.boosting_duration_months ?? null,
               }))}
               revisionsUsed={deal.revisions_used ?? 0}
               revisionLimit={deal.revision_limit}
@@ -183,6 +187,16 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
                           {item.platform} {displayHandle}
                         </span>
+                        {item.reel_type && (
+                          <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.375rem' }}>
+                            {item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}
+                          </span>
+                        )}
+                        {item.boosting_rights && (
+                          <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.375rem' }}>
+                            Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}
+                          </span>
+                        )}
                         {item.external_url && (
                           <a
                             href={item.external_url}
@@ -215,6 +229,41 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         </div>
       )}
 
+      {/* Shipment — only for product deals */}
+      {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
+        <div style={{ marginBottom: '2rem' }}>
+          <ShipmentCard
+            dealId={deal.id}
+            shipmentStatus={deal.shipment_status}
+            trackingLink={deal.tracking_link}
+            carrierNote={deal.carrier_note}
+            shippedAt={deal.shipped_at}
+          />
+        </div>
+      )}
+
+      {/* Posted status */}
+      {deal.is_posted && deal.posted_url && (
+        <div style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md, 8px)', background: '#f0fdf4' }}>
+          <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#16a34a', margin: '0 0 0.25rem' }}>
+            Content Posted
+          </p>
+          <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all' }}>
+            {deal.posted_url.length > 60 ? deal.posted_url.slice(0, 60) + '...' : deal.posted_url}
+          </a>
+          {deal.posted_at && (
+            <p style={{ fontSize: '0.6875rem', color: '#888', margin: '0.25rem 0 0' }}>
+              Posted {new Date(deal.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          )}
+        </div>
+      )}
+      {(['approved', 'paid', 'complete'].includes(deal.status)) && !deal.is_posted && (
+        <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
+          Awaiting creator to post the content.
+        </p>
+      )}
+
       {/* Invoice — show when invoice exists (issued, accepted, paid) */}
       {invoice && (
         <div style={{ marginBottom: '2rem' }}>
@@ -236,6 +285,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontSize: '0.8125rem', color: 'var(--color-heading)' }}>
                         {item.label} <span style={{ color: 'var(--color-muted)', fontSize: '0.75rem' }}>({item.platform} {item.handle.startsWith('@') ? item.handle : `@${item.handle}`})</span>
+                        {item.reel_type && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.25rem' }}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>}
+                        {item.boosting_rights && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.25rem' }}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}</span>}
                       </span>
                       {item.price_paise != null && item.price_paise > 0 && (
                         <span style={{ fontSize: '0.8125rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
@@ -292,6 +343,18 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               )
             })()}
             <DetailField label="Usage rights" value={deal.usage_rights} />
+            {deal.usage_rights_end_date && (
+              <DetailField
+                label="Usage rights expire"
+                value={new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+              />
+            )}
+            {deal.rights_confirmed_at && (
+              <DetailField
+                label="Rights confirmed"
+                value={new Date(deal.rights_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              />
+            )}
             <DetailField label="Payment terms" value={deal.payment_terms} />
             <DetailField label="Last offer by" value={deal.last_offer_by ? (deal.last_offer_by as string).charAt(0).toUpperCase() + (deal.last_offer_by as string).slice(1) : null} />
           </div>
@@ -410,6 +473,25 @@ function parseEvent(ev: { event_type: string; detail: any }): { label: string; d
     // Fallback: show transition if we have from/to
     if (from && to) {
       return { label: `${statusWord(from)} \u2192 ${statusWord(to)}`, description: '' }
+    }
+  }
+
+  // deal.rights_confirmed — creator confirmed content rights terms at acceptance
+  if (ev.event_type === 'deal.rights_confirmed') {
+    return {
+      label: 'Rights terms confirmed',
+      description: 'Creator agreed to the content rights terms',
+      dotColor: '#2563eb',
+    }
+  }
+
+  // deal.posted — creator marked content as live
+  if (ev.event_type === 'deal.posted') {
+    const detail = ev.detail as { posted_url?: string } | null
+    return {
+      label: 'Content posted',
+      description: detail?.posted_url ? `Live at ${detail.posted_url}` : 'Creator marked content as live',
+      dotColor: '#16a34a',
     }
   }
 

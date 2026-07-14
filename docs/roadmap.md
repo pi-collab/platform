@@ -336,6 +336,34 @@ DEFERRED (defer-list): Loom-style TIMESTAMPED video review (brand comments pinne
 
 ---
 
+## External notifications: email interim → WhatsApp at registration
+
+In-app feed (bell + realtime) is built. External ping (reaches user OFF-platform) is the pilot gap — creators won't sit on the web app.
+- EMAIL (now, no registration gate): add a transactional email channel (Resend/Postmark/SES) to the existing notify() helper — same call that creates the in-app notification also sends an email ("new offer / message / payment on Guap'd → view"). Small addition; notify() is already channel-pluggable. Enough for pilot start.
+- WHATSAPP (Interakt, post-registration): the intended channel (Indian creators live on WhatsApp) — adds as a THIRD channel on the same notify(), when registration + verification complete.
+Build email before Utkarsh testing (so creators get notified off-platform); WhatsApp swaps/adds at registration. No rebuild — both attach to notify().
+
+---
+
+## Strategic / roadmap ideas (PJ braindump — captured; #3 needs cofounder decision)
+
+1. CREATOR STICKINESS — "see what other creators are doing" (content types, brand categories, to help creators grow).
+   Goal (retention) is right. BUT: exposing individual creators' deals violates confidentiality (rates/relationships — we just LOCKED this in the RLS audit) and pulls toward a social/discovery product (off-thesis).
+   Safe version: AGGREGATED/ANONYMIZED benchmarks ("finance creators charging ₹X-Y for Reels; category growing"), OPT-IN, post-data-volume. NOT individual deal exposure. Better near-term stickiness = payment reliability + re-engage relationships (already built).
+
+2. AGENCY AGENT (AI does agency work: manage, negotiate, delivery-check, updates, find creators).
+   Strongly on-thesis (AI-realizes the agency-disintermediation). V2, AI-heavy (needs mature product + real data).
+   BUILD (assisted): delivery-check, status updates, drafting, workflow automation.
+   CAUTION: negotiation = ASSISTED only (AI suggests, human confirms — money terms, real consequences), not autonomous.
+   EXCLUDE: "find creators" = DISCOVERY, which the thesis explicitly avoids (host transactions, not discovery marketplace).
+
+3. AGENCIES AS PARTNER USER-TYPE (agencies sign up, bring their creators + brands; brand can go agency-partner [higher fee] or direct [Guap'd fee]; we run agencies' workflow, they bring volume + share revenue; long-game: creators experience the platform via agency, then get DIRECT Guap'd deals even if the agency leaves — "embrace to replace").
+   COFOUNDER DECISION, not a build task. Clever supply+demand cold-start accelerant (agencies have both sides now), and "creators stay if agency leaves" is the strongest part.
+   TENSION TO RESOLVE CONSCIOUSLY: this partially RE-mediates the agency we set out to DISintermediate — enables the agency markup we pitch against (for some deals), risks channel conflict ("skip agencies" vs "here's our agency partner"), could muddy creator-first positioning.
+   KEY QUESTIONS: (a) bootstrap-to-outlast or permanent channel? (bootstrap = more defensible, matches "creators stay if agency leaves"); (b) how to manage the "go direct" vs "agency partner" channel conflict; (c) does it dilute creator-first brand. Decide with cofounders (esp. Utkarsh — owns creator/agency relationships) BEFORE building. On-thesis IF framed as embrace-to-replace bootstrap; off-thesis if it just becomes agency-markup-as-a-service.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

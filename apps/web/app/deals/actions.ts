@@ -10,6 +10,9 @@ interface DeliverableItem {
   platform: string
   handle: string
   price_paise?: number
+  reel_type?: 'collab' | 'non_collab'
+  boosting_rights?: boolean
+  boosting_duration_months?: number
 }
 
 interface CreateDealInput {
@@ -25,12 +28,14 @@ interface CreateDealInput {
   message?: string // stored later when send/notification is built
   items?: DeliverableItem[]
   reengaged_from?: string
+  requires_shipment?: boolean
+  usage_rights_end_date?: string
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -66,6 +71,9 @@ export async function createDeal(input: CreateDealInput) {
       fee_percent: brandFee?.platform_fee_percent ?? 0,
       fee_mode: brandFee?.fee_mode ?? 'on_top',
       reengaged_from: reengaged_from || null,
+      requires_shipment: requires_shipment ?? false,
+      shipment_status: requires_shipment ? 'pending' : null,
+      usage_rights_end_date: usage_rights_end_date || null,
     })
     .select('id')
     .single()
@@ -81,6 +89,9 @@ export async function createDeal(input: CreateDealInput) {
       platform: item.platform,
       handle: item.handle,
       price_paise: item.price_paise ?? null,
+      reel_type: item.reel_type ?? null,
+      boosting_rights: item.boosting_rights ?? null,
+      boosting_duration_months: item.boosting_rights && item.boosting_duration_months ? item.boosting_duration_months : null,
     }))
     const { error: itemsErr } = await supabase
       .from('deal_deliverable_items')

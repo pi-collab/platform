@@ -9,6 +9,7 @@ interface DealRow {
   title: string
   status: string
   price_paise: number
+  is_posted: boolean | null
   created_at: string
   creator_id: string
   creators: unknown
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
   const [{ data: deals }, { data: invoices }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, created_at, creator_id, creators(id, full_name, profile_photo_url)')
+      .select('id, title, status, price_paise, is_posted, created_at, creator_id, creators(id, full_name, profile_photo_url)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .order('created_at', { ascending: false }),
@@ -64,9 +65,12 @@ export default async function DashboardPage() {
   // ── ACTIVITY SUMMARY ─────────────────────────────────────
   const ACTIVE_STATUSES = new Set(['negotiating', 'agreed', 'delivered', 'revision', 'approved'])
   const COMPLETED_STATUSES = new Set(['complete', 'paid'])
+  const POSTABLE_STATUSES = new Set(['approved', 'paid', 'complete'])
 
   const activeDeals = allDeals.filter((d) => ACTIVE_STATUSES.has(d.status))
   const completedDeals = allDeals.filter((d) => COMPLETED_STATUSES.has(d.status))
+  const postableDeals = allDeals.filter((d) => POSTABLE_STATUSES.has(d.status))
+  const postedDeals = postableDeals.filter((d) => d.is_posted)
   const totalDeals = allDeals.length
 
   // Budget spent = sum of brand_pays_paise on PAID invoices only
@@ -166,6 +170,7 @@ export default async function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
         <StatCard label="Active deals" value={String(activeDeals.length)} />
         <StatCard label="Completed" value={String(completedDeals.length)} />
+        <StatCard label="Posted" value={postableDeals.length > 0 ? `${postedDeals.length} of ${postableDeals.length}` : '0'} />
         <StatCard label="Total deals" value={String(totalDeals)} />
         <StatCard label="Budget spent" value={formatRupees(budgetSpent)} />
       </div>
