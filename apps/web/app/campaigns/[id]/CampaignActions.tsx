@@ -9,16 +9,19 @@ export default function CampaignActions({
   currentStatus,
   currentName,
   currentDescription,
+  currentBudgetPaise,
 }: {
   campaignId: string
   currentStatus: string
   currentName: string
   currentDescription: string | null
+  currentBudgetPaise: number | null
 }) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(currentName)
   const [description, setDescription] = useState(currentDescription ?? '')
+  const [budget, setBudget] = useState(currentBudgetPaise != null ? String(currentBudgetPaise / 100) : '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,7 +29,9 @@ export default function CampaignActions({
     if (!name.trim()) { setError('Name is required'); return }
     setLoading(true)
     setError(null)
-    const res = await updateCampaign(campaignId, { name, description })
+    const budgetPaise = budget.trim() ? Math.round(parseFloat(budget) * 100) : null
+    if (budget.trim() && (isNaN(budgetPaise!) || budgetPaise! < 0)) { setError('Budget must be a positive number'); setLoading(false); return }
+    const res = await updateCampaign(campaignId, { name, description, budget_paise: budgetPaise })
     setLoading(false)
     if (res.error) { setError(res.error); return }
     setEditing(false)
@@ -49,6 +54,7 @@ export default function CampaignActions({
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={inputStyle}
+          placeholder="Campaign name"
           autoFocus
         />
         <textarea
@@ -57,6 +63,15 @@ export default function CampaignActions({
           placeholder="Description (optional)"
           rows={2}
           style={{ ...inputStyle, marginTop: '0.5rem', resize: 'vertical' }}
+        />
+        <input
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+          type="number"
+          min="0"
+          step="1"
+          placeholder="Budget (₹, optional)"
+          style={{ ...inputStyle, marginTop: '0.5rem' }}
         />
         <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.75rem' }}>
           <button onClick={() => setEditing(false)} disabled={loading} style={cancelBtn}>Cancel</button>

@@ -9,6 +9,7 @@ export default function NewCampaignButton() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [budget, setBudget] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,12 +17,15 @@ export default function NewCampaignButton() {
     if (!name.trim()) { setError('Name is required'); return }
     setLoading(true)
     setError(null)
-    const res = await createCampaign(name, description || undefined)
+    const budgetPaise = budget.trim() ? Math.round(parseFloat(budget) * 100) : undefined
+    if (budget.trim() && (isNaN(budgetPaise!) || budgetPaise! < 0)) { setError('Budget must be a positive number'); setLoading(false); return }
+    const res = await createCampaign(name, description || undefined, budgetPaise)
     setLoading(false)
     if (res.error) { setError(res.error); return }
     setOpen(false)
     setName('')
     setDescription('')
+    setBudget('')
     if (res.campaignId) router.push(`/campaigns/${res.campaignId}`)
   }
 
@@ -53,6 +57,15 @@ export default function NewCampaignButton() {
         placeholder="Description / brief (optional)"
         rows={2}
         style={{ ...inputStyle, marginTop: '0.5rem', resize: 'vertical' }}
+      />
+      <input
+        value={budget}
+        onChange={(e) => setBudget(e.target.value)}
+        type="number"
+        min="0"
+        step="1"
+        placeholder="Budget in ₹ (optional)"
+        style={{ ...inputStyle, marginTop: '0.5rem' }}
       />
       <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.75rem' }}>
         <button

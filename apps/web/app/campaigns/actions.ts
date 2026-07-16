@@ -4,7 +4,7 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function createCampaign(name: string, description?: string) {
+export async function createCampaign(name: string, description?: string, budgetPaise?: number) {
   const brand = await verifyApprovedBrand()
   const supabase = createClient()
 
@@ -16,6 +16,7 @@ export async function createCampaign(name: string, description?: string) {
       brand_id: brand.brandId,
       name: name.trim(),
       description: description?.trim() || null,
+      budget_paise: budgetPaise ?? null,
     })
     .select('id')
     .single()
@@ -28,7 +29,7 @@ export async function createCampaign(name: string, description?: string) {
 
 export async function updateCampaign(
   campaignId: string,
-  updates: { name?: string; description?: string; status?: 'active' | 'completed' | 'archived' }
+  updates: { name?: string; description?: string; status?: 'active' | 'completed' | 'archived'; budget_paise?: number | null }
 ) {
   await verifyApprovedBrand()
   const supabase = createClient()
@@ -37,6 +38,7 @@ export async function updateCampaign(
   if (updates.name !== undefined) patch.name = updates.name.trim()
   if (updates.description !== undefined) patch.description = updates.description.trim() || null
   if (updates.status !== undefined) patch.status = updates.status
+  if (updates.budget_paise !== undefined) patch.budget_paise = updates.budget_paise
 
   const { error } = await supabase
     .from('campaigns')
