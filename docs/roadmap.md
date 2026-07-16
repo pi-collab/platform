@@ -364,6 +364,75 @@ Build email before Utkarsh testing (so creators get notified off-platform); What
 
 ---
 
+## COMPANY INCORPORATED (COI, PAN, TAN, DIN done) — unlocks the stubbed→real transition
+
+Start these EXTERNAL queues NOW, in parallel (lead times you can't compress; they gate the real pilot):
+1. RAZORPAY Route + linked-account onboarding + per-creator KYC — replaces the payment stub (swap-point: mark_deal_paid). LONGEST lead time (KYC per creator). Start immediately.
+2. GST registration (GSTIN) — needed to charge brands. NOTE: getting GSTIN ≠ building in-product GST invoicing (still deferred; pilot invoicing manual/accountant).
+3. WhatsApp / Interakt business verification — Meta verification is SLOW; start now. Unblocks WhatsApp notification channel (email interim bridges until then). Swap-point: notify() helper.
+4. Supabase Pro upgrade — unblocks 500MB uploads (free-tier 50MB cap) + production infra (no pausing, backups).
+5. Company current account — for Razorpay settlements.
+BUILD SWAP-POINTS ALL READY (architected for this): mark_deal_paid stub→Razorpay Route; notify()→WhatsApp channel; upload 50MB→500MB. Each is a SWAP not a rebuild. Do the swaps as each external dependency goes live.
+
+**Company contact now established:** phone number + contact@guapd.com (domain email).
+- **contact@guapd.com**: use for Razorpay/Interakt/GST business registrations; verify guapd.com domain (SPF/DKIM) when setting up transactional email (Resend/Postmark) — the interim notification channel; point in-product "reach out to us"/support paths here (not placeholders).
+- **Company phone**: business contact for Razorpay/KYC + support. DECIDE: is this the WhatsApp Business number (tied to Interakt verification) or a dedicated line? WhatsApp Business number often shouldn't double as a regular-call line. Decide before starting Interakt.
+- **SMALL PRODUCT TASK**: update placeholder contact references (rejected-creator "reach out to us", support escapes, footer) to contact@guapd.com.
+
+---
+
+## PATH TO LAUNCH (web-first, app later) — sequencing + long-lead flags
+
+DECISION NEEDED: controlled PILOT (Utkarsh's network, real deals, lower polish bar, sooner, real validation) vs full PUBLIC LAUNCH (higher polish bar, later). Lean: pilot-first → learn → then public-launch polish informed by real usage. Don't polish everything before any validation.
+
+LONG-LEAD EXTERNAL GATES — start ALL now, parallel (they gate launch, not code):
+- Razorpay Route + per-creator KYC (payment swap: mark_deal_paid)
+- Interakt/WhatsApp Meta verification (notify() swap; email bridges)
+- META APP + REVIEW (biggest sleeper): needed for brand-side post ANALYTICS + creator profile SNAPSHOTS/storefront. Instagram/FB data = Meta app review + Business Verification + permissions, can take WEEKS, can be rejected/iterated. START EARLY — do not treat as a late build task. Note: deep metrics require creators/brands to CONNECT their business/creator accounts.
+- Supabase Pro (500MB uploads)
+
+BUILD QUEUE (net-new): 2c campaign brief, extension mini-deal, deal_ref+search — then launch surfaces: privacy policy + terms (legal, must-have), support (contact@guapd.com flow), settings, creator self-serve profile/storefront, error messages + empty states across app, marketing site polish + book-a-demo.
+RANK these must-have-to-launch vs fast-follow (don't treat all as pre-launch — e.g. deep Meta analytics + storefront auto-build + book-a-demo may be fast-follows).
+
+DESIGN: Chandreyee design-system-first → restyle screens keeping logic intact (parallel with build).
+APP: after web launch — replicate mobile-web → app, then build all surfaces together.
+
+---
+
+## Measurement — 3 distinct needs, mostly TOOLS not builds
+
+1. SYSTEM HEALTH / errors / API failures / uptime → Sentry (error tracking + alerting — catches server-action/API/webhook failures with stack traces) + an uptime monitor (UptimeRobot/Betterstack) + existing Supabase & Vercel dashboards. INTEGRATION not build. PRE-LAUNCH / pre-real-money must-have (silent payment/webhook failures = lost money+trust invisibly). Do Sentry early — ~1 day.
+2. PRODUCT/BUSINESS analytics (founder view: funnels, GMV, conversion offer→accepted→paid, drop-off, active brands/creators, revenue=fees) → PostHog (fire events from existing actions: offer_created/accepted, deal_paid, signup) + optionally a light internal metrics view or Metabase over the DB. Around launch/pilot — needed to run pilot with eyes open. Mostly event-tracking on existing actions, not custom dashboards.
+3. CAMPAIGN CONTENT performance (views/clicks/reach/engagement) → Meta API. Fast-follow (needs Meta app review + accounts connected). NOT must-have (PJ confirmed).
+
+PRINCIPLE: don't BUILD analytics/monitoring dashboards — integrate Sentry + PostHog (better dashboards, ~free, minimal build). Build time → product; measurement → tools.
+
+---
+
+## Brand team management (multi-user brand orgs + roles) — PILOT-CRITICAL
+
+A brand = a company with MULTIPLE people (managers/team) who each log in, under one brand, with an ADMIN controlling access. Standard B2B org/team management — NOT a small add. PILOT-CRITICAL: pilot brands need multiple logins day one.
+
+Partial foundation exists: brand_members table (users belong to a brand); RLS scopes by my_brand_id() (brand, not individual) — so "all a brand's members share that brand's deals" may already work; confirm.
+
+SCOPE (v1 — pilot):
+- Multiple users under one brand (via brand_members).
+- Roles: Admin (invite/remove members, manage settings) vs Member (deal work, not team management). NO granular permission matrix for pilot — just Admin + Member.
+- INVITE FLOW: admin invites by email → invite token → invitee signs up/logs in → attached to the brand as member. Real work (tokens, email, accept-invite, attach-to-correct-brand).
+- Permission enforcement: admin-only team management; RLS scopes so all members see their brand's deals but NEVER another brand's (careful — multi-user is where cross-brand leaks hide; track in rls.sql).
+- Admin UI: view team, invite, change roles, remove.
+
+BUILD ORDER:
+1. INVESTIGATE existing multi-user/RLS state first — confirm brand_members + my_brand_id() already grants shared access to all brand deals for all members. Identify gaps.
+2. THEN invite flow + roles (Admin/Member) + admin UI.
+SECURITY-CRITICAL: cross-brand isolation MUST hold as membership layer is added — test adversarially + track in rls.sql.
+
+RELATED but DIFFERENT axis: the "role-based access for OUR team" roadmap item (ops/codebase/Supabase) is RBAC for us; this is RBAC for brand CUSTOMERS. Same concept, different users — build the pattern well once.
+
+NOTE: same likely applies to CREATORS eventually (a creator with a manager/agent) — but creator-side is usually single-user; defer.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

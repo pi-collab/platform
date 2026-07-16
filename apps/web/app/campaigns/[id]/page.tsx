@@ -39,7 +39,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .maybeSingle(),
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, internal_note, created_at, creators(id, full_name, profile_photo_url)')
       .eq('campaign_id', params.id)
       .order('created_at', { ascending: false }),
     supabase
@@ -47,7 +47,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .select('deal_id, status, due_date, brand_pays_paise'),
     supabase
       .from('campaign_drafts')
-      .select('id, campaign_id, creator_id, placements, total_price_paise, fee_percent, fee_mode, total_brand_paise, note, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, campaign_id, creator_id, placements, total_price_paise, fee_percent, fee_mode, total_brand_paise, note, creators(id, full_name, handle, profile_photo_url, niches)')
       .eq('campaign_id', params.id)
       .order('created_at', { ascending: true }),
     // All vetted creators for add-creators modal
@@ -63,17 +63,18 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const allDeals = deals ?? []
   const allDrafts = (drafts ?? []).map((d) => {
     const rawCreator = d.creators as unknown
-    const creator = (Array.isArray(rawCreator) ? rawCreator[0] : rawCreator) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null } | null
+    const creator = (Array.isArray(rawCreator) ? rawCreator[0] : rawCreator) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null } | null
     return {
       id: d.id,
       campaign_id: d.campaign_id,
       creator_id: d.creator_id,
-      placements: (d.placements ?? []) as DraftPlacement[],
+      placements: (typeof d.placements === 'string' ? JSON.parse(d.placements) : d.placements ?? []) as DraftPlacement[],
       total_price_paise: d.total_price_paise,
       fee_percent: d.fee_percent,
       fee_mode: d.fee_mode as 'on_top' | 'deducted',
       total_brand_paise: d.total_brand_paise,
-      creator: creator ?? { id: d.creator_id, full_name: 'Unknown', handle: null, profile_photo_url: null },
+      note: (d as Record<string, unknown>).note as string | null ?? null,
+      creator: creator ?? { id: d.creator_id, full_name: 'Unknown', handle: null, profile_photo_url: null, niches: null },
     }
   })
 
@@ -151,6 +152,32 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   // Existing creator IDs in drafts (for add-creators modal dedup)
   const existingDraftCreatorIds = allDrafts.map((d) => d.creator_id)
 
+  // Build campaign deals for unified roster display
+  const campaignDeals = allDeals.map((d) => {
+    const raw = d.creators as unknown
+    const creator = (Array.isArray(raw) ? raw[0] : raw) as { id: string; full_name: string; profile_photo_url: string | null } | null
+    const inv = invoiceMap.get(d.id)
+    const derived = deriveDisplayStatus(d.status, inv?.status ?? null, inv?.due_date ?? null)
+    const fee = d.price_paise > 0 ? calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top') : null
+    const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
+    const overage = extra * (d.price_per_extra_revision_paise ?? 0)
+    return {
+      dealId: d.id,
+      creatorId: creator?.id ?? '',
+      creatorName: creator?.full_name ?? 'Unknown',
+      creatorPhoto: creator?.profile_photo_url ?? null,
+      deliverables: d.deliverables ?? '',
+      pricePaise: d.price_paise,
+      brandPaysPaise: fee ? fee.brand_pays_paise + overage : 0,
+      creatorReceivesPaise: fee ? fee.creator_receives_paise : 0,
+      statusLabel: derived.label,
+      statusColor: derived.color,
+      isPosted: d.is_posted,
+      isPostable: POSTABLE.has(d.status),
+      internalNote: (d as Record<string, unknown>).internal_note as string | null ?? null,
+    }
+  })
+
   // Budget progress
   const budgetPercent = campaign.budget_paise != null && campaign.budget_paise > 0
     ? Math.round((estSpendPaise / campaign.budget_paise) * 100)
@@ -208,8 +235,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       {/* Rollup stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
         <StatCard label="Creators" value={String(creatorIds.size)} />
-        <StatCard label="Drafts" value={String(allDrafts.length)} />
-        <StatCard label="Deals" value={String(allDeals.length)} />
+        <StatCard label="Roster" value={`${allDrafts.filter((d) => d.placements.length > 0 && d.total_price_paise > 0).length} ready / ${allDrafts.filter((d) => d.placements.length === 0 || d.total_price_paise <= 0).length} draft`} />
+        <StatCard label="Sent" value={String(allDeals.length)} />
         {campaign.budget_paise == null && estSpendPaise > 0 && (
           <StatCard label="Est. Spend" value={formatRupees(estSpendPaise)} />
         )}
@@ -249,87 +276,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         drafts={allDrafts}
         productsMap={productsMap}
         campaignId={campaign.id}
+        campaignDeals={campaignDeals}
       />
-
-      {/* ── Deals in this campaign ─────────────────────────── */}
-      <h2 style={{ ...sectionTitle, marginTop: '2.5rem' }}>Deals in this campaign</h2>
-      {allDeals.length === 0 ? (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--color-muted)' }}>
-          No deals sent yet. Configure placements above, then send offers in Phase 2b.
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {allDeals.map((d) => {
-            const raw = d.creators as unknown
-            const creator = (Array.isArray(raw) ? raw[0] : raw) as { id: string; full_name: string; profile_photo_url: string | null } | null
-            const inv = invoiceMap.get(d.id)
-            const derived = deriveDisplayStatus(d.status, inv?.status ?? null, inv?.due_date ?? null)
-            const dsc = derived.color
-
-            let brandTotal: number | null = null
-            if (d.price_paise != null && d.price_paise > 0) {
-              const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
-              const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
-              const overage = extra * (d.price_per_extra_revision_paise ?? 0)
-              brandTotal = fee.brand_pays_paise + overage
-            }
-
-            return (
-              <Link
-                key={d.id}
-                href={`/deals/${d.id}`}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  padding: '0.75rem 1rem',
-                  border: '1px solid var(--color-border, #e5e5e5)',
-                  borderRadius: 'var(--radius-sm, 6px)',
-                  background: 'var(--glass-bg, #fafafa)',
-                  textDecoration: 'none', color: 'inherit',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0, flex: 1 }}>
-                  {creator?.profile_photo_url ? (
-                    <img src={creator.profile_photo_url} alt={creator.full_name} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', border: '1px solid #e5e5e5', flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: '#f0f0f0', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#888', flexShrink: 0 }}>
-                      {creator?.full_name?.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2) ?? '?'}
-                    </div>
-                  )}
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {d.title || 'Untitled deal'}
-                    </p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', margin: 0 }}>
-                      {creator?.full_name ?? 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                  {brandTotal != null && (
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)' }}>
-                      {formatRupees(brandTotal)}
-                    </span>
-                  )}
-                  <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 9999, background: dsc.bg, color: dsc.color, textTransform: 'capitalize', whiteSpace: 'nowrap' }}>
-                    {derived.label}
-                  </span>
-                  {POSTABLE.has(d.status) && (
-                    <span style={{
-                      fontSize: '0.5625rem', fontWeight: 600, padding: '0.1rem 0.35rem', borderRadius: 9999,
-                      background: d.is_posted ? '#dcfce7' : '#fef9c3',
-                      color: d.is_posted ? '#166534' : '#854d0e',
-                    }}>
-                      {d.is_posted ? 'Posted' : 'Awaiting'}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      )}
 
       {/* Metadata */}
       <div style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--color-subtle, #aaa)' }}>
