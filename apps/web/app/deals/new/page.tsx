@@ -74,7 +74,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
 
   if (!creatorId) redirect('/browse')
 
-  const [{ data: creator, error }, { data: products }, { data: brandRow }] = await Promise.all([
+  const [{ data: creator, error }, { data: products }, { data: brandRow }, { data: campaigns }] = await Promise.all([
     supabase
       .from('creators')
       .select('id, full_name, niches, handle, profile_photo_url, social_accounts')
@@ -89,6 +89,11 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
       .select('platform_fee_percent, fee_mode')
       .eq('id', brand.brandId)
       .single(),
+    supabase
+      .from('campaigns')
+      .select('id, name')
+      .eq('status', 'active')
+      .order('name'),
   ])
 
   if (error || !creator) notFound()
@@ -111,6 +116,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
         platformFeePercent={brandRow?.platform_fee_percent ?? 0}
         feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
         prefill={prefill}
+        campaigns={(campaigns ?? []) as { id: string; name: string }[]}
       />
     </section>
   )

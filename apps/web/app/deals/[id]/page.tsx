@@ -36,7 +36,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -62,6 +62,17 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   ])
 
   if (dealError || !deal) notFound()
+
+  // Fetch campaign name if deal belongs to one
+  let campaignName: string | null = null
+  if (deal.campaign_id) {
+    const { data: camp } = await supabase
+      .from('campaigns')
+      .select('name')
+      .eq('id', deal.campaign_id)
+      .maybeSingle()
+    campaignName = camp?.name ?? null
+  }
 
   const rawCreator = deal.creators as unknown
   const creator = Array.isArray(rawCreator)
@@ -100,6 +111,14 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 {creator.full_name}
               </Link>
               {creator.handle && <span style={{ color: 'var(--color-muted)' }}> · {creator.handle}</span>}
+            </p>
+          )}
+          {deal.campaign_id && campaignName && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', margin: '0.25rem 0 0' }}>
+              Campaign:{' '}
+              <Link href={`/campaigns/${deal.campaign_id}`} style={{ color: 'var(--color-heading)', textDecoration: 'none', fontWeight: 600 }}>
+                {campaignName}
+              </Link>
             </p>
           )}
         </div>

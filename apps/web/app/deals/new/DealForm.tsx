@@ -61,7 +61,7 @@ function formatFollowers(n: number): string {
   return n.toLocaleString('en-IN')
 }
 
-export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill }) {
+export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [] }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -136,6 +136,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   const [message, setMessage] = useState('')
   const [priceOverride, setPriceOverride] = useState('')
   const [requiresShipment, setRequiresShipment] = useState(false)
+  const [campaignId, setCampaignId] = useState('')
   // Rights fields
   const [usageRightsEndDate, setUsageRightsEndDate] = useState(prefill?.usage_rights_end_date ?? '')
   // Per-item reel types + boosting: productId → value
@@ -327,6 +328,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       reengaged_from: prefill?.reengaged_from,
       requires_shipment: requiresShipment,
       usage_rights_end_date: usageRightsEndDate || undefined,
+      campaign_id: campaignId || undefined,
     })
 
     setLoading(false)
@@ -375,6 +377,16 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       <Field label="Deal title">
         <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} required />
       </Field>
+
+      {/* Campaign */}
+      {campaigns.length > 0 && (
+        <Field label="Campaign (optional)" hint="Group this deal under a campaign">
+          <select style={inputStyle} value={campaignId} onChange={(e) => setCampaignId(e.target.value)}>
+            <option value="">No campaign</option>
+            {campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </Field>
+      )}
 
       {/* ── Product selection ──────────────────────────────────── */}
       <fieldset style={fieldsetStyle}>
