@@ -10,6 +10,7 @@ import CreatorThread from './CreatorThread'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
+import { getCampaignBriefForCreator } from './actions'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   negotiating: { bg: '#dbeafe', color: '#1e40af' },
@@ -64,6 +65,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   if (dealError || !deal) notFound()
 
+  // Fetch campaign brief (safe — returns only name, pitch, guidelines via admin client)
+  const campaignBrief = await getCampaignBriefForCreator(params.id)
+
   const rawBrand = deal.brands as unknown
   const brand = (Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name) ?? 'Unknown brand'
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
@@ -88,6 +92,34 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
         </div>
         <p style={{ fontSize: '0.8125rem', color: '#888', margin: 0 }}>from {brand}</p>
       </div>
+
+      {/* Campaign Brief (read-only, shown only if brief exists) */}
+      {campaignBrief && (
+        <div style={{ marginBottom: '1.5rem', padding: '1.25rem', border: '1px solid #e0e7ff', borderRadius: 12, background: '#f8faff' }}>
+          <p style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6366f1', margin: '0 0 0.125rem' }}>
+            Campaign Brief
+          </p>
+          <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading, #111)', margin: '0 0 0.75rem' }}>
+            {campaignBrief.campaignName}
+          </p>
+          {campaignBrief.pitch && (
+            <div style={{ marginBottom: campaignBrief.guidelines ? '0.75rem' : 0 }}>
+              <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Pitch</p>
+              <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {campaignBrief.pitch}
+              </p>
+            </div>
+          )}
+          {campaignBrief.guidelines && (
+            <div>
+              <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Creative Guidelines</p>
+              <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                {campaignBrief.guidelines}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Terms */}
       <div style={termsCard}>

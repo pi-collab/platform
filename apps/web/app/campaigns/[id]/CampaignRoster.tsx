@@ -85,11 +85,15 @@ export default function CampaignRoster({
   productsMap,
   campaignId,
   campaignDeals,
+  briefPitch,
+  briefGuidelines,
 }: {
   drafts: Draft[]
   productsMap: Record<string, Product[]>
   campaignId: string
   campaignDeals: CampaignDeal[]
+  briefPitch: string | null
+  briefGuidelines: string | null
 }) {
   const router = useRouter()
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
@@ -480,6 +484,8 @@ export default function CampaignRoster({
         <SendProposalsModal
           campaignId={campaignId}
           drafts={selectedDrafts}
+          briefPitch={briefPitch}
+          briefGuidelines={briefGuidelines}
           onClose={() => { setShowSendModal(false); setSelectedIds(new Set()) }}
         />
       )}

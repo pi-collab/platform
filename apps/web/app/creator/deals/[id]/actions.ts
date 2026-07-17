@@ -402,6 +402,45 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
 /**
  * Issue an invoice to the brand (draft → issued).
  */
+/**
+ * Get campaign brief for a creator — returns ONLY safe fields (name, pitch, guidelines).
+ * Uses admin client because creators have no direct RLS read on campaigns.
+ * Access gated by deal ownership (creator must own the deal via RLS).
+ */
+export async function getCampaignBriefForCreator(dealId: string): Promise<{
+  campaignName: string
+  pitch: string | null
+  guidelines: string | null
+} | null> {
+  const supabase = createClient()
+
+  // Fetch deal — RLS enforces creator owns this deal
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('campaign_id')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal?.campaign_id) return null
+
+  // Use admin client — creators have no SELECT on campaigns (by design)
+  const admin = createAdminClient()
+  const { data: campaign } = await admin
+    .from('campaigns')
+    .select('name, brief_pitch, brief_guidelines')
+    .eq('id', deal.campaign_id)
+    .maybeSingle()
+
+  if (!campaign) return null
+  if (!campaign.brief_pitch && !campaign.brief_guidelines) return null
+
+  return {
+    campaignName: campaign.name,
+    pitch: campaign.brief_pitch,
+    guidelines: campaign.brief_guidelines,
+  }
+}
+
 export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()

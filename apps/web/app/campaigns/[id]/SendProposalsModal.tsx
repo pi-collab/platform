@@ -42,10 +42,14 @@ function placementSummary(placements: DraftPlacement[]): string {
 export default function SendProposalsModal({
   campaignId,
   drafts,
+  briefPitch,
+  briefGuidelines,
   onClose,
 }: {
   campaignId: string
   drafts: SelectedDraft[]
+  briefPitch: string | null
+  briefGuidelines: string | null
   onClose: () => void
 }) {
   const router = useRouter()
@@ -53,16 +57,31 @@ export default function SendProposalsModal({
   const [sending, setSending] = useState(false)
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<SendResult[] | null>(null)
+  const hasBrief = Boolean(briefPitch || briefGuidelines)
+  const [includeBrief, setIncludeBrief] = useState(hasBrief)
 
   const totalBrandPaise = drafts.reduce((s, d) => s + d.total_brand_paise, 0)
 
   async function handleSend() {
     setSending(true)
     setProgress(0)
+
+    // Build the full message: user message + optional brief
+    let fullMessage = message.trim()
+    if (includeBrief && hasBrief) {
+      const briefParts: string[] = []
+      if (briefPitch) briefParts.push(`Pitch:\n${briefPitch}`)
+      if (briefGuidelines) briefParts.push(`Creative Guidelines:\n${briefGuidelines}`)
+      const briefText = briefParts.join('\n\n')
+      fullMessage = fullMessage
+        ? `${fullMessage}\n\n---\n\n${briefText}`
+        : briefText
+    }
+
     const res = await bulkSendCampaignDrafts(
       campaignId,
       drafts.map((d) => d.id),
-      message.trim() || undefined,
+      fullMessage || undefined,
     )
     setResults(res.results)
     setSending(false)
@@ -113,6 +132,20 @@ export default function SendProposalsModal({
               disabled={sending}
               style={{ ...inputStyle, marginBottom: '1rem', resize: 'vertical' }}
             />
+
+            {/* Include brief toggle */}
+            {hasBrief && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--color-heading, #111)', marginBottom: '1rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={includeBrief}
+                  onChange={(e) => setIncludeBrief(e.target.checked)}
+                  disabled={sending}
+                  style={{ width: 16, height: 16, accentColor: '#111', cursor: 'pointer' }}
+                />
+                Include campaign brief in message
+              </label>
+            )}
 
             {/* Summary */}
             <p style={{ fontSize: '0.8125rem', color: '#888', margin: '0 0 1rem' }}>

@@ -7,6 +7,8 @@ import { deriveDisplayStatus } from '@/lib/deal-status'
 import CampaignActions from './CampaignActions'
 import AddCreatorsModal from './AddCreatorsModal'
 import CampaignRoster from './CampaignRoster'
+import CampaignTabs from './CampaignTabs'
+import CampaignBrief from './CampaignBrief'
 import type { DraftPlacement } from './draft-actions'
 
 function formatRupees(paise: number): string {
@@ -34,7 +36,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const [{ data: campaign, error: campErr }, { data: deals }, { data: invoices }, { data: drafts }, { data: allCreators }] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('id, name, description, status, budget_paise, created_at, updated_at')
+      .select('id, name, description, status, budget_paise, brief_pitch, brief_guidelines, created_at, updated_at')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -232,51 +234,67 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         </div>
       )}
 
-      {/* Rollup stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
-        <StatCard label="Creators" value={String(creatorIds.size)} />
-        <StatCard label="Roster" value={`${allDrafts.filter((d) => d.placements.length > 0 && d.total_price_paise > 0).length} ready / ${allDrafts.filter((d) => d.placements.length === 0 || d.total_price_paise <= 0).length} draft`} />
-        <StatCard label="Sent" value={String(allDeals.length)} />
-        {campaign.budget_paise == null && estSpendPaise > 0 && (
-          <StatCard label="Est. Spend" value={formatRupees(estSpendPaise)} />
-        )}
-        {campaign.budget_paise == null && paidPaise > 0 && (
-          <StatCard label="Paid" value={formatRupees(paidPaise)} />
-        )}
-        {postableDeals.length > 0 && (
-          <StatCard label="Posted" value={`${postedCount} of ${postableDeals.length}`} />
-        )}
-      </div>
+      {/* Tabs: Collaborations / Brief */}
+      <CampaignTabs
+        collaborationsTab={
+          <>
+            {/* Rollup stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
+              <StatCard label="Creators" value={String(creatorIds.size)} />
+              <StatCard label="Roster" value={`${allDrafts.filter((d) => d.placements.length > 0 && d.total_price_paise > 0).length} ready / ${allDrafts.filter((d) => d.placements.length === 0 || d.total_price_paise <= 0).length} draft`} />
+              <StatCard label="Sent" value={String(allDeals.length)} />
+              {campaign.budget_paise == null && estSpendPaise > 0 && (
+                <StatCard label="Est. Spend" value={formatRupees(estSpendPaise)} />
+              )}
+              {campaign.budget_paise == null && paidPaise > 0 && (
+                <StatCard label="Paid" value={formatRupees(paidPaise)} />
+              )}
+              {postableDeals.length > 0 && (
+                <StatCard label="Posted" value={`${postedCount} of ${postableDeals.length}`} />
+              )}
+            </div>
 
-      {/* Stage breakdown */}
-      {Object.keys(stageCounts).length > 0 && (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-          {DEAL_STATUS_ORDER.map((s) => {
-            const count = stageCounts[s]
-            if (!count) return null
-            return (
-              <span key={s} style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', textTransform: 'capitalize' }}>
-                {s} ({count})
-              </span>
-            )
-          })}
-        </div>
-      )}
+            {/* Stage breakdown */}
+            {Object.keys(stageCounts).length > 0 && (
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                {DEAL_STATUS_ORDER.map((s) => {
+                  const count = stageCounts[s]
+                  if (!count) return null
+                  return (
+                    <span key={s} style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', textTransform: 'capitalize' }}>
+                      {s} ({count})
+                    </span>
+                  )
+                })}
+              </div>
+            )}
 
-      {/* ── Campaign Roster (drafts) ───────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h2 style={sectionTitle}>Campaign Roster</h2>
-        <AddCreatorsModal
-          campaignId={campaign.id}
-          creators={(allCreators ?? []) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }[]}
-          existingCreatorIds={existingDraftCreatorIds}
-        />
-      </div>
-      <CampaignRoster
-        drafts={allDrafts}
-        productsMap={productsMap}
-        campaignId={campaign.id}
-        campaignDeals={campaignDeals}
+            {/* Campaign Roster */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h2 style={sectionTitle}>Campaign Roster</h2>
+              <AddCreatorsModal
+                campaignId={campaign.id}
+                creators={(allCreators ?? []) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }[]}
+                existingCreatorIds={existingDraftCreatorIds}
+              />
+            </div>
+            <CampaignRoster
+              drafts={allDrafts}
+              productsMap={productsMap}
+              campaignId={campaign.id}
+              campaignDeals={campaignDeals}
+              briefPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
+              briefGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
+            />
+          </>
+        }
+        briefTab={
+          <CampaignBrief
+            campaignId={campaign.id}
+            initialPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
+            initialGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
+          />
+        }
       />
 
       {/* Metadata */}

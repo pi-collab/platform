@@ -433,6 +433,16 @@ NOTE: same likely applies to CREATORS eventually (a creator with a manager/agent
 
 ---
 
+## Invoice gating on posted status (DECIDED — Utkarsh confirmed)
+
+Creator POSTS first, THEN invoices. Gate invoice-generation on `is_posted = true` (server-enforced). Sequence: `approved → creator marks posted (+ live URL) → invoice unlocks`. The invoice-generation action rejects if the deal isn't posted yet, with a clear message ("Mark the content as posted before invoicing").
+
+EDGE TO CHECK at build time: deal types where the creator doesn't post on their own channel (e.g. pure content-licensing where the brand uses the content) — the posting gate may apply only where the creator is the one posting. Flag if there's a deal type where posting-before-invoice doesn't fit.
+
+BUILD: tomorrow.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

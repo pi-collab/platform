@@ -27,10 +27,20 @@ const COMPLETED = new Set(['approved', 'paid', 'complete'])
 
 export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [brandFilter, setBrandFilter] = useState<string>('all')
   const [postedFilter, setPostedFilter] = useState<'all' | 'posted' | 'awaiting'>('all')
 
+  // Unique brand names sorted alphabetically
+  const brands = useMemo(() => {
+    const set = new Set<string>()
+    for (const d of deals) if (d.brand) set.add(d.brand)
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [deals])
+
   const filtered = useMemo(() => {
-    let result = statusFilter === 'all' ? deals : deals.filter((d) => d.status === statusFilter)
+    let result = deals
+    if (brandFilter !== 'all') result = result.filter((d) => d.brand === brandFilter)
+    if (statusFilter !== 'all') result = result.filter((d) => d.status === statusFilter)
     if (postedFilter !== 'all') {
       result = result.filter((d) => {
         if (!COMPLETED.has(d.status)) return true
@@ -38,15 +48,18 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
       })
     }
     return result
-  }, [deals, statusFilter, postedFilter])
+  }, [deals, statusFilter, brandFilter, postedFilter])
+
+  // Counts based on brand-filtered deals (so status counts update when brand is selected)
+  const brandFiltered = useMemo(() => brandFilter === 'all' ? deals : deals.filter((d) => d.brand === brandFilter), [deals, brandFilter])
 
   const counts = useMemo(() => {
-    const m: Record<string, number> = { all: deals.length }
-    for (const d of deals) m[d.status] = (m[d.status] ?? 0) + 1
+    const m: Record<string, number> = { all: brandFiltered.length }
+    for (const d of brandFiltered) m[d.status] = (m[d.status] ?? 0) + 1
     return m
-  }, [deals])
+  }, [brandFiltered])
 
-  const completedDeals = deals.filter((d) => COMPLETED.has(d.status))
+  const completedDeals = brandFiltered.filter((d) => COMPLETED.has(d.status))
   const postedCount = completedDeals.filter((d) => d.is_posted).length
   const awaitingCount = completedDeals.length - postedCount
   const showPostedFilter = completedDeals.length > 0
@@ -61,6 +74,32 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
           .creator-deals-wrap .mobile-cards { display: flex; }
         }
       `}</style>
+
+      {/* Brand filter dropdown */}
+      {brands.length > 1 && (
+        <div style={{ marginBottom: '0.75rem' }}>
+          <select
+            value={brandFilter}
+            onChange={(e) => setBrandFilter(e.target.value)}
+            style={{
+              padding: '0.375rem 0.625rem',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              border: '1px solid var(--color-border, #e5e5e5)',
+              borderRadius: 6,
+              background: 'var(--glass-bg, #fafafa)',
+              color: 'var(--color-heading, #111)',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            <option value="all">All brands ({deals.length})</option>
+            {brands.map((b) => (
+              <option key={b} value={b}>{b} ({deals.filter((d) => d.brand === b).length})</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Status filter pills */}
       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>

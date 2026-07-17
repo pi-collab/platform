@@ -344,3 +344,32 @@ export async function bulkSendCampaignDrafts(
   revalidatePath('/deals')
   return { results }
 }
+
+// ── Campaign Brief ───────────────────────────────────────────
+
+/**
+ * Update the campaign brief (pitch + creative guidelines).
+ * Brand-only — RLS enforces brand owns the campaign.
+ */
+export async function updateCampaignBrief(
+  campaignId: string,
+  pitch: string,
+  guidelines: string
+) {
+  await verifyApprovedBrand()
+  const supabase = createClient()
+
+  const { error } = await supabase
+    .from('campaigns')
+    .update({
+      brief_pitch: pitch.trim() || null,
+      brief_guidelines: guidelines.trim() || null,
+    })
+    .eq('id', campaignId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/campaigns/${campaignId}`)
+  return { success: true }
+}
+
