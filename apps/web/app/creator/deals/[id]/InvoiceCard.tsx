@@ -27,7 +27,7 @@ function formatRupees(paise: number): string {
   return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
-export default function InvoiceCard({ dealId, invoice }: { dealId: string; invoice: Invoice | null }) {
+export default function InvoiceCard({ dealId, invoice, isPosted }: { dealId: string; invoice: Invoice | null; isPosted: boolean }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -47,12 +47,25 @@ export default function InvoiceCard({ dealId, invoice }: { dealId: string; invoi
     if (res.status === 'error') setError(res.message)
   }
 
-  // No invoice yet — show generate button
+  // No invoice yet
   if (!invoice) {
+    // Gate: must post before invoicing
+    if (!isPosted) {
+      return (
+        <div style={cardStyle}>
+          <h3 style={cardTitle}>Invoice</h3>
+          <p style={cardDesc}>Post your content first, then generate an invoice for payment.</p>
+          <p style={{ fontSize: '0.75rem', color: '#854d0e', fontWeight: 600, margin: 0, padding: '0.375rem 0.5rem', background: '#fef9c3', borderRadius: 6 }}>
+            Mark the content as posted before invoicing
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div style={cardStyle}>
         <h3 style={cardTitle}>Invoice</h3>
-        <p style={cardDesc}>Your deliverables have been approved. Generate an invoice to send to the brand for payment.</p>
+        <p style={cardDesc}>Your content is posted and approved. Generate an invoice to send to the brand for payment.</p>
         {error && <p style={errorStyle}>{error}</p>}
         <button onClick={handleGenerate} disabled={loading} style={{ ...actionBtn, opacity: loading ? 0.6 : 1 }}>
           {loading ? 'Generating...' : 'Generate invoice'}

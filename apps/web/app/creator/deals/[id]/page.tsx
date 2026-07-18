@@ -287,7 +287,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       {/* Invoice — show when deal is approved (or later) */}
       {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
         <div style={{ marginTop: '1.5rem' }}>
-          <InvoiceCard dealId={deal.id} invoice={invoice} />
+          <InvoiceCard dealId={deal.id} invoice={invoice} isPosted={deal.is_posted} />
         </div>
       )}
 

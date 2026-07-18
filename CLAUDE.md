@@ -75,6 +75,16 @@ Monorepo (pnpm workspaces):
 
 (For the marketing site's visual design, read `docs/design-patterns.pdf` — Chandreyee's landing-page pattern teardown — on demand; it's a binary, so it isn't auto-imported.)
 
+## Test-case discipline (standing rule)
+
+Every feature built or changed MUST have its test cases added/updated in `docs/test-cases.md` as part of the same work — not afterwards, not "later."
+- New feature → add its functional checks AND any security/RLS checks it introduces.
+- New table → its RLS checks go in the SECURITY section of `docs/test-cases.md` (and its policies in `rls.sql` — both, always).
+- Changed behavior → update the affected existing cases rather than leaving stale ones.
+- New environment gotcha (migration to run, publication table, config limit) → note it so re-testing elsewhere doesn't hit it blind.
+
+Treat `docs/test-cases.md` like `rls.sql`: it's the tracked source of truth for "what must still work," and it goes stale silently if not updated with the change that affects it.
+
 ## Current status
 
 Schema is built, deployed, and verified (audit trigger confirmed firing). Dev accounts: GitHub + Supabase project live; Vercel + Expo not yet connected. **Brand name not yet locked** (this blocks the WhatsApp BSP verification queue — top priority, 48-hour task; does not block the build).

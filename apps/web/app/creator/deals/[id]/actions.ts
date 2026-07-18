@@ -351,13 +351,16 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
 
   const { data: deal } = await supabase
     .from('deals')
-    .select('id, status, price_paise, revisions_used, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, payment_terms')
+    .select('id, status, is_posted, price_paise, revisions_used, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, payment_terms')
     .eq('id', dealId)
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
   if (deal.status !== 'approved') {
     return { status: 'error', message: `Cannot generate invoice for a deal that is "${deal.status}".` }
+  }
+  if (!deal.is_posted) {
+    return { status: 'error', message: 'Mark the content as posted before invoicing.' }
   }
 
   const { data: existing } = await supabase
@@ -445,6 +448,18 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
+
+  // Verify deal is posted before allowing invoice issue
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('is_posted')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { status: 'error', message: 'Deal not found.' }
+  if (!deal.is_posted) {
+    return { status: 'error', message: 'Mark the content as posted before invoicing.' }
+  }
 
   const { data: invoice } = await supabase
     .from('invoices')
