@@ -102,6 +102,7 @@ ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_drafts       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_invites         ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -517,6 +518,17 @@ CREATE POLICY campaign_drafts_update
 CREATE POLICY campaign_drafts_delete
   ON campaign_drafts FOR DELETE TO authenticated
   USING (campaign_id IN (SELECT id FROM campaigns WHERE brand_id = my_brand_id()));
+
+
+-- ── brand_invites ───────────────────────────────────────────────────
+-- Team invites. All brand members can read (admin-only filtering is UI-layer).
+-- All writes are service-role only (server actions enforce isAdmin).
+
+DROP POLICY IF EXISTS brand_invites_read ON brand_invites;
+
+CREATE POLICY brand_invites_read
+  ON brand_invites FOR SELECT TO authenticated
+  USING (brand_id = my_brand_id());
 
 
 -- ================================================================

@@ -78,8 +78,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Support `next` param for post-login redirects (e.g. invite accept flow).
+  // Validate: must start with `/` to prevent open-redirect attacks.
+  const next = searchParams.get('next')
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null
+
   // Founders go straight to /ops — skip brand onboarding entirely
-  if (user?.email) {
+  // (unless they have an explicit next param, e.g. accepting an invite)
+  if (!safeNext && user?.email) {
     const allowedRaw = process.env.OPS_ALLOWED_EMAILS
     if (allowedRaw) {
       const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
@@ -89,5 +95,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/deals`)
+  return NextResponse.redirect(`${origin}${safeNext || '/deals'}`)
 }

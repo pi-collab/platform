@@ -290,6 +290,39 @@
 - [ ] No creator row-level read policy on campaigns table.
 - [ ] getCampaignBriefForCreator uses admin client with explicit 3-field select (name, brief_pitch, brief_guidelines).
 
+### Team Management
+- [ ] Admin can invite a new member by email (createInvite returns invite URL).
+- [ ] Non-admin cannot invite (server returns "Only admins can invite team members").
+- [ ] Invite creates a pending invite with crypto-random 64-char hex token.
+- [ ] Duplicate invite for same email+brand returns existing active link (no new row).
+- [ ] Re-invite after expiry/revocation creates a new invite (partial unique index allows it).
+- [ ] Stale pending invites (past expires_at) are marked expired before new invite insert.
+- [ ] Invite link (/invite/{token}) shows brand name and "Sign in with Google".
+- [ ] Unauthenticated user on invite link → Google login → returns to /invite/{token} via next param.
+- [ ] Email mismatch: user signed in as wrong email → clear error, not attached.
+- [ ] Already-belongs-to-another-brand → blocked with clear message, not attached.
+- [ ] Already a member of THIS brand → redirected to /deals (idempotent).
+- [ ] Expired invite (>7 days) → clear error message, status set to 'expired'.
+- [ ] Revoked invite → clear error message.
+- [ ] Used/accepted invite → clear error message.
+- [ ] Accepted invite attaches user to CORRECT brand (brand_id from invite record) as is_admin=false.
+- [ ] Accepted invite sets invite status to 'accepted' + accepted_by.
+- [ ] Admin can remove a team member.
+- [ ] Admin can toggle member role (admin ↔ member).
+- [ ] Cannot remove the last admin (server-enforced).
+- [ ] Cannot demote the last admin (server-enforced, including self-demote).
+- [ ] Non-admin cannot remove/toggle/revoke (server-enforced, not just UI).
+- [ ] New member sees all existing brand deals/campaigns/invoices immediately (brand-scoped RLS).
+- [ ] Non-admin sees team list read-only (no invite/remove/toggle controls).
+- [ ] Pending invites shown only to admins in UI (not to members).
+- [ ] Auth callback next param: only accepts paths starting with / (no // or external URLs).
+
+### Cross-Brand Security (Team)
+- [ ] Invite token from Brand A cannot attach a user to Brand B (brand_id comes from invite, not user input).
+- [ ] Member of Brand A cannot see Brand B's invites (brand_invites RLS: brand_id = my_brand_id()).
+- [ ] Accept-invite for Brand A doesn't leak Brand B data.
+- [ ] One-brand-per-user enforced: user with brand_members row blocked from accepting any invite.
+
 ### BUT-DID-IT-BREAK Checks (locking too hard)
 - [ ] Authenticated brand still sees vetted creators on /browse (minus phone).
 - [ ] Authenticated brand can still create deals with vetted creators.
