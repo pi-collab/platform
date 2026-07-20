@@ -64,6 +64,7 @@ Monorepo (pnpm workspaces):
 - Status changes auto-log via the DB trigger. For non-status events worth auditing (e.g. a revision request, a payment link sent), write an explicit `events` row.
 - When a decision is ambiguous or risks scope creep, **flag it and propose options rather than guessing.**
 - Prefer boring, standard patterns over clever ones.
+- **RLS policies: `supabase/rls.sql` is the single source of truth.** Every new table's policies MUST go into `rls.sql` at creation time — not only in the migration file. Use `DROP POLICY IF EXISTS` before each `CREATE POLICY` so the file is safely re-runnable. If a migration creates policies inline, consolidate them into `rls.sql` in the same commit. This rule exists because policy drift between migrations and `rls.sql` has caused orphaned/conflicting policies in the live DB (invoices, deal_deliverable_items, creator_products — all had stale migration-named duplicates).
 - Secrets live in `.env` (gitignored), never in this file or any committed file. The Supabase **service-role key bypasses all RLS** — it stays server-side / local only, never in the Expo app or any client bundle.
 
 ## Deeper context (imported — these must exist as markdown in `/docs`)

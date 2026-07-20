@@ -100,6 +100,8 @@ ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaign_drafts       ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -318,26 +320,44 @@ CREATE POLICY events_read
 
 
 -- ── invoices ────────────────────────────────────────────────────────
--- MONEY TABLE. Both parties can read invoices for their deals.
--- Creator can insert (issue an invoice). Both can update (accept/pay).
+-- MONEY TABLE — write policies are deliberately granular.
+-- Both parties can READ invoices for their deals.
+-- Only the CREATOR can INSERT (issue an invoice on an approved deal).
+-- Both parties can UPDATE (creator: draft→issued; brand: issued→accepted).
 -- No client-side delete ever.
+--
+-- NOTE: migration 009 created policies with _creator/_brand suffixes.
+-- Drop both naming conventions to prevent stale duplicates.
 
-DROP POLICY IF EXISTS invoices_read        ON invoices;
-DROP POLICY IF EXISTS invoices_insert      ON invoices;
-DROP POLICY IF EXISTS invoices_update      ON invoices;
-DROP POLICY IF EXISTS invoices_deny_delete ON invoices;
+DROP POLICY IF EXISTS invoices_read           ON invoices;
+DROP POLICY IF EXISTS invoices_insert         ON invoices;
+DROP POLICY IF EXISTS invoices_insert_creator ON invoices;
+DROP POLICY IF EXISTS invoices_update         ON invoices;
+DROP POLICY IF EXISTS invoices_update_creator ON invoices;
+DROP POLICY IF EXISTS invoices_update_brand   ON invoices;
+DROP POLICY IF EXISTS invoices_deny_delete    ON invoices;
 
 CREATE POLICY invoices_read
   ON invoices FOR SELECT
   USING (can_access_deal(deal_id));
 
-CREATE POLICY invoices_insert
+CREATE POLICY invoices_insert_creator
   ON invoices FOR INSERT
-  WITH CHECK (can_access_deal(deal_id));
+  WITH CHECK (
+    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
+  );
 
-CREATE POLICY invoices_update
+CREATE POLICY invoices_update_creator
   ON invoices FOR UPDATE
-  USING (can_access_deal(deal_id));
+  USING (
+    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
+  );
+
+CREATE POLICY invoices_update_brand
+  ON invoices FOR UPDATE
+  USING (
+    deal_id IN (SELECT id FROM deals WHERE brand_id = my_brand_id())
+  );
 
 CREATE POLICY invoices_deny_delete
   ON invoices FOR DELETE
@@ -348,9 +368,13 @@ CREATE POLICY invoices_deny_delete
 -- Per-item deliverables within a deal. Same scoping as deliverables.
 -- Both parties read; creator submits (insert/update); brand reviews (update).
 
-DROP POLICY IF EXISTS deal_deliverable_items_read   ON deal_deliverable_items;
-DROP POLICY IF EXISTS deal_deliverable_items_insert ON deal_deliverable_items;
-DROP POLICY IF EXISTS deal_deliverable_items_update ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_read            ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_insert          ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_update          ON deal_deliverable_items;
+-- Orphaned names from migration 005 (different naming convention):
+DROP POLICY IF EXISTS deal_deliverable_items_update_creator  ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_update_brand    ON deal_deliverable_items;
+DROP POLICY IF EXISTS deal_deliverable_items_insert_brand    ON deal_deliverable_items;
 
 CREATE POLICY deal_deliverable_items_read
   ON deal_deliverable_items FOR SELECT
@@ -372,10 +396,13 @@ CREATE POLICY deal_deliverable_items_update
 -- INSERT/UPDATE: creator can manage their own products only.
 -- No client-side delete.
 
-DROP POLICY IF EXISTS creator_products_read       ON creator_products;
-DROP POLICY IF EXISTS creator_products_insert_own ON creator_products;
-DROP POLICY IF EXISTS creator_products_update_own ON creator_products;
+DROP POLICY IF EXISTS creator_products_read        ON creator_products;
+DROP POLICY IF EXISTS creator_products_insert_own  ON creator_products;
+DROP POLICY IF EXISTS creator_products_update_own  ON creator_products;
 DROP POLICY IF EXISTS creator_products_deny_delete ON creator_products;
+-- Orphaned names from migration 004 (different naming convention):
+DROP POLICY IF EXISTS creator_products_insert      ON creator_products;
+DROP POLICY IF EXISTS creator_products_update      ON creator_products;
 
 CREATE POLICY creator_products_read
   ON creator_products FOR SELECT
@@ -440,6 +467,56 @@ CREATE POLICY notifications_update_own
 CREATE POLICY notifications_deny_delete
   ON notifications FOR DELETE
   USING (false);
+
+
+-- ── campaigns ───────────────────────────────────────────────────────
+-- Grouping container for multiple deals. Brand-scoped.
+-- No DELETE policy — campaigns are archived, not deleted.
+-- (Consolidated from migration 015_campaigns.sql)
+
+DROP POLICY IF EXISTS campaigns_read_brand   ON campaigns;
+DROP POLICY IF EXISTS campaigns_insert_brand ON campaigns;
+DROP POLICY IF EXISTS campaigns_update_brand ON campaigns;
+
+CREATE POLICY campaigns_read_brand
+  ON campaigns FOR SELECT TO authenticated
+  USING (brand_id = my_brand_id());
+
+CREATE POLICY campaigns_insert_brand
+  ON campaigns FOR INSERT TO authenticated
+  WITH CHECK (brand_id = my_brand_id());
+
+CREATE POLICY campaigns_update_brand
+  ON campaigns FOR UPDATE TO authenticated
+  USING (brand_id = my_brand_id())
+  WITH CHECK (brand_id = my_brand_id());
+
+
+-- ── campaign_drafts ─────────────────────────────────────────────────
+-- Pre-send roster entries (one per campaign+creator). Brand-scoped
+-- transitively via campaigns join.
+-- (Consolidated from migration 016_campaign_workspace.sql)
+
+DROP POLICY IF EXISTS campaign_drafts_read   ON campaign_drafts;
+DROP POLICY IF EXISTS campaign_drafts_insert ON campaign_drafts;
+DROP POLICY IF EXISTS campaign_drafts_update ON campaign_drafts;
+DROP POLICY IF EXISTS campaign_drafts_delete ON campaign_drafts;
+
+CREATE POLICY campaign_drafts_read
+  ON campaign_drafts FOR SELECT TO authenticated
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE brand_id = my_brand_id()));
+
+CREATE POLICY campaign_drafts_insert
+  ON campaign_drafts FOR INSERT TO authenticated
+  WITH CHECK (campaign_id IN (SELECT id FROM campaigns WHERE brand_id = my_brand_id()));
+
+CREATE POLICY campaign_drafts_update
+  ON campaign_drafts FOR UPDATE TO authenticated
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE brand_id = my_brand_id()));
+
+CREATE POLICY campaign_drafts_delete
+  ON campaign_drafts FOR DELETE TO authenticated
+  USING (campaign_id IN (SELECT id FROM campaigns WHERE brand_id = my_brand_id()));
 
 
 -- ================================================================

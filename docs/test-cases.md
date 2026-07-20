@@ -267,6 +267,14 @@
 - [ ] User cannot modify another user's notifications.
 - [ ] User cannot change fields other than read_at.
 
+### Invoice Write Isolation (MONEY TABLE)
+- [ ] Only CREATOR can INSERT an invoice (brand INSERT attempt rejected by RLS).
+- [ ] Creator can UPDATE their own deal's invoice (draft → issued).
+- [ ] Brand can UPDATE their deal's invoice (issued → accepted).
+- [ ] Creator A cannot insert/update an invoice on Creator B's deal.
+- [ ] Brand A cannot insert/update an invoice on Brand B's deal.
+- [ ] No stale/duplicate invoice policies in DB (run: `SELECT policyname FROM pg_policies WHERE tablename='invoices'` — expect exactly: invoices_read, invoices_insert_creator, invoices_update_creator, invoices_update_brand, invoices_deny_delete).
+
 ### Action Ownership Guards
 - [ ] mark_deal_paid: only the deal's BRAND can call it. Creator rejected. Other brand rejected.
 - [ ] Request revision: only the deal's brand can request.
