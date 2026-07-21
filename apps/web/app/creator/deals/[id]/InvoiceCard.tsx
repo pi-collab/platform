@@ -27,7 +27,7 @@ function formatRupees(paise: number): string {
   return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
-export default function InvoiceCard({ dealId, invoice, isPosted }: { dealId: string; invoice: Invoice | null; isPosted: boolean }) {
+export default function InvoiceCard({ dealId, dealRef, invoice, isPosted }: { dealId: string; dealRef?: string | null; invoice: Invoice | null; isPosted: boolean }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,7 +79,7 @@ export default function InvoiceCard({ dealId, invoice, isPosted }: { dealId: str
   return (
     <div style={cardStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h3 style={{ ...cardTitle, margin: 0 }}>Invoice</h3>
+        <h3 style={{ ...cardTitle, margin: 0 }}>Invoice{dealRef && <span style={{ fontFamily: 'monospace', fontWeight: 500, marginLeft: '0.375rem' }}>{dealRef}</span>}</h3>
         <span style={{ ...statusBadge, ...STATUS_STYLES[invoice.status] }}>{invoice.status}</span>
       </div>
 

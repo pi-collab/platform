@@ -36,7 +36,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -100,6 +100,11 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
               {deal.title || 'Untitled deal'}
             </h1>
+            {deal.deal_ref && (
+              <span style={{ fontFamily: 'monospace', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-muted)' }}>
+                {deal.deal_ref}
+              </span>
+            )}
             <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
               {derived.label}
             </span>
@@ -286,7 +291,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       {/* Invoice — show when invoice exists (issued, accepted, paid) */}
       {invoice && (
         <div style={{ marginBottom: '2rem' }}>
-          <BrandInvoiceCard dealId={deal.id} invoice={invoice} />
+          <BrandInvoiceCard dealId={deal.id} dealRef={deal.deal_ref} invoice={invoice} />
         </div>
       )}
 

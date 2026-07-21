@@ -3,18 +3,59 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
 import DealsTable from './DealsTable'
 
-export default async function DealsListPage() {
+const PAGE_SIZE = 20
+
+/** Whitelist search query to alphanumeric, space, hyphen only. */
+function sanitizeQuery(raw: string | null | undefined): string {
+  if (!raw) return ''
+  return raw.replace(/[^a-zA-Z0-9 \-]/g, '').trim().slice(0, 100)
+}
+
+/** Validate that a string is one of the known deal statuses. */
+function validStatus(s: string | null | undefined): string | null {
+  const VALID = new Set(['negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled'])
+  return s && VALID.has(s) ? s : null
+}
+
+export default async function DealsListPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string; page?: string }
+}) {
   await verifyApprovedBrand()
 
+  const q = sanitizeQuery(searchParams.q)
+  const status = validStatus(searchParams.status)
+  const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   const supabase = createClient()
-  const [{ data: deals, error }, { data: invoices }] = await Promise.all([
-    supabase
-      .from('deals')
-      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('invoices')
-      .select('deal_id, status, due_date'),
+
+  // Build query — RLS scopes to brand's own deals
+  let query = supabase
+    .from('deals')
+    .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)', { count: 'exact' })
+
+  // Status filter (server-side)
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  // Search — sanitized q is safe for ILIKE and .or() filter string
+  if (q) {
+    // Search deal_ref, title, or deliverables via ILIKE
+    // q is already sanitized to [a-zA-Z0-9 -] so it's safe in the filter string
+    query = query.or(`deal_ref.ilike.%${q}%,title.ilike.%${q}%,deliverables.ilike.%${q}%`)
+  }
+
+  // Order + paginate
+  query = query.order('created_at', { ascending: false }).range(from, to)
+
+  // Also fetch invoices for all deals (for display status)
+  const [{ data: deals, error, count }, { data: invoices }] = await Promise.all([
+    query,
+    supabase.from('invoices').select('deal_id, status, due_date'),
   ])
 
   if (error) {
@@ -25,20 +66,21 @@ export default async function DealsListPage() {
     )
   }
 
-  // Index invoices by deal_id for quick lookup
+  // Index invoices by deal_id
   const invoiceMap = new Map<string, { status: string; due_date: string | null }>()
   for (const inv of invoices ?? []) {
     invoiceMap.set(inv.deal_id, { status: inv.status, due_date: inv.due_date })
   }
 
   const all = (deals ?? []).map((d) => {
-    // Supabase returns the joined creator as an object (not array) for a non-null FK,
-    // but the type comes back as unknown — handle both shapes defensively
     const raw = d.creators as unknown
     const creator = Array.isArray(raw) ? raw[0] ?? null : (raw as { id: string; full_name: string; profile_photo_url: string | null } | null)
     const inv = invoiceMap.get(d.id) ?? null
     return { ...d, creator, invoiceStatus: inv?.status ?? null, invoiceDueDate: inv?.due_date ?? null }
   })
+
+  const totalCount = count ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
   return (
     <section style={container}>
@@ -48,7 +90,9 @@ export default async function DealsListPage() {
             Your Deals
           </h1>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.9375rem', margin: 0 }}>
-            {all.length} deal{all.length !== 1 ? 's' : ''}
+            {totalCount} deal{totalCount !== 1 ? 's' : ''}
+            {q && <> matching &ldquo;{q}&rdquo;</>}
+            {status && <> &middot; {status}</>}
           </p>
         </div>
         <Link
@@ -59,7 +103,7 @@ export default async function DealsListPage() {
         </Link>
       </div>
 
-      {all.length === 0 ? (
+      {totalCount === 0 && !q && !status ? (
         <div style={{ padding: '3rem', textAlign: 'center' }}>
           <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-heading)' }}>No deals yet</p>
           <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)', margin: '0.25rem 0 1rem' }}>
@@ -70,7 +114,14 @@ export default async function DealsListPage() {
           </Link>
         </div>
       ) : (
-        <DealsTable deals={all} />
+        <DealsTable
+          deals={all}
+          currentStatus={status}
+          currentQuery={q}
+          currentPage={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+        />
       )}
     </section>
   )

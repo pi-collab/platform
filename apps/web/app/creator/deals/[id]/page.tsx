@@ -38,7 +38,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -86,6 +86,11 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
           <h1 style={heading}>{deal.title || 'Untitled deal'}</h1>
+          {deal.deal_ref && (
+            <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: '#888' }}>
+              {deal.deal_ref}
+            </span>
+          )}
           <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
             {deal.status}
           </span>
@@ -287,7 +292,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       {/* Invoice — show when deal is approved (or later) */}
       {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
         <div style={{ marginTop: '1.5rem' }}>
-          <InvoiceCard dealId={deal.id} invoice={invoice} isPosted={deal.is_posted} />
+          <InvoiceCard dealId={deal.id} dealRef={deal.deal_ref} invoice={invoice} isPosted={deal.is_posted} />
         </div>
       )}
 

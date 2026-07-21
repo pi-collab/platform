@@ -238,6 +238,27 @@
 - [ ] Selecting a brand filters deals list + updates status/posted counts.
 - [ ] Hidden when creator has deals with only 1 brand.
 
+### Deal Ref (GD-####)
+- [ ] New deals auto-assigned deal_ref (GD-1001, GD-1002, ...) via Postgres trigger.
+- [ ] Existing deals backfilled with deal_ref in creation order (migration 021).
+- [ ] deal_ref is unique (constraint enforced).
+- [ ] deal_ref shown on: brand deals list (Ref column), brand deal detail header, creator deal detail header, creator deals list (next to title), brand invoice card, creator invoice card.
+- [ ] Search by deal_ref works on brand deals list (e.g. "GD-1003").
+
+### Search + Pagination (Brand Deals List)
+- [ ] Search bar: searches deal_ref, title, deliverables via server-side ILIKE.
+- [ ] Search query sanitized: only alphanumeric, space, hyphen allowed. Special chars stripped.
+- [ ] Status filter pills use URL params (?status=agreed). Bookmarkable/shareable.
+- [ ] Pagination: 20 deals per page. Prev/Next controls. Page count shown.
+- [ ] Page resets to 1 when search or status filter changes.
+- [ ] Posted sub-filter remains client-side (within current page).
+- [ ] Empty state: "No deals match this filter" when search/filter yields 0.
+- [ ] Total count shown in header reflects server-side filtered total.
+
+### Search Injection Safety
+- [ ] PostgREST filter-grammar injection blocked: query `q` is sanitized to `[a-zA-Z0-9 -]` before interpolation into `.or()` filter string. Characters like `,`, `.`, `(`, `)`, `%` in user input are stripped.
+- [ ] Status filter validated against a known set — arbitrary strings rejected.
+
 ---
 
 ## CRITICAL: Security / RLS Checks

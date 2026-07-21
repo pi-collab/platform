@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
 import { deriveDisplayStatus, dueLabel } from '@/lib/deal-status'
 
 interface Deal {
   id: string
+  deal_ref: string | null
   title: string | null
   deliverables: string | null
   price_paise: number | null
@@ -31,7 +33,6 @@ function brandTotal(d: Deal): number | null {
   return fee.brand_pays_paise + overage
 }
 
-
 const STATUSES = ['all', 'negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled'] as const
 
 function formatRupees(paise: number): string {
@@ -41,30 +42,56 @@ function formatRupees(paise: number): string {
   return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
-export default function DealsTable({ deals }: { deals: Deal[] }) {
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+interface Props {
+  deals: Deal[]
+  currentStatus: string | null
+  currentQuery: string
+  currentPage: number
+  totalPages: number
+  totalCount: number
+}
+
+export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [searchInput, setSearchInput] = useState(currentQuery)
   const [postedFilter, setPostedFilter] = useState<'all' | 'posted' | 'awaiting'>('all')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const filtered = useMemo(() => {
-    let result = statusFilter === 'all' ? deals : deals.filter((d) => d.status === statusFilter)
-    if (postedFilter !== 'all') {
-      const completedStatuses = new Set(['approved', 'paid', 'complete'])
-      result = result.filter((d) => {
-        if (!completedStatuses.has(d.status)) return true
-        return postedFilter === 'posted' ? d.is_posted : !d.is_posted
-      })
+  // Navigate with updated search params
+  function navigate(updates: Record<string, string | null>) {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const [k, v] of Object.entries(updates)) {
+      if (v === null || v === '' || v === 'all') {
+        params.delete(k)
+      } else {
+        params.set(k, v)
+      }
     }
-    return result
-  }, [deals, statusFilter, postedFilter])
+    // Reset page when filters change (unless page itself is being set)
+    if (!('page' in updates)) params.delete('page')
+    router.push(`/deals?${params.toString()}`)
+  }
 
-  // Count per status for filter pills
-  const counts = useMemo(() => {
-    const m: Record<string, number> = { all: deals.length }
-    for (const d of deals) m[d.status] = (m[d.status] ?? 0) + 1
-    return m
-  }, [deals])
+  function handleSearchChange(value: string) {
+    setSearchInput(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      navigate({ q: value || null })
+    }, 300)
+  }
 
-  // Posted counts (among completed deals)
+  // Posted sub-filter is client-side (within the page's results)
+  const filtered = useMemo(() => {
+    if (postedFilter === 'all') return deals
+    const completedStatuses = new Set(['approved', 'paid', 'complete'])
+    return deals.filter((d) => {
+      if (!completedStatuses.has(d.status)) return true
+      return postedFilter === 'posted' ? d.is_posted : !d.is_posted
+    })
+  }, [deals, postedFilter])
+
+  // Posted counts (among current page's completed deals)
   const completedStatuses = new Set(['approved', 'paid', 'complete'])
   const completedDeals = deals.filter((d) => completedStatuses.has(d.status))
   const postedCount = completedDeals.filter((d) => d.is_posted).length
@@ -82,15 +109,45 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
         }
       `}</style>
 
-      {/* Status filter pills */}
+      {/* Search bar — live search with 300ms debounce */}
+      <div style={{ position: 'relative', marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="Search by ref, title, or deliverables..."
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.5rem 0.75rem',
+            paddingRight: searchInput ? '2rem' : '0.75rem',
+            fontSize: '0.8125rem',
+            border: '1px solid var(--color-border)',
+            borderRadius: 8,
+            background: 'var(--glass-bg)',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        {searchInput && (
+          <button
+            type="button"
+            onClick={() => handleSearchChange('')}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '1rem', color: 'var(--color-muted)', cursor: 'pointer', lineHeight: 1, padding: '0.125rem' }}
+            aria-label="Clear search"
+          >
+            &times;
+          </button>
+        )}
+      </div>
+
+      {/* Status filter pills — URL-param driven */}
       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {STATUSES.map((s) => {
-          if (s !== 'all' && !counts[s]) return null
-          const active = statusFilter === s
+          const active = s === 'all' ? !currentStatus : currentStatus === s
           return (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => navigate({ status: s === 'all' ? null : s })}
               style={{
                 padding: '0.3rem 0.625rem',
                 fontSize: '0.75rem',
@@ -103,13 +160,13 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
                 textTransform: 'capitalize',
               }}
             >
-              {s === 'all' ? 'All' : s} {counts[s] != null ? `(${counts[s]})` : ''}
+              {s === 'all' ? 'All' : s}
             </button>
           )
         })}
       </div>
 
-      {/* Posted sub-filter — shown when completed deals exist */}
+      {/* Posted sub-filter — client-side, shown when completed deals exist */}
       {showPostedFilter && (
         <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1.25rem', alignItems: 'center' }}>
           <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '0.25rem' }}>
@@ -144,11 +201,11 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
           <thead>
             <tr>
-              {['Creator', 'Title', 'Deliverables', 'Price', 'Status', 'Created', ''].map((h, i) => (
+              {['Ref', 'Creator', 'Title', 'Deliverables', 'Price', 'Status', 'Created', ''].map((h, i) => (
                 <th
                   key={i}
                   style={{
-                    textAlign: i === 3 ? 'right' : 'left',
+                    textAlign: i === 4 ? 'right' : 'left',
                     padding: '0.5rem 0.75rem',
                     fontSize: '0.6875rem',
                     fontWeight: 700,
@@ -170,7 +227,7 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-muted)', fontSize: '0.8125rem' }}>
+                <td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-muted)', fontSize: '0.8125rem' }}>
                   No deals match this filter.
                 </td>
               </tr>
@@ -190,6 +247,34 @@ export default function DealsTable({ deals }: { deals: Deal[] }) {
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <button
+            disabled={currentPage <= 1}
+            onClick={() => navigate({ page: String(currentPage - 1) })}
+            style={{ ...paginationBtn, opacity: currentPage <= 1 ? 0.4 : 1 }}
+          >
+            &larr; Prev
+          </button>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--color-muted)' }}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            disabled={currentPage >= totalPages}
+            onClick={() => navigate({ page: String(currentPage + 1) })}
+            style={{ ...paginationBtn, opacity: currentPage >= totalPages ? 0.4 : 1 }}
+          >
+            Next &rarr;
+          </button>
+        </div>
+      )}
+
+      {/* Footer count */}
+      <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-muted)', marginTop: '0.75rem' }}>
+        Showing {filtered.length} of {totalCount} deals
+      </p>
     </>
   )
 }
@@ -201,6 +286,11 @@ function DealRow({ deal: d }: { deal: Deal }) {
 
   return (
     <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+      {/* Ref */}
+      <td style={{ padding: '0.625rem 0.75rem', fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
+        {d.deal_ref ?? '\u2014'}
+      </td>
+
       {/* Creator */}
       <td style={{ padding: '0.625rem 0.75rem', whiteSpace: 'nowrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -307,6 +397,7 @@ function MobileCard({ deal: d }: { deal: Deal }) {
               {d.title || 'Untitled deal'}
             </p>
             <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', margin: 0 }}>
+              {d.deal_ref && <span style={{ fontFamily: 'monospace', marginRight: '0.375rem' }}>{d.deal_ref}</span>}
               {d.creator?.full_name ?? 'Unknown'}
             </p>
           </div>
@@ -346,4 +437,15 @@ function MobileCard({ deal: d }: { deal: Deal }) {
       </div>
     </Link>
   )
+}
+
+const paginationBtn: React.CSSProperties = {
+  padding: '0.375rem 0.75rem',
+  fontSize: '0.8125rem',
+  fontWeight: 600,
+  background: 'var(--glass-bg)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 8,
+  cursor: 'pointer',
+  color: 'var(--color-heading)',
 }
