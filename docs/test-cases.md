@@ -261,6 +261,107 @@
 
 ---
 
+## 9. Creator Storefront
+
+### Public Page (/c/[slug])
+- [ ] Published + vetted storefront renders at /c/{slug}.
+- [ ] Unpublished storefront returns 404 (not a data error).
+- [ ] Unvetted creator's storefront returns 404 (even if is_published = true).
+- [ ] Invalid slug format (special chars, too short) returns 404.
+- [ ] Page is cached (60s ISR revalidation). Stale-while-revalidate works.
+- [ ] OG metadata includes display_name and headline.
+
+### Public Data Whitelist
+- [ ] Function returns ONLY: slug, display_name, headline, bio, portrait_path, categories, stats, platform_links, content_items, (conditional: packages, past_collabs).
+- [ ] Function NEVER returns: creator_id, phone, handle, user_id, auth_id, rate_card, niche, profile_photo_url.
+- [ ] portrait_path: storefront bucket path only, no fallback to creators.profile_photo_url (which is an external URL).
+- [ ] Bio: storefront-authored only, no fallback to ops-entered creators.bio.
+- [ ] Categories: creator-controlled storefront field, not ops-entered niche.
+
+### Packages Display
+- [ ] show_rates = true AND display_price = true: package appears with price.
+- [ ] show_rates = true AND display_price = false: package hidden entirely (not shown with null price).
+- [ ] show_rates = false: ALL packages hidden (section not rendered).
+- [ ] No internal product UUIDs exposed in package objects.
+
+### Past Collabs Display
+- [ ] show_past_collabs = true + brand.allow_public_attribution = true + deal.status = 'complete': brand name appears.
+- [ ] show_past_collabs = true + brand.allow_public_attribution = false: brand name hidden (even with complete deals).
+- [ ] show_past_collabs = true + deal.status NOT 'complete' (approved/paid): brand name hidden.
+- [ ] show_past_collabs = false: past collabs section not rendered.
+- [ ] Only brand name exposed — no deal details, prices, IDs, categories.
+
+### Pitch Panel
+- [ ] "Send a pitch" button opens PitchPanel modal.
+- [ ] Unauthenticated user: fills form → submits → redirected to /login?next=/c/{slug}.
+- [ ] Pitch draft preserved in sessionStorage (title, deliverables, message) across login redirect.
+- [ ] After login, returning to /c/{slug} restores draft from sessionStorage.
+- [ ] Authenticated brand member: pitch creates a real deal with source='storefront'.
+- [ ] Pitch message inserted as first thread message.
+- [ ] Creator notified (offer_sent).
+- [ ] Non-brand user (creator, no brand_members row): clear error "Only brand members can send pitches."
+- [ ] Unapproved brand: clear error "Your brand account is pending approval."
+- [ ] Slug → creator_id resolution happens server-side (creator_id never sent to client).
+
+### Creator Editor (/creator/storefront)
+- [ ] Creator can create a new storefront (upsert — insert if none exists).
+- [ ] Creator can edit existing storefront (upsert — update).
+- [ ] Slug validated: 3-30 chars, lowercase alphanumeric + hyphens, starts/ends with letter/number.
+- [ ] Reserved slugs rejected at server action level (clear error message).
+- [ ] Reserved slugs rejected at DB level (CHECK constraint — safety net).
+- [ ] Duplicate slug rejected with "already taken" error.
+- [ ] Slug availability check (debounced) shows available/taken indicator.
+
+### Write-Time Validation (JSONB)
+- [ ] platform_links: HTTPS only, domain allowlist (instagram/youtube/twitter/linkedin/tiktok). Non-HTTPS rejected.
+- [ ] platform_links: max 10 entries.
+- [ ] content_items: links must be HTTPS from allowed domains. Max 20 entries.
+- [ ] content_items[].image_path: must start with 'storefront/' and not contain '..'. Arbitrary paths rejected.
+- [ ] portrait_path: same storage path validation as image_path.
+- [ ] stats.followers: non-negative integer. Negative or float rejected.
+- [ ] stats.avg_views: non-negative integer.
+- [ ] stats.engagement_rate: 0-100. Out-of-range rejected.
+- [ ] stats: no unexpected keys accepted.
+- [ ] categories: max 10, non-empty strings.
+
+### Dashboard Storefront Card
+- [ ] No storefront row: card shows "Set up your Storefront" with explainer, links to /creator/storefront.
+- [ ] Exists but is_published = false: card shows "Your Storefront isn't live yet" with Edit button.
+- [ ] Published: card shows live URL (guapd.com/c/{slug}), Copy link button, View link (opens /c/{slug}), Edit link.
+- [ ] Copy link produces the full absolute URL (https://guapd.com/c/{slug}).
+- [ ] Copy link works on mobile web (fallback execCommand for insecure contexts).
+
+### Creator Nav
+- [ ] "Storefront" appears in the creator sidebar navigation, links to /creator/storefront.
+
+### Slug Picker
+- [ ] Slug field is the first and most prominent section of the editor.
+- [ ] Live URL preview: "guapd.com/c/" prefix visually distinct from editable input.
+- [ ] Pre-filled from creator name on first visit (no existing storefront).
+- [ ] Live availability check (debounced 400ms) — server action, not client guess.
+- [ ] Validation messages are specific:
+  - [ ] Too short/long: "3-30 characters"
+  - [ ] Bad characters: "Letters, numbers and hyphens only"
+  - [ ] Reserved word: "This URL isn't available"
+  - [ ] Taken: "Someone already has this one"
+- [ ] Available state: green check + "Available" text.
+- [ ] Immutability warning shown BEFORE publish: "Once you publish, guapd.com/c/{slug} becomes permanent and can't be changed."
+- [ ] After publish: slug field becomes read-only with explanation. Copy link button appears next to it.
+- [ ] Slug immutability enforced server-side: upsertStorefront rejects slug change when is_published = true.
+- [ ] Race condition: two sessions claim same slug simultaneously — one succeeds, one gets clean "already taken" error (DB unique constraint).
+- [ ] Client-side validation bypassed (direct server action call) — still rejected by server validation.
+- [ ] Slug change attempted after publish via direct server action call — rejected with clear error.
+
+### Editor Creates Row on First Save
+- [ ] No separate "create" step — editor saves via upsert (insert if no row, update if exists).
+- [ ] First save creates the storefront row with the chosen slug.
+- [ ] Publish is a deliberate checkbox action, not a side effect of saving.
+
+### Rate Limiting (GAP — noted, fix before first storefront goes public)
+- [ ] KNOWN GAP: in-memory rate limiting doesn't work on serverless (instances don't share memory). Currently using 60s ISR cache only. Need @vercel/edge rate-limit or Supabase-backed counter before storefronts go public.
+
+---
+
 ## CRITICAL: Security / RLS Checks
 
 > Run these after ANY change to queries, auth, or a new client.
@@ -343,6 +444,19 @@
 - [ ] Member of Brand A cannot see Brand B's invites (brand_invites RLS: brand_id = my_brand_id()).
 - [ ] Accept-invite for Brand A doesn't leak Brand B data.
 - [ ] One-brand-per-user enforced: user with brand_members row blocked from accepting any invite.
+
+### Storefront RLS + Anonymous Access
+- [ ] Anonymous caller: get_public_storefront(slug) returns whitelisted JSON only — no creator_id, no phone, no handle.
+- [ ] Anonymous caller: direct SELECT on creator_storefronts returns 0 rows (no anon read policy).
+- [ ] Anonymous caller: direct SELECT on creators returns 0 rows (existing policy requires auth).
+- [ ] Creator A cannot read Creator B's storefront via RLS (only own via my_creator_id()).
+- [ ] Creator A cannot update Creator B's storefront (UPDATE policy scoped to my_creator_id()).
+- [ ] No DELETE allowed on creator_storefronts (deny_delete policy).
+- [ ] get_public_storefront: returns NULL for unpublished storefront (no data leak).
+- [ ] get_public_storefront: returns NULL for unvetted creator (no data leak).
+- [ ] Pitch panel: slug → creator_id resolution is server-side only (admin client). Creator_id never exposed to anonymous/brand client.
+- [ ] brands.allow_public_attribution default false — new brands don't auto-appear on storefronts.
+- [ ] Verify: no broad PERMISSIVE anon policy added to creators or deals tables (permissive-OR would widen access).
 
 ### BUT-DID-IT-BREAK Checks (locking too hard)
 - [ ] Authenticated brand still sees vetted creators on /browse (minus phone).

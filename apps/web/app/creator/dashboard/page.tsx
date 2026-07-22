@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
+import CopyLinkButton from './CopyLinkButton'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Dashboard — Guapd Creator' }
@@ -17,7 +18,7 @@ export default async function CreatorDashboardPage() {
   await verifyCreator()
   const supabase = createClient()
 
-  const [{ data: deals }, { data: invoices }] = await Promise.all([
+  const [{ data: deals }, { data: invoices }, { data: storefront }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
@@ -27,6 +28,10 @@ export default async function CreatorDashboardPage() {
     supabase
       .from('invoices')
       .select('deal_id, status, due_date, creator_receives_paise'),
+    supabase
+      .from('creator_storefronts')
+      .select('slug, is_published')
+      .maybeSingle(),
   ])
 
   const allDeals = deals ?? []
@@ -117,6 +122,9 @@ export default async function CreatorDashboardPage() {
       <RealtimeDashboardListener />
       <h1 style={heading}>Dashboard</h1>
 
+      {/* ── STOREFRONT ──────────────────────────────── */}
+      <StorefrontCard storefront={storefront} />
+
       {/* ── NEEDS ATTENTION ───────────────────────────── */}
       {hasAttention && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem', marginBottom: '1.5rem' }}>
@@ -189,6 +197,117 @@ export default async function CreatorDashboardPage() {
       )}
     </main>
   )
+}
+
+// ── Storefront card ─────────────────────────────────────────
+
+function StorefrontCard({ storefront }: { storefront: { slug: string; is_published: boolean } | null }) {
+  const baseUrl = 'https://guapd.com/c/'
+
+  // State 1: No storefront exists
+  if (!storefront) {
+    return (
+      <Link href="/creator/storefront" style={{ ...storefrontCardBase, background: '#f8fafc', borderColor: '#e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={storefrontIconWrap}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+          </div>
+          <div>
+            <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111', margin: 0 }}>
+              Set up your Storefront
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: '#888', margin: '0.15rem 0 0' }}>
+              A public page where brands can discover your work and send you offers
+            </p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto', flexShrink: 0 }}><polyline points="9 18 15 12 9 6" /></svg>
+        </div>
+      </Link>
+    )
+  }
+
+  // State 2: Exists but not published
+  if (!storefront.is_published) {
+    return (
+      <div style={{ ...storefrontCardBase, background: '#fffbeb', borderColor: '#fcd34d' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ ...storefrontIconWrap, background: '#fef3c7' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111', margin: 0 }}>
+              Your Storefront isn&apos;t live yet
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: '#92400e', margin: '0.15rem 0 0' }}>
+              Finish setting up and publish to start receiving pitches
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Link href="/creator/storefront" style={storefrontBtn}>Edit</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // State 3: Published
+  const fullUrl = `${baseUrl}${storefront.slug}`
+  return (
+    <div style={{ ...storefrontCardBase, background: '#f0fdf4', borderColor: '#86efac' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ ...storefrontIconWrap, background: '#dcfce7' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <p style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111', margin: 0 }}>
+            Storefront is live
+          </p>
+          <p style={{ fontSize: '0.8125rem', color: '#166534', margin: '0.15rem 0 0', fontFamily: 'monospace' }}>
+            {fullUrl}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <CopyLinkButton url={fullUrl} />
+          <Link href={`/c/${storefront.slug}`} target="_blank" rel="noopener" style={storefrontBtn}>View</Link>
+          <Link href="/creator/storefront" style={storefrontBtn}>Edit</Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const storefrontCardBase: React.CSSProperties = {
+  display: 'block',
+  padding: '0.875rem 1rem',
+  border: '1px solid',
+  borderRadius: 12,
+  marginBottom: '1.25rem',
+  textDecoration: 'none',
+  color: 'inherit',
+}
+
+const storefrontIconWrap: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 10,
+  background: '#ede9fe',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+}
+
+const storefrontBtn: React.CSSProperties = {
+  padding: '0.375rem 0.875rem',
+  fontSize: '0.8125rem',
+  fontWeight: 600,
+  borderRadius: 8,
+  border: '1px solid #e5e5e5',
+  background: '#fff',
+  color: '#111',
+  textDecoration: 'none',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 }
 
 // ── Sub-components ──────────────────────────────────────────

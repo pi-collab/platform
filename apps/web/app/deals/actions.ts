@@ -32,12 +32,13 @@ interface CreateDealInput {
   usage_rights_end_date?: string
   campaign_id?: string
   internal_note?: string
+  source?: string
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -78,6 +79,7 @@ export async function createDeal(input: CreateDealInput) {
       usage_rights_end_date: usage_rights_end_date || null,
       campaign_id: campaign_id || null,
       internal_note: internal_note?.trim() || null,
+      source: source || 'platform',
     })
     .select('id')
     .single()

@@ -103,6 +103,7 @@ ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_drafts       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brand_invites         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_storefronts  ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -529,6 +530,36 @@ DROP POLICY IF EXISTS brand_invites_read ON brand_invites;
 CREATE POLICY brand_invites_read
   ON brand_invites FOR SELECT TO authenticated
   USING (brand_id = my_brand_id());
+
+
+-- ── creator_storefronts ───────────────────────────────────────────────
+-- Public profile page. Own-only CRUD for the creator.
+-- NO anon/public SELECT policy — all anonymous reads go through the
+-- get_public_storefront() SECURITY DEFINER function (returns whitelisted
+-- JSON only). This prevents broad anon policies from leaking data via
+-- permissive-OR union with other policies.
+
+DROP POLICY IF EXISTS creator_storefronts_read_own    ON creator_storefronts;
+DROP POLICY IF EXISTS creator_storefronts_insert_own  ON creator_storefronts;
+DROP POLICY IF EXISTS creator_storefronts_update_own  ON creator_storefronts;
+DROP POLICY IF EXISTS creator_storefronts_deny_delete ON creator_storefronts;
+
+CREATE POLICY creator_storefronts_read_own
+  ON creator_storefronts FOR SELECT TO authenticated
+  USING (creator_id = my_creator_id());
+
+CREATE POLICY creator_storefronts_insert_own
+  ON creator_storefronts FOR INSERT TO authenticated
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY creator_storefronts_update_own
+  ON creator_storefronts FOR UPDATE TO authenticated
+  USING (creator_id = my_creator_id())
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY creator_storefronts_deny_delete
+  ON creator_storefronts FOR DELETE
+  USING (false);
 
 
 -- ================================================================
