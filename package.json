@@ -11,5 +11,8 @@
     "overrides": {
       "@splinetool/runtime": "0.9.490"
     }
+  },
+  "devDependencies": {
+    "tsx": "^4.23.1"
   }
 }

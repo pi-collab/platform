@@ -356,8 +356,8 @@ export const footer = {
     {
       heading: 'Legal',
       links: [
-        { label: 'Privacy policy',   href: '#privacy' },
-        { label: 'Terms of service', href: '#terms'   },
+        { label: 'Privacy policy',   href: '/privacy' },
+        { label: 'Terms of service', href: '/terms'   },
       ],
     },
   ],
@@ -371,7 +371,8 @@ export const footer = {
   copyright: `© 2026 ${BRAND_NAME}. All rights reserved.`,
 
   legal: [
-    { label: 'Privacy policy',   href: '#privacy' },
-    { label: 'Terms of service', href: '#terms'   },
+    { label: 'Privacy policy',   href: '/privacy' },
+    { label: 'Terms of service', href: '/terms'   },
+    { label: 'Cookie preferences', href: '#cookie-preferences' },
   ],
 }

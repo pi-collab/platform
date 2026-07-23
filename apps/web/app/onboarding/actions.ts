@@ -35,6 +35,9 @@ export async function submitOnboarding(
   const instagram    = ((formData.get('instagram') as string)?.trim() || '').replace(/^@/, '') || null
   const linkedin     = ((formData.get('linkedin') as string)?.trim() || '').replace(/^@/, '') || null
 
+  const termsAccepted = formData.get('terms_accepted') === 'yes'
+  if (!termsAccepted) return { error: 'You must agree to the Terms of Service and Privacy Policy.' }
+
   // 5. Server-side validation (browser `required` / type attrs are not a security boundary)
 
   // Required fields present
@@ -107,6 +110,11 @@ export async function submitOnboarding(
   if (memberErr) {
     return { error: `Failed to link brand member: ${memberErr.message}` }
   }
+
+  await admin.from('users').update({
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: '2026-07-23',
+  }).eq('auth_id', user.id)
 
   redirect('/deals')
 }

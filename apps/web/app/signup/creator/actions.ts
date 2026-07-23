@@ -239,6 +239,12 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     redirect = '/signup/creator/onboarding'
   }
 
+  // ── Write terms acceptance on the users row ──
+  await admin.from('users').update({
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: '2026-07-23',
+  }).eq('id', userId)
+
   // ── 6. Establish browser session ──
   // Sign in via the server-side Supabase client (writes session cookies).
   // This is a server action, so cookies().set() works.

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { StorefrontData } from './actions'
 import PitchPanel from './PitchPanel'
+import { trackEvent } from '@/lib/analytics'
 
 const PLATFORM_ICONS: Record<string, string> = {
   instagram: 'IG',
@@ -29,7 +30,17 @@ export default function StorefrontPage({ data }: { data: StorefrontData }) {
   const [showPitch, setShowPitch] = useState(false)
   const [pitchDeliverables, setPitchDeliverables] = useState('')
 
+  useEffect(() => {
+    trackEvent('storefront_viewed', { slug: data.slug })
+  }, [data.slug])
+
+  function openPitch() {
+    trackEvent('pitch_started', { slug: data.slug })
+    setShowPitch(true)
+  }
+
   function openPitchWithPackage(pkg: { platform: string; product_type: string; price_paise: number }) {
+    trackEvent('pitch_started', { slug: data.slug, package: pkg.product_type })
     setPitchDeliverables(`1 ${pkg.platform} ${pkg.product_type} — ₹${formatPaise(pkg.price_paise)}`)
     setShowPitch(true)
   }
@@ -114,7 +125,7 @@ export default function StorefrontPage({ data }: { data: StorefrontData }) {
 
             {/* Pitch CTA */}
             <button
-              onClick={() => setShowPitch(true)}
+              onClick={openPitch}
               style={{
                 padding: '12px 28px',
                 borderRadius: 999,

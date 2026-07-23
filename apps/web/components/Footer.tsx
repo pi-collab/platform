@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { footer } from '@/lib/content'
 import Logo from '@/components/Logo'
+import CookiePrefsLink from '@/components/CookiePrefsLink'
 
 export default function Footer() {
   return (
@@ -55,11 +56,15 @@ export default function Footer() {
         <div className="footer__bottom">
           <span className="footer__copyright">{footer.copyright}</span>
           <div className="footer__legal">
-            {footer.legal.map((link) => (
-              <Link key={link.href} href={link.href} className="footer__legal-link">
-                {link.label}
-              </Link>
-            ))}
+            {footer.legal.map((link) =>
+              link.href === '#cookie-preferences' ? (
+                <CookiePrefsLink key={link.href} />
+              ) : (
+                <Link key={link.href} href={link.href} className="footer__legal-link">
+                  {link.label}
+                </Link>
+              )
+            )}
           </div>
         </div>
       </div>

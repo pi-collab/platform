@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ================================================================
    DESIGN TOKEN SYSTEM — Liquid Glass
 
@@ -54,9 +58,9 @@
   --_amber-600:  #92400E;
   --_amber-700:  #78350F;
 
-  /* Font stack primitives */
-  --_font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --_font-display: 'Sora', system-ui, -apple-system, sans-serif;
+  /* Font stack primitives — next/font/google sets --font-sora / --font-inter on <html> */
+  --_font-sans:    var(--font-inter, 'Inter'), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --_font-display: var(--font-sora, 'Sora'), system-ui, -apple-system, sans-serif;
 }
 
 /* ── LAYER 2: SEMANTIC ROLE TOKENS ───────────────────────────── */
@@ -109,6 +113,21 @@
   --container-width: 1200px;
   --container-pad:   clamp(1.25rem, 4vw, 5rem);
   --nav-height:      64px;
+
+  /* ── Design system color tokens (used in inline styles) ── */
+  --ink: #181C24;
+  --ink-soft: #4A4F58;
+  --ink-faint: #8B90A0;
+  --neon: #E8FF66;
+  --neon-deep: #D2F04A;
+  --frost-edge: rgba(255,255,255,0.85);
+  --border-hairline: rgba(120,130,150,0.22);
+  --warning: #D89A2E;
+  --warning-soft: #FFFEF3;
+  --danger: #D2545A;
+  --success: #1F9D6B;
+  --font-display: var(--_font-display);
+  --font-ui: var(--_font-sans);
 
   /* ── Liquid glass utilities ── */
   --glass-bg:        rgba(255, 255, 255, 0.55);
@@ -168,11 +187,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Hide cursor only on devices with a fine pointer (mouse/trackpad) */
-@media (pointer: fine) {
-  body { cursor: none; }
-  a, button, [role="button"], input, textarea, select, label { cursor: none; }
-}
 
 img, video { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
@@ -196,6 +210,28 @@ button { cursor: pointer; font-family: inherit; }
 .brand-main,
 .creator-main {
   min-height: 100vh;
+}
+
+/* ── Creator atmospheric background (design mesh) ── */
+.creator-main {
+  background:
+    radial-gradient(720px 600px at 6% 3%, rgba(192,231,209,.36) 0%, transparent 55%),
+    radial-gradient(680px 560px at 96% 12%, rgba(251,215,230,.33) 0%, transparent 55%),
+    radial-gradient(720px 600px at 4% 42%, rgba(226,216,250,.33) 0%, transparent 55%),
+    radial-gradient(700px 580px at 98% 66%, rgba(252,236,207,.33) 0%, transparent 55%),
+    linear-gradient(180deg, #F2F9F5 0%, #F1F5FD 10%, #F5F1FD 20%, #FCF2F8 30%, #FEF5EE 40%, #FBF8EB 50%, #F2F9F5 62%, #F1F5FD 72%, #F5F1FD 82%, #FCF2F8 92%, #F2F9F5 100%);
+}
+
+/* ── Grain overlay for creator pages ── */
+.creator-main::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='gn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gn)'/%3E%3C/svg%3E");
 }
 
 @media (min-width: 768px) {
@@ -229,5 +265,48 @@ button { cursor: pointer; font-family: inherit; }
 @media (min-width: 768px) {
   .inbox-back-btn {
     display: none !important;
+  }
+}
+
+/* ── GUAPD DESIGN SYSTEM UTILITIES ─────────────────────────────── */
+@layer components {
+  .glass {
+    background: linear-gradient(135deg, rgba(255,255,255,.62), rgba(255,255,255,.36));
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    border: 1px solid rgba(255,255,255,.85);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px -12px rgba(60,70,100,.22),
+                inset 0 1px 1px rgba(255,255,255,.6),
+                0 24px 60px -28px rgba(40,52,70,.28);
+  }
+  .glass-soft {
+    background: linear-gradient(135deg, rgba(255,255,255,.5), rgba(255,255,255,.3));
+    backdrop-filter: blur(16px) saturate(130%);
+    -webkit-backdrop-filter: blur(16px) saturate(130%);
+    border: 1px solid rgba(255,255,255,.85);
+    border-radius: 16px;
+  }
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  border-radius: 16px;
+  background: linear-gradient(100deg,
+    rgba(235,240,248,.7) 30%, rgba(255,255,255,.9) 50%, rgba(235,240,248,.7) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Modal entrance */
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes modalIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createDealFromStorefront } from './actions'
+import { trackEvent } from '@/lib/analytics'
 
 interface PitchPanelProps {
   open: boolean
@@ -52,6 +53,8 @@ export default function PitchPanel({ open, onClose, slug, creatorName, initialDe
     setError(null)
     setSending(true)
 
+    trackEvent('pitch_send_attempted', { slug })
+
     const result = await createDealFromStorefront({
       slug,
       title: title.trim(),
@@ -74,6 +77,7 @@ export default function PitchPanel({ open, onClose, slug, creatorName, initialDe
       return
     }
 
+    trackEvent('deal_created_from_storefront', { slug })
     setSuccess(true)
     setTitle('')
     setDeliverables('')
@@ -256,6 +260,13 @@ export default function PitchPanel({ open, onClose, slug, creatorName, initialDe
                 {error}
               </div>
             )}
+
+            <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '0 0 16px', lineHeight: 1.5 }}>
+              By sending this pitch you agree to the{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-soft)', textDecoration: 'underline' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink-soft)', textDecoration: 'underline' }}>Privacy Policy</a>.
+            </p>
 
             <button
               type="submit"

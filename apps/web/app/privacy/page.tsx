@@ -1,0 +1,266 @@
+import type { Metadata } from 'next'
+import Nav from '@/components/Nav'
+import Footer from '@/components/Footer'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy — Guapd',
+  robots: 'index, follow',
+}
+
+const containerStyle: React.CSSProperties = {
+  maxWidth: 720,
+  margin: '0 auto',
+  padding: '3rem 1.5rem 4rem',
+  fontFamily: 'var(--font-ui, Inter, sans-serif)',
+  color: '#222',
+  lineHeight: 1.7,
+}
+
+const h1Style: React.CSSProperties = {
+  fontFamily: 'var(--font-display, Sora, sans-serif)',
+  fontSize: '2rem',
+  fontWeight: 700,
+  color: '#111',
+  margin: '0 0 0.5rem',
+}
+
+const h2Style: React.CSSProperties = {
+  fontFamily: 'var(--font-display, Sora, sans-serif)',
+  fontSize: '1.25rem',
+  fontWeight: 700,
+  color: '#111',
+  margin: '2rem 0 0.75rem',
+}
+
+const pStyle: React.CSSProperties = {
+  margin: '0 0 1rem',
+  fontSize: '0.9375rem',
+}
+
+const metaStyle: React.CSSProperties = {
+  fontSize: '0.8125rem',
+  color: '#888',
+  margin: '0 0 2rem',
+}
+
+const ulStyle: React.CSSProperties = {
+  margin: '0 0 1rem',
+  paddingLeft: '1.25rem',
+  fontSize: '0.9375rem',
+}
+
+const liStyle: React.CSSProperties = {
+  margin: '0 0 0.5rem',
+}
+
+export default function PrivacyPolicyPage() {
+  return (
+    <>
+      <Nav audience="none" />
+      <main style={containerStyle}>
+        <h1 style={h1Style}>Privacy Policy</h1>
+        <p style={metaStyle}>Last updated: 23 July 2026</p>
+
+        <p style={pStyle}>
+          GUAPD PRIVATE LIMITED (&ldquo;Guap&rsquo;d&rdquo;, &ldquo;we&rdquo;).
+          Registered office: Plot No 307, Kh. No. 137/9, 1st Floor, Ishwar Colony,
+          Bawana, Delhi, North West Delhi &ndash; 110039, Delhi, India.
+        </p>
+        <p style={pStyle}>
+          Grievance Officer / Data protection contact: Palak Jain &mdash;{' '}
+          <a href="mailto:contact@guapd.com">contact@guapd.com</a>
+        </p>
+        <p style={pStyle}>
+          Support: <a href="mailto:help@guapd.com">help@guapd.com</a>
+        </p>
+        <p style={pStyle}>
+          This policy is framed under India&rsquo;s Digital Personal Data Protection
+          Act, 2023. We are the Data Fiduciary.
+        </p>
+
+        {/* What we collect */}
+        <h2 style={h2Style}>What we collect</h2>
+        <p style={pStyle}>
+          <strong>Creators:</strong> name, phone number (used for OTP login), email,
+          Instagram/YouTube handles and profile links, self-reported audience
+          statistics, rate card and pricing, profile photo, content samples uploaded
+          to the platform, PAN (optional &mdash; required only for tax-compliant
+          payouts and TDS), deal history, messages sent through the platform, uploaded
+          deliverable files.
+        </p>
+        <p style={pStyle}>
+          <strong>Brands:</strong> name, work email, company name, GSTIN (optional
+          &mdash; required only to issue a GST-compliant invoice), team member names
+          and emails, deal history, messages, payment status records, subscription
+          plan, billing history and invoices.
+        </p>
+        <p style={pStyle}>
+          <strong>Anonymous visitors to a creator&rsquo;s storefront:</strong> if you
+          begin an offer and choose to sign up, the details you entered are carried
+          into your new account. We do not store anything you type before you create
+          an account.
+        </p>
+        <p style={pStyle}>
+          <strong>Automatically:</strong> IP address, device and browser information,
+          pages viewed, and product analytics events (see Cookies).
+        </p>
+        <p style={pStyle}>
+          <strong>We do not collect or store:</strong> card numbers, bank account
+          details, or UPI IDs. All payment instruments are handled by our payment
+          processor and never reach our systems.
+        </p>
+
+        {/* Why we collect it */}
+        <h2 style={h2Style}>Why we collect it</h2>
+        <p style={pStyle}>
+          Operating the deal workflow; verifying identity and vetting creators;
+          sending notifications about your deals over WhatsApp, email and push;
+          generating invoices and meeting tax obligations; managing subscriptions and
+          billing; maintaining an audit record of every change to a deal so that
+          disputes can be resolved fairly; improving the product; security and fraud
+          prevention; complying with law.
+        </p>
+
+        {/* Legal basis */}
+        <h2 style={h2Style}>Legal basis</h2>
+        <p style={pStyle}>
+          We process personal data on the basis of your consent, given when you create
+          an account and when you take specific actions (publishing a storefront,
+          sending an offer), and for legitimate uses permitted under the DPDP Act
+          &mdash; including performing our contract with you and complying with legal
+          obligations.
+        </p>
+
+        {/* Public information */}
+        <h2 style={h2Style}>Public information</h2>
+        <p style={pStyle}>
+          If a creator publishes a storefront, the information on that page &mdash;
+          name, photo, handle, bio, categories, self-reported statistics, and (if the
+          creator enables it) rates and past brand collaborations &mdash; becomes
+          publicly visible to anyone with the link. Publishing is off by default and
+          entirely the creator&rsquo;s choice. A brand&rsquo;s name appears on a
+          creator&rsquo;s storefront only if that brand has separately opted in to
+          public attribution. Creators can unpublish at any time, though pages already
+          viewed or cached elsewhere may persist outside our control.
+        </p>
+
+        {/* Who we share it with */}
+        <h2 style={h2Style}>Who we share it with</h2>
+        <ul style={ulStyle}>
+          <li style={liStyle}>
+            <strong>Supabase</strong> &mdash; database, authentication, file storage.
+            Data hosted in Mumbai, India.
+          </li>
+          <li style={liStyle}>
+            <strong>Vercel</strong> &mdash; application hosting and delivery.
+          </li>
+          <li style={liStyle}>
+            <strong>Razorpay</strong> &mdash; payment and subscription processing.
+          </li>
+          <li style={liStyle}>
+            <strong>Interakt / WhatsApp Business API (Meta)</strong> &mdash; deal
+            notifications sent to your phone number.
+          </li>
+          <li style={liStyle}>
+            <strong>Meta Platforms</strong> &mdash; if you connect an Instagram
+            account, to retrieve your own account statistics.
+          </li>
+          <li style={liStyle}>
+            <strong>PostHog</strong> &mdash; product analytics (see Cookies).
+          </li>
+          <li style={liStyle}>
+            <strong>Professional advisers and authorities</strong> &mdash; where
+            required by law, tax, or legal process.
+          </li>
+        </ul>
+        <p style={pStyle}>
+          We do not sell personal data. We do not share your data with other users
+          except as required to run a deal you are party to, or as published on a
+          storefront you have chosen to make public.
+        </p>
+
+        {/* Where data is stored */}
+        <h2 style={h2Style}>Where data is stored</h2>
+        <p style={pStyle}>
+          Primarily in India (Mumbai). Some processors listed above may process data
+          outside India; where they do, we rely on their contractual safeguards.
+        </p>
+
+        {/* Retention and deletion */}
+        <h2 style={h2Style}>Retention and deletion</h2>
+        <p style={pStyle}>
+          You may request deletion of your account by emailing{' '}
+          <a href="mailto:contact@guapd.com">contact@guapd.com</a>. On deletion we
+          remove your profile, storefront, contact details and uploaded content.
+        </p>
+        <p style={pStyle}>
+          <strong>We retain records of completed transactions</strong> &mdash; deal
+          terms, invoices, payment status and the associated audit log &mdash; for as
+          long as required by tax, accounting and legal obligations, and to resolve
+          any dispute between the parties to that deal. This is because a deal is an
+          agreement between two people: one party cannot erase the shared record of
+          it. Retained records are dissociated from your profile where possible.
+        </p>
+
+        {/* Your rights under the DPDP Act */}
+        <h2 style={h2Style}>Your rights under the DPDP Act</h2>
+        <p style={pStyle}>
+          Access a summary of the personal data we hold about you; correct or complete
+          inaccurate data; request erasure (subject to the retention terms above);
+          nominate another person to exercise these rights in the event of death or
+          incapacity; withdraw consent, which will end your ability to use the
+          platform; and file a grievance with our Grievance Officer.
+        </p>
+        <p style={pStyle}>
+          To exercise any of these, email{' '}
+          <a href="mailto:contact@guapd.com">contact@guapd.com</a>. We will respond
+          within the timelines required by law.
+        </p>
+
+        {/* Grievance redressal */}
+        <h2 style={h2Style}>Grievance redressal</h2>
+        <p style={pStyle}>
+          Grievance Officer: Palak Jain &mdash;{' '}
+          <a href="mailto:contact@guapd.com">contact@guapd.com</a>. If you are not
+          satisfied with our response, you may escalate to the Data Protection Board
+          of India.
+        </p>
+
+        {/* Cookies and analytics */}
+        <h2 style={h2Style}>Cookies and analytics</h2>
+        <p style={pStyle}>
+          We use essential cookies to keep you signed in &mdash; these are required
+          for the platform to work and cannot be switched off. With your consent we
+          also use PostHog for product analytics, to understand how the platform is
+          used and improve it. Analytics cookies are not set until you accept them,
+          and you can change your choice at any time using the link in our footer.
+        </p>
+
+        {/* Children */}
+        <h2 style={h2Style}>Children</h2>
+        <p style={pStyle}>
+          Guapd is not intended for anyone under 18. We do not knowingly process the
+          personal data of children.
+        </p>
+
+        {/* Security */}
+        <h2 style={h2Style}>Security</h2>
+        <p style={pStyle}>
+          Access to data is restricted by row-level security policies enforced at the
+          database layer; uploaded files are stored privately and served only through
+          short-lived signed links; payment instruments never touch our systems. No
+          system is perfectly secure, and we will notify affected users and the Data
+          Protection Board of any personal data breach as required.
+        </p>
+
+        {/* Changes */}
+        <h2 style={h2Style}>Changes</h2>
+        <p style={pStyle}>
+          We will update the &ldquo;Last updated&rdquo; date and, for material
+          changes, notify you in the product or by email.
+        </p>
+      </main>
+      <Footer />
+    </>
+  )
+}

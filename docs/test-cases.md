@@ -565,6 +565,68 @@
 
 ---
 
+## 13. Legal Pages, Cookie Consent & Analytics
+
+### Privacy Policy + Terms of Service
+- [ ] `/privacy` loads unauthenticated — renders full privacy policy with Nav (public marketing nav, no app shell) and Footer.
+- [ ] `/terms` loads unauthenticated — renders full terms of service with Nav and Footer.
+- [ ] Both pages are server components (no client-side data fetching).
+- [ ] Footer on `/privacy` and `/terms` includes links to Privacy Policy, Terms, and Cookie preferences.
+
+### Footer Legal Links
+- [ ] Public pages (`/`, `/brands`, `/creators`, `/privacy`, `/terms`) render Footer with `/privacy` and `/terms` links.
+- [ ] `/privacy` link navigates to the privacy policy page.
+- [ ] `/terms` link navigates to the terms of service page.
+- [ ] "Cookie preferences" link in footer clears consent and re-shows the cookie banner.
+- [ ] Authenticated app-shell pages (deals, dashboard, creator, campaigns) do NOT have the marketing Footer (by design — app nav pattern). Legal pages are accessible by direct URL.
+- [ ] Storefront `/c/[slug]` has its own "Powered by Guapd" footer; PitchPanel links to `/terms` and `/privacy` inline.
+
+### Signup Terms Checkbox
+- [ ] Brand onboarding (`/onboarding`): terms checkbox required — form submit blocked without it.
+- [ ] Brand onboarding: checkbox label links to `/terms` and `/privacy` (open in new tab).
+- [ ] Brand onboarding: server action validates `terms_accepted` — rejects if false/missing.
+- [ ] Brand onboarding: on success, `users.terms_accepted_at` is set to current timestamp, `users.terms_version` is set to `'2026-07-23'`.
+- [ ] Creator signup (`/signup/creator`): terms checkbox required — submit blocked without it.
+- [ ] Creator signup: checkbox label links to `/terms` and `/privacy`.
+- [ ] Creator signup: server action writes `terms_accepted_at` and `terms_version` on users row.
+
+### Cookie Consent Banner
+- [ ] Cookie banner appears on first visit (no prior consent in localStorage).
+- [ ] Cookie banner appears on `/c/[slug]` storefront pages (first visit).
+- [ ] "Accept" sets `localStorage.guapd_analytics_consent = 'yes'`, dismisses banner.
+- [ ] "Decline" sets `localStorage.guapd_analytics_consent = 'no'`, dismisses banner.
+- [ ] Banner does NOT re-appear after choice is made (persists across page loads).
+- [ ] "Cookie preferences" in footer clears localStorage consent value and re-shows banner.
+- [ ] Banner includes link to `/privacy`.
+
+### PostHog / Analytics Consent Gating
+- [ ] No PostHog network calls before consent is granted (check Network tab — no `posthog` requests on first load).
+- [ ] After "Accept": PostHog initializes, `window.__posthog` is set, `trackEvent()` calls fire.
+- [ ] After "Decline": PostHog does NOT initialize, `window.__posthog` is undefined, `trackEvent()` is a no-op.
+- [ ] Choice persists across page reloads — PostHog state matches stored consent without re-prompting.
+- [ ] Revoking consent via footer "Cookie preferences" → PostHog stops (page reload required for full teardown).
+
+### Storefront Funnel Events
+- [ ] `storefront_viewed` fires on `/c/[slug]` page mount (once per mount, with slug property).
+- [ ] `pitch_started` fires when "Send a pitch" button is clicked (with slug property).
+- [ ] `pitch_started` fires when package "+" button is clicked (with slug + package property).
+- [ ] `pitch_send_attempted` fires on pitch form submit (before server action).
+- [ ] `deal_created_from_storefront` fires on successful deal creation from pitch.
+- [ ] All events are no-ops when analytics consent is not granted.
+
+### PitchPanel Legal
+- [ ] PitchPanel shows "By sending this pitch you agree to the Terms of Service and Privacy Policy" with links to `/terms` and `/privacy` before the submit button.
+- [ ] Links open in new tabs.
+
+### Net-of-Fee Creator Visibility (§7 Terms compliance)
+- [ ] Web accept-page (`/offer/[token]`): "You receive" line shows net amount after fee deduction (deducted mode), with breakdown (deal value − fee).
+- [ ] Creator deal page (`/creator/deals/[id]`): "You receive" shows creator's net amount.
+- [ ] Creator invoice card: "You receive" row shows `creator_receives_paise`.
+- [ ] DealForm preview (brand side): shows "Creator receives" with computed net amount.
+- [ ] Campaign roster: shows `creator_receives_paise` per creator.
+
+---
+
 ## Run Schedule
 
 | When | What to run |

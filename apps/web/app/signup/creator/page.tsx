@@ -79,6 +79,15 @@ export default function CreatorSignupPage() {
               disabled={loading}
               autoFocus
             />
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', fontSize: '0.8125rem', color: '#888', cursor: 'pointer' }}>
+              <input type="checkbox" name="terms_accepted" required style={{ marginTop: '0.2rem' }} />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#111', fontWeight: 600, textDecoration: 'underline' }}>Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#111', fontWeight: 600, textDecoration: 'underline' }}>Privacy Policy</a>
+              </span>
+            </label>
             <button
               type="submit"
               disabled={loading || !phone.trim()}

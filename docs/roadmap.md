@@ -443,6 +443,40 @@ BUILD: tomorrow.
 
 ---
 
+## External queues status (as of 2026-07-21)
+
+### Razorpay
+Account application started with COI/PAN/TAN; GSTIN pending. Verify with Razorpay what GSTIN actually blocks (typically settlement/activation, not account creation). Route + per-creator KYC is the separate, longer track that gates real money movement. Integration itself can be built on staging with TEST keys before Route clears.
+
+### Meta (start now — longest lead)
+1. **Meta Business Suite account** — create.
+2. **BUSINESS VERIFICATION** — submit with COI/incorporation docs. Pure queue time; prerequisite for everything else. START IMMEDIATELY.
+3. **Meta app** (developers.facebook.com) — create.
+4. **APP REVIEW** for Instagram permissions (instagram_basic, instagram_manage_insights, etc.) — requires a working demo, screencasts, and a LIVE PRIVACY POLICY URL. Weeks, can be rejected/iterated. Needs something to show, so submit once the feature exists.
+
+NOTE: metrics require creators/brands to CONNECT their IG Business/Creator account via OAuth — we cannot query arbitrary handles. The feature is "connect your account → auto-populate profile/storefront + post performance," not "look up any handle."
+
+DEPENDENCY SURFACED: **privacy policy is a HARD BLOCKER for Meta app review** — move it up from "pre-launch nice-to-have." Must be a live URL on guapd.com before submission.
+
+---
+
+## AI creator search / matching for brands (PJ wants soon — STRATEGIC DECISION, flagged)
+
+Request: brand describes their campaign → AI finds/recommends the best creators.
+⚠️ THIS IS DISCOVERY — the Handoff Brief's locked strategy explicitly excludes it in v1 ("host transactions between a brand and creator who already found each other; NOT a discovery/search marketplace — avoids two-sided cold-start"). Research reached the same conclusion twice (discovery is crowded/commoditised; Industry Layer Framework ranks Discovery LAST as an entry point).
+
+ARGUMENTS AGAINST BUILDING SOON:
+- Supply too small (~20-50 vetted creators) — AI matching over that is just a filtered list; value needs hundreds+.
+- Competes where we're weakest: Qoruz/Modash/global platforms have years of creator+audience data.
+- Reopens the two-sided cold-start the thesis was designed to avoid.
+- Meaningful matching needs data we don't have yet: audience demographics (Meta API, gated on app review) + campaign history (accumulates via usage).
+
+THE DEFENSIBLE VERSION (on-thesis reframe): not generic discovery search, but RECOMMENDATION OVER OUR PROPRIETARY OPERATIONAL DATA — reliability, on-time delivery, revision frequency, past performance with similar campaigns/categories (the "Creator Reliability Index" + "campaign memory" from our own research). Qoruz can't replicate this because they don't host the transactions. REQUIRES campaign history to exist first.
+
+RECOMMENDATION: post-pilot, built on operational data, not a generic creator-search engine. If pulled forward, it's a deliberate thesis change to make with cofounders (esp. Utkarsh), not scope creep.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';
