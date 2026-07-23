@@ -112,6 +112,16 @@ export async function createDealFromStorefront(input: PitchInput) {
 
   if (!creator?.is_vetted) return { error: 'This creator is not available for deals.' }
 
+  // Resolve fee: pair rate (if exists) overrides brand standard rate
+  const { data: pairRate } = await admin
+    .from('brand_creator_rates')
+    .select('fee_pct')
+    .eq('brand_id', brand.id)
+    .eq('creator_id', creator.id)
+    .maybeSingle()
+
+  const resolvedFeePercent = pairRate?.fee_pct ?? brand.platform_fee_percent ?? 0
+
   // Validation
   const title = input.title?.trim()
   const deliverables = input.deliverables?.trim()
@@ -131,7 +141,7 @@ export async function createDealFromStorefront(input: PitchInput) {
       price_paise: 0,
       revision_limit: 1,
       last_offer_by: 'brand',
-      fee_percent: brand.platform_fee_percent ?? 0,
+      fee_percent: resolvedFeePercent,
       fee_mode: brand.fee_mode ?? 'on_top',
       source: 'storefront',
     })

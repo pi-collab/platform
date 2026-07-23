@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -98,6 +99,17 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
 
   if (error || !creator) notFound()
 
+  // Resolve effective fee: pair rate (if exists) overrides brand standard rate
+  const admin = createAdminClient()
+  const { data: pairRate } = await admin
+    .from('brand_creator_rates')
+    .select('fee_pct')
+    .eq('brand_id', brand.brandId)
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  const effectiveFeePercent = pairRate?.fee_pct ?? brandRow?.platform_fee_percent ?? 0
+
   const activeProducts = (products ?? []).filter((p) => p.is_active)
 
   return (
@@ -113,7 +125,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
       <DealForm
         creator={creator}
         products={activeProducts}
-        platformFeePercent={brandRow?.platform_fee_percent ?? 0}
+        platformFeePercent={effectiveFeePercent}
         feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
         prefill={prefill}
         campaigns={(campaigns ?? []) as { id: string; name: string }[]}

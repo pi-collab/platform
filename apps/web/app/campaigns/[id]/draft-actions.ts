@@ -55,8 +55,18 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     .eq('id', brand.brandId)
     .single()
 
-  const feePercent = brandRow?.platform_fee_percent ?? 0
+  const brandFeePercent = brandRow?.platform_fee_percent ?? 0
   const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+
+  // Fetch pair rates for all these creators (service-role needed — RLS denies all)
+  const admin = createAdminClient()
+  const { data: pairRates } = await admin
+    .from('brand_creator_rates')
+    .select('creator_id, fee_pct')
+    .eq('brand_id', brand.brandId)
+    .in('creator_id', creatorIds)
+
+  const pairRateMap = new Map((pairRates ?? []).map((pr) => [pr.creator_id, pr.fee_pct]))
 
   // Insert drafts — skip duplicates (ON CONFLICT DO NOTHING via upsert)
   const rows = creatorIds.map((creatorId) => ({
@@ -64,7 +74,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     creator_id: creatorId,
     placements: [] as DraftPlacement[],
     total_price_paise: 0,
-    fee_percent: feePercent,
+    fee_percent: pairRateMap.get(creatorId) ?? brandFeePercent,
     fee_mode: feeMode,
     total_brand_paise: 0,
   }))
@@ -103,8 +113,28 @@ export async function updateCampaignDraft(
     .eq('id', brand.brandId)
     .single()
 
-  const feePercent = brandRow?.platform_fee_percent ?? 0
+  const brandFeePercent = brandRow?.platform_fee_percent ?? 0
   const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+
+  // Check for a pair rate for this draft's creator
+  const { data: draftRow } = await supabase
+    .from('campaign_drafts')
+    .select('creator_id')
+    .eq('id', draftId)
+    .maybeSingle()
+
+  let feePercent = brandFeePercent
+  if (draftRow?.creator_id) {
+    const admin = createAdminClient()
+    const { data: pairRate } = await admin
+      .from('brand_creator_rates')
+      .select('fee_pct')
+      .eq('brand_id', brand.brandId)
+      .eq('creator_id', draftRow.creator_id)
+      .maybeSingle()
+    if (pairRate) feePercent = pairRate.fee_pct
+  }
+
   const fee = calculateFee(totalPricePaise, feePercent, feeMode)
 
   const { error } = await supabase
