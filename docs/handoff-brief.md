@@ -109,6 +109,18 @@ Plus a **thin web accept-page** so a creator's *first* offer opens without a dow
 
 ---
 
+## Ops portal (`/ops`)
+
+Internal-only console for founders to manage creators, brands, deals, and fee settings. Not a product surface — it's the admin tool.
+
+- **Access**: gated by `OPS_ALLOWED_EMAILS` environment variable (comma-separated emails). Checked at the layout level (via `verifyOpsAccess()`) and again at every server action. No database-stored roles — env var is the single control.
+- **Data access**: uses the Supabase **service-role key** (`createAdminClient()`) for all reads and writes. This **bypasses RLS entirely**. The security boundary is the email allowlist, not RLS.
+- **Capabilities**: add/edit/vet/reject/delete creators; add/edit products; approve/reject brands; edit brand fee settings; set per-deal fee overrides; generate offer links. Can read creator phone numbers, deal terms, messages, and events. Cannot read invoices or uploaded deliverables.
+- **Audit**: every ops write is logged to the `ops_events` table with the acting user's email and auth ID, the action, the target row, and before/after values for status and money fields. Deal-specific ops actions (fee overrides) also write to the `events` table so they appear in the deal timeline.
+- **Route**: `/ops` (layout-gated), with sub-routes for `/ops/creators`, `/ops/brands`, `/ops/deals`, `/ops/offers`, `/ops/access`.
+
+---
+
 ## Pilot success metric (the v1 bar)
 
 One real deal goes **brief → accept → deliver → approve → paid, entirely on-platform**, with a WhatsApp ping and a native-app upload, from one of Utkarsh's creators on TestFlight. And: **would they run deal #2 on it?** (the retention/leakage signal that matters most).

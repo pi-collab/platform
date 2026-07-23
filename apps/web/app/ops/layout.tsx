@@ -1,23 +1,20 @@
 import Link from 'next/link'
 import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
+import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Ops Console', robots: { index: false, follow: false } }
 
 export default async function OpsLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Single source of truth for ops access — same check as server actions
+  const opsUser = await verifyOpsAccess()
 
-  // Check if user is an allowed ops email
-  const allowedRaw = process.env.OPS_ALLOWED_EMAILS
-  const allowedEmails = allowedRaw
-    ? new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean))
-    : new Set<string>()
+  if (!opsUser) {
+    // Need auth state to show sign-in vs sign-out UI
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-  const isOps = user?.email && allowedEmails.has(user.email.toLowerCase())
-
-  if (!isOps) {
     return (
       <div style={{ fontFamily: 'system-ui, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#fafafa' }}>
         <div style={{ textAlign: 'center', padding: '3rem 2rem', background: '#fff', border: '1px solid #e5e5e5', borderRadius: 16, maxWidth: 380 }}>
@@ -56,7 +53,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>
           <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>
         </nav>
-        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#888' }}>{user.email}</span>
+        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#888' }}>{opsUser.email}</span>
       </header>
       {children}
     </div>

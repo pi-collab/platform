@@ -33,12 +33,13 @@ interface CreateDealInput {
   campaign_id?: string
   internal_note?: string
   source?: string
+  fee_pct_override?: number
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -53,6 +54,9 @@ export async function createDeal(input: CreateDealInput) {
     .select('platform_fee_percent, fee_mode')
     .eq('id', brand.brandId)
     .single()
+
+  // Resolve fee: override wins if set, otherwise brand's current rate
+  const resolvedFeePercent = fee_pct_override ?? brandFee?.platform_fee_percent ?? 0
 
   // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
   const { data, error } = await supabase
@@ -71,8 +75,9 @@ export async function createDeal(input: CreateDealInput) {
       usage_rights: usage_rights?.trim() || null,
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
-      fee_percent: brandFee?.platform_fee_percent ?? 0,
+      fee_percent: resolvedFeePercent,
       fee_mode: brandFee?.fee_mode ?? 'on_top',
+      fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,
       shipment_status: requires_shipment ? 'pending' : null,

@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { notFound } from 'next/navigation'
+import { verifyOpsAccess } from '@/lib/ops-auth'
+import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
+import FeeOverrideForm from './FeeOverrideForm'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   negotiating: { bg: '#dbeafe', color: '#1e40af' },
@@ -15,12 +17,15 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 }
 
 export default async function OpsDealDetailPage({ params }: { params: { id: string } }) {
+  const user = await verifyOpsAccess()
+  if (!user) redirect('/login')
+
   const admin = createAdminClient()
 
   const [{ data: deal }, { data: events }, { data: messages }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name), creators(id, full_name, handle)')
+      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_pct_override, brand_id, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name, platform_fee_percent), creators(id, full_name, handle)')
       .eq('id', params.id)
       .single(),
     admin
@@ -155,6 +160,19 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
             ))}
           </div>
         )}
+      </div>
+
+      {/* Fee Override */}
+      <div style={{ marginTop: '1.5rem' }}>
+        <FeeOverrideForm
+          dealId={deal.id}
+          dealStatus={deal.status}
+          pricePaise={deal.price_paise ?? 0}
+          feePercent={feePercent}
+          feeMode={feeMode}
+          feePctOverride={(deal as Record<string, unknown>).fee_pct_override as number | null}
+          brandFeePercent={(deal.brands as any)?.platform_fee_percent ?? 0}
+        />
       </div>
 
       {/* Metadata */}

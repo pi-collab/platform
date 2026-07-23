@@ -362,6 +362,69 @@
 
 ---
 
+## 10. Per-Deal Fee Override
+
+### Resolution at deal creation
+- [ ] Deal created with NO override: fee_percent = brand's platform_fee_percent; fee_pct_override is NULL.
+- [ ] Deal created WITH override (via createDeal fee_pct_override param): fee_percent = override value; fee_pct_override stores the override.
+- [ ] Two deals on the same brand, one with override (e.g. 5%) one without: each deal has its own snapshotted fee_percent (5% vs brand's rate). Brand's own rate is unchanged.
+- [ ] Changing the brand's platform_fee_percent afterwards does NOT alter either existing deal's fee_percent.
+
+### Creator net amount display (all three surfaces)
+- [ ] Creator deal page (`/creator/deals/[id]`): "You receive" shows net amount computed from snapshotted fee_percent (not brand rate).
+- [ ] Web accept-page (`/offer/[token]`): offer card shows net amount using deal's fee_percent.
+- [ ] Invoice card (creator side): creator_receives_paise computed from the deal's snapshotted fee, not recomputed from brand.
+
+### Invoice and payment path
+- [ ] generateInvoice reads fee_percent and fee_mode from the deal — snapshot is the source of truth.
+- [ ] Invoice brand_pays_paise and creator_receives_paise match the deal's snapshotted fee (not the brand's current rate).
+- [ ] mark_deal_paid (Postgres function) does not touch fee — transitions invoice/deal status only.
+
+> Ops-side fee override tests (setDealFeeOverride action, UI, access control, audit) are in Section 11 — Ops Portal.
+
+---
+
+## 11. Ops Portal
+
+### Access control
+- [ ] Non-allowlisted email: blocked at layout (sees access-denied UI, not ops console).
+- [ ] Non-allowlisted email: blocked at each page (deals, deals/[id], offers, creators, creators/new, creators/[id], creators/[id]/edit, brands, brands/[id]/edit, access).
+- [ ] Non-allowlisted email: every server action (addCreator, editCreator, vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, approveBrand, rejectBrand, editBrand, setDealFeeOverride, generateOfferLink) returns "Not authorized".
+- [ ] Removed address (projectinfluencer2026@gmail.com) is denied at layout and actions.
+- [ ] contact@guapd.com is granted access.
+- [ ] Unset/empty OPS_ALLOWED_EMAILS denies all (fails closed).
+
+### Audit trail
+- [ ] Every ops write produces a correctly attributed ops_events entry (actor_email, actor_auth_id, action, target_table, target_id, detail).
+- [ ] vetCreator/rejectCreator: detail includes before/after is_vetted, is_rejected.
+- [ ] approveBrand/rejectBrand: detail includes before/after brand_status.
+- [ ] editBrand: detail includes before/after platform_fee_percent, fee_mode.
+- [ ] setDealFeeOverride: detail includes before/after fee_percent + fee_pct_override + reason.
+- [ ] setDealFeeOverride: ALSO writes a deal-scoped events entry (deal.fee_override) visible in deal timeline.
+- [ ] deleteCreator: audit entry written BEFORE the delete (so the row ID is recorded).
+- [ ] Audit write failure surfaces as an error to the ops user (not silently swallowed).
+
+### Fee override (ops UI)
+- [ ] Fee override form visible on ops deal detail page for negotiating deals.
+- [ ] Fee override form shows immutability message for non-negotiating deals.
+- [ ] Reason field is required — empty reason rejected server-side.
+- [ ] Override set pre-acceptance: deal snapshot uses the override; brand's own rate unchanged.
+- [ ] Two deals on same brand, one overridden — each holds its own snapshotted rate.
+- [ ] Brand's rate changed afterwards: neither existing deal moves.
+- [ ] Override attempted AFTER creator acceptance: rejected server-side (call action directly, not just UI).
+- [ ] Overridden deal: invoice total and mark_deal_paid both use snapshotted fee, not recomputed brand rate.
+- [ ] Creator's net amount matches the snapshot on offer card, web accept-page, and creator deal page.
+- [ ] Override produces both ops_events entry (actor + reason) and deal timeline event.
+- [ ] Brands and creators cannot read fee_pct_override through the app or the API.
+- [ ] Clearing override (empty input) restores brand's current rate.
+
+### RLS — ops_events
+- [ ] Authenticated user (non-ops): SELECT on ops_events returns 0 rows.
+- [ ] Anon: SELECT on ops_events returns 0 rows.
+- [ ] Ops reads ops_events via service-role only.
+
+---
+
 ## CRITICAL: Security / RLS Checks
 
 > Run these after ANY change to queries, auth, or a new client.

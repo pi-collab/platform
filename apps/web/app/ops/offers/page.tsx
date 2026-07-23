@@ -1,7 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyOpsAccess } from '@/lib/ops-auth'
+import { redirect } from 'next/navigation'
 import GenerateLinkButton from './GenerateLinkButton'
 
 export default async function OpsOffersPage() {
+  const user = await verifyOpsAccess()
+  if (!user) redirect('/login')
+
   const admin = createAdminClient()
 
   const { data: deals, error } = await admin

@@ -1,4 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyOpsAccess } from '@/lib/ops-auth'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
@@ -14,6 +16,9 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 }
 
 export default async function OpsDealsPage() {
+  const user = await verifyOpsAccess()
+  if (!user) redirect('/login')
+
   const admin = createAdminClient()
 
   const { data: deals, error } = await admin

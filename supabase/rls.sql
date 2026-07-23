@@ -104,6 +104,7 @@ ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaign_drafts       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brand_invites         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_storefronts  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ops_events           ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -560,6 +561,19 @@ CREATE POLICY creator_storefronts_update_own
 CREATE POLICY creator_storefronts_deny_delete
   ON creator_storefronts FOR DELETE
   USING (false);
+
+
+-- ── ops_events ──────────────────────────────────────────────────
+-- /ops uses the service-role key for ALL data access and bypasses RLS entirely.
+-- The security boundary is OPS_ALLOWED_EMAILS (env var checked server-side),
+-- not RLS. ops_events is the audit log of all admin actions.
+-- No user-facing read access; ops reads via service role.
+
+DROP POLICY IF EXISTS ops_events_deny_all ON ops_events;
+CREATE POLICY ops_events_deny_all
+  ON ops_events FOR ALL
+  USING (false)
+  WITH CHECK (false);
 
 
 -- ================================================================

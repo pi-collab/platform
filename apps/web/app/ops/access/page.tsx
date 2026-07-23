@@ -9,14 +9,14 @@ export default async function OpsAccessPage() {
     'utkarshverma0007@gmail.com': 'Utkarsh',
     'palak13071992@gmail.com': 'Palak',
     'reyeechand@gmail.com': 'Chan',
-    'projectinfluencer2026@gmail.com': 'Project',
+    'contact@guapd.com': 'Guapd',
   }
 
   const orderPriority = [
     'utkarshverma0007@gmail.com',
     'palak13071992@gmail.com',
     'reyeechand@gmail.com',
-    'projectinfluencer2026@gmail.com',
+    'contact@guapd.com',
   ]
 
   const raw = process.env.OPS_ALLOWED_EMAILS ?? ''
