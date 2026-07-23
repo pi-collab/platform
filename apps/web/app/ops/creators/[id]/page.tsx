@@ -17,7 +17,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
 
   if (error || !creator) notFound()
 
-  const [{ data: products }, { data: deals }] = await Promise.all([
+  const [{ data: products }, { data: deals }, { data: pairRates }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
@@ -28,6 +28,11 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
       .select('id, title, status, price_paise, created_at, brands(name)')
       .eq('creator_id', params.id)
       .order('created_at', { ascending: false }),
+    admin
+      .from('brand_creator_rates')
+      .select('id, brand_id, fee_pct, reason, set_by, updated_at, brands(id, name, platform_fee_percent)')
+      .eq('creator_id', params.id)
+      .order('updated_at', { ascending: false }),
   ])
 
   return (
@@ -67,7 +72,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </Link>
       </div>
 
-      <CreatorTabs creator={creator} products={products ?? []} deals={deals ?? []} />
+      <CreatorTabs creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
     </div>
   )
 }

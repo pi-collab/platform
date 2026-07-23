@@ -55,8 +55,23 @@ export async function createDeal(input: CreateDealInput) {
     .eq('id', brand.brandId)
     .single()
 
-  // Resolve fee: override wins if set, otherwise brand's current rate
-  const resolvedFeePercent = fee_pct_override ?? brandFee?.platform_fee_percent ?? 0
+  // Resolve fee (in order): per-deal override → brand-creator pair rate → brand standard rate
+  let resolvedFeePercent: number
+  if (fee_pct_override != null) {
+    resolvedFeePercent = fee_pct_override
+  } else {
+    // Check for a brand-creator pair rate (service-role needed — RLS denies all)
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    const admin = createAdminClient()
+    const { data: pairRate } = await admin
+      .from('brand_creator_rates')
+      .select('fee_pct')
+      .eq('brand_id', brand.brandId)
+      .eq('creator_id', creator_id)
+      .maybeSingle()
+
+    resolvedFeePercent = pairRate?.fee_pct ?? brandFee?.platform_fee_percent ?? 0
+  }
 
   // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
   const { data, error } = await supabase

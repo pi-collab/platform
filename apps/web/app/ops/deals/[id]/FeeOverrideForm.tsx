@@ -78,9 +78,12 @@ export default function FeeOverrideForm({
 
   return (
     <div style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: '1rem', background: '#fafafa' }}>
-      <h3 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#555', margin: '0 0 0.75rem' }}>
-        Platform Fee Override
+      <h3 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#555', margin: '0 0 0.25rem' }}>
+        Per-Deal Fee Exception
       </h3>
+      <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 0.75rem' }}>
+        One-off override for this deal only. For permanent brand-creator rates, use the Fee Rates tab on the creator&rsquo;s page.
+      </p>
 
       {/* Current state */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.8125rem' }}>

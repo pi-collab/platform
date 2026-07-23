@@ -561,6 +561,97 @@ export async function setDealFeeOverride(dealId: string, feePercent: number | nu
   return { success: true }
 }
 
+// ── Set brand-creator pair rate ──────────────────────────────────────────────
+
+export async function setBrandCreatorRate(
+  brandId: string,
+  creatorId: string,
+  feePct: number | null,
+  reason: string,
+) {
+  const user = await verifyOpsAccess()
+  if (!user) return { error: 'Not authorized' }
+
+  if (!reason?.trim()) return { error: 'A reason is required.' }
+
+  if (feePct != null && (feePct < 0 || feePct > 100)) {
+    return { error: 'Fee percent must be between 0 and 100.' }
+  }
+
+  const admin = createAdminClient()
+
+  // Fetch existing pair rate (if any) for before-state
+  const { data: existing } = await admin
+    .from('brand_creator_rates')
+    .select('id, fee_pct, reason')
+    .eq('brand_id', brandId)
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  if (feePct == null) {
+    // Clear: delete the pair rate
+    if (existing) {
+      const { error } = await admin
+        .from('brand_creator_rates')
+        .delete()
+        .eq('id', existing.id)
+      if (error) return { error: error.message }
+    }
+
+    await logOpsEvent(user, 'brand_creator_rate.removed', 'brand_creator_rates', existing?.id ?? null, {
+      brand_id: brandId,
+      creator_id: creatorId,
+      reason: reason.trim(),
+      before: existing ? { fee_pct: existing.fee_pct } : null,
+    })
+  } else if (existing) {
+    // Update existing pair rate
+    const { error } = await admin
+      .from('brand_creator_rates')
+      .update({
+        fee_pct: feePct,
+        reason: reason.trim(),
+        set_by: user.email!,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+    if (error) return { error: error.message }
+
+    await logOpsEvent(user, 'brand_creator_rate.updated', 'brand_creator_rates', existing.id, {
+      brand_id: brandId,
+      creator_id: creatorId,
+      reason: reason.trim(),
+      before: { fee_pct: existing.fee_pct },
+      after: { fee_pct: feePct },
+    })
+  } else {
+    // Insert new pair rate
+    const { data, error } = await admin
+      .from('brand_creator_rates')
+      .insert({
+        brand_id: brandId,
+        creator_id: creatorId,
+        fee_pct: feePct,
+        reason: reason.trim(),
+        set_by: user.email!,
+      })
+      .select('id')
+      .single()
+    if (error) return { error: error.message }
+
+    await logOpsEvent(user, 'brand_creator_rate.set', 'brand_creator_rates', data.id, {
+      brand_id: brandId,
+      creator_id: creatorId,
+      reason: reason.trim(),
+      after: { fee_pct: feePct },
+    })
+  }
+
+  revalidatePath(`/ops/creators/${creatorId}`)
+  revalidatePath(`/ops/brands`)
+  return { success: true }
+}
+
 // ── Edit brand ───────────────────────────────────────────────────────────────
 
 interface EditBrandInput {

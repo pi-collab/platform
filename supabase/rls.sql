@@ -105,6 +105,7 @@ ALTER TABLE campaign_drafts       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brand_invites         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_storefronts  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ops_events           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_creator_rates  ENABLE ROW LEVEL SECURITY;
 
 
 -- ── users ─────────────────────────────────────────────────────────
@@ -568,6 +569,17 @@ CREATE POLICY creator_storefronts_deny_delete
 -- The security boundary is OPS_ALLOWED_EMAILS (env var checked server-side),
 -- not RLS. ops_events is the audit log of all admin actions.
 -- No user-facing read access; ops reads via service role.
+
+-- ── brand_creator_rates ──────────────────────────────────────────
+-- Ops-only via service-role. No brand or creator read access.
+-- Same pattern as ops_events: deny-all, service-role bypasses.
+
+DROP POLICY IF EXISTS brand_creator_rates_deny_all ON brand_creator_rates;
+CREATE POLICY brand_creator_rates_deny_all
+  ON brand_creator_rates FOR ALL
+  USING (false)
+  WITH CHECK (false);
+
 
 DROP POLICY IF EXISTS ops_events_deny_all ON ops_events;
 CREATE POLICY ops_events_deny_all

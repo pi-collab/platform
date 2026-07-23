@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct } from '../../actions'
+import { useState, useEffect } from 'react'
+import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 
@@ -54,10 +54,20 @@ interface Deal {
   brands: unknown
 }
 
-const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Portfolio & Brands'] as const
+interface PairRate {
+  id: string
+  brand_id: string
+  fee_pct: number
+  reason: string
+  set_by: string
+  updated_at: string
+  brands: { id: string; name: string; platform_fee_percent: number } | null
+}
+
+const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Fee Rates', 'Portfolio & Brands'] as const
 type Tab = typeof TABS[number]
 
-export default function CreatorTabs({ creator, products, deals }: { creator: Creator; products: Product[]; deals: Deal[] }) {
+export default function CreatorTabs({ creator, products, deals, pairRates }: { creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -135,6 +145,7 @@ export default function CreatorTabs({ creator, products, deals }: { creator: Cre
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
       {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
       {tab === 'Deals' && <DealsTab deals={deals} />}
+      {tab === 'Fee Rates' && <FeeRatesTab creatorId={creator.id} pairRates={pairRates} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
     </div>
   )
@@ -532,6 +543,204 @@ function DealsTab({ deals }: { deals: Deal[] }) {
         })}
       </div>
     </div>
+  )
+}
+
+/* ── Fee Rates tab ─────────────────────────────────────────────── */
+
+function FeeRatesTab({ creatorId, pairRates }: { creatorId: string; pairRates: PairRate[] }) {
+  const router = useRouter()
+  const [showAdd, setShowAdd] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '1rem' }}>
+        Brand-creator pair rates override the brand&rsquo;s standard platform fee for this creator&rsquo;s deals with that brand.
+        Per-deal overrides (set on the deal detail page) take priority over pair rates.
+      </p>
+
+      {pairRates.length === 0 && !showAdd && (
+        <p style={emptyStyle}>No pair rates set. This creator uses each brand&rsquo;s standard rate.</p>
+      )}
+
+      {pairRates.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          {pairRates.map((pr) => {
+            const brandName = (pr.brands as any)?.name ?? '—'
+            const standardRate = (pr.brands as any)?.platform_fee_percent ?? 0
+
+            if (editingId === pr.id) {
+              return (
+                <PairRateForm
+                  key={pr.id}
+                  creatorId={creatorId}
+                  brandId={pr.brand_id}
+                  brandName={brandName}
+                  standardRate={standardRate}
+                  existing={{ feePct: pr.fee_pct, reason: pr.reason }}
+                  onDone={() => { setEditingId(null); router.refresh() }}
+                />
+              )
+            }
+
+            return (
+              <div key={pr.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fafafa' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>{brandName}</span>
+                    <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#166534' }}>{pr.fee_pct}%</span>
+                    <span style={{ fontSize: '0.65rem', color: '#888' }}>
+                      (standard: {standardRate}%)
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
+                    {pr.reason} &middot; set by {pr.set_by} &middot; {new Date(pr.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <button onClick={() => setEditingId(pr.id)} style={{ background: 'none', border: '1px solid #d5d5d5', borderRadius: 4, padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontWeight: 600, color: '#555', cursor: 'pointer' }}>
+                  Edit
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {showAdd ? (
+        <PairRateForm
+          creatorId={creatorId}
+          brandId=""
+          brandName=""
+          standardRate={0}
+          existing={null}
+          onDone={() => { setShowAdd(false); router.refresh() }}
+          pickBrand
+        />
+      ) : (
+        <button onClick={() => setShowAdd(true)} style={addBtnStyle}>+ Add pair rate</button>
+      )}
+    </div>
+  )
+}
+
+function PairRateForm({ creatorId, brandId: initialBrandId, brandName, standardRate: initialStandardRate, existing, onDone, pickBrand }: {
+  creatorId: string
+  brandId: string
+  brandName: string
+  standardRate: number
+  existing: { feePct: number; reason: string } | null
+  onDone: () => void
+  pickBrand?: boolean
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [feePct, setFeePct] = useState(existing ? String(existing.feePct) : '')
+  const [reason, setReason] = useState(existing?.reason ?? '')
+
+  // Brand picker state (only used for new pair rates)
+  const [brands, setBrands] = useState<{ id: string; name: string; platform_fee_percent: number }[]>([])
+  const [selectedBrandId, setSelectedBrandId] = useState(initialBrandId)
+  const [brandsLoaded, setBrandsLoaded] = useState(false)
+
+  const effectiveBrandId = pickBrand ? selectedBrandId : initialBrandId
+  const selectedBrand = pickBrand ? brands.find((b) => b.id === selectedBrandId) : null
+  const standardRate = pickBrand ? (selectedBrand?.platform_fee_percent ?? 0) : initialStandardRate
+  const displayBrandName = pickBrand ? (selectedBrand?.name ?? '') : brandName
+
+  // Lazy-load brands list for the picker
+  useEffect(() => {
+    if (pickBrand) {
+      fetch('/ops/api/brands')
+        .then((r) => r.json())
+        .then((data) => { setBrands(data.brands ?? []); setBrandsLoaded(true) })
+        .catch(() => setBrandsLoaded(true))
+    }
+  }, [pickBrand])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+
+    if (!effectiveBrandId) { setError('Select a brand.'); return }
+
+    const parsedFee = feePct.trim() === '' ? null : parseFloat(feePct)
+    if (parsedFee != null && (isNaN(parsedFee) || parsedFee < 0 || parsedFee > 100)) {
+      setError('Fee must be between 0 and 100.')
+      return
+    }
+    if (!reason.trim()) { setError('A reason is required.'); return }
+
+    setLoading(true)
+    const res = await setBrandCreatorRate(effectiveBrandId, creatorId, parsedFee, reason.trim())
+    setLoading(false)
+
+    if ('error' in res && res.error) { setError(res.error); return }
+    onDone()
+  }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ padding: '1rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fff', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {error && <div style={{ color: '#dc2626', fontSize: '0.8125rem', padding: '0.375rem', background: '#fef2f2', borderRadius: 4 }}>{error}</div>}
+
+      {pickBrand ? (
+        <label style={formLabelStyle}>
+          <span style={formLabelTextStyle}>Brand</span>
+          <select style={formInputStyle} value={selectedBrandId} onChange={(e) => setSelectedBrandId(e.target.value)} required>
+            <option value="">Select a brand...</option>
+            {brands.map((b) => (
+              <option key={b.id} value={b.id}>{b.name} (standard: {b.platform_fee_percent}%)</option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p style={{ fontSize: '0.8125rem', margin: 0 }}>
+          <strong>{displayBrandName}</strong> — standard rate: <span style={{ fontFamily: 'monospace' }}>{standardRate}%</span>
+        </p>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <label style={{ ...formLabelStyle, flex: '0 0 120px' }}>
+          <span style={formLabelTextStyle}>Pair rate %</span>
+          <input
+            type="number"
+            step="0.1"
+            min="0"
+            max="100"
+            placeholder={`${standardRate} (standard)`}
+            value={feePct}
+            onChange={(e) => setFeePct(e.target.value)}
+            style={formInputStyle}
+          />
+        </label>
+        <label style={{ ...formLabelStyle, flex: 1 }}>
+          <span style={formLabelTextStyle}>Reason (required)</span>
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            required
+            placeholder="e.g. Creator introduced this brand to platform"
+            style={formInputStyle}
+          />
+        </label>
+      </div>
+
+      {feePct !== '' && !isNaN(parseFloat(feePct)) && (
+        <p style={{ fontSize: '0.8125rem', padding: '0.5rem 0.75rem', background: '#eff6ff', borderRadius: 6, margin: 0 }}>
+          New deals between <strong>{displayBrandName || '(select brand)'}</strong> and this creator will use <strong>{parseFloat(feePct)}%</strong> instead of the standard {standardRate}%.
+        </p>
+      )}
+
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <button type="submit" disabled={loading} style={{ padding: '0.4rem 1rem', background: loading ? '#999' : '#111', color: '#fff', border: 'none', borderRadius: 4, fontWeight: 600, fontSize: '0.8125rem', cursor: loading ? 'not-allowed' : 'pointer' }}>
+          {loading ? 'Saving...' : feePct.trim() === '' ? 'Remove pair rate' : existing ? 'Update' : 'Set pair rate'}
+        </button>
+        <button type="button" onClick={onDone} style={{ padding: '0.4rem 1rem', background: '#fff', color: '#555', border: '1px solid #d5d5d5', borderRadius: 4, fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+          Cancel
+        </button>
+      </div>
+    </form>
   )
 }
 

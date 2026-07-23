@@ -362,13 +362,19 @@
 
 ---
 
-## 10. Per-Deal Fee Override
+## 10. Fee Resolution at Deal Creation
 
-### Resolution at deal creation
-- [ ] Deal created with NO override: fee_percent = brand's platform_fee_percent; fee_pct_override is NULL.
-- [ ] Deal created WITH override (via createDeal fee_pct_override param): fee_percent = override value; fee_pct_override stores the override.
-- [ ] Two deals on the same brand, one with override (e.g. 5%) one without: each deal has its own snapshotted fee_percent (5% vs brand's rate). Brand's own rate is unchanged.
-- [ ] Changing the brand's platform_fee_percent afterwards does NOT alter either existing deal's fee_percent.
+### Three-tier resolution order
+- [ ] No pair rate, no per-deal override: fee_percent = brand's platform_fee_percent.
+- [ ] Pair rate exists, no per-deal override: fee_percent = pair rate's fee_pct.
+- [ ] Both pair rate and per-deal override set: fee_percent = per-deal override (override wins).
+- [ ] Per-deal override set, no pair rate: fee_percent = per-deal override.
+- [ ] A different creator on the same brand (no pair rate for them): fee_percent = brand's standard rate.
+
+### Snapshot immutability
+- [ ] Changing the brand's platform_fee_percent afterwards does NOT alter existing deals' fee_percent.
+- [ ] Changing a pair rate afterwards does NOT alter existing deals' fee_percent — only future deals move.
+- [ ] Two deals on the same brand, one with pair rate one without: each holds its own snapshotted rate.
 
 ### Creator net amount display (all three surfaces)
 - [ ] Creator deal page (`/creator/deals/[id]`): "You receive" shows net amount computed from snapshotted fee_percent (not brand rate).
@@ -380,7 +386,37 @@
 - [ ] Invoice brand_pays_paise and creator_receives_paise match the deal's snapshotted fee (not the brand's current rate).
 - [ ] mark_deal_paid (Postgres function) does not touch fee — transitions invoice/deal status only.
 
-> Ops-side fee override tests (setDealFeeOverride action, UI, access control, audit) are in Section 11 — Ops Portal.
+> Per-deal fee exception tests (setDealFeeOverride action, UI) are in Section 11 — Ops Portal.
+
+---
+
+## 12. Brand-Creator Pair Rates
+
+### Setting and updating
+- [ ] Setting a pair rate: brand_creator_rates row created with fee_pct, reason, set_by.
+- [ ] Updating a pair rate: existing row updated (not duplicated). UNIQUE(brand_id, creator_id) constraint holds.
+- [ ] Removing a pair rate: row deleted. Future deals for this pair fall back to brand standard rate.
+- [ ] Fee percent must be 0–100 — negative or >100 rejected.
+- [ ] Reason is required — empty reason rejected server-side.
+
+### Audit trail
+- [ ] Setting a pair rate writes an ops_events entry with action, actor, brand_id, creator_id, reason, after fee_pct.
+- [ ] Updating a pair rate writes an ops_events entry with before/after fee_pct.
+- [ ] Removing a pair rate writes an ops_events entry with before fee_pct.
+
+### Access control / RLS
+- [ ] Brands cannot read brand_creator_rates (deny-all RLS policy).
+- [ ] Creators cannot read brand_creator_rates (deny-all RLS policy).
+- [ ] Authenticated non-ops user: SELECT on brand_creator_rates returns 0 rows.
+- [ ] Only ops (setBrandCreatorRate action, verifyOpsAccess) can write pair rates.
+- [ ] /ops/api/brands returns 403 for non-ops users.
+
+### Ops UI (creator detail page, Fee Rates tab)
+- [ ] Existing pair rates listed with brand name, pair rate %, standard rate %, reason, set_by, date.
+- [ ] Edit button opens inline form pre-filled with existing values.
+- [ ] Add button opens form with brand picker (fetched from /ops/api/brands).
+- [ ] Clearing the fee field and submitting removes the pair rate.
+- [ ] Preview text shows what new deals will use.
 
 ---
 
@@ -389,7 +425,7 @@
 ### Access control
 - [ ] Non-allowlisted email: blocked at layout (sees access-denied UI, not ops console).
 - [ ] Non-allowlisted email: blocked at each page (deals, deals/[id], offers, creators, creators/new, creators/[id], creators/[id]/edit, brands, brands/[id]/edit, access).
-- [ ] Non-allowlisted email: every server action (addCreator, editCreator, vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, approveBrand, rejectBrand, editBrand, setDealFeeOverride, generateOfferLink) returns "Not authorized".
+- [ ] Non-allowlisted email: every server action (addCreator, editCreator, vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, approveBrand, rejectBrand, editBrand, setDealFeeOverride, setBrandCreatorRate, generateOfferLink) returns "Not authorized".
 - [ ] Removed address (projectinfluencer2026@gmail.com) is denied at layout and actions.
 - [ ] contact@guapd.com is granted access.
 - [ ] Unset/empty OPS_ALLOWED_EMAILS denies all (fails closed).
