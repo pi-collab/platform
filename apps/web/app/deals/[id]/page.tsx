@@ -36,7 +36,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -65,13 +65,17 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   // Fetch campaign name if deal belongs to one
   let campaignName: string | null = null
+  let campaignBrief: { pitch: string | null; guidelines: string | null } | null = null
   if (deal.campaign_id) {
     const { data: camp } = await supabase
       .from('campaigns')
-      .select('name')
+      .select('name, brief_pitch, brief_guidelines')
       .eq('id', deal.campaign_id)
       .maybeSingle()
     campaignName = camp?.name ?? null
+    if (camp?.brief_pitch || camp?.brief_guidelines) {
+      campaignBrief = { pitch: (camp as Record<string, unknown>).brief_pitch as string | null, guidelines: (camp as Record<string, unknown>).brief_guidelines as string | null }
+    }
   }
 
   const rawCreator = deal.creators as unknown
@@ -160,6 +164,49 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           <DealThread dealId={deal.id} dealStatus={deal.status} initialMessages={(messages ?? []) as { id: string; deal_id: string; sender_party: 'brand' | 'creator'; body: string | null; created_at: string }[]} />
         </div>
       </div>
+
+      {/* Brief — deal-level or campaign-level */}
+      {(() => {
+        const pitch = (deal as any).brief_pitch ?? campaignBrief?.pitch ?? null
+        const guidelines = (deal as any).brief_guidelines ?? campaignBrief?.guidelines ?? null
+        if (!pitch && !guidelines) return null
+        const isNegotiating = deal.status === 'negotiating'
+        return (
+          <details open={isNegotiating || undefined} style={{ marginBottom: '2rem', border: '1px solid #e0e7ff', borderRadius: 12, background: '#f8faff', overflow: 'hidden' }}>
+            <summary style={{ padding: '1rem 1.25rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', listStyle: 'none' }}>
+              <p style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6366f1', margin: 0 }}>
+                {campaignBrief && deal.campaign_id ? 'Campaign Brief' : 'Brief'}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                {deal.campaign_id && campaignName && (
+                  <Link href={`/campaigns/${deal.campaign_id}`} onClick={(e) => e.stopPropagation()} style={{ fontSize: '0.75rem', color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}>
+                    {campaignName} →
+                  </Link>
+                )}
+                <span style={{ fontSize: '0.75rem', color: '#6366f1' }}>▸</span>
+              </div>
+            </summary>
+            <div style={{ padding: '0 1.25rem 1.25rem' }}>
+              {pitch && (
+                <div style={{ marginBottom: guidelines ? '0.75rem' : 0 }}>
+                  <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-muted)', margin: '0 0 0.25rem' }}>Pitch</p>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-heading)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                    {pitch}
+                  </p>
+                </div>
+              )}
+              {guidelines && (
+                <div>
+                  <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--color-muted)', margin: '0 0 0.25rem' }}>Creative Guidelines</p>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-heading)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                    {guidelines}
+                  </p>
+                </div>
+              )}
+            </div>
+          </details>
+        )
+      })()}
 
       {/* Deliverable Items — interactive review when delivered/revision, read-only otherwise */}
       {hasItems && (

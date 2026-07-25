@@ -38,7 +38,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brief_pitch, brief_guidelines, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -98,33 +98,40 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
         <p style={{ fontSize: '0.8125rem', color: '#888', margin: 0 }}>from {brand}</p>
       </div>
 
-      {/* Campaign Brief (read-only, shown only if brief exists) */}
-      {campaignBrief && (
-        <div style={{ marginBottom: '1.5rem', padding: '1.25rem', border: '1px solid #e0e7ff', borderRadius: 12, background: '#f8faff' }}>
-          <p style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6366f1', margin: '0 0 0.125rem' }}>
-            Campaign Brief
-          </p>
-          <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading, #111)', margin: '0 0 0.75rem' }}>
-            {campaignBrief.campaignName}
-          </p>
-          {campaignBrief.pitch && (
-            <div style={{ marginBottom: campaignBrief.guidelines ? '0.75rem' : 0 }}>
-              <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Pitch</p>
-              <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                {campaignBrief.pitch}
+      {/* Brief (campaign-level or deal-level, read-only) */}
+      {(() => {
+        const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
+        const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
+        if (!pitch && !guidelines) return null
+        return (
+          <div style={{ marginBottom: '1.5rem', padding: '1.25rem', border: '1px solid #e0e7ff', borderRadius: 12, background: '#f8faff' }}>
+            <p style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6366f1', margin: '0 0 0.125rem' }}>
+              {campaignBrief ? 'Campaign Brief' : 'Brief'}
+            </p>
+            {campaignBrief?.campaignName && (
+              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading, #111)', margin: '0 0 0.75rem' }}>
+                {campaignBrief.campaignName}
               </p>
-            </div>
-          )}
-          {campaignBrief.guidelines && (
-            <div>
-              <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Creative Guidelines</p>
-              <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                {campaignBrief.guidelines}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+            {pitch && (
+              <div style={{ marginBottom: guidelines ? '0.75rem' : 0 }}>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Pitch</p>
+                <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                  {pitch}
+                </p>
+              </div>
+            )}
+            {guidelines && (
+              <div>
+                <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Creative Guidelines</p>
+                <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                  {guidelines}
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Terms */}
       <div style={termsCard}>

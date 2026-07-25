@@ -134,6 +134,9 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   const [paymentTerms, setPaymentTerms] = useState(prefillPayment.select)
   const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
   const [message, setMessage] = useState('')
+  const [briefPitch, setBriefPitch] = useState(prefill?.brief_pitch ?? '')
+  const [briefGuidelines, setBriefGuidelines] = useState(prefill?.brief_guidelines ?? '')
+  const [activeTab, setActiveTab] = useState<'offer' | 'brief'>('offer')
   const [priceOverride, setPriceOverride] = useState('')
   const [requiresShipment, setRequiresShipment] = useState(false)
   const [campaignId, setCampaignId] = useState('')
@@ -272,8 +275,15 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     e.preventDefault()
     setError(null)
 
+    if (!title.trim()) {
+      setError('Deal title is required')
+      setActiveTab('offer')
+      return
+    }
+
     if (selectedCount === 0) {
       setError('Select at least one product')
+      setActiveTab('offer')
       return
     }
 
@@ -329,6 +339,8 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       requires_shipment: requiresShipment,
       usage_rights_end_date: usageRightsEndDate || undefined,
       campaign_id: campaignId || undefined,
+      brief_pitch: briefPitch || undefined,
+      brief_guidelines: briefGuidelines || undefined,
     })
 
     setLoading(false)
@@ -358,6 +370,37 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
         </div>
       )}
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--color-border, #e5e5e5)' }}>
+        {(['offer', 'brief'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '0.5rem 1.25rem',
+              fontSize: '0.8125rem',
+              fontWeight: activeTab === tab ? 700 : 500,
+              color: activeTab === tab ? 'var(--color-heading, #111)' : 'var(--color-muted, #888)',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === tab ? '2px solid var(--color-heading, #111)' : '2px solid transparent',
+              marginBottom: -2,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-heading, inherit)',
+            }}
+          >
+            {tab === 'offer' ? 'Offer' : 'Brief'}
+            {tab === 'brief' && (briefPitch || briefGuidelines) && (
+              <span style={{ marginLeft: 6, width: 6, height: 6, borderRadius: '50%', background: '#6366f1', display: 'inline-block' }} />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ── OFFER TAB ──────────────────────────────────────────── */}
+      <div style={{ display: activeTab === 'offer' ? 'flex' : 'none', flexDirection: 'column', gap: '1.5rem' }}>
+
       {/* Creator (read-only) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: 'var(--section-bg-alt)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
         {creator.profile_photo_url ? (
@@ -375,7 +418,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
 
       {/* Title */}
       <Field label="Deal title">
-        <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} required />
+        <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
       </Field>
 
       {/* Campaign */}
@@ -743,6 +786,33 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
           placeholder="Hey! Would love to work together on..."
         />
       </Field>
+
+      </div>{/* end offer tab */}
+
+      {/* ── BRIEF TAB ──────────────────────────────────────────── */}
+      <div style={{ display: activeTab === 'brief' ? 'flex' : 'none', flexDirection: 'column', gap: '1.5rem' }}>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', margin: 0, lineHeight: 1.5 }}>
+          Share your campaign pitch and creative guidelines with the creator. They&apos;ll see this on their deal page. This is optional.
+        </p>
+        <Field label="Pitch" hint="What's the campaign about? What do you want the creator to communicate?">
+          <textarea
+            style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }}
+            value={briefPitch}
+            onChange={(e) => setBriefPitch(e.target.value)}
+            placeholder="We're launching our new savings account for Gen-Z. We want authentic, relatable content showing how easy it is to start saving..."
+            maxLength={2000}
+          />
+        </Field>
+        <Field label="Creative guidelines" hint="Any dos/don'ts, tone, hashtags, or specific talking points?">
+          <textarea
+            style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }}
+            value={briefGuidelines}
+            onChange={(e) => setBriefGuidelines(e.target.value)}
+            placeholder="Must mention: zero-balance account, 7% interest. Don't mention competitors by name. Tone: casual, not scripted. Use #StartSaving."
+            maxLength={2000}
+          />
+        </Field>
+      </div>{/* end brief tab */}
 
       {/* Submit */}
       <button
