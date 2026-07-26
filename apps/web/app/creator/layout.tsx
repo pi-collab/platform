@@ -16,15 +16,17 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     .maybeSingle()
 
   let creatorName: string | null = null
+  let creatorPhoto: string | null = null
   let isVetted = false
   let isRejected = false
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('full_name, is_vetted, is_rejected')
+      .select('full_name, is_vetted, is_rejected, profile_photo_url')
       .eq('user_id', profile.id)
       .maybeSingle()
     creatorName = creator?.full_name ?? null
+    creatorPhoto = creator?.profile_photo_url ?? null
     isVetted = creator?.is_vetted ?? false
     isRejected = creator?.is_rejected ?? false
   }
@@ -79,7 +81,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   return (
     <>
-      <CreatorSidebar creatorName={creatorName} unreadCount={unreadCount} />
+      <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} unreadCount={unreadCount} />
       <main className="creator-main">{children}</main>
     </>
   )

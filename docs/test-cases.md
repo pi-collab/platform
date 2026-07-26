@@ -652,6 +652,33 @@
 
 ## Run Schedule
 
+### Creator Profile Photo (Avatar)
+
+#### Upload
+- [ ] Creator uploads JPEG from dashboard → photo appears in sidebar, dashboard, and storefront (if no separate portrait_path)
+- [ ] Creator uploads PNG, WebP, GIF → all accepted
+- [ ] Upload a non-image file (e.g. .pdf, .txt) → rejected with "Invalid file type" error
+- [ ] Upload an image > 5 MB → rejected with "File too large" error
+- [ ] Upload replaces previous avatar (upsert, not duplicate)
+- [ ] Creator removes photo → falls back to initials everywhere
+
+#### Display consistency
+- [ ] Avatar renders on creator sidebar (desktop + mobile)
+- [ ] Avatar renders on creator dashboard (upload section)
+- [ ] Avatar renders on public storefront /c/[slug] when portrait_path is null (falls back to profile_photo_url)
+- [ ] Storefront uses portrait_path when set, ignoring profile_photo_url (portrait_path takes priority)
+- [ ] Avatar renders in brand's deal thread for a creator they share a deal with (via creators.profile_photo_url in the deals join)
+- [ ] Avatar renders in brand's deals list, deal detail, and campaign views
+
+#### Access boundary
+- [ ] A brand CAN see the photo of a vetted creator (via browse/deal builder — creators_read policy allows is_vetted = true)
+- [ ] A brand CAN see the photo of an unvetted creator they share a deal with (creators_read policy allows deal partner)
+- [ ] A brand CANNOT see the photo (or any data) of an UNVETTED creator they have NO deal with (unvetted + non-partner = hidden by creators_read policy)
+- [ ] No new RLS policy was added or widened for this feature — existing creators_read policy is sufficient
+- [ ] Photo URL is a public storage URL (storefronts bucket) — no storage-level policy change needed
+
+---
+
 | When | What to run |
 |------|-------------|
 | After any query/auth/RLS change | CRITICAL: Security / RLS Checks (full) |

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import SignOutButton from '@/components/SignOutButton'
+import CreatorAvatar from '@/components/CreatorAvatar'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
 
 const NAV_LINKS = [
@@ -33,18 +34,16 @@ const NAV_LINKS = [
   },
 ]
 
-export default function CreatorSidebar({ creatorName, unreadCount: initialUnread = 0 }: { creatorName: string; unreadCount?: number }) {
+export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount: initialUnread = 0 }: { creatorName: string; creatorPhoto?: string | null; unreadCount?: number }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const unreadCount = useRealtimeNotifications(initialUnread)
-
-  const initials = creatorName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 
   const nav = (
     <>
       {/* Profile */}
       <div style={{ padding: '1.25rem 1rem 1rem', display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-        <div style={avatarStyle}>{initials}</div>
+        <CreatorAvatar url={creatorPhoto ?? null} name={creatorName} size={36} borderRadius={8} />
         <div>
           <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111', margin: 0 }}>{creatorName}</p>
           <span style={badgeStyle}>Creator</span>
@@ -180,20 +179,6 @@ export default function CreatorSidebar({ creatorName, unreadCount: initialUnread
       `}</style>
     </>
   )
-}
-
-const avatarStyle: React.CSSProperties = {
-  width: 36,
-  height: 36,
-  borderRadius: 8,
-  background: '#ede9fe',
-  color: '#6d28d9',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  flexShrink: 0,
 }
 
 const badgeStyle: React.CSSProperties = {

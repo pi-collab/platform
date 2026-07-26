@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
+import AvatarUpload from '@/components/AvatarUpload'
 import CopyLinkButton from './CopyLinkButton'
 import type { Metadata } from 'next'
 
@@ -15,10 +16,10 @@ interface InvoiceRow {
 }
 
 export default async function CreatorDashboardPage() {
-  await verifyCreator()
+  const { creatorId, creatorName } = await verifyCreator()
   const supabase = createClient()
 
-  const [{ data: deals }, { data: invoices }, { data: storefront }] = await Promise.all([
+  const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
@@ -31,6 +32,11 @@ export default async function CreatorDashboardPage() {
     supabase
       .from('creator_storefronts')
       .select('slug, is_published')
+      .maybeSingle(),
+    supabase
+      .from('creators')
+      .select('profile_photo_url')
+      .eq('id', creatorId)
       .maybeSingle(),
   ])
 
@@ -121,6 +127,12 @@ export default async function CreatorDashboardPage() {
     <main style={wrapper}>
       <RealtimeDashboardListener />
       <h1 style={heading}>Dashboard</h1>
+
+      {/* ── PROFILE PHOTO ──────────────────────────── */}
+      <div style={{ marginBottom: '1.25rem', padding: '1rem', border: '1px solid #e5e5e5', borderRadius: 12, background: '#fff' }}>
+        <p style={{ ...sectionLabel, marginBottom: '0.75rem' }}>Profile photo</p>
+        <AvatarUpload currentUrl={creatorRow?.profile_photo_url ?? null} name={creatorName} />
+      </div>
 
       {/* ── STOREFRONT ──────────────────────────────── */}
       <StorefrontCard storefront={storefront} />
