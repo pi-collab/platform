@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
 
@@ -41,8 +42,10 @@ export async function uploadAvatar(formData: FormData) {
     return { error: 'Invalid upload path.' }
   }
 
-  // Upload to public storefronts bucket (upsert to overwrite previous avatar)
-  const { error: uploadErr } = await supabase.storage
+  // Upload via admin client (no storage RLS policies on this bucket;
+  // auth is already verified by verifyCreator above)
+  const admin = createAdminClient()
+  const { error: uploadErr } = await admin.storage
     .from(BUCKET)
     .upload(storagePath, file, {
       upsert: true,
@@ -55,7 +58,7 @@ export async function uploadAvatar(formData: FormData) {
   }
 
   // Get public URL
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = admin.storage
     .from(BUCKET)
     .getPublicUrl(storagePath)
 
