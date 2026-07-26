@@ -40,13 +40,13 @@ export default function CreatorOnboardingPage() {
       productPricePaise: pricePaise && pricePaise > 0 ? pricePaise : undefined,
     })
 
-    setLoading(false)
-
     if (result.status === 'error') {
+      setLoading(false)
       setError(result.message)
       return
     }
 
+    // Stay in loading state — page navigates away
     router.push(result.redirect)
   }
 

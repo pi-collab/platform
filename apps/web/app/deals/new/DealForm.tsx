@@ -343,11 +343,11 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       brief_guidelines: briefGuidelines || undefined,
     })
 
-    setLoading(false)
-
     if (res?.error) {
+      setLoading(false)
       setError(res.error)
     } else if (res?.dealId) {
+      // Stay in loading state — page navigates away
       router.push(`/deals/${res.dealId}`)
     } else {
       router.push('/deals')

@@ -36,12 +36,13 @@ export default function PhoneLogin() {
     setLoading(true)
 
     const res = await verifyAndSignIn(phone.trim(), code.trim())
-    setLoading(false)
 
     if (res.status === 'error') {
+      setLoading(false)
       setError(res.message)
       return
     }
+    // Stay in loading state — page navigates away
     router.push(res.redirect)
   }
 

@@ -40,19 +40,20 @@ export default function CreatorSignupPage() {
     setLoading(true)
 
     const result = await verifyAndMatch(phone.trim(), code.trim())
-    setLoading(false)
 
     if (result.status === 'error') {
+      setLoading(false)
       setError(result.message)
       return
     }
 
     if (result.status === 'multi_stub') {
+      setLoading(false)
       setError(result.message)
       return
     }
 
-    // ok → redirect (to onboarding, complete, or login)
+    // Stay in loading state — page navigates away
     router.push(result.redirect)
   }
 

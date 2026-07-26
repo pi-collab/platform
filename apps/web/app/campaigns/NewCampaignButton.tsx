@@ -20,13 +20,13 @@ export default function NewCampaignButton() {
     const budgetPaise = budget.trim() ? Math.round(parseFloat(budget) * 100) : undefined
     if (budget.trim() && (isNaN(budgetPaise!) || budgetPaise! < 0)) { setError('Budget must be a positive number'); setLoading(false); return }
     const res = await createCampaign(name, description || undefined, budgetPaise)
-    setLoading(false)
-    if (res.error) { setError(res.error); return }
+    if (res.error) { setLoading(false); setError(res.error); return }
     setOpen(false)
     setName('')
     setDescription('')
     setBudget('')
     if (res.campaignId) router.push(`/campaigns/${res.campaignId}`)
+    else setLoading(false)
   }
 
   if (!open) {

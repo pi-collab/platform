@@ -21,10 +21,11 @@ export default function EmailAuthForm() {
     setError('')
     setLoading(true)
     const res = await signInWithEmail(email, password)
-    setLoading(false)
     if (res.status === 'error') {
+      setLoading(false)
       setError(res.message)
     } else {
+      // Stay in loading state — page navigates away and unmounts this component
       router.push('/deals')
       router.refresh()
     }
@@ -43,10 +44,11 @@ export default function EmailAuthForm() {
     }
     setLoading(true)
     const res = await signUpWithEmail(email, password)
-    setLoading(false)
     if (res.status === 'error') {
+      setLoading(false)
       setError(res.message)
     } else {
+      setLoading(false)
       setMessage(res.message)
       setView('confirm')
     }
