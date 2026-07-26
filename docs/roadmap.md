@@ -394,6 +394,9 @@ LONG-LEAD EXTERNAL GATES — start ALL now, parallel (they gate launch, not code
 BUILD QUEUE (net-new): 2c campaign brief, extension mini-deal, deal_ref+search — then launch surfaces: privacy policy + terms (legal, must-have), support (contact@guapd.com flow), settings, creator self-serve profile/storefront, error messages + empty states across app, marketing site polish + book-a-demo.
 RANK these must-have-to-launch vs fast-follow (don't treat all as pre-launch — e.g. deep Meta analytics + storefront auto-build + book-a-demo may be fast-follows).
 
+PRE-LAUNCH SECURITY:
+- [ ] **Rotate `OFFER_TOKEN_SECRET` for production** — the dev value was exposed in a chat log. Prod must use its own never-exposed secret (`openssl rand -base64 32`). Staging already uses a separate rotated value.
+
 DESIGN: Chandreyee design-system-first → restyle screens keeping logic intact (parallel with build).
 APP: after web launch — replicate mobile-web → app, then build all surfaces together.
 
