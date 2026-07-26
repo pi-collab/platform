@@ -1,9 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 export default function SignInButton() {
+  const [loading, setLoading] = useState(false)
+
   const handleSignIn = async () => {
+    if (loading) return
+    setLoading(true)
     const supabase = createClient()
     // Clear any existing session first so OAuth creates a fresh one
     await supabase.auth.signOut()
@@ -13,11 +18,13 @@ export default function SignInButton() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
+    // If signInWithOAuth doesn't redirect (e.g. popup blocked), re-enable
+    setTimeout(() => setLoading(false), 5000)
   }
 
   return (
-    <button onClick={handleSignIn} style={styles.btn}>
-      Continue with Google
+    <button onClick={handleSignIn} disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}>
+      {loading ? 'Redirecting to Google...' : 'Continue with Google'}
     </button>
   )
 }

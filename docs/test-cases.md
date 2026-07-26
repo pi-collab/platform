@@ -604,6 +604,15 @@
 - [ ] Password reset sends email (or shows success message regardless, to prevent enumeration).
 - [ ] Password minimum: 8 characters enforced client-side; Supabase enforces server-side.
 
+### Login Feedback + Double-Submit Guard
+- [ ] Brand email+password: button shows "Please wait..." and is disabled during login; double-click does not fire two attempts.
+- [ ] Brand Google OAuth: button shows "Redirecting to Google..." and is disabled; double-click blocked.
+- [ ] Creator OTP send: button shows "Sending..." and is disabled.
+- [ ] Creator OTP verify: button shows "Verifying..." / "Signing in..." and is disabled.
+- [ ] Creator Google OAuth: button shows "Redirecting to Google..." and is disabled.
+- [ ] On auth error, button re-enables and error message is displayed.
+- [ ] Brand deals page (`/deals`) shows loading skeleton during data fetch (no blank screen).
+
 ### Cookie Consent Banner
 - [ ] Cookie banner appears on first visit (no prior consent in localStorage).
 - [ ] Cookie banner appears on `/c/[slug]` storefront pages (first visit).
