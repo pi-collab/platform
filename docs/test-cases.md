@@ -594,6 +594,16 @@
 - [ ] Creator signup: checkbox label links to `/terms` and `/privacy`.
 - [ ] Creator signup: server action writes `terms_accepted_at` and `terms_version` on users row.
 
+### Brand Auth (Email+Password + Google)
+- [ ] Brand signup via email+password: creates auth user, sends confirmation email.
+- [ ] Brand login via email+password: session established, redirects to `/deals` (or `/onboarding` if no brand yet).
+- [ ] Brand login via Google OAuth: unchanged, still works.
+- [ ] **Both auth methods produce identical account state**: `users` row with `auth_id`, `email`, `role: 'brand_member'` — via shared `ensureBrandUserRow()`.
+- [ ] Wrong password → "Invalid email or password" (no email enumeration).
+- [ ] Unconfirmed email → "Please confirm your email first."
+- [ ] Password reset sends email (or shows success message regardless, to prevent enumeration).
+- [ ] Password minimum: 8 characters enforced client-side; Supabase enforces server-side.
+
 ### Cookie Consent Banner
 - [ ] Cookie banner appears on first visit (no prior consent in localStorage).
 - [ ] Cookie banner appears on `/c/[slug]` storefront pages (first visit).

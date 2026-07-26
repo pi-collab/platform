@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 
 /**
  * OAuth callback handler.
@@ -55,27 +56,8 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
-    // Check if a users row already exists for this auth identity
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('auth_id', user.id)
-      .maybeSingle()
-
-    if (!existing) {
-      // First login — create the brand_member row
-      const { error: insertError } = await supabase.from('users').insert({
-        auth_id: user.id,
-        email:   user.email,
-        role:    'brand_member',  // brand login path — see note at top of file
-      })
-
-      if (insertError) {
-        console.error('[auth/callback] users insert failed:', insertError.message)
-        // Non-fatal: session is valid, profile row missing. User can still land
-        // on dashboard; we can retry profile creation there if needed.
-      }
-    }
+    // Ensure users row exists — shared with email+password login path
+    await ensureBrandUserRow(supabase, user.id, user.email)
   }
 
   // Support `next` param for post-login redirects (e.g. invite accept flow).

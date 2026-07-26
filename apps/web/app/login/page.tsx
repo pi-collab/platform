@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
+import EmailAuthForm from '@/components/EmailAuthForm'
 
 export const metadata = {
   title: 'Brand login',
@@ -71,6 +72,14 @@ export default async function LoginPage({
           </p>
         )}
 
+        <EmailAuthForm />
+
+        <div style={styles.divider}>
+          <hr style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <hr style={styles.dividerLine} />
+        </div>
+
         <SignInButton />
       </div>
     </main>
@@ -94,7 +103,7 @@ const styles: Record<string, React.CSSProperties> = {
     background:    '#fff',
     border:        '1px solid #DDD3BE',
     borderRadius:  16,
-    minWidth:      320,
+    width:         360,
   },
   heading: {
     fontFamily:   'Georgia, serif',
@@ -128,5 +137,22 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight:     700,
     textDecoration: 'none',
     textAlign:      'center' as const,
+  },
+  divider: {
+    width:         '100%',
+    display:       'flex',
+    alignItems:    'center',
+    gap:           '0.75rem',
+    color:         '#B5A99A',
+    fontSize:      '0.8125rem',
+  },
+  dividerLine: {
+    flex:        1,
+    border:      'none',
+    borderTop:   '1px solid #DDD3BE',
+    margin:      0,
+  },
+  dividerText: {
+    flex:   'none',
   },
 }
