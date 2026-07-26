@@ -2,12 +2,40 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
- * Middleware: refresh the Supabase session on every request.
- * Without this, access tokens expire after 1 hour and the user gets
- * silently logged out. The session is stored in cookies; this rewrites
- * the response cookies whenever the token is refreshed.
+ * Middleware: Basic Auth gate (opt-in) + Supabase session refresh.
+ *
+ * 1. If STAGING_BASIC_AUTH_USER and STAGING_BASIC_AUTH_PASSWORD are set,
+ *    every request must pass HTTP Basic Auth before anything else runs.
+ * 2. Once past the gate (or if the vars are unset), the existing Supabase
+ *    session-refresh logic runs unchanged.
  */
 export async function middleware(request: NextRequest) {
+  // ── 1. Basic Auth gate (opt-in) ──────────────────────────────────
+  const authUser = process.env.STAGING_BASIC_AUTH_USER
+  const authPass = process.env.STAGING_BASIC_AUTH_PASSWORD
+
+  if (authUser && authPass) {
+    const authorization = request.headers.get('authorization')
+    if (authorization) {
+      const [scheme, encoded] = authorization.split(' ')
+      if (scheme === 'Basic' && encoded) {
+        const decoded = atob(encoded)
+        const [user, ...passParts] = decoded.split(':')
+        const pass = passParts.join(':') // passwords may contain colons
+        if (user === authUser && pass === authPass) {
+          // credentials valid — fall through to session refresh
+        } else {
+          return basicAuthChallenge()
+        }
+      } else {
+        return basicAuthChallenge()
+      }
+    } else {
+      return basicAuthChallenge()
+    }
+  }
+
+  // ── 2. Supabase session refresh (unchanged) ─────────────────────
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -37,6 +65,13 @@ export async function middleware(request: NextRequest) {
   await supabase.auth.getUser()
 
   return supabaseResponse
+}
+
+function basicAuthChallenge() {
+  return new NextResponse('Authentication required', {
+    status: 401,
+    headers: { 'WWW-Authenticate': 'Basic realm="Staging"' },
+  })
 }
 
 export const config = {
