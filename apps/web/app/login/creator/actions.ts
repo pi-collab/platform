@@ -23,10 +23,15 @@ export async function verifyAndSignIn(rawPhone: string, inputCode: string): Prom
   const admin = createAdminClient()
 
   // ── 1. OTP verification ──
-  const isDevBypass =
-    trimmedCode === '123456' && process.env.NODE_ENV !== 'production'
 
-  if (!isDevBypass) {
+  // STAGING ONLY — accept 000000 or 123456 when bypass is enabled.
+  // Never set STAGING_OTP_BYPASS on production. Remove before public launch.
+  const isStagingBypass =
+    (trimmedCode === '000000' || trimmedCode === '123456') &&
+    process.env.STAGING_OTP_BYPASS === 'true' &&
+    process.env.VERCEL_ENV !== 'production'
+
+  if (!isStagingBypass) {
     const { data: verification } = await admin
       .from('phone_verifications')
       .select('id')

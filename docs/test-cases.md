@@ -69,6 +69,10 @@
 - [ ] Creator signup via phone + OTP.
 - [ ] Stub-match/claim: creator signing up links to existing ops-created stub row (matched by phone/handle), inheriting products, deal history, vetting status.
 - [ ] Creator login works after signup.
+- [ ] **Staging OTP bypass**: with `STAGING_OTP_BYPASS=true` set, codes `000000` and `123456` accepted on staging (`VERCEL_ENV !== 'production'`).
+- [ ] **Bypass rejected without flag**: with `STAGING_OTP_BYPASS` unset, `000000` and `123456` are rejected — normal OTP path unchanged.
+- [ ] **Bypass rejected on prod**: even with `STAGING_OTP_BYPASS=true`, bypass codes rejected when `VERCEL_ENV === 'production'`.
+- [ ] **Real OTP path unchanged**: real 6-digit codes from `phone_verifications` still work normally regardless of bypass flag.
 
 ### Vetting Gate
 - [ ] Unvetted creator blocked from receiving deals.

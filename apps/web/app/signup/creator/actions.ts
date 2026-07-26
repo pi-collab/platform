@@ -16,6 +16,18 @@ type VerifyResult =
   | { status: 'multi_stub'; message: string }
   | { status: 'error'; message: string }
 
+// ── Staging bypass helper ────────────────────────────────────────────
+// STAGING ONLY — OTP bypass for demo/testing when no SMS provider is configured.
+// Never set STAGING_OTP_BYPASS on production. Remove before public launch.
+function isStagingEnv(): boolean {
+  // TODO: Remove this log after confirming VERCEL_ENV reads correctly on staging
+  console.log(`[STAGING_ENV_CHECK] VERCEL_ENV=${process.env.VERCEL_ENV}, STAGING_OTP_BYPASS=${process.env.STAGING_OTP_BYPASS}`)
+  return (
+    process.env.STAGING_OTP_BYPASS === 'true' &&
+    process.env.VERCEL_ENV !== 'production'
+  )
+}
+
 // ── Send OTP ───────────────────────────────────────────────────────
 
 export async function sendOTP(rawPhone: string): Promise<OTPResult> {
@@ -45,7 +57,11 @@ export async function sendOTP(rawPhone: string): Promise<OTPResult> {
     expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
   })
 
-  if (error) return { status: 'error', message: 'Failed to send code. Please try again.' }
+  if (error) {
+    // On staging with bypass enabled, let user proceed to code entry even if insert fails
+    if (isStagingEnv()) return { status: 'sent' }
+    return { status: 'error', message: 'Failed to send code. Please try again.' }
+  }
 
   // PLUGGABLE: In production, replace this with real SMS (Twilio/MSG91).
   // For now, log to server console for dev testing.
@@ -67,11 +83,13 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
 
   // ── 1. OTP verification ──
 
-  // ENV-GATED dev bypass: accept 123456 ONLY when NODE_ENV !== 'production'
-  const isDevBypass =
-    trimmedCode === '123456' && process.env.NODE_ENV !== 'production'
+  // STAGING ONLY — accept 000000 or 123456 when bypass is enabled.
+  // Never set STAGING_OTP_BYPASS on production. Remove before public launch.
+  const isStagingBypass =
+    (trimmedCode === '000000' || trimmedCode === '123456') &&
+    isStagingEnv()
 
-  if (!isDevBypass) {
+  if (!isStagingBypass) {
     const { data: verification } = await admin
       .from('phone_verifications')
       .select('id')
