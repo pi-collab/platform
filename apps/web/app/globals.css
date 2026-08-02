@@ -206,39 +206,191 @@ button { cursor: pointer; font-family: inherit; }
   transform: translateY(0);
 }
 
-/* ── Sidebar layout ── */
-.brand-main,
+/* ── App layout ── */
+.brand-main {
+  min-height: 100vh;
+  background: #F7F7F4;
+
+  /* ── Design-system tokens (from Chandreyee's Brand Dashboard) ── */
+  --ink: #1A1B16;
+  --card: #FFFFFF;
+  --lime-50: #F6FCE6;
+  --lime-200: #DFF29A;
+  --lime-400: #E8FF66;
+  --lime-700: #4F6B12;
+  --lime-950: #161B08;
+  --lime: #E8FF66;
+  --meta: #6A6C5F;
+  --wg-400: #8A8C7E;
+  --wg-500: #6A6C5F;
+  --wg-600: #5A5C50;
+  --wg-700: #4A4C40;
+  --amber: #B67C15;
+  --red: #C25640;
+  --paper: #F6FAF5;
+  --paper-2: #EDF2EB;
+  --bone: #EEF1EC;
+  --line: rgba(60,80,30,.10);
+  --hair: rgba(60,80,30,.08);
+  --sec: #F4F8FC;
+  --sec-2: #F7F4FB;
+  --sec-mid: #E4ECF3;
+  --sec-mid-2: #E8E2F0;
+  --sec-ink: #79809C;
+  --sh-2: 0 0 0 1px rgba(26,27,22,.08), 0 20px 48px -30px rgba(40,45,25,.20);
+  --radius-pill: 999px;
+  --neon: #E8FF66;
+  --neon-deep: #D2F04A;
+  --ink-soft: #4A4F58;
+  --ink-faint: #8B90A0;
+  --hairline: #EAEAE3;
+  --border-hairline: #EAEAE3;
+  --warning: #D89A2E;
+
+  /* Font overrides for brand portal — match Chandreyee's design */
+  --font-heading: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-body: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  font-family: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+}
+.ctgrid { display: grid; grid-template-columns: 1.63fr 1fr; gap: clamp(16px, 2vw, 20px); align-items: stretch; }
+
+/* ── Create offer page classes ── */
+.surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
+.dinput { outline: none; border: 1.5px solid #D3DBE6; background: var(--card); border-radius: 12px; font-family: var(--font-ui); font-size: 13.5px; color: var(--ink); width: 100%; height: 46px; padding: 0 14px; box-shadow: inset 0 1px 3px rgba(40,45,25,.07); transition: border-color .16s ease, box-shadow .16s ease; }
+.dinput:focus { border-color: var(--neon-deep); box-shadow: 0 0 0 4px rgba(218,254,12,.18), inset 0 1px 3px rgba(40,45,25,.05); }
+.dinput::placeholder { color: var(--ink-faint); }
+textarea.dinput { height: auto; padding: 13px 14px; line-height: 1.6; resize: vertical; }
+select.dinput { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A4F58' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-size: 12px 12px; background-position: right 15px center; padding-right: 36px; cursor: pointer; }
+input[type="date"].dinput { appearance: none; -webkit-appearance: none; color-scheme: light; position: relative; }
+input[type="date"].dinput::-webkit-calendar-picker-indicator { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; opacity: 0.45; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%234A4F58' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E"); background-size: 18px 18px; background-repeat: no-repeat; }
+input[type="date"].dinput::-webkit-calendar-picker-indicator:hover { opacity: 0.8; }
+input[type="date"].dinput::-webkit-datetime-edit { font-family: var(--font-ui); font-size: 13.5px; color: var(--ink); }
+input[type="date"].dinput::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
+.stepbtn { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); border: 1px solid var(--hairline); color: var(--ink); cursor: pointer; transition: background .16s ease, box-shadow .16s ease; }
+.stepbtn:hover { box-shadow: 0 6px 14px -8px rgba(40,45,25,.42); }
+.scp0 { border-radius: 16px; transition: background .16s, border-color .16s; }
+.brief-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: stretch; }
+@media (max-width: 700px) { .brief-grid { grid-template-columns: 1fr !important; } }
+/* ── Brand dashboard marquee + grid classes ── */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.33%); }
+}
+.mq { display: flex; gap: 0; white-space: nowrap; animation: marquee 30s linear infinite; font-size: 9.5px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--meta); }
+.mq:hover { animation-play-state: paused; }
+.t-meta {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 9.5px;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--meta);
+}
+.kpigrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.g3 { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
+.brandgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(16px, 2vw, 20px); }
+
+/* Hover effects from design */
+.drow { transition: background 0.16s; }
+.drow:hover { background: rgba(232, 255, 102, 0.14); }
+.drow:hover .pillbtn { transform: scale(1.03); }
+/* Shared neon-glow hover for all dashboard boxes */
+.neon-hover {
+  transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.neon-hover:hover {
+  box-shadow: 0 0 0 1.5px rgb(166,210,87),
+              0 0 20px -4px rgba(200,230,50,0.25),
+              0 20px 48px -30px rgba(40,45,25,.20) !important;
+}
+.dealcard { transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.dealcard:hover {
+  box-shadow: 0 0 0 1.5px rgb(166,210,87),
+              0 0 20px -4px rgba(200,230,50,0.25),
+              0 20px 48px -30px rgba(40,45,25,.20) !important;
+}
+.dealcard:hover .dealgo { transform: translateX(4px); }
+.dealgo { transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1); }
+.brandc { transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+.brandc:hover {
+  box-shadow: 0 0 0 1.5px rgb(166,210,87),
+              0 0 20px -4px rgba(200,230,50,0.25),
+              0 20px 48px -30px rgba(40,45,25,.20) !important;
+}
+
+@media (max-width: 900px) {
+  .kpigrid { grid-template-columns: repeat(2, 1fr) !important; }
+  .g3 { grid-template-columns: 1fr !important; }
+  .brandgrid { grid-template-columns: 1fr !important; }
+  .ctgrid { grid-template-columns: 1fr !important; }
+  .reachstat { grid-template-columns: 1fr !important; }
+  .reachstat > div { border-top: 1px solid var(--hair); border-left: none !important; }
+  .reachstat > div:first-child { border-top: none; }
+}
+/* ── Creator portal (same design system as brand) ── */
 .creator-main {
   min-height: 100vh;
+  background: #F7F7F4;
+  position: relative;
+  overflow-x: hidden;
+
+  /* Design-system tokens (shared with brand portal) */
+  --ink: #1A1B16;
+  --card: #FFFFFF;
+  --lime-50: #F6FCE6;
+  --lime-200: #DFF29A;
+  --lime-400: #E8FF66;
+  --lime-700: #4F6B12;
+  --lime-950: #161B08;
+  --lime: #E8FF66;
+  --meta: #6A6C5F;
+  --wg-400: #8A8C7E;
+  --wg-500: #6A6C5F;
+  --wg-600: #5A5C50;
+  --wg-700: #4A4C40;
+  --amber: #B67C15;
+  --red: #C25640;
+  --paper: #F6FAF5;
+  --paper-2: #EDF2EB;
+  --bone: #EEF1EC;
+  --line: rgba(60,80,30,.10);
+  --hair: rgba(60,80,30,.08);
+  --sec: #F4F8FC;
+  --sec-2: #F7F4FB;
+  --sec-mid: #E4ECF3;
+  --sec-mid-2: #E8E2F0;
+  --sec-ink: #79809C;
+  --sh-2: 0 0 0 1px rgba(26,27,22,.08), 0 20px 48px -30px rgba(40,45,25,.20);
+  --radius-pill: 999px;
+  --auraC: rgba(232,255,102,0.04);
+
+  --font-heading: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-body: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  font-family: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
 }
 
-/* ── Creator atmospheric background (design mesh) ── */
-.creator-main {
-  background:
-    radial-gradient(720px 600px at 6% 3%, rgba(192,231,209,.36) 0%, transparent 55%),
-    radial-gradient(680px 560px at 96% 12%, rgba(251,215,230,.33) 0%, transparent 55%),
-    radial-gradient(720px 600px at 4% 42%, rgba(226,216,250,.33) 0%, transparent 55%),
-    radial-gradient(700px 580px at 98% 66%, rgba(252,236,207,.33) 0%, transparent 55%),
-    linear-gradient(180deg, #F2F9F5 0%, #F1F5FD 10%, #F5F1FD 20%, #FCF2F8 30%, #FEF5EE 40%, #FBF8EB 50%, #F2F9F5 62%, #F1F5FD 72%, #F5F1FD 82%, #FCF2F8 92%, #F2F9F5 100%);
-}
+/* Creator-specific additional CSS classes */
+.postgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(12px, 1.4vw, 16px); }
+.lift { transition: box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1), transform 0.22s; }
+.lift:hover { box-shadow: 0 0 0 1.5px rgb(166,210,87), 0 0 20px -4px rgba(200,230,50,0.25), 0 20px 48px -30px rgba(40,45,25,.20) !important; }
+.brandmoment { display: grid; grid-template-columns: 1.3fr 0.9fr; gap: clamp(24px, 3vw, 48px); align-items: center; width: 100%; }
+.ghost { transition: background 0.18s, box-shadow 0.22s; }
+.ghost:hover { background: rgba(232,255,102,0.15) !important; box-shadow: 0 0 0 1px rgba(166,210,87,0.3); }
+.neonbtn { transition: box-shadow 0.22s, transform 0.18s; }
+.neonbtn:hover { box-shadow: rgba(180,215,50,0.9) 0px 18px 32px -14px !important; transform: translateY(-1px); }
+.pillbtn { transition: transform 0.18s; }
 
-/* ── Grain overlay for creator pages ── */
-.creator-main::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 90;
-  opacity: 0.06;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='gn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gn)'/%3E%3C/svg%3E");
-}
-
-@media (min-width: 768px) {
-  .brand-main,
-  .creator-main {
-    margin-left: 220px;
-  }
+@media (max-width: 900px) {
+  .postgrid { grid-template-columns: repeat(2, 1fr) !important; }
+  .brandmoment { grid-template-columns: 1fr !important; }
 }
 
 /* ── Inbox split-pane ── */

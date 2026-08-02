@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = { title: 'Notifications — Guapd' }
 
 export default async function BrandNotificationsPage() {
-  const brand = await verifyApprovedBrand()
+  await verifyApprovedBrand()
   const supabase = createClient()
 
   const { data: notifications } = await supabase
@@ -18,34 +18,43 @@ export default async function BrandNotificationsPage() {
   const all = notifications ?? []
   const unreadCount = all.filter((n) => !n.read_at).length
 
+  // Collect unique deal_ids to fetch creator names + prices
+  const dealIds = Array.from(new Set(all.map((n) => n.deal_id).filter(Boolean))) as string[]
+  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null }> = {}
+
+  if (dealIds.length > 0) {
+    const { data: deals } = await supabase
+      .from('deals')
+      .select('id, price_paise, creators(full_name, profile_photo_url)')
+      .in('id', dealIds)
+
+    if (deals) {
+      for (const d of deals) {
+        const raw = d.creators as unknown
+        const creator = Array.isArray(raw) ? raw[0] : (raw as { full_name: string; profile_photo_url: string | null } | null)
+        if (creator) {
+          creatorMap[d.id] = { name: creator.full_name, photo: creator.profile_photo_url, pricePaise: d.price_paise }
+        }
+      }
+    }
+  }
+
   return (
     <main style={wrapper}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={heading}>Notifications</h1>
-        <p style={{ color: '#888', fontSize: '0.875rem', margin: 0 }}>
-          {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-        </p>
-      </div>
-
       <NotificationFeed
         notifications={all}
         dealLinkPrefix="/deals"
         unreadCount={unreadCount}
+        creatorMap={creatorMap}
       />
     </main>
   )
 }
 
 const wrapper: React.CSSProperties = {
-  padding: '2rem clamp(1rem, 3vw, 2.5rem)',
-  maxWidth: 900,
+  position: 'relative',
+  zIndex: 1,
+  padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)',
+  maxWidth: 1080,
   margin: '0 auto',
-}
-
-const heading: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.375rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: '0 0 0.25rem',
 }

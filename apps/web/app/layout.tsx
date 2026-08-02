@@ -1,7 +1,7 @@
 import './globals.css'
 import './marketing.css'
 import { BRAND_NAME } from '@/lib/content'
-import { sora, inter } from './fonts'
+import { sora, inter, schibstedGrotesk, instrumentSerif } from './fonts'
 import AnimationProvider from '@/components/AnimationProvider'
 import PostHogProvider from '@/components/PostHogProvider'
 import CookieConsent from '@/components/CookieConsent'
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sora.variable} ${inter.variable}`}>
+    <html lang="en" className={`${sora.variable} ${inter.variable} ${schibstedGrotesk.variable} ${instrumentSerif.variable}`}>
       <body>
         <AnimationProvider />
         <PostHogProvider>

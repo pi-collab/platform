@@ -18,34 +18,43 @@ export default async function CreatorNotificationsPage() {
   const all = notifications ?? []
   const unreadCount = all.filter((n) => !n.read_at).length
 
+  // For creator side, the "other party" is the brand — fetch brand names + prices
+  const dealIds = Array.from(new Set(all.map((n) => n.deal_id).filter(Boolean))) as string[]
+  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null }> = {}
+
+  if (dealIds.length > 0) {
+    const { data: deals } = await supabase
+      .from('deals')
+      .select('id, price_paise, brands(name)')
+      .in('id', dealIds)
+
+    if (deals) {
+      for (const d of deals) {
+        const raw = d.brands as unknown
+        const brand = Array.isArray(raw) ? raw[0] : (raw as { name: string } | null)
+        if (brand) {
+          creatorMap[d.id] = { name: brand.name, photo: null, pricePaise: d.price_paise }
+        }
+      }
+    }
+  }
+
   return (
     <main style={wrapper}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={heading}>Notifications</h1>
-        <p style={{ color: '#888', fontSize: '0.875rem', margin: 0 }}>
-          {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-        </p>
-      </div>
-
       <NotificationFeed
         notifications={all}
         dealLinkPrefix="/creator/deals"
         unreadCount={unreadCount}
+        creatorMap={creatorMap}
       />
     </main>
   )
 }
 
 const wrapper: React.CSSProperties = {
-  padding: '2rem clamp(1rem, 3vw, 2.5rem)',
-  maxWidth: 900,
+  position: 'relative',
+  zIndex: 1,
+  padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)',
+  maxWidth: 1080,
   margin: '0 auto',
-}
-
-const heading: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.375rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: '0 0 0.25rem',
 }

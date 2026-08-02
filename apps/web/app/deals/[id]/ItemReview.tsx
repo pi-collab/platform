@@ -20,18 +20,9 @@ interface Item {
   boosting_duration_months: number | null
 }
 
-const ITEM_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending:   { bg: '#f3f4f6', color: '#6b7280' },
-  submitted: { bg: '#fef9c3', color: '#854d0e' },
-  revision:  { bg: '#ffedd5', color: '#9a3412' },
-  approved:  { bg: '#dcfce7', color: '#166534' },
-}
-
 function formatRupees(paise: number): string {
   const rupees = paise / 100
-  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
-  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
-  return `₹${rupees.toLocaleString('en-IN')}`
+  return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
 export default function ItemReview({
@@ -41,6 +32,7 @@ export default function ItemReview({
   revisionLimit,
   dealStatus,
   pricePerExtraRevisionPaise = 0,
+  creatorFirstName = 'Creator',
 }: {
   dealId: string
   items: Item[]
@@ -48,6 +40,7 @@ export default function ItemReview({
   revisionLimit: number
   dealStatus: string
   pricePerExtraRevisionPaise?: number
+  creatorFirstName?: string
 }) {
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,19 +49,10 @@ export default function ItemReview({
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({})
   const [viewingFile, setViewingFile] = useState<string | null>(null)
 
-  const reviewed = items.filter((i) => i.item_status === 'approved' || i.item_status === 'revision').length
+  const allApproved = items.every((i) => i.item_status === 'approved')
   const submitted = items.filter((i) => i.item_status === 'submitted').length
-
-  // Revision reminder logic:
-  // - "next round is the last included" when deal is delivered and revisionsUsed + 1 === revisionLimit
-  // - "beyond the limit" when deal is delivered and revisionsUsed >= revisionLimit
-  // Only relevant when deal is 'delivered' (a new round would increment revisions_used)
-  const isLastIncluded = dealStatus === 'delivered' && revisionsUsed + 1 === revisionLimit && submitted > 0
+  const hasRevision = items.some((i) => i.item_status === 'revision')
   const isBeyondLimit = dealStatus === 'delivered' && revisionsUsed >= revisionLimit && submitted > 0
-
-  function displayHandle(h: string) {
-    return h.startsWith('@') ? h : `@${h}`
-  }
 
   async function handleApprove(itemId: string) {
     setError(null)
@@ -107,147 +91,154 @@ export default function ItemReview({
 
   if (doneMessage) {
     return (
-      <div style={successBox}>
-        <p style={{ fontWeight: 700, fontSize: '0.9375rem', margin: '0 0 0.25rem' }}>All deliverables approved</p>
-        <p style={{ fontSize: '0.8125rem', color: '#555', margin: 0 }}>
-          The deal has been marked as approved. The creator has been notified.
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '18px 22px', borderRadius: 14, background: 'color-mix(in oklab, var(--neon) 14%, var(--card))', border: '1.5px solid var(--neon-deep)' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>All deliverables approved.</span>
       </div>
     )
   }
 
+  // Build subtitle
+  let subtitle = ''
+  if (hasRevision && submitted > 0) subtitle = 'Revised submission \u00B7 waiting on your review'
+  else if (submitted > 0) subtitle = `${submitted} deliverable${submitted !== 1 ? 's' : ''} waiting on your review`
+
   return (
     <div>
-      {/* Progress */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--color-border, #e5e5e5)', overflow: 'hidden' }}>
-          <div style={{ width: `${(reviewed / items.length) * 100}%`, height: '100%', background: '#16a34a', borderRadius: 3, transition: 'width 0.3s' }} />
-        </div>
-        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
-          {reviewed} of {items.length} reviewed
-        </span>
-      </div>
-
-      {/* Revision count */}
-      <p style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 400, margin: '0 0 0.75rem' }}>
-        Revisions: {revisionsUsed} / {revisionLimit} used
-      </p>
-
-      {/* Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {items.map((item) => {
-          const sc = ITEM_STATUS_COLORS[item.item_status] ?? ITEM_STATUS_COLORS.pending
           const isSubmitted = item.item_status === 'submitted'
+          const isApproved = item.item_status === 'approved'
+          const isRevisionStatus = item.item_status === 'revision'
           const isApproving = loadingAction === `approve-${item.id}`
           const isRevising = loadingAction === `revision-${item.id}`
           const isLoading = isApproving || isRevising
           const showRevisionForm = revisingItemId === item.id
 
+          const details: string[] = []
+          if (item.reel_type) details.push(item.reel_type === 'collab' ? 'Collab post' : 'Non-collab')
+          if (item.boosting_rights) details.push(`${item.boosting_duration_months ?? '\u221E'}-day boosting rights`)
+          if (item.price_paise != null && item.price_paise > 0) details.push(formatRupees(item.price_paise))
+
+          // Status dot + label
+          const statusDot = isApproved
+            ? 'var(--success, #1F9D6B)'
+            : isRevisionStatus
+              ? 'var(--warning)'
+              : isSubmitted
+                ? 'var(--info, #5AA9E6)'
+                : 'var(--ink-faint)'
+          const statusLabel = isApproved
+            ? 'Approved'
+            : isRevisionStatus
+              ? 'Revision requested'
+              : isSubmitted
+                ? 'Submitted'
+                : 'Pending'
+
+          // File info
+          const fileName = item.file_name || (item.external_url ? (item.external_url.length > 40 ? item.external_url.slice(0, 40) + '...' : item.external_url) : null)
+
           return (
-            <div key={item.id} style={itemCard}>
-              {/* Header row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.375rem' }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--color-heading)' }}>{item.label}</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', marginLeft: '0.375rem' }}>
-                    {item.platform} {displayHandle(item.handle)}
-                  </span>
-                  {item.reel_type && (
-                    <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.375rem' }}>
-                      {item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}
-                    </span>
-                  )}
-                  {item.boosting_rights && (
-                    <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.375rem' }}>
-                      Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}
-                    </span>
-                  )}
-                  {item.price_paise != null && item.price_paise > 0 && (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading)', marginLeft: '0.5rem' }}>
-                      {formatRupees(item.price_paise)}
-                    </span>
+            <div key={item.id} style={{ borderRadius: 16, border: '1.5px solid var(--hairline, #EAEAE3)', background: 'var(--card)', padding: '16px 18px' }}>
+              {/* Header: label + details + status */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                <div>
+                  <span style={{ fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.01em' }}>{item.label}</span>
+                  {details.length > 0 && (
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 4, maxWidth: 400 }}>
+                      {details.join(' \u00B7 ')}
+                    </div>
                   )}
                 </div>
-                <span style={{
-                  fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.4rem', borderRadius: 9999,
-                  background: sc.bg, color: sc.color, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0,
-                }}>
-                  {item.item_status}{item.version > 1 ? ` v${item.version}` : ''}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', flexShrink: 0 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusDot }} />
+                  {statusLabel}
                 </span>
               </div>
 
-              {/* Link or uploaded file */}
-              {item.external_url && (
-                <a
-                  href={item.external_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all', display: 'block', marginBottom: '0.5rem' }}
-                >
-                  {item.external_url.length > 55 ? item.external_url.slice(0, 55) + '...' : item.external_url}
-                </a>
-              )}
-              {item.storage_path && item.file_name && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--color-heading)', fontWeight: 500 }}>
-                    {item.file_name}
+              {/* File pill */}
+              {(item.storage_path || item.external_url) && fileName && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 'var(--radius-pill, 999px)', background: 'var(--card)', border: '1px solid var(--hairline, #EAEAE3)', marginTop: 14 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                    {item.file_name || item.external_url}
                   </span>
-                  <button
-                    onClick={() => handleViewFile(dealId, item.id)}
-                    disabled={viewingFile === item.id}
-                    style={{ ...viewFileBtn, opacity: viewingFile === item.id ? 0.5 : 1, cursor: viewingFile === item.id ? 'not-allowed' : 'pointer' }}
-                  >
-                    {viewingFile === item.id ? 'Loading...' : 'View file'}
-                  </button>
+                  {item.storage_path ? (
+                    <button
+                      onClick={() => handleViewFile(dealId, item.id)}
+                      disabled={viewingFile === item.id}
+                      style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: viewingFile === item.id ? 'not-allowed' : 'pointer', opacity: viewingFile === item.id ? 0.5 : 1 }}
+                    >
+                      {viewingFile === item.id ? 'Loading...' : 'View file'}
+                    </button>
+                  ) : item.external_url ? (
+                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                      View file
+                    </a>
+                  ) : null}
                 </div>
               )}
 
-              {/* Actions for submitted items */}
+              {/* Approve + Revision buttons for submitted items */}
               {isSubmitted && !showRevisionForm && (
-                <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => handleApprove(item.id)}
-                    disabled={isLoading}
-                    style={{ ...approveBtn, opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
-                  >
-                    {isApproving ? 'Approving...' : 'Approve'}
-                  </button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
                   <button
                     onClick={() => setRevisingItemId(item.id)}
                     disabled={isLoading}
-                    style={{ ...revisionBtn, opacity: isLoading ? 0.5 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
+                    className="pill"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 42, padding: '0 18px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 6px 14px -10px rgba(40,45,25,.4)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}
                   >
-                    Request Revision
+                    Request revision
+                  </button>
+                  <button
+                    onClick={() => handleApprove(item.id)}
+                    disabled={isLoading}
+                    className="neonbtn"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 42, padding: '0 20px', borderRadius: 11, background: 'var(--neon, var(--lime-400))', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: isLoading ? 'not-allowed' : 'pointer', boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', opacity: isLoading ? 0.5 : 1 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    {isApproving ? 'Approving...' : 'Approve'}
                   </button>
                 </div>
               )}
 
               {/* Revision feedback form */}
               {isSubmitted && showRevisionForm && (
-                <div style={{ marginTop: '0.25rem' }}>
+                <div style={{ marginTop: 14 }}>
                   <textarea
                     value={revisionNotes[item.id] ?? ''}
                     onChange={(e) => setRevisionNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                    placeholder="What needs to change? e.g. at 0:14 fix the transition, increase brightness, change music..."
-                    rows={3}
+                    placeholder="Describe what needs to change\u2026"
+                    rows={4}
                     disabled={isRevising}
-                    style={noteTextarea}
+                    style={{ height: 'auto', minHeight: 120, width: '100%', boxSizing: 'border-box', padding: '16px 18px', fontFamily: 'var(--font-ui)', fontSize: 13.5, lineHeight: 1.6, resize: 'vertical', outline: 'none', border: '1.5px solid var(--sec-mid-2, var(--hairline))', background: 'var(--sec-2, var(--card))', borderRadius: 16, color: 'var(--ink)', boxShadow: 'inset 0 1px 3px rgba(40,45,25,.06)', transition: 'border-color .16s ease, box-shadow .16s ease' }}
                   />
-                  <div style={{ display: 'flex', gap: '0.375rem', marginTop: '0.375rem' }}>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
                     <button
                       onClick={() => setRevisingItemId(null)}
                       disabled={isRevising}
-                      style={{ ...cancelBtn, cursor: isRevising ? 'not-allowed' : 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 40, padding: '0 16px', borderRadius: 11, background: 'none', border: '1px solid var(--frost-edge, var(--hairline))', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink-soft)', cursor: isRevising ? 'not-allowed' : 'pointer' }}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => handleRevision(item.id)}
                       disabled={isRevising}
-                      style={{ ...sendRevisionBtn, opacity: isRevising ? 0.5 : 1, cursor: isRevising ? 'not-allowed' : 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 40, padding: '0 18px', borderRadius: 11, background: 'var(--ink)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, color: '#FFFFFF', cursor: isRevising ? 'not-allowed' : 'pointer', opacity: isRevising ? 0.5 : 1 }}
                     >
                       {isRevising ? 'Sending...' : 'Send revision request'}
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Revision sent — waiting on creator */}
+              {isRevisionStatus && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, borderRadius: 14, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--sec-mid-2, var(--hairline))', marginTop: 14 }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--card)', border: '1px solid var(--sec-mid-2, var(--hairline))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>Waiting on {creatorFirstName}&apos;s revision</div>
                   </div>
                 </div>
               )}
@@ -256,123 +247,35 @@ export default function ItemReview({
         })}
       </div>
 
-      {/* Revision reminders — gentle, informative tone */}
-      {isLastIncluded && !isBeyondLimit && (
-        <div style={reminderBox}>
-          <p style={{ fontSize: '0.8125rem', color: '#555', margin: 0 }}>
-            This is the final revision included in the agreed terms.
-          </p>
-        </div>
-      )}
-      {isBeyondLimit && (
-        <div style={warningBox}>
-          <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#92400e', margin: 0 }}>
-            ⚠ Beyond revision limit ({revisionsUsed}/{revisionLimit} used)
-          </p>
-          <p style={{ fontSize: '0.8125rem', color: '#92400e', margin: '0.25rem 0 0' }}>
-            Extra revisions should be discussed with the creator.
-            {pricePerExtraRevisionPaise > 0 && <span style={{ fontWeight: 700 }}> Each extra revision adds {formatRupees(pricePerExtraRevisionPaise)}.</span>}
-          </p>
+      {/* All approved banner */}
+      {allApproved && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '18px 22px', marginTop: 18, borderRadius: 14, background: 'color-mix(in oklab, var(--neon) 14%, var(--card))', border: '1.5px solid var(--neon-deep)' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>All deliverables are approved.</span>
         </div>
       )}
 
+      {/* Revision limit warning */}
+      {isBeyondLimit && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 18px', marginTop: 14, borderRadius: 14, background: 'color-mix(in oklab, var(--warning) 10%, var(--card))', border: '1.5px solid var(--warning)' }}>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
+            <b style={{ fontWeight: 700, color: 'var(--ink)' }}>Beyond revision limit</b> ({revisionsUsed}/{revisionLimit} used). Extra revisions should be discussed with the creator.
+            {pricePerExtraRevisionPaise > 0 && <span> Each extra revision adds <b>{formatRupees(pricePerExtraRevisionPaise)}</b>.</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Footer note */}
+      <div style={{ paddingTop: 20, marginTop: 20, borderTop: '1px solid var(--border-hairline)' }}>
+        <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
+          {revisionLimit > 0 ? `${revisionLimit} revision round${revisionLimit !== 1 ? 's' : ''} included per deliverable if you need changes.` : 'Revisions can be requested if you need changes.'}
+        </span>
+      </div>
+
       {error && (
-        <p style={{ fontSize: '0.8125rem', color: '#dc2626', margin: '0.75rem 0 0', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: 8 }}>
+        <div style={{ fontSize: 12.5, color: 'var(--danger, #D2545A)', marginTop: 14, padding: '12px 16px', borderRadius: 12, background: 'color-mix(in oklab, var(--danger, #D2545A) 8%, var(--card))', border: '1px solid color-mix(in oklab, var(--danger, #D2545A) 20%, transparent)' }}>
           {error}
-        </p>
+        </div>
       )}
     </div>
   )
-}
-
-const itemCard: React.CSSProperties = {
-  padding: '0.75rem',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 8,
-  background: 'var(--glass-bg, #fafafa)',
-}
-
-const approveBtn: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
-  background: 'var(--accent, #DAFE0C)',
-  color: 'var(--accent-text, #181C24)',
-  border: 'none',
-  borderRadius: 6,
-  fontSize: '0.75rem',
-  fontWeight: 700,
-}
-
-const revisionBtn: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
-  background: '#fff',
-  color: '#9a3412',
-  border: '1px solid #fed7aa',
-  borderRadius: 6,
-  fontSize: '0.75rem',
-  fontWeight: 600,
-}
-
-const noteTextarea: React.CSSProperties = {
-  width: '100%',
-  padding: '0.5rem 0.625rem',
-  border: '1px solid var(--color-border, #d5d5d5)',
-  borderRadius: 6,
-  fontSize: '0.8125rem',
-  fontFamily: 'var(--font-body, inherit)',
-  resize: 'vertical',
-  outline: 'none',
-  boxSizing: 'border-box',
-}
-
-const cancelBtn: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
-  background: 'transparent',
-  color: 'var(--color-muted, #888)',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 6,
-  fontSize: '0.75rem',
-  fontWeight: 600,
-}
-
-const sendRevisionBtn: React.CSSProperties = {
-  padding: '0.375rem 0.75rem',
-  background: '#9a3412',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 6,
-  fontSize: '0.75rem',
-  fontWeight: 700,
-}
-
-const reminderBox: React.CSSProperties = {
-  marginTop: '0.75rem',
-  padding: '0.625rem 0.875rem',
-  background: 'var(--glass-bg, #f9fafb)',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 8,
-}
-
-const warningBox: React.CSSProperties = {
-  marginTop: '0.75rem',
-  padding: '0.75rem 1rem',
-  background: '#fffbeb',
-  border: '2px solid #f59e0b',
-  borderRadius: 8,
-}
-
-const viewFileBtn: React.CSSProperties = {
-  padding: '0.25rem 0.5rem',
-  background: '#eff6ff',
-  color: '#2563eb',
-  border: '1px solid #bfdbfe',
-  borderRadius: 5,
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-}
-
-const successBox: React.CSSProperties = {
-  padding: '1.25rem',
-  border: '1px solid #bbf7d0',
-  borderRadius: 12,
-  background: '#f0fdf4',
 }

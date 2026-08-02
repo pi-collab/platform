@@ -483,6 +483,72 @@ RECOMMENDATION: post-pilot, built on operational data, not a generic creator-sea
 
 ---
 
+## Mutual ratings + interest/favourites (post-pilot)
+
+### Ratings
+
+Prefer the DERIVED Creator Reliability Score (on-time delivery, response time, revision frequency, completion rate) as the primary signal — it's the moat, competitors can't fake it, it's fact not opinion.
+
+If subjective star ratings are added, they SUPPLEMENT the behavioral score, not replace it.
+
+If two-sided subjective ratings are built, they MUST be double-blind (neither side sees the other's rating until both submit or a window closes) — otherwise ratings inflate uselessly from fear of retaliation.
+
+Brand-rates-creator AND creator-rates-brand (brand reliability matters too: payment speed, brief clarity, revision reasonableness).
+
+### Interest / favourites — SPLIT by thesis alignment
+
+**ON-THESIS (build first when this lands):** favourite / re-engage a creator you've ALREADY completed a deal with → powers the recurring-deals wedge ("run deal #2 in one tap"). This is the good version.
+
+**THESIS-DRIFT (defer, flag before building):** brands favouriting / creators signalling interest to parties they have NO deal history with → that's pre-relationship discovery/matchmaking, which the v1 thesis excludes. Don't let a favourites button become a discovery marketplace.
+
+DECISION NEEDED when this is picked up: is "mark as interested" post-relationship (re-engagement, on-thesis) or pre-relationship (discovery, drift)? Answer that first.
+
+---
+
+## Post-deal rights extension (follow-on rights acquisition)
+
+**What:** After a deal completes, a brand can acquire ADDITIONAL rights they didn't originally buy — extend usage duration, add boosting/paid-media rights, or license a clip for the brand's own channels. This is a new commercial agreement on top of a finished deal.
+
+**On-thesis:** Post-relationship, between a brand and creator who already transacted. Not discovery. Extends the recurring-deals wedge.
+
+**Reuse — do NOT build new:**
+- The deal model already has: per-item boosting rights, usage_rights_end_date, rights_confirmed_at, and a rights snapshot that survives edits.
+- The "extension as a linked mini-deal" (Option A) was already specced: a linked follow-on deal that rides existing payment rails and preserves the original rights snapshot. THIS is the vehicle. Apply it here — don't invent a parallel mechanism.
+
+**Shape:**
+- On a completed (or post-approval) deal, the brand initiates a "rights extension."
+- Creates a LINKED follow-on deal with its own price, terms, and a NEW rights snapshot. Goes through the normal accept → pay flow on existing rails.
+- Do NOT edit the original completed deal. Its rights snapshot stays frozen as the record of what was first agreed. The extension links to it and appears in the deal's timeline/history.
+- The creator must agree and be paid — additional rights (boosting, clip licensing) have real value and can't be silently extended. Consistent with Terms §6 (rights are whatever the agreed terms say; brands can't exceed them, so more rights = a new agreement).
+
+**Rights types to support:** extend usage duration, add/upgrade boosting rights, license a clip for brand's own channels (organic/paid/whitelisting per the content-rights schedule).
+
+**Defer to v2 (needs analytics we don't have yet):**
+- Proactively SUGGESTING a rights extension when a reel is performing well. Requires IG/Meta performance data (Meta Graph API + review — deferred). Build the ABILITY to take additional rights now; the SMART SUGGESTION of when comes later.
+
+**Audit:** the extension is moat data — "original deal, then rights extension on [date] for [amount]." Ensure it's captured in the deal's audit/timeline.
+
+---
+
+## MCP / agent connectivity (platform play — post-PMF)
+
+Let internal tools, Claude, and external agents connect to Guapd data via MCP to build scripts, automations, workflows.
+
+- Requires FIRST: a stable public API, external-agent auth + scoped permissions, rate limiting, and a settled data model.
+- Security gate: do NOT expose an agent/MCP surface until RLS and access boundaries are hardened and audited. (This codebase had a live write-hole on the money table; an external surface multiplies that risk.)
+- On-vision (Guapd as a system others plug into) but this is a post-PMF platform feature, not a pilot one.
+
+---
+
+## Creator content-script agent (post-pilot, low priority)
+
+AI helper that generates content scripts for creators.
+
+- Creator-tools feature — parked as post-pilot, gated on core loop proven.
+- Note: commodity capability (creators already have ChatGPT). Does NOT touch the moat (operational/transaction data). Lowest priority relative to core-loop and trust-infrastructure work.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

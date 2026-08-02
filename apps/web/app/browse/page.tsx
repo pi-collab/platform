@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
 
@@ -40,17 +41,17 @@ export default async function BrowsePage() {
     )
   }
 
-  return (
-    <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--color-heading)', margin: '0 0 0.375rem' }}>
-          Browse Creators
-        </h1>
-        <p style={{ color: 'var(--color-muted)', fontSize: '0.9375rem', margin: 0 }}>
-          Find a creator from our vetted roster to start a deal.
-        </p>
-      </div>
-      <BrowseGrid creators={(creators ?? []) as BrowseCreator[]} />
-    </section>
-  )
+  // Fetch which creators have published storefronts (RLS blocks brand reads, use admin)
+  const admin = createAdminClient()
+  const { data: storefronts } = await admin
+    .from('creator_storefronts')
+    .select('creator_id, slug')
+    .eq('is_published', true)
+
+  const storefrontSlugs: Record<string, string> = {}
+  for (const s of storefronts ?? []) {
+    storefrontSlugs[s.creator_id] = s.slug
+  }
+
+  return <BrowseGrid creators={(creators ?? []) as BrowseCreator[]} storefrontSlugs={storefrontSlugs} />
 }

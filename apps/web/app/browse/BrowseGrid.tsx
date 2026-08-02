@@ -1,62 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
 import { NICHES } from '@/lib/niches'
 
-/**
- * Client-side filtering is appropriate at pilot scale (tens to low hundreds of creators).
- * TODO: Move to server-side filtering + pagination if the vetted roster grows past ~500.
- */
-
-/* ── Bracket definitions ───────────────────────────────────────── */
-
-interface Bracket { label: string; min?: number; max?: number }
-
-// Follower brackets — values are actual follower counts
-const FOLLOWER_BRACKETS: Bracket[] = [
-  { label: '< 50K', max: 50_000 },
-  { label: '50K – 100K', min: 50_000, max: 100_000 },
-  { label: '100K – 500K', min: 100_000, max: 500_000 },
-  { label: '500K – 1M', min: 500_000, max: 1_000_000 },
-  { label: '1M+', min: 1_000_000 },
-]
-
-// Rate brackets — values are in PAISE (₹ × 100)
-const RATE_BRACKETS: Bracket[] = [
-  { label: '< ₹10K', max: 10_000_00 },
-  { label: '₹10K – ₹25K', min: 10_000_00, max: 25_000_00 },
-  { label: '₹25K – ₹50K', min: 25_000_00, max: 50_000_00 },
-  { label: '₹50K – ₹1L', min: 50_000_00, max: 1_00_000_00 },
-  { label: '₹1L – ₹3L', min: 1_00_000_00, max: 3_00_000_00 },
-  { label: '₹3L+', min: 3_00_000_00 },
-]
-
-// Budget brackets — values are in PAISE. Compared against creator's LOWEST rate.
-const BUDGET_BRACKETS: Bracket[] = [
-  { label: '< ₹25K', max: 25_000_00 },
-  { label: '₹25K – ₹50K', min: 25_000_00, max: 50_000_00 },
-  { label: '₹50K – ₹1L', min: 50_000_00, max: 1_00_000_00 },
-  { label: '₹1L – ₹3L', min: 1_00_000_00, max: 3_00_000_00 },
-  { label: '₹3L+', min: 3_00_000_00 },
-]
-
 /* ── Helpers ────────────────────────────────────────────────────── */
-
-function rateRange(rc: Record<string, number> | null): { min: number; max: number } | null {
-  if (!rc) return null
-  const values = Object.values(rc).filter((v) => v > 0)
-  if (values.length === 0) return null
-  return { min: Math.min(...values), max: Math.max(...values) }
-}
-
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
-  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
-  return `₹${rupees.toLocaleString('en-IN')}`
-}
 
 function bestFollowers(sa: Array<{ follower_count: number | null }> | null): number {
   if (!sa || sa.length === 0) return 0
@@ -64,9 +13,23 @@ function bestFollowers(sa: Array<{ follower_count: number | null }> | null): num
 }
 
 function formatFollowers(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
-  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
   return n.toLocaleString('en-IN')
+}
+
+function lowestRate(rc: Record<string, number> | null): number | null {
+  if (!rc) return null
+  const values = Object.values(rc).filter((v) => v > 0)
+  if (values.length === 0) return null
+  return Math.min(...values)
+}
+
+function formatRupees(paise: number): string {
+  const rupees = paise / 100
+  if (rupees >= 100_000) return `₹${(rupees / 100_000).toFixed(rupees % 100_000 === 0 ? 0 : 1)}L`
+  if (rupees >= 1_000) return `₹${Math.round(rupees / 1_000)}K`
+  return `₹${rupees.toLocaleString('en-IN')}`
 }
 
 function primarySocial(sa: Array<{ platform: string; handle: string; follower_count: number | null }> | null) {
@@ -76,290 +39,661 @@ function primarySocial(sa: Array<{ platform: string; handle: string; follower_co
   , sa[0])
 }
 
-function initials(name: string): string {
+function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function PlatformIcon({ platform, size = 13 }: { platform: string; size?: number }) {
+  const p = platform.toLowerCase()
+  if (p === 'instagram' || p === 'ig') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" />
+    </svg>
+  )
+  if (p === 'youtube' || p === 'yt') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9.5 5 2.5-5 2.5z" />
+    </svg>
+  )
+  return <span style={{ fontSize: size - 2, fontWeight: 700 }}>{platform.slice(0, 2).toUpperCase()}</span>
+}
+
+/* ── Rate filter brackets ────────────────────────────────────────── */
+const RATE_FILTERS = [
+  { value: 'any', label: 'Any rate' },
+  { value: 'lt50', label: 'Under ₹50K' },
+  { value: '50to100', label: '₹50K – ₹1L' },
+  { value: 'gt100', label: '₹1L+' },
+]
+
+const SORT_OPTIONS = [
+  { value: 'followers', label: 'Followers' },
+  { value: 'rateLow', label: 'Rate ↑' },
+  { value: 'name', label: 'Name' },
+]
+
+const PAGE_SIZE = 9
+
+/* ── Animated placeholder hook ───────────────────────────────────── */
+function useAnimatedPlaceholder() {
+  const phrases = [
+    'Search name or @handle',
+    'Try "finance creators"',
+    'Try "beauty under 50K"',
+    'Try "tech in Bangalore"',
+  ]
+  const [ph, setPh] = useState('')
+  useEffect(() => {
+    let i = 0, n = 0, del = false
+    let timer: ReturnType<typeof setTimeout>
+    const tick = () => {
+      const word = phrases[i]
+      n += del ? -1 : 1
+      setPh(word.slice(0, n))
+      let wait = del ? 34 : 62
+      if (!del && n === word.length) { del = true; wait = 1900 }
+      else if (del && n === 0) { del = false; i = (i + 1) % phrases.length; wait = 320 }
+      timer = setTimeout(tick, wait)
+    }
+    timer = setTimeout(tick, 500)
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return ph
 }
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators }: { creators: BrowseCreator[] }) {
+export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creators: BrowseCreator[]; storefrontSlugs?: Record<string, string> }) {
   const [search, setSearch] = useState('')
-  const [nicheFilter, setNicheFilter] = useState('')
-  const [followerBracket, setFollowerBracket] = useState('')
-  const [rateBracket, setRateBracket] = useState('')
-  const [budgetBracket, setBudgetBracket] = useState('')
+  const [nicheFilter, setNicheFilter] = useState('all')
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
+  const [rateFilter, setRateFilter] = useState('any')
+  const [sort, setSort] = useState('followers')
+  const [savedView, setSavedView] = useState(false)
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  const [shown, setShown] = useState(PAGE_SIZE)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const ph = useAnimatedPlaceholder()
+
+  const savedCount = Object.values(saved).filter(Boolean).length
+
+  const toggleSave = useCallback((id: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setSaved((prev) => ({ ...prev, [id]: !prev[id] }))
+  }, [])
 
   const filtered = useMemo(() => {
-    const fb = followerBracket ? FOLLOWER_BRACKETS[parseInt(followerBracket, 10)] : null
-    const rb = rateBracket ? RATE_BRACKETS[parseInt(rateBracket, 10)] : null
-    const bb = budgetBracket ? BUDGET_BRACKETS[parseInt(budgetBracket, 10)] : null
+    let list = creators
 
-    return creators.filter((c) => {
-      // Search
-      if (search) {
-        const q = search.toLowerCase()
+    // Saved view
+    if (savedView) list = list.filter((c) => saved[c.id])
+
+    // Search
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter((c) => {
         const nameMatch = c.full_name.toLowerCase().includes(q)
         const handleMatch = c.handle?.toLowerCase().includes(q)
-        if (!nameMatch && !handleMatch) return false
-      }
+        const nicheMatch = (c.niches ?? []).some((n) => n.toLowerCase().includes(q))
+        return nameMatch || handleMatch || nicheMatch
+      })
+    }
 
-      // Niche — creator's niches array contains the selected niche
-      if (nicheFilter && !(c.niches ?? []).includes(nicheFilter)) return false
+    // Niche
+    if (nicheFilter !== 'all') {
+      list = list.filter((c) => (c.niches ?? []).includes(nicheFilter))
+    }
 
-      // Followers — compare against creator's highest follower count
-      if (fb) {
-        const followers = bestFollowers(c.social_accounts)
-        if (fb.min !== undefined && followers < fb.min) return false
-        if (fb.max !== undefined && followers > fb.max) return false
-      }
+    // Platform
+    if (platformFilter !== 'all') {
+      list = list.filter((c) =>
+        (c.social_accounts ?? []).some((sa) => sa.platform.toLowerCase() === platformFilter)
+      )
+    }
 
-      // Rate range — show creator if ANY rate falls within the bracket
-      if (rb) {
-        if (!c.rate_card) return false
-        const rates = Object.values(c.rate_card).filter((v) => v > 0)
-        if (rates.length === 0) return false
-        const anyInRange = rates.some((r) => {
-          if (rb.min !== undefined && r < rb.min) return false
-          if (rb.max !== undefined && r > rb.max) return false
-          return true
-        })
-        if (!anyInRange) return false
-      }
+    // Rate
+    if (rateFilter !== 'any') {
+      list = list.filter((c) => {
+        const low = lowestRate(c.rate_card)
+        if (low === null) return false
+        const rupees = low / 100
+        if (rateFilter === 'lt50') return rupees < 50_000
+        if (rateFilter === '50to100') return rupees >= 50_000 && rupees <= 100_000
+        if (rateFilter === 'gt100') return rupees > 100_000
+        return true
+      })
+    }
 
-      // Budget — show creators whose LOWEST rate ≤ budget bracket max
-      // "Can I afford to work with them at all?"
-      if (bb) {
-        if (!c.rate_card) return false
-        const rates = Object.values(c.rate_card).filter((v) => v > 0)
-        if (rates.length === 0) return false
-        const lowestRate = Math.min(...rates)
-        if (bb.max !== undefined && lowestRate > bb.max) return false
-        if (bb.min !== undefined && lowestRate < bb.min) return false
-      }
-
-      return true
+    // Sort
+    list = [...list].sort((a, b) => {
+      if (sort === 'followers') return bestFollowers(b.social_accounts) - bestFollowers(a.social_accounts)
+      if (sort === 'rateLow') return (lowestRate(a.rate_card) ?? 0) - (lowestRate(b.rate_card) ?? 0)
+      return a.full_name.localeCompare(b.full_name)
     })
-  }, [creators, search, nicheFilter, followerBracket, rateBracket, budgetBracket])
 
-  const hasFilters = search || nicheFilter || followerBracket || rateBracket || budgetBracket
+    return list
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved])
+
+  const pageList = filtered.slice(0, shown)
+  const hasMore = shown < filtered.length
+
+  // Active filter chips
+  const chips: { label: string; onRemove: () => void }[] = []
+  if (platformFilter !== 'all') chips.push({ label: platformFilter === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => setPlatformFilter('all') })
+  if (nicheFilter !== 'all') chips.push({ label: nicheFilter, onRemove: () => setNicheFilter('all') })
+  if (rateFilter !== 'any') chips.push({ label: RATE_FILTERS.find((r) => r.value === rateFilter)?.label ?? rateFilter, onRemove: () => setRateFilter('any') })
+  const hasChips = chips.length > 0
+
+  function clearAll() {
+    setSearch('')
+    setNicheFilter('all')
+    setPlatformFilter('all')
+    setRateFilter('any')
+    setSort('followers')
+    setSavedView(false)
+    setShown(PAGE_SIZE)
+  }
+
+  const igActive = platformFilter === 'instagram'
+  const ytActive = platformFilter === 'youtube'
 
   return (
-    <div>
-      {/* Filters */}
-      <div style={filterBar}>
-        <input
-          style={{ ...filterInput, flex: 2 }}
-          placeholder="Search by name or handle..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select style={{ ...filterInput, flex: 1 }} value={nicheFilter} onChange={(e) => setNicheFilter(e.target.value)}>
-          <option value="">All niches</option>
-          {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
-        </select>
-        <select style={filterInput} value={followerBracket} onChange={(e) => setFollowerBracket(e.target.value)}>
-          <option value="">Followers</option>
-          {FOLLOWER_BRACKETS.map((b, i) => <option key={i} value={i}>{b.label}</option>)}
-        </select>
-      </div>
-      <div style={{ ...filterBar, marginTop: '0.5rem' }}>
-        <select style={filterInput} value={rateBracket} onChange={(e) => setRateBracket(e.target.value)}>
-          <option value="">Rate range</option>
-          {RATE_BRACKETS.map((b, i) => <option key={i} value={i}>{b.label}</option>)}
-        </select>
-        <select style={{ ...filterInput, flex: 1.5 }} value={budgetBracket} onChange={(e) => setBudgetBracket(e.target.value)}>
-          <option value="">My budget</option>
-          {BUDGET_BRACKETS.map((b, i) => <option key={i} value={i}>{b.label}</option>)}
-        </select>
-        {hasFilters && (
-          <button
-            onClick={() => { setSearch(''); setNicheFilter(''); setFollowerBracket(''); setRateBracket(''); setBudgetBracket('') }}
-            style={clearBtn}
-          >
-            Clear all
-          </button>
+    <section style={{ padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
+      <style>{`
+        .creator-card {
+          transition: border-color .2s ease, box-shadow .2s ease, transform .15s ease;
+        }
+        .creator-card:hover {
+          border-color: var(--neon) !important;
+          box-shadow: 0 0 0 2px var(--neon), 0 20px 46px -34px rgba(40,45,25,.34);
+          transform: translateY(-2px);
+        }
+      `}</style>
+      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+
+        {/* ══════ HEADER CARD ══════ */}
+        <div style={{
+          borderRadius: 20,
+          background: '#FFFFFF',
+          boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05)',
+          padding: '32px 36px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link
+              href="/dashboard"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: 'var(--ink-faint)', whiteSpace: 'nowrap', textDecoration: 'none' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              Back to dashboard
+            </Link>
+            <div style={{ display: 'flex', gap: 22, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              <button
+                onClick={() => setSavedView(false)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13,
+                  padding: '0 0 4px',
+                  color: !savedView ? 'var(--ink)' : 'var(--ink-faint)',
+                  borderBottom: `2px solid ${!savedView ? 'var(--ink)' : 'transparent'}`,
+                }}
+              >
+                All creators
+              </button>
+              <button
+                onClick={() => setSavedView(true)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13,
+                  padding: '0 0 4px',
+                  color: savedView ? 'var(--ink)' : 'var(--ink-faint)',
+                  borderBottom: `2px solid ${savedView ? 'var(--ink)' : 'transparent'}`,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                Saved
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
+                  background: savedView ? 'var(--neon)' : 'var(--sec-2)',
+                  fontSize: 10.5, fontWeight: 800,
+                }}>
+                  {savedCount}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <h1 style={{
+            fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600,
+            letterSpacing: '-0.02em', margin: '18px 0 0',
+          }}>
+            Browse <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 36 }}>creators</span>
+          </h1>
+
+          {/* ── Filter bar ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginTop: 20,
+            paddingTop: 18, borderTop: '1px solid var(--border-hairline)', flexWrap: 'nowrap',
+          }}>
+            {/* Search */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--ink-faint)', flex: '1 1 240px', minWidth: 150 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+              <input
+                ref={searchRef}
+                type="search"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setShown(PAGE_SIZE) }}
+                placeholder={ph}
+                style={{
+                  flex: 1, minWidth: 0, border: 'none',
+                  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500,
+                  outline: 'none', background: 'none', color: 'var(--ink)',
+                }}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  aria-label="Clear search"
+                  style={{
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
+                    border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </button>
+              )}
+            </div>
+
+            <div style={{ width: 1, height: 20, background: 'var(--border-hairline)' }} />
+
+            {/* Platform toggles + dropdowns */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 1 auto', minWidth: 0 }}>
+              {/* Platform toggle pill */}
+              <div style={{
+                display: 'flex', alignItems: 'stretch', flexShrink: 0,
+                border: '1px solid #D4D4CB', borderRadius: 12, background: '#fff', overflow: 'hidden',
+              }}>
+                <button
+                  onClick={() => setPlatformFilter(igActive ? 'all' : 'instagram')}
+                  aria-label="Instagram creators"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '6px 12px', background: igActive ? 'var(--neon)' : 'transparent', border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={igActive ? 'var(--ink)' : '#9EA096'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></svg>
+                </button>
+                <div style={{ width: 1, background: '#D4D4CB', flexShrink: 0 }} />
+                <button
+                  onClick={() => setPlatformFilter(ytActive ? 'all' : 'youtube')}
+                  aria-label="YouTube creators"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '6px 12px', background: ytActive ? 'var(--neon)' : 'transparent', border: 'none', cursor: 'pointer',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ytActive ? 'var(--ink)' : '#9EA096'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9.5 5 2.5-5 2.5z" /></svg>
+                </button>
+              </div>
+
+              {/* Niche dropdown */}
+              <select
+                value={nicheFilter}
+                onChange={(e) => { setNicheFilter(e.target.value); setShown(PAGE_SIZE) }}
+                style={selectStyle}
+              >
+                <option value="all">All niches</option>
+                {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+
+              {/* Rate dropdown */}
+              <select
+                value={rateFilter}
+                onChange={(e) => { setRateFilter(e.target.value); setShown(PAGE_SIZE) }}
+                style={selectStyle}
+              >
+                {RATE_FILTERS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+
+              {/* Sort dropdown */}
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                style={selectStyle}
+              >
+                {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ══════ RESULT META + CHIPS ══════ */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap' }}>
+              {filtered.length} creator{filtered.length !== 1 ? 's' : ''}
+            </span>
+
+            {hasChips && <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-faint)' }} />}
+
+            {chips.map((chip) => (
+              <button
+                key={chip.label}
+                onClick={chip.onRemove}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 8px 5px 12px', borderRadius: 'var(--radius-pill)',
+                  background: 'var(--card)', border: '1px solid var(--frost-edge)',
+                  fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600,
+                  color: 'var(--ink)', cursor: 'pointer',
+                }}
+              >
+                {chip.label}
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 16, height: 16, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </span>
+              </button>
+            ))}
+
+            {hasChips && (
+              <button
+                onClick={clearAll}
+                style={{
+                  background: 'none', border: 'none', fontFamily: 'var(--font-ui)',
+                  fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', cursor: 'pointer',
+                  textDecoration: 'underline', textUnderlineOffset: 2,
+                }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ══════ GRID ══════ */}
+        {filtered.length === 0 ? (
+          <div style={{
+            borderRadius: 26, background: 'var(--card)',
+            border: '1px dashed var(--border-hairline)',
+            boxShadow: '0 28px 58px -36px rgba(40,45,25,.42), inset 0 1.5px 0 rgba(255,255,255,.9)',
+            padding: 'clamp(40px,5vw,64px)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
+            marginTop: 20,
+          }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginTop: 20 }}>
+              {savedView ? 'No saved creators yet' : 'No creators match your filters'}
+            </div>
+            <p style={{ margin: '9px 0 0', color: 'var(--ink-soft)', maxWidth: 380, lineHeight: 1.55, fontSize: 14 }}>
+              {savedView ? 'Tap the bookmark icon on any creator card to save them here.' : 'Try adjusting your search or filters to find what you\'re looking for.'}
+            </p>
+            <button
+              onClick={clearAll}
+              style={{
+                marginTop: 22, padding: '12px 24px', borderRadius: 'var(--radius-pill)',
+                backgroundColor: 'var(--neon)', border: 'none',
+                fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14,
+                color: 'var(--ink)', cursor: 'pointer',
+                boxShadow: '0 14px 28px -8px rgba(180,210,60,.9)',
+              }}
+            >
+              {savedView ? 'Browse all creators' : 'Clear filters'}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
+              {pageList.map((c) => (
+                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} />
+              ))}
+            </div>
+
+            {/* Load more */}
+            {hasMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 36 }}>
+                <button
+                  onClick={() => setShown((s) => s + PAGE_SIZE)}
+                  style={{
+                    padding: '13px 26px', borderRadius: 'var(--radius-pill)',
+                    background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
+                    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13,
+                    color: 'var(--ink)', cursor: 'pointer',
+                  }}
+                >
+                  Show more ({filtered.length - shown} remaining)
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ══════ SHORTLIST BAR ══════ */}
+        {savedCount > 0 && !savedView && (
+          <div style={{
+            position: 'fixed', bottom: 18, left: 0, right: 0, zIndex: 40,
+            display: 'flex', justifyContent: 'center', padding: '0 20px', pointerEvents: 'none',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+              padding: '12px 14px 12px 20px', borderRadius: 'var(--radius-pill)',
+              background: 'var(--ink)', boxShadow: '0 22px 50px -20px rgba(40,45,25,.6)',
+              pointerEvents: 'auto',
+            }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap' }}>
+                {savedCount} shortlisted
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  onClick={() => setSavedView(true)}
+                  style={{
+                    padding: '9px 16px', borderRadius: 'var(--radius-pill)',
+                    background: 'rgba(255,255,255,.12)', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+                    color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Review
+                </button>
+                <button
+                  onClick={() => setSaved({})}
+                  style={{
+                    padding: '9px 14px', borderRadius: 'var(--radius-pill)',
+                    background: 'none', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+                    color: 'rgba(255,255,255,.6)', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Clear
+                </button>
+                <Link
+                  href="/deals/new"
+                  style={{
+                    padding: '9px 18px', borderRadius: 'var(--radius-pill)',
+                    backgroundColor: 'var(--neon)', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                    color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
+                  }}
+                >
+                  Start a deal
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
       </div>
+    </section>
+  )
+}
 
-      {/* Results count */}
-      <p style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', margin: '1.25rem 0 1rem' }}>
-        {filtered.length} creator{filtered.length !== 1 ? 's' : ''}
-        {filtered.length !== creators.length && ` (of ${creators.length})`}
-      </p>
+/* ── Creator Card ──────────────────────────────────────────────── */
 
-      {/* Grid */}
-      {filtered.length === 0 ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-subtle)' }}>
-          <p style={{ fontSize: '1rem', fontWeight: 600 }}>No creators match your filters</p>
-          <p style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}>Try adjusting your search or filters.</p>
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
+  creator: BrowseCreator
+  isSaved: boolean
+  onToggleSave: (id: string, e: React.MouseEvent) => void
+  storefrontSlug: string | null
+}) {
+  const primary = primarySocial(c.social_accounts)
+  const followers = bestFollowers(c.social_accounts)
+  const low = lowestRate(c.rate_card)
+  const niche = (c.niches ?? [])[0]
+
+  return (
+    <div
+      className="creator-card"
+      style={{
+        position: 'relative', cursor: 'pointer', borderRadius: 20,
+        border: '1px solid var(--frost-edge)', background: 'var(--card)',
+        boxShadow: '0 20px 46px -34px rgba(40,45,25,.34)',
+        display: 'flex', flexDirection: 'column', padding: 20, color: 'var(--ink)',
+      }}
+    >
+      {/* Top: Avatar + Name + Bookmark */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{
+          width: 46, height: 46, borderRadius: 14, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5,
+          color: 'var(--ink-soft)',
+          background: c.profile_photo_url ? 'none' : 'linear-gradient(150deg, #EEF6FD 0%, #F4F0FF 100%)',
+          border: '1px solid var(--frost-edge)',
+          overflow: 'hidden',
+        }}>
+          {c.profile_photo_url ? (
+            <img src={c.profile_photo_url} alt={c.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            getInitials(c.full_name)
+          )}
         </div>
-      ) : (
-        <div style={gridStyle}>
-          {filtered.map((c) => (
-            <CreatorCard key={c.id} creator={c} />
-          ))}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, letterSpacing: '-0.01em' }}>{c.full_name}</span>
+            {/* Verified badge */}
+            <svg width="14" height="14" viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-label="Verified">
+              <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
+              <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          {primary && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--ink-soft)', fontWeight: 600, marginTop: 3 }}>
+              <PlatformIcon platform={primary.platform} size={13} />
+              <span>{primary.handle || c.handle || ''}</span>
+            </div>
+          )}
+        </div>
+        {/* Bookmark */}
+        <button
+          onClick={(e) => onToggleSave(c.id, e)}
+          aria-label="Shortlist creator"
+          style={{
+            flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 38, height: 38, borderRadius: 12,
+            background: isSaved ? 'var(--neon)' : 'var(--card)',
+            border: `1px solid ${isSaved ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill={isSaved ? 'var(--ink)' : 'none'} stroke={isSaved ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+        </button>
+      </div>
+
+      {/* Niche pill */}
+      {niche && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, flexWrap: 'wrap' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '4px 11px', borderRadius: 'var(--radius-pill)',
+            background: 'rgba(232,255,102,.4)', border: '1px solid rgba(210,240,74,.5)',
+            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
+            color: 'var(--ink)', whiteSpace: 'nowrap',
+          }}>
+            {niche}
+          </span>
         </div>
       )}
+
+      {/* Stats row */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', marginTop: 14,
+        padding: '12px 14px',
+        borderTop: '1px solid var(--border-hairline)',
+        borderBottom: '1px solid var(--border-hairline)',
+      }}>
+        <div style={{ textAlign: 'left' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5 }}>{formatFollowers(followers)}</div>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>Followers</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5 }}>
+            {(c.worked_with?.length ?? 0) > 0 ? `${c.worked_with.length} brands` : '—'}
+          </div>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>Worked with</div>
+        </div>
+      </div>
+
+      {/* Starting rate */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 14 }}>
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)' }}>Starting rate</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em' }}>
+          {low ? `${formatRupees(low)}+` : '—'}
+        </span>
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 14, position: 'relative', zIndex: 1 }}>
+        <Link
+          href={storefrontSlug ? `/c/${storefrontSlug}` : `/browse/${c.id}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            padding: 11, borderRadius: 11,
+            background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
+            fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
+            color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
+          }}
+        >
+          {storefrontSlug ? 'View Storefront' : 'View Profile'}
+        </Link>
+        <Link
+          href={`/deals/new?creator=${c.id}`}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            padding: 11, borderRadius: 11,
+            backgroundColor: 'var(--ink)', border: '1px solid var(--ink)',
+            fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12,
+            color: '#FFFFFF', whiteSpace: 'nowrap', textDecoration: 'none',
+          }}
+        >
+          Start deal
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </Link>
+      </div>
     </div>
   )
 }
 
-function CreatorCard({ creator: c }: { creator: BrowseCreator }) {
-  const range = rateRange(c.rate_card)
-  const primary = primarySocial(c.social_accounts)
-  const workedCount = c.worked_with?.length ?? 0
+/* ── Shared select style ─────────────────────────────────────────── */
 
-  return (
-    <Link href={`/browse/${c.id}`} style={cardStyle}>
-      {/* Avatar */}
-      <div style={avatarArea}>
-        {c.profile_photo_url ? (
-          <img src={c.profile_photo_url} alt={c.full_name} style={avatarImg} />
-        ) : (
-          <div style={avatarFallback}>{initials(c.full_name)}</div>
-        )}
-      </div>
-
-      {/* Info */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={cardName}>{c.full_name}</p>
-        {(c.niches ?? []).length > 0 && (
-          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            {c.niches.map((n) => <span key={n} style={nicheBadge}>{n}</span>)}
-          </div>
-        )}
-
-        {/* Primary social */}
-        {primary && (
-          <p style={cardMeta}>
-            <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{primary.platform}</span>
-            {primary.handle && <> · {primary.handle}</>}
-            {primary.follower_count != null && primary.follower_count > 0 && (
-              <> · {formatFollowers(primary.follower_count)} followers</>
-            )}
-          </p>
-        )}
-
-        {/* Rate range */}
-        {range && (
-          <p style={{ ...cardMeta, fontWeight: 600, color: 'var(--color-heading)' }}>
-            {range.min === range.max
-              ? formatRupees(range.min)
-              : `${formatRupees(range.min)} – ${formatRupees(range.max)}`
-            }
-          </p>
-        )}
-
-        {/* Worked with */}
-        {workedCount > 0 && (
-          <p style={{ ...cardMeta, fontSize: '0.7rem' }}>
-            Worked with {workedCount} brand{workedCount !== 1 ? 's' : ''}
-          </p>
-        )}
-      </div>
-    </Link>
-  )
-}
-
-/* ── Styles ─────────────────────────────────────────────────────── */
-
-const filterBar: React.CSSProperties = {
-  display: 'flex',
-  gap: '0.5rem',
-  flexWrap: 'wrap',
-}
-
-const filterInput: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-sm)',
-  fontSize: '0.8125rem',
-  outline: 'none',
-  background: 'var(--glass-bg)',
-  minWidth: 120,
-  flex: 1,
-}
-
-const clearBtn: React.CSSProperties = {
-  padding: '0.5rem 0.75rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-sm)',
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  background: 'var(--section-bg-alt)',
-  color: 'var(--color-muted)',
-  cursor: 'pointer',
+const selectStyle: React.CSSProperties = {
+  minWidth: 0, boxSizing: 'border-box',
+  padding: '6px 28px 6px 12px',
+  border: '1px solid #D4D4CB', borderRadius: 12,
+  backgroundColor: '#fff',
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239EA096' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+  backgroundRepeat: 'no-repeat',
+  backgroundPosition: 'right 12px center',
+  appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500,
+  color: '#5C5E52', outline: 'none',
+  textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-}
-
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-  gap: '1rem',
-}
-
-const cardStyle: React.CSSProperties = {
-  display: 'flex',
-  gap: '1rem',
-  padding: '1.25rem',
-  background: 'var(--glass-bg)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  textDecoration: 'none',
-  color: 'inherit',
-  transition: 'box-shadow 0.15s, border-color 0.15s',
-}
-
-const avatarArea: React.CSSProperties = {
-  flexShrink: 0,
-}
-
-const avatarImg: React.CSSProperties = {
-  width: 56,
-  height: 56,
-  borderRadius: 'var(--radius-sm)',
-  objectFit: 'cover',
-  border: '1px solid var(--color-border)',
-}
-
-const avatarFallback: React.CSSProperties = {
-  width: 56,
-  height: 56,
-  borderRadius: 'var(--radius-sm)',
-  background: 'var(--section-bg-alt)',
-  border: '1px solid var(--color-border)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontWeight: 700,
-  fontSize: '1rem',
-  color: 'var(--color-muted)',
-  fontFamily: 'var(--font-heading)',
-}
-
-const cardName: React.CSSProperties = {
-  fontFamily: 'var(--font-heading)',
-  fontWeight: 700,
-  fontSize: '1rem',
-  color: 'var(--color-heading)',
-  margin: '0 0 0.25rem',
-}
-
-const nicheBadge: React.CSSProperties = {
-  display: 'inline-block',
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  padding: '0.125rem 0.5rem',
-  borderRadius: 'var(--radius-pill)',
-  background: 'var(--section-bg-alt)',
-  border: '1px solid var(--color-border)',
-  color: 'var(--color-body)',
-  marginBottom: '0.375rem',
-}
-
-const cardMeta: React.CSSProperties = {
-  fontSize: '0.75rem',
-  color: 'var(--color-muted)',
-  margin: '0.2rem 0 0',
-  lineHeight: 1.4,
 }

@@ -28,6 +28,8 @@ export interface DealPrefill {
   brief_guidelines?: string | null
 }
 
+const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
+
 export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string } }) {
   const brand = await verifyApprovedBrand()
   const supabase = createClient()
@@ -113,27 +115,113 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     .maybeSingle()
 
   const effectiveFeePercent = pairRate?.fee_pct ?? brandRow?.platform_fee_percent ?? 0
-
   const activeProducts = (products ?? []).filter((p) => p.is_active)
+  const firstName = creator.full_name.split(' ')[0]
 
   return (
-    <section style={{ padding: '2.5rem var(--container-pad)', maxWidth: 'var(--container-width)', margin: '0 auto' }}>
-      <Link href={`/browse/${creatorId}`} style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
-        &larr; Back to {creator.full_name}
-      </Link>
+    <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: '0 0 2rem' }}>
-        {prefill ? `New deal with ${creator.full_name}` : `Create an offer for ${creator.full_name}`}
-      </h1>
+        {/* ── Header card ── */}
+        <div className="surface" style={{ padding: '28px 30px' }}>
+          <Link href="/deals" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            Back to deals
+          </Link>
 
-      <DealForm
-        creator={creator}
-        products={activeProducts}
-        platformFeePercent={effectiveFeePercent}
-        feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
-        prefill={prefill}
-        campaigns={(campaigns ?? []) as { id: string; name: string }[]}
-      />
-    </section>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>
+                New deal
+              </div>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px, 3.4vw, 34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
+                Create an offer for{' '}
+                <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400 }}>{firstName}</span>
+              </h1>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flex: '0 0 auto' }}>
+              <Link
+                href={`/browse/${creatorId}`}
+                className="pill"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 42, padding: '0 16px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--hairline)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Storefront
+              </Link>
+              <Link
+                href={`/inbox?creator=${creatorId}`}
+                className="neonbtn"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 42, padding: '0 18px', borderRadius: 11, background: 'var(--neon, var(--lime-400))', border: 'none', boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Message {firstName}
+              </Link>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
+              <span style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--warning)', boxShadow: '0 0 0 4px color-mix(in oklab, var(--warning) 22%, transparent)' }} />
+              Draft
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+              {prefill ? 'Prefilled from the previous deal' : `Prefilled from ${firstName}'s storefront`} &middot; nothing is sent until you create the offer
+            </span>
+          </div>
+        </div>
+
+        {/* ── Progress stepper ── */}
+        <div className="surface" style={{ padding: '18px 16px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+            {STEPS.map((label, i) => {
+              const active = i === 0
+              return (
+                <div key={label} style={{ position: 'relative', flex: '1 1 0%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
+                  <div style={{ position: 'relative', width: '100%', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {i > 0 && (
+                      <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: 'var(--border-hairline)' }} />
+                    )}
+                    {i < STEPS.length - 1 && (
+                      <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: 'var(--border-hairline)' }} />
+                    )}
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                      background: active ? 'var(--neon, var(--lime-400))' : 'var(--sec, #F4F8FC)',
+                      color: active ? 'var(--ink)' : 'var(--ink-faint)',
+                    }}>
+                      {active && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink)' }} />}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: 11.5,
+                    fontWeight: active ? 700 : 600,
+                    whiteSpace: 'nowrap',
+                    color: active ? 'var(--ink)' : 'var(--ink-faint)',
+                  }}>
+                    {label}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-hairline)' }}>
+            <span />
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
+              Next &middot; send to {firstName}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Form ── */}
+        <DealForm
+          creator={creator}
+          products={activeProducts}
+          platformFeePercent={effectiveFeePercent}
+          feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
+          prefill={prefill}
+          campaigns={(campaigns ?? []) as { id: string; name: string }[]}
+        />
+      </div>
+    </main>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { acceptInvoice, markAsPaid } from './invoice-actions'
-import { formatDueStatus } from '@/lib/invoice'
 
 interface Invoice {
   id: string
@@ -20,23 +19,51 @@ interface Invoice {
   accepted_at: string | null
 }
 
+interface LineItem {
+  label: string
+  pricePaise: number
+}
+
 function formatRupees(paise: number): string {
+  const rupees = paise / 100
+  return `\u20B9${rupees.toLocaleString('en-IN')}`
+}
+
+function formatRupeesShort(paise: number): string {
   const rupees = paise / 100
   if (rupees >= 100000) return `\u20B9${(rupees / 100000).toFixed(1)}L`
   if (rupees >= 1000) return `\u20B9${(rupees / 1000).toFixed(0)}K`
   return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
-export default function BrandInvoiceCard({ dealId, dealRef, invoice }: { dealId: string; dealRef?: string | null; invoice: Invoice }) {
+interface Props {
+  dealId: string
+  dealRef?: string | null
+  invoice: Invoice
+  lineItems?: LineItem[]
+  creatorFirstName: string
+  creatorId?: string | null
+  usageRightsEndDate?: string | null
+  paidAt?: string | null
+}
+
+export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, creatorFirstName, creatorId, usageRightsEndDate, paidAt }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [accepted, setAccepted] = useState(invoice.status === 'accepted')
+  const [showPayDialog, setShowPayDialog] = useState(false)
 
   async function handleAccept() {
     setError(null)
     setLoading(true)
     const res = await acceptInvoice(dealId)
     setLoading(false)
-    if (res.status === 'error') setError(res.message)
+    if (res.status === 'error') {
+      setError(res.message)
+    } else {
+      setAccepted(true)
+      setShowPayDialog(true)
+    }
   }
 
   async function handlePay() {
@@ -45,153 +72,198 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice }: { dealId:
     const res = await markAsPaid(dealId)
     setLoading(false)
     if (res.status === 'error') setError(res.message)
+    else setShowPayDialog(false)
   }
 
-  const dueStatus = formatDueStatus(invoice.due_date)
+  const isPending = invoice.status === 'issued' && !accepted
+  const isAccepted = accepted || invoice.status === 'accepted'
+  const isPaid = invoice.status === 'paid'
+
+  const dueDateFormatted = invoice.due_date
+    ? new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : null
+
+  // ── Paid state: "Deal complete" card ──
+  if (isPaid) {
+    const paidDateStr = paidAt
+      ? new Date(paidAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : null
+    const rightsEndStr = usageRightsEndDate
+      ? new Date(usageRightsEndDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      : null
+
+    return (
+      <>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--neon)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 16px -6px rgba(40,45,25,.35)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          </span>
+          <div>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Deal complete</h3>
+            <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '4px 0 0' }}>
+              Paid in full{paidDateStr ? ` on ${paidDateStr.split(',')[0]}` : ''}.
+              {rightsEndStr && ` Rights run through ${rightsEndStr}.`}
+            </p>
+          </div>
+        </div>
+
+        {/* Dark "You paid" bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '20px 24px', margin: '24px 0 0', borderRadius: 16, background: 'var(--ink)', color: '#FFFFFF' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>You paid</div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', marginTop: 3 }}>{creatorFirstName} received {formatRupees(invoice.creator_receives_paise)}</div>
+          </div>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>{formatRupees(invoice.brand_pays_paise)}</span>
+        </div>
+
+        {/* Footer: paid date + UTR */}
+        <div style={{ marginTop: 20 }}>
+          <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+            {paidDateStr ? `Paid ${paidDateStr}` : 'Paid'}
+            {dealRef && ` \u00B7 UTR ${dealRef}`}
+          </span>
+        </div>
+      </>
+    )
+  }
+
+  // ── Issued / Accepted states ──
+  const helperText = isPending
+    ? `${invoice.payment_terms ? invoice.payment_terms + '. ' : ''}Review the line items and accept the invoice to proceed to payment.`
+    : isAccepted
+      ? `Invoice accepted${dueDateFormatted ? ` \u2014 pay by ${dueDateFormatted}` : ''}. Complete the payment to close this deal.`
+      : ''
 
   return (
-    <div style={cardStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-        <h3 style={{ ...cardTitle, margin: 0 }}>Invoice{dealRef && <span style={{ fontFamily: 'monospace', fontWeight: 500, marginLeft: '0.375rem' }}>{dealRef}</span>}</h3>
-        <span style={{ ...statusBadge, ...STATUS_STYLES[invoice.status] }}>{invoice.status}</span>
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+          Invoice{' '}
+          {dealRef && <span style={{ color: 'var(--ink-faint)', fontWeight: 600 }}>#{dealRef}</span>}
+        </h3>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
+          {isAccepted ? 'Accepted' : 'Pending'}
+        </span>
       </div>
 
       {/* Line items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.75rem' }}>
-        <Row label="Deliverables" value={formatRupees(invoice.base_paise)} />
+      <div style={{ marginTop: 18 }}>
+        {lineItems && lineItems.length > 0 ? (
+          lineItems.map((item, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>{item.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatRupees(item.pricePaise)}</span>
+            </div>
+          ))
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Deliverables</span>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatRupees(invoice.base_paise)}</span>
+          </div>
+        )}
         {invoice.overage_paise > 0 && (
-          <Row label="Revision overage" value={formatRupees(invoice.overage_paise)} />
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Extra revisions</span>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatRupees(invoice.overage_paise)}</span>
+          </div>
         )}
         {invoice.fee_paise > 0 && (
-          <Row
-            label={`Platform fee (${invoice.fee_percent}%, ${invoice.fee_mode === 'on_top' ? 'on top' : 'deducted'})`}
-            value={`${invoice.fee_mode === 'on_top' ? '+' : '\u2212'}${formatRupees(invoice.fee_paise)}`}
-          />
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Platform fee ({invoice.fee_percent}%)</span>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>{invoice.fee_mode === 'deducted' ? `\u2212${formatRupees(invoice.fee_paise)}` : formatRupees(invoice.fee_paise)}</span>
+          </div>
         )}
-        <div style={{ borderTop: '1px solid #e5e5e5', paddingTop: '0.375rem', marginTop: '0.15rem' }}>
-          <Row label="You pay" value={formatRupees(invoice.brand_pays_paise)} bold />
-          <Row label="Creator receives" value={formatRupees(invoice.creator_receives_paise)} bold />
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border-hairline)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Creator receives</span>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatRupees(invoice.creator_receives_paise)}</span>
         </div>
       </div>
 
-      {/* Payment terms + due date */}
-      {invoice.payment_terms && (
-        <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 0.25rem' }}>
-          Terms: {invoice.payment_terms}
-        </p>
-      )}
-      {dueStatus && (
-        <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: dueStatus.urgent ? '#dc2626' : '#16a34a', margin: '0 0 0.5rem' }}>
-          {dueStatus.text}
-        </p>
-      )}
-      {invoice.issued_at && (
-        <p style={{ fontSize: '0.6875rem', color: '#aaa', margin: '0 0 0.25rem' }}>
-          Issued {new Date(invoice.issued_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </p>
-      )}
-      {invoice.accepted_at && (
-        <p style={{ fontSize: '0.6875rem', color: '#aaa', margin: '0 0 0.25rem' }}>
-          Accepted {new Date(invoice.accepted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-        </p>
-      )}
+      {/* Dark "You pay" bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '18px 24px', margin: '16px -24px 0', background: 'var(--ink)', color: '#FFFFFF' }}>
+        <span style={{ fontSize: 13.5, fontWeight: 700 }}>You pay</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>{formatRupees(invoice.brand_pays_paise)}</span>
+      </div>
 
-      {error && <p style={errorStyle}>{error}</p>}
+      {/* Helper text + action button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border-hairline)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 460 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+          <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>{helperText}</span>
+        </div>
 
-      {/* Issued: accept button */}
-      {invoice.status === 'issued' && (
-        <button onClick={handleAccept} disabled={loading} style={{ ...actionBtn, opacity: loading ? 0.6 : 1, marginTop: '0.5rem' }}>
-          {loading ? 'Accepting...' : 'Accept invoice'}
-        </button>
-      )}
+        {error && (
+          <span style={{ fontSize: 11.5, color: 'var(--danger, #D2545A)', fontWeight: 600 }}>{error}</span>
+        )}
 
-      {/* Accepted: pay button */}
-      {invoice.status === 'accepted' && (
-        <button onClick={handlePay} disabled={loading} style={{ ...payBtn, opacity: loading ? 0.6 : 1, marginTop: '0.5rem' }}>
-          {loading ? 'Processing...' : `Pay ${formatRupees(invoice.brand_pays_paise)}`}
-        </button>
-      )}
+        {isPending && (
+          <button
+            onClick={handleAccept}
+            disabled={loading}
+            className="neonbtn"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 54, padding: '0 28px', borderRadius: 14, background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: 'pointer', boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', opacity: loading ? 0.6 : 1 }}
+          >
+            {loading ? 'Accepting\u2026' : 'Accept invoice'}
+          </button>
+        )}
 
-      {/* Paid: confirmation */}
-      {invoice.status === 'paid' && (
-        <p style={{ fontSize: '0.8125rem', color: '#065f46', fontWeight: 600, margin: '0.5rem 0 0' }}>
-          Paid — deal complete
-        </p>
+        {isAccepted && !showPayDialog && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {dueDateFormatted && (
+              <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>Due {dueDateFormatted}</span>
+            )}
+            <button
+              onClick={handlePay}
+              disabled={loading}
+              className="neonbtn"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 54, padding: '0 28px', borderRadius: 14, background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: 'pointer', boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', opacity: loading ? 0.6 : 1 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
+              {loading ? 'Processing\u2026' : `Pay ${formatRupeesShort(invoice.brand_pays_paise)}`}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Pay now dialog — shown immediately after accepting */}
+      {showPayDialog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)' }} onClick={() => setShowPayDialog(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20, background: 'var(--card, #fff)', boxShadow: '0 24px 64px rgba(0,0,0,.18)', padding: '32px 28px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Proceed to payment?</h3>
+              <p style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-soft)', margin: '10px 0 0' }}>
+                Invoice accepted. You&apos;ll be redirected to complete the payment of <b style={{ color: 'var(--ink)' }}>{formatRupees(invoice.brand_pays_paise)}</b>.
+                {dueDateFormatted && <> Payment is due by <b style={{ color: 'var(--ink)' }}>{dueDateFormatted}</b>.</>}
+              </p>
+            </div>
+
+            {error && (
+              <span style={{ fontSize: 12, color: 'var(--danger, #D2545A)', fontWeight: 600 }}>{error}</span>
+            )}
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => setShowPayDialog(false)}
+                style={{ flex: 1, height: 50, borderRadius: 12, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--hairline, #EAEAE3)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)', cursor: 'pointer' }}
+              >
+                Pay later
+              </button>
+              <button
+                onClick={handlePay}
+                disabled={loading}
+                className="neonbtn"
+                style={{ flex: 1, height: 50, borderRadius: 12, background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: 'pointer', boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.6 : 1 }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
+                {loading ? 'Processing\u2026' : `Pay ${formatRupeesShort(invoice.brand_pays_paise)}`}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   )
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-      <span style={{ fontSize: '0.8125rem', color: bold ? '#111' : '#666', fontWeight: bold ? 700 : 400 }}>{label}</span>
-      <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace', fontWeight: bold ? 700 : 500, color: '#111' }}>{value}</span>
-    </div>
-  )
-}
-
-const cardStyle: React.CSSProperties = {
-  padding: '1.25rem',
-  border: '1px solid #e5e5e5',
-  borderRadius: 12,
-  background: '#fff',
-}
-
-const cardTitle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: '#555',
-  margin: '0 0 0.75rem',
-}
-
-const actionBtn: React.CSSProperties = {
-  width: '100%',
-  padding: '0.625rem',
-  background: '#111',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 8,
-  fontSize: '0.875rem',
-  fontWeight: 700,
-  cursor: 'pointer',
-}
-
-const payBtn: React.CSSProperties = {
-  width: '100%',
-  padding: '0.625rem',
-  background: '#16a34a',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 8,
-  fontSize: '0.875rem',
-  fontWeight: 700,
-  cursor: 'pointer',
-}
-
-const errorStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: '#dc2626',
-  margin: '0.5rem 0 0',
-  background: '#fef2f2',
-  padding: '0.375rem 0.5rem',
-  borderRadius: 6,
-}
-
-const statusBadge: React.CSSProperties = {
-  fontSize: '0.625rem',
-  fontWeight: 600,
-  padding: '0.1rem 0.4rem',
-  borderRadius: 9999,
-  textTransform: 'capitalize',
-}
-
-const STATUS_STYLES: Record<string, React.CSSProperties> = {
-  draft:    { background: '#f3f4f6', color: '#6b7280' },
-  issued:   { background: '#fef9c3', color: '#854d0e' },
-  accepted: { background: '#dcfce7', color: '#166534' },
-  paid:     { background: '#d1fae5', color: '#065f46' },
-  overdue:  { background: '#fee2e2', color: '#991b1b' },
 }
