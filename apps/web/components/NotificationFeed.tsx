@@ -24,14 +24,23 @@ interface Props {
   dealLinkPrefix: string
   unreadCount: number
   creatorMap?: Record<string, CreatorInfo>
+  variant?: 'brand' | 'creator'
 }
 
-type Filter = 'all' | 'unread' | 'submissions' | 'payments' | 'deals'
+type Filter = 'all' | 'unread' | 'submissions' | 'offers' | 'payments' | 'deals'
 
-const FILTERS: { id: Filter; label: string }[] = [
+const BRAND_FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'unread', label: 'Unread' },
   { id: 'submissions', label: 'Submissions' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'deals', label: 'Deals' },
+]
+
+const CREATOR_FILTERS: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'unread', label: 'Unread' },
+  { id: 'offers', label: 'Offers' },
   { id: 'payments', label: 'Payments' },
   { id: 'deals', label: 'Deals' },
 ]
@@ -89,52 +98,90 @@ function getBucket(iso: string): 'today' | 'week' | 'older' {
 }
 
 const SUBMISSION_TYPES = new Set(['deliverable_submitted', 'content_posted', 'submission', 'delivered'])
+const OFFER_TYPES = new Set(['offer_sent', 'offer_declined', 'offer'])
 const PAYMENT_TYPES = new Set(['invoice_issued', 'invoice_accepted', 'payment_paid', 'payment', 'invoice'])
-const DEAL_TYPES = new Set(['offer_sent', 'deal_agreed', 'offer_declined', 'deal_approved', 'revision_requested', 'product_shipped', 'product_delivered', 'accepted', 'complete', 'cancelled', 'declined', 'agreed', 'approval', 'shipping'])
+// Brand: deals = everything except submissions/payments/messages
+const BRAND_DEAL_TYPES = new Set(['offer_sent', 'deal_agreed', 'offer_declined', 'deal_approved', 'revision_requested', 'product_shipped', 'product_delivered', 'accepted', 'complete', 'cancelled', 'declined', 'agreed', 'approval', 'shipping'])
+// Creator: deals = invoice, approval, shipping, delivery (per HTML)
+const CREATOR_DEAL_TYPES = new Set(['invoice_issued', 'invoice_accepted', 'deal_agreed', 'deal_approved', 'product_shipped', 'product_delivered', 'invoice', 'approval', 'shipping', 'delivery', 'agreed', 'complete'])
 
-function matchesFilter(n: Notification, f: Filter, allRead: boolean): boolean {
+function matchesFilter(n: Notification, f: Filter, allRead: boolean, variant: 'brand' | 'creator'): boolean {
   if (f === 'all') return true
   if (f === 'unread') return !n.read_at && !allRead
   if (f === 'submissions') return SUBMISSION_TYPES.has(n.type)
+  if (f === 'offers') return OFFER_TYPES.has(n.type)
   if (f === 'payments') return PAYMENT_TYPES.has(n.type)
-  if (f === 'deals') return DEAL_TYPES.has(n.type)
+  if (f === 'deals') return variant === 'creator' ? CREATOR_DEAL_TYPES.has(n.type) : BRAND_DEAL_TYPES.has(n.type)
   return true
 }
 
-function typeDescription(type: string): string {
-  const map: Record<string, string> = {
-    offer_sent: 'New offer sent',
-    deal_agreed: 'Deal accepted \u00B7 the deal is now active',
-    offer_declined: 'Offer declined',
-    deal_approved: 'Content approved',
-    revision_requested: 'Revision requested',
-    deliverable_submitted: 'Content ready for your review',
-    invoice_issued: 'Invoice received \u00B7 payment awaiting your release',
-    invoice_accepted: 'Invoice accepted',
-    payment_paid: 'Payment released',
-    content_posted: 'Content is now live',
-    product_shipped: 'Product shipped',
-    product_delivered: 'Product delivered',
-    new_message: 'New message',
-    accepted: 'Deal accepted \u00B7 the deal is now active',
-    submission: 'Content ready for your review',
-    invoice: 'Invoice received \u00B7 payment awaiting your release',
-    payment: 'Payment released',
-    complete: 'Deal completed',
-    message: 'New message',
-    shipping: 'Product shipped',
-    delivered: 'Content delivered',
-    approval: 'Content approved',
-    agreed: 'Deal accepted \u00B7 the deal is now active',
-    declined: 'Offer declined',
-    cancelled: 'Deal cancelled',
-  }
+const BRAND_DESC: Record<string, string> = {
+  offer_sent: 'New offer sent',
+  deal_agreed: 'Deal accepted \u00B7 the deal is now active',
+  offer_declined: 'Offer declined',
+  deal_approved: 'Content approved',
+  revision_requested: 'Revision requested',
+  deliverable_submitted: 'Content ready for your review',
+  invoice_issued: 'Invoice received \u00B7 payment awaiting your release',
+  invoice_accepted: 'Invoice accepted',
+  payment_paid: 'Payment released',
+  content_posted: 'Content is now live',
+  product_shipped: 'Product shipped',
+  product_delivered: 'Product delivered',
+  new_message: 'New message',
+  accepted: 'Deal accepted \u00B7 the deal is now active',
+  submission: 'Content ready for your review',
+  invoice: 'Invoice received \u00B7 payment awaiting your release',
+  payment: 'Payment released',
+  complete: 'Deal completed',
+  message: 'New message',
+  shipping: 'Product shipped',
+  delivered: 'Content delivered',
+  approval: 'Content approved',
+  agreed: 'Deal accepted \u00B7 the deal is now active',
+  declined: 'Offer declined',
+  cancelled: 'Deal cancelled',
+}
+
+const CREATOR_DESC: Record<string, string> = {
+  offer_sent: 'New offer \u00B7 review the terms',
+  deal_agreed: 'You accepted the terms',
+  offer_declined: 'Offer declined',
+  deal_approved: 'Deliverables approved \u00B7 time to get paid',
+  revision_requested: 'Revision requested',
+  deliverable_submitted: 'Deliverables submitted',
+  invoice_issued: 'Invoice sent',
+  invoice_accepted: 'Invoice accepted \u00B7 payment is being processed',
+  payment_paid: 'Sent to your linked account',
+  content_posted: 'Content is now live',
+  product_shipped: 'Tracking added to the deal',
+  product_delivered: 'Everything is here \u00B7 time to create',
+  new_message: 'New message',
+  accepted: 'You accepted the terms',
+  submission: 'Deliverables submitted',
+  invoice: 'Invoice accepted \u00B7 payment is being processed',
+  payment: 'Sent to your linked account',
+  complete: 'Deal completed',
+  message: 'New message',
+  shipping: 'Tracking added to the deal',
+  delivered: 'Everything is here \u00B7 time to create',
+  delivery: 'Everything is here \u00B7 time to create',
+  approval: 'You accepted the terms',
+  agreed: 'You accepted the terms',
+  declined: 'Offer declined',
+  cancelled: 'Deal cancelled',
+  offer: 'New offer \u00B7 review the terms',
+  approved: 'Deliverables approved',
+}
+
+function typeDescription(type: string, variant: 'brand' | 'creator'): string {
+  const map = variant === 'creator' ? CREATOR_DESC : BRAND_DESC
   return map[type] || type
 }
 
 const PAGE_SIZE = 10
 
-export default function NotificationFeed({ notifications, dealLinkPrefix, unreadCount, creatorMap = {} }: Props) {
+export default function NotificationFeed({ notifications, dealLinkPrefix, unreadCount, creatorMap = {}, variant = 'brand' }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
   const [allRead, setAllRead] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -152,7 +199,8 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
   }
 
   const effectiveUnread = allRead ? 0 : unreadCount
-  const filtered = notifications.filter((n) => matchesFilter(n, filter, allRead))
+  const filters = variant === 'creator' ? CREATOR_FILTERS : BRAND_FILTERS
+  const filtered = notifications.filter((n) => matchesFilter(n, filter, allRead, variant))
   const totalFiltered = filtered.length
   const visible = filtered.slice(0, visibleCount)
   const hasMore = visibleCount < totalFiltered
@@ -190,7 +238,7 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
 
       {/* Filter tabs */}
       <div style={filterRow}>
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const active = filter === f.id
           return (
             <button
@@ -241,6 +289,7 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
                     dealLinkPrefix={dealLinkPrefix}
                     creatorInfo={n.deal_id ? creatorMap[n.deal_id] : undefined}
                     allRead={allRead}
+                    variant={variant}
                   />
                 ))}
               </div>
@@ -274,11 +323,12 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
   )
 }
 
-function NotificationRow({ notification: n, dealLinkPrefix, creatorInfo, allRead }: {
+function NotificationRow({ notification: n, dealLinkPrefix, creatorInfo, allRead, variant }: {
   notification: Notification
   dealLinkPrefix: string
   creatorInfo?: CreatorInfo
   allRead: boolean
+  variant: 'brand' | 'creator'
 }) {
   const [pending, startTransition] = useTransition()
   const isUnread = !n.read_at && !allRead
@@ -289,10 +339,12 @@ function NotificationRow({ notification: n, dealLinkPrefix, creatorInfo, allRead
   const initials = getInitials(avatarName)
   const grad = AVATAR_GRADS[nameToGradIndex(avatarName)]
 
-  const isPayment = PAYMENT_TYPES.has(n.type)
-  const isSubmission = SUBMISSION_TYPES.has(n.type)
+  const isPayment = PAYMENT_TYPES.has(n.type) || n.type === 'payment_paid'
+  const isSubmission = variant === 'brand' && SUBMISSION_TYPES.has(n.type)
+  const isOffer = variant === 'creator' && OFFER_TYPES.has(n.type)
   const showAmount = isPayment && creatorInfo?.pricePaise && creatorInfo.pricePaise > 0
-  const desc = typeDescription(n.type)
+  const showOfferAmount = isOffer && creatorInfo?.pricePaise && creatorInfo.pricePaise > 0
+  const desc = typeDescription(n.type, variant)
 
   function handleClick() {
     if (isUnread) {
@@ -354,11 +406,20 @@ function NotificationRow({ notification: n, dealLinkPrefix, creatorInfo, allRead
       {/* Right side */}
       {showAmount ? (
         <span style={amountPill}>
+          {variant === 'creator' ? '+' : ''}{formatRupees(creatorInfo!.pricePaise!)}
+        </span>
+      ) : showOfferAmount ? (
+        <span style={amountPill}>
           {formatRupees(creatorInfo!.pricePaise!)}
         </span>
       ) : isSubmission ? (
         <span style={reviewBtn}>
           Review
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+        </span>
+      ) : isOffer ? (
+        <span style={reviewBtn}>
+          View
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
         </span>
       ) : (

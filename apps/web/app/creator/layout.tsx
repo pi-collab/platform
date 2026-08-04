@@ -33,15 +33,45 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   if (!creatorName) redirect('/')
 
-  // Unread notification count
+  // Unread notification count + recent notifications for dropdown
   let unreadCount = 0
+  let recentNotifications: { id: string; deal_id: string | null; type: string; body: string; read_at: string | null; created_at: string }[] = []
+  let notifBrandMap: Record<string, { name: string; photo: string | null }> = {}
+
   if (profile && isVetted) {
-    const { count } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', profile.id)
-      .is('read_at', null)
+    const [{ count }, { data: recentNotifs }] = await Promise.all([
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .is('read_at', null),
+      supabase
+        .from('notifications')
+        .select('id, deal_id, type, body, read_at, created_at')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
     unreadCount = count ?? 0
+    recentNotifications = recentNotifs ?? []
+
+    // Fetch brand names for recent notifications
+    const recentDealIds = Array.from(new Set(recentNotifications.map((n) => n.deal_id).filter(Boolean))) as string[]
+    if (recentDealIds.length > 0) {
+      const { data: deals } = await supabase
+        .from('deals')
+        .select('id, brands(name)')
+        .in('id', recentDealIds)
+      if (deals) {
+        for (const d of deals) {
+          const raw = d.brands as unknown
+          const brand = Array.isArray(raw) ? raw[0] : (raw as { name: string } | null)
+          if (brand) {
+            notifBrandMap[d.id] = { name: brand.name, photo: null }
+          }
+        }
+      }
+    }
   }
 
   // Vetting gate: unvetted creators see a pending or rejected interstitial
@@ -82,7 +112,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   return (
     <>
       <div className="creator-main">
-        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} unreadCount={unreadCount} />
+        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
       </div>
     </>

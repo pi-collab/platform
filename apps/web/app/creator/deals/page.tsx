@@ -16,23 +16,16 @@ export default async function CreatorDealsPage() {
 
   if (error) {
     return (
-      <main style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
-        <div style={{ maxWidth: 1220, margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '14px 18px',
-              borderRadius: 16,
-              background: '#fff',
-              border: '1px solid var(--frost-edge)',
-              boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
-              color: '#9B3030',
-            }}
-          >
+      <main style={wrapper}>
+        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '14px 18px', borderRadius: 20, background: '#fff',
+            boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)',
+            color: '#9B3030',
+          }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#D2545A', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-inter, Inter), system-ui, sans-serif', fontSize: 14, fontWeight: 500 }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 500 }}>
               Error loading deals: {error.message}
             </span>
           </div>
@@ -48,22 +41,15 @@ export default async function CreatorDealsPage() {
   })
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
-      <div style={{ maxWidth: 1220, margin: '0 auto' }}>
-        <div
-          style={{
-            borderRadius: 26,
-            border: '1px solid var(--frost-edge)',
-            background: 'rgba(255,255,255,.5)',
-            backdropFilter: 'blur(26px) saturate(150%)',
-            WebkitBackdropFilter: 'blur(26px) saturate(150%)',
-            boxShadow: '0 34px 66px -34px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.9)',
-            padding: 'clamp(18px, 2.6vw, 28px)',
-          }}
-        >
-          <CreatorDealsTable deals={all} />
-        </div>
+    <main style={wrapper}>
+      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+        <CreatorDealsTable deals={all} />
       </div>
     </main>
   )
+}
+
+const wrapper: React.CSSProperties = {
+  flex: 1, minWidth: 0,
+  padding: 'clamp(22px,3vw,38px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)',
 }

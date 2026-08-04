@@ -46,6 +46,7 @@ export default async function CreatorNotificationsPage() {
         dealLinkPrefix="/creator/deals"
         unreadCount={unreadCount}
         creatorMap={creatorMap}
+        variant="creator"
       />
     </main>
   )

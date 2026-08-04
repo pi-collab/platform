@@ -6,11 +6,10 @@ import { useState, useRef, useEffect } from 'react'
 import SignOutButton from '@/components/SignOutButton'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
 
-const NAV_PILLS = [
-  { label: 'Dashboard', href: '/creator/dashboard' },
-  { label: 'Inbox', href: '/creator/inbox' },
-  { label: 'Deals', href: '/creator/deals' },
-  { label: 'Payments', href: '/creator/payments' },
+const NAV_PILLS: { label: string; href: string; icon: 'dashboard' | 'deals' | 'payments' }[] = [
+  { label: 'Dashboard', href: '/creator/dashboard', icon: 'dashboard' },
+  { label: 'Deals', href: '/creator/deals', icon: 'deals' },
+  { label: 'Payments', href: '/creator/payments', icon: 'payments' },
 ]
 
 const ALL_MOBILE_LINKS = [
@@ -22,11 +21,102 @@ const ALL_MOBILE_LINKS = [
   { label: 'Storefront', href: '/creator/storefront' },
 ]
 
-export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount: initialUnread = 0 }: { creatorName: string; creatorPhoto?: string | null; unreadCount?: number }) {
+interface NotifItem {
+  id: string
+  deal_id: string | null
+  type: string
+  body: string
+  read_at: string | null
+  created_at: string
+}
+
+interface NotifBrandMap {
+  [dealId: string]: { name: string; photo: string | null }
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'NOW'
+  if (mins < 60) return `${mins}M AGO`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}H AGO`
+  const days = Math.floor(hrs / 24)
+  if (days === 1) return 'YESTERDAY'
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+const NOTIF_GRADS = [
+  'linear-gradient(135deg,#E9E2FF,#DEF0FF)',
+  'linear-gradient(135deg,#FFEEE2,#FFE1EC)',
+  'linear-gradient(135deg,#D6F0F5,#E8FAFC)',
+  'linear-gradient(135deg,#F7F4FB,#F7F4FB)',
+  'linear-gradient(135deg,#F7F4FB,#FFE0EC)',
+  'linear-gradient(135deg,#F5EDE0,#FFF8E6)',
+]
+
+function nameToGradIndex(name: string): number {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
+  return Math.abs(hash) % NOTIF_GRADS.length
+}
+
+function Mascot({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 336 336" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M168 12C278 12 324 112 324 188C324 276 252 324 168 324C84 324 12 276 12 188C12 112 58 12 168 12Z" fill="#E8FF66" />
+      <ellipse cx="114" cy="126" rx="54" ry="36" fill="#fff" opacity="0.55" />
+      <ellipse cx="168" cy="188" rx="24" ry="10" fill="#fff" opacity="0.18" />
+    </svg>
+  )
+}
+
+function NavIcon({ icon, active }: { icon: 'dashboard' | 'deals' | 'payments'; active: boolean }) {
+  const stroke = active ? 'var(--ink)' : 'currentColor'
+  if (icon === 'dashboard') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" />
+      </svg>
+    )
+  }
+  if (icon === 'deals') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+      </svg>
+    )
+  }
+  // payments
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" />
+    </svg>
+  )
+}
+
+function InboxIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </svg>
+  )
+}
+
+export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount: initialUnread = 0, recentNotifications = [], notifBrandMap = {} }: { creatorName: string; creatorPhoto?: string | null; unreadCount?: number; recentNotifications?: NotifItem[]; notifBrandMap?: NotifBrandMap }) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const avatarRef = useRef<HTMLDivElement>(null)
+  const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = useRealtimeNotifications(initialUnread)
 
   const initials = creatorName ? creatorName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'CR'
@@ -40,7 +130,16 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
     return () => document.removeEventListener('mousedown', handleClick)
   }, [avatarOpen])
 
-  useEffect(() => { setDrawerOpen(false); setAvatarOpen(false) }, [pathname])
+  useEffect(() => {
+    if (!notifOpen) return
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [notifOpen])
+
+  useEffect(() => { setDrawerOpen(false); setAvatarOpen(false); setNotifOpen(false) }, [pathname])
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
@@ -49,41 +148,142 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
       {/* ── Desktop top nav ──────────────────────────── */}
       <header className="creator-topnav-desktop">
         <nav style={navBar}>
-          {/* Left: logo */}
+          {/* Left: mascot + wordmark */}
           <Link href="/creator/dashboard" style={logoLink}>
-            <span style={logoIcon}>g</span>
-            <span style={logoText}>guapd</span>
+            <Mascot size={26} />
+            <span className="g-wordmark" style={logoText}>guapd</span>
           </Link>
 
-          {/* Center: nav pills */}
+          {/* Center: nav pills with icons */}
           <div style={navPillsWrap}>
             {NAV_PILLS.map((link) => {
               const active = isActive(link.href)
               return (
                 <Link key={link.href} href={link.href} style={active ? navPillActive : navPillInactive}>
+                  <NavIcon icon={link.icon} active={active} />
                   {link.label}
                 </Link>
               )
             })}
           </div>
 
-          {/* Right: bell + avatar */}
+          {/* Right: inbox + bell + avatar */}
           <div style={rightGroup}>
-            {/* Bell */}
-            <Link href="/creator/notifications" style={bellBtn} title="Notifications">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-              {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+            {/* Inbox icon */}
+            <Link href="/creator/inbox" title="Inbox" style={iconBtn}>
+              <InboxIcon />
             </Link>
+
+            {/* Bell / Notifications */}
+            <div ref={notifRef} style={{ position: 'relative' }}>
+              <button onClick={() => setNotifOpen(!notifOpen)} style={bellBtn} title="Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
+              </button>
+              {notifOpen && (
+                <div style={notifDropdown}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px 12px' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', letterSpacing: '-0.01em' }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--ink)', background: 'var(--neon, var(--lime-400))', borderRadius: 6, padding: '3px 8px' }}>
+                        {unreadCount} NEW
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Notification list */}
+                  <div style={{ maxHeight: 340, overflowY: 'auto' }}>
+                    {recentNotifications.length === 0 ? (
+                      <div style={{ padding: '28px 18px', textAlign: 'center', color: 'var(--ink-faint, var(--wg-500))', fontSize: 13, fontFamily: 'var(--font-ui)' }}>
+                        No notifications yet
+                      </div>
+                    ) : (
+                      recentNotifications.map((n) => {
+                        const isUnread = !n.read_at
+                        const brandInfo = n.deal_id ? notifBrandMap[n.deal_id] : undefined
+                        const avatarName = brandInfo?.name || 'Guapd'
+                        const avatarInitials = getInitials(avatarName)
+                        const grad = NOTIF_GRADS[nameToGradIndex(avatarName)]
+                        const href = n.deal_id ? `/creator/deals/${n.deal_id}` : '/creator/notifications'
+                        return (
+                          <Link
+                            key={n.id}
+                            href={href}
+                            onClick={() => setNotifOpen(false)}
+                            style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 12,
+                              padding: '12px 18px', textDecoration: 'none',
+                              background: isUnread ? 'rgba(232,255,102,.08)' : 'transparent',
+                              borderTop: '1px solid #F2F2ED',
+                              transition: 'background .12s ease',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(232,255,102,.14)' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isUnread ? 'rgba(232,255,102,.08)' : 'transparent' }}
+                          >
+                            {/* Avatar */}
+                            <div style={{
+                              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: grad, fontSize: 12, fontWeight: 700, color: 'var(--ink)',
+                              fontFamily: 'var(--font-display)',
+                              border: '1px solid rgba(255,255,255,.85)',
+                            }}>
+                              {avatarInitials}
+                            </div>
+                            {/* Body + time */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{
+                                margin: 0, fontSize: 13, lineHeight: 1.45, color: 'var(--ink)',
+                                fontFamily: 'var(--font-ui)', fontWeight: isUnread ? 600 : 400,
+                                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                              }}>
+                                {n.body}
+                              </p>
+                              <span style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', color: '#9EA096', marginTop: 3, display: 'block' }}>
+                                {timeAgo(n.created_at)}
+                              </span>
+                            </div>
+                            {/* Unread dot */}
+                            {isUnread && (
+                              <div style={{ width: 8, height: 8, borderRadius: 999, background: 'var(--neon-deep, var(--lime-600))', flexShrink: 0, marginTop: 6 }} />
+                            )}
+                          </Link>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <Link
+                    href="/creator/notifications"
+                    onClick={() => setNotifOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '13px 18px', borderTop: '1px solid #EAEAE3',
+                      fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none',
+                      fontFamily: 'var(--font-ui)',
+                    }}
+                  >
+                    See all notifications
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+                  </Link>
+                </div>
+              )}
+            </div>
 
             {/* Avatar dropdown */}
             <div ref={avatarRef} style={{ position: 'relative' }}>
               <button onClick={() => setAvatarOpen(!avatarOpen)} style={avatarBtnStyle} aria-label="Account menu">
-                <span style={avatarCircle}>{initials}</span>
-                <div style={{ lineHeight: 1.2 }}>
-                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13 }}>{creatorName}</div>
-                  <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--wg-500)', letterSpacing: '0.04em' }}>Creator</div>
+                <span style={avatarSquare}>{initials}</span>
+                <div style={{ lineHeight: 1.15 }}>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14 }}>{creatorName}</div>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--neon-deep)' }} />
+                    Creator
+                  </div>
                 </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="m6 9 6 6 6-6" /></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}><path d="m6 9 6 6 6-6" /></svg>
               </button>
               {avatarOpen && (
                 <div style={dropdown}>
@@ -105,7 +305,7 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
         <button onClick={() => setDrawerOpen(!drawerOpen)} style={hamburgerBtn} aria-label="Menu">
           <span style={hamLine} /><span style={{ ...hamLine, marginTop: 4 }} /><span style={{ ...hamLine, marginTop: 4 }} />
         </button>
-        <Link href="/creator/dashboard" style={{ ...logoTextStyle, fontSize: 16, textDecoration: 'none' }}>guapd</Link>
+        <Link href="/creator/dashboard" style={{ ...logoTextMobile, textDecoration: 'none' }}>guapd</Link>
         <Link href="/creator/notifications" style={{ position: 'relative', padding: 4, color: 'var(--ink)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
           {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
@@ -118,7 +318,7 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
           <div className="creator-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <div className="creator-drawer">
             <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(26,27,22,0.08)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--sec-2)', color: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{initials}</div>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: '#F7F4FB', color: 'var(--sec-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{initials}</div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{creatorName}</p>
                 <span style={{ fontSize: 11, color: 'var(--wg-500)' }}>Creator</span>
@@ -150,6 +350,7 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
       )}
 
       <style>{`
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .creator-topnav-desktop { display: none; }
         .creator-topbar-mobile {
           display: flex; align-items: center; justify-content: space-between;
@@ -166,9 +367,8 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
         }
         @media (min-width: 768px) {
           .creator-topnav-desktop {
-            display: block; padding: 16px clamp(14px, 4vw, 28px) 0;
+            display: block; padding: 14px clamp(14px, 4vw, 28px) 0;
             position: sticky; top: 0; z-index: 30;
-            background: #F7F7F4;
           }
           .creator-topbar-mobile { display: none; }
         }
@@ -181,64 +381,76 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
 
 const navBar: React.CSSProperties = {
   position: 'relative',
-  maxWidth: 1080,
+  maxWidth: 1280,
   margin: '0 auto',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  gap: 'clamp(12px, 2vw, 22px)',
-  padding: '12px 12px 12px 20px',
+  gap: 'clamp(14px, 2.4vw, 26px)',
+  padding: '9px 12px 9px 20px',
   borderRadius: 999,
+  border: '1px solid var(--frost-edge)',
   background: 'var(--card)',
-  boxShadow: 'rgba(90,88,50,0.05) 0px 1px 2px, rgba(90,88,50,0.28) 0px 10px 24px -12px, rgba(90,88,50,0.2) 0px 30px 60px -30px',
+  boxShadow: '0 12px 36px -22px rgba(40,45,25,.45)',
 }
 
 const logoLink: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--ink)', flexShrink: 0,
-}
-
-const logoIcon: React.CSSProperties = {
-  width: 24, height: 24, borderRadius: 8, background: 'var(--lime-400)',
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--lime-950)',
+  display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'var(--ink)', flexShrink: 0,
 }
 
 const logoText: React.CSSProperties = {
-  fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em',
+  fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em',
 }
 
-const logoTextStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-display, var(--font-sora), system-ui, sans-serif)',
-  fontSize: 18, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em',
+const logoTextMobile: React.CSSProperties = {
+  fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em',
 }
 
 const navPillsWrap: React.CSSProperties = {
   position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-  display: 'flex', alignItems: 'center', gap: 'clamp(36px, 4vw, 60px)',
+  display: 'flex', alignItems: 'center', gap: 'clamp(16px, 2.4vw, 30px)',
   fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap',
+  color: 'var(--ink-soft)',
 }
 
 const navPillActive: React.CSSProperties = {
-  color: 'var(--lime-950)', fontWeight: 700,
-  background: 'var(--lime-400)', border: '1px solid transparent',
-  padding: '9px 22px', borderRadius: 999,
-  boxShadow: 'rgba(180,215,50,0.85) 0px 8px 16px -8px',
+  color: 'var(--ink)', fontWeight: 600,
+  background: 'var(--neon)', border: '1px solid transparent',
+  padding: '7px 14px', borderRadius: 999,
+  boxShadow: '0 6px 16px -8px rgba(180,210,60,.95)',
   textDecoration: 'none',
+  display: 'inline-flex', alignItems: 'center', gap: 7,
 }
 
 const navPillInactive: React.CSSProperties = {
-  color: 'var(--wg-600)', textDecoration: 'none',
+  color: 'var(--ink-soft)', textDecoration: 'none',
+  display: 'inline-flex', alignItems: 'center', gap: 7,
 }
 
 const rightGroup: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
 }
 
+const iconBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 40, height: 40, borderRadius: '50%',
+  background: 'var(--card)', border: '1px solid var(--frost-edge)',
+  color: 'var(--ink)', flexShrink: 0, textDecoration: 'none',
+}
+
 const bellBtn: React.CSSProperties = {
   position: 'relative', width: 40, height: 40, flexShrink: 0,
-  borderRadius: '50%', border: '1px solid var(--line)', background: 'var(--card)',
+  borderRadius: '50%', border: '1px solid var(--frost-edge)', background: 'var(--card)',
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  textDecoration: 'none',
+  textDecoration: 'none', cursor: 'pointer', fontFamily: 'inherit',
+}
+
+const notifDropdown: React.CSSProperties = {
+  position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 340,
+  background: '#fff', borderRadius: 16,
+  boxShadow: '0 26px 52px -24px rgba(40,52,70,.5), 0 0 0 1px rgba(26,27,22,.06)',
+  overflow: 'hidden', zIndex: 50,
+  animation: 'fadeUp .16s cubic-bezier(.22,1,.36,1)',
 }
 
 const bellBadge: React.CSSProperties = {
@@ -252,16 +464,16 @@ const bellBadge: React.CSSProperties = {
 
 const avatarBtnStyle: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, whiteSpace: 'nowrap',
-  padding: '5px 12px 5px 6px', borderRadius: 999,
-  border: '1px solid var(--line)', background: 'rgba(255,255,255,0.6)',
-  cursor: 'pointer',
+  padding: '5px 10px 5px 6px', borderRadius: 999,
+  border: '1px solid var(--frost-edge)', background: 'var(--card)',
+  cursor: 'pointer', fontFamily: 'inherit',
 }
 
-const avatarCircle: React.CSSProperties = {
+const avatarSquare: React.CSSProperties = {
   width: 32, height: 32, borderRadius: 9, flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12.5,
-  color: 'var(--ink)', background: 'var(--sec-2)',
+  fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+  color: 'var(--sec-ink)', background: '#F7F4FB',
 }
 
 const dropdown: React.CSSProperties = {

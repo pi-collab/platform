@@ -12,23 +12,45 @@ import { calculateFee } from '@/lib/fee'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  negotiating: { bg: '#dbeafe', color: '#1e40af' },
-  agreed:      { bg: '#dcfce7', color: '#166534' },
-  delivered:   { bg: '#fef9c3', color: '#854d0e' },
-  revision:    { bg: '#ffedd5', color: '#9a3412' },
-  approved:    { bg: '#dcfce7', color: '#166534' },
-  paid:        { bg: '#d1fae5', color: '#065f46' },
-  complete:    { bg: '#f3f4f6', color: '#374151' },
-  declined:    { bg: '#fee2e2', color: '#991b1b' },
-  cancelled:   { bg: '#f3f4f6', color: '#6b7280' },
+// ── Stage definitions (mirrors the deals list) ──
+const STAGES = ['Offer received', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
+const STATUS_TO_STAGE: Record<string, number> = {
+  negotiating: 0, agreed: 1, delivered: 2, revision: 2, approved: 3, paid: 4, complete: 5, declined: -1, cancelled: -1,
+}
+
+const STATUS_META: Record<string, { label: string; dot: string; glow: string }> = {
+  negotiating: { label: 'Received',  dot: 'var(--warning)',  glow: 'color-mix(in oklab, var(--warning) 22%, transparent)' },
+  agreed:      { label: 'Agreed',    dot: '#7E6BC4',         glow: 'rgba(126,107,196,.22)' },
+  delivered:   { label: 'Submitted', dot: '#4C9E82',         glow: 'rgba(76,158,130,.22)' },
+  revision:    { label: 'Revision',  dot: '#C89A3C',         glow: 'rgba(200,154,60,.22)' },
+  approved:    { label: 'Approved',  dot: '#8FAF1F',         glow: 'rgba(143,175,31,.22)' },
+  paid:        { label: 'Paid',      dot: '#1F8A5B',         glow: 'rgba(31,138,91,.22)' },
+  complete:    { label: 'Complete',  dot: '#9AA08C',         glow: 'rgba(154,160,140,.22)' },
+  declined:    { label: 'Declined',  dot: '#C4494F',         glow: 'rgba(196,73,79,.22)' },
+  cancelled:   { label: 'Cancelled', dot: '#8B90A0',         glow: 'rgba(139,144,160,.22)' },
+}
+
+function formatINR(paise: number): string {
+  const rupees = paise / 100
+  const s = String(Math.round(rupees))
+  const last3 = s.slice(-3)
+  const rest = s.slice(0, -3)
+  return '\u20B9' + (rest ? rest.replace(/\B(?=(\d\d)+(?!\d))/g, ',') + ',' + last3 : last3)
 }
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
-  if (rupees >= 100000) return `\u20B9${(rupees / 100000).toFixed(1)}L`
+  if (rupees >= 100000) { const s = (rupees / 100000).toFixed(2).replace(/\.?0+$/, ''); return `\u20B9${s}L` }
   if (rupees >= 1000) return `\u20B9${(rupees / 1000).toFixed(0)}K`
   return `\u20B9${rupees.toLocaleString('en-IN')}`
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
+
+function formatDateLong(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export default async function CreatorDealDetailPage({ params }: { params: { id: string } }) {
@@ -65,395 +87,486 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   if (dealError || !deal) notFound()
 
-  // Fetch campaign brief (safe — returns only name, pitch, guidelines via admin client)
   const campaignBrief = await getCampaignBriefForCreator(params.id)
 
   const rawBrand = deal.brands as unknown
   const brand = (Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name) ?? 'Unknown brand'
-  const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
   const canSubmit = deal.status === 'agreed' || deal.status === 'revision'
   const hasStructuredItems = items && items.length > 0
+  const isNegotiating = deal.status === 'negotiating'
+  const stageIndex = STATUS_TO_STAGE[deal.status] ?? 0
+  const allDone = deal.status === 'complete'
+  const sm = STATUS_META[deal.status] ?? STATUS_META.negotiating
+
+  // Fee calculation
+  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
+  const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+  const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+  const creatorReceives = fee ? fee.creator_receives_paise + overage : null
+
+  // Brief data
+  const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
+  const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
 
   return (
     <main style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
+      <style>{`
+        .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
+        .neonbtn { transition: filter .16s ease, transform .12s ease, box-shadow .16s ease; }
+        .neonbtn:hover { filter: brightness(1.02); transform: translateY(-1px); box-shadow: 0 14px 28px -14px rgba(40,45,25,.55), inset 0 1px 0 rgba(255,255,255,.7); }
+        .pill-hover { transition: background .16s ease, box-shadow .16s ease, transform .12s ease; }
+        .pill-hover:hover { background: var(--card); box-shadow: 0 8px 18px -10px rgba(40,45,25,.4); transform: translateY(-1px); }
+        .viewlink { transition: color .14s ease; cursor: pointer; }
+        .viewlink:hover { color: var(--ink) !important; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal { animation: fadeUp .6s cubic-bezier(.22,1,.36,1) backwards; }
+      `}</style>
 
-      <Link href="/creator/deals" style={backLink}>
-        &larr; My deals
-      </Link>
+      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+        <div className="frame reveal" style={{ width: '100%', maxWidth: 1180, display: 'flex', flexDirection: 'column', gap: 36 }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
-          <h1 style={heading}>{deal.title || 'Untitled deal'}</h1>
-          {deal.deal_ref && (
-            <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', fontWeight: 600, color: '#888' }}>
-              {deal.deal_ref}
-            </span>
+          {/* ── Editorial hero ── */}
+          <div className="surface" style={{ padding: '28px 30px' }}>
+            <Link href="/creator/deals" style={backLinkStyle}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              Back to deals
+            </Link>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={metaLabel}>{deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}</div>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
+                  {isNegotiating ? 'Offer received from ' : 'Deal with '}
+                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
+                </h1>
+              </div>
+              <Link href="/creator/inbox" className="neonbtn" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                height: 42, padding: '0 18px', borderRadius: 11,
+                background: 'var(--neon)', border: 'none',
+                boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
+                textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                Message brand
+              </Link>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: sm.dot, boxShadow: `0 0 0 4px ${sm.glow}` }} />
+                {sm.label}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+                Sent {formatDate(deal.created_at)}
+                {deal.timeline_date && <>{' '}&middot; deliver by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></>}
+              </span>
+            </div>
+          </div>
+
+          {/* ── "Ready to decide?" CTA (negotiating only) ── */}
+          {isNegotiating && (
+            <div className="surface" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>Ready to decide?</div>
+                <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>Accept, counter, or decline — the terms and actions are below.</div>
+              </div>
+              <a href="#decision" className="neonbtn" style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                height: 44, padding: '0 22px', borderRadius: 12,
+                background: 'var(--neon)', border: 'none',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 13, letterSpacing: '-0.01em', color: 'var(--ink)',
+                boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                Ready to decide
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
+              </a>
+            </div>
           )}
-          <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
-            {deal.status}
-          </span>
-        </div>
-        <p style={{ fontSize: '0.8125rem', color: '#888', margin: 0 }}>from {brand}</p>
-      </div>
 
-      {/* Brief (campaign-level or deal-level, read-only) */}
-      {(() => {
-        const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
-        const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
-        if (!pitch && !guidelines) return null
-        return (
-          <div style={{ marginBottom: '1.5rem', padding: '1.25rem', border: '1px solid #e0e7ff', borderRadius: 12, background: '#f8faff' }}>
-            <p style={{ fontSize: '0.625rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#6366f1', margin: '0 0 0.125rem' }}>
-              {campaignBrief ? 'Campaign Brief' : 'Brief'}
-            </p>
-            {campaignBrief?.campaignName && (
-              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading, #111)', margin: '0 0 0.75rem' }}>
-                {campaignBrief.campaignName}
-              </p>
-            )}
-            {pitch && (
-              <div style={{ marginBottom: guidelines ? '0.75rem' : 0 }}>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Pitch</p>
-                <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                  {pitch}
-                </p>
+          {/* ── Progress stepper ── */}
+          <div className="surface" style={{ padding: '18px 16px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+              {STAGES.map((label, i) => {
+                const done = allDone || i < stageIndex
+                const current = !allDone && i === stageIndex
+                const leftBar = i > 0
+                const rightBar = i < STAGES.length - 1
+                const leftColor = (allDone || (i - 1) < stageIndex) ? 'var(--neon-deep)' : 'var(--border-hairline, #EAEAE3)'
+                const rightColor = (allDone || i < stageIndex) ? 'var(--neon-deep)' : 'var(--border-hairline, #EAEAE3)'
+                const dotStyle: React.CSSProperties = {
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+                  ...(done
+                    ? { background: 'var(--neon-deep)', color: 'var(--ink)', border: '2px solid var(--card)', boxShadow: '0 0 0 2px var(--neon-deep), 0 5px 12px -4px rgba(180,210,60,.7)' }
+                    : current
+                      ? { background: 'var(--neon)', color: 'var(--ink)', border: '2px solid var(--card)', boxShadow: '0 0 0 2px var(--neon-deep), 0 0 0 6px rgba(232,255,102,.28)' }
+                      : { background: 'var(--card)', color: 'var(--ink-faint)', border: '2px solid #C6D0DD', boxShadow: 'inset 0 1px 2px rgba(40,45,25,.06)' }),
+                }
+                return (
+                  <div key={i} style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
+                    <div style={{ position: 'relative', width: '100%', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {leftBar && <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: leftColor }} />}
+                      {rightBar && <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: rightColor }} />}
+                      <span style={dotStyle}>
+                        {done && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                        {current && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink)' }} />}
+                      </span>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: current ? 700 : 600, whiteSpace: 'nowrap', color: done || current ? 'var(--ink)' : 'var(--ink-faint)' }}>
+                      {label}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+              <span />
+              <span style={metaLabel}>
+                {stageIndex < STAGES.length - 1 ? `Next \u00B7 ${STAGES[stageIndex + 1]?.toLowerCase() ?? ''}` : 'Complete'}
+              </span>
+            </div>
+          </div>
+
+          {/* ── Offer / Agreed terms ── */}
+          <div className="surface" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 24 }} id="decision">
+            <div style={{ padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                <h3 style={sectionHeading}>{isNegotiating ? 'Offer terms' : 'Agreed terms'}</h3>
+                {deal.agreed_at && <span style={metaRight}>Agreed {formatDateLong(deal.agreed_at)}</span>}
+              </div>
+
+              {/* Price hero */}
+              {creatorReceives != null && (
+                <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginTop: 22, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1.3, minWidth: 240, paddingRight: 32 }}>
+                    <div style={metaLabel}>You receive</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 48, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, marginTop: 8 }}>
+                      {formatINR(creatorReceives)}
+                    </div>
+                    {deal.payment_terms && (
+                      <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 8 }}>{deal.payment_terms}</div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 200, paddingLeft: 32, borderLeft: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18 }}>
+                    {deal.timeline_date && (
+                      <div>
+                        <div style={metaLabel}>Deliver by</div>
+                        <div style={dateValue}>{formatDate(deal.timeline_date + 'T00:00:00')}</div>
+                      </div>
+                    )}
+                    {deal.revision_limit != null && (
+                      <div>
+                        <div style={metaLabel}>Revisions</div>
+                        <div style={dateValue}>{deal.revisions_used ?? 0} / {deal.revision_limit} rounds</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Deliverable items */}
+            {hasStructuredItems && (
+              <div style={{ padding: '22px 24px', borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                  <h3 style={sectionHeading}>Deliverables</h3>
+                  <span style={metaRight}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  {items.map((item, idx) => (
+                    <div key={item.id} style={{ display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}>
+                      <span style={itemIcon}>
+                        {item.platform?.toLowerCase().includes('youtube') ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                        )}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
+                          <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>{item.label}</h4>
+                          {item.price_paise != null && item.price_paise > 0 && (
+                            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatINR(item.price_paise)}</span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
+                          <span style={chipStyle}>{item.platform} {item.handle?.startsWith('@') ? item.handle : `@${item.handle}`}</span>
+                          {item.reel_type && <span style={chipStyle}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>}
+                          {item.boosting_rights && <span style={chipStyle}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '\u221E'}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Fee + total breakdown */}
+                {fee && (
+                  <>
+                    {feeMode === 'on_top' && fee.fee_paise > 0 && (
+                      <div style={termRow}>
+                        <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%), paid by the brand</span>
+                        <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
+                      </div>
+                    )}
+                    {feeMode === 'deducted' && fee.fee_paise > 0 && (
+                      <div style={termRow}>
+                        <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%)</span>
+                        <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
+                      </div>
+                    )}
+                    {deal.price_paise != null && (
+                      <div style={{ ...termRow, borderBottom: 'none' }}>
+                        <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Deal total</span>
+                        <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.brand_pays_paise)}</b>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* "You receive" highlight */}
+                {creatorReceives != null && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+                    padding: '18px 22px', marginTop: 22, borderRadius: 14,
+                    border: '1.5px solid var(--neon-deep)', background: 'color-mix(in oklab, var(--neon) 14%, var(--card))',
+                  }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)' }}>
+                      You receive{deal.payment_terms ? `, ${deal.payment_terms.toLowerCase()}` : ''}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, fontSize: 28, color: 'var(--ink)' }}>
+                      {formatINR(creatorReceives)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Accept / Counter / Decline actions */}
+                {isNegotiating && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', paddingTop: 22, marginTop: 22, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 380 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+                      <div>
+                        <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
+                          Accepting locks the terms above. You can also decline if this isn&apos;t for you.
+                        </span>
+                      </div>
+                    </div>
+                    <AcceptDecline dealId={deal.id} />
+                  </div>
+                )}
               </div>
             )}
-            {guidelines && (
-              <div>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.25rem' }}>Creative Guidelines</p>
-                <p style={{ fontSize: '0.875rem', color: '#333', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                  {guidelines}
-                </p>
+
+            {/* Non-structured terms fallback */}
+            {!hasStructuredItems && (
+              <div style={{ padding: '22px 24px', borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {deal.deliverables && <TermRow label="Deliverables" value={deal.deliverables} />}
+                  {deal.usage_rights && <TermRow label="Usage rights" value={deal.usage_rights} />}
+                  {deal.usage_rights_end_date && <TermRow label="Usage rights expire" value={formatDate(deal.usage_rights_end_date + 'T00:00:00')} />}
+                  {deal.rights_confirmed_at && <TermRow label="Rights confirmed" value={formatDateLong(deal.rights_confirmed_at)} />}
+                  {deal.revision_limit != null && <TermRow label="Revisions" value={`${deal.revisions_used ?? 0} / ${deal.revision_limit} rounds`} />}
+                  {(deal.price_per_extra_revision_paise ?? 0) > 0 && <TermRow label="Per extra revision" value={formatRupees(deal.price_per_extra_revision_paise)} />}
+                  {deal.payment_terms && <TermRow label="Payment terms" value={deal.payment_terms} />}
+                  {deal.requires_shipment && <TermRow label="Product kit" value="A product kit will be sent to you" />}
+                </div>
+
+                {/* Accept / Decline for non-structured items */}
+                {isNegotiating && (
+                  <div style={{ paddingTop: 22, marginTop: 22, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                    <AcceptDecline dealId={deal.id} />
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )
-      })()}
 
-      {/* Terms */}
-      <div style={termsCard}>
-        <h2 style={sectionTitle}>{deal.status === 'negotiating' ? 'Offer Terms' : 'Agreed Terms'}</h2>
-
-        {deal.agreed_at && (
-          <p style={agreedDate}>
-            Agreed on {new Date(deal.agreed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-        )}
-
-        <div style={termsGrid}>
-          {hasStructuredItems ? (
-            <div>
-              <p style={termLabel}>Deliverables</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                {items.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: '#111' }}>
-                      {item.label} <span style={{ color: '#888', fontSize: '0.8125rem' }}>({item.platform} {item.handle.startsWith('@') ? item.handle : `@${item.handle}`})</span>
-                      {item.reel_type && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', marginLeft: '0.25rem' }}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>}
-                      {item.boosting_rights && <span style={{ fontSize: '0.625rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#eff6ff', color: '#2563eb', marginLeft: '0.25rem' }}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '∞'}</span>}
-                    </span>
-                    {item.price_paise != null && item.price_paise > 0 && (
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace', color: '#111', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
-                        {formatRupees(item.price_paise)}
-                      </span>
-                    )}
+          {/* ── Brief section ── */}
+          {(pitch || guidelines) && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                <h3 style={sectionHeading}>The brief in detail</h3>
+                <span style={metaRight}>{brand} &middot; {formatDate(deal.created_at)}</span>
+              </div>
+              {pitch && (
+                <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 32, paddingTop: 34, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                  <div style={metaLabel}>The brief</div>
+                  <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620 }}>{pitch}</p>
+                </div>
+              )}
+              {guidelines && (
+                <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                  <div style={metaLabel}>Creative guidelines</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {guidelines.split('\n').filter(Boolean).map((line: string, i: number) => (
+                      <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <span style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: 'var(--ink)', color: '#FFFFFF' }}>{i + 1}</span>
+                        <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{line}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
-          )}
-          {deal.price_paise != null && deal.price_paise > 0 && (() => {
-            const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
-            const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode)
-            const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
-            const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
-            const creatorTotal = fee.creator_receives_paise + overage
-            // Only show breakdown when something affects the creator's payout:
-            // deducted fee or overage. on_top fee is invisible to creator (brand pays it).
-            const isDeducted = feeMode === 'deducted' && fee.fee_paise > 0
-            const hasBreakdown = isDeducted || overage > 0
-            return hasBreakdown ? (
-              <div>
-                <p style={termLabel}>You receive</p>
-                <p style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
-                  {formatRupees(creatorTotal)}
-                </p>
-                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.15rem 0 0' }}>
-                  {formatRupees(deal.price_paise)} base
-                  {isDeducted && ` − ${formatRupees(fee.fee_paise)} platform fee (${fee.fee_percent}%)`}
-                  {overage > 0 && ` + ${extra} extra rev × ${formatRupees(deal.price_per_extra_revision_paise)}`}
-                </p>
-              </div>
-            ) : (
-              <Term label="You receive" value={formatRupees(creatorTotal)} />
-            )
-          })()}
-          {deal.timeline_date && (
-            <Term
-              label="Delivery by"
-              value={new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-            />
-          )}
-          <Term label="Revisions" value={`${deal.revisions_used} / ${deal.revision_limit}`} />
-          {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
-            <Term label="Per extra revision" value={formatRupees(deal.price_per_extra_revision_paise)} />
-          )}
-          {(deal.revisions_used ?? 0) > (deal.revision_limit ?? 0) && (deal.price_per_extra_revision_paise ?? 0) > 0 && (() => {
-            const extra = (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0)
-            const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
-            return (
-              <div>
-                <p style={termLabel}>Amount owed</p>
-                <p style={{ fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'monospace', color: '#111', margin: 0 }}>
-                  Base {formatRupees(deal.price_paise)} + {extra} extra revision{extra !== 1 ? 's' : ''} × {formatRupees(deal.price_per_extra_revision_paise)} = {formatRupees(deal.price_paise + overage)}
-                </p>
-              </div>
-            )
-          })()}
-          {deal.usage_rights && <Term label="Usage rights" value={deal.usage_rights} />}
-          {deal.usage_rights_end_date && (
-            <Term
-              label="Usage rights expire"
-              value={new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-            />
-          )}
-          {deal.rights_confirmed_at && (
-            <Term
-              label="Rights confirmed"
-              value={new Date(deal.rights_confirmed_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            />
-          )}
-          {deal.payment_terms && <Term label="Payment terms" value={deal.payment_terms} />}
-          {deal.requires_shipment && (
-            <div>
-              <p style={termLabel}>Product shipment</p>
-              <p style={{ fontSize: '0.9375rem', fontWeight: 500, color: '#111', margin: 0 }}>
-                The brand will ship a product to you
-              </p>
+                </div>
+              )}
             </div>
           )}
+
+          {/* ── Structured deliverable items (submit/track section) ── */}
+          {hasStructuredItems && !isNegotiating && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <h3 style={sectionHeading}>Deliverable progress</h3>
+              <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} />
+            </div>
+          )}
+
+          {/* ── Legacy deliverables ── */}
+          {!hasStructuredItems && !isNegotiating && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <h3 style={sectionHeading}>Deliverables</h3>
+              {deliverables && deliverables.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {deliverables.map((d) => (
+                    <div key={d.id} style={{ padding: 12, border: '1px solid var(--border-hairline, #EAEAE3)', borderRadius: 14, background: 'var(--card)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>v{d.version}</span>
+                          {d.note && <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}> — {d.note}</span>}
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{formatDate(d.created_at)}</span>
+                      </div>
+                      {d.external_url && (
+                        <a href={d.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563eb', wordBreak: 'break-all', marginTop: 4, display: 'block' }}>
+                          {d.external_url.length > 60 ? d.external_url.slice(0, 60) + '...' : d.external_url}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(!deliverables || deliverables.length === 0) && !canSubmit && (
+                <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>No deliverables submitted yet.</p>
+              )}
+              {canSubmit && <SubmitDeliverable dealId={deal.id} />}
+            </div>
+          )}
+
+          {/* ── Invoice ── */}
+          {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <InvoiceCard dealId={deal.id} dealRef={deal.deal_ref} invoice={invoice} isPosted={deal.is_posted} />
+            </div>
+          )}
+
+          {/* ── Shipment info ── */}
+          {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <h3 style={sectionHeading}>Product Shipment</h3>
+              {deal.shipment_status === 'pending' && (
+                <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>A product kit will be sent to you</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 2 }}>The brand is preparing your shipment.</div>
+                  </div>
+                </div>
+              )}
+              {deal.shipment_status === 'shipped' && (
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#2563eb', margin: '0 0 4px' }}>
+                    Product shipped{deal.shipped_at && ` on ${formatDate(deal.shipped_at)}`}
+                  </p>
+                  {deal.tracking_link && (
+                    <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563eb', wordBreak: 'break-all', display: 'block' }}>Track shipment</a>
+                  )}
+                  {deal.carrier_note && <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '4px 0 0' }}>{deal.carrier_note}</p>}
+                </div>
+              )}
+              {deal.shipment_status === 'delivered' && (
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a', margin: 0 }}>Product delivered</p>
+              )}
+            </div>
+          )}
+
+          {/* ── Posted ── */}
+          {(['approved', 'paid', 'complete'].includes(deal.status)) && !deal.is_posted && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <PostedCard dealId={deal.id} />
+            </div>
+          )}
+          {deal.is_posted && deal.posted_url && (
+            <div className="surface" style={{ padding: '22px 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#16a34a', boxShadow: '0 0 0 4px rgba(22,163,74,.18)' }} />
+                <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>Content Posted</span>
+              </div>
+              <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563eb', wordBreak: 'break-all', marginTop: 8, display: 'block' }}>
+                {deal.posted_url.length > 60 ? deal.posted_url.slice(0, 60) + '...' : deal.posted_url}
+              </a>
+              {deal.posted_at && <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 4 }}>Posted {formatDateLong(deal.posted_at)}</div>}
+            </div>
+          )}
+
+          {/* ── Chat thread ── */}
+          <CreatorThread dealId={deal.id} dealStatus={deal.status} initialMessages={messages ?? []} />
+
         </div>
       </div>
-
-      {/* Accept / Decline for negotiating deals */}
-      {deal.status === 'negotiating' && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <AcceptDecline dealId={deal.id} />
-        </div>
-      )}
-
-      {/* Deliverable Items (structured) */}
-      {hasStructuredItems && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h2 style={sectionTitle}>Deliverables</h2>
-          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} />
-        </div>
-      )}
-
-      {/* Legacy deliverables (for deals created before structured items) */}
-      {!hasStructuredItems && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <h2 style={sectionTitle}>Deliverables</h2>
-
-          {deliverables && deliverables.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-              {deliverables.map((d) => (
-                <div key={d.id} style={deliverableRow}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#555' }}>v{d.version}</span>
-                      {d.note && <span style={{ fontSize: '0.75rem', color: '#888' }}> — {d.note}</span>}
-                    </div>
-                    <span style={{ fontSize: '0.6875rem', color: '#aaa' }}>
-                      {new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
-                  {d.external_url && (
-                    <a
-                      href={d.external_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all', marginTop: '0.25rem', display: 'block' }}
-                    >
-                      {d.external_url.length > 60 ? d.external_url.slice(0, 60) + '...' : d.external_url}
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {(!deliverables || deliverables.length === 0) && !canSubmit && (
-            <p style={{ fontSize: '0.8125rem', color: '#888' }}>No deliverables submitted yet.</p>
-          )}
-
-          {canSubmit && <SubmitDeliverable dealId={deal.id} />}
-        </div>
-      )}
-
-      {/* Invoice — show when deal is approved (or later) */}
-      {(deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <InvoiceCard dealId={deal.id} dealRef={deal.deal_ref} invoice={invoice} isPosted={deal.is_posted} />
-        </div>
-      )}
-
-      {/* Shipment info (read-only for creator) */}
-      {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
-        <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #e5e5e5', borderRadius: 12, background: '#fafafa' }}>
-          <h2 style={sectionTitle}>Product Shipment</h2>
-          {deal.shipment_status === 'pending' && (
-            <p style={{ fontSize: '0.8125rem', color: '#888', margin: 0 }}>
-              The brand will ship the product to you.
-            </p>
-          )}
-          {deal.shipment_status === 'shipped' && (
-            <div>
-              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#2563eb', margin: '0 0 0.25rem' }}>
-                Product shipped{deal.shipped_at && ` on ${new Date(deal.shipped_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
-              </p>
-              {deal.tracking_link && (
-                <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all', display: 'block' }}>
-                  Track shipment
-                </a>
-              )}
-              {deal.carrier_note && <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.25rem 0 0' }}>{deal.carrier_note}</p>}
-              {canSubmit && (
-                <p style={{ fontSize: '0.75rem', color: '#888', margin: '0.5rem 0 0', fontStyle: 'italic' }}>
-                  You can start recording once your product arrives.
-                </p>
-              )}
-            </div>
-          )}
-          {deal.shipment_status === 'delivered' && (
-            <div>
-              <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#16a34a', margin: '0 0 0.25rem' }}>
-                Product delivered
-              </p>
-              {deal.tracking_link && (
-                <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.75rem', color: '#2563eb', wordBreak: 'break-all', display: 'block' }}>
-                  Tracking link
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Posted — creator marks content as live */}
-      {(['approved', 'paid', 'complete'].includes(deal.status)) && !deal.is_posted && (
-        <div style={{ marginTop: '1.5rem' }}>
-          <PostedCard dealId={deal.id} />
-        </div>
-      )}
-      {deal.is_posted && deal.posted_url && (
-        <div style={{ marginTop: '1.5rem', padding: '1rem', border: '1px solid #bbf7d0', borderRadius: 12, background: '#f0fdf4' }}>
-          <p style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#16a34a', margin: '0 0 0.25rem' }}>
-            Content Posted
-          </p>
-          <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: '#2563eb', wordBreak: 'break-all' }}>
-            {deal.posted_url.length > 60 ? deal.posted_url.slice(0, 60) + '...' : deal.posted_url}
-          </a>
-          {deal.posted_at && (
-            <p style={{ fontSize: '0.6875rem', color: '#888', margin: '0.25rem 0 0' }}>
-              Posted {new Date(deal.posted_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Chat thread */}
-      <CreatorThread dealId={deal.id} dealStatus={deal.status} initialMessages={messages ?? []} />
     </main>
   )
 }
 
-function Term({ label, value }: { label: string; value: string }) {
+function TermRow({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p style={termLabel}>{label}</p>
-      <p style={termValue}>{value}</p>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '11px 0', borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+      <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{label}</span>
+      <b style={{ fontSize: 14, fontWeight: 700 }}>{value}</b>
     </div>
   )
 }
 
-/* ── Styles ─────────────────────────────────────────────────────── */
+/* ── Style fragments ── */
 
 const wrapper: React.CSSProperties = {
-  padding: '1.5rem 1rem',
-  maxWidth: 900,
-  margin: '0 auto',
+  flex: 1, minWidth: 0,
+  padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)',
 }
 
-const backLink: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: '#888',
-  textDecoration: 'none',
-  display: 'inline-block',
-  marginBottom: '1rem',
+const backLinkStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)',
+  textDecoration: 'none', whiteSpace: 'nowrap',
 }
 
-const heading: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.25rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: 0,
+const metaLabel: React.CSSProperties = {
+  fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint)',
 }
 
-const sectionTitle: React.CSSProperties = {
-  fontSize: '0.75rem',
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: '#555',
-  margin: '0 0 0.75rem',
+const sectionHeading: React.CSSProperties = {
+  fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0,
 }
 
-const termsCard: React.CSSProperties = {
-  padding: '1.25rem',
-  border: '1px solid #e5e5e5',
-  borderRadius: 12,
-  background: '#fff',
+const metaRight: React.CSSProperties = {
+  fontSize: 11.5, color: 'var(--ink-soft)',
 }
 
-const agreedDate: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: '#16a34a',
-  fontWeight: 600,
-  margin: '0 0 1rem',
+const dateValue: React.CSSProperties = {
+  fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', marginTop: 5,
 }
 
-const termsGrid: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem',
+const termRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14,
+  padding: '13px 0', marginTop: 6, borderTop: '1px solid var(--border-hairline, #EAEAE3)',
 }
 
-const termLabel: React.CSSProperties = {
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: '#888',
-  margin: '0 0 0.1rem',
+const itemIcon: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 11, flexShrink: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
 }
 
-const termValue: React.CSSProperties = {
-  fontSize: '0.9375rem',
-  fontWeight: 500,
-  color: '#111',
-  margin: 0,
-}
-
-const deliverableRow: React.CSSProperties = {
-  padding: '0.75rem',
-  border: '1px solid #e5e5e5',
-  borderRadius: 8,
-  background: '#fafafa',
+const chipStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  padding: '5px 11px', borderRadius: 999,
+  background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+  fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)',
 }
