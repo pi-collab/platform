@@ -74,7 +74,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -141,6 +141,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   // Brief content
   const briefPitch = (deal as any).brief_pitch ?? campaignBrief?.pitch ?? null
   const briefGuidelines = (deal as any).brief_guidelines ?? campaignBrief?.guidelines ?? null
+  const briefAvoid = (deal as any).brief_avoid as string | null
+  const briefAttachments = ((deal as any).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 
   // Group items by platform+handle for deliverables display
   const groupedItems = new Map<string, typeof items>()
@@ -653,7 +655,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
         )}
 
         {/* ── Brief details ── */}
-        {(briefPitch || briefGuidelines || deal.usage_rights || deal.payment_terms || deal.timeline_date || deal.revision_limit != null) && (
+        {(briefPitch || briefGuidelines || briefAvoid || briefAttachments.length > 0 || deal.usage_rights || deal.payment_terms || deal.timeline_date || deal.revision_limit != null) && (
           ['negotiating', 'agreed'].includes(deal.status) ? (
           <div className="surface" style={{ padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
@@ -714,12 +716,12 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               </div>
             </div>
 
-            {/* "View more details" toggle — guidelines, shipment, extra revision pricing, rights confirmed */}
-            {(briefGuidelines || deal.requires_shipment || (deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
+            {/* "View more details" toggle — guidelines, avoid, attachments, shipment, extra revision pricing, rights confirmed */}
+            {(briefGuidelines || briefAvoid || briefAttachments.length > 0 || deal.requires_shipment || (deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
               <BriefDetailsToggle>
                 <div className="brief-grid" style={{ marginTop: 20 }}>
-                  {/* Guidelines + shipment */}
-                  {(briefGuidelines || deal.requires_shipment) && (
+                  {/* Guidelines + avoid + shipment */}
+                  {(briefGuidelines || briefAvoid || deal.requires_shipment) && (
                     <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
                       {briefGuidelines && (
                         <>
@@ -727,37 +729,57 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefGuidelines}</p>
                         </>
                       )}
+                      {briefAvoid && (
+                        <>
+                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: briefGuidelines ? 6 : 0 }}>What to avoid</div>
+                          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefAvoid}</p>
+                        </>
+                      )}
                       {deal.requires_shipment && (
                         <>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: briefGuidelines ? 6 : 0 }}>Product shipment</div>
+                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: (briefGuidelines || briefAvoid) ? 6 : 0 }}>Product shipment</div>
                           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0 }}>Included &mdash; shipped once agreed.</p>
                         </>
                       )}
                     </div>
                   )}
 
-                  {/* More terms */}
-                  {((deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
-                    <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 14 }}>More terms</div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
-                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Per extra revision</span>
-                            <b style={{ fontSize: 13.5, fontWeight: 700 }}>{formatRupees(deal.price_per_extra_revision_paise)}</b>
+                  {/* Attachments + more terms */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+                    {briefAttachments.length > 0 && (
+                      <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Attachments</div>
+                        {briefAttachments.map((att) => (
+                          <div key={att.storage_path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--hairline)' }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                            <span style={{ fontSize: 11, color: 'var(--ink-faint)', flexShrink: 0 }}>{(att.size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
                           </div>
-                        )}
-                        {deal.rights_confirmed_at && (
-                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Rights confirmed</span>
-                            <b style={{ fontSize: 13.5, fontWeight: 700 }}>
-                              {new Date(deal.rights_confirmed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </b>
-                          </div>
-                        )}
+                        ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                    {((deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
+                      <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 14 }}>More terms</div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Per extra revision</span>
+                              <b style={{ fontSize: 13.5, fontWeight: 700 }}>{formatRupees(deal.price_per_extra_revision_paise)}</b>
+                            </div>
+                          )}
+                          {deal.rights_confirmed_at && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Rights confirmed</span>
+                              <b style={{ fontSize: 13.5, fontWeight: 700 }}>
+                                {new Date(deal.rights_confirmed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </b>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </BriefDetailsToggle>
             )}

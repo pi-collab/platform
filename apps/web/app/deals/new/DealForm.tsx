@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createDeal } from '../actions'
+import { uploadBriefAttachment, removeBriefAttachment } from './upload-actions'
+import PointsInput from './PointsInput'
 import { useRouter } from 'next/navigation'
 import { calculateFee } from '@/lib/fee'
 import type { DealPrefill } from './page'
@@ -130,6 +132,9 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
   const [message, setMessage] = useState('')
   const [briefPitch, setBriefPitch] = useState(prefill?.brief_pitch ?? '')
   const [briefGuidelines, setBriefGuidelines] = useState(prefill?.brief_guidelines ?? '')
+  const [briefAvoid, setBriefAvoid] = useState('')
+  const [briefAttachments, setBriefAttachments] = useState<{ name: string; storage_path: string; size_bytes: number; content_type: string }[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
   const [priceOverride, setPriceOverride] = useState('')
   const [requiresShipment, setRequiresShipment] = useState(false)
   const [campaignId, setCampaignId] = useState('')
@@ -268,7 +273,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     if (!title.trim()) { setError('Deal title is required'); return }
     if (selectedCount === 0) { setError('Select at least one product'); return }
     if (hasMissingPrice) { setError('Enter a price for all "price on request" products'); return }
-    if (isNaN(finalPaise) || finalPaise <= 0) { setError('Total price must be greater than \u20B90'); return }
+    if (isNaN(finalPaise) || finalPaise <= 0) { setError('Total price must be greater than ₹0'); return }
 
     // Validate: every selected deliverable needs a delivery date
     const missingDates: string[] = []
@@ -325,6 +330,8 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       campaign_id: campaignId || undefined,
       brief_pitch: briefPitch || undefined,
       brief_guidelines: briefGuidelines || undefined,
+      brief_avoid: briefAvoid || undefined,
+      brief_attachments: briefAttachments.length > 0 ? briefAttachments : undefined,
     })
 
     if (res?.error) { setLoading(false); setError(res.error) }
@@ -585,7 +592,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                                 {!p.display_price && (
                                   <input
                                     type="number" min="0" step="1"
-                                    placeholder="Your price (\u20B9)"
+                                    placeholder="Your price (₹)"
                                     className="dinput"
                                     value={sel?.customPricePaise != null ? String(sel.customPricePaise / 100) : ''}
                                     onChange={(e) => setCustomPrice(p.id, e.target.value)}
@@ -670,11 +677,68 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Creative guidelines</div>
-              <textarea className="dinput" rows={4} placeholder="Tone, must-mentions, hashtags, anything to avoid." value={briefGuidelines} onChange={(e) => setBriefGuidelines(e.target.value)} maxLength={2000} style={{ width: '100%' }} />
+              <PointsInput value={briefGuidelines} onChange={setBriefGuidelines} placeholder="Tone, must-mentions, hashtags…" />
+            </div>
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>What to avoid</div>
+              <PointsInput value={briefAvoid} onChange={setBriefAvoid} placeholder="Competitor mentions, off-brand language…" />
+            </div>
+            <div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Attachments</div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginBottom: 12 }}>Mood boards, brand guidelines, reference videos — up to 50 MB each.</div>
+              {briefAttachments.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                  {briefAttachments.map((att, i) => (
+                    <div key={att.storage_path} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--hairline)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                        <span style={{ fontSize: 11, color: 'var(--ink-faint)', flexShrink: 0 }}>{(att.size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await removeBriefAttachment(att.storage_path)
+                          setBriefAttachments((prev) => prev.filter((_, j) => j !== i))
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-soft)' }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10, border: '1px dashed var(--hairline)', background: 'var(--card)', cursor: uploadingFile ? 'wait' : 'pointer', opacity: uploadingFile ? 0.6 : 1 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M12 3v13M7 8l5-5 5 5" /></svg>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-soft)' }}>{uploadingFile ? 'Uploading\u2026' : 'Add file'}</span>
+                <input
+                  type="file"
+                  style={{ display: 'none' }}
+                  disabled={uploadingFile}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    if (file.size > 50 * 1024 * 1024) {
+                      alert('File too large. Maximum size is 50 MB.')
+                      e.target.value = ''
+                      return
+                    }
+                    setUploadingFile(true)
+                    const fd = new FormData()
+                    fd.append('file', file)
+                    const res = await uploadBriefAttachment(fd)
+                    setUploadingFile(false)
+                    e.target.value = ''
+                    if (res.error) { alert(res.error); return }
+                    if (res.attachment) setBriefAttachments((prev) => [...prev, res.attachment!])
+                  }}
+                />
+              </label>
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Message</div>
-              <textarea className="dinput" rows={3} placeholder="Optional \u2014 a note to send with the offer." value={message} onChange={(e) => setMessage(e.target.value)} style={{ width: '100%' }} />
+              <textarea className="dinput" rows={3} placeholder="Optional — a note to send with the offer." value={message} onChange={(e) => setMessage(e.target.value)} style={{ width: '100%' }} />
               <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 9 }}>This becomes the first message in your thread with {firstName}.</div>
             </div>
           </div>

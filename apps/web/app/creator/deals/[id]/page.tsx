@@ -314,8 +314,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             )}
           </div>
 
-          {/* ── Deliverable items breakdown ── */}
-          {hasStructuredItems && (
+          {/* ── Deliverable items breakdown (hidden during agreed — shown during negotiating for accept/decline, and post-agreed for reference) ── */}
+          {hasStructuredItems && deal.status !== 'agreed' && (
             <div className="surface" style={{ padding: '22px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                 <h3 style={sectionHeading}>Deliverables</h3>

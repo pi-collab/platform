@@ -36,12 +36,14 @@ interface CreateDealInput {
   fee_pct_override?: number
   brief_pitch?: string
   brief_guidelines?: string
+  brief_avoid?: string
+  brief_attachments?: { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 }
 
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyApprovedBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -104,6 +106,8 @@ export async function createDeal(input: CreateDealInput) {
       source: source || 'platform',
       brief_pitch: brief_pitch?.trim() || null,
       brief_guidelines: brief_guidelines?.trim() || null,
+      brief_avoid: brief_avoid?.trim() || null,
+      brief_attachments: brief_attachments && brief_attachments.length > 0 ? brief_attachments : [],
     })
     .select('id')
     .single()
