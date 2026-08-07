@@ -101,9 +101,9 @@ const SUBMISSION_TYPES = new Set(['deliverable_submitted', 'content_posted', 'su
 const OFFER_TYPES = new Set(['offer_sent', 'offer_declined', 'offer'])
 const PAYMENT_TYPES = new Set(['invoice_issued', 'invoice_accepted', 'payment_paid', 'payment', 'invoice'])
 // Brand: deals = everything except submissions/payments/messages
-const BRAND_DEAL_TYPES = new Set(['offer_sent', 'deal_agreed', 'offer_declined', 'deal_approved', 'revision_requested', 'product_shipped', 'product_delivered', 'accepted', 'complete', 'cancelled', 'declined', 'agreed', 'approval', 'shipping'])
+const BRAND_DEAL_TYPES = new Set(['offer_sent', 'deal_agreed', 'offer_declined', 'deal_approved', 'revision_requested', 'product_shipped', 'product_delivered', 'accepted', 'complete', 'cancelled', 'declined', 'agreed', 'approval', 'shipping', 'counter_offer', 'counter_accepted'])
 // Creator: deals = invoice, approval, shipping, delivery (per HTML)
-const CREATOR_DEAL_TYPES = new Set(['invoice_issued', 'invoice_accepted', 'deal_agreed', 'deal_approved', 'product_shipped', 'product_delivered', 'invoice', 'approval', 'shipping', 'delivery', 'agreed', 'complete'])
+const CREATOR_DEAL_TYPES = new Set(['invoice_issued', 'invoice_accepted', 'deal_agreed', 'deal_approved', 'product_shipped', 'product_delivered', 'invoice', 'approval', 'shipping', 'delivery', 'agreed', 'complete', 'counter_offer', 'counter_accepted'])
 
 function matchesFilter(n: Notification, f: Filter, allRead: boolean, variant: 'brand' | 'creator'): boolean {
   if (f === 'all') return true
@@ -141,6 +141,8 @@ const BRAND_DESC: Record<string, string> = {
   agreed: 'Deal accepted \u00B7 the deal is now active',
   declined: 'Offer declined',
   cancelled: 'Deal cancelled',
+  counter_offer: 'Counter offer received \u00B7 review their terms',
+  counter_accepted: 'Counter accepted \u00B7 terms are now locked',
 }
 
 const CREATOR_DESC: Record<string, string> = {
@@ -172,6 +174,8 @@ const CREATOR_DESC: Record<string, string> = {
   cancelled: 'Deal cancelled',
   offer: 'New offer \u00B7 review the terms',
   approved: 'Deliverables approved',
+  counter_offer: 'New counter offer \u00B7 review updated terms',
+  counter_accepted: 'Counter accepted \u00B7 deal is now active',
 }
 
 function typeDescription(type: string, variant: 'brand' | 'creator'): string {

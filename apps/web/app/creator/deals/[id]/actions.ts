@@ -36,11 +36,29 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
     return { status: 'error', message: `Cannot accept a deal that is "${deal.status}".` }
   }
 
+  const admin = createAdminClient()
   const now = new Date().toISOString()
+
+  // Check if there's a brand counter to apply
+  const { data: brandCounterEvents } = await admin
+    .from('events')
+    .select('detail')
+    .eq('deal_id', dealId)
+    .eq('event_type', 'deal.brand_counter')
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const brandCounter = brandCounterEvents?.[0]?.detail as { counter_items?: { id: string; label: string; price_paise: number }[]; counter_total_paise?: number } | undefined
+
+  // Update deal status + total price from brand counter if applicable
+  const dealUpdate: Record<string, unknown> = { status: 'agreed', rights_confirmed_at: now }
+  if (brandCounter?.counter_total_paise) {
+    dealUpdate.price_paise = brandCounter.counter_total_paise
+  }
 
   const { error: updateErr } = await supabase
     .from('deals')
-    .update({ status: 'agreed', rights_confirmed_at: now })
+    .update(dealUpdate)
     .eq('id', dealId)
     .eq('status', 'negotiating')
 
@@ -48,8 +66,18 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
     return { status: 'error', message: `Failed to accept deal: ${updateErr.message}` }
   }
 
+  // Update individual deliverable item prices from brand counter
+  if (brandCounter?.counter_items) {
+    for (const ci of brandCounter.counter_items) {
+      await admin
+        .from('deal_deliverable_items')
+        .update({ price_paise: ci.price_paise })
+        .eq('id', ci.id)
+        .eq('deal_id', dealId)
+    }
+  }
+
   // Snapshot rights terms in an audit event — survives future edits (e.g. extensions)
-  const admin = createAdminClient()
   await admin.from('events').insert({
     deal_id: dealId,
     event_type: 'deal.rights_confirmed',
@@ -124,6 +152,73 @@ export async function declineDeal(dealId: string, reason?: string): Promise<Deli
 
   // Notify brand: offer declined
   notifyDealParty(dealId, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`)
+
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { status: 'success' }
+}
+
+/**
+ * Send a counter offer — creator proposes new per-item prices + optional note.
+ * Deal stays in 'negotiating'; brand is notified.
+ */
+export async function counterOffer(
+  dealId: string,
+  counterItems: { id: string; label: string; price_paise: number }[],
+  note?: string,
+): Promise<DeliverableResult> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { status: 'error', message: 'Not authenticated.' }
+
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { status: 'error', message: 'Deal not found.' }
+  if (deal.status !== 'negotiating') {
+    return { status: 'error', message: `Cannot counter a deal that is "${deal.status}".` }
+  }
+
+  const totalPaise = counterItems.reduce((sum, i) => sum + i.price_paise, 0)
+  if (totalPaise <= 0) {
+    return { status: 'error', message: 'Counter total must be greater than zero.' }
+  }
+
+  // Log the counter as an audit event
+  const admin = createAdminClient()
+  await admin.from('events').insert({
+    deal_id: dealId,
+    event_type: 'deal.counter_offer',
+    detail: {
+      counter_items: counterItems,
+      counter_total_paise: totalPaise,
+      note: note?.trim() || null,
+    },
+  })
+
+  // Send a message summarizing the counter
+  const { data: profile } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (profile) {
+    const lines = counterItems.map((i) => `${i.label}: \u20B9${(i.price_paise / 100).toLocaleString('en-IN')}`)
+    const body = `Counter offer:\n${lines.join('\n')}\nTotal: \u20B9${(totalPaise / 100).toLocaleString('en-IN')}${note?.trim() ? `\n\nNote: ${note.trim()}` : ''}`
+    await supabase.from('messages').insert({
+      deal_id: dealId,
+      sender_id: profile.id,
+      sender_party: 'creator',
+      body,
+    })
+  }
+
+  // Notify brand
+  notifyDealParty(dealId, 'brand', 'counter_offer', (t) => `Counter offer received for "${t}"`)
+
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
