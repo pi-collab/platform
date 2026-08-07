@@ -144,6 +144,21 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const briefAvoid = (deal as any).brief_avoid as string | null
   const briefAttachments = ((deal as any).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 
+  // Generate signed URLs for brief attachments
+  const attachmentUrls: Record<string, string> = {}
+  if (briefAttachments.length > 0) {
+    const results = await Promise.all(
+      briefAttachments.map((att) =>
+        supabase.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
+      )
+    )
+    results.forEach((res, i) => {
+      if (res.data?.signedUrl) {
+        attachmentUrls[briefAttachments[i].storage_path] = res.data.signedUrl
+      }
+    })
+  }
+
   // Group items by platform+handle for deliverables display
   const groupedItems = new Map<string, typeof items>()
   if (hasItems) {
@@ -667,161 +682,206 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               )}
             </div>
 
-            {/* Primary row: brief pitch + core terms (always visible) */}
-            <div className="brief-grid" style={{ marginTop: 24 }}>
-              {/* Brief text */}
-              {briefPitch && (
-                <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Brief</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.62, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefPitch}</p>
-                </div>
-              )}
+            {/* Brief pitch — 190px label + content grid */}
+            {briefPitch && (
+              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>The brief</div>
+                <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap' }}>{briefPitch}</p>
+              </div>
+            )}
 
-              {/* Core terms */}
-              <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Terms</div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {deal.timeline_date && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Delivery date</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>
-                        {new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </b>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Revisions</span>
-                    <b style={{ fontSize: 13.5, fontWeight: 700 }}>
-                      {deal.revision_limit ?? 0} included{deal.revisions_used ? ` \u00B7 ${deal.revisions_used} used` : ''}
-                    </b>
-                  </div>
-                  {deal.usage_rights && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Usage rights</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>
-                        {deal.usage_rights}
-                        {deal.usage_rights_end_date && (
-                          <span> &middot; to {new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                        )}
-                      </b>
-                    </div>
-                  )}
-                  {deal.payment_terms && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Payment terms</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>{deal.payment_terms}</b>
-                    </div>
-                  )}
+            {/* Attachments — grid of clickable file cards */}
+            {briefAttachments.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Attachments</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                  {briefAttachments.map((att) => {
+                    const signedUrl = attachmentUrls[att.storage_path]
+                    const ext = att.name.split('.').pop()?.toUpperCase() || 'FILE'
+                    const sizeMB = (att.size_bytes / (1024 * 1024)).toFixed(1)
+                    return (
+                      <a key={att.storage_path} href={signedUrl || '#'} target="_blank" rel="noopener noreferrer" className="att-card" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 13px', borderRadius: 14, background: 'var(--card)', border: '1px solid var(--hairline)', boxShadow: '0 1px 2px rgba(22,23,15,.03)', cursor: 'pointer', textDecoration: 'none' }}>
+                        <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                        </span>
+                        <span style={{ minWidth: 0 }}>
+                          <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                          <span style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 2 }}>{ext} · {sizeMB} MB</span>
+                        </span>
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* "View more details" toggle — guidelines, avoid, attachments, shipment, extra revision pricing, rights confirmed */}
-            {(briefGuidelines || briefAvoid || briefAttachments.length > 0 || deal.requires_shipment || (deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
-              <BriefDetailsToggle>
-                <div className="brief-grid" style={{ marginTop: 20 }}>
-                  {/* Guidelines + avoid + shipment */}
-                  {(briefGuidelines || briefAvoid || deal.requires_shipment) && (
-                    <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-                      {briefGuidelines && (
-                        <>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Creative guidelines</div>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefGuidelines}</p>
-                        </>
-                      )}
-                      {briefAvoid && (
-                        <>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: briefGuidelines ? 6 : 0 }}>What to avoid</div>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefAvoid}</p>
-                        </>
-                      )}
-                      {deal.requires_shipment && (
-                        <>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: (briefGuidelines || briefAvoid) ? 6 : 0 }}>Product shipment</div>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', margin: 0 }}>Included &mdash; shipped once agreed.</p>
-                        </>
-                      )}
-                    </div>
-                  )}
+            {/* Full terms — toggle */}
+            <BriefDetailsToggle label="Full terms">
+              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Deal total</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(deal.price_paise)}</b>
+                </div>
+                {feeInfo && feeInfo.fee_paise > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({feeInfo.fee_percent}%){feeInfo.fee_mode === 'on_top' ? ', paid by you' : ', deducted from creator'}</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
+                  </div>
+                )}
+                {deal.timeline_date && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Delivery date</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
+                  </div>
+                )}
+                {deal.usage_rights && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.usage_rights}{deal.usage_rights_end_date && `, to ${new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</b>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatRupees(deal.price_per_extra_revision_paise)}` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
+                </div>
+                {deal.payment_terms && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Payment terms</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.payment_terms}</b>
+                  </div>
+                )}
+                {deal.rights_confirmed_at && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Rights confirmed</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.rights_confirmed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                  </div>
+                )}
+              </div>
+            </BriefDetailsToggle>
 
-                  {/* Attachments + more terms */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-                    {briefAttachments.length > 0 && (
-                      <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Attachments</div>
-                        {briefAttachments.map((att) => (
-                          <div key={att.storage_path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--hairline)' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
-                            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
-                            <span style={{ fontSize: 11, color: 'var(--ink-faint)', flexShrink: 0 }}>{(att.size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
+            {/* Creative guidelines — toggle section */}
+            {(briefGuidelines || briefAvoid) && (() => {
+              const guidelinePoints: string[] = briefGuidelines ? briefGuidelines.split('\n').filter(Boolean) : []
+              const avoidPoints: string[] = briefAvoid ? briefAvoid.split('\n').filter(Boolean) : []
+              const parts: string[] = []
+              if (guidelinePoints.length > 0) parts.push(`${guidelinePoints.length} guideline${guidelinePoints.length !== 1 ? 's' : ''}`)
+              if (avoidPoints.length > 0) parts.push(`${avoidPoints.length} to avoid`)
+              return (
+                <BriefDetailsToggle label="Creative guidelines" subtitle={parts.join(' · ')}>
+                  {/* Guidelines */}
+                  {guidelinePoints.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 28 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Creative guidelines</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {guidelinePoints.map((point, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                            <span style={{ width: 22, height: 22, borderRadius: 7, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: 'var(--ink)', color: '#FFFFFF' }}>{i + 1}</span>
+                            <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
                           </div>
                         ))}
                       </div>
-                    )}
-                    {((deal.price_per_extra_revision_paise ?? 0) > 0 || deal.rights_confirmed_at) && (
-                      <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginBottom: 14 }}>More terms</div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          {(deal.price_per_extra_revision_paise ?? 0) > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Per extra revision</span>
-                              <b style={{ fontSize: 13.5, fontWeight: 700 }}>{formatRupees(deal.price_per_extra_revision_paise)}</b>
-                            </div>
-                          )}
-                          {deal.rights_confirmed_at && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Rights confirmed</span>
-                              <b style={{ fontSize: 13.5, fontWeight: 700 }}>
-                                {new Date(deal.rights_confirmed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </b>
-                            </div>
-                          )}
-                        </div>
+                    </div>
+                  )}
+
+                  {/* Avoid */}
+                  {avoidPoints.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 30, paddingTop: 28, borderTop: guidelinePoints.length > 0 ? '1px solid var(--border-hairline)' : 'none' }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Please avoid</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {avoidPoints.map((point, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.2" strokeLinecap="round" style={{ flex: 'none', marginTop: 4 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </BriefDetailsToggle>
+                    </div>
+                  )}
+                </BriefDetailsToggle>
+              )
+            })()}
+
+            {/* Shipment note */}
+            {deal.requires_shipment && (
+              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Product shipment</div>
+                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: 0 }}>Included — shipped once agreed.</p>
+              </div>
             )}
           </div>
           ) : (
           <CollapsibleSection title="Brief details">
-            {/* Primary row: brief pitch + core terms */}
-            <div className="brief-grid" style={{ marginTop: 24 }}>
-              {briefPitch && (
-                <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Brief</div>
-                  <p style={{ fontSize: 14, lineHeight: 1.62, color: 'var(--ink)', margin: 0, whiteSpace: 'pre-wrap' }}>{briefPitch}</p>
-                </div>
-              )}
-              <div style={{ borderRadius: 16, border: '1px solid var(--hairline, #EAEAE3)', padding: 22, display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Terms</div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {deal.timeline_date && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Delivery date</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Revisions</span>
-                    <b style={{ fontSize: 13.5, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{deal.revisions_used ? ` \u00B7 ${deal.revisions_used} used` : ''}</b>
-                  </div>
-                  {deal.usage_rights && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Usage rights</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>{deal.usage_rights}{deal.usage_rights_end_date && <span> &middot; to {new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}</b>
-                    </div>
-                  )}
-                  {deal.payment_terms && (
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, padding: '11px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Payment terms</span>
-                      <b style={{ fontSize: 13.5, fontWeight: 700 }}>{deal.payment_terms}</b>
-                    </div>
-                  )}
+            {briefPitch && (
+              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>The brief</div>
+                <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap' }}>{briefPitch}</p>
+              </div>
+            )}
+            {briefAttachments.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Attachments</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                  {briefAttachments.map((att) => {
+                    const signedUrl = attachmentUrls[att.storage_path]
+                    const ext = att.name.split('.').pop()?.toUpperCase() || 'FILE'
+                    const sizeMB = (att.size_bytes / (1024 * 1024)).toFixed(1)
+                    return (
+                      <a key={att.storage_path} href={signedUrl || '#'} target="_blank" rel="noopener noreferrer" className="att-card" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 13px', borderRadius: 14, background: 'var(--card)', border: '1px solid var(--hairline)', boxShadow: '0 1px 2px rgba(22,23,15,.03)', cursor: 'pointer', textDecoration: 'none' }}>
+                        <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                        </span>
+                        <span style={{ minWidth: 0 }}>
+                          <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                          <span style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 2 }}>{ext} · {sizeMB} MB</span>
+                        </span>
+                      </a>
+                    )
+                  })}
                 </div>
               </div>
-            </div>
+            )}
+            <BriefDetailsToggle label="Full terms">
+              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Deal total</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(deal.price_paise)}</b>
+                </div>
+                {feeInfo && feeInfo.fee_paise > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({feeInfo.fee_percent}%){feeInfo.fee_mode === 'on_top' ? ', paid by you' : ', deducted from creator'}</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
+                  </div>
+                )}
+                {deal.timeline_date && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Delivery date</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
+                  </div>
+                )}
+                {deal.usage_rights && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.usage_rights}{deal.usage_rights_end_date && `, to ${new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</b>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatRupees(deal.price_per_extra_revision_paise)}` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
+                </div>
+                {deal.payment_terms && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Payment terms</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.payment_terms}</b>
+                  </div>
+                )}
+                {deal.rights_confirmed_at && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Rights confirmed</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.rights_confirmed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                  </div>
+                )}
+              </div>
+            </BriefDetailsToggle>
           </CollapsibleSection>
           )
         )}
