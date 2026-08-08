@@ -55,11 +55,16 @@ interface CampaignDeal {
   internalNote: string | null
 }
 
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
-  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
-  return `₹${rupees.toLocaleString('en-IN')}`
+function formatINR(paise: number): string {
+  const rupees = Math.round(paise / 100)
+  const s = String(rupees)
+  const last3 = s.slice(-3)
+  const rest = s.slice(0, -3)
+  return '\u20B9' + (rest ? rest.replace(/\B(?=(\d\d)+(?!\d))/g, ',') + ',' + last3 : last3)
+}
+
+function getInitials(name: string) {
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function draftStatus(d: Draft): 'ready' | 'draft' {
@@ -78,6 +83,12 @@ function placementSummary(placements: DraftPlacement[]): string {
   return Array.from(counts.entries())
     .map(([k, n]) => (n > 1 ? `${n}× ${k}` : k))
     .join(' + ')
+}
+
+const STAGE_DOTS: Record<string, string> = {
+  draft: '#D8DACF',
+  ready: 'var(--sec-mid-2)',
+  sent: 'var(--neon-deep)',
 }
 
 export default function CampaignRoster({
@@ -101,18 +112,21 @@ export default function CampaignRoster({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showSendModal, setShowSendModal] = useState(false)
   const [bulkRemoving, setBulkRemoving] = useState(false)
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null) // "draft:{id}" or "deal:{id}"
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteValue, setNoteValue] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [rosterFilter, setRosterFilter] = useState<'all' | 'draft' | 'ready'>('all')
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
-  // Build set of creator IDs that already have deals in this campaign
   const sentCreatorIds = new Set(campaignDeals.map((d) => d.creatorId))
-
   const readyDrafts = drafts.filter((d) => draftStatus(d) === 'ready' && !sentCreatorIds.has(d.creator_id))
   const readyIds = new Set(readyDrafts.map((d) => d.id))
+  const selectableDrafts = drafts.filter((d) => !sentCreatorIds.has(d.creator_id))
+  const selectableIds = new Set(selectableDrafts.map((d) => d.id))
   const readyCount = readyDrafts.length
   const draftCount = drafts.filter((d) => draftStatus(d) === 'draft').length
   const sentCount = campaignDeals.length
+  const totalRows = drafts.length + campaignDeals.length
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -124,10 +138,10 @@ export default function CampaignRoster({
   }
 
   function toggleSelectAll() {
-    if (selectedIds.size === readyCount) {
+    if (selectedIds.size === selectableDrafts.length && selectableDrafts.length > 0) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(readyIds))
+      setSelectedIds(new Set(selectableIds))
     }
   }
 
@@ -137,6 +151,7 @@ export default function CampaignRoster({
     await removeCampaignDraft(draftId, campaignId)
     setRemovingId(null)
     setSelectedIds((prev) => { const next = new Set(prev); next.delete(draftId); return next })
+    setOpenMenuId(null)
     router.refresh()
   }
 
@@ -164,53 +179,97 @@ export default function CampaignRoster({
     router.refresh()
   }
 
-  const totalRows = drafts.length + campaignDeals.length
   if (totalRows === 0) {
     return (
-      <p style={{ fontSize: '0.8125rem', color: 'var(--color-muted)' }}>
-        No creators added yet. Use &quot;Add creators&quot; to build your campaign roster.
-      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 24px 10px' }}>
+        <div style={{ position: 'relative', width: 84, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <span aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px dashed var(--lime-200)' }} />
+        </div>
+        <p className="t-body" style={{ color: 'var(--ink-2)', margin: '18px 0 0', maxWidth: 320 }}>
+          No creators added yet. Use &quot;Add creators&quot; to build your roster.
+        </p>
+      </div>
     )
   }
 
   const selectedDrafts = drafts.filter((d) => selectedIds.has(d.id))
+  const allSelected = selectableDrafts.length > 0 && selectableDrafts.every((r) => selectedIds.has(r.id))
+
+  // Filter rows
+  const filteredDrafts = rosterFilter === 'all' ? drafts
+    : rosterFilter === 'draft' ? drafts.filter((d) => draftStatus(d) === 'draft')
+    : drafts.filter((d) => draftStatus(d) === 'ready' && !sentCreatorIds.has(d.creator_id))
+  const filteredDeals = rosterFilter === 'all' ? campaignDeals : []
 
   return (
     <div>
-      {/* Header: select-all + stage counts */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.75rem' }}>
-        {readyCount > 0 && (
-          <input
-            type="checkbox"
-            checked={selectedIds.size === readyCount && readyCount > 0}
-            onChange={toggleSelectAll}
-            title={selectedIds.size === readyCount ? 'Deselect all' : 'Select all ready'}
-            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#111' }}
-          />
-        )}
-        <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
-          {totalRows} creator{totalRows !== 1 ? 's' : ''}
-          {sentCount > 0 && ` · ${sentCount} sent`}
-          {readyCount > 0 && ` · ${readyCount} ready`}
-          {draftCount > 0 && ` · ${draftCount} draft`}
-        </p>
+      {/* Filter pills */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
+        {(['all', 'draft', 'ready'] as const).map((f) => {
+          const active = rosterFilter === f
+          const count = f === 'all' ? totalRows : f === 'draft' ? draftCount : readyCount
+          return (
+            <span
+              key={f}
+              onClick={() => setRosterFilter(f)}
+              style={{
+                padding: '7px 15px', borderRadius: 999, cursor: 'pointer',
+                background: active ? 'var(--ink)' : 'none',
+                color: active ? '#FFFFFF' : 'var(--ink-2)',
+                border: `1px solid ${active ? 'var(--ink)' : 'var(--hairline)'}`,
+                fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+                transition: 'background .15s, color .15s',
+              }}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)} · {count}
+            </span>
+          )
+        })}
       </div>
 
-      {/* Bulk action bar */}
+      {/* Selection bar */}
       {selectedIds.size > 0 && (
         <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '0.5rem 0.75rem', marginBottom: '0.5rem',
-          background: '#f0f0f0', borderRadius: 6, border: '1px solid #e5e5e5',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+          marginTop: 14, padding: '14px 18px', borderRadius: 14,
+          background: 'var(--lime-50)', border: '1px solid var(--lime-200)',
         }}>
-          <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)' }}>
-            {selectedIds.size} selected
-          </span>
-          <div style={{ display: 'flex', gap: '0.375rem' }}>
-            <button onClick={handleBulkRemove} disabled={bulkRemoving} style={{ ...actionBtn, color: '#888' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              title="Clear selection"
+              style={{
+                width: 22, height: 22, borderRadius: 6, background: 'none', border: 'none',
+                cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+            <span className="t-meta" style={{ color: 'var(--ink)' }}>{selectedIds.size} selected</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className="pill"
+              onClick={handleBulkRemove}
+              disabled={bulkRemoving}
+              style={{
+                height: 36, padding: '0 16px', borderRadius: 10,
+                background: '#FFFFFF', border: '1px solid var(--hairline)',
+                fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink)', cursor: 'pointer',
+              }}
+            >
               {bulkRemoving ? 'Removing...' : 'Remove'}
             </button>
-            <button onClick={() => setShowSendModal(true)} style={{ ...actionBtn, background: '#111', color: '#fff', border: '1px solid #111' }}>
+            <button
+              className="neonbtn"
+              onClick={() => setShowSendModal(true)}
+              style={{
+                height: 36, padding: '0 18px', borderRadius: 10,
+                background: 'var(--neon)', border: 'none',
+                boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
               Send proposals
             </button>
           </div>
@@ -218,247 +277,310 @@ export default function CampaignRoster({
       )}
 
       {/* Column header */}
-      <div style={{ ...rowStyle, background: 'transparent', border: 'none', padding: '0 1rem 0.25rem', fontSize: '0.625rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        <div style={{ width: 16, flexShrink: 0 }} />
-        <div style={{ flex: 2, minWidth: 0 }}>Creator</div>
-        <div style={{ flex: 2, minWidth: 0 }}>Placements</div>
-        <div style={{ width: 80, textAlign: 'center', flexShrink: 0 }}>Stage</div>
-        <div style={{ width: 70, textAlign: 'right', flexShrink: 0 }}>Price</div>
-        <div style={{ width: 80, textAlign: 'right', flexShrink: 0 }}>Brand pays</div>
-        <div style={{ flex: 1, minWidth: 60 }}>Note</div>
-        <div style={{ width: 90, textAlign: 'right', flexShrink: 0 }}>Actions</div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: '20px 40px 1.6fr 1.3fr 110px 110px 34px',
+        gap: 16, alignItems: 'center', padding: '0 4px 12px', marginTop: 20,
+        borderBottom: '1px solid var(--hairline)',
+      }}>
+        <button
+          onClick={toggleSelectAll}
+          title={allSelected ? 'Deselect all' : 'Select all ready'}
+          style={{
+            width: 20, height: 20, borderRadius: 6,
+            background: allSelected ? 'var(--neon)' : '#FFFFFF',
+            border: `1.5px solid ${allSelected ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+          }}
+        >
+          {allSelected && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+          )}
+        </button>
+        <span />
+        <span className="t-meta">Creator</span>
+        <span className="t-meta">Deal</span>
+        <span className="t-meta">Stage</span>
+        <span className="t-meta" style={{ textAlign: 'right' }}>Price</span>
+        <span />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        {/* ── Sent deal rows (top) ── */}
-        {campaignDeals.map((deal) => (
-          <div key={`deal-${deal.dealId}`} style={{ ...rowStyle, border: '1px solid var(--color-border, #e5e5e5)', background: 'var(--glass-bg, #fafafa)' }}>
-            {/* Checkbox — disabled for sent */}
-            <input type="checkbox" disabled style={{ width: 16, height: 16, opacity: 0.2, flexShrink: 0 }} />
+      {/* Rows */}
+      <div>
+        {/* Sent deal rows */}
+        {filteredDeals.map((deal) => {
+          const isMenuOpen = openMenuId === `deal-${deal.dealId}`
+          return (
+            <div key={`deal-${deal.dealId}`} style={{ borderTop: '1px solid var(--hairline)' }}>
+              <div style={{
+                display: 'grid', gridTemplateColumns: '20px 40px 1.6fr 1.3fr 110px 110px 34px',
+                gap: 16, alignItems: 'center', padding: '20px 4px',
+              }}>
+                {/* Checkbox disabled for sent */}
+                <button
+                  disabled
+                  style={{
+                    width: 20, height: 20, borderRadius: 6,
+                    background: '#FFFFFF', border: '1.5px solid var(--ink-faint)',
+                    cursor: 'not-allowed', opacity: 0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                  }}
+                />
 
-            {/* Creator */}
-            <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-              {deal.creatorPhoto ? (
-                <img src={deal.creatorPhoto} alt={deal.creatorName} style={{ width: 30, height: 30, borderRadius: 6, objectFit: 'cover', border: '1px solid #e5e5e5', flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: 30, height: 30, borderRadius: 6, background: '#f0f0f0', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5625rem', fontWeight: 700, color: '#888', flexShrink: 0 }}>
-                  {deal.creatorName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)}
+                {/* Avatar */}
+                <span style={{ position: 'relative', flexShrink: 0 }}>
+                  {deal.creatorPhoto ? (
+                    <img src={deal.creatorPhoto} alt={deal.creatorName} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{
+                      width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--sec-ink, var(--ink-soft))', background: '#F7F4FB',
+                    }}>
+                      {getInitials(deal.creatorName)}
+                    </span>
+                  )}
+                  <span style={{
+                    position: 'absolute', right: -1, bottom: -1, width: 11, height: 11,
+                    borderRadius: '50%', background: STAGE_DOTS.sent, border: '2px solid #fff',
+                  }} />
+                </span>
+
+                {/* Creator info */}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {deal.creatorName}
+                    </span>
+                    <span style={{ color: 'var(--ink-faint)', fontSize: 14 }}>·</span>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 12, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
+                      {deal.statusLabel}
+                    </span>
+                  </div>
                 </div>
-              )}
-              <div style={{ minWidth: 0 }}>
-                <Link href={`/browse/${deal.creatorId}`} style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {deal.creatorName}
-                </Link>
+
+                {/* Deal / deliverables */}
+                <div className="t-body" style={{ fontSize: 13.5, color: 'var(--ink-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {deal.deliverables || '—'}
+                </div>
+
+                {/* Stage */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: STAGE_DOTS.sent, flexShrink: 0 }} />
+                  <span className="t-meta" style={{ color: 'var(--ink-2)', fontSize: 11 }}>Sent</span>
+                </div>
+
+                {/* Price */}
+                <span className="t-figure-sm" style={{ fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
+                  {formatINR(deal.brandPaysPaise)}
+                </span>
+
+                {/* Kebab menu */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setOpenMenuId(isMenuOpen ? null : `deal-${deal.dealId}`)}
+                    title="Actions"
+                    style={{
+                      width: 34, height: 34, borderRadius: 9,
+                      background: isMenuOpen ? 'var(--sec-2)' : 'transparent',
+                      border: 'none', cursor: 'pointer', color: 'var(--ink)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+                  </button>
+                  {isMenuOpen && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 150,
+                      borderRadius: 12, background: '#FFFFFF',
+                      boxShadow: '0 4px 16px rgba(22,23,15,.12)', border: '1px solid var(--hairline)',
+                      padding: 6, zIndex: 10,
+                    }}>
+                      <Link
+                        href={`/deals/${deal.dealId}`}
+                        onClick={() => setOpenMenuId(null)}
+                        style={{
+                          display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none',
+                          fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 13, color: 'var(--ink)',
+                        }}
+                      >
+                        View deal
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
+          )
+        })}
 
-            {/* Placements / deliverables */}
-            <div style={{ flex: 2, minWidth: 0, fontSize: '0.75rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {deal.deliverables || '—'}
-            </div>
-
-            {/* Stage — real deal status, linked to deal */}
-            <div style={{ width: 80, textAlign: 'center', flexShrink: 0 }}>
-              <Link href={`/deals/${deal.dealId}`} style={{ textDecoration: 'none' }}>
-                <span style={{ ...badgeStyle, background: deal.statusColor.bg, color: deal.statusColor.color }}>
-                  {deal.statusLabel}
-                </span>
-              </Link>
-              {deal.isPostable && (
-                <span style={{ ...badgeStyle, marginLeft: 3, fontSize: '0.5rem', background: deal.isPosted ? '#dcfce7' : '#fef9c3', color: deal.isPosted ? '#166534' : '#854d0e' }}>
-                  {deal.isPosted ? 'Posted' : 'Awaiting'}
-                </span>
-              )}
-            </div>
-
-            {/* Price (creator receives) */}
-            <div style={{ width: 70, textAlign: 'right', flexShrink: 0 }}>
-              <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#555' }}>
-                {formatRupees(deal.creatorReceivesPaise)}
-              </span>
-            </div>
-
-            {/* Brand pays */}
-            <div style={{ width: 80, textAlign: 'right', flexShrink: 0 }}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)' }}>
-                {formatRupees(deal.brandPaysPaise)}
-              </span>
-            </div>
-
-            {/* Note (internal, brand-only) */}
-            <div style={{ flex: 1, minWidth: 60 }}>
-              {editingNoteId === `deal:${deal.dealId}` ? (
-                <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                  <input
-                    value={noteValue}
-                    onChange={(e) => setNoteValue(e.target.value)}
-                    placeholder="Internal note..."
-                    autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNote(`deal:${deal.dealId}`); if (e.key === 'Escape') setEditingNoteId(null) }}
-                    style={{ flex: 1, fontSize: '0.6875rem', padding: '0.2rem 0.3rem', border: '1px solid #ccc', borderRadius: 3, outline: 'none', minWidth: 0 }}
-                  />
-                  <button onClick={() => handleSaveNote(`deal:${deal.dealId}`)} disabled={savingNote} style={{ ...actionBtn, fontSize: '0.5625rem', padding: '0.15rem 0.3rem' }}>
-                    {savingNote ? '...' : 'Save'}
-                  </button>
-                </div>
-              ) : (
-                <span
-                  onClick={() => { setEditingNoteId(`deal:${deal.dealId}`); setNoteValue(deal.internalNote ?? '') }}
-                  title="Click to add/edit note"
-                  style={{ fontSize: '0.6875rem', color: deal.internalNote ? '#666' : '#ccc', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
-                >
-                  {deal.internalNote || '+ note'}
-                </span>
-              )}
-            </div>
-
-            {/* Actions — link to deal */}
-            <div style={{ width: 90, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-              <Link href={`/deals/${deal.dealId}`} style={{ ...actionBtn, textDecoration: 'none', display: 'inline-block', textAlign: 'center' }}>
-                View deal
-              </Link>
-            </div>
-          </div>
-        ))}
-
-        {/* ── Draft rows ── */}
-        {drafts.map((d) => {
+        {/* Draft rows */}
+        {filteredDrafts.map((d) => {
           const status = draftStatus(d)
           const isReady = status === 'ready'
+          const isDraft = status === 'draft'
           const isEditing = editingDraftId === d.id
           const isRemoving = removingId === d.id
           const isSelected = selectedIds.has(d.id)
           const isSent = sentCreatorIds.has(d.creator_id)
+          const isMenuOpen = openMenuId === `draft-${d.id}`
+          const stageDot = isSent ? STAGE_DOTS.sent : isReady ? STAGE_DOTS.ready : STAGE_DOTS.draft
+          const stageLabel = isSent ? 'Sent' : isReady ? 'Ready' : 'Draft'
 
           const fee = calculateFee(d.total_price_paise, d.fee_percent, d.fee_mode)
-
-          let stageLabel: string
-          let stageSc: { bg: string; color: string }
-          if (isSent) {
-            stageLabel = 'sent'
-            stageSc = { bg: '#dbeafe', color: '#1e40af' }
-          } else if (isReady) {
-            stageLabel = 'ready'
-            stageSc = { bg: '#dcfce7', color: '#166534' }
-          } else {
-            stageLabel = 'draft'
-            stageSc = { bg: '#fef9c3', color: '#854d0e' }
-          }
-
-          const creatorDesc = [
-            d.creator.handle ? (d.creator.handle.startsWith('@') ? d.creator.handle : `@${d.creator.handle}`) : null,
-            d.creator.niches?.length ? d.creator.niches.slice(0, 2).join(', ') : null,
-          ].filter(Boolean).join(' · ') || null
-
-          const isEditingNote = editingNoteId === `draft:${d.id}`
 
           return (
             <div key={d.id}>
               <div style={{
-                ...rowStyle,
-                border: `1px solid ${isEditing ? '#111' : isSelected ? '#111' : 'var(--color-border, #e5e5e5)'}`,
-                background: isSelected ? '#f8f8f8' : 'var(--glass-bg, #fafafa)',
+                borderTop: '1px solid var(--hairline)',
+                borderRadius: isSelected ? 14 : 0,
+                boxShadow: isSelected ? 'inset 0 0 0 1.5px var(--neon-deep)' : 'none',
+                margin: isSelected ? '4px -4px' : 0,
               }}>
-                {/* Checkbox */}
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  disabled={!isReady || isSent}
-                  onChange={() => toggleSelect(d.id)}
-                  title={isSent ? 'Already sent' : isReady ? undefined : 'Set placements & price first'}
-                  style={{ width: 16, height: 16, cursor: isReady && !isSent ? 'pointer' : 'not-allowed', accentColor: '#111', opacity: isReady && !isSent ? 1 : 0.35, flexShrink: 0 }}
-                />
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '20px 40px 1.6fr 1.3fr 110px 110px 34px',
+                  gap: 16, alignItems: 'center', padding: '20px 4px',
+                }}>
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => !isSent && toggleSelect(d.id)}
+                    disabled={isSent}
+                    title={isSent ? 'Already sent' : undefined}
+                    style={{
+                      width: 20, height: 20, borderRadius: 6,
+                      background: isSelected ? 'var(--neon)' : '#FFFFFF',
+                      border: `1.5px solid ${isSelected ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
+                      cursor: !isSent ? 'pointer' : 'not-allowed',
+                      opacity: !isSent ? 1 : 0.3,
+                      flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+                    }}
+                  >
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    )}
+                  </button>
 
-                {/* Creator */}
-                <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                  {d.creator.profile_photo_url ? (
-                    <img src={d.creator.profile_photo_url} alt={d.creator.full_name} style={{ width: 30, height: 30, borderRadius: 6, objectFit: 'cover', border: '1px solid #e5e5e5', flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 30, height: 30, borderRadius: 6, background: '#f0f0f0', border: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.5625rem', fontWeight: 700, color: '#888', flexShrink: 0 }}>
-                      {d.creator.full_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)}
-                    </div>
-                  )}
+                  {/* Avatar */}
+                  <span style={{ position: 'relative', flexShrink: 0 }}>
+                    {d.creator.profile_photo_url ? (
+                      <img src={d.creator.profile_photo_url} alt={d.creator.full_name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{
+                        width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--sec-ink, var(--ink-soft))', background: '#F7F4FB',
+                      }}>
+                        {getInitials(d.creator.full_name)}
+                      </span>
+                    )}
+                    <span style={{
+                      position: 'absolute', right: -1, bottom: -1, width: 11, height: 11,
+                      borderRadius: '50%', background: stageDot, border: '2px solid #fff',
+                    }} />
+                  </span>
+
+                  {/* Creator info */}
                   <div style={{ minWidth: 0 }}>
-                    <Link href={`/browse/${d.creator.id}`} style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-heading)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {d.creator.full_name}
-                    </Link>
-                    {creatorDesc && (
-                      <p style={{ fontSize: '0.6875rem', color: '#999', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {creatorDesc}
-                      </p>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                      <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {d.creator.full_name}
+                      </span>
+                      <span style={{ color: 'var(--ink-faint)', fontSize: 14 }}>·</span>
+                      <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 12, color: 'var(--ink-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {isDraft ? 'Set terms' : 'Ready to send'}
+                      </span>
+                    </div>
+                    {d.creator.handle && (
+                      <div style={{ marginTop: 6, fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                        @{d.creator.handle.replace(/^@/, '')}
+                      </div>
                     )}
                   </div>
-                </div>
 
-                {/* Placements */}
-                <div style={{ flex: 2, minWidth: 0, fontSize: '0.75rem', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {placementSummary(d.placements)}
-                </div>
+                  {/* Deal / placements */}
+                  <div className="t-body" style={{ fontSize: 13.5, color: 'var(--ink-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {placementSummary(d.placements)}
+                  </div>
 
-                {/* Stage */}
-                <div style={{ width: 80, textAlign: 'center', flexShrink: 0 }}>
-                  <span style={{ ...badgeStyle, background: stageSc.bg, color: stageSc.color }}>
-                    {stageLabel}
-                  </span>
-                </div>
+                  {/* Stage */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: stageDot, flexShrink: 0 }} />
+                    <span className="t-meta" style={{ color: 'var(--ink-2)', fontSize: 11 }}>{stageLabel}</span>
+                  </div>
 
-                {/* Price (creator receives) */}
-                <div style={{ width: 70, textAlign: 'right', flexShrink: 0 }}>
-                  {d.total_price_paise > 0 ? (
-                    <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#555' }}>
-                      {formatRupees(fee.creator_receives_paise)}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.6875rem', color: '#ccc' }}>—</span>
-                  )}
-                </div>
-
-                {/* Brand pays */}
-                <div style={{ width: 80, textAlign: 'right', flexShrink: 0 }}>
-                  {d.total_brand_paise > 0 ? (
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)' }}>
-                      {formatRupees(d.total_brand_paise)}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.6875rem', color: '#ccc' }}>—</span>
-                  )}
-                </div>
-
-                {/* Note (internal, brand-only) */}
-                <div style={{ flex: 1, minWidth: 60 }}>
-                  {isEditingNote ? (
-                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                      <input
-                        value={noteValue}
-                        onChange={(e) => setNoteValue(e.target.value)}
-                        placeholder="Internal note..."
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNote(`draft:${d.id}`); if (e.key === 'Escape') setEditingNoteId(null) }}
-                        style={{ flex: 1, fontSize: '0.6875rem', padding: '0.2rem 0.3rem', border: '1px solid #ccc', borderRadius: 3, outline: 'none', minWidth: 0 }}
-                      />
-                      <button onClick={() => handleSaveNote(`draft:${d.id}`)} disabled={savingNote} style={{ ...actionBtn, fontSize: '0.5625rem', padding: '0.15rem 0.3rem' }}>
-                        {savingNote ? '...' : 'Save'}
+                  {/* Price */}
+                  {isDraft ? (
+                    <div style={{ textAlign: 'right' }}>
+                      <button
+                        className="pill"
+                        onClick={() => setEditingDraftId(isEditing ? null : d.id)}
+                        style={{
+                          height: 30, padding: '0 12px', borderRadius: 9,
+                          background: '#FFFFFF', border: '1px solid var(--hairline)',
+                          fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 11.5, color: 'var(--ink)',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Set terms →
                       </button>
                     </div>
                   ) : (
-                    <span
-                      onClick={() => { setEditingNoteId(`draft:${d.id}`); setNoteValue(d.note ?? '') }}
-                      title="Click to add/edit note"
-                      style={{ fontSize: '0.6875rem', color: d.note ? '#666' : '#ccc', cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
-                    >
-                      {d.note || '+ note'}
+                    <span className="t-figure-sm" style={{ fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
+                      {formatINR(d.total_brand_paise)}
                     </span>
                   )}
-                </div>
 
-                {/* Actions */}
-                <div style={{ width: 90, display: 'flex', justifyContent: 'flex-end', gap: '0.25rem', flexShrink: 0 }}>
-                  <button onClick={() => setEditingDraftId(isEditing ? null : d.id)} style={actionBtn}>
-                    {isEditing ? 'Close' : 'Edit'}
-                  </button>
-                  <button onClick={() => handleRemove(d.id)} disabled={isRemoving} style={{ ...actionBtn, color: '#888' }}>
-                    {isRemoving ? '...' : 'Remove'}
-                  </button>
+                  {/* Kebab menu */}
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setOpenMenuId(isMenuOpen ? null : `draft-${d.id}`)}
+                      title="Actions"
+                      style={{
+                        width: 34, height: 34, borderRadius: 9,
+                        background: isMenuOpen ? 'var(--sec-2)' : 'transparent',
+                        border: 'none', cursor: 'pointer', color: 'var(--ink)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+                    </button>
+                    {isMenuOpen && (
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 160,
+                        borderRadius: 12, background: '#FFFFFF',
+                        boxShadow: '0 4px 16px rgba(22,23,15,.12)', border: '1px solid var(--hairline)',
+                        padding: 6, zIndex: 10,
+                      }}>
+                        <button
+                          onClick={() => { setEditingDraftId(isEditing ? null : d.id); setOpenMenuId(null) }}
+                          style={{
+                            display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8, textAlign: 'left',
+                            background: 'none', border: 'none',
+                            fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 13, color: 'var(--ink)', cursor: 'pointer',
+                          }}
+                        >
+                          {isEditing ? 'Close editor' : 'Edit terms'}
+                        </button>
+                        <Link
+                          href={`/browse/${d.creator.id}`}
+                          onClick={() => setOpenMenuId(null)}
+                          style={{
+                            display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none',
+                            fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 13, color: 'var(--ink)',
+                          }}
+                        >
+                          View profile
+                        </Link>
+                        <button
+                          onClick={() => { setOpenMenuId(null); handleRemove(d.id) }}
+                          disabled={isRemoving}
+                          style={{
+                            display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8, textAlign: 'left',
+                            background: 'none', border: 'none',
+                            fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 13, color: '#dc2626', cursor: 'pointer',
+                          }}
+                        >
+                          {isRemoving ? 'Removing...' : 'Remove'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -491,32 +613,4 @@ export default function CampaignRoster({
       )}
     </div>
   )
-}
-
-const rowStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '0.625rem',
-  padding: '0.625rem 1rem',
-  borderRadius: 'var(--radius-sm, 6px)',
-}
-
-const badgeStyle: React.CSSProperties = {
-  fontSize: '0.5625rem',
-  fontWeight: 600,
-  padding: '0.1rem 0.4rem',
-  borderRadius: 9999,
-  textTransform: 'capitalize',
-  whiteSpace: 'nowrap',
-}
-
-const actionBtn: React.CSSProperties = {
-  padding: '0.2rem 0.4rem',
-  background: 'var(--glass-bg, #fafafa)',
-  color: 'var(--color-heading, #111)',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 4,
-  fontSize: '0.625rem',
-  fontWeight: 600,
-  cursor: 'pointer',
 }

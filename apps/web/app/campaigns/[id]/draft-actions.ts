@@ -384,22 +384,50 @@ export async function bulkSendCampaignDrafts(
 export async function updateCampaignBrief(
   campaignId: string,
   pitch: string,
-  guidelines: string
+  guidelines: string,
+  avoid?: string,
+  attachments?: { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 ) {
   await verifyApprovedBrand()
   const supabase = createClient()
 
+  const update: Record<string, unknown> = {
+    brief_pitch: pitch.trim() || null,
+    brief_guidelines: guidelines.trim() || null,
+  }
+  if (avoid !== undefined) update.brief_avoid = avoid.trim() || null
+  if (attachments !== undefined) update.brief_attachments = attachments
+
   const { error } = await supabase
     .from('campaigns')
-    .update({
-      brief_pitch: pitch.trim() || null,
-      brief_guidelines: guidelines.trim() || null,
-    })
+    .update(update)
     .eq('id', campaignId)
 
   if (error) return { error: error.message }
 
   revalidatePath(`/campaigns/${campaignId}`)
   return { success: true }
+}
+
+export async function uploadCampaignBriefAttachment(campaignId: string, formData: FormData) {
+  await verifyApprovedBrand()
+  const supabase = createClient()
+  const file = formData.get('file') as File | null
+  if (!file) return { error: 'No file provided' }
+
+  const ext = file.name.split('.').pop() || 'bin'
+  const path = `campaign-briefs/${campaignId}/${Date.now()}_${file.name}`
+
+  const { error: uploadErr } = await supabase.storage.from('deal-files').upload(path, file, { contentType: file.type })
+  if (uploadErr) return { error: uploadErr.message }
+
+  return {
+    attachment: {
+      name: file.name,
+      storage_path: path,
+      size_bytes: file.size,
+      content_type: file.type,
+    },
+  }
 }
 

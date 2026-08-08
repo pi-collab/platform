@@ -7,25 +7,23 @@ import { deriveDisplayStatus } from '@/lib/deal-status'
 import CampaignActions from './CampaignActions'
 import AddCreatorsModal from './AddCreatorsModal'
 import CampaignRoster from './CampaignRoster'
-import CampaignTabs from './CampaignTabs'
 import CampaignBrief from './CampaignBrief'
 import type { DraftPlacement } from './draft-actions'
 
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 10000000) return `₹${(rupees / 10000000).toFixed(1)}Cr`
-  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
-  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
-  return `₹${rupees.toLocaleString('en-IN')}`
+function formatINR(paise: number): string {
+  const rupees = Math.round(paise / 100)
+  const s = String(rupees)
+  const last3 = s.slice(-3)
+  const rest = s.slice(0, -3)
+  return '\u20B9' + (rest ? rest.replace(/\B(?=(\d\d)+(?!\d))/g, ',') + ',' + last3 : last3)
 }
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  active:    { bg: '#dcfce7', color: '#166534' },
-  completed: { bg: '#f3f4f6', color: '#374151' },
-  archived:  { bg: '#f3f4f6', color: '#6b7280' },
+const STATUS_MAP: Record<string, { label: string; bg: string; fg: string }> = {
+  active:    { label: 'Active',    bg: 'var(--lime-50)',  fg: 'var(--lime-700)' },
+  completed: { label: 'Completed', bg: 'var(--sec-2)',    fg: 'var(--ink-soft)' },
+  archived:  { label: 'Archived',  bg: 'var(--sec-2)',    fg: 'var(--ink-faint)' },
 }
 
-const DEAL_STATUS_ORDER = ['negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled']
 const POSTABLE = new Set(['approved', 'paid', 'complete'])
 const PAID_INVOICE_STATUSES = new Set(['paid'])
 
@@ -36,7 +34,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const [{ data: campaign, error: campErr }, { data: deals }, { data: invoices }, { data: drafts }, { data: allCreators }] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('id, name, description, status, budget_paise, brief_pitch, brief_guidelines, created_at, updated_at')
+      .select('id, name, description, status, budget_paise, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, created_at, updated_at')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -52,7 +50,6 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .select('id, campaign_id, creator_id, placements, total_price_paise, fee_percent, fee_mode, total_brand_paise, note, creators(id, full_name, handle, profile_photo_url, niches)')
       .eq('campaign_id', params.id)
       .order('created_at', { ascending: true }),
-    // All vetted creators for add-creators modal
     supabase
       .from('creators')
       .select('id, full_name, handle, profile_photo_url, niches')
@@ -61,7 +58,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
   if (campErr || !campaign) notFound()
 
-  const sc = STATUS_COLORS[campaign.status] ?? STATUS_COLORS.active
+  const st = STATUS_MAP[campaign.status] ?? STATUS_MAP.active
   const allDeals = deals ?? []
   const allDrafts = (drafts ?? []).map((d) => {
     const rawCreator = d.creators as unknown
@@ -80,7 +77,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     }
   })
 
-  // Fetch products for all drafted creators (for placement editor)
+  // Fetch products for all drafted creators
   const draftCreatorIds = allDrafts.map((d) => d.creator_id)
   let productsMap: Record<string, { id: string; platform: string; handle: string; product_type: string; description: string | null; price_paise: number; display_price: boolean; is_active: boolean }[]> = {}
   if (draftCreatorIds.length > 0) {
@@ -101,10 +98,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     invoiceMap.set(inv.deal_id, inv)
   }
 
-  // ── ROLLUP ──────────────────────────────────────────────
+  // ── ROLLUP ──
   const nonCancelled = allDeals.filter((d) => !['declined', 'cancelled'].includes(d.status))
-
-  // Committed (deals) = sum of non-cancelled deal brand_pays via calculateFee
   let dealsBrandPaise = 0
   for (const d of nonCancelled) {
     if (d.price_paise != null && d.price_paise > 0) {
@@ -112,14 +107,9 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       dealsBrandPaise += fee.brand_pays_paise
     }
   }
-
-  // Draft spend = sum of all draft total_brand_paise
   const draftsBrandPaise = allDrafts.reduce((s, d) => s + d.total_brand_paise, 0)
-
-  // Est. Spend = drafts + committed deals
   const estSpendPaise = draftsBrandPaise + dealsBrandPaise
 
-  // Paid = sum of brand_pays_paise on invoices with status='paid' (ONLY paid money)
   let paidPaise = 0
   for (const d of allDeals) {
     const inv = invoiceMap.get(d.id)
@@ -127,34 +117,23 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       paidPaise += inv.brand_pays_paise ?? 0
     }
   }
-
-  // To Allocate = budget - est. spend (only when budget set)
   const toAllocatePaise = campaign.budget_paise != null ? campaign.budget_paise - estSpendPaise : null
 
-  // Deals by stage
-  const stageCounts: Record<string, number> = {}
-  for (const d of allDeals) {
-    stageCounts[d.status] = (stageCounts[d.status] ?? 0) + 1
-  }
-
-  // Posted
-  const postableDeals = allDeals.filter((d) => POSTABLE.has(d.status))
-  const postedCount = postableDeals.filter((d) => d.is_posted).length
-
-  // Distinct creators (deals + drafts)
+  // Counts
   const creatorIds = new Set<string>()
   for (const d of allDeals) {
     const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { id: string } | null
     if (c) creatorIds.add(c.id)
   }
-  for (const d of allDrafts) {
-    creatorIds.add(d.creator_id)
-  }
+  for (const d of allDrafts) creatorIds.add(d.creator_id)
 
-  // Existing creator IDs in drafts (for add-creators modal dedup)
+  const readyCount = allDrafts.filter((d) => d.placements.length > 0 && d.total_price_paise > 0).length
+  const draftCount = allDrafts.filter((d) => d.placements.length === 0 || d.total_price_paise <= 0).length
+  const sentCount = allDeals.length
+
   const existingDraftCreatorIds = allDrafts.map((d) => d.creator_id)
 
-  // Build campaign deals for unified roster display
+  // Campaign deals for roster
   const campaignDeals = allDeals.map((d) => {
     const raw = d.creators as unknown
     const creator = (Array.isArray(raw) ? raw[0] : raw) as { id: string; full_name: string; profile_photo_url: string | null } | null
@@ -180,153 +159,170 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     }
   })
 
-  // Budget progress
   const budgetPercent = campaign.budget_paise != null && campaign.budget_paise > 0
-    ? Math.round((estSpendPaise / campaign.budget_paise) * 100)
+    ? Math.min(100, Math.round((estSpendPaise / campaign.budget_paise) * 100))
     : null
-  const budgetColor = budgetPercent != null
-    ? budgetPercent > 100 ? '#dc2626' : budgetPercent >= 80 ? '#d97706' : '#16a34a'
-    : '#16a34a'
+
+  // Split campaign name for t-accent on last word
+  const nameParts = campaign.name.trim().split(/\s+/)
+  const lastWord = nameParts.length > 1 ? nameParts.pop() : null
+  const nameRest = nameParts.join(' ')
 
   return (
-    <section style={container}>
-      <Link href="/campaigns" style={{ fontSize: '0.8125rem', color: 'var(--color-muted)', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
-        &larr; All campaigns
-      </Link>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
-              {campaign.name}
-            </h1>
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: sc.bg, color: sc.color, textTransform: 'capitalize' }}>
-              {campaign.status}
+      {/* ===== HEADER ===== */}
+      <div className="surface reveal" style={{ padding: '36px 38px' }}>
+        <Link href="/campaigns" className="backlink" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          All campaigns
+        </Link>
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginTop: 22, flexWrap: 'wrap' }}>
+          <div>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '5px 12px', borderRadius: 999,
+              background: st.bg, fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 11, color: st.fg,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--neon-deep)' }} />
+              {st.label}
             </span>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em', fontSize: 'clamp(30px,3.6vw,38px)', lineHeight: 1.1, margin: '14px 0 0' }}>
+              {lastWord ? <>{nameRest} <span className="t-accent">{lastWord}</span></> : campaign.name}
+            </h1>
+            {campaign.description && (
+              <p className="t-body" style={{ color: 'var(--ink-2)', margin: '12px 0 0', maxWidth: 520 }}>
+                {campaign.description}
+              </p>
+            )}
           </div>
-          {campaign.description && (
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-muted)', margin: '0.25rem 0 0', maxWidth: 600 }}>
-              {campaign.description}
-            </p>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <CampaignActions campaignId={campaign.id} currentStatus={campaign.status} currentName={campaign.name} currentDescription={campaign.description} currentBudgetPaise={campaign.budget_paise} />
+          </div>
         </div>
-        <CampaignActions campaignId={campaign.id} currentStatus={campaign.status} currentName={campaign.name} currentDescription={campaign.description} currentBudgetPaise={campaign.budget_paise} />
       </div>
 
-      {/* Budget bar */}
+      {/* ===== BUDGET CARD ===== */}
       {campaign.budget_paise != null && (
-        <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', border: '1px solid #e5e5e5', borderRadius: 8, background: '#fafafa' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.375rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Budget</span>
-            <span style={{ fontSize: '0.875rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--color-heading)' }}>{formatRupees(campaign.budget_paise)}</span>
+        <div className="surface reveal" style={{ padding: '30px 32px', marginTop: 22 }}>
+          <h2 className="sect-head">Budget</h2>
+          <div className="sect-rule" />
+
+          <div style={{ position: 'relative', display: 'inline-block', marginTop: 16 }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: -4, right: -4, bottom: 2, height: 14, background: 'var(--lime-400)', borderRadius: 3, transform: 'rotate(-2.5deg)', zIndex: 0 }} />
+            <span className="t-data" style={{ position: 'relative', zIndex: 1, fontSize: 40 }}>
+              {formatINR(campaign.budget_paise)}
+            </span>
           </div>
-          <div style={{ height: 6, borderRadius: 3, background: '#e5e5e5', overflow: 'hidden', marginBottom: '0.375rem' }}>
-            <div style={{ width: `${Math.min(budgetPercent ?? 0, 100)}%`, height: '100%', background: budgetColor, borderRadius: 3, transition: 'width 0.3s' }} />
+
+          <div style={{ height: 7, borderRadius: 999, background: 'linear-gradient(90deg,var(--sec-mid),var(--sec-mid-2))', marginTop: 18, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${budgetPercent ?? 0}%`, background: 'var(--lime-400)', borderRadius: 999 }} />
           </div>
-          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.75rem', color: '#888', flexWrap: 'wrap' }}>
-            <span>Est. Spend: <strong style={{ fontFamily: 'monospace', color: 'var(--color-heading)' }}>{formatRupees(estSpendPaise)}</strong></span>
-            <span>Paid: <strong style={{ fontFamily: 'monospace', color: '#16a34a' }}>{formatRupees(paidPaise)}</strong></span>
-            {toAllocatePaise != null && (
-              <span>To Allocate: <strong style={{ fontFamily: 'monospace', color: toAllocatePaise < 0 ? '#dc2626' : 'var(--color-heading)' }}>{toAllocatePaise < 0 ? `−${formatRupees(Math.abs(toAllocatePaise))}` : formatRupees(toAllocatePaise)}</strong></span>
-            )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginTop: 24, paddingTop: 22, borderTop: '1px solid var(--hairline)' }}>
+            <div>
+              <div className="t-meta">Est. spend</div>
+              <div className="t-data" style={{ fontSize: 22, marginTop: 9 }}>
+                {formatINR(estSpendPaise)}
+              </div>
+            </div>
+            <div style={{ paddingLeft: 24, borderLeft: '1px solid var(--hairline)' }}>
+              <div className="t-meta">Paid</div>
+              <div className="t-data" style={{ fontSize: 22, marginTop: 9 }}>
+                {formatINR(paidPaise)}
+              </div>
+            </div>
+            <div style={{ paddingLeft: 24, borderLeft: '1px solid var(--hairline)' }}>
+              <div className="t-meta">To allocate</div>
+              <div className="t-data" style={{ fontSize: 22, marginTop: 9, color: toAllocatePaise != null && toAllocatePaise < 0 ? '#dc2626' : undefined }}>
+                {toAllocatePaise != null ? (toAllocatePaise < 0 ? `−${formatINR(Math.abs(toAllocatePaise))}` : formatINR(toAllocatePaise)) : '—'}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Tabs: Collaborations / Brief */}
-      <CampaignTabs
-        collaborationsTab={
-          <>
-            {/* Rollup stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
-              <StatCard label="Creators" value={String(creatorIds.size)} />
-              <StatCard label="Roster" value={`${allDrafts.filter((d) => d.placements.length > 0 && d.total_price_paise > 0).length} ready / ${allDrafts.filter((d) => d.placements.length === 0 || d.total_price_paise <= 0).length} draft`} />
-              <StatCard label="Sent" value={String(allDeals.length)} />
-              {campaign.budget_paise == null && estSpendPaise > 0 && (
-                <StatCard label="Est. Spend" value={formatRupees(estSpendPaise)} />
-              )}
-              {campaign.budget_paise == null && paidPaise > 0 && (
-                <StatCard label="Paid" value={formatRupees(paidPaise)} />
-              )}
-              {postableDeals.length > 0 && (
-                <StatCard label="Posted" value={`${postedCount} of ${postableDeals.length}`} />
-              )}
-            </div>
+      {/* ===== COLLABORATIONS ===== */}
+      <div className="surface reveal" style={{ padding: 0, overflow: 'hidden', marginTop: 34 }}>
+        <div style={{ padding: '28px 30px 0' }}>
+          <h2 className="sect-head">Collaborations</h2>
+          <div className="sect-rule" />
+        </div>
 
-            {/* Stage breakdown */}
-            {Object.keys(stageCounts).length > 0 && (
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-                {DEAL_STATUS_ORDER.map((s) => {
-                  const count = stageCounts[s]
-                  if (!count) return null
-                  return (
-                    <span key={s} style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: 9999, background: '#f3f4f6', color: '#555', textTransform: 'capitalize' }}>
-                      {s} ({count})
-                    </span>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Campaign Roster */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h2 style={sectionTitle}>Campaign Roster</h2>
-              <AddCreatorsModal
-                campaignId={campaign.id}
-                creators={(allCreators ?? []) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }[]}
-                existingCreatorIds={existingDraftCreatorIds}
-              />
+        <div style={{ padding: '20px 30px 28px', display: 'flex', alignItems: 'center', gap: 32 }}>
+          <div style={{ flexShrink: 0, textAlign: 'center' }}>
+            <div className="t-data" style={{ fontSize: 40 }}>
+              {creatorIds.size}
             </div>
-            <CampaignRoster
-              drafts={allDrafts}
-              productsMap={productsMap}
+            <div className="t-meta" style={{ marginTop: 5 }}>creators</div>
+          </div>
+          <div style={{ flex: 1, borderLeft: '1px solid var(--hairline)', paddingLeft: 28, display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="t-meta" style={{ color: 'var(--ink-2)' }}>
+                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--sec-mid-2)', marginRight: 7 }} />
+                Ready to send
+              </span>
+              <span className="t-data" style={{ fontSize: 14 }}>{readyCount}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="t-meta" style={{ color: 'var(--ink-2)' }}>
+                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#D8DACF', marginRight: 7 }} />
+                Still drafting
+              </span>
+              <span className="t-data" style={{ fontSize: 14, color: 'var(--ink-2)' }}>{draftCount}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="t-meta" style={{ color: 'var(--ink-2)' }}>
+                <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--neon-deep)', marginRight: 7 }} />
+                Briefs sent
+              </span>
+              <span className="t-data" style={{ fontSize: 14 }}>{sentCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Campaign roster */}
+        <div style={{ borderTop: '1px solid var(--hairline)', padding: '24px 30px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <h2 className="sect-head" style={{ fontSize: 17 }}>Campaign roster</h2>
+            <AddCreatorsModal
               campaignId={campaign.id}
-              campaignDeals={campaignDeals}
-              briefPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
-              briefGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
+              creators={(allCreators ?? []) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }[]}
+              existingCreatorIds={existingDraftCreatorIds}
             />
-          </>
-        }
-        briefTab={
+          </div>
+          <CampaignRoster
+            drafts={allDrafts}
+            productsMap={productsMap}
+            campaignId={campaign.id}
+            campaignDeals={campaignDeals}
+            briefPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
+            briefGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
+          />
+        </div>
+      </div>
+
+      {/* ===== BRIEF ===== */}
+      <div className="surface reveal" style={{ padding: '28px 30px', marginTop: 22 }}>
+        <h2 className="sect-head">Campaign Brief</h2>
+        <div className="sect-rule" />
+        <div style={{ marginTop: 20 }}>
           <CampaignBrief
             campaignId={campaign.id}
             initialPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
             initialGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
+            initialAvoid={(campaign as Record<string, unknown>).brief_avoid as string | null ?? null}
+            initialAttachments={((campaign as Record<string, unknown>).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]}
           />
-        }
-      />
+        </div>
+      </div>
 
       {/* Metadata */}
-      <div style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'var(--color-subtle, #aaa)' }}>
-        <p style={{ margin: '0.15rem 0' }}>Created: {new Date(campaign.created_at).toLocaleString('en-IN')}</p>
-        <p style={{ margin: '0.15rem 0' }}>Updated: {new Date(campaign.updated_at).toLocaleString('en-IN')}</p>
+      <div style={{ marginTop: 22, padding: '0 4px' }}>
+        <span className="t-meta">Created {new Date(campaign.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+        <span className="t-meta" style={{ marginLeft: 16 }}>Updated {new Date(campaign.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
       </div>
-    </section>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ padding: '0.875rem 1rem', border: '1px solid #e5e5e5', borderRadius: 10, background: '#fafafa' }}>
-      <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', margin: 0, fontFamily: 'monospace' }}>{value}</p>
-      <p style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#888', margin: '0.2rem 0 0', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</p>
     </div>
   )
-}
-
-const container: React.CSSProperties = {
-  padding: '2.5rem var(--container-pad)',
-  maxWidth: 'var(--container-width)',
-  margin: '0 auto',
-}
-
-const sectionTitle: React.CSSProperties = {
-  fontFamily: 'var(--font-heading)',
-  fontSize: '0.9375rem',
-  fontWeight: 700,
-  color: 'var(--color-heading)',
-  margin: '0 0 0.75rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.03em',
 }
