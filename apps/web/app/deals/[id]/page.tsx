@@ -171,7 +171,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
 
   return (
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <RealtimeDealListener dealId={deal.id} />
 
         {/* ── Hero card ── */}

@@ -157,7 +157,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       `}</style>
 
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <div className="frame reveal" style={{ width: '100%', maxWidth: 1180, display: 'flex', flexDirection: 'column', gap: 36 }}>
+        <div className="frame reveal" style={{ width: '100%', maxWidth: 1080, display: 'flex', flexDirection: 'column', gap: 36 }}>
 
           {/* ── Editorial hero ── */}
           <div className="surface" style={{ padding: '28px 30px' }}>

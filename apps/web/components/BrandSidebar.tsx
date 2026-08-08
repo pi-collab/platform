@@ -376,7 +376,7 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
 
 const navBar: React.CSSProperties = {
   position: 'relative',
-  maxWidth: 1080,
+  maxWidth: 1280,
   margin: '0 auto',
   display: 'flex',
   alignItems: 'center',
