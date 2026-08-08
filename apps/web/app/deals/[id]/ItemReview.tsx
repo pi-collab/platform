@@ -18,11 +18,25 @@ interface Item {
   reel_type: string | null
   boosting_rights: boolean | null
   boosting_duration_months: number | null
+  submitted_at: string | null
+  updated_at: string | null
+  revision_note: string | null
 }
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
   return `\u20B9${rupees.toLocaleString('en-IN')}`
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const h = d.getHours()
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const h12 = h % 12 || 12
+  return `${day} ${months[d.getMonth()]}, ${h12}:${m} ${ampm}`
 }
 
 export default function ItemReview({
@@ -109,6 +123,7 @@ export default function ItemReview({
           const isSubmitted = item.item_status === 'submitted'
           const isApproved = item.item_status === 'approved'
           const isRevisionStatus = item.item_status === 'revision'
+          const isResubmitted = isSubmitted && item.version > 1 && !!item.revision_note
           const isApproving = loadingAction === `approve-${item.id}`
           const isRevising = loadingAction === `revision-${item.id}`
           const isLoading = isApproving || isRevising
@@ -124,16 +139,20 @@ export default function ItemReview({
             ? 'var(--success, #1F9D6B)'
             : isRevisionStatus
               ? 'var(--warning)'
-              : isSubmitted
-                ? 'var(--info, #5AA9E6)'
-                : 'var(--ink-faint)'
+              : isResubmitted
+                ? 'var(--warning)'
+                : isSubmitted
+                  ? 'var(--info, #5AA9E6)'
+                  : 'var(--ink-faint)'
           const statusLabel = isApproved
             ? 'Approved'
             : isRevisionStatus
               ? 'Revision requested'
-              : isSubmitted
-                ? 'Submitted'
-                : 'Pending'
+              : isResubmitted
+                ? 'Resubmitted'
+                : isSubmitted
+                  ? 'Submitted'
+                  : 'Pending'
 
           // File info
           const fileName = item.file_name || (item.external_url ? (item.external_url.length > 40 ? item.external_url.slice(0, 40) + '...' : item.external_url) : null)
@@ -156,11 +175,36 @@ export default function ItemReview({
                 </span>
               </div>
 
+              {/* Resubmission card */}
+              {isResubmitted && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
+                  <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700 }}>{creatorFirstName} has resubmitted</div>
+                    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, whiteSpace: 'pre-wrap' }}>
+                      Your note: &quot;{item.revision_note}&quot;
+                    </div>
+                    {item.submitted_at && (
+                      <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>Resubmitted {formatDateTime(item.submitted_at)}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* File pill */}
               {(item.storage_path || item.external_url) && fileName && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 'var(--radius-pill, 999px)', background: 'var(--card)', border: '1px solid var(--hairline, #EAEAE3)', marginTop: 14 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
-                    {item.file_name || item.external_url}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 'var(--radius-pill, 999px)', background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)', marginTop: 14 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                    {item.storage_path ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
+                    )}
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                      {item.file_name || item.external_url}
+                    </span>
                   </span>
                   {item.storage_path ? (
                     <button
@@ -207,7 +251,7 @@ export default function ItemReview({
                   <textarea
                     value={revisionNotes[item.id] ?? ''}
                     onChange={(e) => setRevisionNotes((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                    placeholder="Describe what needs to change\u2026"
+                    placeholder="Describe what needs to change…"
                     rows={4}
                     disabled={isRevising}
                     style={{ height: 'auto', minHeight: 120, width: '100%', boxSizing: 'border-box', padding: '16px 18px', fontFamily: 'var(--font-ui)', fontSize: 13.5, lineHeight: 1.6, resize: 'vertical', outline: 'none', border: '1.5px solid var(--sec-mid-2, var(--hairline))', background: 'var(--sec-2, var(--card))', borderRadius: 16, color: 'var(--ink)', boxShadow: 'inset 0 1px 3px rgba(40,45,25,.06)', transition: 'border-color .16s ease, box-shadow .16s ease' }}

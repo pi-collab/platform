@@ -126,7 +126,6 @@ export async function submitItemWithUpload(
       version,
       submitted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      revision_note: null,
     })
     .eq('id', itemId)
 

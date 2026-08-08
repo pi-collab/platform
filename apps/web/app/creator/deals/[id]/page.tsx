@@ -13,13 +13,9 @@ import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
 import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
 import ShippingAddressForm from './ShippingAddressForm'
+import CreatorStepper from './CreatorStepper'
 
 // ── Stage definitions (mirrors the deals list) ──
-const STAGES = ['Offer received', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
-const STATUS_TO_STAGE: Record<string, number> = {
-  negotiating: 0, agreed: 1, delivered: 2, revision: 2, approved: 3, paid: 4, complete: 5, declined: -1, cancelled: -1,
-}
-
 const STATUS_META: Record<string, { label: string; dot: string; glow: string }> = {
   negotiating: { label: 'Received',  dot: 'var(--warning)',  glow: 'color-mix(in oklab, var(--warning) 22%, transparent)' },
   agreed:      { label: 'Agreed',    dot: '#7E6BC4',         glow: 'rgba(126,107,196,.22)' },
@@ -55,6 +51,17 @@ function formatDateLong(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+function formatDateWithTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const h = d.getHours()
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const h12 = h % 12 || 12
+  return `${day} ${months[d.getMonth()]}, ${h12}:${m} ${ampm}`
+}
+
 export default async function CreatorDealDetailPage({ params }: { params: { id: string } }) {
   await verifyCreator()
   const supabase = createClient()
@@ -72,7 +79,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .order('version', { ascending: false }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, revision_note')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at, updated_at, revision_note, posted_url, posted_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -96,9 +103,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const canSubmit = deal.status === 'agreed' || deal.status === 'revision'
   const hasStructuredItems = items && items.length > 0
   const isNegotiating = deal.status === 'negotiating'
-  const stageIndex = STATUS_TO_STAGE[deal.status] ?? 0
-  const allDone = deal.status === 'complete'
   const sm = STATUS_META[deal.status] ?? STATUS_META.negotiating
+  const invoiceIssuedOrLater = invoice && (invoice.status === 'issued' || invoice.status === 'accepted' || invoice.status === 'paid')
 
   // Fee calculation
   const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
@@ -169,7 +175,15 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
               <div>
                 <div style={metaLabel}>{deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}</div>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
-                  {isNegotiating && hasBrandCounter ? 'Counter received from ' : isNegotiating ? 'Offer received from ' : 'Deal with '}
+                  {isNegotiating && hasBrandCounter ? 'Counter received from '
+                    : isNegotiating ? 'Offer received from '
+                    : deal.status === 'delivered' ? 'Delivered to '
+                    : deal.status === 'revision' ? 'Changes asked by '
+                    : invoice && invoice.status === 'accepted' ? 'Invoice accepted by '
+                    : invoice && invoice.status === 'issued' ? 'Invoice sent to '
+                    : invoice && invoice.status === 'paid' ? 'Paid by '
+                    : deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete' ? 'Approved by '
+                    : 'Deal with '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
               </div>
@@ -186,12 +200,40 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: sm.dot, boxShadow: `0 0 0 4px ${sm.glow}` }} />
-                {sm.label}
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
+                {invoiceIssuedOrLater ? 'Invoice' : sm.label}
               </span>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                Sent {formatDate(deal.created_at)}
-                {deal.timeline_date && <>{' '}&middot; deliver by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></>}
+                {(() => {
+                  if (invoiceIssuedOrLater && invoice) {
+                    const sentTs = invoice.issued_at ? formatDateWithTime(invoice.issued_at) : ''
+                    const receiveAmt = formatRupees(invoice.creator_receives_paise)
+                    if (invoice.status === 'paid') {
+                      return <>Paid &middot; {receiveAmt} received</>
+                    }
+                    const dueDate = invoice.due_date ? formatDate(invoice.due_date + (invoice.due_date.includes('T') ? '' : 'T00:00:00')) : null
+                    if (invoice.status === 'accepted') {
+                      return <>Accepted &middot; {receiveAmt} lands by <b style={{ color: 'var(--ink)' }}>{dueDate || 'TBD'}</b></>
+                    }
+                    return <>Sent{sentTs ? ` ${sentTs}` : ''} &middot; {receiveAmt} lands by <b style={{ color: 'var(--ink)' }}>{dueDate || 'TBD'}</b></>
+                  }
+                  if (deal.status === 'delivered') {
+                    const deliveredEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'delivered' || e.detail?.new_status === 'delivered')).pop()
+                    const ts = deliveredEvent ? formatDateWithTime(deliveredEvent.created_at) : formatDate(deal.created_at)
+                    return <>Submitted {ts} &middot; brands usually review within <b style={{ color: 'var(--ink)' }}>2 days</b></>
+                  }
+                  if (deal.status === 'revision') {
+                    const revisionEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'revision' || e.detail?.new_status === 'revision')).pop()
+                    const ts = revisionEvent ? formatDateWithTime(revisionEvent.created_at) : ''
+                    return <>Feedback received{ts ? ` ${ts}` : ''}{deal.timeline_date ? <> &middot; resubmit by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></> : ''}</>
+                  }
+                  if (deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') {
+                    const approvedEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'approved' || e.detail?.new_status === 'approved')).pop()
+                    const ts = approvedEvent ? formatDateWithTime(approvedEvent.created_at) : ''
+                    return <>Approved{ts ? ` ${ts}` : ''} &middot; post inside the live window, then invoice</>
+                  }
+                  return <>Sent {formatDate(deal.created_at)}{deal.timeline_date && <> &middot; deliver by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></>}</>
+                })()}
               </span>
             </div>
           </div>
@@ -218,48 +260,11 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
           )}
 
           {/* ── Progress stepper ── */}
-          <div className="surface" style={{ padding: '18px 16px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-              {STAGES.map((label, i) => {
-                const done = allDone || i < stageIndex
-                const current = !allDone && i === stageIndex
-                const leftBar = i > 0
-                const rightBar = i < STAGES.length - 1
-                const leftColor = (allDone || (i - 1) < stageIndex) ? 'var(--neon-deep)' : 'var(--border-hairline, #EAEAE3)'
-                const rightColor = (allDone || i < stageIndex) ? 'var(--neon-deep)' : 'var(--border-hairline, #EAEAE3)'
-                const dotStyle: React.CSSProperties = {
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                  ...(done
-                    ? { background: 'var(--neon-deep)', color: 'var(--ink)', border: '2px solid var(--card)', boxShadow: '0 0 0 2px var(--neon-deep), 0 5px 12px -4px rgba(180,210,60,.7)' }
-                    : current
-                      ? { background: 'var(--neon)', color: 'var(--ink)', border: '2px solid var(--card)', boxShadow: '0 0 0 2px var(--neon-deep), 0 0 0 6px rgba(232,255,102,.28)' }
-                      : { background: 'var(--card)', color: 'var(--ink-faint)', border: '2px solid #C6D0DD', boxShadow: 'inset 0 1px 2px rgba(40,45,25,.06)' }),
-                }
-                return (
-                  <div key={i} style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}>
-                    <div style={{ position: 'relative', width: '100%', height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {leftBar && <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: leftColor }} />}
-                      {rightBar && <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: rightColor }} />}
-                      <span style={dotStyle}>
-                        {done && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
-                        {current && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink)' }} />}
-                      </span>
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: current ? 700 : 600, whiteSpace: 'nowrap', color: done || current ? 'var(--ink)' : 'var(--ink-faint)' }}>
-                      {label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
-              <span />
-              <span style={metaLabel}>
-                {stageIndex < STAGES.length - 1 ? `Next \u00B7 ${STAGES[stageIndex + 1]?.toLowerCase() ?? ''}` : 'Complete'}
-              </span>
-            </div>
-          </div>
+          <CreatorStepper
+            dealStatus={deal.status}
+            events={(events ?? []) as { id: string; event_type: string; detail: any; created_at: string }[]}
+            invoiceStatus={invoice?.status}
+          />
 
           {/* ── Negotiation history (2+ rounds, during negotiating) ── */}
           {isNegotiating && showNegotiationHistory && (
@@ -270,8 +275,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             />
           )}
 
-          {/* ── Offer / Agreed terms ── */}
-          <div className="surface" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 24 }} id="decision">
+          {/* ── Offer / Agreed terms (only during negotiating + agreed) ── */}
+          {(isNegotiating || deal.status === 'agreed') && <div className="surface" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 24 }} id="decision">
             <div style={{ padding: '26px 28px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                 <h3 style={sectionHeading}>{isNegotiating ? 'Offer terms' : 'Agreed terms'}</h3>
@@ -331,10 +336,10 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                 </span>
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* ── Deliverable items breakdown (hidden during agreed — shown during negotiating for accept/decline, and post-agreed for reference) ── */}
-          {hasStructuredItems && deal.status !== 'agreed' && (
+          {/* ── Deliverable items breakdown (during negotiating only) ── */}
+          {hasStructuredItems && isNegotiating && (
             <div className="surface" style={{ padding: '22px 24px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                 <h3 style={sectionHeading}>Deliverables</h3>
@@ -425,8 +430,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             </div>
           )}
 
-          {/* ── Non-structured terms fallback ── */}
-          {!hasStructuredItems && (
+          {/* ── Non-structured terms fallback (negotiating/agreed only) ── */}
+          {!hasStructuredItems && (isNegotiating || deal.status === 'agreed') && (
             <div className="surface" style={{ padding: '22px 24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {deal.deliverables && <TermRow label="Deliverables" value={deal.deliverables} />}
@@ -456,7 +461,13 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             const showInvoice = ['approved', 'paid', 'complete'].includes(deal.status)
 
             type Section = 'shipment' | 'deliverables' | 'brief' | 'posted' | 'invoice'
-            const sections: Section[] = ['brief', 'deliverables', 'invoice', 'shipment', 'posted']
+            // After submission, deliverables come first; brief moves down collapsible
+            const isPostApproval = deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete'
+            const sections: Section[] = isNegotiating
+              ? ['brief', 'deliverables', 'invoice', 'shipment', 'posted']
+              : isPostApproval
+                ? ['posted', 'invoice', 'deliverables', 'brief', 'shipment']
+                : ['deliverables', 'brief', 'invoice', 'shipment', 'posted']
 
             return sections.map((section) => {
               switch (section) {
@@ -467,28 +478,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   const glParts: string[] = []
                   if (guidelinePoints.length > 0) glParts.push(`${guidelinePoints.length} guideline${guidelinePoints.length !== 1 ? 's' : ''}`)
                   if (avoidPoints.length > 0) glParts.push(`${avoidPoints.length} to avoid`)
-                  return (
-                    <div key="brief" className="surface" style={{ padding: '26px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                        <div>
-                          <div style={metaLabel}>{brand} &middot; {formatDate(deal.created_at)}</div>
-                          <h3 style={{ ...sectionHeading, marginTop: 8 }}>The brief in detail</h3>
-                        </div>
-                        {canSubmit && (
-                          <a href="#deliverables" className="neonbtn" style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                            height: 46, padding: '0 22px', borderRadius: 12,
-                            background: 'var(--neon)', border: 'none',
-                            boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-                            fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 13.5, color: 'var(--ink)',
-                            textDecoration: 'none', cursor: 'pointer',
-                          }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M12 3v13M7 8l5-5 5 5" /></svg>
-                            Ready to deliver
-                          </a>
-                        )}
-                      </div>
-
+                  // Brief content (shared between open and collapsed modes)
+                  const briefContent = (
+                    <>
                       {/* The brief */}
                       {pitch && (
                         <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
@@ -608,6 +600,43 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                           )}
                         </BriefDetailsToggle>
                       )}
+                    </>
+                  )
+
+                  // When negotiating or agreed (pre-submission): open surface
+                  if (isNegotiating || deal.status === 'agreed') {
+                    return (
+                      <div key="brief" className="surface" style={{ padding: '26px 24px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                          <div>
+                            <div style={metaLabel}>{brand} &middot; {formatDate(deal.created_at)}</div>
+                            <h3 style={{ ...sectionHeading, marginTop: 8 }}>The brief in detail</h3>
+                          </div>
+                          {canSubmit && (
+                            <a href="#deliverables" className="neonbtn" style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 8,
+                              height: 46, padding: '0 22px', borderRadius: 12,
+                              background: 'var(--neon)', border: 'none',
+                              boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                              fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 13.5, color: 'var(--ink)',
+                              textDecoration: 'none', cursor: 'pointer',
+                            }}>
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M12 3v13M7 8l5-5 5 5" /></svg>
+                              Ready to deliver
+                            </a>
+                          )}
+                        </div>
+                        {briefContent}
+                      </div>
+                    )
+                  }
+
+                  // Post-submission: collapsible surface
+                  return (
+                    <div key="brief" className="surface" style={{ padding: '22px 24px' }}>
+                      <BriefDetailsToggle label="The brief in detail" subtitle={`${brand} · ${formatDate(deal.created_at)}`} variant="surface">
+                        {briefContent}
+                      </BriefDetailsToggle>
                     </div>
                   )
                 }
@@ -697,10 +726,69 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                 case 'deliverables':
                   if (isNegotiating) return null
                   if (hasStructuredItems) {
+                    const approvedCount = items!.filter((i) => i.item_status === 'approved').length
+                    const hasRevision = items!.some((i) => i.item_status === 'revision')
+                    const submittedCount = items!.filter((i) => i.item_status === 'submitted' || i.item_status === 'approved').length
+                    const submittedItem = items!.find((i) => i.submitted_at)
+                    const sentDate = submittedItem?.submitted_at ? formatDate(submittedItem.submitted_at) : null
+                    const approvedAt = items!.find((i) => i.approved_at)?.approved_at
+                    const allApproved = approvedCount === items!.length
+
+                    const subtitle = hasRevision
+                      ? undefined // subtitle rendered inline with dot below
+                      : submittedCount > 0
+                        ? `${allApproved ? approvedCount : submittedCount} of ${items!.length} ${allApproved ? 'approved' : 'submitted'}${allApproved && approvedAt ? ` · ${formatDate(approvedAt)}` : sentDate ? ` · sent ${sentDate}` : ''}`
+                        : undefined
+
+                    // Collapsed in approved/paid/complete states
+                    const isDelivsCollapsible = deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete'
+
+                    const delivContent = (
+                      <>
+                        {hasRevision && (
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <span />
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
+                              {approvedCount} of {items!.length} approved{(() => {
+                                const timelineDate = (deal as Record<string, unknown>).timeline_date as string | null
+                                return timelineDate ? ` · resubmit by ${formatDate(timelineDate)}` : ''
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                        <DeliverableItems dealId={deal.id} items={items!} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
+                      </>
+                    )
+
+                    if (isDelivsCollapsible) {
+                      return (
+                        <div key="deliverables" id="deliverables">
+                          <BriefDetailsToggle label="Deliverables" subtitle={subtitle} variant="surface">
+                            {delivContent}
+                          </BriefDetailsToggle>
+                        </div>
+                      )
+                    }
+
                     return (
                       <div key="deliverables" className="surface" style={{ padding: '22px 24px' }} id="deliverables">
-                        <h3 style={sectionHeading}>Deliverable progress</h3>
-                        <DeliverableItems dealId={deal.id} items={items!} canSubmit={canSubmit} />
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                          <h3 style={sectionHeading}>Deliverables</h3>
+                          {subtitle && <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>{subtitle}</span>}
+                        </div>
+                        {hasRevision && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 4 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)' }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
+                              {approvedCount} of {items!.length} approved{(() => {
+                                const timelineDate = (deal as Record<string, unknown>).timeline_date as string | null
+                                return timelineDate ? ` · resubmit by ${formatDate(timelineDate)}` : ''
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                        <DeliverableItems dealId={deal.id} items={items!} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
                       </div>
                     )
                   }
@@ -736,34 +824,47 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
                 case 'posted':
                   if (!showPosted) return null
-                  return (
-                    <div key="posted">
-                      {!deal.is_posted && (
-                        <div className="surface" style={{ padding: '22px 24px' }}>
-                          <PostedCard dealId={deal.id} />
-                        </div>
-                      )}
-                      {deal.is_posted && deal.posted_url && (
-                        <div className="surface" style={{ padding: '22px 24px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--success, #16a34a)', boxShadow: '0 0 0 4px rgba(22,163,74,.18)' }} />
-                            <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>Content posted</span>
-                          </div>
-                          <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12, marginTop: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}>
-                            View post
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
-                          </a>
-                          {deal.posted_at && <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 8 }}>Posted {formatDateLong(deal.posted_at)}</div>}
-                        </div>
-                      )}
-                    </div>
-                  )
+                  {
+                    // Build per-item posted data (only approved items get posted)
+                    const postedItems = hasStructuredItems
+                      ? items!.filter((i) => i.item_status === 'approved').map((i) => ({
+                          id: i.id,
+                          label: i.label,
+                          platform: i.platform,
+                          posted_url: (i as any).posted_url as string | null,
+                          posted_at: (i as any).posted_at as string | null,
+                        }))
+                      : undefined
+
+                    return (
+                      <div key="posted" className="surface" style={{ padding: 24 }}>
+                        <PostedCard
+                          dealId={deal.id}
+                          items={postedItems}
+                          timelineDate={(deal as Record<string, unknown>).timeline_date as string | null}
+                        />
+                      </div>
+                    )
+                  }
 
                 case 'invoice':
                   if (!showInvoice) return null
                   return (
-                    <div key="invoice" className="surface" style={{ padding: '22px 24px' }}>
-                      <InvoiceCard dealId={deal.id} dealRef={deal.deal_ref} invoice={invoice} isPosted={deal.is_posted} />
+                    <div key="invoice" className="surface" style={{ padding: 24 }}>
+                      <InvoiceCard
+                        dealId={deal.id}
+                        dealRef={deal.deal_ref}
+                        invoice={invoice}
+                        isPosted={deal.is_posted}
+                        creatorReceivesPaise={creatorReceives}
+                        brandPaysPaise={fee?.brand_pays_paise}
+                        feePaise={fee?.fee_paise}
+                        feePercent={deal.fee_percent}
+                        feeMode={feeMode}
+                        paymentTerms={deal.payment_terms}
+                        items={hasStructuredItems ? items!.map((i) => ({ label: i.label, price_paise: i.price_paise })) : undefined}
+                        brandName={brand}
+                      />
                     </div>
                   )
 

@@ -17,6 +17,8 @@ interface Item {
   version: number
   price_paise: number | null
   submitted_at: string | null
+  approved_at: string | null
+  updated_at: string | null
   revision_note: string | null
 }
 
@@ -35,10 +37,14 @@ export default function DeliverableItems({
   dealId,
   items,
   canSubmit,
+  dealStatus,
+  brandName,
 }: {
   dealId: string
   items: Item[]
   canSubmit: boolean
+  dealStatus?: string
+  brandName?: string
 }) {
   const [urls, setUrls] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -152,7 +158,11 @@ export default function DeliverableItems({
     }
   }
 
-  if (successMsg) {
+  // Show submitted banner when deal is in delivered/revision/approved/paid/complete status
+  const isSubmitted = dealStatus === 'delivered' || dealStatus === 'revision' || dealStatus === 'approved' || dealStatus === 'paid' || dealStatus === 'complete' || successMsg
+
+  if (successMsg && !dealStatus) {
+    // Transient success after clicking submit — will be replaced by the richer view on reload
     return (
       <div style={{ padding: '22px 24px', borderRadius: 14, border: '1.5px solid var(--neon-deep)', background: 'color-mix(in oklab, var(--neon) 14%, var(--card))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -168,10 +178,35 @@ export default function DeliverableItems({
 
   return (
     <div>
+      {/* Status banner — shown after submission (not in revision state, where per-item cards convey the info) */}
+      {isSubmitted && !canSubmit && dealStatus !== 'revision' && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: 22, borderRadius: 16, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
+            <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--card)', border: '1px solid var(--sec-mid-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                {dealStatus === 'approved' || dealStatus === 'paid' || dealStatus === 'complete'
+                  ? 'Deliverables approved'
+                  : `Submitted for review — ${brandName ? `${brandName} has` : 'the brand has'} been notified`}
+              </div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, maxWidth: 560 }}>
+                {dealStatus === 'approved' || dealStatus === 'paid' || dealStatus === 'complete'
+                  ? 'The brand has approved your deliverables.'
+                  : `${brandName ?? 'The brand'} usually replies within 2 days.`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Progress summary */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>{savedCount} of {total} ready</span>
-      </div>
+      {(!isSubmitted || canSubmit) && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>{savedCount} of {total} ready</span>
+        </div>
+      )}
 
       {/* Items list */}
       <div style={{ marginTop: 12 }}>
@@ -183,11 +218,13 @@ export default function DeliverableItems({
           const mode = getMode(item.id)
 
           const statusLabel = item.item_status === 'approved' ? 'Approved'
-            : item.item_status === 'revision' ? 'Revision requested'
+            : item.item_status === 'revision' ? 'Changes requested'
+            : item.item_status === 'submitted' ? 'Submitted'
             : isSaved ? 'Ready to submit'
             : 'Pending'
           const statusDot = item.item_status === 'approved' ? 'var(--neon-deep)'
             : item.item_status === 'revision' ? 'var(--warning)'
+            : item.item_status === 'submitted' ? 'var(--neon-deep)'
             : isSaved ? 'var(--neon-deep)'
             : 'var(--warning)'
 
@@ -227,11 +264,70 @@ export default function DeliverableItems({
                   </span>
                 </div>
 
-                {/* Revision feedback */}
+                {/* Revision feedback card */}
                 {item.item_status === 'revision' && item.revision_note && (
-                  <div style={{ margin: '12px 0 0', padding: '10px 14px', background: 'var(--danger-soft, #fef2f2)', border: '1px solid var(--danger, #dc2626)', borderRadius: 12, opacity: 0.9 }}>
-                    <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--danger, #dc2626)', margin: '0 0 4px' }}>Revision feedback</p>
-                    <p style={{ fontSize: 13, color: 'var(--ink)', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{item.revision_note}</p>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
+                    <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>{brandName ? `${brandName} requested changes` : 'Changes requested'}</div>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, whiteSpace: 'pre-wrap' }}>"{item.revision_note}"</div>
+                      {item.updated_at && (
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>{formatDateTime(item.updated_at)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Approved card — only shown during revision state (mixed approved/revision) */}
+                {item.item_status === 'approved' && dealStatus === 'revision' && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                    <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>Approved as submitted — nothing more to do here</div>
+                      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5 }}>
+                        {brandName ? `${brandName} approved this asset with no changes — it counts as delivered.` : 'This asset was approved with no changes — it counts as delivered.'}
+                      </div>
+                      {item.approved_at && (
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>Approved {formatDateTime(item.approved_at)}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Previous submission pill for revision items */}
+                {item.item_status === 'revision' && (item.external_url || item.storage_path) && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
+                    padding: '12px 16px', borderRadius: 999,
+                    background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                    marginTop: 14,
+                  }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      {item.storage_path ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
+                      )}
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                        {item.file_name || (item.external_url ? truncateUrl(item.external_url) : '')}
+                      </span>
+                      {item.submitted_at && (
+                        <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
+                      disabled={viewingFile === item.id}
+                      className="viewlink"
+                      style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                    >
+                      {viewingFile === item.id ? 'Loading…' : 'View file'}
+                    </button>
                   </div>
                 )}
 
@@ -259,25 +355,42 @@ export default function DeliverableItems({
                         <input
                           className="dinput"
                           type="url"
-                          placeholder="Paste a link (Google Drive, Dropbox, Frame.io\u2026)"
+                          placeholder="Paste a link (Google Drive, Dropbox, Frame.io…)"
                           value={urls[item.id] ?? ''}
                           onChange={(e) => setUrls((prev) => ({ ...prev, [item.id]: e.target.value }))}
                           disabled={isLoading}
                           style={{ flex: 1, minWidth: 240 }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => handleSubmitItem(item.id)}
-                          disabled={isLoading || !(urls[item.id]?.trim())}
-                          style={{
-                            ...saveBtn,
-                            background: urls[item.id]?.trim() ? 'var(--card)' : 'rgba(255,255,255,.55)',
-                            opacity: isLoading || !(urls[item.id]?.trim()) ? 0.5 : 1,
-                            cursor: isLoading || !(urls[item.id]?.trim()) ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          {isLoading ? 'Saving...' : 'Save'}
-                        </button>
+                        {item.item_status === 'revision' ? (
+                          <button
+                            type="button"
+                            className="neonbtn"
+                            onClick={() => handleSubmitItem(item.id)}
+                            disabled={isLoading || !(urls[item.id]?.trim())}
+                            style={{
+                              ...resubmitBtn,
+                              opacity: isLoading || !(urls[item.id]?.trim()) ? 0.45 : 1,
+                              cursor: isLoading || !(urls[item.id]?.trim()) ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>
+                            {isLoading ? 'Resubmitting…' : `Resubmit ${item.label?.toLowerCase().includes('reel') ? 'reel' : item.label?.toLowerCase().includes('post') ? 'post' : 'file'}`}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSubmitItem(item.id)}
+                            disabled={isLoading || !(urls[item.id]?.trim())}
+                            style={{
+                              ...saveBtn,
+                              background: urls[item.id]?.trim() ? 'var(--card)' : 'rgba(255,255,255,.55)',
+                              opacity: isLoading || !(urls[item.id]?.trim()) ? 0.5 : 1,
+                              cursor: isLoading || !(urls[item.id]?.trim()) ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {isLoading ? 'Saving…' : 'Save'}
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div style={{ marginTop: 12 }}>
@@ -325,28 +438,36 @@ export default function DeliverableItems({
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
                     padding: '12px 16px', borderRadius: 999,
-                    background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)',
+                    background: item.item_status === 'approved' ? 'var(--card)' : 'var(--sec-2, #f5f5f0)',
+                    border: item.item_status === 'approved' ? '1px solid var(--border-hairline, #EAEAE3)' : '1px solid var(--sec-mid-2, #e5e5dc)',
                     marginTop: 14,
                   }}>
-                    {item.storage_path && item.file_name ? (
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>{item.file_name}</span>
-                    ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      {item.storage_path ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
+                      )}
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
-                        {(item.external_url || urls[item.id] || '').length > 60
-                          ? (item.external_url || urls[item.id] || '').slice(0, 60) + '...'
-                          : (item.external_url || urls[item.id] || '')}
+                        {item.file_name || truncateUrl(item.external_url || urls[item.id] || '')}
                       </span>
-                    )}
+                      {item.item_status === 'approved' && item.approved_at && (
+                        <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>approved {formatShortDate(item.approved_at)}</span>
+                      )}
+                      {item.item_status === 'submitted' && item.submitted_at && (
+                        <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
+                      )}
+                    </span>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                      {item.storage_path && (
+                      {(item.storage_path || item.external_url) && (
                         <button
                           type="button"
-                          onClick={() => handleViewFile(item.id)}
+                          onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
                           disabled={viewingFile === item.id}
                           className="viewlink"
                           style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                         >
-                          {viewingFile === item.id ? 'Loading...' : 'View'}
+                          {viewingFile === item.id ? 'Loading…' : 'View file'}
                         </button>
                       )}
                       {editable && (
@@ -402,7 +523,7 @@ export default function DeliverableItems({
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>
-              {submittingAll ? 'Submitting...' : 'Submit for review'}
+              {submittingAll ? 'Submitting…' : dealStatus === 'revision' ? 'Resubmit for review' : 'Submit for review'}
             </button>
           </div>
         </div>
@@ -487,4 +608,40 @@ const saveBtn: React.CSSProperties = {
   background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
   boxShadow: '0 8px 18px -12px rgba(40,45,25,.42)',
   fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)',
+}
+
+const resubmitBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+  height: 54, padding: '0 26px', borderRadius: 14,
+  background: 'var(--neon)', border: 'none',
+  fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 15.5, letterSpacing: '-0.01em', color: 'var(--ink)',
+  boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+}
+
+function truncateUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    const display = u.hostname.replace(/^www\./, '') + u.pathname
+    return display.length > 40 ? display.slice(0, 37) + '…' : display
+  } catch {
+    return url.length > 40 ? url.slice(0, 37) + '…' : url
+  }
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso)
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return `${day} ${months[d.getMonth()]}`
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const day = d.getDate()
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const h = d.getHours()
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const h12 = h % 12 || 12
+  return `${day} ${months[d.getMonth()]}, ${h12}:${m} ${ampm}`
 }

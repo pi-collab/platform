@@ -89,7 +89,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at, updated_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -300,20 +300,6 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           </div>
         )}
 
-        {/* ── Shipment card ── */}
-        {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
-          <div className="surface" style={{ padding: 24 }}>
-            <ShipmentCard
-              dealId={deal.id}
-              shipmentStatus={deal.shipment_status}
-              trackingLink={deal.tracking_link}
-              carrierNote={deal.carrier_note}
-              shippedAt={deal.shipped_at}
-              shippingAddress={(deal as Record<string, unknown>).shipping_address as string | null}
-            />
-          </div>
-        )}
-
         {/* ── Deal complete (paid) ── */}
         {invoice && invoice.status === 'paid' && (
           <div className="surface" style={{ padding: 24 }}>
@@ -450,6 +436,15 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                   {items.some(i => i.approved_at) && ` \u00B7 ${new Date(items.find(i => i.approved_at)!.approved_at!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
                 </span>
               )}
+              {(deal.status === 'delivered' || deal.status === 'revision') && hasItems && (() => {
+                const revisionCount = items.filter(i => i.item_status === 'revision').length
+                const parts: string[] = []
+                if (approvedCount > 0) parts.push(`${approvedCount} of ${items.length} approved`)
+                if (revisionCount > 0) parts.push(`${revisionCount} in revision`)
+                return parts.length > 0 ? (
+                  <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>{parts.join(' \u00B7 ')}</span>
+                ) : null
+              })()}
             </div>
           ) : null
 
@@ -472,6 +467,9 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     reel_type: i.reel_type ?? null,
                     boosting_rights: i.boosting_rights ?? null,
                     boosting_duration_months: i.boosting_duration_months ?? null,
+                    submitted_at: i.submitted_at ?? null,
+                    updated_at: i.updated_at ?? null,
+                    revision_note: i.revision_note ?? null,
                   }))}
                   revisionsUsed={deal.revisions_used ?? 0}
                   revisionLimit={deal.revision_limit}
@@ -509,7 +507,8 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                           if (item.reel_type) details.push(item.reel_type === 'collab' ? 'Collab post' : 'Non-collab')
                           if (item.boosting_rights) details.push(`${item.boosting_duration_months ?? '\u221E'}-day boosting rights`)
 
-                          const itemStatusLabel = item.item_status === 'submitted' ? 'Submitted' : item.item_status === 'approved' ? 'Approved' : item.item_status === 'revision' ? 'Revision requested' : null
+                          const isItemResubmitted = item.item_status === 'submitted' && item.version > 1 && !!item.revision_note
+                          const itemStatusLabel = isItemResubmitted ? 'Resubmitted' : item.item_status === 'submitted' ? 'Submitted' : item.item_status === 'approved' ? 'Approved' : item.item_status === 'revision' ? 'Revision requested' : null
                           const showAwaitingBadge = deal.status === 'agreed' || (deal.status !== 'negotiating' && !item.item_status)
                           const isApprovedItem = item.item_status === 'approved'
 
@@ -557,14 +556,21 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                               </div>
                               {/* File pill */}
                               {(item.external_url || (item.storage_path && item.file_name)) && (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '10px 14px', borderRadius: 'var(--radius-pill, 999px)', background: 'var(--sec-2, #F4F8FC)', marginTop: 12 }}>
-                                  <span style={{ fontSize: 11.5, color: 'var(--ink)', wordBreak: 'break-all' }}>
-                                    {item.file_name ?? (item.external_url && item.external_url.length > 40 ? item.external_url.slice(0, 40) + '\u2026' : item.external_url)}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 'var(--radius-pill, 999px)', background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)', marginTop: 14 }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                                    {item.storage_path ? (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                                    ) : (
+                                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
+                                    )}
+                                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                                      {item.file_name ?? (item.external_url && item.external_url.length > 40 ? item.external_url.slice(0, 40) + '\u2026' : item.external_url)}
+                                    </span>
                                   </span>
                                   {item.storage_path ? (
                                     <ViewFileButton dealId={deal.id} itemId={item.id} />
                                   ) : item.external_url ? (
-                                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 3, color: 'var(--ink-soft)' }}>View file</a>
+                                    <a href={item.external_url} target="_blank" rel="noopener noreferrer" className="viewlink" style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3 }}>View file</a>
                                   ) : null}
                                 </div>
                               )}
@@ -599,6 +605,20 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             </div>
           )
         })()}
+
+        {/* ── Shipment card (after deliverables) ── */}
+        {deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status) && (
+          <div className="surface" style={{ padding: 24 }}>
+            <ShipmentCard
+              dealId={deal.id}
+              shipmentStatus={deal.shipment_status}
+              trackingLink={deal.tracking_link}
+              carrierNote={deal.carrier_note}
+              shippedAt={deal.shipped_at}
+              shippingAddress={(deal as Record<string, unknown>).shipping_address as string | null}
+            />
+          </div>
+        )}
 
         {/* ── Agreed terms summary card (agreed stage only) ── */}
         {deal.agreed_at && deal.status === 'agreed' && deal.price_paise != null && deal.price_paise > 0 && (

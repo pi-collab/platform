@@ -10,29 +10,119 @@ type Result =
   | { status: 'success' }
   | { status: 'error'; message: string }
 
+function validateUrl(raw: string): { ok: true; url: string } | { ok: false; message: string } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { ok: false, message: 'Please enter the live post URL.' }
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { ok: false, message: 'URL must start with http:// or https://' }
+    }
+    if (!parsed.hostname.includes('.')) {
+      return { ok: false, message: 'Please enter a valid URL (e.g. https://instagram.com/reel/...)' }
+    }
+  } catch {
+    return { ok: false, message: 'Please enter a valid URL (e.g. https://instagram.com/reel/...)' }
+  }
+  return { ok: true, url: trimmed }
+}
+
 /**
- * Mark a deal's content as posted with the live URL.
- * Creator-only action — verifyCreator() is the guard.
- * Allowed from approved onward (approved, paid, complete).
+ * Mark a single deliverable item as posted with its live URL.
+ * When all items are posted, the deal-level is_posted is also set.
+ */
+export async function markItemPosted(dealId: string, itemId: string, postedUrl: string): Promise<Result> {
+  await verifyCreator()
+
+  const v = validateUrl(postedUrl)
+  if (!v.ok) return { status: 'error', message: v.message }
+  const rawUrl = v.url
+
+  const supabase = createClient()
+
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { status: 'error', message: 'Deal not found.' }
+  const ALLOWED = new Set(['approved', 'paid', 'complete'])
+  if (!ALLOWED.has(deal.status)) {
+    return { status: 'error', message: `Cannot mark as posted when deal status is "${deal.status}".` }
+  }
+
+  // Verify item belongs to this deal and is approved
+  const { data: item } = await supabase
+    .from('deal_deliverable_items')
+    .select('id, item_status, posted_url')
+    .eq('id', itemId)
+    .eq('deal_id', dealId)
+    .maybeSingle()
+
+  if (!item) return { status: 'error', message: 'Item not found.' }
+  if (item.item_status !== 'approved') {
+    return { status: 'error', message: 'Item must be approved before marking as posted.' }
+  }
+  if (item.posted_url) {
+    return { status: 'error', message: 'This item is already marked as posted.' }
+  }
+
+  const now = new Date().toISOString()
+
+  // Update the item
+  const { error: itemErr } = await supabase
+    .from('deal_deliverable_items')
+    .update({ posted_url: rawUrl, posted_at: now, updated_at: now })
+    .eq('id', itemId)
+
+  if (itemErr) return { status: 'error', message: `Failed to update item: ${itemErr.message}` }
+
+  // Check if ALL items in this deal are now posted
+  const { data: allItems } = await supabase
+    .from('deal_deliverable_items')
+    .select('id, posted_url')
+    .eq('deal_id', dealId)
+
+  const allPosted = allItems && allItems.length > 0 && allItems.every((i) => !!i.posted_url)
+
+  if (allPosted) {
+    // Mark deal-level as posted (first item's URL for backwards compat)
+    await supabase
+      .from('deals')
+      .update({ is_posted: true, posted_url: rawUrl, posted_at: now })
+      .eq('id', dealId)
+  }
+
+  // Write event
+  const admin = createAdminClient()
+  await admin.from('events').insert({
+    deal_id: dealId,
+    event_type: 'deal.item_posted',
+    detail: { item_id: itemId, posted_url: rawUrl },
+  })
+
+  if (allPosted) {
+    notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`)
+  }
+
+  revalidatePath(`/deals/${dealId}`)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { status: 'success' }
+}
+
+/**
+ * Legacy: Mark a deal's content as posted with a single URL.
+ * Used for deals without structured items.
  */
 export async function markPosted(dealId: string, postedUrl: string): Promise<Result> {
   await verifyCreator()
-  const supabase = createClient()
 
-  // Server-side URL validation — posted_url is rendered as a clickable link
-  const rawUrl = postedUrl.trim()
-  if (!rawUrl) return { status: 'error', message: 'Please enter the live post URL.' }
-  try {
-    const parsed = new URL(rawUrl)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return { status: 'error', message: 'URL must start with http:// or https://' }
-    }
-    if (!parsed.hostname.includes('.')) {
-      return { status: 'error', message: 'Please enter a valid URL (e.g. https://instagram.com/reel/...)' }
-    }
-  } catch {
-    return { status: 'error', message: 'Please enter a valid URL (e.g. https://instagram.com/reel/...)' }
-  }
+  const v = validateUrl(postedUrl)
+  if (!v.ok) return { status: 'error', message: v.message }
+  const rawUrl = v.url
+
+  const supabase = createClient()
 
   const { data: deal } = await supabase
     .from('deals')
@@ -60,7 +150,6 @@ export async function markPosted(dealId: string, postedUrl: string): Promise<Res
 
   if (error) return { status: 'error', message: `Failed to update: ${error.message}` }
 
-  // Write an explicit event — the audit trigger only captures status changes, not is_posted
   const admin = createAdminClient()
   await admin.from('events').insert({
     deal_id: dealId,
