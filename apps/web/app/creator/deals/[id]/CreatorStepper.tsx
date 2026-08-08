@@ -58,9 +58,11 @@ export default function CreatorStepper({ dealStatus, events, invoiceStatus }: { 
 
   const footerLabel = dealStatus === 'revision'
     ? 'Revision requested'
-    : dealStatus === 'complete' || stageIndex >= STAGES.length - 1
-      ? 'Complete'
-      : `Next \u00B7 ${STAGES[stageIndex + 1]?.toLowerCase() ?? ''}`
+    : allDone
+      ? 'Deal complete'
+      : dealStatus === 'complete' || stageIndex >= STAGES.length - 1
+        ? 'Complete'
+        : `Next \u00B7 ${STAGES[stageIndex + 1]?.toLowerCase() ?? ''}`
 
   return (
     <div className="surface" style={{ padding: '18px 16px 14px' }}>

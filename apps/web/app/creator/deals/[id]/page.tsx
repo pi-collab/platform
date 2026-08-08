@@ -179,9 +179,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     : isNegotiating ? 'Offer received from '
                     : deal.status === 'delivered' ? 'Delivered to '
                     : deal.status === 'revision' ? 'Changes asked by '
+                    : invoice && invoice.status === 'paid' ? 'Wrapped with '
                     : invoice && invoice.status === 'accepted' ? 'Invoice accepted by '
                     : invoice && invoice.status === 'issued' ? 'Invoice sent to '
-                    : invoice && invoice.status === 'paid' ? 'Paid by '
                     : deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete' ? 'Approved by '
                     : 'Deal with '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
@@ -200,8 +200,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
-                {invoiceIssuedOrLater ? 'Invoice' : sm.label}
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: invoice?.status === 'paid' ? 'var(--neon)' : invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${invoice?.status === 'paid' ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
+                {invoice?.status === 'paid' ? 'Complete' : invoiceIssuedOrLater ? 'Invoice' : sm.label}
               </span>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
                 {(() => {
@@ -209,7 +209,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     const sentTs = invoice.issued_at ? formatDateWithTime(invoice.issued_at) : ''
                     const receiveAmt = formatRupees(invoice.creator_receives_paise)
                     if (invoice.status === 'paid') {
-                      return <>Paid &middot; {receiveAmt} received</>
+                      const paidEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'paid' || e.detail?.new_status === 'paid')).pop()
+                      const paidTs = paidEvent ? formatDate(paidEvent.created_at) : (invoice.accepted_at ? formatDate(invoice.accepted_at) : '')
+                      return <>{receiveAmt} received{paidTs ? ` ${paidTs}` : ''} &middot; nothing left to do</>
                     }
                     const dueDate = invoice.due_date ? formatDate(invoice.due_date + (invoice.due_date.includes('T') ? '' : 'T00:00:00')) : null
                     if (invoice.status === 'accepted') {
@@ -460,14 +462,16 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             const showPosted = ['approved', 'paid', 'complete'].includes(deal.status)
             const showInvoice = ['approved', 'paid', 'complete'].includes(deal.status)
 
-            type Section = 'shipment' | 'deliverables' | 'brief' | 'posted' | 'invoice'
-            // After submission, deliverables come first; brief moves down collapsible
+            type Section = 'shipment' | 'deliverables' | 'brief' | 'posted' | 'invoice' | 'paid'
             const isPostApproval = deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete'
+            const isCompleted = invoice?.status === 'paid'
             const sections: Section[] = isNegotiating
               ? ['brief', 'deliverables', 'invoice', 'shipment', 'posted']
-              : isPostApproval
-                ? ['posted', 'invoice', 'deliverables', 'brief', 'shipment']
-                : ['deliverables', 'brief', 'invoice', 'shipment', 'posted']
+              : isCompleted
+                ? ['paid', 'invoice', 'deliverables', 'brief', 'shipment']
+                : isPostApproval
+                  ? ['posted', 'invoice', 'deliverables', 'brief', 'shipment']
+                  : ['deliverables', 'brief', 'invoice', 'shipment', 'posted']
 
             return sections.map((section) => {
               switch (section) {
@@ -847,10 +851,65 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     )
                   }
 
+                case 'paid':
+                  if (!isCompleted) return null
+                  {
+                    const paidEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'paid' || e.detail?.new_status === 'paid')).pop()
+                    const paidTs = paidEvent ? formatDateWithTime(paidEvent.created_at) : (invoice!.accepted_at ? formatDateWithTime(invoice!.accepted_at) : '')
+                    const rightsEnd = (deal as Record<string, unknown>).usage_rights_end_date as string | null
+                    const rightsText = rightsEnd ? `Rights lapse ${formatDate(rightsEnd + 'T00:00:00')}.` : ''
+
+                    return (
+                      <div key="paid" className="surface" style={{ padding: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon-deep)' }} />
+                            Paid in full
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 }}>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em' }}>You have been guapd</div>
+                            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)', marginTop: 4 }}>
+                              Paid in full{paidTs ? ` on ${paidTs.split(',')[0]}` : ''}.{rightsText ? ` ${rightsText}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dark "Received" bar */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '20px 24px', marginTop: 24, borderRadius: 14, background: 'var(--ink)', color: '#FFFFFF' }}>
+                          <span style={{ fontSize: 13.5, fontWeight: 700 }}>Received</span>
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>
+                            {creatorReceives ? formatINR(creatorReceives) : (invoice ? formatINR(invoice.creator_receives_paise) : '')}
+                          </span>
+                        </div>
+
+                        {/* Footer with payment details */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 18 }}>
+                          <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>
+                            {paidTs ? `Paid ${paidTs}` : 'Paid'}
+                          </span>
+                          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <Link href="/creator/inbox" className="pill-hover" style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                              height: 46, padding: '0 20px', borderRadius: 12,
+                              background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                              boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)',
+                              fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none',
+                            }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
+                              Message brand
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
                 case 'invoice':
                   if (!showInvoice) return null
-                  return (
-                    <div key="invoice" className="surface" style={{ padding: 24 }}>
+                  {
+                    const invoiceContent = (
                       <InvoiceCard
                         dealId={deal.id}
                         dealRef={deal.deal_ref}
@@ -865,8 +924,26 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                         items={hasStructuredItems ? items!.map((i) => ({ label: i.label, price_paise: i.price_paise })) : undefined}
                         brandName={brand}
                       />
-                    </div>
-                  )
+                    )
+
+                    // Collapsible when invoice is paid
+                    if (isCompleted && invoice) {
+                      const invSubtitle = `Paid in full${invoice.issued_at ? ` · sent ${formatDate(invoice.issued_at)}` : ''}`
+                      return (
+                        <div key="invoice">
+                          <BriefDetailsToggle label={`Invoice${deal.deal_ref ? ` #${deal.deal_ref}` : ''}`} subtitle={invSubtitle} variant="surface">
+                            {invoiceContent}
+                          </BriefDetailsToggle>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div key="invoice" className="surface" style={{ padding: 24 }}>
+                        {invoiceContent}
+                      </div>
+                    )
+                  }
 
                 default:
                   return null
