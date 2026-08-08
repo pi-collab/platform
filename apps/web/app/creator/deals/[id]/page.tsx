@@ -431,7 +431,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
           {/* ── Sections ── */}
           {(() => {
-            const showShipment = deal.requires_shipment && deal.shipment_status && !['negotiating', 'declined', 'cancelled'].includes(deal.status)
+            const showShipment = deal.requires_shipment && !['declined', 'cancelled'].includes(deal.status)
             const showDeliverables = !isNegotiating && (hasStructuredItems || (!hasStructuredItems && true))
             const showPosted = ['approved', 'paid', 'complete'].includes(deal.status)
             const showInvoice = ['approved', 'paid', 'complete'].includes(deal.status)
@@ -492,10 +492,10 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     <div key="shipment" className="surface" style={{ padding: '22px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                         <h3 style={sectionHeading}>Product shipment</h3>
-                        {deal.shipment_status === 'pending' && (
+                        {(!deal.shipment_status || deal.shipment_status === 'pending') && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
                             <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
-                            Not shipped yet
+                            {!deal.shipment_status ? 'Included in this deal' : 'Not shipped yet'}
                           </span>
                         )}
                         {deal.shipment_status === 'shipped' && (
@@ -511,9 +511,11 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                           </span>
                         )}
                       </div>
-                      {deal.shipment_status === 'pending' && (
+                      {(!deal.shipment_status || deal.shipment_status === 'pending') && (
                         <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-                          The brand is preparing a product kit to send to you. You&apos;ll see tracking details here once it ships.
+                          {!deal.shipment_status
+                            ? 'This deal includes a product kit. The brand will ship it to you once the deal is agreed.'
+                            : 'The brand is preparing a product kit to send to you. You\u2019ll see tracking details here once it ships.'}
                         </p>
                       )}
                       {deal.shipment_status === 'shipped' && (

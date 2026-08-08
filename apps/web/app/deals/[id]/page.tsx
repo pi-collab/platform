@@ -801,11 +801,16 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               )
             })()}
 
-            {/* Shipment note */}
+            {/* Shipment note — brief mention; full tracking is in ShipmentCard above */}
             {deal.requires_shipment && (
-              <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', paddingTop: 3 }}>Product shipment</div>
-                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: 0 }}>Included — shipped once agreed.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border-hairline)' }}>
+                <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" /></svg>
+                </span>
+                <span>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Product shipment included</span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 1 }}>Shipped once the deal is agreed</span>
+                </span>
               </div>
             )}
           </div>
