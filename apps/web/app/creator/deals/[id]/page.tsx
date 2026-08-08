@@ -11,6 +11,8 @@ import { calculateFee } from '@/lib/fee'
 import NegotiationHistory from '@/components/NegotiationHistory'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
+import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
+import ShippingAddressForm from './ShippingAddressForm'
 
 // ── Stage definitions (mirrors the deals list) ──
 const STAGES = ['Offer received', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
@@ -60,7 +62,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brief_pitch, brief_guidelines, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -121,6 +123,23 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   // Brief data
   const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
   const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
+  const avoid = (deal as any).brief_avoid as string | null
+  const briefAttachments = ((deal as any).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]
+
+  // Signed URLs for brief attachments
+  const attachmentUrls: Record<string, string> = {}
+  if (briefAttachments.length > 0) {
+    const results = await Promise.all(
+      briefAttachments.map((att) =>
+        supabase.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
+      )
+    )
+    results.forEach((res, i) => {
+      if (res.data?.signedUrl) {
+        attachmentUrls[briefAttachments[i].storage_path] = res.data.signedUrl
+      }
+    })
+  }
 
   return (
     <main style={wrapper}>
@@ -441,8 +460,13 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
             return sections.map((section) => {
               switch (section) {
-                case 'brief':
-                  if (!(pitch || guidelines)) return null
+                case 'brief': {
+                  if (!(pitch || guidelines || avoid || briefAttachments.length > 0)) return null
+                  const guidelinePoints: string[] = guidelines ? guidelines.split('\n').filter(Boolean) : []
+                  const avoidPoints: string[] = avoid ? avoid.split('\n').filter(Boolean) : []
+                  const glParts: string[] = []
+                  if (guidelinePoints.length > 0) glParts.push(`${guidelinePoints.length} guideline${guidelinePoints.length !== 1 ? 's' : ''}`)
+                  if (avoidPoints.length > 0) glParts.push(`${avoidPoints.length} to avoid`)
                   return (
                     <div key="brief" className="surface" style={{ padding: '26px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -464,32 +488,134 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                           </a>
                         )}
                       </div>
+
+                      {/* The brief */}
                       {pitch && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 32, paddingTop: 34, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
                           <div style={metaLabel}>The brief</div>
-                          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620 }}>{pitch}</p>
+                          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap' }}>{pitch}</p>
                         </div>
                       )}
-                      {guidelines && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
-                          <div style={metaLabel}>Creative guidelines</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {guidelines.split('\n').filter(Boolean).map((line: string, i: number) => (
-                              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                <span style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: 'var(--ink)', color: '#FFFFFF' }}>{i + 1}</span>
-                                <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{line}</span>
-                              </div>
-                            ))}
+
+                      {/* Attachments */}
+                      {briefAttachments.length > 0 && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                          <div style={metaLabel}>What they&apos;ve attached</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+                            {briefAttachments.map((att) => {
+                              const signedUrl = attachmentUrls[att.storage_path]
+                              const ext = att.name.split('.').pop()?.toUpperCase() || 'FILE'
+                              const sizeMB = (att.size_bytes / (1024 * 1024)).toFixed(1)
+                              return (
+                                <a key={att.storage_path} href={signedUrl || '#'} target="_blank" rel="noopener noreferrer" className="att-card" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 13px', borderRadius: 14, background: 'var(--card)', border: '1px solid var(--hairline)', boxShadow: '0 1px 2px rgba(22,23,15,.03)', cursor: 'pointer', textDecoration: 'none' }}>
+                                  <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                                  </span>
+                                  <span style={{ minWidth: 0 }}>
+                                    <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
+                                    <span style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 2 }}>{ext} · {sizeMB} MB</span>
+                                  </span>
+                                </a>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
+
+                      {/* Product kit — in brief */}
+                      {deal.requires_shipment && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                          <div style={metaLabel}>Product kit</div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', paddingTop: 3 }}>
+                            <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', marginTop: 1 }}><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 700 }}>You will be sent a product kit</div>
+                                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 2 }}>Ships once the deal is agreed</div>
+                              </div>
+                            </div>
+                            {(!deal.shipment_status || deal.shipment_status === 'pending') && (
+                              <a href="#shipment" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--border-hairline)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', cursor: 'pointer' }}>
+                                {(deal as Record<string, unknown>).shipping_address ? 'View address' : 'Add address'}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Full terms — toggle */}
+                      <BriefDetailsToggle label="Full terms" defaultOpen={!deal.agreed_at}>
+                        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
+                          {deal.price_paise != null && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your rate</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(deal.price_paise)}</b>
+                            </div>
+                          )}
+                          {fee && fee.fee_paise > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%), paid by the brand</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
+                            </div>
+                          )}
+                          {deal.usage_rights && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.usage_rights}{deal.usage_rights_end_date && `, ${new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</b>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                            <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
+                            <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatINR(deal.price_per_extra_revision_paise)}` : ''}</b>
+                          </div>
+                          {deal.payment_terms && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Payment terms</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.payment_terms}</b>
+                            </div>
+                          )}
+                        </div>
+                      </BriefDetailsToggle>
+
+                      {/* Creative guidelines — toggle */}
+                      {(guidelinePoints.length > 0 || avoidPoints.length > 0) && (
+                        <BriefDetailsToggle label="Creative guidelines" subtitle={glParts.join(' · ')} defaultOpen={!deal.agreed_at}>
+                          {guidelinePoints.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 28 }}>
+                              <div style={metaLabel}>Creative guidelines</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {guidelinePoints.map((point: string, i: number) => (
+                                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <span style={{ width: 22, height: 22, borderRadius: 7, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: 'var(--ink)', color: '#FFFFFF' }}>{i + 1}</span>
+                                    <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {avoidPoints.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 30, paddingTop: 28, borderTop: guidelinePoints.length > 0 ? '1px solid var(--border-hairline)' : 'none' }}>
+                              <div style={metaLabel}>Please avoid</div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {avoidPoints.map((point: string, i: number) => (
+                                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.2" strokeLinecap="round" style={{ flex: 'none', marginTop: 4 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
+                                    <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </BriefDetailsToggle>
+                      )}
                     </div>
                   )
+                }
 
                 case 'shipment':
                   if (!showShipment) return null
                   return (
-                    <div key="shipment" className="surface" style={{ padding: '22px 24px' }}>
+                    <div key="shipment" id="shipment" className="surface" style={{ padding: '22px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                         <h3 style={sectionHeading}>Product shipment</h3>
                         {(!deal.shipment_status || deal.shipment_status === 'pending') && (
@@ -512,11 +638,14 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                         )}
                       </div>
                       {(!deal.shipment_status || deal.shipment_status === 'pending') && (
-                        <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-                          {!deal.shipment_status
-                            ? 'This deal includes a product kit. The brand will ship it to you once the deal is agreed.'
-                            : 'The brand is preparing a product kit to send to you. You\u2019ll see tracking details here once it ships.'}
-                        </p>
+                        <>
+                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
+                            {!deal.shipment_status
+                              ? 'This deal includes a product kit. The brand will ship it to you once the deal is agreed.'
+                              : 'The brand is preparing a product kit to send to you. Send your address so they know where to ship.'}
+                          </p>
+                          <ShippingAddressForm dealId={deal.id} existingAddress={(deal as Record<string, unknown>).shipping_address as string | null} />
+                        </>
                       )}
                       {deal.shipment_status === 'shipped' && (
                         <>

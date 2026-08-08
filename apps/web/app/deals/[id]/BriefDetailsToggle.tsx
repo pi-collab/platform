@@ -6,10 +6,11 @@ interface BriefDetailsToggleProps {
   children: React.ReactNode
   label?: string
   subtitle?: string
+  defaultOpen?: boolean
 }
 
-export default function BriefDetailsToggle({ children, label, subtitle }: BriefDetailsToggleProps) {
-  const [open, setOpen] = useState(false)
+export default function BriefDetailsToggle({ children, label, subtitle, defaultOpen = false }: BriefDetailsToggleProps) {
+  const [open, setOpen] = useState(defaultOpen)
 
   return (
     <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border-hairline)' }}>

@@ -11,6 +11,7 @@ export default function ShipmentCard({
   trackingLink,
   carrierNote,
   shippedAt,
+  shippingAddress,
   creatorFirstName = 'Creator',
 }: {
   dealId: string
@@ -18,6 +19,7 @@ export default function ShipmentCard({
   trackingLink: string | null
   carrierNote: string | null
   shippedAt: string | null
+  shippingAddress?: string | null
   creatorFirstName?: string
 }) {
   const [loading, setLoading] = useState(false)
@@ -82,6 +84,18 @@ export default function ShipmentCard({
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
             {creatorFirstName} has 5 days to deliver once he receives this — mark it shipped and add tracking so that window starts.
           </p>
+
+          {shippingAddress ? (
+            <div style={{ marginTop: 18, padding: '14px 18px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)' }}>
+              <div style={metaLabel}>Shipping address</div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink)', marginTop: 8 }}>{shippingAddress}</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18, padding: '12px 16px', borderRadius: 12, background: 'var(--warning-soft, #FFF8E7)', border: '1px solid color-mix(in oklab, var(--warning) 20%, transparent)' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>Waiting for {creatorFirstName.toLowerCase()} to share their shipping address</span>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 22, paddingTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
             <div>

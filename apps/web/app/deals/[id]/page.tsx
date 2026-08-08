@@ -74,7 +74,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -309,6 +309,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               trackingLink={deal.tracking_link}
               carrierNote={deal.carrier_note}
               shippedAt={deal.shipped_at}
+              shippingAddress={(deal as Record<string, unknown>).shipping_address as string | null}
             />
           </div>
         )}
@@ -716,7 +717,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             )}
 
             {/* Full terms — toggle */}
-            <BriefDetailsToggle label="Full terms">
+            <BriefDetailsToggle label="Full terms" defaultOpen={deal.status === 'negotiating'}>
               <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Deal total</span>
@@ -767,7 +768,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               if (guidelinePoints.length > 0) parts.push(`${guidelinePoints.length} guideline${guidelinePoints.length !== 1 ? 's' : ''}`)
               if (avoidPoints.length > 0) parts.push(`${avoidPoints.length} to avoid`)
               return (
-                <BriefDetailsToggle label="Creative guidelines" subtitle={parts.join(' · ')}>
+                <BriefDetailsToggle label="Creative guidelines" subtitle={parts.join(' · ')} defaultOpen={deal.status === 'negotiating'}>
                   {/* Guidelines */}
                   {guidelinePoints.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 28 }}>

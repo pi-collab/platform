@@ -539,6 +539,46 @@ export async function getCampaignBriefForCreator(dealId: string): Promise<{
   }
 }
 
+/**
+ * Submit shipping address for a deal's product shipment.
+ * Creator-only action — RLS restricts to creator's own deals.
+ */
+export async function submitShippingAddress(dealId: string, address: string): Promise<DeliverableResult> {
+  const trimmed = address.trim()
+  if (!trimmed) return { status: 'error', message: 'Please enter your shipping address.' }
+  if (trimmed.length < 10) return { status: 'error', message: 'Address seems too short. Please include your full address.' }
+
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { status: 'error', message: 'Not authenticated.' }
+
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, requires_shipment, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { status: 'error', message: 'Deal not found.' }
+  if (!deal.requires_shipment) return { status: 'error', message: 'This deal does not require a product shipment.' }
+  if (['declined', 'cancelled'].includes(deal.status)) {
+    return { status: 'error', message: 'Cannot submit address for this deal.' }
+  }
+
+  const { error } = await supabase
+    .from('deals')
+    .update({ shipping_address: trimmed })
+    .eq('id', dealId)
+
+  if (error) return { status: 'error', message: `Failed to save address: ${error.message}` }
+
+  // Notify brand that the creator submitted their shipping address
+  notifyDealParty(dealId, 'brand', 'shipping_address_submitted', (t) => `Shipping address received for ${t}`)
+
+  revalidatePath(`/creator/deals/${dealId}`)
+  revalidatePath(`/deals/${dealId}`)
+  return { status: 'success' }
+}
+
 export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
