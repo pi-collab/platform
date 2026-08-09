@@ -6,10 +6,11 @@ import { useState, useRef, useEffect } from 'react'
 import SignOutButton from '@/components/SignOutButton'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
 
-const NAV_PILLS: { label: string; href: string; icon: 'dashboard' | 'deals' | 'payments' }[] = [
+const NAV_PILLS: { label: string; href: string; icon: 'dashboard' | 'deals' | 'payments' | 'storefront' }[] = [
   { label: 'Dashboard', href: '/creator/dashboard', icon: 'dashboard' },
   { label: 'Deals', href: '/creator/deals', icon: 'deals' },
   { label: 'Payments', href: '/creator/payments', icon: 'payments' },
+  { label: 'Storefront', href: '/creator/storefront', icon: 'storefront' },
 ]
 
 const ALL_MOBILE_LINKS = [
@@ -78,7 +79,7 @@ function Mascot({ size = 26 }: { size?: number }) {
   )
 }
 
-function NavIcon({ icon, active }: { icon: 'dashboard' | 'deals' | 'payments'; active: boolean }) {
+function NavIcon({ icon, active }: { icon: 'dashboard' | 'deals' | 'payments' | 'storefront'; active: boolean }) {
   const stroke = active ? 'var(--ink)' : 'currentColor'
   if (icon === 'dashboard') {
     return (
@@ -91,6 +92,13 @@ function NavIcon({ icon, active }: { icon: 'dashboard' | 'deals' | 'payments'; a
     return (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+      </svg>
+    )
+  }
+  if (icon === 'storefront') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 3h20" /><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" /><path d="m7 21 5-5 5 5" />
       </svg>
     )
   }
@@ -291,7 +299,6 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{creatorName}</p>
                     <span style={{ fontSize: 11, color: 'var(--wg-500)' }}>Creator</span>
                   </div>
-                  <Link href="/creator/storefront" style={dropdownLink}>Storefront</Link>
                   <div style={{ padding: '4px 14px 10px' }}><SignOutButton redirectTo="/login/creator" /></div>
                 </div>
               )}

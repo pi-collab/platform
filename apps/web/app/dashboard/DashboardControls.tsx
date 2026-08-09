@@ -12,7 +12,7 @@ const PERIOD_OPTIONS: { value: Period; label: string }[] = [
   { value: 'custom', label: 'Custom' },
 ]
 
-export function DateFilter() {
+export function DateFilter({ basePath = '/dashboard' }: { basePath?: string } = {}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentPeriod = (searchParams.get('period') as Period) || 'this_year'
@@ -38,7 +38,7 @@ export function DateFilter() {
     else params.delete('from')
     if (period === 'custom' && to) params.set('to', to)
     else params.delete('to')
-    router.push(`/dashboard?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   function handleSelect(period: Period) {

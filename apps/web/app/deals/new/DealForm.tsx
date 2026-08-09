@@ -71,7 +71,7 @@ function PlatformIcon({ platform }: { platform: string }) {
   return null
 }
 
-export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [] }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[] }) {
+export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +103,19 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     return { sel, dropped }
   }, [prefill, products])
 
-  const [selections, setSelections] = useState<Record<string, { qty: number; customPricePaise: number | null }>>(prefillResult.sel)
+  const [selections, setSelections] = useState<Record<string, { qty: number; customPricePaise: number | null }>>(() => {
+    // If storefront selections exist (from browse rate card), use those
+    if (storefrontSelections && Object.keys(prefillResult.sel).length === 0) {
+      const sel: Record<string, { qty: number; customPricePaise: number | null }> = {}
+      for (const [productId, qty] of Object.entries(storefrontSelections)) {
+        if (products.some(p => p.id === productId)) {
+          sel[productId] = { qty, customPricePaise: null }
+        }
+      }
+      return sel
+    }
+    return prefillResult.sel
+  })
 
   const didSetDropped = useRef(false)
   useEffect(() => {

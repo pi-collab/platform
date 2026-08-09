@@ -127,7 +127,7 @@ export default function CreatorInboxView({
   const isTerminal = selectedThread ? TERMINAL_STATUSES.includes(selectedThread.dealStatus) : false
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [selected, selectedMessages.length])
 
   useEffect(() => {

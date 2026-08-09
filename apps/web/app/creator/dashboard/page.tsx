@@ -2,6 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
+import { DateFilter } from '@/app/dashboard/DashboardControls'
+import { periodToDateRange } from '@/app/dashboard/period-utils'
+import type { Period } from '@/app/dashboard/period-utils'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Dashboard — Guapd Creator' }
@@ -14,9 +17,21 @@ interface InvoiceRow {
   paid_at: string | null
 }
 
-export default async function CreatorDashboardPage() {
+const VALID_PERIODS = new Set(['this_year', 'this_quarter', 'this_month', 'this_week', 'custom'])
+
+export default async function CreatorDashboardPage({
+  searchParams,
+}: {
+  searchParams: { period?: string; from?: string; to?: string }
+}) {
   const { creatorId, creatorName } = await verifyCreator()
   const supabase = createClient()
+
+  // Date range filtering
+  const period = (searchParams.period && VALID_PERIODS.has(searchParams.period) ? searchParams.period : 'this_year') as Period
+  const { from: periodFrom, to: periodTo } = periodToDateRange(period, searchParams.from, searchParams.to)
+  const periodFromISO = periodFrom.toISOString()
+  const periodToISO = periodTo.toISOString()
 
   const [{ data: deals }, { data: invoices }, { data: storefront }] = await Promise.all([
     supabase
@@ -24,6 +39,8 @@ export default async function CreatorDashboardPage() {
       .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
+      .gte('created_at', periodFromISO)
+      .lte('created_at', periodToISO)
       .order('created_at', { ascending: false }),
     supabase
       .from('invoices')
@@ -35,7 +52,11 @@ export default async function CreatorDashboardPage() {
   ])
 
   const allDeals = deals ?? []
-  const allInvoices = (invoices ?? []) as InvoiceRow[]
+  const rawInvoices = (invoices ?? []) as InvoiceRow[]
+
+  // Scope invoices to only deals within the selected period
+  const dealIds = new Set(allDeals.map(d => d.id))
+  const allInvoices = rawInvoices.filter(inv => dealIds.has(inv.deal_id))
 
   const invoiceMap = new Map<string, InvoiceRow>()
   for (const inv of allInvoices) invoiceMap.set(inv.deal_id, inv)
@@ -115,7 +136,7 @@ export default async function CreatorDashboardPage() {
 
         {/* ── HERO CARD ──────────────────────────────── */}
         <section className="neon-hover" style={heroCard}>
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 0%', minWidth: 240 }}>
               <span className="t-meta" style={{ display: 'inline-block', color: 'var(--meta)' }}>Welcome back</span>
               <h1 style={heroTitle}>
@@ -124,31 +145,29 @@ export default async function CreatorDashboardPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14, flexShrink: 0 }}>
-              {/* Date filter (placeholder) */}
-              <label style={dateFilter}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                <select disabled style={dateSelect}><option>This year</option></select>
-              </label>
+              <DateFilter basePath="/creator/dashboard" />
 
-              {/* Next payout card */}
-              {nextPayoutAmount > 0 && (
-                <div style={payoutCard}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                    <span className="t-meta" style={{ color: 'var(--meta)' }}>Next payout</span>
-                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--wg-600)', background: 'var(--paper-2)', borderRadius: 999, padding: '3px 10px' }}>Pending</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
-                    <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 34, letterSpacing: '-0.045em', lineHeight: 0.9, color: 'var(--ink)' }}>{fmt(nextPayoutAmount)}</div>
-                    <svg width="120" height="34" viewBox="0 0 92 28" fill="none" style={{ display: 'block', overflow: 'visible' }}>
-                      <polyline points="2,22 10,21 18,23 26,18 34,19 42,15 50,16 58,12 66,13 74,9 82,10 90,5" stroke="var(--sec-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <circle cx="90" cy="5" r="3" fill="var(--sec-ink)" stroke="var(--card)" strokeWidth="1.6" />
-                    </svg>
-                  </div>
-                  {nextPayoutInvoice?.due_date && (
-                    <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 8 }}>Due {new Date(nextPayoutInvoice.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
-                  )}
+              {/* Next payout card — always visible to prevent layout shift */}
+              <div style={payoutCard}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <span className="t-meta" style={{ color: 'var(--meta)' }}>Next payout</span>
+                  <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--wg-600)', background: 'var(--paper-2)', borderRadius: 999, padding: '3px 10px' }}>
+                    {nextPayoutAmount > 0 ? 'Pending' : 'None'}
+                  </span>
                 </div>
-              )}
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 34, letterSpacing: '-0.045em', lineHeight: 0.9, color: 'var(--ink)' }}>{fmt(nextPayoutAmount)}</div>
+                  <svg width="120" height="34" viewBox="0 0 92 28" fill="none" style={{ display: 'block', overflow: 'visible' }}>
+                    <polyline points="2,22 10,21 18,23 26,18 34,19 42,15 50,16 58,12 66,13 74,9 82,10 90,5" stroke="var(--sec-ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="90" cy="5" r="3" fill="var(--sec-ink)" stroke="var(--card)" strokeWidth="1.6" />
+                  </svg>
+                </div>
+                {nextPayoutInvoice?.due_date ? (
+                  <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 8 }}>Due {new Date(nextPayoutInvoice.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
+                ) : (
+                  <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 8 }}>No pending payouts</div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -619,7 +638,7 @@ function computeMonthlyEarnings(invoices: InvoiceRow[]): { label: string; amount
 // ── Style constants ─────────────────────────────────────────
 
 const heroCard: React.CSSProperties = {
-  position: 'relative', overflow: 'hidden', borderRadius: 24,
+  position: 'relative', overflow: 'visible', borderRadius: 24,
   background: 'var(--card)', boxShadow: 'var(--sh-2)',
   padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)',
 }
@@ -630,19 +649,6 @@ const heroTitle: React.CSSProperties = {
   margin: '12px 0 0', color: 'var(--ink)', whiteSpace: 'nowrap',
 }
 
-const dateFilter: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 8,
-  padding: '9px 14px', borderRadius: 999,
-  border: '1px solid var(--line)', background: 'var(--card)',
-  fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)',
-  cursor: 'pointer', opacity: 0.5,
-}
-
-const dateSelect: React.CSSProperties = {
-  border: 'none', outline: 'none', background: 'transparent',
-  fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)',
-  cursor: 'pointer',
-}
 
 const payoutCard: React.CSSProperties = {
   width: 304, maxWidth: '100%', borderRadius: 18,

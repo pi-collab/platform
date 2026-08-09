@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
 import { NICHES } from '@/lib/niches'
@@ -543,14 +544,18 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
   const low = lowestRate(c.rate_card)
   const niche = (c.niches ?? [])[0]
 
+  const router = useRouter()
+
   return (
     <div
+      onClick={() => router.push(`/browse/${c.id}`)}
       className="creator-card"
       style={{
         position: 'relative', cursor: 'pointer', borderRadius: 20,
         border: '1px solid var(--frost-edge)', background: 'var(--card)',
         boxShadow: '0 20px 46px -34px rgba(40,45,25,.34)',
         display: 'flex', flexDirection: 'column', padding: 20, color: 'var(--ink)',
+        textDecoration: 'none',
       }}
     >
       {/* Top: Avatar + Name + Bookmark */}
@@ -646,20 +651,39 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: 8, marginTop: 14, position: 'relative', zIndex: 1 }}>
-        <Link
-          href={storefrontSlug ? `/c/${storefrontSlug}` : `/browse/${c.id}`}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            padding: 11, borderRadius: 11,
-            background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
-            fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
-            color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
-          }}
-        >
-          {storefrontSlug ? 'View Storefront' : 'View Profile'}
-        </Link>
+        {storefrontSlug ? (
+          <a
+            href={`/c/${storefrontSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              padding: 11, borderRadius: 11,
+              background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
+              fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
+              color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
+            }}
+          >
+            Storefront
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+          </a>
+        ) : (
+          <span
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              padding: 11, borderRadius: 11,
+              background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
+              fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
+              color: 'var(--ink)', whiteSpace: 'nowrap',
+            }}
+          >
+            View Profile
+          </span>
+        )}
         <Link
           href={`/deals/new?creator=${c.id}`}
           onClick={(e) => e.stopPropagation()}

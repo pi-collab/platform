@@ -79,25 +79,34 @@ interface StorefrontStats {
   followers?: number
   avg_views?: number
   engagement_rate?: number
+  // Extended fields stored in stats JSONB
+  monthly_reach?: string
+  repeat_brands?: string
+  avg_deal_value?: string
+  reply_time?: string
+  booking_open?: boolean
+  spots_left?: number
+  audience?: unknown
+  content_items?: unknown
+  brand_collabs?: unknown
 }
 
 function validateStats(stats: unknown): stats is StorefrontStats {
   if (typeof stats !== 'object' || stats === null) return false
   const s = stats as Record<string, unknown>
 
-  const allowedKeys = new Set(['followers', 'avg_views', 'engagement_rate'])
-  for (const key of Object.keys(s)) {
-    if (!allowedKeys.has(key)) return false
+  // Validate numeric fields if present
+  if (s.followers !== undefined && s.followers !== null) {
+    if (typeof s.followers !== 'number' || s.followers < 0) return false
   }
-
-  if (s.followers !== undefined) {
-    if (typeof s.followers !== 'number' || !Number.isInteger(s.followers) || s.followers < 0) return false
+  if (s.avg_views !== undefined && s.avg_views !== null) {
+    if (typeof s.avg_views !== 'number' || s.avg_views < 0) return false
   }
-  if (s.avg_views !== undefined) {
-    if (typeof s.avg_views !== 'number' || !Number.isInteger(s.avg_views) || s.avg_views < 0) return false
-  }
-  if (s.engagement_rate !== undefined) {
+  if (s.engagement_rate !== undefined && s.engagement_rate !== null) {
     if (typeof s.engagement_rate !== 'number' || s.engagement_rate < 0 || s.engagement_rate > 100) return false
+  }
+  if (s.spots_left !== undefined && s.spots_left !== null) {
+    if (typeof s.spots_left !== 'number' || s.spots_left < 0) return false
   }
   return true
 }
@@ -228,11 +237,6 @@ export async function upsertStorefront(input: UpsertInput) {
 
   let error
   if (existing) {
-    // Slug immutability: once published, slug cannot change
-    if (existing.is_published && slug !== existing.slug) {
-      return { error: 'Your URL can\u2019t be changed after your storefront has been published.' }
-    }
-
     // Update — don't change creator_id
     const { error: updateErr } = await supabase
       .from('creator_storefronts')
@@ -257,6 +261,10 @@ export async function upsertStorefront(input: UpsertInput) {
 
   revalidatePath('/creator/storefront')
   revalidatePath(`/c/${slug}`)
+  // If slug changed on a published storefront, invalidate the old URL's cache
+  if (existing && existing.slug && existing.slug !== slug) {
+    revalidatePath(`/c/${existing.slug}`)
+  }
   return { success: true }
 }
 

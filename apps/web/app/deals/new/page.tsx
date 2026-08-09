@@ -30,7 +30,7 @@ export interface DealPrefill {
 
 const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
 
-export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string } }) {
+export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string } }) {
   const brand = await verifyApprovedBrand()
   const supabase = createClient()
 
@@ -117,6 +117,18 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
   const effectiveFeePercent = pairRate?.fee_pct ?? brandRow?.platform_fee_percent ?? 0
   const activeProducts = (products ?? []).filter((p) => p.is_active)
   const firstName = creator.full_name.split(' ')[0]
+
+  // Parse storefront item selections: "productId:qty,productId:qty"
+  let storefrontSelections: Record<string, number> | undefined
+  if (!prefill && searchParams.items) {
+    storefrontSelections = {}
+    for (const pair of searchParams.items.split(',')) {
+      const [key, qtyStr] = pair.split(':')
+      const qty = parseInt(qtyStr, 10)
+      if (key && qty > 0) storefrontSelections[key] = qty
+    }
+    if (Object.keys(storefrontSelections).length === 0) storefrontSelections = undefined
+  }
 
   return (
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
@@ -220,6 +232,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
           prefill={prefill}
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
+          storefrontSelections={storefrontSelections}
         />
       </div>
     </main>

@@ -1,0 +1,983 @@
+'use client'
+
+import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
+
+/* ── Types ────────────────────────────────────────────────────── */
+
+export interface ShopfrontSection {
+  key: string
+  label: string
+  enabled: boolean
+}
+
+export interface PlatformStat {
+  platform: 'instagram' | 'youtube'
+  handle: string
+  followers: number
+  engagement: number
+  avgViews: number
+  reachData?: { month: string; value: number }[]
+}
+
+export interface AudienceData {
+  ageBreakdown?: { label: string; pct: number }[]
+  gender?: { women: number; men: number }
+  topLocations?: { city: string; pct: number }[]
+}
+
+export interface ContentItem {
+  title: string
+  type: string // Reel, Story, YouTube Short, etc.
+  brand?: string
+  date?: string
+  views?: string
+  engagement?: string
+  saves?: string
+  thumbnailUrl?: string
+  embedUrl?: string // Instagram/YouTube embed link for preview
+}
+
+export interface BrandCollab {
+  name: string
+  type?: string // "Reel + Stories", "YouTube integration", etc.
+  views?: string
+  engagement?: string
+  logoUrl?: string
+}
+
+export interface RateCardItem {
+  key: string
+  name: string
+  desc: string
+  pricePaise: number
+  platform: string
+  handle: string
+}
+
+export interface ShopfrontData {
+  creatorName: string
+  handle: string
+  slug?: string
+  bio: string
+  profilePhotoUrl?: string | null
+  niches: string[]
+  isVerified: boolean
+  replyTime: string
+  totalFollowers: string
+  engagementRate: string
+  avgViews: string
+  // Stats strip
+  monthlyReach: string
+  repeatBrands: string
+  avgDealValue: string
+  // Platform stats
+  platforms: PlatformStat[]
+  // Audience
+  audience: AudienceData
+  // Content
+  contentItems: ContentItem[]
+  // Brand collabs
+  brandCollabs: BrandCollab[]
+  // Rate card
+  rateCardItems: RateCardItem[]
+  // Sections
+  sections: ShopfrontSection[]
+  // Availability
+  bookingOpen: boolean
+  spotsLeft: number
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+
+function formatINR(paise: number): string {
+  const rupees = Math.round(paise / 100)
+  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
+  return '₹' + rupees.toLocaleString('en-IN')
+}
+
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+const DEFAULT_SECTIONS: ShopfrontSection[] = [
+  { key: 'hero', label: 'Hero', enabled: true },
+  { key: 'stats', label: 'Stats Strip', enabled: true },
+  { key: 'ratecard', label: 'Rate Card', enabled: true },
+  { key: 'audience', label: 'Audience', enabled: true },
+  { key: 'content', label: 'Content Showcase', enabled: true },
+  { key: 'collabs', label: 'Past Collaborations', enabled: true },
+  { key: 'pitch', label: 'Work With Me', enabled: true },
+]
+
+/* ── Section Wrapper (stable component identity) ─────────────── */
+
+const SectionCtx = createContext<{
+  sections: ShopfrontSection[]
+  editing: boolean
+  isEnabled: (key: string) => boolean
+  toggleSection: (key: string) => void
+}>({ sections: [], editing: false, isEnabled: () => true, toggleSection: () => {} })
+
+function SectionWrapper({ sectionKey, children }: { sectionKey: string; children: React.ReactNode }) {
+  const { sections, editing, isEnabled, toggleSection } = useContext(SectionCtx)
+  if (!isEnabled(sectionKey) && !editing) return null
+  return (
+    <div style={{ position: 'relative', opacity: isEnabled(sectionKey) ? 1 : 0.4, transition: 'opacity .2s' }}>
+      {editing && (
+        <div style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 20,
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'var(--card)', borderRadius: 12, padding: '6px 14px',
+          boxShadow: '0 4px 12px rgba(0,0,0,.12)', border: '1px solid var(--hairline)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)', textTransform: 'uppercase', letterSpacing: '.08em' }}>
+            {sections.find(s => s.key === sectionKey)?.label}
+          </span>
+          <button
+            onClick={() => toggleSection(sectionKey)}
+            style={{
+              width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', position: 'relative',
+              background: isEnabled(sectionKey) ? 'var(--neon)' : 'var(--sec-mid-2)',
+              transition: 'background .15s',
+            }}
+          >
+            <span style={{
+              position: 'absolute', top: 2, width: 16, height: 16, borderRadius: '50%',
+              background: 'var(--card)', boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+              left: isEnabled(sectionKey) ? 18 : 2, transition: 'left .15s',
+            }} />
+          </button>
+        </div>
+      )}
+      {children}
+    </div>
+  )
+}
+
+/* ── Component ────────────────────────────────────────────────── */
+
+export default function ShopfrontPreview({
+  data,
+  editing = false,
+  onSectionsChange,
+  dealUrl,
+  onDealClick,
+}: {
+  data: ShopfrontData
+  editing?: boolean
+  onSectionsChange?: (sections: ShopfrontSection[]) => void
+  /** When set, CTA buttons link to this URL (e.g. /deals/new?creator=ID) instead of in-page anchors */
+  dealUrl?: string
+  /** When set, CTA buttons call this with selected rate card quantities instead of navigating */
+  onDealClick?: (selectedQty: Record<string, number>) => void
+}) {
+  const sections = data.sections?.length ? data.sections : DEFAULT_SECTIONS
+  const isEnabled = (key: string) => sections.find(s => s.key === key)?.enabled !== false
+
+  // Copy link state
+  const [linkCopied, setLinkCopied] = useState(false)
+  const copyLink = useCallback(() => {
+    const url = `https://guapd.com/c/${data.slug || data.handle}`
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    })
+  }, [data.slug, data.handle])
+
+  // Rate card state
+  const [qty, setQty] = useState<Record<string, number>>({})
+  const setItemQty = (key: string, delta: number) => {
+    setQty(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }))
+  }
+  const rateTotal = data.rateCardItems.reduce((s, item) => s + (qty[item.key] || 0) * item.pricePaise, 0)
+  const rateCount = Object.values(qty).reduce((s, n) => s + n, 0)
+
+  // Platform tab state
+  const [activePlatform, setActivePlatform] = useState<string>(data.platforms[0]?.platform || 'instagram')
+
+  // Audience animation
+  const audRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = audRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    el.classList.add('aud-ready')
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => el.classList.toggle('aud-in', e.isIntersecting))
+    }, { threshold: 0.22 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  const toggleSection = useCallback((key: string) => {
+    if (!onSectionsChange) return
+    const updated = sections.map(s => s.key === key ? { ...s, enabled: !s.enabled } : s)
+    onSectionsChange(updated)
+  }, [sections, onSectionsChange])
+
+  const sectionCtx = useMemo(() => ({ sections, editing, isEnabled, toggleSection }), [sections, editing, isEnabled, toggleSection])
+
+  const firstName = data.creatorName.split(' ')[0]
+
+  return (
+    <SectionCtx.Provider value={sectionCtx}>
+    <div style={{ fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', minHeight: '100vh', background: '#F7F7F4' }}>
+      {/* Noise overlay */}
+      <div aria-hidden="true" style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 90, opacity: 0.03, mixBlendMode: 'multiply',
+        backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='gn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gn)'/%3E%3C/svg%3E\")",
+      }} />
+
+      {/* ═══ 1. HERO ═══════════════════════════════════════════ */}
+      <SectionWrapper sectionKey="hero">
+        <section style={{ padding: 'clamp(28px,3.6vw,60px) clamp(20px,5vw,72px) clamp(20px,2.4vw,36px)' }}>
+          <div className="sf-hero-border" style={{ maxWidth: 1080, margin: '0 auto' }}>
+            <div className="sf-comet" />
+            <div style={{ borderRadius: 32, background: 'var(--card)', boxShadow: '0 34px 80px -44px rgba(40,45,25,.4)', padding: 'clamp(24px,3.4vw,48px)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(28px,3.8vw,56px)', alignItems: 'center' }}>
+                {/* Photo card */}
+                <div style={{ position: 'relative' }}>
+                  <div className="sfcard" style={{ borderRadius: 22, background: 'var(--card)', border: '1px solid var(--frost-edge)', boxShadow: '0 20px 46px -30px rgba(40,45,25,.42)', padding: 10, maxWidth: 440 }}>
+                    {data.profilePhotoUrl ? (
+                      <img src={data.profilePhotoUrl} alt={data.creatorName} style={{ width: '100%', aspectRatio: '4/5', display: 'block', borderRadius: 16, objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', aspectRatio: '4/5', borderRadius: 16, border: '1px solid var(--sec-mid-2)', background: 'linear-gradient(150deg,#F4F8FC 0%,#F7F4FB 55%,#FAFAF8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 64, color: 'var(--ink-faint)', letterSpacing: '-0.03em' }}>
+                          {getInitials(data.creatorName)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div>
+                  <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Creator shopfront</span>
+                  <h1 className="t-display" style={{ margin: '14px 0 0', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    {firstName}
+                    {data.isVerified && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: '50%', background: 'var(--neon)', flexShrink: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      </span>
+                    )}
+                  </h1>
+                  {/* Social handles + storefront link — single row */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                    {data.platforms.map(p => (
+                      <a
+                        key={p.platform}
+                        href={p.platform === 'instagram' ? `https://instagram.com/${p.handle.replace(/^@/, '')}` : `https://youtube.com/@${p.handle.replace(/^@/, '')}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '5px 12px', borderRadius: 999,
+                          background: 'var(--card)', border: '1px solid var(--frost-edge)',
+                          fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
+                          color: 'var(--ink-soft)', textDecoration: 'none',
+                          transition: 'border-color .15s',
+                        }}
+                      >
+                        {p.platform === 'instagram' ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" /><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" /><line x1="17.5" y1="6.5" x2="17.51" y2="6.5" /></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg>
+                        )}
+                        @{p.handle.replace(/^@/, '')}
+                      </a>
+                    ))}
+                    {data.slug && (
+                      <button type="button" onClick={copyLink} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '5px 12px', borderRadius: 999,
+                        background: linkCopied ? 'color-mix(in oklab, var(--neon) 14%, var(--card))' : 'var(--card)',
+                        border: `1px solid ${linkCopied ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
+                        fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
+                        color: linkCopied ? 'var(--ink)' : 'var(--ink-faint)',
+                        cursor: 'pointer', transition: 'all .2s',
+                      }}>
+                        {linkCopied ? (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                        ) : (
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+                        )}
+                        {linkCopied ? 'Copied!' : `guapd.com/c/${data.slug}`}
+                      </button>
+                    )}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0 5px 4px', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: 0 }} />
+                      Replies in {data.replyTime}
+                    </span>
+                  </div>
+
+                  {/* Bio */}
+                  <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: '16px 0 0' }}>{data.bio}</p>
+
+                  {/* Niche pills */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                    {data.niches.map(n => (
+                      <span key={n} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 13px',
+                        borderRadius: 999, background: 'var(--card)', border: '1.5px solid rgba(123,163,52,.6)',
+                        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)',
+                      }}>{n}</span>
+                    ))}
+                  </div>
+
+                  {/* Quick stats */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.totalFollowers}</div>
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Total followers</div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.engagementRate}</div>
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Engagement</div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.avgViews}</div>
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Avg views</div>
+                    </div>
+                  </div>
+
+                  {/* CTAs */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
+                    {onDealClick ? (
+                      <button onClick={() => onDealClick({})} className="g-btn-primary" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
+                        Create an offer
+                      </button>
+                    ) : (
+                      <a href={dealUrl || '#pitch'} className="g-btn-primary" style={{ textDecoration: 'none', width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
+                        Create an offer
+                      </a>
+                    )}
+                    <a href={dealUrl ? '#packages' : '#packages'} style={{
+                      fontWeight: 700, fontSize: 14, color: 'var(--ink)', textDecoration: 'none',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                      width: 180, padding: '14px 22px', border: '1px solid var(--hairline)',
+                      borderRadius: 999, background: 'var(--card)',
+                      boxShadow: '0 12px 26px -12px rgba(40,45,25,.45),inset 0 1px 0 rgba(255,255,255,.9)',
+                    }}>
+                      View rates
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </SectionWrapper>
+
+      {/* ═══ 2. STATS STRIP ════════════════════════════════════ */}
+      <SectionWrapper sectionKey="stats">
+        <section style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
+          <div style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
+            {[
+              { value: data.monthlyReach, label: 'Monthly reach' },
+              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '~4h', label: 'Replies in' },
+              { value: data.repeatBrands, label: 'Repeat brands' },
+              { value: data.avgDealValue, label: 'Avg deal value' },
+            ].map((stat, i) => (
+              <div key={i} style={{
+                position: 'relative', borderRadius: 20, background: 'var(--card)', padding: '22px 24px',
+                boxShadow: '0 20px 46px -30px rgba(40,45,25,.4)',
+              }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 34, lineHeight: 1 }}>{stat.value}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sec-ink)' }} />
+                  <span className="t-meta" style={{ color: 'var(--ink-soft)' }}>{stat.label}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </SectionWrapper>
+
+      {/* ═══ 3. RATE CARD ══════════════════════════════════════ */}
+      <SectionWrapper sectionKey="ratecard">
+        <section id="packages" style={{ padding: 'clamp(28px,3.4vw,44px) clamp(20px,5vw,72px) clamp(32px,3.6vw,48px)' }}>
+          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+              <div>
+                <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Rate card</span>
+                <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Build your deal</h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap', margin: '0 0 clamp(16px,2vw,22px)' }}>
+                  Add what you need at {firstName}&apos;s set rates — the total updates as you go.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0, marginBottom: 'clamp(16px,2vw,22px)' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--ink)', fontSize: 15, opacity: 0.5 }}>guapd</span>
+                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 500, color: 'var(--ink-soft)' }}>verified rates</span>
+              </div>
+            </div>
+
+            <div style={{
+              border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
+              boxShadow: '0 30px 66px -40px rgba(40,45,25,.4),inset 0 1px 0 rgba(255,255,255,.9)',
+              padding: 'clamp(10px,1.4vw,18px) clamp(20px,2.6vw,30px) clamp(20px,2.4vw,26px)',
+            }}>
+              {data.rateCardItems.map((item, i) => {
+                const q = qty[item.key] || 0
+                return (
+                  <div key={item.key} style={{
+                    display: 'grid', gridTemplateColumns: '48px minmax(0,1fr) 110px auto',
+                    alignItems: 'center', gap: 20, padding: '20px 0',
+                    borderTop: i === 0 ? 'none' : '1px solid var(--hairline)',
+                    background: q > 0 ? 'rgba(232,255,102,.14)' : 'transparent',
+                    borderRadius: 14, transition: 'background .18s ease',
+                  }}>
+                    {/* Platform icon */}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 14, background: 'var(--card)', border: '1px solid var(--frost-edge)', boxShadow: '0 8px 18px -12px rgba(40,45,25,.35)' }}>
+                      {item.platform === 'instagram' ? (
+                        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg>
+                      ) : (
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 8.5a3 3 0 0 0-2.1-2.1C18 5.8 12 5.8 12 5.8s-6 0-7.9.6A3 3 0 0 0 2 8.5 31 31 0 0 0 1.6 12 31 31 0 0 0 2 15.5a3 3 0 0 0 2.1 2.1c1.9.6 7.9.6 7.9.6s6 0 7.9-.6A3 3 0 0 0 22 15.5 31 31 0 0 0 22.4 12 31 31 0 0 0 22 8.5z" /><path d="M10 15.2V8.8L15.5 12z" fill="currentColor" stroke="none" /></svg>
+                      )}
+                    </span>
+
+                    {/* Name + desc */}
+                    <div style={{ minWidth: 0 }}>
+                      <div className="t-subhead">{item.name}</div>
+                      <div className="t-body" style={{ color: 'var(--ink-soft)', marginTop: 4 }}>{item.desc}</div>
+                    </div>
+
+                    {/* Price */}
+                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
+                      {formatINR(item.pricePaise)}
+                    </div>
+
+                    {/* Stepper */}
+                    <div style={{
+                      justifySelf: 'end', display: 'inline-flex', alignItems: 'center', gap: 0,
+                      background: 'var(--frost-1)', border: '1px solid var(--hairline)',
+                      borderRadius: 999, padding: 5,
+                    }}>
+                      <button
+                        onClick={() => setItemQty(item.key, -1)}
+                        aria-label="Decrease quantity"
+                        style={{
+                          width: 30, height: 30, borderRadius: '50%', border: 'none',
+                          background: 'var(--card)', color: 'var(--ink)', fontFamily: 'var(--font-ui)',
+                          fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 6px -2px rgba(40,45,25,.3)',
+                        }}
+                      >−</button>
+                      <span style={{
+                        minWidth: 38, textAlign: 'center', fontFamily: 'var(--font-display)',
+                        fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em', color: 'var(--ink)',
+                      }}>{q}</span>
+                      <button
+                        onClick={() => setItemQty(item.key, 1)}
+                        aria-label="Increase quantity"
+                        style={{
+                          width: 30, height: 30, borderRadius: '50%', border: 'none',
+                          background: 'var(--neon)', color: 'var(--lime-950)', fontFamily: 'var(--font-ui)',
+                          fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 6px -2px rgba(180,210,60,.6)',
+                        }}
+                      >+</button>
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Total row */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap',
+                marginTop: 14, paddingTop: 20, borderTop: '1px solid var(--hairline)',
+              }}>
+                <div>
+                  <span className="t-meta" style={{ color: 'var(--ink-faint)' }}>Selected</span>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, fontSize: 17, color: 'var(--ink)', marginTop: 5 }}>
+                    {rateCount === 0 ? 'None yet' : `${rateCount} deliverable${rateCount !== 1 ? 's' : ''} selected`}
+                  </div>
+                </div>
+                {onDealClick ? (
+                  <button onClick={() => onDealClick(qty)} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
+                    fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
+                    color: 'var(--lime-950)', background: 'var(--neon)',
+                    borderRadius: 999, padding: '13px 24px',
+                    boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
+                    opacity: rateTotal > 0 ? 1 : 0.45,
+                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
+                    transition: 'opacity .2s',
+                  }}>
+                    Proceed to create deal
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lime-950)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </button>
+                ) : (
+                  <a href={dealUrl || '#pitch'} style={{
+                    textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7,
+                    fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
+                    color: 'var(--lime-950)', background: 'var(--neon)',
+                    borderRadius: 999, padding: '13px 24px',
+                    boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
+                    opacity: rateTotal > 0 ? 1 : 0.45,
+                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
+                    transition: 'opacity .2s',
+                  }}>
+                    Proceed to create deal
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lime-950)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </SectionWrapper>
+
+      {/* ═══ 4. AUDIENCE ═══════════════════════════════════════ */}
+      <SectionWrapper sectionKey="audience">
+        <section style={{ padding: 'clamp(18px,2.2vw,28px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+          <div ref={audRef} style={{
+            maxWidth: 1080, margin: '0 auto', position: 'relative', overflow: 'hidden',
+            borderRadius: 28, border: '1.5px solid rgba(255,255,255,.9)',
+            boxShadow: '0 30px 70px -46px rgba(40,45,25,.34)',
+            background: 'linear-gradient(168deg,var(--sec) 0%,var(--sec-2) 30%,var(--card) 66%)',
+            padding: 'clamp(26px,3.6vw,48px)',
+          }}>
+            {/* Header + tabs */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+              <div>
+                <h2 className="t-title" style={{ margin: '0 0 6px' }}>{firstName}&apos;s <span className="t-accent">audience</span></h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Real reach and growth on each platform, updated monthly.</p>
+              </div>
+              <div role="tablist" style={{ display: 'inline-flex', gap: 10, flexShrink: 0 }}>
+                {data.platforms.map(p => {
+                  const isActive = activePlatform === p.platform
+                  return (
+                    <button
+                      key={p.platform}
+                      type="button"
+                      onClick={() => setActivePlatform(p.platform)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        fontFamily: 'var(--font-ui)', fontWeight: isActive ? 700 : 600,
+                        fontSize: 13.5, color: isActive ? '#fff' : 'var(--ink-soft)',
+                        background: isActive ? 'var(--ink)' : 'var(--card)',
+                        border: `1px solid ${isActive ? 'var(--ink)' : 'var(--hairline)'}`,
+                        borderRadius: 999, padding: '10px 20px', cursor: 'pointer',
+                        transition: 'background .18s ease,color .18s ease',
+                      }}
+                    >
+                      {p.platform === 'instagram' ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg>
+                      ) : (
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 8.5a3 3 0 0 0-2.1-2.1C18 5.8 12 5.8 12 5.8s-6 0-7.9.6A3 3 0 0 0 2 8.5 31 31 0 0 0 1.6 12 31 31 0 0 0 2 15.5a3 3 0 0 0 2.1 2.1c1.9.6 7.9.6 7.9.6s6 0 7.9-.6A3 3 0 0 0 22 15.5 31 31 0 0 0 22.4 12 31 31 0 0 0 22 8.5z" /><path d="M10 15.2V8.8L15.5 12z" fill="currentColor" stroke="none" /></svg>
+                      )}
+                      {p.platform === 'instagram' ? 'Instagram' : 'YouTube'}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Platform cards */}
+            {data.platforms.map(p => (
+              <div key={p.platform} style={{ display: activePlatform === p.platform ? 'block' : 'none', marginTop: 'clamp(24px,3vw,34px)' }}>
+                <div style={{
+                  background: 'var(--card)', borderRadius: 20, padding: 'clamp(20px,2.6vw,30px)',
+                  boxShadow: 'inset 0 2px 7px rgba(40,45,25,.11),inset 0 0 0 1px rgba(40,45,25,.06)',
+                }}>
+                  {/* Platform header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, flexShrink: 0, borderRadius: 14, background: 'var(--card)', border: '1px solid var(--frost-edge)', boxShadow: '0 8px 18px -12px rgba(40,45,25,.3)' }}>
+                        {p.platform === 'instagram' ? (
+                          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg>
+                        ) : (
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 8.5a3 3 0 0 0-2.1-2.1C18 5.8 12 5.8 12 5.8s-6 0-7.9.6A3 3 0 0 0 2 8.5 31 31 0 0 0 1.6 12 31 31 0 0 0 2 15.5a3 3 0 0 0 2.1 2.1c1.9.6 7.9.6 7.9.6s6 0 7.9-.6A3 3 0 0 0 22 15.5 31 31 0 0 0 22.4 12 31 31 0 0 0 22 8.5z" /><path d="M10 15.2V8.8L15.5 12z" fill="currentColor" stroke="none" /></svg>
+                        )}
+                      </span>
+                      <div>
+                        <div className="t-subhead" style={{ fontSize: 18 }}>{p.platform === 'instagram' ? 'Instagram' : 'YouTube'}</div>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 1 }}>@{p.handle}</div>
+                      </div>
+                    </div>
+                    <a
+                      href={p.platform === 'instagram' ? `https://instagram.com/${p.handle}` : `https://youtube.com/@${p.handle}`}
+                      target="_blank"
+                      rel="noopener"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
+                        color: 'var(--ink)', background: 'var(--card)',
+                        border: '1px solid var(--hairline)', borderRadius: 999,
+                        padding: '9px 16px', textDecoration: 'none',
+                        flexShrink: 0, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      View {p.platform === 'instagram' ? 'Instagram' : 'YouTube'}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg>
+                    </a>
+                  </div>
+
+                  {/* Follower stats */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(36px,4vw,52px)', letterSpacing: '-0.04em', lineHeight: 0.85, color: 'var(--ink)' }}>
+                      {(p.followers / 1000).toFixed(0)}K
+                    </span>
+                    <span className="t-body" style={{ color: 'var(--ink-soft)' }}>
+                      {p.platform === 'instagram' ? 'followers' : 'subscribers'} · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.engagement}%</span> engagement · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{(p.avgViews / 1000).toFixed(0)}K</span> avg views
+                    </span>
+                  </div>
+
+                  {/* Reach bar chart */}
+                  {p.reachData && p.reachData.length > 0 && (
+                    <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 'clamp(18px,2.2vw,24px)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 'clamp(16px,2vw,22px)', flexWrap: 'wrap' }}>
+                        <span className="t-meta" style={{ color: 'var(--ink-soft)' }}>Monthly {p.platform === 'instagram' ? 'reach' : 'views'}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--lime-950)', background: 'var(--neon)', borderRadius: 999, padding: '4px 11px', whiteSpace: 'nowrap' }}>
+                          ▲ {p.platform === 'instagram' ? '104' : '121'}% 6-mo
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'clamp(6px,.8vw,10px)', height: 120 }}>
+                        {(() => {
+                          const max = Math.max(...p.reachData.map(d => d.value))
+                          return p.reachData.map((d, i) => {
+                            const isPeak = d.value === max
+                            const h = Math.round(d.value / max * 88 + 6) + '%'
+                            return (
+                              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: isPeak ? 700 : 600, color: isPeak ? 'var(--ink)' : 'var(--ink-faint)' }}>
+                                  {(d.value / 1000).toFixed(0)}K
+                                </span>
+                                <div className="aud-bar" style={{
+                                  width: '100%', maxWidth: 44, height: h, borderRadius: 8,
+                                  background: isPeak ? 'linear-gradient(180deg,var(--lime-400),var(--neon-deep))' : 'linear-gradient(180deg,var(--sec-mid),var(--sec-mid-2))',
+                                  boxShadow: isPeak ? '0 10px 20px -8px rgba(180,215,50,.55)' : 'none',
+                                  transformOrigin: 'bottom',
+                                }} />
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10.5, color: 'var(--ink-faint)', fontWeight: 500 }}>{d.month}</span>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Age + Gender + Location */}
+            {(data.audience.ageBreakdown || data.audience.gender || data.audience.topLocations) && (
+              <div style={{ marginTop: 'clamp(8px,1vw,14px)', paddingTop: 'clamp(14px,1.6vw,20px)', borderTop: '1px solid rgba(255,255,255,.5)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 'clamp(14px,1.8vw,20px)', alignItems: 'stretch' }}>
+                  {/* Age breakdown */}
+                  {data.audience.ageBreakdown && (
+                    <div style={{
+                      border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
+                      boxShadow: '0 26px 56px -36px rgba(40,45,25,.34)', padding: 'clamp(24px,2.8vw,34px)',
+                      display: 'flex', flexDirection: 'column',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--hairline)', paddingBottom: 13 }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, letterSpacing: '.03em', textTransform: 'uppercase', color: 'var(--ink)' }}>Age breakdown</span>
+                      </div>
+                      {/* Highlight top age group */}
+                      {(() => {
+                        const top = data.audience.ageBreakdown!.reduce((a, b) => b.pct > a.pct ? b : a)
+                        return (
+                          <div style={{ margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(52px,6vw,76px)', letterSpacing: '-0.04em', lineHeight: .85, color: 'var(--ink)' }}>{top.pct}</span>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(24px,2.6vw,32px)', color: 'var(--ink)' }}>%</span>
+                            </div>
+                            <p className="t-body" style={{ color: 'var(--ink-soft)', margin: '10px 0 0' }}>
+                              are aged {top.label} — {firstName}&apos;s <span className="t-accent">core</span> buying audience.
+                            </p>
+                          </div>
+                        )
+                      })()}
+                      <div style={{ marginTop: 'auto' }}>
+                        {data.audience.ageBreakdown!.map((age, i) => {
+                          const isTop = age.pct === Math.max(...data.audience.ageBreakdown!.map(a => a.pct))
+                          return (
+                            <div key={i} style={{ marginTop: i === 0 ? 0 : 14 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: isTop ? 700 : 500, color: isTop ? 'var(--ink)' : 'var(--ink-soft)' }}>{age.label}</span>
+                                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{age.pct}%</span>
+                              </div>
+                              <div style={{ height: 9, borderRadius: 20, background: 'rgba(120,130,150,.16)', overflow: 'hidden' }}>
+                                <div className="aud-bar" style={{
+                                  height: '100%', width: `${age.pct}%`, borderRadius: 20, transformOrigin: 'left',
+                                  background: isTop ? 'var(--neon-deep)' : 'rgba(120,130,150,.4)',
+                                }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right column: Gender + Locations */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)' }}>
+                    {/* Gender donut */}
+                    {data.audience.gender && (
+                      <div style={{
+                        flex: '0 0 auto', border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
+                        boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(18px,2vw,22px) clamp(22px,2.4vw,28px)',
+                        display: 'flex', flexDirection: 'column',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--hairline)', paddingBottom: 13 }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, letterSpacing: '.03em', textTransform: 'uppercase', color: 'var(--ink)' }}>Gender</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 'auto', paddingTop: 16 }}>
+                          <div className="aud-donut" style={{
+                            position: 'relative', width: 112, height: 112, flexShrink: 0, borderRadius: '50%',
+                            background: `conic-gradient(var(--neon-deep) 0 ${data.audience.gender.women}%,var(--sec-mid-2) ${data.audience.gender.women}% 100%)`,
+                            boxShadow: '0 12px 26px -14px rgba(40,45,25,.35)',
+                          } as React.CSSProperties}>
+                            <div style={{
+                              position: 'absolute', inset: 15, borderRadius: '50%', background: 'var(--card)',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{data.audience.gender.women}%</span>
+                              <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>women</span>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--neon-deep)' }} />
+                              <div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.women}%</div>
+                                <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Women</div>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--sec-mid-2)' }} />
+                              <div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.men}%</div>
+                                <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Men</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top locations */}
+                    {data.audience.topLocations && (
+                      <div style={{
+                        flex: '1 1 auto', border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
+                        boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(22px,2.4vw,28px)',
+                        display: 'flex', flexDirection: 'column',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--hairline)', paddingBottom: 13 }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, letterSpacing: '.03em', textTransform: 'uppercase', color: 'var(--ink)' }}>Top locations</span>
+                        </div>
+                        <div style={{ marginTop: 'auto', paddingTop: 16 }}>
+                          {data.audience.topLocations.map((loc, i) => {
+                            const maxPct = Math.max(...data.audience.topLocations!.map(l => l.pct))
+                            const isTop = loc.pct === maxPct
+                            return (
+                              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: i === 0 ? 0 : 12 }}>
+                                <span style={{ width: 76, flexShrink: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)' }}>{loc.city}</span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ height: 8, borderRadius: 20, background: 'rgba(120,130,150,.16)', overflow: 'hidden' }}>
+                                    <div className="aud-bar" style={{
+                                      height: '100%', width: `${(loc.pct / maxPct) * 88}%`, borderRadius: 20,
+                                      background: isTop ? 'var(--neon-deep)' : 'rgba(120,130,150,.4)',
+                                      transformOrigin: 'left',
+                                    }} />
+                                  </div>
+                                </div>
+                                <span style={{ width: 34, textAlign: 'right', flexShrink: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{loc.pct}%</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      </SectionWrapper>
+
+      {/* ═══ 5. CONTENT SHOWCASE ═══════════════════════════════ */}
+      {data.contentItems.length > 0 && (
+        <SectionWrapper sectionKey="content">
+          <section style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+            <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Recent work</span>
+              <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>A look at {firstName}&apos;s content</h2>
+
+              <div className="sf-exprow">
+                {data.contentItems.slice(0, 5).map((item, i) => (
+                  <div key={i} className="sf-exp">
+                    <div className="sf-vid">
+                      <span style={{
+                        position: 'absolute', left: 11, top: 11, zIndex: 3,
+                        fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 9.5,
+                        letterSpacing: '.05em', textTransform: 'uppercase',
+                        background: 'rgba(255,255,255,.92)', color: 'var(--ink)',
+                        borderRadius: 999, padding: '3px 9px',
+                      }}>{item.type}</span>
+                      <span className="sf-play">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg>
+                      </span>
+                      <div className="sf-vlab">{item.title}</div>
+                    </div>
+                    <div className="sf-side">
+                      <div className="sf-side-in">
+                        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', lineHeight: 1.25, color: 'var(--ink)' }}>{item.title}</div>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 6 }}>
+                          {item.brand}{item.date ? ` · ${item.date}` : ''}
+                        </div>
+                        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 9 }}>
+                          {item.views && (
+                            <div className="sf-srow">
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Views</span>
+                              <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.views}</b>
+                            </div>
+                          )}
+                          {item.engagement && (
+                            <div className="sf-srow">
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Engagement</span>
+                              <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.engagement}</b>
+                            </div>
+                          )}
+                          {item.saves && (
+                            <div className="sf-srow">
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Saves</span>
+                              <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.saves}</b>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </SectionWrapper>
+      )}
+
+      {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
+      {data.brandCollabs.length > 0 && (
+        <SectionWrapper sectionKey="collabs">
+          <section style={{ padding: 'clamp(30px,3.8vw,56px) 0 clamp(16px,2vw,28px)' }}>
+            <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 clamp(20px,5vw,72px)' }}>
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Past collaborations</span>
+              <div style={{ margin: '10px 0 clamp(10px,1.3vw,16px)' }}>
+                <h2 className="t-title" style={{ margin: '0 0 6px' }}>Brands {firstName} has delivered for</h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: 0 }}>Real campaigns, real numbers — brands who booked {firstName} and came back.</p>
+                <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>{data.brandCollabs.length} brands booked on our platform</div>
+              </div>
+            </div>
+
+            <div className="sf-brandmarquee" aria-label={`Brands ${firstName} has worked with`} style={{
+              position: 'relative', overflow: 'hidden',
+              WebkitMask: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)',
+              mask: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)',
+              padding: '44px 0',
+            }}>
+              <div className="sf-brandtrack" style={{ display: 'flex', alignItems: 'center', gap: 40, width: 'max-content', padding: '0 20px' }}>
+                {/* Double the items for seamless loop */}
+                {[...data.brandCollabs, ...data.brandCollabs].map((brand, i) => (
+                  <div key={i} className="sf-btile" style={{
+                    flexShrink: 0, width: 280, height: 320, borderRadius: 24,
+                    position: 'relative', overflow: 'hidden',
+                    border: '1px solid var(--hairline)', background: 'var(--card)',
+                    boxShadow: '0 24px 52px -34px rgba(40,45,25,.34)',
+                    display: 'flex', flexDirection: 'column', padding: 18,
+                  }}>
+                    {/* Brand logo placeholder */}
+                    <div style={{
+                      width: '100%', height: 214, borderRadius: 18,
+                      border: '1px solid var(--sec-mid-2)',
+                      background: 'linear-gradient(150deg,#F4F8FC 0%,#F7F4FB 55%,#FAFAF8 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-faint)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                    </div>
+                    <div style={{ marginTop: 'auto', paddingTop: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                        <span className="t-subhead" style={{ fontSize: 17 }}>{brand.name}</span>
+                        {brand.type && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>{brand.type}</span>}
+                      </div>
+                      <div style={{ marginTop: 9, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                        {brand.views && <><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{brand.views}</span> views</>}
+                        {brand.views && brand.engagement && ' · '}
+                        {brand.engagement && <><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{brand.engagement}</span> engagement</>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </SectionWrapper>
+      )}
+
+      {/* ═══ 7. PITCH / CTA SECTION ════════════════════════════ */}
+      <SectionWrapper sectionKey="pitch">
+        <section style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(40px,4.5vw,68px)' }}>
+          <div style={{
+            maxWidth: 1080, margin: '0 auto', borderRadius: 28, overflow: 'hidden',
+            background: 'radial-gradient(680px 460px at 12% 6%, var(--sec-2) 0%, transparent 60%),radial-gradient(620px 440px at 92% 94%, var(--sec) 0%, transparent 62%),linear-gradient(150deg,var(--sec-2) 0%,var(--sec) 100%)',
+            border: '2px solid var(--card)',
+            boxShadow: '0 3px 10px rgba(80,90,150,.2),0 26px 50px -18px rgba(80,90,150,.5),0 50px 90px -40px rgba(80,90,150,.55),inset 0 1px 0 rgba(255,255,255,.9)',
+            padding: 'clamp(28px,3.6vw,52px)',
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(30px,3.8vw,56px)', alignItems: 'center' }}>
+              <div>
+                <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Work with {firstName}</span>
+                <h2 className="t-title" style={{ lineHeight: 1.03, margin: '14px 0 0' }}>Make {firstName} an <span className="t-accent">offer</span></h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 420, margin: '18px 0 0' }}>
+                  Pick deliverables at {firstName}&apos;s set rates and {firstName} gets a structured offer — not a DM. They review, then accept, counter, or decline. Nothing is locked until you both agree.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 26 }}>
+                  {['Transparent, itemised pricing', 'Written terms before anyone commits', `Replies in ${data.replyTime}`].map((point, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 30, height: 30, borderRadius: 9, background: 'var(--neon)', flexShrink: 0,
+                      }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      </span>
+                      <span style={{ fontSize: 14.5, color: 'var(--ink-soft)' }}>{point}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pitch panel placeholder */}
+              <div style={{
+                borderRadius: 24, background: 'var(--card)', border: '1px solid var(--hairline)',
+                boxShadow: '0 20px 46px -30px rgba(40,45,25,.35)', padding: 'clamp(24px,2.8vw,36px)',
+                display: 'flex', flexDirection: 'column', gap: 20, minHeight: 300,
+              }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--ink)' }}>
+                  Ready to work together?
+                </div>
+                <p className="t-body" style={{ color: 'var(--ink-soft)' }}>
+                  Select deliverables from the rate card above, then create a structured offer. {firstName} will review and respond.
+                </p>
+                {onDealClick ? (
+                  <button onClick={() => onDealClick({})} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                    Start a deal with {firstName}
+                  </button>
+                ) : (
+                  <a href={dealUrl || '#packages'} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                    Start a deal with {firstName}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </SectionWrapper>
+    </div>
+    </SectionCtx.Provider>
+  )
+}

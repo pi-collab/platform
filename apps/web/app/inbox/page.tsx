@@ -8,26 +8,32 @@ export default async function BrandInboxPage() {
 
   const { data: messages } = await supabase
     .from('messages')
-    .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, creators(full_name, profile_photo_url))')
+    .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, creators(full_name, profile_photo_url))')
     .order('created_at', { ascending: false })
 
-  // Build threads (latest message per deal) + collect all messages
-  const threadMap = new Map<string, { dealId: string; dealTitle: string; dealStatus: string; creatorName: string; creatorPhoto: string | null; lastMessage: string; senderParty: string; createdAt: string }>()
+  const threadMap = new Map<string, {
+    dealId: string; dealTitle: string; dealStatus: string; creatorName: string;
+    creatorPhoto: string | null; creatorInitials: string; lastMessage: string;
+    senderParty: string; createdAt: string; amountPaise: number;
+  }>()
 
   for (const msg of messages ?? []) {
     if (!threadMap.has(msg.deal_id)) {
       const deal = msg.deals as any
       const creator = deal?.creators
       const creatorObj = Array.isArray(creator) ? creator[0] : creator
+      const creatorName = creatorObj?.full_name || 'Unknown'
       threadMap.set(msg.deal_id, {
         dealId: msg.deal_id,
         dealTitle: deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
-        creatorName: creatorObj?.full_name || 'Unknown',
+        creatorName,
         creatorPhoto: creatorObj?.profile_photo_url || null,
+        creatorInitials: getInitials(creatorName),
         lastMessage: msg.body || '',
         senderParty: msg.sender_party,
         createdAt: msg.created_at,
+        amountPaise: deal?.price_paise ?? 0,
       })
     }
   }
@@ -42,4 +48,12 @@ export default async function BrandInboxPage() {
   }))
 
   return <BrandInboxView threads={threads} allMessages={allMessages} />
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
 }
