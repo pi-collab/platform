@@ -24,10 +24,10 @@ const STAGE: Record<string, { i: number; label: string; dot: string; bg: string;
   delivered:   { i: 2, label: 'Submitted \u00B7 in review',  dot: '#4C9E82', bg: '#ECFBF5', fg: '#38765F', action: 'Track review', hot: false },
   revision:    { i: 2, label: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
   awaiting:    { i: 3, label: 'Approved \u00B7 post it',     dot: '#8FAF1F', bg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
-  posted:      { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'Send invoice', hot: false },
+  posted:      { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
   declined:    { i: -1, label: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
-  complete:    { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'Send invoice', hot: false },
-  paid:        { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'Send invoice', hot: false },
+  complete:    { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  paid:        { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
   cancelled:   { i: -1, label: 'Cancelled',             dot: '#8B90A0', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
 }
 

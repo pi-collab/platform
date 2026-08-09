@@ -90,7 +90,7 @@ export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creato
 
   // If invoice exists, show the invoice detail view
   if (invoice) {
-    return <InvoiceDetail invoice={invoice} dealRef={dealRef} dealId={dealId} onIssue={handleIssue} loading={loading} error={error} items={items} brandName={brandName} />
+    return <InvoiceDetail invoice={invoice} dealRef={dealRef} dealId={dealId} onIssue={handleIssue} loading={loading} error={error} items={items} brandName={brandName} hideHeader={dealStatus === 'paid' || dealStatus === 'complete'} />
   }
 
   // Deal is already paid/complete but no invoice record — show paid state
@@ -210,8 +210,8 @@ export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creato
   )
 }
 
-function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, items, brandName }: {
-  invoice: Invoice; dealRef?: string | null; dealId: string; onIssue: () => void; loading: boolean; error: string | null; items?: InvoiceItem[]; brandName?: string
+function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, items, brandName, hideHeader }: {
+  invoice: Invoice; dealRef?: string | null; dealId: string; onIssue: () => void; loading: boolean; error: string | null; items?: InvoiceItem[]; brandName?: string; hideHeader?: boolean
 }) {
   const dueStatus = formatDueStatus(invoice.due_date)
   const isIssued = invoice.status === 'issued'
@@ -230,16 +230,18 @@ function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, item
 
   return (
     <>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
-          Invoice {dealRef && <span style={{ color: 'var(--ink-faint)', fontWeight: 600 }}>#{dealRef}</span>}
-        </h3>
-        <span style={statusPill}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusDot }} />
-          {statusLabel}
-        </span>
-      </div>
+      {/* Header — hidden when wrapped in a collapsible toggle */}
+      {!hideHeader && (
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
+            Invoice {dealRef && <span style={{ color: 'var(--ink-faint)', fontWeight: 600 }}>#{dealRef}</span>}
+          </h3>
+          <span style={statusPill}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusDot }} />
+            {statusLabel}
+          </span>
+        </div>
+      )}
 
       {/* Line items */}
       <div style={{ marginTop: 18 }}>
@@ -326,7 +328,7 @@ function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, item
             </span>
           )}
 
-          {dueStatus?.urgent && (
+          {dueStatus?.urgent && !isPaid && (
             <span style={{ fontSize: 11.5, fontWeight: 600, color: '#dc2626', marginTop: 4 }}>
               {dueStatus.text}
             </span>
