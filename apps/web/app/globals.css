@@ -385,6 +385,14 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   --sh-2: 0 0 0 1px rgba(26,27,22,.08), 0 20px 48px -30px rgba(40,45,25,.20);
   --radius-pill: 999px;
   --auraC: rgba(232,255,102,0.04);
+  --neon: #E8FF66;
+  --neon-deep: #D2F04A;
+  --ink-soft: #4A4F58;
+  --ink-faint: #8B90A0;
+  --hairline: #EAEAE3;
+  --border-hairline: #EAEAE3;
+  --frost-edge: rgba(255,255,255,0.85);
+  --warning: #D89A2E;
 
   --font-heading: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
   --font-body: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;

@@ -20,6 +20,7 @@ const ALL_MOBILE_LINKS = [
   { label: 'Payments', href: '/creator/payments' },
   { label: 'Notifications', href: '/creator/notifications' },
   { label: 'Storefront', href: '/creator/storefront' },
+  { label: 'Settings', href: '/creator/settings' },
 ]
 
 interface NotifItem {
@@ -299,6 +300,7 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, unreadCount:
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{creatorName}</p>
                     <span style={{ fontSize: 11, color: 'var(--wg-500)' }}>Creator</span>
                   </div>
+                  <Link href="/creator/settings" style={dropdownLink}>Settings</Link>
                   <div style={{ padding: '4px 14px 10px' }}><SignOutButton redirectTo="/login/creator" /></div>
                 </div>
               )}

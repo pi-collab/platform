@@ -2,62 +2,48 @@
 
 import { useState, useTransition, useCallback } from 'react'
 import Link from 'next/link'
-import { updateProfile, updateAccount } from './actions'
-import { createInvite, revokeInvite, removeTeamMember, toggleAdmin } from './team/actions'
+import { updateCreatorProfile, updateCreatorAccount } from './actions'
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
-interface Member {
-  id: string
-  email: string
-  name: string | null
-  isAdmin: boolean
-  joinedAt: string
-  isCurrentUser: boolean
-}
-
-interface PendingInvite {
-  id: string
-  email: string
-  expiresAt: string
+interface SocialEntry {
+  platform: string
+  handle: string
 }
 
 interface Props {
-  brandName: string
-  brandCategory: string
-  brandWebsite: string
-  brandBio: string
-  brandLocation: string
-  brandContactEmail: string
-  brandSocials: Record<string, string>
-  userName: string
+  creatorName: string
+  creatorHandle: string
+  creatorBio: string
+  creatorNiche: string
+  creatorLocation: string
+  creatorPrimaryPlatform: string
+  creatorContactEmail: string
+  creatorSocials: SocialEntry[]
   userEmail: string
   userPhone: string
   userLanguage: string
   userTimezone: string
   authProvider: string
   authEmail: string
-  isAdmin: boolean
-  teamMembers: Member[]
-  pendingInvites: PendingInvite[]
 }
 
 const SOCIAL_PLATFORMS = [
   { key: 'instagram', label: 'Instagram', prefix: '@', placeholder: 'yourbrand' },
   { key: 'youtube', label: 'YouTube', prefix: '@', placeholder: 'yourchannel' },
-  { key: 'linkedin', label: 'LinkedIn', prefix: '', placeholder: 'company/yourbrand' },
-  { key: 'twitter', label: 'X (Twitter)', prefix: '@', placeholder: 'yourbrand' },
+  { key: 'linkedin', label: 'LinkedIn', prefix: '', placeholder: 'in/yourname' },
+  { key: 'twitter', label: 'X (Twitter)', prefix: '@', placeholder: 'yourhandle' },
 ]
 
-const BRAND_CATEGORIES = ['D2C', 'Fashion', 'Tech & finance', 'Beauty', 'Lifestyle', 'FMCG', 'Fintech', 'Health & fitness', 'Food & beverage', 'Education', 'Gaming', 'Travel', 'Other']
+const NICHE_OPTIONS = ['Tech & finance', 'Fashion', 'Beauty', 'Lifestyle', 'Food', 'Travel', 'Fitness', 'Education', 'Gaming', 'Other']
+const PLATFORM_OPTIONS = ['Instagram', 'YouTube', 'X', 'LinkedIn', 'TikTok']
 
 /* ── Section Config ─────────────────────────────────────────────── */
 
-const SECTIONS: { id: string; label: string; icon: string; brandOnly?: boolean }[] = [
+const SECTIONS: { id: string; label: string; icon: string }[] = [
   { id: 'profile', label: 'Profile', icon: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { id: 'account', label: 'Account', icon: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z' },
   { id: 'payments', label: 'Payments', icon: 'M2 5h20v14H2zM2 10h20' },
-  { id: 'team', label: 'Team', icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8', brandOnly: true },
 ]
 
 function getInitials(name: string) {
@@ -66,39 +52,45 @@ function getInitials(name: string) {
 
 /* ── Main Component ─────────────────────────────────────────────── */
 
-export default function SettingsClient({
-  brandName: initialBrandName,
-  brandCategory: initialCategory,
-  brandWebsite: initialWebsite,
-  brandBio: initialBio,
-  brandLocation: initialLocation,
-  brandContactEmail: initialContactEmail,
-  brandSocials: initialSocials,
-  userName: initialUserName,
+export default function CreatorSettingsClient({
+  creatorName: initialName,
+  creatorHandle: initialHandle,
+  creatorBio: initialBio,
+  creatorNiche: initialNiche,
+  creatorLocation: initialLocation,
+  creatorPrimaryPlatform: initialPlatform,
+  creatorContactEmail: initialContactEmail,
+  creatorSocials: initialSocials,
   userEmail: initialEmail,
   userPhone: initialPhone,
   userLanguage: initialLanguage,
   userTimezone: initialTimezone,
   authProvider,
   authEmail,
-  isAdmin,
-  teamMembers,
-  pendingInvites,
 }: Props) {
   const [section, setSection] = useState('profile')
   const [dirty, setDirty] = useState(false)
   const [toast, setToast] = useState('')
   const [saving, startSave] = useTransition()
 
-  // Form state
-  const [brandName, setBrandName] = useState(initialBrandName)
-  const [category, setCategory] = useState(initialCategory)
-  const [website, setWebsite] = useState(initialWebsite)
+  // Profile form state
+  const [name, setName] = useState(initialName)
+  const [handle, setHandle] = useState(initialHandle)
   const [bio, setBio] = useState(initialBio)
+  const [niche, setNiche] = useState(initialNiche)
   const [location, setLocation] = useState(initialLocation)
+  const [platform, setPlatform] = useState(initialPlatform)
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
-  const [socials, setSocials] = useState<Record<string, string>>(initialSocials)
-  const [userName, setUserName] = useState(initialUserName)
+
+  // Social accounts — convert array to a map for easy editing
+  const socialsToMap = (arr: SocialEntry[]): Record<string, string> => {
+    const m: Record<string, string> = {}
+    for (const s of arr) m[s.platform] = s.handle
+    return m
+  }
+  const [socials, setSocials] = useState<Record<string, string>>(socialsToMap(initialSocials))
+
+  // Account form state
   const [userEmail, setUserEmail] = useState(initialEmail)
   const [userPhone, setUserPhone] = useState(initialPhone)
   const [language, setLanguage] = useState(initialLanguage)
@@ -113,26 +105,27 @@ export default function SettingsClient({
 
   const handleSave = () => {
     startSave(async () => {
-      // Save profile fields
-      const profileRes = await updateProfile({
-        brandName,
-        category,
-        website,
+      // Convert socials map back to array
+      const socialArr = Object.entries(socials)
+        .filter(([, h]) => h.trim())
+        .map(([p, h]) => ({ platform: p, handle: h }))
+
+      const profileRes = await updateCreatorProfile({
+        fullName: name,
+        handle,
         bio,
+        niche,
         location,
+        primaryPlatform: platform,
         contactEmail,
-        socials,
-        fullName: userName,
-        email: userEmail,
-        phone: userPhone,
+        socials: socialArr,
       })
       if (profileRes.error) {
         showToast(`Error: ${profileRes.error}`)
         return
       }
 
-      // Save account preferences
-      const accountRes = await updateAccount({
+      const accountRes = await updateCreatorAccount({
         email: userEmail,
         phone: userPhone,
         language,
@@ -149,14 +142,14 @@ export default function SettingsClient({
   }
 
   const handleDiscard = () => {
-    setBrandName(initialBrandName)
-    setCategory(initialCategory)
-    setWebsite(initialWebsite)
+    setName(initialName)
+    setHandle(initialHandle)
     setBio(initialBio)
+    setNiche(initialNiche)
     setLocation(initialLocation)
+    setPlatform(initialPlatform)
     setContactEmail(initialContactEmail)
-    setSocials(initialSocials)
-    setUserName(initialUserName)
+    setSocials(socialsToMap(initialSocials))
     setUserEmail(initialEmail)
     setUserPhone(initialPhone)
     setLanguage(initialLanguage)
@@ -165,12 +158,12 @@ export default function SettingsClient({
     showToast('Changes discarded.')
   }
 
-  const updateSocial = (platform: string, handle: string) => {
-    setSocials(prev => ({ ...prev, [platform]: handle }))
+  const updateSocial = (p: string, h: string) => {
+    setSocials(prev => ({ ...prev, [p]: h }))
     markDirty()
   }
 
-  const initials = getInitials(brandName || userName || '?')
+  const initials = getInitials(name || '?')
 
   return (
     <div style={{ padding: 'clamp(20px,2.6vw,34px) clamp(22px,4vw,56px) clamp(64px,6vw,110px)' }}>
@@ -179,7 +172,7 @@ export default function SettingsClient({
         {/* Page header */}
         <div style={{ marginBottom: 22 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
-            <Link href="/dashboard" style={{ color: 'var(--ink-faint)' }}>Account</Link>
+            <Link href="/creator/dashboard" style={{ color: 'var(--ink-faint)' }}>Account</Link>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             <span style={{ color: 'var(--ink-soft)', fontWeight: 600 }}>Settings</span>
           </div>
@@ -188,42 +181,37 @@ export default function SettingsClient({
 
         <div className="set-grid" style={{ display: 'grid', gridTemplateColumns: '232px 1fr', gap: 'clamp(16px,2vw,26px)', alignItems: 'start' }}>
 
-          {/* ═══ SIDEBAR ═══ */}
+          {/* ═══ SIDE NAV ═══ */}
           <aside className="set-side panel" style={{ position: 'sticky', top: 88, display: 'flex', flexDirection: 'column', gap: 2, padding: 10, borderRadius: 20, border: '1px solid var(--frost-edge)', background: 'var(--card)', boxShadow: '0 24px 54px -40px rgba(40,45,25,.32), inset 0 1px 0 rgba(255,255,255,.92)' }}>
             {SECTIONS.map(s => {
-              if (s.brandOnly && !isAdmin) return null
               const on = section === s.id
-              const danger = s.id === 'danger'
-              const col = danger ? '#C43D3D' : (on ? 'var(--ink)' : 'var(--ink-soft)')
               return (
                 <div
                   key={s.id}
-                  onClick={() => setSection(s.id)}
                   className="navitem"
+                  onClick={() => setSection(s.id)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px', borderRadius: 12,
-                    fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: on ? 700 : 600,
-                    color: col, cursor: 'pointer',
-                    background: on ? (danger ? 'rgba(214,64,64,.08)' : 'rgba(232,255,102,.2)') : 'transparent',
+                    display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px',
+                    borderRadius: 12, fontFamily: 'var(--font-ui)', fontSize: 13.5,
+                    fontWeight: on ? 700 : 600, color: on ? 'var(--ink)' : 'var(--ink-soft)',
+                    background: on ? 'rgba(232,255,102,.2)' : 'transparent', cursor: 'pointer',
                   }}
                 >
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 26, height: 26, borderRadius: 8, flexShrink: 0, color: col,
-                    background: on ? (danger ? 'rgba(214,64,64,.12)' : 'rgba(210,240,74,.35)') : 'rgba(40,45,25,.05)',
+                    width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+                    color: on ? 'var(--ink)' : 'var(--ink-soft)',
+                    background: on ? 'rgba(210,240,74,.35)' : 'rgba(40,45,25,.05)',
                   }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={s.icon} /></svg>
                   </span>
                   <span style={{ flex: 1 }}>{s.label}</span>
-                  {s.brandOnly && !on && (
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: 'var(--ink-faint)', background: 'rgba(40,45,25,.06)', borderRadius: 6, padding: '2px 6px' }}>Brand</span>
-                  )}
                 </div>
               )
             })}
           </aside>
 
-          {/* ═══ CONTENT ═══ */}
+          {/* ═══ SECTION CONTENT ═══ */}
           <div style={{ minWidth: 0 }}>
 
             {/* ── PROFILE ── */}
@@ -232,26 +220,20 @@ export default function SettingsClient({
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                   <div>
                     <h2 style={h2Style}>Profile</h2>
-                    <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>Your public company profile brands and creators see.</p>
+                    <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>Your public creator profile brands see.</p>
                   </div>
-                  <Link href="/browse" className="pill" style={{ ...pillBtn, borderRadius: 'var(--radius-pill)' }}>
-                    View company profile
+                  <Link href="/creator/storefront" className="pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 15px', borderRadius: 'var(--radius-pill)', background: 'var(--card)', border: '1px solid var(--frost-edge)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink)', boxShadow: '0 6px 16px -12px rgba(40,45,25,.4)' }}>
+                    View shopfront
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
                   </Link>
                 </div>
 
-                {/* Avatar row */}
+                {/* Avatar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22, paddingBottom: 22, borderBottom: '1px solid var(--border-hairline)' }}>
-                  <span style={{
-                    width: 72, height: 72, borderRadius: 20, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26,
-                    color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))',
-                    border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 var(--card)',
-                  }}>{initials}</span>
+                  <span style={{ width: 72, height: 72, borderRadius: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 var(--card)' }}>{initials}</span>
                   <div>
                     <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-                      <span className="pill" onClick={markDirty} style={pillBtn}>
+                      <span className="pill" style={pillBtn}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
                         Upload photo
                       </span>
@@ -261,24 +243,24 @@ export default function SettingsClient({
                   </div>
                 </div>
 
-                {/* Basic fields */}
+                {/* Profile fields */}
                 <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 22 }}>
-                  <FieldInput label="Company name" value={brandName} onChange={v => { setBrandName(v); markDirty() }} />
-                  <FieldInput label="Website" value={website} onChange={v => { setWebsite(v); markDirty() }} placeholder="acmebrands.com" />
+                  <FieldInput label="Full name" value={name} onChange={v => { setName(v); markDirty() }} />
+                  <FieldInput label="Handle" value={handle} onChange={v => { setHandle(v); markDirty() }} placeholder="@maya.money" />
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={labelStyle}>Bio</label>
                     <textarea
                       className="fld"
                       value={bio}
                       onChange={e => { setBio(e.target.value); markDirty() }}
-                      placeholder="Tell creators about your brand..."
-                      style={{ ...fldStyle, resize: 'vertical', minHeight: 80, lineHeight: 1.55 }}
+                      placeholder="Tell brands about yourself..."
+                      style={{ ...fldStyle, minHeight: 80, resize: 'vertical' }}
                     />
                   </div>
-                  <FieldSelect label="Niche / category" value={category} options={BRAND_CATEGORIES} onChange={v => { setCategory(v); markDirty() }} placeholder="Select category" />
+                  <FieldSelect label="Niche / category" value={niche} options={NICHE_OPTIONS} onChange={v => { setNiche(v); markDirty() }} placeholder="Select niche" />
                   <FieldInput label="Location" value={location} onChange={v => { setLocation(v); markDirty() }} placeholder="Mumbai, India" />
-                  <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="team@yourbrand.com" />
-                  <FieldInput label="Contact person" value={userName} onChange={v => { setUserName(v); markDirty() }} placeholder="Your name" />
+                  <FieldSelect label="Primary platform" value={platform} options={PLATFORM_OPTIONS} onChange={v => { setPlatform(v); markDirty() }} placeholder="Select platform" />
+                  <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="you@email.com" />
                 </div>
 
                 {/* Social accounts */}
@@ -366,27 +348,27 @@ export default function SettingsClient({
             {section === 'payments' && (
               <div className="reveal panel" style={panelStyle}>
                 <h2 style={h2Style}>Payments</h2>
-                <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>How you pay creators, plus tax and invoice details.</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>How you get paid, plus tax and invoice details.</p>
 
                 <div style={{ marginTop: 20, padding: 16, borderRadius: 14, border: '1px solid var(--border-hairline)', background: 'rgba(247,250,253,.8)' }}>
-                  <div style={eyebrowStyle}>Payment method</div>
+                  <div style={eyebrowStyle}>Payout method</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginTop: 12 }}>
                     <span style={{ ...iconBox, width: 44, height: 44, borderRadius: 12 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
                     </span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>Razorpay</div>
-                      <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 2 }}>Payment links for each deal</div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>UPI</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 2 }}>Primary payout account</div>
                     </div>
-                    <span className="pill" onClick={markDirty} style={smallPill}>Edit</span>
+                    <span className="pill" style={smallPill}>Edit</span>
                   </div>
                 </div>
 
                 <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-                  <FieldSelect label="Billing cycle" value="Monthly" options={['Monthly', 'Weekly', 'On approval']} onChange={markDirty} />
+                  <FieldSelect label="Payout schedule" value="Every 15 days" options={['Every 15 days', 'Monthly', 'On approval']} onChange={markDirty} />
                   <FieldInput label="GST / tax ID" value="" onChange={markDirty} placeholder="27AABCU9603R1ZX" />
                   <div style={{ gridColumn: '1/-1' }}>
-                    <FieldInput label="Billing address" value="" onChange={markDirty} placeholder="4th Floor, Acme House, Bandra, Mumbai 400050" />
+                    <FieldInput label="Bank account details" value="" onChange={markDirty} placeholder="IFSC, Account number" />
                   </div>
                   <div style={{ gridColumn: '1/-1' }}>
                     <FieldSelect label="Invoice preferences" value="Email a PDF on every payment" options={['Email a PDF on every payment', 'Monthly summary only', 'No emails']} onChange={markDirty} />
@@ -394,35 +376,6 @@ export default function SettingsClient({
                 </div>
               </div>
             )}
-
-            {/* ── TEAM ── */}
-            {section === 'team' && isAdmin && (
-              <div className="reveal panel" style={panelStyle}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <h2 style={h2Style}>Team</h2>
-                    <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>Invite teammates and manage their access.</p>
-                  </div>
-                  <InviteButton />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', marginTop: 18 }}>
-                  {teamMembers.map(m => (
-                    <TeamMemberRow key={m.id} member={m} isAdmin={isAdmin} onDirty={markDirty} onToast={showToast} />
-                  ))}
-                </div>
-
-                {pendingInvites.length > 0 && (
-                  <div style={{ marginTop: 20 }}>
-                    <div style={{ ...eyebrowStyle, marginBottom: 10 }}>Pending invites</div>
-                    {pendingInvites.map(inv => (
-                      <PendingInviteRow key={inv.id} invite={inv} onToast={showToast} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
           </div>
         </div>
       </div>
@@ -590,185 +543,6 @@ function FieldSelect({ label, value, options, onChange, placeholder }: { label: 
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
-    </div>
-  )
-}
-
-/* ── Invite Button ──────────────────────────────────────────────── */
-
-function InviteButton() {
-  const [show, setShow] = useState(false)
-  const [email, setEmail] = useState('')
-  const [pending, startTransition] = useTransition()
-  const [result, setResult] = useState<{ inviteUrl?: string; error?: string; email?: string } | null>(null)
-  const [copied, setCopied] = useState(false)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setResult(null)
-    startTransition(async () => {
-      const res = await createInvite(email)
-      setResult(res)
-    })
-  }
-
-  const handleCopy = () => {
-    if (result?.inviteUrl) {
-      navigator.clipboard.writeText(result.inviteUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  return (
-    <>
-      <span className="pill" onClick={() => setShow(true)} style={{
-        display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 16px',
-        borderRadius: 12, background: 'var(--card)', border: '1px solid var(--frost-edge)',
-        fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer',
-        boxShadow: '0 6px 16px -12px rgba(40,45,25,.4)',
-      }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        Invite teammate
-      </span>
-
-      {show && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => { setShow(false); setResult(null); setEmail('') }}>
-          <div style={{ ...panelStyle, width: '100%', maxWidth: 480, padding: '1.5rem' }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ ...h2Style, fontSize: 18, marginBottom: 8 }}>Invite teammate</h2>
-            {!result?.inviteUrl ? (
-              <>
-                <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '0 0 16px' }}>They&apos;ll get a link to join your brand. The invite expires in 7 days.</p>
-                <form onSubmit={handleSubmit}>
-                  <input className="fld" type="email" placeholder="colleague@company.com" value={email} onChange={e => setEmail(e.target.value)} required autoFocus style={fldStyle} />
-                  {result?.error && <p style={{ fontSize: 13, color: '#C43D3D', margin: '8px 0 0' }}>{result.error}</p>}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                    <button type="button" className="pill" style={{ ...pillBtn, border: '1px solid var(--frost-edge)' }} onClick={() => { setShow(false); setResult(null) }}>Cancel</button>
-                    <button type="submit" className="neonbtn" disabled={pending} style={{
-                      height: 40, padding: '0 18px', borderRadius: 12, background: 'var(--neon)', border: 'none',
-                      fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer',
-                    }}>{pending ? 'Sending...' : 'Send invite'}</button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <>
-                <p style={{ fontSize: 13, margin: '0 0 12px' }}>Invite created for <strong>{result.email}</strong></p>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input readOnly value={result.inviteUrl} style={{ ...fldStyle, flex: 1, fontSize: 12.5, color: 'var(--ink-faint)' }} onFocus={e => e.target.select()} />
-                  <span className="neonbtn" onClick={handleCopy} style={{
-                    height: 40, padding: '0 18px', borderRadius: 12, background: 'var(--neon)',
-                    fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer',
-                    display: 'inline-flex', alignItems: 'center',
-                  }}>{copied ? 'Copied!' : 'Copy link'}</span>
-                </div>
-                <p style={{ fontSize: 12, color: 'var(--ink-faint)', margin: '12px 0 0' }}>Share this link via Slack, WhatsApp, or email.</p>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-                  <span className="pill" onClick={() => { setShow(false); setResult(null); setEmail('') }} style={pillBtn}>Done</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-/* ── Team Member Row ────────────────────────────────────────────── */
-
-function TeamMemberRow({ member, isAdmin, onDirty, onToast }: { member: Member; isAdmin: boolean; onDirty: () => void; onToast: (msg: string) => void }) {
-  const [pending, startTransition] = useTransition()
-
-  const handleToggleRole = () => {
-    startTransition(async () => {
-      const res = await toggleAdmin(member.id)
-      if (res.error) onToast(`Error: ${res.error}`)
-    })
-  }
-
-  const handleRemove = () => {
-    if (!confirm(`Remove ${member.name || member.email} from the team?`)) return
-    startTransition(async () => {
-      const res = await removeTeamMember(member.id)
-      if (res.error) onToast(`Error: ${res.error}`)
-    })
-  }
-
-  const roleTag: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', padding: '4px 11px',
-    borderRadius: 'var(--radius-pill)', fontSize: 10.5, fontWeight: 700,
-    letterSpacing: '.03em', textTransform: 'uppercase',
-    color: 'var(--ink-soft)', background: 'rgba(40,45,25,.06)', border: '1px solid var(--border-hairline)',
-  }
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 0', borderTop: '1px solid var(--border-hairline)' }}>
-      <span style={{
-        width: 40, height: 40, borderRadius: 11, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
-        background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)',
-      }}>{getInitials(member.name || member.email)}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5 }}>
-          {member.name || member.email}
-          {member.isCurrentUser && <span style={{ fontWeight: 400, color: 'var(--ink-faint)' }}> (You)</span>}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--ink-faint)' }}>{member.email}</div>
-      </div>
-      <span style={roleTag}>{member.isAdmin ? 'Admin' : 'Member'}</span>
-      {isAdmin && !member.isCurrentUser && (
-        <select
-          className="fld"
-          style={{
-            ...fldStyle, width: 'auto', padding: '8px 30px 8px 12px', fontSize: 12.5,
-            appearance: 'none', cursor: 'pointer',
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238B90A0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
-            backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center',
-          }}
-          value={member.isAdmin ? 'Admin' : 'Member'}
-          onChange={e => {
-            const newRole = e.target.value
-            if ((newRole === 'Admin') !== member.isAdmin) handleToggleRole()
-          }}
-          disabled={pending}
-        >
-          <option value="Admin">Admin</option>
-          <option value="Member">Member</option>
-        </select>
-      )}
-    </div>
-  )
-}
-
-/* ── Pending Invite Row ─────────────────────────────────────────── */
-
-function PendingInviteRow({ invite, onToast }: { invite: PendingInvite; onToast: (msg: string) => void }) {
-  const [pending, startTransition] = useTransition()
-  const [revoked, setRevoked] = useState(false)
-
-  if (revoked) return null
-
-  const daysLeft = Math.ceil((new Date(invite.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '12px 0', borderTop: '1px solid var(--border-hairline)' }}>
-      <div style={{ flex: 1 }}>
-        <span style={{ fontSize: 13.5, fontWeight: 600 }}>{invite.email}</span>
-        <span style={{ fontSize: 12, color: 'var(--ink-faint)', marginLeft: 8 }}>expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
-      </div>
-      <span
-        className="pill"
-        onClick={() => {
-          startTransition(async () => {
-            const res = await revokeInvite(invite.id)
-            if (res.error) onToast(`Error: ${res.error}`)
-            else setRevoked(true)
-          })
-        }}
-        style={{ ...smallPill, opacity: pending ? 0.5 : 1 }}
-      >Revoke</span>
     </div>
   )
 }
