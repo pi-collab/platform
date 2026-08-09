@@ -52,7 +52,7 @@ export default function CreatorStepper({ dealStatus, events, invoiceStatus }: { 
   // When invoice is issued/accepted, advance stepper to Invoice stage
   if (invoiceStatus === 'issued' || invoiceStatus === 'accepted') stageIndex = 4
   if (invoiceStatus === 'paid' || dealStatus === 'paid') stageIndex = 5
-  const allDone = dealStatus === 'complete' || (invoiceStatus === 'paid')
+  const allDone = dealStatus === 'complete' || dealStatus === 'paid' || invoiceStatus === 'paid'
   const stepDates = deriveStepDates(events)
   const [hoveredStep, setHoveredStep] = useState<number | null>(null)
 

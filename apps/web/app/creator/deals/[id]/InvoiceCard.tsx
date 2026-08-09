@@ -65,9 +65,10 @@ interface Props {
   paymentTerms?: string | null
   items?: InvoiceItem[]
   brandName?: string
+  dealStatus?: string
 }
 
-export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creatorReceivesPaise, brandPaysPaise, feePaise, feePercent, feeMode, paymentTerms, items, brandName }: Props) {
+export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creatorReceivesPaise, brandPaysPaise, feePaise, feePercent, feeMode, paymentTerms, items, brandName, dealStatus }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -90,6 +91,39 @@ export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creato
   // If invoice exists, show the invoice detail view
   if (invoice) {
     return <InvoiceDetail invoice={invoice} dealRef={dealRef} dealId={dealId} onIssue={handleIssue} loading={loading} error={error} items={items} brandName={brandName} />
+  }
+
+  // Deal is already paid/complete but no invoice record — show paid state
+  const dealAlreadyPaid = dealStatus === 'paid' || dealStatus === 'complete'
+  if (dealAlreadyPaid) {
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Payment</h3>
+          <span style={statusPill}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success, #16a34a)' }} />
+            Paid
+          </span>
+        </div>
+
+        {creatorReceivesPaise != null && creatorReceivesPaise > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+            padding: '18px 24px', margin: '18px -24px 0', background: 'var(--ink)', color: '#FFFFFF',
+          }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700 }}>You received</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>
+              {formatINR(creatorReceivesPaise)}
+            </span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
+          <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Payment completed — this deal is wrapped.</span>
+        </div>
+      </>
+    )
   }
 
   // Pre-invoice state — show the money breakdown

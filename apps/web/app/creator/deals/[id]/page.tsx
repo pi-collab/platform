@@ -179,10 +179,10 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     : isNegotiating ? 'Offer received from '
                     : deal.status === 'delivered' ? 'Delivered to '
                     : deal.status === 'revision' ? 'Changes asked by '
-                    : invoice && invoice.status === 'paid' ? 'Wrapped with '
+                    : (invoice && invoice.status === 'paid') || deal.status === 'paid' || deal.status === 'complete' ? 'Wrapped with '
                     : invoice && invoice.status === 'accepted' ? 'Invoice accepted by '
                     : invoice && invoice.status === 'issued' ? 'Invoice sent to '
-                    : deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete' ? 'Approved by '
+                    : deal.status === 'approved' ? 'Approved by '
                     : 'Deal with '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
@@ -200,8 +200,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: invoice?.status === 'paid' ? 'var(--neon)' : invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${invoice?.status === 'paid' ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
-                {invoice?.status === 'paid' ? 'Complete' : invoiceIssuedOrLater ? 'Invoice' : sm.label}
+                <span style={{ width: 9, height: 9, borderRadius: '50%', background: (invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'var(--neon)' : invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
+                {(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'Complete' : invoiceIssuedOrLater ? 'Invoice' : sm.label}
               </span>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
                 {(() => {
@@ -229,7 +229,13 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                     const ts = revisionEvent ? formatDateWithTime(revisionEvent.created_at) : ''
                     return <>Feedback received{ts ? ` ${ts}` : ''}{deal.timeline_date ? <> &middot; resubmit by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></> : ''}</>
                   }
-                  if (deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete') {
+                  if (deal.status === 'paid' || deal.status === 'complete') {
+                    const paidEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'paid' || e.detail?.new_status === 'paid')).pop()
+                    const paidTs = paidEvent ? formatDate(paidEvent.created_at) : ''
+                    const receiveAmt = creatorReceives ? formatRupees(creatorReceives) : ''
+                    return <>{receiveAmt ? `${receiveAmt} received` : 'Paid'}{paidTs ? ` ${paidTs}` : ''} &middot; nothing left to do</>
+                  }
+                  if (deal.status === 'approved') {
                     const approvedEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'approved' || e.detail?.new_status === 'approved')).pop()
                     const ts = approvedEvent ? formatDateWithTime(approvedEvent.created_at) : ''
                     return <>Approved{ts ? ` ${ts}` : ''} &middot; post inside the live window, then invoice</>
@@ -464,7 +470,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
             type Section = 'shipment' | 'deliverables' | 'brief' | 'posted' | 'invoice' | 'paid'
             const isPostApproval = deal.status === 'approved' || deal.status === 'paid' || deal.status === 'complete'
-            const isCompleted = invoice?.status === 'paid'
+            const isCompleted = invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))
             const sections: Section[] = isNegotiating
               ? ['brief', 'deliverables', 'invoice', 'shipment', 'posted']
               : isCompleted
@@ -855,7 +861,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   if (!isCompleted) return null
                   {
                     const paidEvent = (events ?? []).filter((e: any) => e.event_type === 'deal.status_changed' && (e.detail?.to === 'paid' || e.detail?.new_status === 'paid')).pop()
-                    const paidTs = paidEvent ? formatDateWithTime(paidEvent.created_at) : (invoice!.accepted_at ? formatDateWithTime(invoice!.accepted_at) : '')
+                    const paidTs = paidEvent ? formatDateWithTime(paidEvent.created_at) : (invoice?.accepted_at ? formatDateWithTime(invoice.accepted_at) : '')
                     const rightsEnd = (deal as Record<string, unknown>).usage_rights_end_date as string | null
                     const rightsText = rightsEnd ? `Rights lapse ${formatDate(rightsEnd + 'T00:00:00')}.` : ''
 
@@ -923,11 +929,12 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                         paymentTerms={deal.payment_terms}
                         items={hasStructuredItems ? items!.map((i) => ({ label: i.label, price_paise: i.price_paise })) : undefined}
                         brandName={brand}
+                        dealStatus={deal.status}
                       />
                     )
 
-                    // Collapsible when invoice is paid
-                    if (isCompleted && invoice) {
+                    // Collapsible when invoice exists and is paid
+                    if (invoice && (invoice.status === 'paid')) {
                       const invSubtitle = `Paid in full${invoice.issued_at ? ` · sent ${formatDate(invoice.issued_at)}` : ''}`
                       return (
                         <div key="invoice">
