@@ -19,7 +19,7 @@ const ALL_MOBILE_LINKS = [
   { label: 'Browse Creators', href: '/browse' },
   { label: 'Inbox', href: '/inbox' },
   { label: 'Notifications', href: '/notifications' },
-  { label: 'Settings', href: '/settings/team' },
+  { label: 'Settings', href: '/settings' },
 ]
 
 interface NotifItem {
@@ -284,7 +284,7 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1b16', margin: 0 }}>{brandName || 'Brand'}</p>
                     <span style={{ fontSize: 11, color: '#6a6c5f' }}>Brand</span>
                   </div>
-                  <Link href="/settings/team" style={dropdownLink}>Settings</Link>
+                  <Link href="/settings" style={dropdownLink}>Settings</Link>
                   <div style={{ padding: '4px 14px 10px' }}><SignOutButton /></div>
                 </div>
               )}
