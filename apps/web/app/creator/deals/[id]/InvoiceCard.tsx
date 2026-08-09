@@ -272,7 +272,7 @@ function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, item
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
         padding: '18px 24px', margin: '16px -24px 0', background: 'var(--ink)', color: '#FFFFFF',
       }}>
-        <span style={{ fontSize: 13.5, fontWeight: 700 }}>You receive</span>
+        <span style={{ fontSize: 13.5, fontWeight: 700 }}>{isPaid ? 'You received' : 'You receive'}</span>
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>
           {formatINR(invoice.creator_receives_paise)}
         </span>
@@ -282,92 +282,76 @@ function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, item
       {invoice.issued_at && (
         <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 18 }}>
           Sent to {brandName || 'brand'} {fmtDateTime(invoice.issued_at)}
-          {invoice.payment_terms ? ` · ${invoice.payment_terms}` : invoice.due_date ? ` · payment due by ${fmtDate(invoice.due_date)}` : ''}
+          {isPaid && invoice.accepted_at ? ` · paid ${fmtDateTime(invoice.accepted_at)}` : invoice.payment_terms ? ` · ${invoice.payment_terms}` : invoice.due_date ? ` · payment due by ${fmtDate(invoice.due_date)}` : ''}
         </div>
       )}
 
-      {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
-        {/* Left: status info */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 460 }}>
-          {isAwaitingPayment && (
-            <>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-              <div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
-                  Payment on the way
-                </span>
-                <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)', marginTop: 6 }}>
-                  Your invoice has been sent to {brandName || 'the brand'}.
-                  {invoice.due_date ? ` Payment is due by ${fmtDate(invoice.due_date)}.` : ''}
-                </span>
-              </div>
-            </>
-          )}
+      {/* Footer — only for non-paid states */}
+      {!isPaid && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 18, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 460 }}>
+            {isAwaitingPayment && (
+              <>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                <div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
+                    Payment on the way
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)', marginTop: 6 }}>
+                    Your invoice has been sent to {brandName || 'the brand'}.
+                    {invoice.due_date ? ` Payment is due by ${fmtDate(invoice.due_date)}.` : ''}
+                  </span>
+                </div>
+              </>
+            )}
 
-          {isPaid && (
-            <>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M20 6 9 17l-5-5" /></svg>
-              <div>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--success, #16a34a)' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success, #16a34a)' }} />
-                  Payment received
-                </span>
-                <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)', marginTop: 6 }}>
-                  {formatINR(invoice.creator_receives_paise)} received
-                  {invoice.accepted_at ? ` · paid ${fmtDate(invoice.accepted_at)}` : ''}
-                </span>
-              </div>
-            </>
-          )}
+            {invoice.status === 'draft' && (
+              <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
+                Invoice generated. Issue it to send to the brand.
+              </span>
+            )}
+
+            {dueStatus?.urgent && (
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: '#dc2626', marginTop: 4 }}>
+                {dueStatus.text}
+              </span>
+            )}
+          </div>
 
           {invoice.status === 'draft' && (
-            <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
-              Invoice generated. Issue it to send to the brand.
-            </span>
+            <button
+              className="neonbtn"
+              onClick={onIssue}
+              disabled={loading}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                height: 42, padding: '0 18px', borderRadius: 11,
+                background: 'var(--neon)', border: 'none',
+                boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? 'Issuing...' : 'Issue to brand'}
+            </button>
           )}
 
-          {dueStatus?.urgent && !isPaid && (
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: '#dc2626', marginTop: 4 }}>
-              {dueStatus.text}
-            </span>
+          {isAwaitingPayment && (
+            <Link href="/creator/inbox" className="pill-hover" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              height: 54, padding: '0 20px', borderRadius: 14,
+              background: 'var(--card)', border: '1px solid var(--frost-edge, var(--border-hairline, #EAEAE3))',
+              boxShadow: '0 8px 18px -12px rgba(40,45,25,.42)',
+              fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none',
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
+              Message brand
+            </Link>
           )}
         </div>
-
-        {/* Right: action */}
-        {invoice.status === 'draft' && (
-          <button
-            className="neonbtn"
-            onClick={onIssue}
-            disabled={loading}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              height: 42, padding: '0 18px', borderRadius: 11,
-              background: 'var(--neon)', border: 'none',
-              boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-              fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-            }}
-          >
-            {loading ? 'Issuing...' : 'Issue to brand'}
-          </button>
-        )}
-
-        {isAwaitingPayment && (
-          <Link href="/creator/inbox" className="pill-hover" style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-            height: 54, padding: '0 20px', borderRadius: 14,
-            background: 'var(--card)', border: '1px solid var(--frost-edge, var(--border-hairline, #EAEAE3))',
-            boxShadow: '0 8px 18px -12px rgba(40,45,25,.42)',
-            fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none',
-          }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
-            Message brand
-          </Link>
-        )}
-      </div>
+      )}
 
       {error && <p style={errorStyle}>{error}</p>}
     </>

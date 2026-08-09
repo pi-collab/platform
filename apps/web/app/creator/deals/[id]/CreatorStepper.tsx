@@ -9,19 +9,21 @@ interface Event {
   created_at: string
 }
 
-const STAGES = ['Offer received', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
+const STAGES = ['Offer received', 'Negotiating', 'Agreed', 'Submitted', 'Revision', 'Approved', 'Invoice', 'Paid'] as const
 
 const STATUS_TO_STAGE: Record<string, number> = {
-  negotiating: 0, agreed: 1, delivered: 2, revision: 2, approved: 3, paid: 4, complete: 5, declined: -1, cancelled: -1,
+  negotiating: 1, agreed: 2, delivered: 3, revision: 4, approved: 5, paid: 6, complete: 7, declined: -1, cancelled: -1,
 }
 
 const STAGE_STATUS: Record<number, string> = {
   0: '__created',
-  1: 'agreed',
-  2: 'delivered',
-  3: 'approved',
-  4: 'paid',
-  5: 'complete',
+  1: 'negotiating',
+  2: 'agreed',
+  3: 'delivered',
+  4: 'revision',
+  5: 'approved',
+  6: 'paid',
+  7: 'complete',
 }
 
 function deriveStepDates(events: Event[]): Record<number, string> {
@@ -50,8 +52,8 @@ function formatStepDate(iso: string): string {
 export default function CreatorStepper({ dealStatus, events, invoiceStatus }: { dealStatus: string; events: Event[]; invoiceStatus?: string | null }) {
   let stageIndex = STATUS_TO_STAGE[dealStatus] ?? 0
   // When invoice is issued/accepted, advance stepper to Invoice stage
-  if (invoiceStatus === 'issued' || invoiceStatus === 'accepted') stageIndex = 4
-  if (invoiceStatus === 'paid' || dealStatus === 'paid') stageIndex = 5
+  if (invoiceStatus === 'issued' || invoiceStatus === 'accepted') stageIndex = 6
+  if (invoiceStatus === 'paid' || dealStatus === 'paid') stageIndex = 7
   const allDone = dealStatus === 'complete' || dealStatus === 'paid' || invoiceStatus === 'paid'
   const stepDates = deriveStepDates(events)
   const [hoveredStep, setHoveredStep] = useState<number | null>(null)

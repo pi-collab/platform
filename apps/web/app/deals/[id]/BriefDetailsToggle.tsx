@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 interface BriefDetailsToggleProps {
   children: React.ReactNode
-  label?: string
+  label?: React.ReactNode
   subtitle?: string
   defaultOpen?: boolean
   variant?: 'inline' | 'surface'
@@ -16,7 +16,7 @@ export default function BriefDetailsToggle({ children, label, subtitle, defaultO
   const isSurface = variant === 'surface'
 
   return (
-    <div style={isSurface ? undefined : { marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border-hairline)' }}>
+    <div className={isSurface ? 'surface' : undefined} style={isSurface ? { padding: '22px 24px' } : { marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--border-hairline)' }}>
       <button
         type="button"
         onClick={() => setOpen(!open)}

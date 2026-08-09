@@ -178,8 +178,8 @@ export default function DeliverableItems({
 
   return (
     <div>
-      {/* Status banner — shown after submission (not in revision state, where per-item cards convey the info) */}
-      {isSubmitted && !canSubmit && dealStatus !== 'revision' && (
+      {/* Status banner — shown after submission (not in revision/paid/complete state) */}
+      {isSubmitted && !canSubmit && dealStatus !== 'revision' && dealStatus !== 'paid' && dealStatus !== 'complete' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: 22, borderRadius: 16, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
             <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--card)', border: '1px solid var(--sec-mid-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>

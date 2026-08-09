@@ -643,11 +643,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
                   // Post-submission: collapsible surface
                   return (
-                    <div key="brief" className="surface" style={{ padding: '22px 24px' }}>
-                      <BriefDetailsToggle label="The brief in detail" subtitle={`${brand} · ${formatDate(deal.created_at)}`} variant="surface">
-                        {briefContent}
-                      </BriefDetailsToggle>
-                    </div>
+                    <BriefDetailsToggle key="brief" label="The brief in detail" subtitle={`${brand} · ${formatDate(deal.created_at)}`} variant="surface">
+                      {briefContent}
+                    </BriefDetailsToggle>
                   )
                 }
 
@@ -773,11 +771,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
                     if (isDelivsCollapsible) {
                       return (
-                        <div key="deliverables" id="deliverables">
-                          <BriefDetailsToggle label="Deliverables" subtitle={subtitle} variant="surface">
-                            {delivContent}
-                          </BriefDetailsToggle>
-                        </div>
+                        <BriefDetailsToggle key="deliverables" label="Deliverables" subtitle={subtitle} variant="surface">
+                          {delivContent}
+                        </BriefDetailsToggle>
                       )
                     }
 
@@ -874,6 +870,12 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                           </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 }}>
+                          {/* Mascot */}
+                          <svg width="44" height="44" viewBox="0 0 336 336" fill="none" style={{ flexShrink: 0 }}>
+                            <path d="M168 12C278 12 324 112 324 188C324 276 252 324 168 324C84 324 12 276 12 188C12 112 58 12 168 12Z" fill="#E8FF66" />
+                            <ellipse cx="114" cy="126" rx="54" ry="36" fill="#fff" opacity="0.55" />
+                            <ellipse cx="168" cy="188" rx="24" ry="10" fill="#fff" opacity="0.18" />
+                          </svg>
                           <div>
                             <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em' }}>You have been guapd</div>
                             <div style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--ink-soft)', marginTop: 4 }}>
@@ -896,6 +898,16 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                             {paidTs ? `Paid ${paidTs}` : 'Paid'}
                           </span>
                           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <Link href="/creator/payments" className="pill-hover" style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                              height: 46, padding: '0 20px', borderRadius: 12,
+                              background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                              boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)',
+                              fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none',
+                            }}>
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                              View in payments
+                            </Link>
                             <Link href="/creator/inbox" className="pill-hover" style={{
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                               height: 46, padding: '0 20px', borderRadius: 12,
@@ -935,13 +947,14 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
                     // Collapsible when invoice exists and is paid
                     if (invoice && (invoice.status === 'paid')) {
-                      const invSubtitle = `Paid in full${invoice.issued_at ? ` · sent ${formatDate(invoice.issued_at)}` : ''}`
                       return (
-                        <div key="invoice">
-                          <BriefDetailsToggle label={`Invoice${deal.deal_ref ? ` #${deal.deal_ref}` : ''}`} subtitle={invSubtitle} variant="surface">
-                            {invoiceContent}
-                          </BriefDetailsToggle>
-                        </div>
+                        <BriefDetailsToggle
+                          key="invoice"
+                          label={<>Invoice{deal.deal_ref && <> <span style={{ color: 'var(--ink-faint)', fontWeight: 600 }}>#{deal.deal_ref}</span></>} <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.04em', color: 'var(--ink-soft)', marginLeft: 12 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon-deep)' }} />Paid in full</span></>}
+                          variant="surface"
+                        >
+                          {invoiceContent}
+                        </BriefDetailsToggle>
                       )
                     }
 
