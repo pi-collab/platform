@@ -76,5 +76,5 @@ export default async function BrandNav() {
     }
   }
 
-  return <BrandSidebar brandName={brandName} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+  return <BrandSidebar brandName={brandName} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
 }

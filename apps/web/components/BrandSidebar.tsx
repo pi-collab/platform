@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
-import SignOutButton from '@/components/SignOutButton'
+import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
 
 const NAV_LINKS = [
@@ -69,7 +69,7 @@ interface NotifCreatorMap {
   [dealId: string]: { name: string; photo: string | null }
 }
 
-export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+export default function BrandSidebar({ brandName, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -79,6 +79,12 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
   const unreadCount = useRealtimeNotifications(initialUnread)
 
   const initials = brandName ? brandName.slice(0, 2).toUpperCase() : 'BR'
+
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
 
   useEffect(() => {
     if (!avatarOpen) return
@@ -269,23 +275,63 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
             <div ref={avatarRef} style={{ position: 'relative' }}>
               <button onClick={() => setAvatarOpen(!avatarOpen)} style={avatarBtn} aria-label="Account menu">
                 <span style={avatarSquare}>{initials}</span>
-                <div className="profile-meta" style={{ lineHeight: 1.15 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{brandName || 'Brand'}</div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--ink-faint)', fontSize: 11, fontWeight: 500 }}>
+                <div style={{ lineHeight: 1.15 }}>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{brandName || 'Brand'}</div>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--neon-deep)' }} />
                     Brand
                   </div>
                 </div>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}><path d="m6 9 6 6 6-6" /></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2, transform: 'rotate(180deg)' }}><path d="m6 9 6 6 6-6" /></svg>
               </button>
               {avatarOpen && (
-                <div style={dropdown}>
-                  <div style={dropdownHead}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1b16', margin: 0 }}>{brandName || 'Brand'}</p>
-                    <span style={{ fontSize: 11, color: '#6a6c5f' }}>Brand</span>
+                <div className="pmenu" style={dropdown}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px 14px' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' }}>{initials}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5 }}>{brandName || 'Brand'}</div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)', marginTop: 2 }}>
+                        <span style={{ padding: '1px 7px', borderRadius: 999, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)', color: 'var(--sec-ink)', letterSpacing: '.03em', textTransform: 'uppercase' as const, fontSize: 9.5 }}>Brand</span>
+                      </div>
+                      {userEmail && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>}
+                    </div>
                   </div>
-                  <Link href="/settings" style={dropdownLink}>Settings</Link>
-                  <div style={{ padding: '4px 14px 10px' }}><SignOutButton /></div>
+                  <div style={{ height: 1, background: 'var(--border-hairline)', margin: '2px 6px 6px' }} />
+
+                  {/* Company profile */}
+                  <Link href="/settings?tab=profile" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Company profile</span><span style={pmiSub}>Your public brand page</span></span>
+                  </Link>
+                  {/* Settings */}
+                  <Link href="/settings?tab=account" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Settings</span><span style={pmiSub}>Account, notifications, security</span></span>
+                  </Link>
+                  {/* Payments */}
+                  <Link href="/settings?tab=payments" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Payments</span><span style={pmiSub}>Payment method & invoices</span></span>
+                  </Link>
+                  {/* Team */}
+                  <Link href="/settings?tab=team" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Team</span><span style={pmiSub}>Invite & manage members</span></span>
+                  </Link>
+                  {/* Help & support */}
+                  <Link href="/settings" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Help & support</span></span>
+                  </Link>
+
+                  <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
+
+                  {/* Sign out */}
+                  <button onClick={handleSignOut} className="pmi pmi-danger" style={{ ...pmiStyle, border: 'none', background: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <span style={{ ...pmiIconWrap, background: 'rgba(210,84,90,.09)', color: '#d2545a' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13.5, color: '#d2545a', textAlign: 'left' }}>Sign out</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -337,7 +383,9 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
                 )
               })}
             </nav>
-            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(26,27,22,0.08)' }}><SignOutButton /></div>
+            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(26,27,22,0.08)' }}>
+              <button onClick={handleSignOut} style={{ padding: '0.5rem 1.25rem', background: 'transparent', color: '#5C5048', border: '1px solid #DDD3BE', borderRadius: 9999, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>Sign out</button>
+            </div>
           </div>
         </>
       )}
@@ -345,6 +393,11 @@ export default function BrandSidebar({ brandName, unreadCount: initialUnread = 0
       <style>{`
         @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-33.33%); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes menuIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .pmenu { animation: menuIn .2s cubic-bezier(.22,1,.36,1); transform-origin: top right; }
+        .pmi { transition: background .14s ease; }
+        .pmi:hover { background: #F7F7F4; }
+        .pmi-danger:hover { background: rgba(210,84,90,.08) !important; }
         .brand-topnav-desktop { display: none; }
         .brand-topbar-mobile {
           display: flex; align-items: center; justify-content: space-between;
@@ -441,11 +494,10 @@ const bellBadge: React.CSSProperties = {
 }
 
 const avatarBtn: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 10,
-  padding: '5px 12px 5px 5px',
-  borderRadius: 'var(--radius-pill)',
-  background: '#fff', border: '1px solid #EAEAE3',
-  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+  display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, whiteSpace: 'nowrap',
+  padding: '5px 10px 5px 6px', borderRadius: 999,
+  background: 'var(--card)', border: '1px solid #EAEAE3',
+  cursor: 'pointer', fontFamily: 'inherit',
 }
 
 const avatarSquare: React.CSSProperties = {
@@ -453,23 +505,33 @@ const avatarSquare: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12.5,
   color: 'var(--ink)',
-  background: '#EEEDEA',
-  border: '1px solid #E0DFD9',
+  background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))',
+  border: '1px solid var(--frost-edge)',
 }
 
 const dropdown: React.CSSProperties = {
-  position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 200,
-  background: '#fff', borderRadius: 14,
-  boxShadow: 'rgba(26,27,22,0.08) 0px 0px 0px 1px, rgba(40,45,25,0.2) 0px 20px 48px -30px',
-  overflow: 'hidden', zIndex: 50,
+  position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 308,
+  zIndex: 50, borderRadius: 20,
+  border: '1px solid #EAEAE3', background: '#FFFFFF',
+  boxShadow: '0 30px 60px -26px rgba(40,45,25,.5), 0 0 0 1px rgba(26,27,22,.06)',
+  padding: 8,
 }
 
-const dropdownHead: React.CSSProperties = {
-  padding: '12px 14px', borderBottom: '1px solid rgba(26,27,22,0.06)',
+const pmiStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, textDecoration: 'none',
 }
 
-const dropdownLink: React.CSSProperties = {
-  display: 'block', padding: '8px 14px', fontSize: 14, color: '#5a5c50', textDecoration: 'none',
+const pmiIconWrap: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 32, height: 32, borderRadius: 10, background: '#F7F7F4', color: 'var(--ink-soft)', flexShrink: 0,
+}
+
+const pmiLabel: React.CSSProperties = {
+  display: 'block', fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13.5, color: 'var(--ink)',
+}
+
+const pmiSub: React.CSSProperties = {
+  display: 'block', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 1,
 }
 
 const hamburgerBtn: React.CSSProperties = {

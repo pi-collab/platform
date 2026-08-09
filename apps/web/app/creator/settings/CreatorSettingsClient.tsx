@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition, useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
 
 /* ── Types ──────────────────────────────────────────────────────── */
@@ -68,7 +69,15 @@ export default function CreatorSettingsClient({
   authProvider,
   authEmail,
 }: Props) {
-  const [section, setSection] = useState('profile')
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const validSections = SECTIONS.map(s => s.id)
+  const initialSection = tabParam && validSections.includes(tabParam) ? tabParam : 'profile'
+  const [section, setSection] = useState(initialSection)
+
+  useEffect(() => {
+    if (tabParam && validSections.includes(tabParam)) setSection(tabParam)
+  }, [tabParam])
   const [dirty, setDirty] = useState(false)
   const [toast, setToast] = useState('')
   const [saving, startSave] = useTransition()

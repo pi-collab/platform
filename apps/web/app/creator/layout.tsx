@@ -112,7 +112,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   return (
     <>
       <div className="creator-main">
-        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
+        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
       </div>
     </>

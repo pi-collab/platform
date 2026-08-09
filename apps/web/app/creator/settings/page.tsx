@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -31,7 +32,7 @@ export default async function CreatorSettingsPage() {
   const prefs = (user?.preferences ?? {}) as Record<string, string>
 
   return (
-    <CreatorSettingsClient
+    <Suspense><CreatorSettingsClient
       creatorName={creator?.full_name ?? ctx.creatorName}
       creatorHandle={(creator as Record<string, unknown>)?.handle as string ?? ''}
       creatorBio={(creator as Record<string, unknown>)?.bio as string ?? ''}
@@ -46,6 +47,6 @@ export default async function CreatorSettingsPage() {
       userTimezone={prefs.timezone ?? 'IST (GMT+5:30)'}
       authProvider={authProvider}
       authEmail={authEmail}
-    />
+    /></Suspense>
   )
 }

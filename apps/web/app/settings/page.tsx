@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -62,7 +63,7 @@ export default async function SettingsPage() {
   const prefs = (user?.preferences ?? {}) as Record<string, string>
 
   return (
-    <SettingsClient
+    <Suspense><SettingsClient
       brandName={brandRow?.name ?? brand.brandName}
       brandCategory={brandRow?.category ?? ''}
       brandWebsite={brandRow?.website ?? ''}
@@ -80,6 +81,6 @@ export default async function SettingsPage() {
       isAdmin={brand.isAdmin}
       teamMembers={teamMembers}
       pendingInvites={pendingInvites}
-    />
+    /></Suspense>
   )
 }
