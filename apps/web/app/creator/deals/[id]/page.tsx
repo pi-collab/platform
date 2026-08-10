@@ -14,6 +14,7 @@ import { getCampaignBriefForCreator } from './actions'
 import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
 import ShippingAddressForm from './ShippingAddressForm'
 import CreatorStepper from './CreatorStepper'
+import CreatorReviewCard from './CreatorReviewCard'
 
 // ── Stage definitions (mirrors the deals list) ──
 const STATUS_META: Record<string, { label: string; dot: string; glow: string }> = {
@@ -96,6 +97,18 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   if (dealError || !deal) notFound()
 
+  // Fetch creator's own review (if any) — table may not exist yet pre-migration
+  let existingReview: { rating: number; note: string | null } | null = null
+  if (['paid', 'complete'].includes(deal.status)) {
+    const { data: review } = await supabase
+      .from('deal_reviews')
+      .select('rating, note')
+      .eq('deal_id', params.id)
+      .eq('reviewer_role', 'creator')
+      .maybeSingle()
+    existingReview = review
+  }
+
   const campaignBrief = await getCampaignBriefForCreator(params.id)
 
   const rawBrand = deal.brands as unknown
@@ -105,6 +118,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const isNegotiating = deal.status === 'negotiating'
   const sm = STATUS_META[deal.status] ?? STATUS_META.negotiating
   const invoiceIssuedOrLater = invoice && (invoice.status === 'issued' || invoice.status === 'accepted' || invoice.status === 'paid')
+  const isCompleted = invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))
 
   // Fee calculation
   const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
@@ -978,6 +992,16 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
               variant="creator"
               brandName={brand}
               collapsed
+            />
+          )}
+
+          {/* ── Review card (only on completed deals) ── */}
+          {isCompleted && (
+            <CreatorReviewCard
+              dealId={deal.id}
+              brandName={brand}
+              existingRating={existingReview?.rating}
+              existingNote={existingReview?.note}
             />
           )}
 

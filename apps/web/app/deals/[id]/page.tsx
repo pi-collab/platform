@@ -14,6 +14,7 @@ import BriefDetailsToggle from './BriefDetailsToggle'
 import StepperTimeline from './StepperTimeline'
 import PaymentBreakup from './PaymentBreakup'
 import CollapsibleSection from './CollapsibleSection'
+import BrandReviewCard from './BrandReviewCard'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -100,6 +101,19 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   ])
 
   if (dealError || !deal) notFound()
+
+  const isCompleted = ['paid', 'complete'].includes(deal.status)
+
+  let brandReview: { rating: number; note: string | null } | null = null
+  if (isCompleted) {
+    const { data: review } = await supabase
+      .from('deal_reviews')
+      .select('rating, note')
+      .eq('deal_id', deal.id)
+      .eq('reviewer_role', 'brand')
+      .maybeSingle()
+    brandReview = review ?? null
+  }
 
   let campaignName: string | null = null
   let campaignBrief: { pitch: string | null; guidelines: string | null } | null = null
@@ -953,6 +967,16 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>{formatRupees(brandTotal)}</span>
             </div>
           </CollapsibleSection>
+        )}
+
+        {/* ── Brand review card (completed deals only) ── */}
+        {isCompleted && creator && (
+          <BrandReviewCard
+            dealId={deal.id}
+            creatorName={creator.full_name}
+            existingRating={brandReview?.rating}
+            existingNote={brandReview?.note}
+          />
         )}
 
         {/* ── Metadata footer ── */}

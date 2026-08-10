@@ -588,6 +588,93 @@ CREATE POLICY ops_events_deny_all
   WITH CHECK (false);
 
 
+-- ── deal_reviews ──────────────────────────────────────────────────
+-- Post-deal ratings. Each side can only see/write their OWN review.
+-- Ratings are PRIVATE — neither side sees the other's rating.
+
+DROP POLICY IF EXISTS brand_insert_review   ON deal_reviews;
+DROP POLICY IF EXISTS brand_update_review   ON deal_reviews;
+DROP POLICY IF EXISTS creator_insert_review ON deal_reviews;
+DROP POLICY IF EXISTS creator_update_review ON deal_reviews;
+DROP POLICY IF EXISTS brand_read_own_review ON deal_reviews;
+DROP POLICY IF EXISTS creator_read_own_review ON deal_reviews;
+
+CREATE POLICY brand_insert_review ON deal_reviews
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    reviewer_role = 'brand'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      JOIN brand_members bm ON bm.brand_id = d.brand_id
+      WHERE bm.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
+    )
+  );
+
+CREATE POLICY brand_update_review ON deal_reviews
+  FOR UPDATE TO authenticated
+  USING (
+    reviewer_role = 'brand'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      JOIN brand_members bm ON bm.brand_id = d.brand_id
+      WHERE bm.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
+    )
+  );
+
+CREATE POLICY creator_insert_review ON deal_reviews
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    reviewer_role = 'creator'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      WHERE d.creator_id = (
+        SELECT c.id FROM creators c
+        JOIN users u ON u.id = c.user_id
+        WHERE u.auth_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY creator_update_review ON deal_reviews
+  FOR UPDATE TO authenticated
+  USING (
+    reviewer_role = 'creator'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      WHERE d.creator_id = (
+        SELECT c.id FROM creators c
+        JOIN users u ON u.id = c.user_id
+        WHERE u.auth_id = auth.uid()
+      )
+    )
+  );
+
+CREATE POLICY brand_read_own_review ON deal_reviews
+  FOR SELECT TO authenticated
+  USING (
+    reviewer_role = 'brand'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      JOIN brand_members bm ON bm.brand_id = d.brand_id
+      WHERE bm.user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
+    )
+  );
+
+CREATE POLICY creator_read_own_review ON deal_reviews
+  FOR SELECT TO authenticated
+  USING (
+    reviewer_role = 'creator'
+    AND deal_id IN (
+      SELECT d.id FROM deals d
+      WHERE d.creator_id = (
+        SELECT c.id FROM creators c
+        JOIN users u ON u.id = c.user_id
+        WHERE u.auth_id = auth.uid()
+      )
+    )
+  );
+
+
 -- ================================================================
 -- END OF RLS POLICIES
 -- ================================================================

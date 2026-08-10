@@ -75,6 +75,37 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
  * Request revision on a single deliverable item.
  * Item → 'revision'. Deal → 'revision' if coming from 'delivered' (one round = one increment).
  */
+/**
+ * Submit or update a brand review for a completed deal.
+ */
+export async function submitBrandReview(dealId: string, rating: number, note: string | null): Promise<{ success: boolean; error?: string }> {
+  await verifyApprovedBrand()
+  const supabase = createClient()
+
+  if (rating < 1 || rating > 5) return { success: false, error: 'Rating must be 1-5.' }
+
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { success: false, error: 'Deal not found.' }
+  if (!['paid', 'complete'].includes(deal.status)) return { success: false, error: 'Deal must be completed to leave a review.' }
+
+  const { error } = await supabase
+    .from('deal_reviews')
+    .upsert(
+      { deal_id: dealId, reviewer_role: 'brand', rating, note, updated_at: new Date().toISOString() },
+      { onConflict: 'deal_id,reviewer_role' }
+    )
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(`/deals/${dealId}`)
+  return { success: true }
+}
+
 export async function requestItemRevision(dealId: string, itemId: string, note?: string): Promise<ReviewResult> {
   await verifyApprovedBrand()
   const supabase = createClient()

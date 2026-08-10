@@ -159,6 +159,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     }
   })
 
+  const hasCompletedDeal = allDeals.some((d) => ['paid', 'complete'].includes(d.status))
+
   const budgetPercent = campaign.budget_paise != null && campaign.budget_paise > 0
     ? Math.min(100, Math.round((estSpendPaise / campaign.budget_paise) * 100))
     : null
@@ -198,6 +200,26 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {hasCompletedDeal && (
+              <Link
+                href={`/campaigns/${campaign.id}/analytics`}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '10px 20px', borderRadius: 999,
+                  border: '1px solid var(--border-hairline, #EAEAE3)',
+                  background: 'var(--card)', color: 'var(--ink)',
+                  fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 700,
+                  textDecoration: 'none', whiteSpace: 'nowrap',
+                  transition: 'border-color .16s ease',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 3v18h18" />
+                  <path d="m19 9-5 5-4-4-3 3" />
+                </svg>
+                Analytics
+              </Link>
+            )}
             <CampaignActions campaignId={campaign.id} currentStatus={campaign.status} currentName={campaign.name} currentDescription={campaign.description} currentBudgetPaise={campaign.budget_paise} />
           </div>
         </div>

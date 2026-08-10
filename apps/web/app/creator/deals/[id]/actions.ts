@@ -626,3 +626,38 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   revalidatePath(`/deals/${dealId}`)
   return { status: 'success' }
 }
+
+/**
+ * Submit or update a creator's review for a completed deal.
+ * Rating is private — not shared directly with the brand.
+ */
+export async function submitCreatorReview(dealId: string, rating: number, note: string | null): Promise<{ success: boolean; error?: string }> {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'Not authenticated.' }
+
+  if (rating < 1 || rating > 5) return { success: false, error: 'Rating must be 1-5.' }
+
+  // Verify the deal is in a completed state
+  const { data: deal } = await supabase
+    .from('deals')
+    .select('id, status')
+    .eq('id', dealId)
+    .maybeSingle()
+
+  if (!deal) return { success: false, error: 'Deal not found.' }
+  if (!['paid', 'complete'].includes(deal.status)) return { success: false, error: 'Deal must be completed to leave a review.' }
+
+  // Upsert the review (unique on deal_id + reviewer_role)
+  const { error } = await supabase
+    .from('deal_reviews')
+    .upsert(
+      { deal_id: dealId, reviewer_role: 'creator', rating, note, updated_at: new Date().toISOString() },
+      { onConflict: 'deal_id,reviewer_role' }
+    )
+
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { success: true }
+}
