@@ -107,7 +107,7 @@ export default function CampaignActions({
           Reactivate
         </button>
       )}
-      {currentStatus !== 'archived' && (
+      {currentStatus === 'completed' && (
         <button onClick={() => handleStatusChange('archived')} disabled={loading} style={{ ...pillBtn, color: 'var(--ink-faint)' }}>
           Archive
         </button>
