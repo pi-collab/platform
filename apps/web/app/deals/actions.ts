@@ -4,6 +4,9 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
+import { generateOfferToken } from '@/lib/offer-token'
+import { calculateFee } from '@/lib/fee'
+import { formatAmountForMessage } from '@/lib/money'
 
 interface DeliverableItem {
   label: string
@@ -141,8 +144,20 @@ export async function createDeal(input: CreateDealInput) {
   // TODO: Insert input.message as first message in the deal thread (messages table)
   // when the send/notification piece is built.
 
-  // Notify creator: new offer
-  notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`)
+  // Notify creator: new offer (in-app + WhatsApp).
+  // The creator sees what they will RECEIVE, net of any deducted fee — the
+  // same number as the accept-page, not the gross price.
+  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const { creator_receives_paise } = calculateFee(price_paise, resolvedFeePercent, feeMode)
+
+  await notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {
+    whatsapp: (ctx) => ({
+      template: 'new_offer_received',
+      bodyVars: [ctx.creatorName, ctx.brandName, formatAmountForMessage(creator_receives_paise)],
+      // Offer page is token-authorised — a deal UUID here would NOT open it.
+      buttonValue: generateOfferToken(data.id),
+    }),
+  })
 
   revalidatePath('/deals')
   return { success: true, dealId: data.id }

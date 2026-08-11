@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
+import { generateOfferToken } from '@/lib/offer-token'
+import { formatAmountForMessage } from '@/lib/money'
 
 // ── Public storefront fetch ──────────────────────────────────────────────────
 // Uses the SECURITY DEFINER function — returns whitelisted JSON only.
@@ -240,8 +242,18 @@ export async function createDealFromStorefront(input: PitchInput) {
     })
   }
 
-  // Notify creator
-  notifyDealParty(deal.id, 'creator', 'offer_sent', (t) => `New pitch from storefront: ${t}`)
+  // Notify creator (in-app + WhatsApp), same event as the offer builder.
+  // A storefront pitch inserts price_paise: 0 by design — the price is agreed
+  // in the thread — so the amount variable resolves to a human phrase rather
+  // than a misleading "₹0" (see formatAmountForMessage).
+  await notifyDealParty(deal.id, 'creator', 'offer_sent', (t) => `New pitch from storefront: ${t}`, {
+    whatsapp: (ctx) => ({
+      template: 'new_offer_received',
+      bodyVars: [ctx.creatorName, ctx.brandName, formatAmountForMessage(0)],
+      // Offer page is token-authorised — a deal UUID here would NOT open it.
+      buttonValue: generateOfferToken(deal.id),
+    }),
+  })
 
   revalidatePath('/deals')
   return { success: true, dealId: deal.id }

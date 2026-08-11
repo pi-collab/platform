@@ -4,6 +4,7 @@ import { verifyApprovedBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
+import { formatAmountForMessage } from '@/lib/money'
 
 type InvoiceResult =
   | { status: 'success' }
@@ -80,7 +81,7 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('id, status')
+    .select('id, status, creator_receives_paise')
     .eq('deal_id', dealId)
     .maybeSingle()
 
@@ -116,8 +117,21 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
     return { status: 'success' }
   }
 
-  // Notify creator: payment received
-  notifyDealParty(dealId, 'creator', 'payment_paid', (t) => `Payment received for ${t}`)
+  // Notify creator: payment received (in-app + WhatsApp).
+  // `res.already` above short-circuits a repeat call, so one payment produces
+  // exactly one message. The amount is the invoice's authoritative
+  // creator_receives_paise — net of platform fee, what actually reaches them.
+  await notifyDealParty(dealId, 'creator', 'payment_paid', (t) => `Payment received for ${t}`, {
+    whatsapp: (ctx) => ({
+      template: 'payment_released',
+      bodyVars: [
+        ctx.creatorName,
+        formatAmountForMessage(invoice.creator_receives_paise),
+        ctx.dealRef ?? ctx.dealTitle,
+      ],
+      buttonValue: dealId,
+    }),
+  })
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)

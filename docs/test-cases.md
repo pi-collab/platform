@@ -604,6 +604,81 @@
 - [ ] Password reset sends email (or shows success message regardless, to prevent enumeration).
 - [ ] Password minimum: 8 characters enforced client-side; Supabase enforces server-side.
 
+### WhatsApp Notifications (MSG91)
+
+> Creator-only by design — brands are never sent WhatsApp. Four event-triggered
+> templates; the two scheduled ones (deliverable_reminder, deliverable_overdue)
+> are a separate cron task and are NOT wired.
+>
+> **Env:** `MSG91_AUTH_KEY`, `MSG91_WHATSAPP_NUMBER`, `MSG91_WHATSAPP_LANG`
+> (must match the approved template language exactly), optional
+> `MSG91_WHATSAPP_NAMESPACE`, `MSG91_WHATSAPP_URL`, and the opt-in switch
+> `MSG91_WHATSAPP_ENABLED` (must be exactly `'true'`; anything else = no sends).
+> **Keep the switch OFF on staging** so testing never messages a real creator.
+
+**Event → template → variables**
+- [ ] Brand sends offer (`/deals` builder) → `new_offer_received`; body = creator name, brand name, amount; button = **offer TOKEN**.
+- [ ] Storefront pitch (`/c/{slug}`) → same `new_offer_received`; amount reads "Amount to be discussed" (pitch inserts `price_paise: 0`, so "₹0" would be misleading).
+- [ ] Brand requests revision → `revision_requested`; body = creator, brand, deal ref; button = deal UUID.
+- [ ] Payment marked paid → `payment_released`; body = creator, amount, deal ref; button = deal UUID.
+- [ ] All items approved → `deliverables_approved`; body = creator, deal ref; button = deal UUID.
+
+**Button value — the link must actually open**
+- [ ] `new_offer_received` button value is an HMAC token that resolves at `/offer/{token}`; pasting it after the base gives a working offer page. A deal UUID here would NOT authorize — regression-check this specifically.
+- [ ] The other three button values are bare deal UUIDs resolving at `/creator/deals/{id}`.
+- [ ] Button value is the SUFFIX ONLY — never a full URL (the base is baked into the approved template; a full URL would double the base).
+- [ ] Offer token TTL is 7 days — a `new_offer_received` button tapped on day 8 shows "Link invalid or expired". **Any future offer-reminder template must mint a fresh token, not reuse a stored link.**
+
+**Amounts (creator sees net, not gross)**
+- [ ] `fee_mode: 'deducted'` → `new_offer_received` amount equals `creator_receives_paise`, NOT `price_paise`.
+- [ ] `payment_released` amount equals `invoices.creator_receives_paise`.
+- [ ] Formatting is Indian grouping via `lib/money.ts` (₹60,000; ₹12,50,000). Raw paise never appear in a message.
+
+**Failure isolation — the critical property**
+- [ ] MSG91 returns HTTP 500 → deal action still SUCCEEDS; in-app notification still created; error logged.
+- [ ] MSG91 returns HTTP 200 with `{"type":"error"}` → treated as failure (status code alone is not a success signal); deal action still succeeds.
+- [ ] MSG91 hangs → send aborts at ~4s; deal action still succeeds.
+- [ ] Missing/invalid `MSG91_AUTH_KEY` → no throw, deal action succeeds.
+- [ ] Creator has NULL phone → send skipped + logged; in-app notification still fires.
+- [ ] Creator is an unclaimed ops stub (no `users` row) → no in-app row is possible, but WhatsApp still fires (it is their only channel for a first offer).
+- [ ] Auth key, recipient phone, and message variables never appear in logs.
+
+**Dedupe — one event, one message**
+- [ ] Approving items one by one fires exactly ONE `deliverables_approved` (gated on the real `delivered/revision → approved` transition).
+- [ ] Requesting revision on 3 items in one round fires exactly ONE `revision_requested` (gated on the actual transition into `revision`; the in-app notification remains per-item).
+- [ ] Calling `markAsPaid` twice fires exactly ONE `payment_released` (`mark_deal_paid` returns `already`).
+
+**Kill switch**
+- [ ] `MSG91_WHATSAPP_ENABLED` unset or not exactly `'true'` → zero HTTP requests to MSG91 (verify no outbound call is made at all, not merely that it fails).
+- [ ] Controlled first live test goes to a founder's own number before any real creator.
+
+### Creator Deep Links Through Login (WhatsApp notification return path)
+
+> WhatsApp opens links in its own in-app browser with a separate cookie jar, so a
+> creator tapping a deal notification is normally LOGGED OUT. Five of the six
+> creator templates (revision requested, payment released, deliverables approved,
+> deliverable reminder, overdue) point at `/creator/deals/{id}` — if the
+> destination is not preserved through login they all land on the deals list.
+
+- [ ] Logged-out creator opens `https://guapd.com/creator/deals/{id}` → 307 to `/login/creator?next=%2Fcreator%2Fdeals%2F{id}` (destination preserved, URL-encoded).
+- [ ] Signs in via **phone OTP** → lands on THAT deal, not the deals list.
+- [ ] Signs in via **Google** → lands on THAT deal, not the deals list.
+- [ ] Already-signed-in creator opening `/login/creator?next=/creator/deals/{id}` is sent straight to that deal.
+- [ ] `next` survives the whole chain: page → `/login/creator` → OAuth → `/auth/creator/callback` → deal page.
+- [ ] Other creator routes preserve destination too (`/creator/payments`, `/creator/inbox`, `/creator/notifications`) — the `/creator` layout gate supplies `next` from the `x-pathname` middleware header.
+- [ ] Creator with NO destination (direct visit to `/login/creator`) still defaults to `/creator/deals`.
+- [ ] **Offer flow unchanged**: `/offer/{token}` still renders publicly with NO login redirect; sign-in from the offer card still returns to `/offer/{token}`; tampered token still shows "Link invalid or expired".
+- [ ] Session refresh still works while signed in (middleware now rewrites request headers — confirm no silent sign-outs after the access token expires).
+
+**SECURITY — open redirect (`lib/safe-next.ts`):** each of these must fall back to `/creator/deals` and never leave guapd.com:
+- [ ] `?next=https://evil.com` (absolute URL)
+- [ ] `?next=//evil.com` (protocol-relative)
+- [ ] `?next=/\evil.com` (backslash — browsers normalise to `//`)
+- [ ] `?next=///evil.com`
+- [ ] `?next=javascript:alert(1)`
+- [ ] Same validation enforced on `/auth/creator/callback?next=...` (attacker-reachable via the OAuth redirect URL).
+- [ ] Phone-OTP `next` is re-validated **server-side** in `verifyAndSignIn` — a tampered client value cannot redirect off-site.
+
 ### Login Feedback + Double-Submit Guard
 - [ ] Brand email+password: button shows "Please wait..." and is disabled during login; double-click does not fire two attempts.
 - [ ] Brand Google OAuth: button shows "Redirecting to Google..." and is disabled; double-click blocked.

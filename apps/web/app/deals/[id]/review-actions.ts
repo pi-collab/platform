@@ -60,9 +60,17 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
       .in('status', ['delivered', 'revision'])
       .select('id')
 
-    // Only notify if the deal actually transitioned (prevents double-notify on concurrent approvals)
+    // Only notify if the deal actually transitioned (prevents double-notify on
+    // concurrent approvals). The WhatsApp send inherits this guard, so one
+    // approval event produces exactly one message.
     if (updated && updated.length > 0) {
-      notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`)
+      await notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`, {
+        whatsapp: (ctx) => ({
+          template: 'deliverables_approved',
+          bodyVars: [ctx.creatorName, ctx.dealRef ?? ctx.dealTitle],
+          buttonValue: dealId,
+        }),
+      })
     }
   }
 
@@ -152,6 +160,10 @@ export async function requestItemRevision(dealId: string, itemId: string, note?:
   // Transition deal to 'revision' + atomically increment revisions_used
   // (only fires if deal is currently 'delivered' — safe no-op otherwise).
   // Uses SECURITY DEFINER function to avoid read-then-write race on counter.
+  // Did THIS call move the deal into 'revision'? Requesting revision on a
+  // second item leaves the deal already in 'revision', so no transition occurs.
+  let dealEnteredRevision = false
+
   if (deal.status === 'delivered') {
     const { data: rowsAffected, error: rpcErr } = await supabase.rpc('request_deal_revision', {
       p_deal_id: dealId,
@@ -161,13 +173,32 @@ export async function requestItemRevision(dealId: string, itemId: string, note?:
       return { status: 'error', message: `Item marked for revision but deal status failed to update: ${rpcErr.message}` }
     }
 
-    if (rowsAffected === 0) {
-      // Deal was no longer 'delivered' (concurrent transition) — item is still marked, which is fine
-    }
+    // rowsAffected === 0 → deal was no longer 'delivered' (concurrent
+    // transition); the item is still marked, which is fine.
+    dealEnteredRevision = rowsAffected > 0
   }
 
-  // Notify creator: revision requested
-  notifyDealParty(dealId, 'creator', 'revision_requested', (t) => `Revision requested on ${t}`)
+  // Notify creator: revision requested.
+  //
+  // The in-app notification stays per-item (each item genuinely needs
+  // reworking), but WhatsApp is attached ONLY on the real deal transition —
+  // otherwise a brand revising three items would fire three WhatsApp messages
+  // for one review round.
+  await notifyDealParty(
+    dealId,
+    'creator',
+    'revision_requested',
+    (t) => `Revision requested on ${t}`,
+    dealEnteredRevision
+      ? {
+          whatsapp: (ctx) => ({
+            template: 'revision_requested',
+            bodyVars: [ctx.creatorName, ctx.brandName, ctx.dealRef ?? ctx.dealTitle],
+            buttonValue: dealId,
+          }),
+        }
+      : undefined,
+  )
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)
