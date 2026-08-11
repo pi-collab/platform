@@ -127,7 +127,7 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
       bodyVars: [
         ctx.creatorName,
         formatAmountForMessage(invoice.creator_receives_paise),
-        ctx.dealRef ?? ctx.dealTitle,
+        ctx.dealLabel,
       ],
       buttonValue: dealId,
     }),

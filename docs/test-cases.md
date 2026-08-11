@@ -619,9 +619,15 @@
 **Event → template → variables**
 - [ ] Brand sends offer (`/deals` builder) → `new_offer_received`; body = creator name, brand name, amount; button = **offer TOKEN**.
 - [ ] Storefront pitch (`/c/{slug}`) → same `new_offer_received`; amount reads "Amount to be discussed" (pitch inserts `price_paise: 0`, so "₹0" would be misleading).
-- [ ] Brand requests revision → `revision_requested`; body = creator, brand, deal ref; button = deal UUID.
-- [ ] Payment marked paid → `payment_released`; body = creator, amount, deal ref; button = deal UUID.
-- [ ] All items approved → `deliverables_approved`; body = creator, deal ref; button = deal UUID.
+- [ ] Brand requests revision → `revision_requested`; body = creator, brand, deal label; button = deal UUID.
+- [ ] Payment marked paid → `payment_released`; body = creator, amount, deal label; button = deal UUID.
+- [ ] All items approved → `deliverables_approved`; body = creator, deal label; button = deal UUID.
+
+**Deal label (`buildDealLabel`)** — creators don't recognise `GD-1056`, and brand-authored titles are unbounded free text, so messages carry both:
+- [ ] Title + ref → `Test WA again (GD-1056)`.
+- [ ] Title longer than 40 chars is truncated with an ellipsis before the ref.
+- [ ] Newlines/repeated whitespace in a title are collapsed — WhatsApp REJECTS parameters containing newlines.
+- [ ] Missing ref → title alone; missing title → ref alone; both missing → `your deal` (never blank; WhatsApp rejects empty parameters).
 
 **Button value — the link must actually open**
 - [ ] `new_offer_received` button value is an HMAC token that resolves at `/offer/{token}`; pasting it after the base gives a working offer page. A deal UUID here would NOT authorize — regression-check this specifically.
@@ -637,9 +643,18 @@
 **Failure isolation — the critical property**
 - [ ] MSG91 returns HTTP 500 → deal action still SUCCEEDS; in-app notification still created; error logged.
 - [ ] MSG91 returns HTTP 200 with `{"type":"error"}` → treated as failure (status code alone is not a success signal); deal action still succeeds.
+- [ ] MSG91 returns HTTP 200 with `{"status":"error","hasError":true}` → ALSO treated as failure. This is the LIVE response shape; the original code only checked `type`, which is absent from real responses, so error bodies were logged as successes.
+- [ ] **`✓ accepted` means QUEUED, not delivered.** MSG91 validates the template only after queuing, so a wrong template name or language returns `hasError:false` and fails later. Confirm delivery on the handset or in MSG91's delivery report — never from our log alone.
+- [ ] Wrong `MSG91_WHATSAPP_LANG` (template approved as `en_GB`/`en_US`, sent as `en`) → MSG91 accepts, delivery report says "template name does not exist in {lang}". Known trap: costs a real message to discover.
+- [ ] Recipient country must be unblocked in the MSG91 account — a blocked country code fails at delivery, not at the API call.
 - [ ] MSG91 hangs → send aborts at ~4s; deal action still succeeds.
 - [ ] Missing/invalid `MSG91_AUTH_KEY` → no throw, deal action succeeds.
 - [ ] Creator has NULL phone → send skipped + logged; in-app notification still fires.
+- [ ] **International recipients are supported.** A `+44`/`+1`/`+61` number normalises and sends — WhatsApp is global and MSG91 delivers internationally. An India-only rule silently dropped every foreign number, including founders' own numbers during testing.
+- [ ] Bare 10-digit number (no `+`) still assumes India → `91XXXXXXXXXX`; trunk-prefixed `0XXXXXXXXXX` likewise.
+- [ ] Junk input (`123`, empty, non-numeric) → skipped with `reason=unusable_phone`, logged not silent.
+- [ ] **NO failure path is silent.** Every non-ok return routes through `fail()` and logs before returning. Regression-check `unusable_phone`, `empty_body_var`, `not_configured` specifically — all three originally returned with no log at all, so three triggered events produced no message and no trace.
+- [ ] The dispatch site logs the send result rather than discarding it.
 - [ ] Creator is an unclaimed ops stub (no `users` row) → no in-app row is possible, but WhatsApp still fires (it is their only channel for a first offer).
 - [ ] Auth key, recipient phone, and message variables never appear in logs.
 

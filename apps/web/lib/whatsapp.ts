@@ -74,15 +74,43 @@ export function isWhatsAppConfigured(): boolean {
  * Convert a stored phone to MSG91's wire format: country code, digits only,
  * no '+' (e.g. "+91 98765 43210" → "919876543210").
  *
- * Returns null for anything that isn't a plausible Indian mobile — better to
- * skip the send than to hand MSG91 a malformed recipient.
+ * NOT India-only. WhatsApp is global and MSG91 delivers internationally; an
+ * India-only rule silently drops every foreign number, including the founders'
+ * own UK numbers during testing. Only genuinely unusable input is rejected.
+ *
+ * Rules, in order:
+ *   "09876543210"   → 919876543210  (Indian trunk-0 national form)
+ *   "9876543210"    → 919876543210  (bare national number ⇒ assume India,
+ *                                    matching lib/phone.ts)
+ *   "+447700900123" → 447700900123  (explicit country code, kept as-is)
+ *   anything outside E.164's 8–15 digits → null
  */
 export function toMsg91Number(phone: string | null | undefined): string | null {
   if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  if (/^91\d{10}$/.test(digits)) return digits
-  if (/^\d{10}$/.test(digits)) return `91${digits}`
+
+  const trimmed = phone.trim()
+  const digits = trimmed.replace(/\D/g, '')
+  if (!digits) return null
+
+  // Indian trunk-prefixed national form.
+  if (/^0\d{10}$/.test(digits)) return `91${digits.slice(1)}`
+
+  // Bare 10-digit national number with no explicit country code ⇒ India.
+  // A leading '+' means the caller stated a country code, so don't assume.
+  if (/^\d{10}$/.test(digits) && !trimmed.startsWith('+')) return `91${digits}`
+
+  // Otherwise assume the country code is already present. E.164 permits 8–15
+  // digits total; outside that it is not a usable recipient.
+  if (digits.length >= 8 && digits.length <= 15) return digits
+
   return null
+}
+
+/** Mask a phone for logs — enough to identify it, not enough to leak it. */
+function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return 'none'
+  const digits = phone.replace(/\D/g, '')
+  return digits.length <= 4 ? '****' : `****${digits.slice(-4)}`
 }
 
 export interface SendTemplateParams {
@@ -110,16 +138,22 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
 
   try {
     const config = readConfig()
-    if (!config) return { ok: false, reason: 'whatsapp_not_configured' }
+    if (!config) {
+      return fail(template, dealId, 'not_configured', 'MSG91_WHATSAPP_ENABLED is not exactly "true", or auth key / number is missing')
+    }
 
     const to = toMsg91Number(toPhone)
-    if (!to) return { ok: false, reason: 'no_valid_phone' }
+    if (!to) {
+      return fail(template, dealId, 'unusable_phone', `stored value ${maskPhone(toPhone)} could not be normalised to an E.164 recipient`)
+    }
 
     // WhatsApp rejects empty body parameters — catch it here rather than
     // burning a send and getting an opaque template-mismatch error back.
     if (bodyVars.some((v) => !v || !v.trim())) {
-      return { ok: false, reason: 'empty_body_var' }
+      return fail(template, dealId, 'empty_body_var', `${bodyVars.length} body vars, at least one blank`)
     }
+
+    console.info(`[whatsapp] → sending template=${template} deal=${dealId ?? 'n/a'} to=${maskPhone(to)} lang=${config.lang} host=${config.baseUrl}`)
 
     const components: Record<string, unknown> = {}
     bodyVars.forEach((value, i) => {
@@ -164,7 +198,21 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
 
     // MSG91 can return HTTP 200 with { type: 'error' } — the status code alone
     // is NOT a success signal.
-    let parsed: { type?: string; message?: string } = {}
+    // MSG91's LIVE response shape (captured from a real send) is:
+    //   { status: 'success', hasError: false, errors: null, request_id: '…' }
+    // Some MSG91 endpoints/docs instead use { type: 'success' }. Accept both.
+    //
+    // Keying only on `type` — as this originally did — silently passed an
+    // error body as success, because the live response has no `type` field at
+    // all. `hasError` is authoritative when present.
+    let parsed: {
+      type?: string
+      status?: string
+      hasError?: boolean
+      request_id?: string
+      errors?: unknown
+      message?: string
+    } = {}
     try {
       parsed = raw ? JSON.parse(raw) : {}
     } catch {
@@ -172,11 +220,24 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
       return { ok: true }
     }
 
-    if (parsed.type && parsed.type !== 'success') {
-      logFailure(template, dealId, `msg91_${parsed.type}`, raw)
-      return { ok: false, reason: `msg91_${parsed.type}` }
+    const reportsFailure =
+      parsed.hasError === true ||
+      (typeof parsed.status === 'string' && parsed.status.toLowerCase() !== 'success') ||
+      (typeof parsed.type === 'string' && parsed.type.toLowerCase() !== 'success')
+
+    if (reportsFailure) {
+      const label = parsed.status ?? parsed.type ?? 'error'
+      logFailure(template, dealId, `msg91_${label}`, raw)
+      return { ok: false, reason: `msg91_${label}` }
     }
 
+    // ACCEPTED IS NOT DELIVERED. MSG91 queues the message ("check delivery
+    // reports for status"). An unapproved template name, a recipient who has
+    // not opted in, or a Meta policy block surfaces in the delivery report
+    // later — never in this response. request_id is the reconciliation key.
+    console.info(
+      `[whatsapp] ✓ accepted (queued, not yet delivered) template=${template} deal=${dealId ?? 'n/a'} request_id=${parsed.request_id ?? 'n/a'}`
+    )
     return { ok: true }
   } catch (err) {
     const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timeout' : 'network_error'
@@ -186,11 +247,22 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
 }
 
 /**
- * Log a delivery failure. Never includes the auth key, the recipient's phone,
- * or message variables — those can carry names and deal amounts.
+ * Log a delivery failure. Never includes the auth key or message variables
+ * (those carry names and deal amounts); phones appear masked only.
+ *
+ * EVERY non-ok path must go through here. A send that fails silently is worse
+ * than one that fails loudly — silence was the original bug: an unroutable
+ * phone returned early with no log at all, so three triggered events produced
+ * no message and no trace of why.
  */
 function logFailure(template: string, dealId: string | undefined, reason: string, detail: string) {
   console.error(
-    `[whatsapp] send failed template=${template} deal=${dealId ?? 'n/a'} reason=${reason} detail=${detail.slice(0, 300)}`
+    `[whatsapp] ✗ send failed template=${template} deal=${dealId ?? 'n/a'} reason=${reason} detail=${detail.slice(0, 300)}`
   )
+}
+
+/** Log and return a failure in one step, so no early return can skip the log. */
+function fail(template: string, dealId: string | undefined, reason: string, detail: string): WhatsAppResult {
+  logFailure(template, dealId, reason, detail)
+  return { ok: false, reason }
 }

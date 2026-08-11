@@ -67,7 +67,7 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
       await notifyDealParty(dealId, 'creator', 'deal_approved', (t) => `${t} has been approved`, {
         whatsapp: (ctx) => ({
           template: 'deliverables_approved',
-          bodyVars: [ctx.creatorName, ctx.dealRef ?? ctx.dealTitle],
+          bodyVars: [ctx.creatorName, ctx.dealLabel],
           buttonValue: dealId,
         }),
       })
@@ -193,7 +193,7 @@ export async function requestItemRevision(dealId: string, itemId: string, note?:
       ? {
           whatsapp: (ctx) => ({
             template: 'revision_requested',
-            bodyVars: [ctx.creatorName, ctx.brandName, ctx.dealRef ?? ctx.dealTitle],
+            bodyVars: [ctx.creatorName, ctx.brandName, ctx.dealLabel],
             buttonValue: dealId,
           }),
         }

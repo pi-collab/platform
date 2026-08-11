@@ -396,6 +396,7 @@ RANK these must-have-to-launch vs fast-follow (don't treat all as pre-launch —
 
 PRE-LAUNCH SECURITY:
 - [ ] **Rotate `OFFER_TOKEN_SECRET` for production** — the dev value was exposed in a chat log. Prod must use its own never-exposed secret (`openssl rand -base64 32`). Staging already uses a separate rotated value.
+- [ ] **Rotate `MSG91_AUTH_KEY` for production** — the dev key was exposed in a chat log. Production must use a fresh key issued from the MSG91 dashboard, never the dev value. Note the key authorises real WhatsApp sends against the prepaid balance, so treat exposure as billable, not just a data risk.
 - [ ] **Confirm `STAGING_OTP_BYPASS` is NOT set on production.** Remove bypass codes (`000000`/`123456`) from `signup/creator/actions.ts` and `login/creator/actions.ts` before public launch.
 - [ ] **Configure custom SMTP (Resend/Postmark) for transactional email before launch** — built-in Supabase email is rate-limited (~4/hr). Needed for brand email confirmation + password reset at scale.
 - [ ] **Confirm `mailer_autoconfirm` stays `false` on production** — brand email confirmation must be enforced.

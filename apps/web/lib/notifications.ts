@@ -37,6 +37,39 @@ export interface WhatsAppContext {
   dealTitle: string
   /** Human-readable reference like "GD-1042", null on older deals. */
   dealRef: string | null
+  /**
+   * How a deal should be named TO THE CREATOR: `"Diwali Reel (GD-1042)"`.
+   *
+   * Title alone is brand-authored free text of unpredictable quality; ref
+   * alone reads like an internal ticket number and means nothing to a
+   * creator. Combining gives recognisable context plus something they can
+   * quote to support, matching the ref on their invoice.
+   *
+   * Prefer this over raw dealTitle/dealRef in outbound messages.
+   */
+  dealLabel: string
+}
+
+/** Longest brand-authored title we will put in a message before truncating. */
+const MAX_TITLE_CHARS = 40
+
+/**
+ * Build the creator-facing deal label.
+ *
+ * Guaranteed non-empty — WhatsApp rejects blank body parameters, and both
+ * title and ref are nullable in practice (ops-created and pre-migration rows).
+ */
+export function buildDealLabel(title: string | null, ref: string | null): string {
+  const cleanTitle = title?.trim().replace(/\s+/g, ' ') ?? ''
+  const cleanRef = ref?.trim() ?? ''
+
+  const shortTitle =
+    cleanTitle.length > MAX_TITLE_CHARS
+      ? `${cleanTitle.slice(0, MAX_TITLE_CHARS - 1).trimEnd()}…`
+      : cleanTitle
+
+  if (shortTitle && cleanRef) return `${shortTitle} (${cleanRef})`
+  return shortTitle || cleanRef || 'your deal'
 }
 
 export interface WhatsAppSpec {
@@ -231,10 +264,17 @@ async function sendCreatorWhatsApp(
   },
 ) {
   try {
-    // Cheap exits before spending a query on the brand name.
-    if (!isWhatsAppConfigured()) return
+    // Entry log: proves the WhatsApp path was reached for this event, which is
+    // the first thing to check when no message arrives.
+    const configured = isWhatsAppConfigured()
+    console.info(`[whatsapp] dispatch deal=${args.dealId} configured=${configured}`)
+
+    if (!configured) {
+      console.warn(`[whatsapp] ✗ skipped deal=${args.dealId} reason=not_configured (MSG91_WHATSAPP_ENABLED must be exactly "true")`)
+      return
+    }
     if (!args.creatorPhone) {
-      console.warn(`[whatsapp] skipped deal=${args.dealId} reason=creator_has_no_phone`)
+      console.warn(`[whatsapp] ✗ skipped deal=${args.dealId} reason=creator_has_no_phone`)
       return
     }
 
@@ -249,15 +289,22 @@ async function sendCreatorWhatsApp(
       brandName: brand?.name?.trim() || 'A brand',
       dealTitle: args.dealTitle,
       dealRef: args.dealRef,
+      dealLabel: buildDealLabel(args.dealTitle, args.dealRef),
     })
 
-    await sendWhatsAppTemplate({
+    // The result is inspected rather than discarded — the sender logs its own
+    // failures, but dropping the value here once hid the reason entirely.
+    const result = await sendWhatsAppTemplate({
       template: spec.template,
       toPhone: args.creatorPhone,
       bodyVars: spec.bodyVars,
       buttonValue: spec.buttonValue,
       dealId: args.dealId,
     })
+
+    if (!result.ok) {
+      console.warn(`[whatsapp] ✗ not delivered deal=${args.dealId} template=${spec.template} reason=${result.reason}`)
+    }
   } catch (err) {
     console.error(
       `[whatsapp] dispatch failed deal=${args.dealId}: ${err instanceof Error ? err.message : String(err)}`
