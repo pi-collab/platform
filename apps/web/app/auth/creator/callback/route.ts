@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { safeNext } from '@/lib/safe-next'
 
 /**
  * Creator OAuth callback.
@@ -19,7 +20,9 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const next = searchParams.get('next') || '/creator/deals'
+  // `next` is attacker-reachable (it rides in the OAuth redirect URL), so it
+  // is validated as a same-origin path before being concatenated onto origin.
+  const next = safeNext(searchParams.get('next'), '/creator/deals')
 
   if (error) {
     return NextResponse.redirect(`${origin}/login/creator?error=${encodeURIComponent(error)}`)

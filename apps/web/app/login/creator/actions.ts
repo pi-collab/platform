@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
+import { safeNext } from '@/lib/safe-next'
 
 type SignInResult =
   | { status: 'ok'; redirect: string }
@@ -12,8 +13,18 @@ type SignInResult =
 /**
  * Verify OTP and sign in an existing creator.
  * Does NOT create accounts — for that, use /signup/creator.
+ *
+ * `next` is the post-login destination (e.g. the deal a creator tapped in a
+ * WhatsApp notification). It arrives from the client, so it is re-validated
+ * here rather than trusted — the login page's validation is for rendering,
+ * this one is the security boundary.
  */
-export async function verifyAndSignIn(rawPhone: string, inputCode: string): Promise<SignInResult> {
+export async function verifyAndSignIn(
+  rawPhone: string,
+  inputCode: string,
+  next?: string,
+): Promise<SignInResult> {
+  const redirectTo = safeNext(next, '/creator/deals')
   const phone = normalizePhone(rawPhone)
   if (!phone) return { status: 'error', message: 'Invalid phone number.' }
 
@@ -118,5 +129,5 @@ export async function verifyAndSignIn(rawPhone: string, inputCode: string): Prom
     return { status: 'error', message: 'Sign-in failed. Please try again.' }
   }
 
-  return { status: 'ok', redirect: '/creator/deals' }
+  return { status: 'ok', redirect: redirectTo }
 }

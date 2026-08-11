@@ -3,7 +3,13 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function CreatorSignInButton() {
+/**
+ * `next` is where the creator lands after Google sign-in. The login page
+ * validates it (see `lib/safe-next.ts`) before passing it down; the callback
+ * route validates again on the way back. Defaults to the deals list for
+ * callers with no specific destination (e.g. /signup/creator).
+ */
+export default function CreatorSignInButton({ next = '/creator/deals' }: { next?: string }) {
   const [loading, setLoading] = useState(false)
 
   const handleSignIn = async () => {
@@ -13,7 +19,7 @@ export default function CreatorSignInButton() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/creator/callback?next=/creator/deals`,
+        redirectTo: `${window.location.origin}/auth/creator/callback?next=${encodeURIComponent(next)}`,
       },
     })
     // If signInWithOAuth doesn't redirect (e.g. popup blocked), re-enable

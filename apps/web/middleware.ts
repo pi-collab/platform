@@ -36,7 +36,20 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── 2. Supabase session refresh (unchanged) ─────────────────────
-  let supabaseResponse = NextResponse.next({ request })
+  //
+  // `x-pathname` is added to the REQUEST headers so server components can see
+  // the path they are rendering (Next gives layouts no other way to know it).
+  // The creator layout uses it to build a `next` on its login redirect, so a
+  // creator tapping a deal link in WhatsApp — where the in-app browser has its
+  // own cookie jar, so logged-out is the norm — returns to that deal after
+  // signing in. Read via `headers().get('x-pathname')`.
+  const withPathname = () => {
+    const headers = new Headers(request.headers)
+    headers.set('x-pathname', request.nextUrl.pathname + request.nextUrl.search)
+    return headers
+  }
+
+  let supabaseResponse = NextResponse.next({ request: { headers: withPathname() } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +64,9 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          supabaseResponse = NextResponse.next({ request })
+          // Re-derive headers AFTER the cookie writes so both the refreshed
+          // auth cookies and x-pathname survive onto the new response.
+          supabaseResponse = NextResponse.next({ request: { headers: withPathname() } })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )

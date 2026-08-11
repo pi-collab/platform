@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CreatorSignInButton from '@/components/CreatorSignInButton'
 import PhoneLogin from './PhoneLogin'
+import { safeNext } from '@/lib/safe-next'
 
 export const metadata = {
   title: 'Creator login — Guapd',
@@ -11,8 +12,12 @@ export const metadata = {
 export default async function CreatorLoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: { error?: string; next?: string }
 }) {
+  // Where to land after sign-in. Validated here, once, so every path below
+  // (already-signed-in redirect, phone OTP, Google) gets a trusted value.
+  const next = safeNext(searchParams.next, '/creator/deals')
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -31,7 +36,7 @@ export default async function CreatorLoginPage({
         .eq('user_id', profile.id)
         .maybeSingle()
 
-      if (creator) redirect('/creator/deals')
+      if (creator) redirect(next)
     }
   }
 
@@ -62,7 +67,7 @@ export default async function CreatorLoginPage({
           </p>
         )}
 
-        <PhoneLogin />
+        <PhoneLogin next={next} />
 
         <div style={styles.divider}>
           <span style={styles.dividerLine} />
@@ -70,7 +75,7 @@ export default async function CreatorLoginPage({
           <span style={styles.dividerLine} />
         </div>
 
-        <CreatorSignInButton />
+        <CreatorSignInButton next={next} />
 
         <p style={styles.footer}>
           Don&apos;t have an account?{' '}

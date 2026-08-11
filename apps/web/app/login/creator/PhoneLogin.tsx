@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { sendOTP } from '@/app/signup/creator/actions'
 import { verifyAndSignIn } from './actions'
 
-export default function PhoneLogin() {
+export default function PhoneLogin({ next }: { next?: string }) {
   const router = useRouter()
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -35,7 +35,7 @@ export default function PhoneLogin() {
     setError(null)
     setLoading(true)
 
-    const res = await verifyAndSignIn(phone.trim(), code.trim())
+    const res = await verifyAndSignIn(phone.trim(), code.trim(), next)
 
     if (res.status === 'error') {
       setLoading(false)

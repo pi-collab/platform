@@ -64,7 +64,9 @@ function formatDateWithTime(dateStr: string): string {
 }
 
 export default async function CreatorDealDetailPage({ params }: { params: { id: string } }) {
-  await verifyCreator()
+  // Pass the deal path so a logged-out creator arriving from a WhatsApp
+  // notification returns to THIS deal after signing in, not the deals list.
+  await verifyCreator(`/creator/deals/${params.id}`)
   const supabase = createClient()
 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }] = await Promise.all([

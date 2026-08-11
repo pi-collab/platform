@@ -2,12 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CreatorSidebar from '@/components/CreatorSidebar'
 import SignOutButton from '@/components/SignOutButton'
+import { currentPath } from '@/lib/creator-auth'
+import { creatorLoginUrl } from '@/lib/safe-next'
 
 export default async function CreatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login/creator')
+  // This gate fires BEFORE any page under /creator, so it — not the page's
+  // verifyCreator() — is what a logged-out creator from a WhatsApp deal link
+  // actually hits. It must preserve where they were headed.
+  if (!user) redirect(creatorLoginUrl(currentPath()))
 
   const { data: profile } = await supabase
     .from('users')
