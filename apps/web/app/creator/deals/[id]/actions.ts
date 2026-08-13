@@ -97,7 +97,15 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
   })
 
   // Notify brand: deal agreed
-  notifyDealParty(dealId, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`)
+  await notifyDealParty(dealId, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} accepted your offer — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} accepted your offer`,
+      body: `The terms are now agreed and the deal has moved forward. You can view the full terms and next steps on the deal.`,
+      amountPaise: ctx.brandPaysPaise,
+      amountLabel: 'Deal value',
+    }),
+  })
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -151,7 +159,14 @@ export async function declineDeal(dealId: string, reason?: string): Promise<Deli
   }
 
   // Notify brand: offer declined
-  notifyDealParty(dealId, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`)
+  await notifyDealParty(dealId, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} declined your offer — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} declined your offer`,
+      body: `This deal will not go ahead. Any reason they gave is on the deal thread. You can re-engage them with revised terms at any time.`,
+      // No amount: a price on a declined deal is noise.
+    }),
+  })
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -217,7 +232,18 @@ export async function counterOffer(
   }
 
   // Notify brand
-  notifyDealParty(dealId, 'brand', 'counter_offer', (t) => `Counter offer received for "${t}"`)
+  await notifyDealParty(dealId, 'brand', 'counter_offer', (t) => `Counter offer received for "${t}"`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} sent a counter offer — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} sent a counter offer`,
+      body: `They've proposed different terms. Review the counter and accept, revise, or decline it on the deal.`,
+      // The countered total lives only in this action's scope — the deal row
+      // still holds the original price — so apply the fee snapshot to it here.
+      amountPaise: ctx.brandPaysFor(totalPaise),
+      amountLabel: 'Countered total',
+      ctaLabel: 'Review counter offer',
+    }),
+  })
 
 
   revalidatePath(`/creator/deals/${dealId}`)
@@ -349,7 +375,15 @@ export async function submitForReview(dealId: string): Promise<DeliverableResult
   }
 
   // Notify brand: deliverables submitted for review
-  notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`)
+  await notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} submitted deliverables — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} submitted deliverables for review`,
+      body: `The work is ready for you to review. Approve it, or request a revision if something needs changing.`,
+      // No amount: this is a review request, not a money event.
+      ctaLabel: 'Review deliverables',
+    }),
+  })
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -428,7 +462,15 @@ export async function submitDeliverable(dealId: string, formData: FormData): Pro
   }
 
   // Notify brand: deliverable submitted
-  notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`)
+  await notifyDealParty(dealId, 'brand', 'deliverable_submitted', (t) => `Deliverables submitted for ${t}`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} submitted deliverables — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} submitted deliverables for review`,
+      body: `The work is ready for you to review. Approve it, or request a revision if something needs changing.`,
+      // No amount: this is a review request, not a money event.
+      ctaLabel: 'Review deliverables',
+    }),
+  })
 
   revalidatePath(`/creator/deals/${dealId}`)
   return { status: 'success' }
@@ -571,7 +613,10 @@ export async function submitShippingAddress(dealId: string, address: string): Pr
   if (error) return { status: 'error', message: `Failed to save address: ${error.message}` }
 
   // Notify brand that the creator submitted their shipping address
-  notifyDealParty(dealId, 'brand', 'shipping_address_submitted', (t) => `Shipping address received for ${t}`)
+  // No email by scope decision (informational). Awaited because notifyDealParty
+  // now writes one row per brand member — leaving it floating risks losing the
+  // existing in-app notification.
+  await notifyDealParty(dealId, 'brand', 'shipping_address_submitted', (t) => `Shipping address received for ${t}`)
 
   revalidatePath(`/creator/deals/${dealId}`)
   revalidatePath(`/deals/${dealId}`)
@@ -620,7 +665,16 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
   }
 
   // Notify brand: invoice issued
-  notifyDealParty(dealId, 'brand', 'invoice_issued', (t) => `Invoice received for ${t}`)
+  await notifyDealParty(dealId, 'brand', 'invoice_issued', (t) => `Invoice received for ${t}`, {
+    email: (ctx) => ({
+      subject: `Invoice from ${ctx.creatorName} — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} sent you an invoice`,
+      body: `An invoice has been issued for this deal. Review and accept it to move to payment.`,
+      amountPaise: ctx.brandPaysPaise,
+      amountLabel: 'Amount due',
+      ctaLabel: 'View invoice',
+    }),
+  })
 
   revalidatePath(`/creator/deals/${dealId}`)
   revalidatePath(`/deals/${dealId}`)

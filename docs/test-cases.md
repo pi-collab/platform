@@ -604,6 +604,64 @@
 - [ ] Password reset sends email (or shows success message regardless, to prevent enumeration).
 - [ ] Password minimum: 8 characters enforced client-side; Supabase enforces server-side.
 
+### Brand Deal Emails (Resend)
+
+> Brand-only by design — creators are notified by WhatsApp and must NEVER
+> receive these. Channel is chosen by role in `notifyDealParty`: an `email`
+> spec passed for `'creator'` is ignored, a `whatsapp` spec for `'brand'` is
+> ignored.
+>
+> **Env:** `RESEND_API_KEY`, `EMAIL_FROM`, optional `EMAIL_REPLY_TO`
+> (intentionally UNSET — see below), and the opt-in switch `EMAIL_ENABLED`
+> (must be exactly `'true'`). **Keep it OFF locally** — `.env.local` points at
+> the shared Supabase project holding real brand addresses.
+
+**Event → email (7 types, 11 call sites)**
+- [ ] Creator accepts → "accepted your offer", amount = deal value. Fires from BOTH `creator/deals/[id]/actions.ts` and the web offer page `offer/[token]/actions.ts`.
+- [ ] Creator declines → "declined your offer", NO amount. Both paths.
+- [ ] Creator counters → "sent a counter offer", amount = **countered total** (not the deal's stored price, which is unchanged at that point).
+- [ ] Creator submits deliverables → "submitted deliverables for review", no amount. Both the item flow (`submitForReview`) and file flow (`submitDeliverable`).
+- [ ] Creator posts content → "posted the content", no amount. Both paths.
+- [ ] Creator issues invoice → "sent you an invoice", amount = amount due.
+- [ ] Creator sends payment reminder → "is waiting on payment", amount from the INVOICE (`brand_pays_paise`), which can include revision overage the deal price doesn't carry.
+- [ ] `shipping_address_submitted` sends NO email (deferred by scope) but still writes its in-app row.
+
+**Recipients — a brand is a team**
+- [ ] ALL brand members receive the in-app notification (one row each) AND the email (single Resend call, all addresses).
+- [ ] Regression: previously `.limit(1).single()` with no `ORDER BY` notified exactly ONE non-deterministically chosen member.
+- [ ] **Single-member brand still works** — one row, one recipient.
+- [ ] A member with a null/malformed `users.email` still gets the in-app row; only their address is skipped, and it's logged. One bad address must not suppress the others.
+- [ ] Brand with no usable emails at all → `reason=no_brand_member_emails`, logged, in-app rows still written.
+
+**Amounts — brands see what they PAY**
+- [ ] Amounts are gross (`calculateFee(...).brand_pays_paise`), never `creator_receives_paise`. With `fee_mode: 'deducted'` the brand's figure is HIGHER than the creator's WhatsApp figure for the same deal — verify both on one deal.
+- [ ] Computed once in `notifyDealParty` (`ctx.brandPaysPaise` / `ctx.brandPaysFor`) so no call site re-derives it.
+
+**Template**
+- [ ] Table layout, inline styles, no `<style>` block (Gmail strips it), no remote images (clients block them).
+- [ ] Plain-text alternative always present.
+- [ ] CTA links to **`/deals/{id}`** — the BRAND route. `/creator/deals/{id}` would bounce a brand user to creator login.
+- [ ] Brand-authored deal titles are HTML-escaped (`<script>` renders as text, not markup).
+- [ ] Footer says "This is an automated notification — manage this deal in your dashboard at guapd.com" and does NOT invite replies.
+- [ ] `reply_to` is omitted entirely; replies fall back to the From address.
+
+**Failure isolation**
+- [ ] Resend 500 → deal action still SUCCEEDS, in-app rows intact, error logged.
+- [ ] Resend 200 with `{name:"validation_error"}` and no `id` → treated as failure (status code alone is not a success signal).
+- [ ] Resend hangs → aborts at ~4s; deal action still succeeds.
+- [ ] Missing/invalid `RESEND_API_KEY` → no throw.
+- [ ] **NO silent failure paths** — every non-ok return logs via `fail()` first. Regression-check `not_configured`, `no_valid_recipients`, `empty_content`.
+- [ ] API key and full addresses never logged (addresses masked as `fo*****@acme.com`).
+
+**Dedupe + rate limiting**
+- [ ] `Idempotency-Key` is the notification row UUID — a replayed send delivers once. Two genuinely distinct events still send two emails (two counter-offers = two emails).
+- [ ] **Payment reminder cooldown is SERVER-side**: a second reminder on the same deal within 24h is refused with a clear message. Regression: the only previous guard was `remindedIds` React state, which reset on refresh — unbounded once it emails.
+- [ ] Existing state guards still hold (`res.already` on payment, conditional-update row counts on approve).
+
+**Kill switch**
+- [ ] `EMAIL_ENABLED` unset or not exactly `'true'` → **zero HTTP requests** to Resend (verify no call is made at all, not merely that it fails).
+- [ ] Creators never receive brand emails, on any event.
+
 ### WhatsApp Notifications (MSG91)
 
 > Creator-only by design — brands are never sent WhatsApp. Four event-triggered

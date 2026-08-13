@@ -103,7 +103,15 @@ export async function markItemPosted(dealId: string, itemId: string, postedUrl: 
   })
 
   if (allPosted) {
-    notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`)
+    await notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} posted the content — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} posted the content`,
+      body: `The content is now live. The live link is on the deal.`,
+      // No amount: posting is a delivery milestone, not a money event.
+      ctaLabel: 'View live post',
+    }),
+  })
   }
 
   revalidatePath(`/deals/${dealId}`)
@@ -157,7 +165,15 @@ export async function markPosted(dealId: string, postedUrl: string): Promise<Res
     detail: { posted_url: rawUrl },
   })
 
-  notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`)
+  await notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`, {
+    email: (ctx) => ({
+      subject: `${ctx.creatorName} posted the content — ${ctx.dealLabel}`,
+      heading: `${ctx.creatorName} posted the content`,
+      body: `The content is now live. The live link is on the deal.`,
+      // No amount: posting is a delivery milestone, not a money event.
+      ctaLabel: 'View live post',
+    }),
+  })
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)
