@@ -46,15 +46,22 @@ export async function setNewPassword(password: string, confirmation: string): Pr
   // 4. Burn the marker: one recovery link, one password change.
   cookies().delete(RECOVERY_COOKIE)
 
-  // 5. Revoke every OTHER session. A reset is often prompted by a suspected
-  //    compromise; leaving other sessions alive would defeat the point. The
-  //    current session is kept so the success screen can render, then the user
-  //    is sent to /login to sign in with the new password.
-  const { error: signOutErr } = await supabase.auth.signOut({ scope: 'others' })
+  // 5. Revoke EVERY session, including this one.
+  //
+  //    A reset is often prompted by suspected compromise, so other devices
+  //    must be cut off. This device is included deliberately:
+  //      - /login redirects any authenticated user to /ops or /deals
+  //        (login/page.tsx:19-42), so keeping this session alive made the
+  //        success screen's "go to login" CTA bounce straight back out.
+  //      - Signing in again is what proves the new password actually works.
+  //
+  //    The success screen is client state, so it still renders after the
+  //    session is gone.
+  const { error: signOutErr } = await supabase.auth.signOut({ scope: 'global' })
   if (signOutErr) {
     // Non-fatal: the password DID change. Log it rather than telling the user
     // their reset failed when it did not.
-    console.error('[reset-password] failed to revoke other sessions:', signOutErr.message)
+    console.error('[reset-password] failed to revoke sessions:', signOutErr.message)
   }
 
   return { status: 'ok' }

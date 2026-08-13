@@ -729,8 +729,10 @@
 - [ ] Under 8 chars rejected; mismatched confirmation rejected; both enforced server-side even if the client check is bypassed.
 - [ ] Signup and reset report identical messages — they call the same validator.
 
-**Session revocation**
-- [ ] Other sessions are revoked on success (sign in on a second browser first, then reset — the second session is dead).
+**Session revocation + success CTA**
+- [ ] ALL sessions are revoked on success, including the current device (`scope: 'global'`). Sign in on a second browser first, then reset — both sessions are dead.
+- [ ] Success screen's "Go to login" lands on `/login` and **renders the login form**. Regression: while only *other* sessions were revoked, the user stayed authenticated, so `/login` (login/page.tsx:19-42 redirects authenticated users) bounced them to `/deals` or `/ops` and the CTA looked broken.
+- [ ] The CTA is a real `<a href>` doing a FULL page load, not `router.push` — the client router cache still holds the pre-signout authenticated RSC payload, so a soft navigation can render stale state.
 - [ ] If revocation fails, the password change still reports success (it did change) and the failure is logged.
 
 **REGRESSION — `/auth/callback` must be untouched**

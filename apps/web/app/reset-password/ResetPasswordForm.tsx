@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { setNewPassword } from './actions'
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/password'
 
 export default function ResetPasswordForm() {
-  const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
   const [error, setError] = useState('')
@@ -46,12 +44,20 @@ export default function ResetPasswordForm() {
     return (
       <div style={styles.form}>
         <p style={styles.success}>
-          Password updated. You&apos;ve been signed out on other devices — sign in
-          with your new password.
+          Password updated. You&apos;ve been signed out everywhere — sign in with
+          your new password.
         </p>
-        <button type="button" onClick={() => router.push('/login')} style={styles.btn}>
+        {/*
+          A real link with a FULL page load, not router.push. The server action
+          cleared the auth cookies, but Next's client router cache still holds
+          the RSC payload from when this page rendered authenticated — a soft
+          navigation can serve that stale state. A hard load guarantees /login
+          re-renders against the now-signed-out session. It also means the CTA
+          works if the action's redirect state is ever out of sync.
+        */}
+        <a href="/login" style={{ ...styles.btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>
           Go to login
-        </button>
+        </a>
       </div>
     )
   }
