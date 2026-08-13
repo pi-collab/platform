@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { isEmailConfigured } from '@/lib/email'
 import { isWhatsAppConfigured } from '@/lib/whatsapp'
 
@@ -51,8 +51,19 @@ const VISIBLE_VARS = [
   'VERCEL_GIT_COMMIT_SHA',
 ] as const
 
-export async function GET() {
-  if (process.env.VERCEL_ENV === 'production') {
+/**
+ * Public hostnames this must never answer on, whatever VERCEL_ENV says.
+ *
+ * Gated by HOST rather than VERCEL_ENV: staging.guapd.com turned out to run
+ * with VERCEL_ENV === 'production', so an env-based guard 404'd the very
+ * environment this exists to diagnose. Host is the thing we actually care
+ * about — never expose this on the live site.
+ */
+const BLOCKED_HOSTS = new Set(['guapd.com', 'www.guapd.com'])
+
+export async function GET(request: NextRequest) {
+  const host = (request.headers.get('host') || '').toLowerCase().split(':')[0]
+  if (BLOCKED_HOSTS.has(host)) {
     return new NextResponse('Not found', { status: 404 })
   }
 
