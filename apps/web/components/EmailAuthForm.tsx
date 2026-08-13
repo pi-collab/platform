@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmail, signUpWithEmail, resetPassword } from '@/app/login/actions'
+import { validateNewPassword } from '@/lib/password'
 
 type View = 'login' | 'signup' | 'reset' | 'confirm'
 
@@ -34,12 +35,10 @@ export default function EmailAuthForm() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
-    if (password !== confirmPw) {
-      setError('Passwords do not match.')
+    // Shared with the reset page so the two can't drift apart.
+    const check = validateNewPassword(password, confirmPw)
+    if (!check.ok) {
+      setError(check.message)
       return
     }
     setLoading(true)

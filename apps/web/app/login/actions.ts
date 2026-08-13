@@ -46,11 +46,24 @@ export async function signInWithEmail(email: string, password: string) {
   return { status: 'ok' as const }
 }
 
+/**
+ * Send a password-reset link.
+ *
+ * Lands on /auth/confirm (token_hash + verifyOtp), NOT /auth/callback.
+ * /auth/callback exchanges a PKCE code, which needs the code_verifier cookie
+ * from the browser that requested the reset — so it fails whenever someone
+ * requests on a laptop and opens the email on their phone. It also would only
+ * sign them in, leaving the old password unchanged.
+ *
+ * Requires the Supabase "Reset Password" email template to send
+ * {{ .TokenHash }}, and /auth/confirm to be on the redirect allowlist.
+ */
 export async function resetPassword(email: string) {
   const supabase = createClient()
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`,
+    redirectTo: `${siteUrl}/auth/confirm?next=${encodeURIComponent('/reset-password')}`,
   })
 
   if (error) {

@@ -694,6 +694,51 @@
 - [ ] Same validation enforced on `/auth/creator/callback?next=...` (attacker-reachable via the OAuth redirect URL).
 - [ ] Phone-OTP `next` is re-validated **server-side** in `verifyAndSignIn` — a tampered client value cannot redirect off-site.
 
+### Password Reset — completion (brand only)
+
+> Creators are unaffected: they log in with phone+OTP and their password is a
+> random internal value rotated on every login. The "Forgot password?" link
+> exists only on the brand `/login`.
+>
+> **Requires two Supabase dashboard settings** — `/auth/confirm` on the redirect
+> allowlist, and the Reset Password email template sending `{{ .TokenHash }}`.
+> Without both, the link fails before reaching the app.
+
+**Happy path**
+- [ ] `/login` → "Forgot password?" → email arrives with a link to `/auth/confirm?token_hash=…&type=recovery&next=/reset-password`.
+- [ ] Clicking it lands on `/reset-password` showing the account's email, NOT on `/deals`.
+- [ ] Setting a valid password succeeds; success screen offers "Go to login".
+- [ ] **New password works; old password is rejected.** (The original bug was a silent no-op — verify the change actually took.)
+
+**CROSS-DEVICE — the reason for the token_hash flow**
+- [ ] Request the reset on desktop, open the email on a **phone** → works. Under the old `/auth/callback` PKCE code flow this fails ("both auth code and code verifier should be non-empty") because the code_verifier cookie lives in the requesting browser.
+
+**Guards — form must NOT render, and the action must refuse**
+- [ ] `/reset-password` with no session → "This link is no longer valid".
+- [ ] `/reset-password` with a forged `guapd_pw_recovery` cookie but no session → refused.
+- [ ] `/reset-password` while signed in NORMALLY (no recovery marker) → refused. Prevents someone at an unattended signed-in browser changing the password without knowing the current one.
+- [ ] Calling the `setNewPassword` server action directly without the marker → `expired`. The page render is not the security gate; the action re-checks.
+- [ ] Expired, already-used, and tampered tokens all show the SAME message — never reveal which, or whether the account exists.
+
+**Token handling**
+- [ ] Token is single-use: clicking the same link twice fails the second time (`verifyOtp` consumes it).
+- [ ] Recovery marker cookie is `httpOnly` (not readable by page scripts) and expires in 15 min.
+- [ ] Marker is cleared after a successful change — one link, one password change.
+
+**Validation (shared `lib/password.ts`, client AND server)**
+- [ ] Under 8 chars rejected; mismatched confirmation rejected; both enforced server-side even if the client check is bypassed.
+- [ ] Signup and reset report identical messages — they call the same validator.
+
+**Session revocation**
+- [ ] Other sessions are revoked on success (sign in on a second browser first, then reset — the second session is dead).
+- [ ] If revocation fails, the password change still reports success (it did change) and the failure is logged.
+
+**REGRESSION — `/auth/callback` must be untouched**
+- [ ] Brand Google OAuth still works.
+- [ ] Brand signup email confirmation still works.
+- [ ] Creator Google sign-in from `/offer/{token}` still works and still returns to the offer.
+- [ ] `/auth/confirm` refuses non-recovery types (`type=signup` → `/login?error=unsupported_link_type`), so it cannot become an alternative way to establish a session.
+
 ### Login Feedback + Double-Submit Guard
 - [ ] Brand email+password: button shows "Please wait..." and is disabled during login; double-click does not fire two attempts.
 - [ ] Brand Google OAuth: button shows "Redirecting to Google..." and is disabled; double-click blocked.
