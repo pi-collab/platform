@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CreatorSidebar from '@/components/CreatorSidebar'
 import SignOutButton from '@/components/SignOutButton'
+import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { currentPath } from '@/lib/creator-auth'
 import { creatorLoginUrl } from '@/lib/safe-next'
 
@@ -116,6 +117,8 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   return (
     <>
+      {/* UUID only — never email/phone/name. No-op until consent is granted. */}
+      {profile?.id && <AnalyticsIdentify userId={profile.id} role="creator" />}
       <div className="creator-main">
         <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>

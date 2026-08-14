@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { submitDeliverable } from './actions'
+import { trackEvent } from '@/lib/analytics'
 
 export default function SubmitDeliverable({ dealId }: { dealId: string }) {
   const [url, setUrl] = useState('')
@@ -26,6 +27,8 @@ export default function SubmitDeliverable({ dealId }: { dealId: string }) {
       setError(result.message)
       return
     }
+
+    trackEvent('deliverable_submitted', { flow: 'file' })
 
     setDone(true)
   }

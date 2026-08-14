@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { acceptDeal, declineDeal, counterOffer } from './actions'
+import { trackEvent } from '@/lib/analytics'
 
 interface ItemForCounter {
   id: string
@@ -45,6 +46,7 @@ export default function AcceptDecline({
     setError(null)
     setLoading(true)
     const result = await acceptDeal(dealId)
+    if (result.status === 'success') trackEvent('offer_accepted', { surface: 'app' })
     setLoading(false)
     if (result.status === 'error') setError(result.message)
     else { setDone('accepted'); router.refresh() }
@@ -54,6 +56,7 @@ export default function AcceptDecline({
     setError(null)
     setLoading(true)
     const result = await declineDeal(dealId, reason)
+    if (result.status === 'success') trackEvent('offer_declined', { surface: 'app' })
     setLoading(false)
     if (result.status === 'error') setError(result.message)
     else { setDone('declined'); router.refresh() }
@@ -72,6 +75,7 @@ export default function AcceptDecline({
       return { id: item.id, label: item.label, price_paise: Math.round((isNaN(n) ? 0 : n) * 100) }
     })
     const result = await counterOffer(dealId, counterItems, counterNote)
+    if (result.status === 'success') trackEvent('offer_countered', { items: counterItems.length })
     setLoading(false)
     if (result.status === 'error') setError(result.message)
     else { setDone('countered'); setCounterOpen(false); router.refresh() }

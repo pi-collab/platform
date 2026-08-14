@@ -7,6 +7,7 @@ import PointsInput from './PointsInput'
 import { useRouter } from 'next/navigation'
 import { calculateFee } from '@/lib/fee'
 import type { DealPrefill } from './page'
+import { trackEvent, priceBucket } from '@/lib/analytics'
 
 interface SocialAccount {
   platform: string
@@ -347,8 +348,27 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     })
 
     if (res?.error) { setLoading(false); setError(res.error) }
-    else if (res?.dealId) { router.push(`/deals/${res.dealId}`) }
-    else { router.push('/deals') }
+    else {
+      // Amount is BUCKETED — exact deal values are commercially sensitive and
+      // should not leave for a third-party analytics tool.
+      trackEvent('offer_sent', {
+        price_bucket: priceBucket(res?.pricePaise ?? finalPaise),
+        deal_number: res?.dealCount ?? null,
+        repeat_creator: (res?.pairCount ?? 0) > 1,
+      })
+
+      // Retention signal. Fires from the second deal onward; filter on
+      // deal_number === 2 for the strict "started a second deal" cohort.
+      if ((res?.dealCount ?? 0) >= 2) {
+        trackEvent('deal_2_started', {
+          deal_number: res?.dealCount ?? null,
+          repeat_creator: (res?.pairCount ?? 0) > 1,
+        })
+      }
+
+      if (res?.dealId) router.push(`/deals/${res.dealId}`)
+      else router.push('/deals')
+    }
   }
 
   const firstName = creator.full_name.split(' ')[0]

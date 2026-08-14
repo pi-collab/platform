@@ -70,7 +70,7 @@ export default async function OpsCreatorsPage() {
                   </td>
                   <td style={tdStyle}>{c.handle || '—'}</td>
                   <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
-                  <td style={tdStyle}>{c.phone || '—'}</td>
+                  <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
                   <td style={tdStyle}>
                     {c.is_vetted ? (
                       <span style={vettedBadge}>Vetted</span>

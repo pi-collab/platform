@@ -166,7 +166,8 @@ export default function PrivacyPolicyPage() {
             account, to retrieve your own account statistics.
           </li>
           <li style={liStyle}>
-            <strong>PostHog</strong> &mdash; product analytics (see Cookies).
+            <strong>PostHog</strong> &mdash; product analytics and session replay,
+            hosted in the EU (Frankfurt). Only with your consent (see Cookies).
           </li>
           <li style={liStyle}>
             <strong>Professional advisers and authorities</strong> &mdash; where
@@ -184,6 +185,8 @@ export default function PrivacyPolicyPage() {
         <p style={pStyle}>
           Primarily in India (Mumbai). Some processors listed above may process data
           outside India; where they do, we rely on their contractual safeguards.
+          Specifically, if you consent to analytics, PostHog stores that analytics
+          and session-replay data in the European Union (Frankfurt).
         </p>
 
         {/* Retention and deletion */}
@@ -234,6 +237,15 @@ export default function PrivacyPolicyPage() {
           also use PostHog for product analytics, to understand how the platform is
           used and improve it. Analytics cookies are not set until you accept them,
           and you can change your choice at any time using the link in our footer.
+        </p>
+        <p style={pStyle}>
+          If you accept analytics, PostHog also records <strong>session replays</strong>
+          &mdash; a reconstruction of how pages were used, such as clicks and
+          navigation. What you type is masked: passwords, one-time codes, email and
+          phone fields are never captured, and screens showing personal details are
+          hidden from recordings. Replays are stored in the EU and are used only to
+          diagnose problems and improve the product. Decline analytics and no replay
+          is recorded at all.
         </p>
 
         {/* Children */}

@@ -811,8 +811,8 @@
 ### Cookie Consent Banner
 - [ ] Cookie banner appears on first visit (no prior consent in localStorage).
 - [ ] Cookie banner appears on `/c/[slug]` storefront pages (first visit).
-- [ ] "Accept" sets `localStorage.guapd_analytics_consent = 'yes'`, dismisses banner.
-- [ ] "Decline" sets `localStorage.guapd_analytics_consent = 'no'`, dismisses banner.
+- [ ] "Accept" sets `localStorage.guapd_analytics_consent = 'granted'`, dismisses banner.
+- [ ] "Decline" sets `localStorage.guapd_analytics_consent = 'denied'`, dismisses banner.
 - [ ] Banner does NOT re-appear after choice is made (persists across page loads).
 - [ ] "Cookie preferences" in footer clears localStorage consent value and re-shows banner.
 - [ ] Banner includes link to `/privacy`.
@@ -822,7 +822,54 @@
 - [ ] After "Accept": PostHog initializes, `window.__posthog` is set, `trackEvent()` calls fire.
 - [ ] After "Decline": PostHog does NOT initialize, `window.__posthog` is undefined, `trackEvent()` is a no-op.
 - [ ] Choice persists across page reloads — PostHog state matches stored consent without re-prompting.
-- [ ] Revoking consent via footer "Cookie preferences" → PostHog stops (page reload required for full teardown).
+- [ ] Revoking consent via footer "Cookie preferences" → page reloads automatically and PostHog is fully gone. posthog-js cannot unload in-page, so the reload is the teardown, not a convenience.
+
+### Session Replay Masking (verify in a REAL recording, not just config)
+
+> Replay masks INPUTS by default but NOT text. Config alone is not evidence —
+> open an actual recording in PostHog and look.
+
+- [ ] Password fields on `/login` and `/reset-password` show masked, never the typed value.
+- [ ] Creator OTP input (`PhoneLogin`) is masked — it's `type="text"` with `inputMode="numeric"`, so it relies on `maskAllInputs`, not on being a password field. **Highest-risk field; check first.**
+- [ ] Email and phone inputs masked (`maskInputOptions.email/tel`).
+- [ ] `data-ph-mask` surfaces are hidden in replay: `/ops` creator phone (list + detail), team member emails, brand/creator sidebar signed-in email.
+- [ ] Deal amounts on brand/creator deal pages — decide whether these need masking too; currently NOT masked.
+- [ ] No replay recorded at all before consent.
+
+### User Identification
+- [ ] `identify()` is called with the `users.id` UUID — never an email, phone, or name. Check the person's distinct ID in PostHog is a UUID.
+- [ ] Brand identified via `BrandNav`, creator via `/creator` layout, each once per session.
+- [ ] `reset()` fires on sign-out — sign out, sign in as a different user, confirm events do NOT attach to the previous person.
+- [ ] Anonymous pre-signup events merge onto the person on identify (this is what preserves first-touch attribution).
+
+### Acquisition / First-Touch Attribution
+- [ ] Land with `?utm_source=x&utm_medium=y&utm_campaign=z`, accept consent → UTMs appear on the event.
+- [ ] `$initial_utm_source` is set as a PERSON property and does NOT change on later visits from a different source.
+- [ ] First-touch survives signup: land via UTM → sign up → the person retains the original `$initial_utm_*`.
+- [ ] Referrer captured automatically (`$referrer` / `$initial_referrer`).
+- [ ] A user who DECLINES consent has no attribution at all — expected, not a bug.
+
+### Pageviews (App Router)
+- [ ] Exactly ONE `$pageview` on first load — `capture_pageview: false` plus a manual capture in init; verify it isn't double-counted.
+- [ ] Client-side navigation between routes emits a new `$pageview`. Without this every funnel would show one pageview per session.
+- [ ] No `$pageview` before consent.
+
+### Deal Lifecycle Events (client-side by design)
+> Fired from the CLIENT after the server action returns, never server-side:
+> consent lives in the browser, so a server-side capture could not know whether
+> it was granted. Trade-off accepted: an event is lost if the user navigates away
+> mid-action.
+
+- [ ] `offer_sent` on deal creation, with `price_bucket` (a RANGE, never exact paise), `deal_number`, `repeat_creator`.
+- [ ] `deal_2_started` fires from the brand's 2nd deal onward, carrying `deal_number`; filter `deal_number === 2` for the strict cohort.
+- [ ] `offer_accepted` / `offer_declined` fire from BOTH surfaces, tagged `surface: 'app'` vs `surface: 'web'` (the no-download doorway).
+- [ ] `offer_countered` with item count.
+- [ ] `deliverable_submitted` from both flows, tagged `flow: 'items'` vs `flow: 'file'`.
+- [ ] `deliverable_approved` on brand approval.
+- [ ] `payment_released` AND `deal_completed` both fire on payment (one transaction completes the deal).
+- [ ] `brand_signed_up`, `creator_onboarded`.
+- [ ] **No event carries PII** — inspect properties: no names, emails, phones, no exact amounts.
+- [ ] Every event is a no-op when consent is not granted.
 
 ### Storefront Funnel Events
 - [ ] `storefront_viewed` fires on `/c/[slug]` page mount (once per mount, with slug property).

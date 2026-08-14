@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { submitItem, submitForReview } from './actions'
 import { getUploadPath, submitItemWithUpload, getSignedUrl, deleteOrphanedUpload } from './upload-actions'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/analytics'
 
 interface Item {
   id: string
@@ -143,6 +144,7 @@ export default function DeliverableItems({
     if (result.status === 'error') {
       setError(result.message)
     } else {
+      trackEvent('deliverable_submitted', { flow: 'items' })
       setSuccessMsg('All deliverables submitted for review.')
     }
   }

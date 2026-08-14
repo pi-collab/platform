@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import BrandSidebar from '@/components/BrandSidebar'
+import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 
 export default async function BrandNav() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  let profileId: string | null = null
   let brandName: string | null = null
   let unreadCount = 0
   let unreadInbox = 0
@@ -19,6 +21,7 @@ export default async function BrandNav() {
       .maybeSingle()
 
     if (profile) {
+      profileId = profile.id
       const { data: membership } = await supabase
         .from('brand_members')
         .select('brands(name)')
@@ -76,5 +79,11 @@ export default async function BrandNav() {
     }
   }
 
-  return <BrandSidebar brandName={brandName} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+  return (
+    <>
+      {/* UUID only — never email/phone/name. No-op until consent is granted. */}
+      {profileId && <AnalyticsIdentify userId={profileId} role="brand" />}
+      <BrandSidebar brandName={brandName} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+    </>
+  )
 }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmail, signUpWithEmail, resetPassword } from '@/app/login/actions'
 import { validateNewPassword } from '@/lib/password'
+import { trackEvent } from '@/lib/analytics'
 
 type View = 'login' | 'signup' | 'reset' | 'confirm'
 
@@ -43,6 +44,7 @@ export default function EmailAuthForm() {
     }
     setLoading(true)
     const res = await signUpWithEmail(email, password)
+    if (res.status !== 'error') trackEvent('brand_signed_up', { method: 'email' })
     if (res.status === 'error') {
       setLoading(false)
       setError(res.message)

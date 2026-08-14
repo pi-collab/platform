@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { acceptInvoice, markAsPaid } from './invoice-actions'
+import { trackEvent } from '@/lib/analytics'
 
 interface Invoice {
   id: string
@@ -70,6 +71,12 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
     setError(null)
     setLoading(true)
     const res = await markAsPaid(dealId)
+    if (res.status === 'success') {
+      // mark_deal_paid transitions paid -> complete in one transaction, so a
+      // successful payment IS deal completion.
+      trackEvent('payment_released')
+      trackEvent('deal_completed')
+    }
     setLoading(false)
     if (res.status === 'error') setError(res.message)
     else setShowPayDialog(false)

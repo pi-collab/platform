@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveOnboarding } from './actions'
 import { PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
+import { trackEvent } from '@/lib/analytics'
 
 const PLATFORMS = ['Instagram', 'YouTube', 'X', 'LinkedIn']
 
@@ -47,6 +48,7 @@ export default function CreatorOnboardingPage() {
     }
 
     // Stay in loading state — page navigates away
+    trackEvent('creator_onboarded')
     router.push(result.redirect)
   }
 

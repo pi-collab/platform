@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { acceptOffer, declineOffer } from './actions'
+import { trackEvent } from '@/lib/analytics'
 
 interface Deal {
   id: string
@@ -59,6 +60,7 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
       return
     }
 
+    trackEvent(action === 'accept' ? 'offer_accepted' : 'offer_declined', { surface: 'web' })
     setView({ step: 'done', action: action === 'accept' ? 'accepted' : 'declined' })
   }
 

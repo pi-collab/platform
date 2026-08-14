@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { approveItem, requestItemRevision } from './review-actions'
 import { getSignedUrl } from '@/app/creator/deals/[id]/upload-actions'
+import { trackEvent } from '@/lib/analytics'
 
 interface Item {
   id: string
@@ -72,6 +73,7 @@ export default function ItemReview({
     setError(null)
     setLoadingAction(`approve-${itemId}`)
     const result = await approveItem(dealId, itemId)
+    if (result.status === 'success') trackEvent('deliverable_approved')
     setLoadingAction(null)
     if (result.status === 'error') setError(result.message)
     else if (items.filter((i) => i.item_status === 'submitted').length === 1) {

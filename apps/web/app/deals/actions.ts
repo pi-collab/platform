@@ -159,6 +159,28 @@ export async function createDeal(input: CreateDealInput) {
     }),
   })
 
+  // Counts for the retention signal. Returned to the client so IT can fire the
+  // analytics event — analytics must stay client-side, because consent lives in
+  // the browser and the server has no way to know whether it was granted.
+  //
+  // dealCount  = this brand's deals overall ("second deal" retention signal)
+  // pairCount  = deals with THIS creator — the recurring-relationship wedge the
+  //              strategy is built on (docs/build-plan.md §0)
+  const [{ count: dealCount }, { count: pairCount }] = await Promise.all([
+    supabase.from('deals').select('id', { count: 'exact', head: true }).eq('brand_id', brand.brandId),
+    supabase
+      .from('deals')
+      .select('id', { count: 'exact', head: true })
+      .eq('brand_id', brand.brandId)
+      .eq('creator_id', creator_id),
+  ])
+
   revalidatePath('/deals')
-  return { success: true, dealId: data.id }
+  return {
+    success: true,
+    dealId: data.id,
+    dealCount: dealCount ?? null,
+    pairCount: pairCount ?? null,
+    pricePaise: price_paise,
+  }
 }

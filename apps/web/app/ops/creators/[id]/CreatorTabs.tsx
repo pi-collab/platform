@@ -156,7 +156,7 @@ function BasicDetails({ creator }: { creator: Creator }) {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: 560 }}>
       <DetailField label="Full name" value={creator.full_name} />
       <DetailField label="Handle" value={creator.handle} />
-      <DetailField label="Phone" value={creator.phone} />
+      <span data-ph-mask><DetailField label="Phone" value={creator.phone} /></span>
       <DetailField label="Niches" value={creator.niches.length > 0 ? creator.niches.join(', ') : null} />
       <div style={{ gridColumn: '1 / -1' }}>
         <DetailField label="Bio" value={creator.bio} />

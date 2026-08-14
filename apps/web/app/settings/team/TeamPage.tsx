@@ -108,7 +108,7 @@ function MemberRow({ member, isAdmin }: { member: Member; isAdmin: boolean }) {
       <td style={styles.td}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontWeight: 600, color: '#16100B' }}>
-            {member.name || member.email}
+            <span data-ph-mask>{member.name || member.email}</span>
             {member.isCurrentUser && <span style={{ color: '#7A6D61', fontWeight: 400 }}> (you)</span>}
           </span>
           {member.name && (

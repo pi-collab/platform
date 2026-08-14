@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { resetAnalytics } from '@/lib/analytics'
 
 export default function SignOutButton({ redirectTo = '/login' }: { redirectTo?: string }) {
   const router = useRouter()
@@ -9,6 +10,10 @@ export default function SignOutButton({ redirectTo = '/login' }: { redirectTo?: 
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
+    // Clear the identified person BEFORE leaving. Without this, the next
+    // person to use this browser inherits the previous user's identity and
+    // their events land on the wrong account.
+    resetAnalytics()
     window.location.href = redirectTo
   }
 

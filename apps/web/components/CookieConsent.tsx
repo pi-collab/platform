@@ -33,6 +33,12 @@ export default function CookieConsent() {
     localStorage.setItem('guapd_analytics_consent', 'denied')
     window.dispatchEvent(new Event('guapd_consent_change'))
     setVisible(false)
+    // If PostHog was running from a previous 'granted' choice, a hard reload
+    // is the only way to fully unload it — see CookiePrefsLink. Declining from
+    // a clean first visit never initialised it, so nothing to tear down.
+    if ((window as unknown as { __posthog?: unknown }).__posthog) {
+      window.location.reload()
+    }
   }
 
   if (!visible) return null
