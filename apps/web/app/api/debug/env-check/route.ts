@@ -33,6 +33,9 @@ const SECRET_VARS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'STAGING_BASIC_AUTH_PASSWORD',
+  // Publishable by design (it ships in the client bundle), but presence and
+  // length are all that's needed to confirm it landed.
+  'NEXT_PUBLIC_POSTHOG_KEY',
 ] as const
 
 /** Non-secret config: echoed exactly, so whitespace/case problems show up. */
@@ -46,6 +49,9 @@ const VISIBLE_VARS = [
   'MSG91_WHATSAPP_URL',
   'NEXT_PUBLIC_SITE_URL',
   'NEXT_PUBLIC_SUPABASE_URL',
+  // Must be exactly https://eu.i.posthog.com — a US host would send Indian
+  // users' analytics to the wrong region, contradicting the privacy policy.
+  'NEXT_PUBLIC_POSTHOG_HOST',
   'VERCEL_ENV',
   'VERCEL_GIT_COMMIT_REF',
   'VERCEL_GIT_COMMIT_SHA',
@@ -87,6 +93,12 @@ export async function GET(request: NextRequest) {
       verdict: {
         emailWillSend: isEmailConfigured(),
         whatsappWillSend: isWhatsAppConfigured(),
+        // PostHog initialises CLIENT-side and only after consent, so the
+        // server can only confirm the vars exist for the bundle. Actual
+        // capture still requires the user to accept analytics.
+        posthogConfigured: Boolean(
+          process.env.NEXT_PUBLIC_POSTHOG_KEY && process.env.NEXT_PUBLIC_POSTHOG_HOST,
+        ),
       },
       // Why a verdict is false. EMAIL needs all three of EMAIL_ENABLED==="true",
       // RESEND_API_KEY and EMAIL_FROM. WhatsApp needs MSG91_WHATSAPP_ENABLED
