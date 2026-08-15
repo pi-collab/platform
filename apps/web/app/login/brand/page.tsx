@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AuthShell, { CreateAccountNav } from '@/components/AuthShell'
+import Toast from '@/components/Toast'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import BrandLoginForm from './BrandLoginForm'
@@ -89,12 +90,6 @@ export default async function LoginPage({
   return (
     <AuthShell navRight={<CreateAccountNav />}>
       <div className="signup-panel__inner">
-        {searchParams.reset === 'success' && (
-          <p className="signup-notice" role="status">
-            Password updated. Sign in with your new password.
-          </p>
-        )}
-
         {searchParams.error && (
           <FormError>
             {searchParams.error === 'exchange_failed'
@@ -106,6 +101,13 @@ export default async function LoginPage({
         {/* 'reset' is the only linkable view. The post-submit states are not
             reachable by URL, or they would claim an email nobody sent. */}
         <BrandLoginForm initialView={searchParams.view === 'reset' ? 'reset' : 'login'} />
+
+        {/* The reset happened on the previous page and revoked the session, so
+            the confirmation has to travel here. Strips ?reset= once shown, or a
+            refresh keeps re-announcing a password change from minutes ago. */}
+        {searchParams.reset === 'success' && (
+          <Toast message="Password updated. Sign in with your new password." param="reset" />
+        )}
       </div>
     </AuthShell>
   )
