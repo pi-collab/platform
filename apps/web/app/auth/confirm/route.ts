@@ -85,10 +85,28 @@ export async function GET(request: NextRequest) {
   // branch exists only for signup links still rendered from the old template.
   if (tokenHash) {
     // Consumes the token: single-use and expiry are enforced by Supabase.
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
+    const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
     if (error) {
       console.error(`[auth/confirm] verifyOtp failed (${type}):`, error.message)
       return NextResponse.redirect(`${origin}${failureTarget}?error=invalid_link`)
+    }
+
+    // No error is NOT the same as a session. verifyOtp only stores one when the
+    // response carries an access_token, so a shape it doesn't recognise returns
+    // {session: null, error: null} and would sail past the check above. Both
+    // destinations require a live session, so without this the user is sent to
+    // a page that silently bounces them and neither of us learns why.
+    //
+    // Tokens minted under PKCE arrive prefixed `pkce_`, and those are the ones
+    // most likely to come back this way, since the exchange they expect is not
+    // the one verifyOtp performs. Logged with the prefix so the cause is
+    // visible in the server log rather than inferred.
+    if (!data.session) {
+      console.error(
+        `[auth/confirm] verifyOtp returned no session (type=${type}, ` +
+        `token_prefix=${tokenHash.slice(0, 5)})`,
+      )
+      return NextResponse.redirect(`${origin}${failureTarget}?error=link_not_usable`)
     }
   } else {
     if (isRecovery) {
