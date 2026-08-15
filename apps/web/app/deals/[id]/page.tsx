@@ -15,6 +15,7 @@ import StepperTimeline from './StepperTimeline'
 import PaymentBreakup from './PaymentBreakup'
 import CollapsibleSection from './CollapsibleSection'
 import BrandReviewCard from './BrandReviewCard'
+import HeldNotice from '@/components/HeldNotice'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -68,14 +69,14 @@ const NEXT_LABELS: Record<string, string> = {
 }
 
 export default async function DealDetailPage({ params }: { params: { id: string } }) {
-  await verifyBrand()
+  const brand = await verifyBrand()
 
   const supabase = createClient()
 
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, held_at, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -187,6 +188,19 @@ export default async function DealDetailPage({ params }: { params: { id: string 
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <RealtimeDealListener dealId={deal.id} />
+
+        {/* The most important place this can appear. The deal reads
+            "Negotiating" with a timeline and an open thread, so without this
+            the brand waits on a creator who was never told the deal exists.
+            Gated on THIS deal being held, not on the account having holds —
+            on a deal page the relevant fact is this deal. */}
+        {(deal as { held_at?: string | null }).held_at && (
+          <HeldNotice
+            heldCount={1}
+            status={brand.brandStatus}
+            rejectionReason={brand.rejectionReason}
+          />
+        )}
 
         {/* ── Hero card ── */}
         <div className="surface" style={{ padding: '28px 30px' }}>
