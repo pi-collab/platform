@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { RECOVERY_COOKIE } from '@/lib/recovery-cookie'
+import AuthShell from '@/components/AuthShell'
 import ResetPasswordForm from './ResetPasswordForm'
 
 export const metadata = {
@@ -20,6 +21,10 @@ export const metadata = {
  *      recovery link rather than an ordinary login, so someone sitting at an
  *      already-signed-in browser cannot change the password without knowing
  *      the current one.
+ *
+ * Shares the login shell. No nav action opposite the logo: the user arrived
+ * from an email mid-task, and "Create account" there would invite them to
+ * abandon a recovery they are one field away from finishing.
  */
 export default async function ResetPasswordPage({
   searchParams,
@@ -37,78 +42,28 @@ export default async function ResetPasswordPage({
     // no session, or an ordinary session with no recovery marker. Telling an
     // anonymous visitor WHICH it was would leak account state.
     return (
-      <main style={wrapper}>
-        <div style={card}>
-          <h1 style={heading}>This link is no longer valid</h1>
-          <p style={text}>
+      <AuthShell>
+        <div className="signup-panel__inner">
+          <h2 className="signup-panel__title">This link is no longer valid.</h2>
+          <p className="signup-panel__sub">
             Password reset links can only be used once and expire after a short time.
             Request a new one and it will arrive in your inbox.
           </p>
-          <a href="/login/brand" style={primaryLink}>Back to login</a>
+          <div className="signup-form">
+            <a href="/login/brand" className="signup-form__cta signup-form__cta--link">
+              Back to log in
+            </a>
+          </div>
         </div>
-      </main>
+      </AuthShell>
     )
   }
 
   return (
-    <main style={wrapper}>
-      <div style={card}>
-        <h1 style={heading}>Set a new password</h1>
-        <p style={text}>
-          Choose a new password for <strong>{user!.email}</strong>. You will be
-          signed out everywhere else and can sign in again with the new password.
-        </p>
-        <ResetPasswordForm />
+    <AuthShell>
+      <div className="signup-panel__inner">
+        <ResetPasswordForm email={user!.email ?? 'your account'} />
       </div>
-    </main>
+    </AuthShell>
   )
-}
-
-/* ── Styles ─────────────────────────────────────────────────────── */
-
-const wrapper: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '100vh',
-  background: '#fafafa',
-  padding: '2rem 1rem',
-}
-
-const card: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-  padding: '2.5rem',
-  background: '#fff',
-  border: '1px solid #e5e5e5',
-  borderRadius: 16,
-  maxWidth: 380,
-  width: '100%',
-}
-
-const heading: React.CSSProperties = {
-  fontSize: '1.375rem',
-  fontWeight: 700,
-  color: '#111',
-  margin: 0,
-}
-
-const text: React.CSSProperties = {
-  fontSize: '0.9375rem',
-  color: '#666',
-  margin: 0,
-  lineHeight: 1.6,
-}
-
-const primaryLink: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '0.625rem 1.25rem',
-  background: '#111',
-  color: '#fff',
-  borderRadius: 8,
-  fontWeight: 600,
-  fontSize: '0.9375rem',
-  textDecoration: 'none',
-  textAlign: 'center',
 }

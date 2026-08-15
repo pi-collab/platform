@@ -5,9 +5,14 @@ import { setNewPassword } from './actions'
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/password'
 import FormError from '@/components/FormError'
 
-export default function ResetPasswordForm() {
+/**
+ * Owns its headings as well as its fields, because both change once the
+ * password has been updated and a server component cannot react to that.
+ */
+export default function ResetPasswordForm({ email }: { email: string }) {
   const [password, setPassword] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -43,102 +48,100 @@ export default function ResetPasswordForm() {
 
   if (done) {
     return (
-      <div style={styles.form}>
-        <p style={styles.success}>
-          Password updated. You&apos;ve been signed out everywhere — sign in with
-          your new password.
-        </p>
-        {/*
-          A real link with a FULL page load, not router.push. The server action
-          cleared the auth cookies, but Next's client router cache still holds
-          the RSC payload from when this page rendered authenticated — a soft
-          navigation can serve that stale state. A hard load guarantees /login
-          re-renders against the now-signed-out session. It also means the CTA
-          works if the action's redirect state is ever out of sync.
-        */}
-        <a href="/login/brand" style={{ ...styles.btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-          Go to login
-        </a>
-      </div>
+      <>
+        <h2 className="signup-panel__title">Password updated.</h2>
+        <div className="signup-form">
+          <p className="signup-form__success">
+            You&rsquo;ve been signed out everywhere else. Sign in with your new password.
+          </p>
+          {/*
+            A real anchor with a FULL page load, not router.push. The server
+            action cleared the auth cookies, but Next's client router cache
+            still holds the RSC payload from when this page rendered
+            authenticated — a soft navigation can serve that stale state. A hard
+            load guarantees /login/brand re-renders against the signed-out
+            session.
+          */}
+          <a href="/login/brand" className="signup-form__cta signup-form__cta--link">
+            Go to log in
+          </a>
+        </div>
+      </>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} style={styles.form}>
-      <input
-        type="password"
-        placeholder="New password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        minLength={MIN_PASSWORD_LENGTH}
-        autoComplete="new-password"
-        required
-        autoFocus
-        disabled={loading}
-        style={styles.input}
-      />
-      <input
-        type="password"
-        placeholder="Confirm new password"
-        value={confirmPw}
-        onChange={(e) => setConfirmPw(e.target.value)}
-        autoComplete="new-password"
-        required
-        disabled={loading}
-        style={styles.input}
-      />
-      {error && <FormError>{error}</FormError>}
-      <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}>
-        {loading ? 'Updating...' : 'Update password'}
-      </button>
-    </form>
-  )
-}
+    <>
+      <h2 className="signup-panel__title">Set a new password.</h2>
+      <p className="signup-panel__sub">
+        Choose a new password for {email}. You&rsquo;ll be signed out everywhere else.
+      </p>
 
-const styles: Record<string, React.CSSProperties> = {
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.625rem',
-    width: '100%',
-  },
-  input: {
-    padding: '0.625rem 0.875rem',
-    border: '1px solid #e5e5e5',
-    borderRadius: 8,
-    fontSize: '0.9375rem',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-    fontFamily: 'inherit',
-  },
-  btn: {
-    padding: '0.625rem 1rem',
-    background: '#111',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: '0.9375rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  },
-  error: {
-    fontSize: '0.875rem',
-    color: '#854d0e',
-    background: '#fef9c3',
-    padding: '0.625rem 0.875rem',
-    borderRadius: 8,
-    margin: 0,
-    lineHeight: 1.5,
-  },
-  success: {
-    fontSize: '0.9375rem',
-    color: '#15803D',
-    background: '#f0fdf4',
-    padding: '0.75rem 0.875rem',
-    borderRadius: 8,
-    margin: 0,
-    lineHeight: 1.6,
-  },
+      <form onSubmit={handleSubmit} className="signup-form">
+        <div className="fld-box">
+          <input
+            type={showPw ? 'text' : 'password'}
+            placeholder="New password"
+            aria-label="New password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError('') }}
+            minLength={MIN_PASSWORD_LENGTH}
+            autoComplete="new-password"
+            required
+            autoFocus
+            disabled={loading}
+            className="fld-box__input"
+          />
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setShowPw((v) => !v)}
+            className="fld-box__toggle lnk"
+            aria-label={showPw ? 'Hide password' : 'Show password'}
+          >
+            {showPw ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+                <line x1="3" y1="21" x2="21" y2="3" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Kept as a separate field rather than relying on the show/hide toggle
+            the way signup does. A typo here locks someone out of the account
+            they are in the middle of recovering, with no way to discover it —
+            the one screen where the extra keystrokes are worth it. */}
+        <div className="fld-box fld-box--gap">
+          <input
+            type={showPw ? 'text' : 'password'}
+            placeholder="Confirm new password"
+            aria-label="Confirm new password"
+            value={confirmPw}
+            onChange={(e) => { setConfirmPw(e.target.value); setError('') }}
+            autoComplete="new-password"
+            required
+            disabled={loading}
+            className="fld-box__input"
+          />
+        </div>
+
+        <p className={`signup-form__hint${password ? ' signup-form__hint--visible' : ''}`}>
+          At least {MIN_PASSWORD_LENGTH} characters.
+        </p>
+
+        {error && <FormError>{error}</FormError>}
+
+        <button type="submit" disabled={loading} className="signup-form__cta cta">
+          {loading ? 'Updating…' : 'Update password'}
+        </button>
+      </form>
+    </>
+  )
 }

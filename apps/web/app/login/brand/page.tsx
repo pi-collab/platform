@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import AuthShell, { CreateAccountNav } from '@/components/AuthShell'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import BrandLoginForm from './BrandLoginForm'
@@ -59,7 +60,7 @@ export default async function LoginPage({
     // at the step they actually still owe rather than a dashboard they have no
     // brand for.
     return (
-      <Shell>
+      <AuthShell>
         <div className="signup-panel__inner">
           <div className="login-tick">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -81,12 +82,12 @@ export default async function LoginPage({
             </div>
           </div>
         </div>
-      </Shell>
+      </AuthShell>
     )
   }
 
   return (
-    <Shell showCreateAccount>
+    <AuthShell navRight={<CreateAccountNav />}>
       <div className="signup-panel__inner">
         {searchParams.error && (
           <FormError>
@@ -100,50 +101,6 @@ export default async function LoginPage({
             reachable by URL, or they would claim an email nobody sent. */}
         <BrandLoginForm initialView={searchParams.view === 'reset' ? 'reset' : 'login'} />
       </div>
-    </Shell>
-  )
-}
-
-/** The split shell, shared with /signup/brand. */
-function Shell({
-  children,
-  showCreateAccount = false,
-}: {
-  children: React.ReactNode
-  showCreateAccount?: boolean
-}) {
-  return (
-    <main className="signup-shell">
-      <div className="signup-shell__dark" />
-
-      <div className="signup-nav-wrap">
-        <nav className="signup-nav">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo" />
-          {showCreateAccount && (
-            <div className="signup-nav__right">
-              <span className="signup-nav__label">New here?</span>
-              <Link href="/signup/brand" className="signup-nav__cta">Create account</Link>
-            </div>
-          )}
-        </nav>
-      </div>
-
-      <div className="signup-grid">
-        <section className="signup-pitch">
-          <div className="signup-pitch__inner">
-            <div className="signup-pitch__rule" />
-            <h1 className="signup-pitch__title">
-              Your whole deal<br />flow, one platform.
-            </h1>
-            <p className="signup-pitch__sub">
-              Source, negotiate and manage campaigns — all from one place built for brands.
-            </p>
-          </div>
-        </section>
-
-        <section className="signup-panel">{children}</section>
-      </div>
-    </main>
+    </AuthShell>
   )
 }
