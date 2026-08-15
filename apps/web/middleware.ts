@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { ORIGIN_COOKIE, ORIGIN_COOKIE_MAX_AGE } from '@/lib/attribution'
 import { NextResponse, type NextRequest } from 'next/server'
 
 /**
@@ -78,6 +79,28 @@ export async function middleware(request: NextRequest) {
   // This call is what actually refreshes the token.
   // Do NOT remove it or short-circuit before it runs.
   await supabase.auth.getUser()
+
+  // ── Storefront attribution (FUNCTIONAL cookie, not analytics) ──────────────
+  // Records which creator's storefront a visitor arrived through, so a brand
+  // that later signs up is attributed to them. Set here because a Server
+  // Component cannot write cookies and this has to happen on a plain page view.
+  //
+  // FIRST-TOUCH: written only when absent. The creator who introduced the brand
+  // keeps the attribution; a later storefront view cannot displace it.
+  //
+  // NOT gated on analytics consent — see lib/attribution.ts. It carries a
+  // public slug, no identifiers, and a brand declining analytics must not
+  // silently strip their referring creator of credit.
+  const slugMatch = request.nextUrl.pathname.match(/^\/c\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])$/i)
+  if (slugMatch && !request.cookies.get(ORIGIN_COOKIE)) {
+    supabaseResponse.cookies.set(ORIGIN_COOKIE, slugMatch[1].toLowerCase(), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: ORIGIN_COOKIE_MAX_AGE,
+    })
+  }
 
   return supabaseResponse
 }

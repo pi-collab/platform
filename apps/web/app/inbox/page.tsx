@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import BrandInboxView from './BrandInboxView'
 
 export default async function BrandInboxPage() {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { data: messages } = await supabase

@@ -1,9 +1,9 @@
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import TeamPage from './TeamPage'
 
 export default async function SettingsTeamPage() {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const admin = createAdminClient()
 
   // Fetch team members with user details

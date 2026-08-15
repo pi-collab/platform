@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import DealThread from './DealThread'
@@ -68,7 +68,7 @@ const NEXT_LABELS: Record<string, string> = {
 }
 
 export default async function DealDetailPage({ params }: { params: { id: string } }) {
-  await verifyApprovedBrand()
+  await verifyBrand()
 
   const supabase = createClient()
 

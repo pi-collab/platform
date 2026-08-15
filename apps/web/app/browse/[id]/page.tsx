@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BrowseStorefront from './BrowseStorefront'
@@ -64,7 +64,7 @@ function getInitials(name: string): string {
 }
 
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
   const admin = createAdminClient()
 

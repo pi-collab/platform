@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // ── Update Profile ────────────────────────────────────────────────
@@ -20,7 +20,7 @@ interface ProfileUpdate {
 }
 
 export async function updateProfile(data: ProfileUpdate): Promise<{ error?: string }> {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const admin = createAdminClient()
 
   // Update brand table
@@ -78,7 +78,7 @@ interface AccountUpdate {
 }
 
 export async function updateAccount(data: AccountUpdate): Promise<{ error?: string }> {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const admin = createAdminClient()
 
   const userUpdate: Record<string, unknown> = {}

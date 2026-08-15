@@ -2,7 +2,7 @@
 
 import { randomBytes } from 'crypto'
 import { revalidatePath } from 'next/cache'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const INVITE_EXPIRY_DAYS = 7
@@ -15,7 +15,7 @@ function isValidEmail(email: string): boolean {
 }
 
 async function requireAdmin() {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   if (!brand.isAdmin) throw new Error('ADMIN_ONLY')
   return brand
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import HeldNotice from '@/components/HeldNotice'
+import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
 import DealsTable from './DealsTable'
@@ -38,7 +39,7 @@ export default async function DealsListPage({
 }: {
   searchParams: { q?: string; status?: string; page?: string; sort?: string }
 }) {
-  await verifyApprovedBrand()
+  const brand = await verifyBrand()
 
   const q = sanitizeQuery(searchParams.q)
   const status = validStatus(searchParams.status)
@@ -51,7 +52,7 @@ export default async function DealsListPage({
   // Build query -- RLS scopes to brand's own deals
   let query = supabase
     .from('deals')
-    .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)', { count: 'exact' })
+    .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, held_at, created_at, creators(id, full_name, profile_photo_url)', { count: 'exact' })
 
   // Status filter (server-side)
   if (status === 'needs_you') {
@@ -118,8 +119,19 @@ export default async function DealsListPage({
     return sum + (bt ?? 0)
   }, 0)
 
+  // Held deals belong to a brand not yet cleared to send. Surfaced FIRST and
+  // prominently — a brand seeing no creator response with no explanation
+  // assumes the product is broken, and may re-send and create duplicates.
+  const heldCount = (deals ?? []).filter((d: { held_at?: string | null }) => d.held_at).length
+
   return (
     <main style={container}>
+
+      <HeldNotice
+        heldCount={heldCount}
+        status={brand.brandStatus}
+        rejectionReason={brand.rejectionReason}
+      />
 
       {/* ══════ HERO CARD ══════ */}
       <section style={heroCard}>

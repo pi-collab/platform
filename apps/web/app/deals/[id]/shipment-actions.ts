@@ -1,6 +1,6 @@
 'use server'
 
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
@@ -11,14 +11,14 @@ type Result =
 
 /**
  * Mark a deal's product as shipped (pending → shipped).
- * Brand-only action — verifyApprovedBrand() is the guard.
+ * Brand-only action — verifyBrand() is the guard.
  */
 export async function markShipped(
   dealId: string,
   trackingLink?: string,
   carrierNote?: string,
 ): Promise<Result> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   // Validate tracking link if provided
@@ -73,7 +73,7 @@ export async function markShipped(
  * Brand-only action — brand confirms delivery via tracking info.
  */
 export async function markShipmentDelivered(dealId: string): Promise<Result> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { data: deal } = await supabase

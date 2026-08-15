@@ -1,6 +1,6 @@
 'use server'
 
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
@@ -24,7 +24,7 @@ export interface DraftPlacement {
  * Phase 2b re-snapshots the brand's CURRENT fee at send time.
  */
 export async function addCreatorsToCampaign(campaignId: string, creatorIds: string[]) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   if (creatorIds.length === 0) return { error: 'No creators selected' }
@@ -100,7 +100,7 @@ export async function updateCampaignDraft(
   placements: DraftPlacement[],
   note?: string
 ) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   // Compute totals from placements
@@ -166,7 +166,7 @@ export async function updateCampaignDraft(
  * Update just the internal note on a campaign draft (brand-only, never sent to creator).
  */
 export async function updateCampaignDraftNote(draftId: string, note: string) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { error } = await supabase
@@ -190,7 +190,7 @@ export async function updateCampaignDraftNote(draftId: string, note: string) {
  * Update the internal note on a deal (brand-only, never shown to creator).
  */
 export async function updateDealInternalNote(dealId: string, note: string) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { error } = await supabase
@@ -210,7 +210,7 @@ export async function updateDealInternalNote(dealId: string, note: string) {
  * Remove a creator from the campaign roster (delete draft).
  */
 export async function removeCampaignDraft(draftId: string, campaignId: string) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { error } = await supabase
@@ -256,7 +256,7 @@ export async function bulkSendCampaignDrafts(
   draftIds: string[],
   message?: string
 ): Promise<{ results: BulkSendResult[] }> {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
   const admin = createAdminClient()
 
@@ -388,7 +388,7 @@ export async function updateCampaignBrief(
   avoid?: string,
   attachments?: { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 ) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const update: Record<string, unknown> = {
@@ -410,7 +410,7 @@ export async function updateCampaignBrief(
 }
 
 export async function uploadCampaignBriefAttachment(campaignId: string, formData: FormData) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
   const file = formData.get('file') as File | null
   if (!file) return { error: 'No file provided' }

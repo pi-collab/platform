@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import DealAnalyticsClient, { generateMockAnalyticsData, generateMockCampaignBreakdowns } from '@/app/deals/[id]/analytics/DealAnalyticsClient'
 
 export default async function CampaignAnalyticsPage({ params }: { params: { id: string } }) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   // Fetch campaign

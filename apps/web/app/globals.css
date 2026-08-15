@@ -905,3 +905,55 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   .cta, .ghost { transition: none; }
   .cta:hover, .ghost:hover { transform: none; }
 }
+
+/* ── Held-deal notice (brand-facing) ─────────────────────────────────────────
+   A held deal with no explanation reads as a broken product, so this is
+   deliberately prominent rather than a subtle inline hint. */
+.heldnotice {
+  border: 1px solid rgba(24, 28, 36, .10);
+  background: #FFFEF3;
+  border-left: 3px solid var(--warning, #D89A2E);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  font-family: var(--font-ui);
+}
+.heldnotice--rejected {
+  background: #FFF5F5;
+  border-left-color: #C43D3D;
+}
+.heldnotice__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink, #12151C);
+  margin-bottom: 6px;
+}
+.heldnotice__body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-soft, #565C68);
+  margin: 0 0 6px;
+}
+.heldnotice__meta {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-faint, #878D99);
+  margin: 8px 0 0;
+}
+.heldnotice__link { color: var(--ink-soft, #565C68); text-decoration: underline; }
+
+/* Per-row badge so a held deal is distinguishable from a sent one at a glance */
+.heldbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #FFFEF3;
+  border: 1px solid rgba(216, 154, 46, .35);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8A6414;
+  white-space: nowrap;
+}

@@ -224,9 +224,15 @@ DROP POLICY IF EXISTS deals_insert_brand ON deals;
 DROP POLICY IF EXISTS deals_update       ON deals;
 DROP POLICY IF EXISTS deals_deny_delete  ON deals;
 
+-- Held deals (held_at IS NOT NULL) belong to a brand not yet approved to send.
+-- They are invisible to the creator HERE, at the database, so no code path —
+-- deal inbox, notifications, or anything written later — can leak one.
 CREATE POLICY deals_read
   ON deals FOR SELECT
-  USING (brand_id = my_brand_id() OR creator_id = my_creator_id());
+  USING (
+    brand_id = my_brand_id()
+    OR (creator_id = my_creator_id() AND held_at IS NULL)
+  );
 
 CREATE POLICY deals_insert_brand
   ON deals FOR INSERT
@@ -234,7 +240,10 @@ CREATE POLICY deals_insert_brand
 
 CREATE POLICY deals_update
   ON deals FOR UPDATE
-  USING (brand_id = my_brand_id() OR creator_id = my_creator_id());
+  USING (
+    brand_id = my_brand_id()
+    OR (creator_id = my_creator_id() AND held_at IS NULL)
+  );
 
 CREATE POLICY deals_deny_delete
   ON deals FOR DELETE

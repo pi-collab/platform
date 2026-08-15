@@ -1,11 +1,11 @@
 import { Suspense } from 'react'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SettingsClient from './SettingsClient'
 
 export default async function SettingsPage() {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
   const admin = createAdminClient()
 

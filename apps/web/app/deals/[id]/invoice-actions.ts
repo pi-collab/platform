@@ -1,6 +1,6 @@
 'use server'
 
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
@@ -14,7 +14,7 @@ type InvoiceResult =
  * Accept an invoice (issued → accepted). Sets due_date from payment_due_days.
  */
 export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { data: invoice } = await supabase
@@ -76,7 +76,7 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
  * ─────────────────────────────────────────────────────────────────
  */
 export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { data: invoice } = await supabase

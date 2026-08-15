@@ -16,9 +16,62 @@ export default async function OpsBrandsPage() {
 
   if (error) return <p style={{ color: 'red' }}>Error loading brands: {error.message}</p>
 
+  // Review queue: brands whose first send is held. ONE task per brand however
+  // many deals a bulk send queued — the gate is on the brand, not the deal, and
+  // approving releases all of them together.
+  const pending = (brands ?? []).filter((b) => b.brand_status === 'pending_review')
+
+  const { data: heldRows } = await admin
+    .from('deals')
+    .select('brand_id')
+    .not('held_at', 'is', null)
+
+  const heldByBrand = new Map<string, number>()
+  for (const r of heldRows ?? []) {
+    heldByBrand.set(r.brand_id, (heldByBrand.get(r.brand_id) ?? 0) + 1)
+  }
+
   return (
     <div>
       <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem' }}>Brands</h1>
+
+      {pending.length > 0 && (
+        <section style={{ marginBottom: '2rem', border: '1px solid #E3C77A', background: '#FFFEF3', borderRadius: 12, padding: '1rem 1.25rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 4px' }}>
+            Awaiting approval ({pending.length})
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: '#7A6D61', margin: '0 0 12px', lineHeight: 1.5 }}>
+            These brands tried to send their first deal. Nothing has reached a creator.
+            Approving releases every held deal for that brand automatically.
+          </p>
+          <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Brand</th>
+                <th style={thStyle}>Contact</th>
+                <th style={thStyle}>Held deals</th>
+                <th style={thStyle}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pending.map((b) => (
+                <tr key={b.id}>
+                  <td style={tdStyle}>
+                    <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link>
+                  </td>
+                  <td style={tdStyle} data-ph-mask>{b.contact_email || '—'}</td>
+                  <td style={tdStyle}>
+                    <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
+                  </td>
+                  <td style={tdStyle}>
+                    <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {!brands || brands.length === 0 ? (
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No brands registered yet.</p>

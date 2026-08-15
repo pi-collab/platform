@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
 import { formatAmountForMessage } from '@/lib/money'
+import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
 
 // ── Public storefront fetch ──────────────────────────────────────────────────
 // Uses the SECURITY DEFINER function — returns whitelisted JSON only.
@@ -170,9 +171,13 @@ export async function createDealFromStorefront(input: PitchInput) {
 
   if (!membership) return { error: 'Only brand members can send pitches.' }
   const brand = (membership as any).brands
-  if (!brand || brand.brand_status !== 'approved') {
-    return { error: 'Your brand account is pending approval.' }
-  }
+  if (!brand) return { error: 'Brand account not found.' }
+
+  // SEND GATE — this was an inline brand_status comparison, which is exactly
+  // why this path stayed invisible to anyone auditing the shared auth helper.
+  const sendMode = await resolveSendMode(brand.id)
+  if (sendMode.mode === 'block') return { error: sendMode.message }
+  const isHeld = sendMode.mode === 'hold'
 
   // Resolve slug → creator_id via admin client (bypasses RLS)
   const admin = createAdminClient()
@@ -226,6 +231,7 @@ export async function createDealFromStorefront(input: PitchInput) {
       fee_percent: resolvedFeePercent,
       fee_mode: brand.fee_mode ?? 'on_top',
       source: 'storefront',
+      held_at: isHeld ? new Date().toISOString() : null,
     })
     .select('id')
     .single()
@@ -240,6 +246,12 @@ export async function createDealFromStorefront(input: PitchInput) {
       sender_party: 'brand',
       body: input.message.trim(),
     })
+  }
+
+  if (isHeld) {
+    await registerHeldSend(brand.id, deal.id)
+    revalidatePath('/deals')
+    return { success: true, dealId: deal.id, held: true }
   }
 
   // Notify creator (in-app + WhatsApp), same event as the offer builder.

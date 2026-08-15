@@ -8,6 +8,7 @@ interface BrandContext {
   brandId: string
   brandName: string
   brandStatus: string
+  rejectionReason: string | null
   isAdmin: boolean
 }
 
@@ -18,10 +19,13 @@ interface BrandContext {
  * Gate logic:
  *   1. No auth session → /login
  *   2. No users row / no brand_members row → /onboarding (or /ops for founders)
- *   3. brand_status !== 'approved' → /brand/pending (pending approval interstitial)
+ *   3. brand_status is NOT a gate here. Approval is enforced at FIRST SEND
+ *      (lib/send-gate.ts), not on dashboard access — an unreviewed brand may
+ *      explore, browse vetted creators and build drafts. brandStatus is
+ *      returned so surfaces can label held work.
  *   4. Approved → return context
  */
-export async function verifyApprovedBrand(): Promise<BrandContext> {
+export async function verifyBrand(): Promise<BrandContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -36,7 +40,7 @@ export async function verifyApprovedBrand(): Promise<BrandContext> {
 
   const { data: membership } = await supabase
     .from('brand_members')
-    .select('is_admin, brand_id, brands(id, name, brand_status)')
+    .select('is_admin, brand_id, brands(id, name, brand_status, rejection_reason)')
     .eq('user_id', profile.id)
     .maybeSingle()
 
@@ -51,16 +55,15 @@ export async function verifyApprovedBrand(): Promise<BrandContext> {
   }
 
   const brand = (membership as any)?.brands
-  if (!brand || brand.brand_status !== 'approved') {
-    redirect('/brand/pending')
-  }
+  if (!brand) redirect('/onboarding')
 
   return {
     userId: user.id,
     profileId: profile.id,
     brandId: brand.id,
     brandName: brand.name,
-    brandStatus: brand.brand_status,
+    brandStatus: brand.brand_status as string,
+    rejectionReason: (brand.rejection_reason ?? null) as string | null,
     isAdmin: (membership as any).is_admin,
   }
 }

@@ -1,12 +1,14 @@
 'use server'
 
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
 import { calculateFee } from '@/lib/fee'
 import { formatAmountForMessage } from '@/lib/money'
+import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
+import { ensurePairOrigin } from '@/lib/attribution'
 
 interface DeliverableItem {
   label: string
@@ -44,7 +46,7 @@ interface CreateDealInput {
 }
 
 export async function createDeal(input: CreateDealInput) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
 
   const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
 
@@ -53,6 +55,12 @@ export async function createDeal(input: CreateDealInput) {
   if (!deliverables.trim()) return { error: 'Deliverables are required (select at least one product)' }
   if (!Number.isInteger(price_paise) || price_paise <= 0) return { error: 'Price must be greater than ₹0' }
   if (!Number.isInteger(revision_limit) || revision_limit < 0) return { error: 'Revision limit must be 0 or more' }
+
+  // SEND GATE — server-side, before the deal exists and long before any
+  // notification. A rejected brand gets nothing written at all.
+  const sendMode = await resolveSendMode(brand.brandId)
+  if (sendMode.mode === 'block') return { error: sendMode.message }
+  const isHeld = sendMode.mode === 'hold'
 
   // Fetch brand's fee defaults for snapshot
   const supabase = createClient()
@@ -111,11 +119,19 @@ export async function createDeal(input: CreateDealInput) {
       brief_guidelines: brief_guidelines?.trim() || null,
       brief_avoid: brief_avoid?.trim() || null,
       brief_attachments: brief_attachments && brief_attachments.length > 0 ? brief_attachments : [],
+      // Withheld from the creator until ops approves the brand. RLS makes this
+      // invisible to them; nothing here relies on app-level filtering.
+      held_at: isHeld ? new Date().toISOString() : null,
     })
     .select('id')
     .single()
 
   if (error) return { error: error.message }
+
+  // Stamp pair origin if this relationship has none. ignoreDuplicates means an
+  // existing storefront origin always wins — a pair that began through a
+  // creator's link is never rewritten to 'guapd' by a later browse-sourced deal.
+  await ensurePairOrigin(brand.brandId, creator_id, source || 'platform')
 
   // Insert structured deliverable items — atomic with the deal.
   // If items insert fails, delete the deal so we don't leave a deal with missing items.
@@ -143,6 +159,14 @@ export async function createDeal(input: CreateDealInput) {
 
   // TODO: Insert input.message as first message in the deal thread (messages table)
   // when the send/notification piece is built.
+
+  // Held: open/refresh the review, and return WITHOUT notifying. This is the
+  // line that keeps a held deal off the creator's phone.
+  if (isHeld) {
+    await registerHeldSend(brand.brandId, data.id)
+    revalidatePath('/deals')
+    return { success: true, dealId: data.id, held: true, dealCount: null, pairCount: null, pricePaise: price_paise }
+  }
 
   // Notify creator: new offer (in-app + WhatsApp).
   // The creator sees what they will RECEIVE, net of any deducted fee — the

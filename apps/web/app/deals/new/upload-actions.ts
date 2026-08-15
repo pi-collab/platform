@@ -1,14 +1,14 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { randomUUID } from 'crypto'
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
 const BUCKET = 'deal-files'
 
 export async function uploadBriefAttachment(formData: FormData) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
 
   const file = formData.get('file') as File | null
   if (!file) return { error: 'No file provided.' }
@@ -44,7 +44,7 @@ export async function uploadBriefAttachment(formData: FormData) {
 }
 
 export async function removeBriefAttachment(storagePath: string) {
-  await verifyApprovedBrand()
+  await verifyBrand()
 
   const admin = createAdminClient()
   await admin.storage.from(BUCKET).remove([storagePath])

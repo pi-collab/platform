@@ -1,11 +1,11 @@
 'use server'
 
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function createCampaign(name: string, description?: string, budgetPaise?: number) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   if (!name.trim()) return { error: 'Campaign name is required' }
@@ -31,7 +31,7 @@ export async function updateCampaign(
   campaignId: string,
   updates: { name?: string; description?: string; status?: 'active' | 'completed' | 'archived'; budget_paise?: number | null }
 ) {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -53,7 +53,7 @@ export async function updateCampaign(
 }
 
 export async function assignDealToCampaign(dealId: string, campaignId: string | null) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   // Validate brand owns the deal (RLS enforces, but be explicit)

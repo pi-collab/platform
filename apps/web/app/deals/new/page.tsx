@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import DealForm from './DealForm'
@@ -31,7 +31,7 @@ export interface DealPrefill {
 const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
 
 export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string } }) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   // If ?from= is set, fetch source deal for pre-fill and derive creator from it

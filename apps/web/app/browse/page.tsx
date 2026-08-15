@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
 
 interface SocialAccount {
@@ -24,7 +24,7 @@ export interface BrowseCreator {
 }
 
 export default async function BrowsePage() {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
 
   // Uses the anon-key client — RLS creators_read policy enforces is_vetted=true
   const supabase = createClient()

@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
 import CampaignsClient from './CampaignsClient'
 
 const PAID_STATUSES = new Set(['paid', 'complete'])
 
 export default async function CampaignsPage() {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const [{ data: campaigns }, { data: deals }, { data: invoices }] = await Promise.all([

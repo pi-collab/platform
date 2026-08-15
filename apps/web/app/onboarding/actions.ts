@@ -3,6 +3,8 @@
 import { createClient }      from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect }          from 'next/navigation'
+import { cookies }           from 'next/headers'
+import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
 
 export type OnboardingState = { error: string } | null
 
@@ -115,6 +117,10 @@ export async function submitOnboarding(
     terms_accepted_at: new Date().toISOString(),
     terms_version: '2026-07-23',
   }).eq('auth_id', user.id)
+
+  // Attribution: resolve the first-touch storefront cookie onto this brand and
+  // the brand↔creator pair. Set-once; never recomputed after this.
+  await captureSignupOrigin(brand.id, cookies().get(ORIGIN_COOKIE)?.value)
 
   redirect('/deals')
 }

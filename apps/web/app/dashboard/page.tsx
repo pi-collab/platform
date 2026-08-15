@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -40,7 +40,7 @@ export default async function DashboardPage({
 }: {
   searchParams: { period?: string; from?: string; to?: string }
 }) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
 
   // Date range filtering

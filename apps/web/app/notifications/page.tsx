@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import NotificationFeed from '@/components/NotificationFeed'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Notifications — Guapd' }
 
 export default async function BrandNotificationsPage() {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   const { data: notifications } = await supabase

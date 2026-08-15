@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 
@@ -12,7 +12,7 @@ type ActionResult = { status: 'ok' } | { status: 'error'; message: string }
  * Brand accepts the creator's counter offer — transitions negotiating → agreed.
  */
 export async function acceptCounterOffer(dealId: string): Promise<ActionResult> {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   if (!brand) return { status: 'error', message: 'Not authorised' }
 
   const supabase = await createClient()
@@ -86,7 +86,7 @@ export async function brandCounterOffer(
   counterItems: { id: string; label: string; price_paise: number }[],
   note?: string,
 ): Promise<ActionResult> {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   if (!brand) return { status: 'error', message: 'Not authorised' }
 
   const supabase = await createClient()
@@ -128,7 +128,7 @@ export async function brandCounterOffer(
 }
 
 export async function updateDealTitle(dealId: string, title: string) {
-  const brand = await verifyApprovedBrand()
+  const brand = await verifyBrand()
   if (!brand) return { status: 'error' as const, message: 'Not authorised' }
 
   const trimmed = title.trim()

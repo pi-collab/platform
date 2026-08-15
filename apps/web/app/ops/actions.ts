@@ -3,7 +3,10 @@
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logOpsEvent } from '@/lib/ops-audit'
+import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
+import { calculateFee } from '@/lib/fee'
+import { formatAmountForMessage } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
 
 // ── Add creator ──────────────────────────────────────────────────────────────
@@ -350,15 +353,84 @@ export async function approveBrand(brandId: string) {
     after: { brand_status: 'approved' },
   })
 
+  // Release every held deal for this brand — ONE action however many a bulk
+  // send queued. The brand does not re-send; this is what makes the "everything
+  // you've sent goes out automatically" promise true.
+  const released = await releaseHeldDeals(brandId, user.email ?? 'ops')
+
   revalidatePath('/ops/brands')
-  return { success: true }
+  revalidatePath('/deals')
+  return { success: true, released }
+}
+
+/**
+ * Clear the hold on a brand's deals and deliver them.
+ *
+ * Order matters: the hold is cleared FIRST, so the creator-facing RLS predicate
+ * (held_at IS NULL) already passes by the time the notification lands and they
+ * click through. Notifying before releasing would send them to a deal they
+ * still cannot read.
+ *
+ * Each deal notifies exactly as it would have at send time, so a released deal
+ * is indistinguishable from a normal one to the creator.
+ */
+async function releaseHeldDeals(brandId: string, actor: string): Promise<number> {
+  const admin = createAdminClient()
+
+  const { data: held } = await admin
+    .from('deals')
+    .select('id, price_paise, fee_percent, fee_mode')
+    .eq('brand_id', brandId)
+    .not('held_at', 'is', null)
+
+  if (!held || held.length === 0) return 0
+
+  let sent = 0
+  for (const deal of held) {
+    // Conditional clear: if a concurrent approval already released it, the
+    // update affects no rows and we skip, so no deal notifies twice.
+    const { data: cleared } = await admin
+      .from('deals')
+      .update({ held_at: null })
+      .eq('id', deal.id)
+      .not('held_at', 'is', null)
+      .select('id')
+
+    if (!cleared || cleared.length === 0) continue
+
+    await admin.from('events').insert({
+      deal_id: deal.id,
+      event_type: 'deal.hold_released',
+      detail: { brand_id: brandId, released_by: actor },
+    })
+
+    const { creator_receives_paise } = calculateFee(
+      deal.price_paise ?? 0,
+      deal.fee_percent ?? 0,
+      (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top',
+    )
+
+    await notifyDealParty(deal.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {
+      whatsapp: (ctx) => ({
+        template: 'new_offer_received',
+        bodyVars: [ctx.creatorName, ctx.brandName, formatAmountForMessage(creator_receives_paise)],
+        buttonValue: generateOfferToken(deal.id),
+      }),
+    })
+    sent++
+  }
+
+  return sent
 }
 
 // ── Reject brand ─────────────────────────────────────────────────────────────
 
-export async function rejectBrand(brandId: string) {
+export async function rejectBrand(brandId: string, reason?: string) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
+  // Held deals are NOT deleted on rejection — the brand keeps seeing its work
+  // alongside the reason. Silently vanishing someone's drafts is worse than a
+  // clear refusal.
 
   const admin = createAdminClient()
 
@@ -370,7 +442,7 @@ export async function rejectBrand(brandId: string) {
 
   const { error } = await admin
     .from('brands')
-    .update({ brand_status: 'rejected' })
+    .update({ brand_status: 'rejected', rejection_reason: reason?.trim() || null })
     .eq('id', brandId)
 
   if (error) return { error: error.message }

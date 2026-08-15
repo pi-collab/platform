@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { verifyApprovedBrand } from '@/lib/brand-auth'
+import { verifyBrand } from '@/lib/brand-auth'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 
@@ -14,7 +14,7 @@ type ReviewResult =
  * If all items are now approved → deal transitions delivered → approved.
  */
 export async function approveItem(dealId: string, itemId: string): Promise<ReviewResult> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   // Fetch item (RLS: brand can only see their own deal's items)
@@ -87,7 +87,7 @@ export async function approveItem(dealId: string, itemId: string): Promise<Revie
  * Submit or update a brand review for a completed deal.
  */
 export async function submitBrandReview(dealId: string, rating: number, note: string | null): Promise<{ success: boolean; error?: string }> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   if (rating < 1 || rating > 5) return { success: false, error: 'Rating must be 1-5.' }
@@ -115,7 +115,7 @@ export async function submitBrandReview(dealId: string, rating: number, note: st
 }
 
 export async function requestItemRevision(dealId: string, itemId: string, note?: string): Promise<ReviewResult> {
-  await verifyApprovedBrand()
+  await verifyBrand()
   const supabase = createClient()
 
   // Fetch deal (need status + revision tracking)
