@@ -93,114 +93,126 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
 
   // Post-submit confirmation state — signup requires a confirmed email before
   // the account can be used, so the user cannot continue in this tab.
+  // Post-submit: the account exists but is unusable until the emailed link is
+  // clicked, so the screen becomes about that one action and nothing else.
   if (message) {
     return (
-      <div className="signup-form">
-        <p className="signup-form__success">{message}</p>
-        <Link href="/login" className="signup-form__cta signup-form__cta--link">
-          Back to log in
-        </Link>
-      </div>
+      <>
+        <h2 className="signup-panel__title">Verify your email</h2>
+        <div className="signup-form">
+          <p className="signup-form__success">{message}</p>
+          {/* The app cannot know whether they've clicked the link yet, so the
+              CTA is phrased as the user's own claim rather than asserting a
+              verification we haven't observed. */}
+          <Link href="/login" className="signup-form__cta signup-form__cta--link">
+            I&rsquo;ve verified — log in
+          </Link>
+        </div>
+      </>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="signup-form">
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={googleLoading}
-        className="signup-form__google ghost"
-      >
-        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.7 42.2 45 36.7 45 24z" />
-          <path fill="#34A853" d="M24 46c5.9 0 10.8-2 14.4-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.6 2.2-5.8 0-10.7-3.9-12.5-9.2l-7 5.4C7.9 40.8 15.3 46 24 46z" />
-          <path fill="#FBBC05" d="M11.5 28.5c-.5-1.4-.7-2.9-.7-4.5s.3-3.1.7-4.5l-7-5.4C3.6 17.1 3 20.5 3 24s.6 6.9 1.5 9.9l7-5.4z" />
-          <path fill="#EA4335" d="M24 10.8c3.2 0 5.4 1.4 6.6 2.5l5.9-5.8C32.8 4.1 28 2 24 2 15.3 2 7.9 7.2 4.5 14.1l7 5.4C13.3 14.7 18.2 10.8 24 10.8z" />
-        </svg>
-        {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
-      </button>
-
-      <div className="signup-form__divider">
-        <span className="signup-form__rule" />
-        <span className="signup-form__or">or</span>
-        <span className="signup-form__rule" />
-      </div>
-
-      <div className={`fld-box${errorField === 'email' || (showOauthError && oauthError === 'work_email_required') ? ' fld-box--error' : ''}`}>
-        <input
-          type="email"
-          placeholder="you@brand.com"
-          value={email}
-          onChange={(e) => { setEmail(e.target.value); clearErrors() }}
-          aria-invalid={errorField === 'email'}
-          autoComplete="email"
-          required
-          className="fld-box__input"
-        />
-      </div>
-
-      <div className={`fld-box fld-box--gap${errorField === 'password' ? ' fld-box--error' : ''}`}>
-        <input
-          type={showPw ? 'text' : 'password'}
-          placeholder="Create a password"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); clearErrors() }}
-          aria-invalid={errorField === 'password'}
-          onFocus={() => setPwFocused(true)}
-          onBlur={() => setPwFocused(false)}
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-          className="fld-box__input"
-        />
+    <>
+      <h2 className="signup-panel__title">Create your account.</h2>
+      <p className="signup-panel__sub">Set up your brand account to get started.</p>
+      <form onSubmit={handleSubmit} className="signup-form">
         <button
           type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setShowPw((v) => !v)}
-          className="fld-box__toggle lnk"
-          aria-label={showPw ? 'Hide password' : 'Show password'}
+          onClick={handleGoogle}
+          disabled={googleLoading}
+          className="signup-form__google ghost"
         >
-          {showPw ? (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          ) : (
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-              <line x1="3" y1="21" x2="21" y2="3" />
-            </svg>
-          )}
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#4285F4" d="M45 24c0-1.6-.1-2.7-.4-4H24v7.5h12c-.2 2-1.5 5-4.4 7l6.8 5.3C42.7 42.2 45 36.7 45 24z" />
+            <path fill="#34A853" d="M24 46c5.9 0 10.8-2 14.4-5.2l-6.8-5.3c-1.9 1.3-4.4 2.2-7.6 2.2-5.8 0-10.7-3.9-12.5-9.2l-7 5.4C7.9 40.8 15.3 46 24 46z" />
+            <path fill="#FBBC05" d="M11.5 28.5c-.5-1.4-.7-2.9-.7-4.5s.3-3.1.7-4.5l-7-5.4C3.6 17.1 3 20.5 3 24s.6 6.9 1.5 9.9l7-5.4z" />
+            <path fill="#EA4335" d="M24 10.8c3.2 0 5.4 1.4 6.6 2.5l5.9-5.8C32.8 4.1 28 2 24 2 15.3 2 7.9 7.2 4.5 14.1l7 5.4C13.3 14.7 18.2 10.8 24 10.8z" />
+          </svg>
+          {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
         </button>
-      </div>
 
-      <p
-        className={`signup-form__hint${pwFocused ? ' signup-form__hint--visible' : ''}`}
-        aria-hidden={!pwFocused}
-      >
-        At least {MIN_PASSWORD_LENGTH} characters.
-      </p>
+        <div className="signup-form__divider">
+          <span className="signup-form__rule" />
+          <span className="signup-form__or">or</span>
+          <span className="signup-form__rule" />
+        </div>
 
-      {(error || showOauthError) && (
-        <FormError>
-          {error ||
-            (oauthError === 'work_email_required'
-              ? 'That Google account uses a personal email. Please use your work email, like you@brand.com.'
-              : `Sign-in failed (${oauthError}). Please try again.`)}
-        </FormError>
-      )}
+        <div className={`fld-box${errorField === 'email' || (showOauthError && oauthError === 'work_email_required') ? ' fld-box--error' : ''}`}>
+          <input
+            type="email"
+            placeholder="you@brand.com"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); clearErrors() }}
+            aria-invalid={errorField === 'email'}
+            autoComplete="email"
+            required
+            className="fld-box__input"
+          />
+        </div>
 
-      <button type="submit" disabled={loading} className="signup-form__cta cta">
-        {loading ? 'Creating account…' : 'Create account'}
-      </button>
+        <div className={`fld-box fld-box--gap${errorField === 'password' ? ' fld-box--error' : ''}`}>
+          <input
+            type={showPw ? 'text' : 'password'}
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); clearErrors() }}
+            aria-invalid={errorField === 'password'}
+            onFocus={() => setPwFocused(true)}
+            onBlur={() => setPwFocused(false)}
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            required
+            className="fld-box__input"
+          />
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setShowPw((v) => !v)}
+            className="fld-box__toggle lnk"
+            aria-label={showPw ? 'Hide password' : 'Show password'}
+          >
+            {showPw ? (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+                <line x1="3" y1="21" x2="21" y2="3" />
+              </svg>
+            )}
+          </button>
+        </div>
 
-      <p className="signup-form__legal">
-        By continuing, you agree to guapd&rsquo;s{' '}
-        <Link href="/terms" className="signup-form__legal-link">Terms</Link> and{' '}
-        <Link href="/privacy" className="signup-form__legal-link">Privacy Policy</Link>.
-      </p>
-    </form>
+        <p
+          className={`signup-form__hint${pwFocused ? ' signup-form__hint--visible' : ''}`}
+          aria-hidden={!pwFocused}
+        >
+          At least {MIN_PASSWORD_LENGTH} characters.
+        </p>
+
+        {(error || showOauthError) && (
+          <FormError>
+            {error ||
+              (oauthError === 'work_email_required'
+                ? 'That Google account uses a personal email. Please use your work email, like you@brand.com.'
+                : `Sign-in failed (${oauthError}). Please try again.`)}
+          </FormError>
+        )}
+
+        <button type="submit" disabled={loading} className="signup-form__cta cta">
+          {loading ? 'Creating account…' : 'Create account'}
+        </button>
+
+        <p className="signup-form__legal">
+          By continuing, you agree to guapd&rsquo;s{' '}
+          <Link href="/terms" className="signup-form__legal-link">Terms</Link> and{' '}
+          <Link href="/privacy" className="signup-form__legal-link">Privacy Policy</Link>.
+        </p>
+      </form>
+    </>
   )
 }

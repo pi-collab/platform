@@ -70,8 +70,10 @@ export default async function BrandSignupPage({
 
         <section className="signup-panel">
           <div className="signup-panel__inner">
-            <h2 className="signup-panel__title">Create your account.</h2>
-            <p className="signup-panel__sub">Set up your brand account to get started.</p>
+            {/* Heading lives INSIDE the form: it has to change once the
+                confirmation state is showing, and a server component can't
+                react to that. Same split that had /login titled "Brand login"
+                over a signup form. */}
             <BrandSignupForm oauthError={searchParams.error} />
           </div>
         </section>
