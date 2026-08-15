@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { signInWithEmail, signUpWithEmail, resetPassword } from '@/app/login/actions'
 import { validateNewPassword } from '@/lib/password'
 import { trackEvent } from '@/lib/analytics'
+import FormError from '@/components/FormError'
 
 type View = 'login' | 'signup' | 'reset' | 'confirm'
 
@@ -91,7 +92,7 @@ export default function EmailAuthForm() {
           required
           style={styles.input}
         />
-        {error && <p style={styles.error}>{error}</p>}
+        {error && <FormError>{error}</FormError>}
         <button type="submit" disabled={loading} style={styles.btn}>
           {loading ? 'Sending...' : 'Send reset link'}
         </button>
@@ -131,7 +132,7 @@ export default function EmailAuthForm() {
           style={styles.input}
         />
       )}
-      {error && <p style={styles.error}>{error}</p>}
+      {error && <FormError>{error}</FormError>}
       <button type="submit" disabled={loading} style={styles.btn}>
         {loading ? 'Please wait...' : view === 'login' ? 'Log in' : 'Create account'}
       </button>

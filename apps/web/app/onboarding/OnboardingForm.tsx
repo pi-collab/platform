@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom'
 import { submitOnboarding, type OnboardingState } from './actions'
+import FormError from '@/components/FormError'
 
 function SubmitButton() {
   const { pending } = useFormStatus()
@@ -26,7 +27,7 @@ export default function OnboardingForm() {
 
   return (
     <form action={action} style={styles.form}>
-      {state?.error && <p style={styles.error}>{state.error}</p>}
+      {state?.error && <FormError>{state.error}</FormError>}
 
       <Field label="Brand name *">
         <input name="name" required style={styles.input} placeholder="e.g. Groww" />

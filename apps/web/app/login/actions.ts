@@ -2,8 +2,17 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
+import { validateWorkEmail } from '@/lib/work-email'
 
 export async function signUpWithEmail(email: string, password: string) {
+  // Brands must use a work address. Enforced HERE, not just in the form —
+  // client validation is a convenience, a server action is the boundary.
+  // Signup only: existing accounts on free providers keep working.
+  const emailCheck = validateWorkEmail(email, process.env.OPS_ALLOWED_EMAILS)
+  if (!emailCheck.ok) {
+    return { status: 'error' as const, message: emailCheck.message }
+  }
+
   const supabase = createClient()
 
   const { error } = await supabase.auth.signUp({

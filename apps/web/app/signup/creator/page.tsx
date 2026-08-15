@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CreatorSignInButton from '@/components/CreatorSignInButton'
 import { sendOTP, verifyAndMatch } from './actions'
+import FormError from '@/components/FormError'
 
 export default function CreatorSignupPage() {
   const router = useRouter()
@@ -67,7 +68,7 @@ export default function CreatorSignupPage() {
             : `We sent a code to ${phone}. Enter it below.`}
         </p>
 
-        {error && <p style={styles.error}>{error}</p>}
+        {error && <FormError>{error}</FormError>}
 
         {step === 'phone' ? (
           <form onSubmit={handleSendCode} style={styles.form}>

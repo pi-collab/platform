@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { setNewPassword } from './actions'
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/password'
+import FormError from '@/components/FormError'
 
 export default function ResetPasswordForm() {
   const [password, setPassword] = useState('')
@@ -86,7 +87,7 @@ export default function ResetPasswordForm() {
         disabled={loading}
         style={styles.input}
       />
-      {error && <p style={styles.error}>{error}</p>}
+      {error && <FormError>{error}</FormError>}
       <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}>
         {loading ? 'Updating...' : 'Update password'}
       </button>

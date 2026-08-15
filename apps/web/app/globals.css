@@ -253,6 +253,10 @@ button { cursor: pointer; font-family: inherit; }
   --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
   --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
   --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  /* Numeric figures — prices, stats, counts. Matches the design system's
+     --font-num; Sora was already loaded but never mapped to a token, so 11
+     design files referencing var(--font-num) had no family to resolve to. */
+  --font-num: var(--font-sora), 'Sora', system-ui, sans-serif;
   font-family: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
 }
 .ctgrid { display: grid; grid-template-columns: 1.63fr 1fr; gap: clamp(16px, 2vw, 20px); align-items: stretch; }
@@ -399,6 +403,10 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
   --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
   --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  /* Numeric figures — prices, stats, counts. Matches the design system's
+     --font-num; Sora was already loaded but never mapped to a token, so 11
+     design files referencing var(--font-num) had no family to resolve to. */
+  --font-num: var(--font-sora), 'Sora', system-ui, sans-serif;
   font-family: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
 }
 
@@ -546,3 +554,354 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .sf-btile{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s ease;}
 .sf-btile:hover{transform:translateY(-8px);box-shadow:0 40px 70px -32px rgba(40,45,25,.5);}
 @media (prefers-reduced-motion: reduce){.sf-comet{display:none !important;}}
+
+/* ============================================================================
+   BRAND SIGNUP — design "Brand Signup - Paged Flow step 1"
+   Split shell: dark editorial panel left, form right, floating pill nav.
+   Values transcribed from the design file; tokens resolve to our existing set.
+   ========================================================================== */
+
+.signup-shell {
+  /* Font tokens are scoped, not global: :root maps --font-display/--font-ui to
+     Sora/Inter, while .brand-main and .creator-main override them to the
+     design-export families. This page sits in neither wrapper, so without this
+     block the serif headline resolved to nothing (falling back to inherited
+     Inter) and the display/UI text rendered in the wrong families entirely.
+     Same pattern as .brand-main — scoped, so the marketing site is untouched. */
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-body: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  --font-num: var(--font-sora), 'Sora', system-ui, sans-serif;
+
+  /* Colour tokens, from the design's guapd-skin.css — which declares itself
+     "the single source of truth for tokens" and is imported last, so it wins
+     over the design-system defaults. Four differed from what :root gives:
+     --card was UNDEFINED entirely, which made the floating nav pill's
+     background invalid and therefore transparent — the dark logo then
+     disappeared against the dark left panel. */
+  --card: #FFFFFF;
+  --ink: #12151C;
+  --ink-soft: #565C68;
+  --ink-faint: #878D99;
+  --neon: #E8FF66;
+  --neon-deep: #D2F04A;
+
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: #F5F7FA;
+  position: relative;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+/* Dark field extends past the grid to the viewport edge, so the left column
+   reads as full-bleed at any width while the content stays within 1280px. */
+.signup-shell__dark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: #181C24;
+  pointer-events: none;
+  width: calc(50vw - min(100vw, 1280px) / 2 + min(100vw, 1280px) * 0.534883);
+}
+
+.signup-nav-wrap {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 0 clamp(20px, 4vw, 48px);
+}
+
+.signup-nav {
+  position: relative;
+  z-index: 4;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  padding: 9px 12px 9px 20px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(18, 21, 28, .03),
+    0 8px 16px rgba(18, 21, 28, .04),
+    0 32px 64px rgba(18, 21, 28, .05);
+}
+
+.signup-nav__logo { height: 19px; width: auto; display: block; }
+.signup-nav__right { display: flex; align-items: center; gap: 10px; }
+.signup-nav__label { font-size: 13px; color: var(--ink-soft); }
+
+.signup-nav__cta {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--neon);
+  border-radius: 999px;
+  padding: 9px 18px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.signup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  width: 100%;
+  max-width: 1280px;
+  position: relative;
+  z-index: 1;
+}
+
+.signup-pitch {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 104px clamp(32px, 4vw, 56px) clamp(32px, 4vw, 56px);
+}
+
+.signup-pitch__inner { position: relative; z-index: 2; max-width: 480px; }
+.signup-pitch__rule { width: 44px; height: 2px; background: var(--neon); margin-bottom: 26px; }
+
+.signup-pitch__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(38px, 4.6vw, 56px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: #F5F7FA;
+}
+
+.signup-pitch__sub {
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: rgba(245, 247, 250, .7);
+  margin: 22px 0 0;
+  max-width: 380px;
+}
+
+.signup-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 104px clamp(32px, 5vw, 72px) clamp(32px, 5vw, 72px);
+}
+
+.signup-panel__inner { width: 100%; max-width: 400px; }
+
+.signup-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.signup-panel__sub {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 10px 0 0;
+}
+
+.signup-form { margin-top: 28px; }
+
+.signup-form__google {
+  width: 100%;
+  height: 52px;
+  border-radius: 13px;
+  background: #fff;
+  border: 1.5px solid rgba(24, 28, 36, .14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+.signup-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-faint);
+  margin: 30px 0;
+}
+.signup-form__rule { flex: 1; height: 1px; background: rgba(24, 28, 36, .12); }
+.signup-form__or { font-size: 12px; }
+
+/* Shared field shell — 54px, matching the design's .fld-box */
+.fld-box {
+  outline: none;
+  border: 1.5px solid rgba(24, 28, 36, .14);
+  background: #fff;
+  border-radius: 13px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--ink);
+  height: 54px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.fld-box--gap { gap: 8px; margin-top: 14px; }
+
+/* Neon focus, matching .dinput / .ffield elsewhere in the app. :focus-within
+   because the real <input> is nested inside the field shell. */
+.fld-box:focus-within {
+  border-color: var(--neon-deep);
+  /* Matches .dinput:focus exactly — the same soft lime bloom used on the
+     creator deliverable fields, so focus reads identically across the app.
+     The inset shadow .dinput also carries is deliberately omitted: these
+     signup fields have no inner shadow in the design. */
+  box-shadow: 0 0 0 4px rgba(218, 254, 12, .18);
+}
+
+/* Field-level error. Mirrors the neon focus treatment but in the error red,
+   so the message and the field that caused it are visibly connected — an
+   error listed below a form tells you something is wrong, not WHERE.
+   Declared after the focus rule so it wins while the field is focused. */
+.fld-box--error,
+.fld-box--error:focus-within {
+  border-color: #C43D3D;
+  box-shadow: 0 0 0 4px rgba(196, 61, 61, .13);
+}
+
+
+.fld-box__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 0;
+}
+
+.fld-box__toggle {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  display: flex;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Always rendered, faded rather than mounted. The design toggles this node in
+   and out, which pushes the button and legal text down the moment the password
+   field is focused — reserving the row keeps the form completely still. */
+.signup-form__hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-faint);
+  margin: 8px 0 0;
+  min-height: 17px;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.signup-form__hint--visible { opacity: 1; }
+
+/* Inline form error — house pattern from the auth designs. Values taken
+   verbatim from "Creator Login Verify Error": white card, #E3B3B3 hairline
+   border, #C43D3D icon and text at 12.5px/600. Shared so every auth surface
+   fails the same way. */
+.formerr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #E3B3B3;
+  color: #C43D3D;
+}
+.formerr svg { flex-shrink: 0; }
+.formerr__text {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #C43D3D;
+}
+.formerr__link { color: #C43D3D; text-decoration: underline; }
+
+.signup-form__success {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0 0 18px;
+}
+
+.signup-form__cta {
+  width: 100%;
+  height: 52px;
+  border-radius: 13px;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #fff;
+  margin-top: 18px;
+  border: none;
+}
+.signup-form__cta--link { text-decoration: none; margin-top: 0; }
+
+.signup-form__legal {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 20px 0 0;
+}
+.signup-form__legal-link { color: var(--ink-faint); text-decoration: underline; }
+
+/* Interaction — transcribed from the design's .cta / .ghost / .lnk */
+.cta { cursor: pointer; transition: transform .16s cubic-bezier(.22, 1, .36, 1), filter .16s; }
+.cta:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.cta:active { transform: translateY(0) scale(.99); }
+.ghost { cursor: pointer; transition: transform .16s, box-shadow .16s, background .16s; }
+.ghost:hover { transform: translateY(-1px); box-shadow: 0 12px 24px -16px rgba(40, 45, 25, .4); }
+.lnk { cursor: pointer; }
+.cta:disabled, .ghost:disabled { opacity: .6; cursor: default; transform: none; filter: none; }
+
+/* Design is a 1280px desktop composition. Below the split's natural break the
+   dark panel would crush the headline, so it stacks and the pitch is dropped
+   rather than shown at an unusable size — the mobile design is a separate file. */
+@media (max-width: 900px) {
+  .signup-shell__dark { display: none; }
+  .signup-grid { grid-template-columns: minmax(0, 1fr); }
+  .signup-pitch { display: none; }
+  .signup-panel { padding: 120px clamp(20px, 6vw, 40px) 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta, .ghost { transition: none; }
+  .cta:hover, .ghost:hover { transform: none; }
+}

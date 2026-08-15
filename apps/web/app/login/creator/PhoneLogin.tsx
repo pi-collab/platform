@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sendOTP } from '@/app/signup/creator/actions'
 import { verifyAndSignIn } from './actions'
+import FormError from '@/components/FormError'
 
 export default function PhoneLogin({ next }: { next?: string }) {
   const router = useRouter()
@@ -48,7 +49,7 @@ export default function PhoneLogin({ next }: { next?: string }) {
 
   return (
     <div style={{ width: '100%' }}>
-      {error && <p style={styles.error}>{error}</p>}
+      {error && <FormError>{error}</FormError>}
 
       {step === 'phone' ? (
         <form onSubmit={handleSendOTP} style={styles.form}>

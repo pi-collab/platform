@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import CreatorSignInButton from '@/components/CreatorSignInButton'
 import PhoneLogin from './PhoneLogin'
 import { safeNext } from '@/lib/safe-next'
+import FormError from '@/components/FormError'
 
 export const metadata = {
   title: 'Creator login — Guapd',
@@ -47,24 +48,24 @@ export default async function CreatorLoginPage({
         <p style={styles.sub}>Sign in to manage your deals.</p>
 
         {searchParams.error === 'no_account' && (
-          <p style={styles.error}>
+          <FormError>
             No creator account found.{' '}
-            <a href="/signup/creator" style={{ color: '#854d0e', fontWeight: 600 }}>
+            <a href="/signup/creator" className="formerr__link">
               Sign up as a creator &rarr;
             </a>
-          </p>
+          </FormError>
         )}
 
         {searchParams.error === 'account_exists' && (
-          <p style={styles.error}>
+          <FormError>
             This phone is already registered. Sign in below.
-          </p>
+          </FormError>
         )}
 
         {searchParams.error && searchParams.error !== 'no_account' && searchParams.error !== 'account_exists' && (
-          <p style={styles.error}>
+          <FormError>
             Sign-in failed ({searchParams.error}). Please try again.
-          </p>
+          </FormError>
         )}
 
         <PhoneLogin next={next} />

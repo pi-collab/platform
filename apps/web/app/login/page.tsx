@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
 import EmailAuthForm from '@/components/EmailAuthForm'
+import FormError from '@/components/FormError'
 
 export const metadata = {
   title: 'Brand login',
@@ -67,9 +68,9 @@ export default async function LoginPage({
         <p style={styles.sub}>Sign in to manage your creator deals.</p>
 
         {searchParams.error && (
-          <p style={styles.error}>
+          <FormError>
             Sign-in failed ({searchParams.error}). Please try again.
-          </p>
+          </FormError>
         )}
 
         <EmailAuthForm />

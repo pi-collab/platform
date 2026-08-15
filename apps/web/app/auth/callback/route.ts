@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { validateWorkEmail } from '@/lib/work-email'
 
 /**
  * OAuth callback handler.
@@ -56,6 +58,30 @@ export async function GET(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user) {
+    // Google is a SIGNUP path too, so the work-email rule has to be enforced
+    // here as well — otherwise "Continue with Google" is an open door for the
+    // exact free-inbox signups the rule exists to stop.
+    //
+    // Only NEW accounts are checked. Every existing brand account is on a free
+    // provider and must keep signing in. Admin client because RLS does not let
+    // a fresh session read other users rows.
+    const admin = createAdminClient()
+    const { data: byAuthId } = await admin
+      .from('users').select('id').eq('auth_id', user.id).maybeSingle()
+    const { data: byEmail } = user.email
+      ? await admin.from('users').select('id').eq('email', user.email).maybeSingle()
+      : { data: null }
+
+    if (!byAuthId && !byEmail) {
+      const check = validateWorkEmail(user.email ?? '', process.env.OPS_ALLOWED_EMAILS)
+      if (!check.ok) {
+        // Undo the sign-in: no users row was created, so nothing to clean up
+        // beyond the session itself.
+        await supabase.auth.signOut()
+        return NextResponse.redirect(`${origin}/signup/brand?error=work_email_required`)
+      }
+    }
+
     // Ensure users row exists — shared with email+password login path
     await ensureBrandUserRow(supabase, user.id, user.email)
   }

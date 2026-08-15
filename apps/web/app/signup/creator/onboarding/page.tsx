@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { saveOnboarding } from './actions'
 import { PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 import { trackEvent } from '@/lib/analytics'
+import FormError from '@/components/FormError'
 
 const PLATFORMS = ['Instagram', 'YouTube', 'X', 'LinkedIn']
 
@@ -60,7 +61,7 @@ export default function CreatorOnboardingPage() {
           Tell us the basics so brands can find and offer you deals.
         </p>
 
-        {error && <p style={styles.error}>{error}</p>}
+        {error && <FormError>{error}</FormError>}
 
         <form onSubmit={handleSubmit} style={styles.form}>
           {/* Name */}
