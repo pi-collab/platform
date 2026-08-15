@@ -105,7 +105,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
                       I&apos;m a creator
                     </Link>
                     <Link
-                      href="/login"
+                      href="/signup/brand"
                       style={dropdownItemStyle}
                       onClick={() => setCtaOpen(false)}
                     >
@@ -168,7 +168,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
               <Link href="/signup/creator" className="btn btn--primary" onClick={() => setOpen(false)}>
                 Join as creator
               </Link>
-              <Link href="/login" className="btn btn--ghost" onClick={() => setOpen(false)}>
+              <Link href="/signup/brand" className="btn btn--ghost" onClick={() => setOpen(false)}>
                 Get access as a brand
               </Link>
             </>

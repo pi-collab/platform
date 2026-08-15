@@ -21,7 +21,7 @@ export const nav = {
     { label: 'How it works',  href: '#how-it-works' },
   ],
   login:      { label: 'Log in',           href: '/login'           },
-  brandCta:   { label: 'Get access',       href: '/login'           },
+  brandCta:   { label: 'Get access',       href: '/signup/brand'    },
   creatorCta: { label: 'Join as creator',  href: '/signup/creator'  },
 }
 
@@ -133,7 +133,7 @@ export const homePage = {
 
   homeFinalCta: {
     headline:     'The deal platform India\'s creators and brands have been waiting for.',
-    brandCta:     { label: 'Get early access', href: '/login'  },
+    brandCta:     { label: 'Get early access', href: '/signup/brand'  },
     creatorCta:   { label: 'Join as a creator', href: '/signup/creator' },
     microcopy:    'Free for creators · No agency required',
   },
