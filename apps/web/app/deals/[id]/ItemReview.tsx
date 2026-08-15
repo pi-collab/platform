@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { approveItem, requestItemRevision } from './review-actions'
 import { getSignedUrl } from '@/app/creator/deals/[id]/upload-actions'
 import { trackEvent } from '@/lib/analytics'
@@ -69,6 +70,8 @@ export default function ItemReview({
   const hasRevision = items.some((i) => i.item_status === 'revision')
   const isBeyondLimit = dealStatus === 'delivered' && revisionsUsed >= revisionLimit && submitted > 0
 
+  const router = useRouter()
+
   async function handleApprove(itemId: string) {
     setError(null)
     setLoadingAction(`approve-${itemId}`)
@@ -76,8 +79,15 @@ export default function ItemReview({
     if (result.status === 'success') trackEvent('deliverable_approved')
     setLoadingAction(null)
     if (result.status === 'error') setError(result.message)
-    else if (items.filter((i) => i.item_status === 'submitted').length === 1) {
-      setDoneMessage('All deliverables approved!')
+    else {
+      if (items.filter((i) => i.item_status === 'submitted').length === 1) {
+        setDoneMessage('All deliverables approved!')
+      }
+      // revalidatePath in the server action alone was leaving this list stale
+      // — the approve succeeded server-side but the UI still showed the item
+      // as submitted until a manual reload. router.refresh() re-fetches the
+      // server components so the new item_status actually renders.
+      router.refresh()
     }
   }
 
@@ -102,6 +112,9 @@ export default function ItemReview({
     else {
       setRevisingItemId(null)
       setRevisionNotes((prev) => ({ ...prev, [itemId]: '' }))
+      // Same staleness as approve — the item moves to 'revision' server-side
+      // but the list needs a refetch to show it.
+      router.refresh()
     }
   }
 
