@@ -167,6 +167,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
           <input
             type="email"
             placeholder="you@brand.com"
+            aria-label="Work email"
             value={email}
             onChange={(e) => { setEmail(e.target.value); clearErrors() }}
             aria-invalid={errorField === 'email'}
@@ -180,6 +181,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
           <input
             type={showPw ? 'text' : 'password'}
             placeholder="Create a password"
+            aria-label="Create a password"
             value={password}
             onChange={(e) => { setPassword(e.target.value); clearErrors() }}
             aria-invalid={errorField === 'password'}
