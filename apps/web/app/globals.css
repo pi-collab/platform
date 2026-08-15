@@ -1373,6 +1373,31 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 
 .signup-form__forgot-link:hover { color: var(--ink-soft); }
 
+/* The design's OTHER secondary-link treatment. "Forgot password?" is a quiet
+   aside under a form the user is already working in, so it carries no
+   underline. This one is used where the link is the ONLY alternative action on
+   the screen, so it has to read as clickable: larger, underlined, and sitting
+   closer to the button it follows. */
+.signup-form__alt {
+  margin-top: 18px;
+}
+
+.signup-form__alt-link,
+button.signup-form__alt-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.signup-form__alt-link:hover { color: var(--ink-soft); }
+
 /* Signed-in-without-a-brand confirmation mark. */
 .login-tick {
   width: 52px;
@@ -1395,3 +1420,44 @@ button.signup-form__recover-link {
   font: inherit;
   cursor: pointer;
 }
+
+/* Cross-login wayfinding. Distinguished from "Forgot password?" above it: the
+   question stays faint, the action is inked and underlined, because this one
+   is a real destination rather than an aside. */
+.signup-form__cross {
+  margin: 22px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+.signup-form__cross-link {
+  color: var(--ink);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signup-form__cross-link:hover { color: var(--ink-soft); }
+
+/* ── "Can't access your account? Contact us" ───────────────────────────────
+   Last line on every auth screen, and the only escape that doesn't assume the
+   user can still help themselves. Quiet by default: it should be findable when
+   someone is stuck, not compete with the form when they aren't. */
+.auth-support {
+  margin: 28px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-faint, #878D99);
+}
+
+.auth-support--center { text-align: center; }
+
+.auth-support__link {
+  color: var(--ink, #12151C);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-support__link:hover { color: var(--ink-soft, #565C68); }

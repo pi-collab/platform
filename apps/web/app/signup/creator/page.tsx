@@ -6,6 +6,7 @@ import Link from 'next/link'
 import CreatorSignInButton from '@/components/CreatorSignInButton'
 import { sendOTP, verifyAndMatch } from './actions'
 import FormError from '@/components/FormError'
+import AuthSupportLink from '@/components/AuthSupportLink'
 
 export default function CreatorSignupPage() {
   const router = useRouter()
@@ -144,6 +145,8 @@ export default function CreatorSignupPage() {
           Already have an account?{' '}
           <Link href="/login/creator" style={styles.footerLink}>Sign in</Link>
         </p>
+
+        <AuthSupportLink className="auth-support auth-support--center" />
       </div>
     </main>
   )

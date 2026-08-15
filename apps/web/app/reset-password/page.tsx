@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { RECOVERY_COOKIE } from '@/lib/recovery-cookie'
 import ResetPasswordForm from './ResetPasswordForm'
+import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = {
   title: 'Set a new password — Guapd',
@@ -59,6 +60,7 @@ export default async function ResetPasswordPage({
           signed out everywhere else and can sign in again with the new password.
         </p>
         <ResetPasswordForm />
+        <AuthSupportLink className="auth-support auth-support--center" />
       </div>
     </main>
   )

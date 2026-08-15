@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import BrandLoginForm from './BrandLoginForm'
 import FormError from '@/components/FormError'
+import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = {
   title: 'Log in — Guapd',
@@ -76,8 +77,8 @@ export default async function LoginPage({
             <Link href="/onboarding" className="signup-form__cta signup-form__cta--link">
               Set up my brand
             </Link>
-            <div className="signup-form__forgot">
-              <SignOutButton className="signup-form__forgot-link lnk" label="Sign out" />
+            <div className="signup-form__alt">
+              <SignOutButton className="signup-form__alt-link lnk" label="Sign out" />
             </div>
           </div>
         </div>
@@ -142,7 +143,10 @@ function Shell({
           </div>
         </section>
 
-        <section className="signup-panel">{children}</section>
+        <section className="signup-panel">
+          {children}
+          <AuthSupportLink />
+        </section>
       </div>
     </main>
   )

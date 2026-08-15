@@ -148,8 +148,8 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
             {loading ? 'Sending…' : 'Send reset link'}
           </button>
 
-          <div className="signup-form__forgot">
-            <button type="button" onClick={() => switchTo('login')} className="signup-form__forgot-link lnk">
+          <div className="signup-form__alt">
+            <button type="button" onClick={() => switchTo('login')} className="signup-form__alt-link lnk">
               Back to log in
             </button>
           </div>
@@ -257,6 +257,15 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
             Forgot password?
           </button>
         </div>
+
+        {/* Wrong-door recovery. The two sides have separate accounts and
+            separate login pages, so a creator who lands here has no way in and
+            nothing on the page says so. Only on the entry view — it is
+            wayfinding, not something to offer mid-password-reset. */}
+        <p className="signup-form__cross">
+          Are you a creator?{' '}
+          <Link href="/login/creator" className="signup-form__cross-link">Log in here instead</Link>
+        </p>
       </form>
     </>
   )

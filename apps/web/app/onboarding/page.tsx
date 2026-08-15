@@ -2,6 +2,7 @@ import { redirect }     from 'next/navigation'
 import SignOutButton    from '@/components/SignOutButton'
 import { createClient } from '@/lib/supabase/server'
 import OnboardingForm   from './OnboardingForm'
+import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = { title: 'Your brand — Guapd', robots: { index: false, follow: false } }
 
@@ -42,7 +43,7 @@ export default async function OnboardingPage() {
               rather than literally, the useful escape at this point is leaving a
               wrong account — someone who signed up under the wrong address is
               otherwise stuck on a form they don't want to fill in. */}
-          <SignOutButton className="onboard-nav__cta" label="Log out" />
+          <SignOutButton className="onboard-nav__cta" label="Sign out" />
         </nav>
       </div>
 
@@ -54,8 +55,11 @@ export default async function OnboardingPage() {
       </div>
 
       <div className="onboard-body">
-        <div className="onboard-card">
-          <OnboardingForm />
+        <div>
+          <div className="onboard-card">
+            <OnboardingForm />
+          </div>
+          <AuthSupportLink className="auth-support auth-support--center" />
         </div>
       </div>
     </main>

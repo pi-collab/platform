@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import BrandSignupForm from './BrandSignupForm'
+import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = {
   title: 'Create your account — Guapd',
@@ -75,6 +76,7 @@ export default async function BrandSignupPage({
                 react to that. Same split that had /login titled "Brand login"
                 over a signup form. */}
             <BrandSignupForm oauthError={searchParams.error} />
+            <AuthSupportLink />
           </div>
         </section>
       </div>
