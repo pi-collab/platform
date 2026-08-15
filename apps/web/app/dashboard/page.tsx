@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
+import HeldNotice from '@/components/HeldNotice'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -42,6 +43,17 @@ export default async function DashboardPage({
 }) {
   const brand = await verifyBrand()
   const supabase = createClient()
+
+  // Held-deal count is deliberately its OWN query rather than derived from the
+  // list/period query above. Those are scoped by tab, search text, page and
+  // date range; this notice reports ACCOUNT state, so deriving it from a
+  // filtered view meant switching tabs or typing in search made it vanish
+  // while the deals were still held. RLS scopes it to this brand.
+  const { count: heldCount } = await supabase
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .not('held_at', 'is', null)
+
 
   // Date range filtering
   const period = (searchParams.period && VALID_PERIODS.has(searchParams.period) ? searchParams.period : 'this_year') as Period
@@ -160,6 +172,14 @@ export default async function DashboardPage({
     return (
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          {/* Above the hero: a brand whose first deal is sitting unsent needs
+              to know that before anything else on the page. */}
+          <HeldNotice
+            heldCount={heldCount ?? 0}
+            status={brand.brandStatus}
+            rejectionReason={brand.rejectionReason}
+          />
+
           <section style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)' }}>
             <div style={{ position: 'relative', zIndex: 2 }}>
               <span className="t-meta" style={{ display: 'inline-block', color: 'var(--meta)' }}>Welcome</span>
@@ -196,6 +216,16 @@ export default async function DashboardPage({
     <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
       <RealtimeDashboardListener />
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+
+        {/* Above the hero: a brand whose deals are sitting unsent needs to know
+            that before anything else on the page. Rendered in BOTH dashboard
+            states — the empty one is where a brand held on its FIRST send
+            actually lands, so it is the one that matters most. */}
+        <HeldNotice
+          heldCount={heldCount ?? 0}
+          status={brand.brandStatus}
+          rejectionReason={brand.rejectionReason}
+        />
 
         {/* ── HERO CARD ─────────────────────────────────────── */}
         <section className="neon-hover" style={{ position: 'relative', overflow: 'visible', borderRadius: 24, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)' }}>

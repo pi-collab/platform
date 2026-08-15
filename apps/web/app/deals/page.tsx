@@ -49,6 +49,16 @@ export default async function DealsListPage({
 
   const supabase = createClient()
 
+  // Held-deal count is deliberately its OWN query rather than derived from the
+  // list/period query above. Those are scoped by tab, search text, page and
+  // date range; this notice reports ACCOUNT state, so deriving it from a
+  // filtered view meant switching tabs or typing in search made it vanish
+  // while the deals were still held. RLS scopes it to this brand.
+  const { count: heldCount } = await supabase
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .not('held_at', 'is', null)
+
   // Build query -- RLS scopes to brand's own deals
   let query = supabase
     .from('deals')
@@ -122,13 +132,12 @@ export default async function DealsListPage({
   // Held deals belong to a brand not yet cleared to send. Surfaced FIRST and
   // prominently — a brand seeing no creator response with no explanation
   // assumes the product is broken, and may re-send and create duplicates.
-  const heldCount = (deals ?? []).filter((d: { held_at?: string | null }) => d.held_at).length
 
   return (
     <main style={container}>
 
       <HeldNotice
-        heldCount={heldCount}
+        heldCount={heldCount ?? 0}
         status={brand.brandStatus}
         rejectionReason={brand.rejectionReason}
       />
