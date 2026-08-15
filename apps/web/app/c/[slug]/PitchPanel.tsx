@@ -70,7 +70,7 @@ export default function PitchPanel({ open, onClose, slug, creatorName, initialDe
         try {
           sessionStorage.setItem(SESSION_KEY, JSON.stringify({ slug, title, deliverables, message }))
         } catch { /* storage full / disabled */ }
-        router.push(`/login?next=/c/${slug}`)
+        router.push(`/login/brand?next=/c/${slug}`)
         return
       }
       setError(result.error ?? 'An error occurred.')

@@ -5,7 +5,7 @@ import GenerateLinkButton from './GenerateLinkButton'
 
 export default async function OpsOffersPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
 

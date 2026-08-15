@@ -50,7 +50,7 @@ export async function setNewPassword(password: string, confirmation: string): Pr
   //
   //    A reset is often prompted by suspected compromise, so other devices
   //    must be cut off. This device is included deliberately:
-  //      - /login redirects any authenticated user to /ops or /deals
+  //      - /login/brand redirects any authenticated user to /ops or /dashboard
   //        (login/page.tsx:19-42), so keeping this session alive made the
   //        success screen's "go to login" CTA bounce straight back out.
   //      - Signing in again is what proves the new password actually works.

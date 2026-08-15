@@ -85,7 +85,7 @@ export default async function CreatorLoginPage({
 
         <p style={styles.footer}>
           Looking to book creators?{' '}
-          <a href="/login" style={styles.footerLink}>Log in as a brand</a>
+          <a href="/login/brand" style={styles.footerLink}>Log in as a brand</a>
         </p>
 
       </div>

@@ -4,7 +4,7 @@ import AddCreatorForm from './AddCreatorForm'
 
 export default async function NewCreatorPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   return (
     <div>

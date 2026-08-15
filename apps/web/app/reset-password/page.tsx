@@ -44,7 +44,7 @@ export default async function ResetPasswordPage({
             Password reset links can only be used once and expire after a short time.
             Request a new one and it will arrive in your inbox.
           </p>
-          <a href="/login" style={primaryLink}>Back to login</a>
+          <a href="/login/brand" style={primaryLink}>Back to login</a>
         </div>
       </main>
     )

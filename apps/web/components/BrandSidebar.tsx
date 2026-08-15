@@ -83,7 +83,7 @@ export default function BrandSidebar({ brandName, userEmail, unreadCount: initia
   const handleSignOut = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    window.location.href = '/login'
+    window.location.href = '/login/brand'
   }
 
   useEffect(() => {

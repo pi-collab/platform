@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { resetAnalytics } from '@/lib/analytics'
 
 export default function SignOutButton({
-  redirectTo = '/login',
+  redirectTo = '/login/brand',
   className,
   label = 'Sign out',
 }: {

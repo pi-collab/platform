@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 export default async function OpsAccessPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const nameMap: Record<string, string> = {
     'utkarshverma0007@gmail.com': 'Utkarsh',

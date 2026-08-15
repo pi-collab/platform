@@ -23,11 +23,11 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error')
 
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error)}`)
+    return NextResponse.redirect(`${origin}/login/brand?error=${encodeURIComponent(error)}`)
   }
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`)
+    return NextResponse.redirect(`${origin}/login/brand?error=no_code`)
   }
 
   const cookieStore = cookies()
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
   if (exchangeError) {
     console.error('[auth/callback] exchangeCodeForSession failed:', exchangeError.message)
-    return NextResponse.redirect(`${origin}/login?error=exchange_failed`)
+    return NextResponse.redirect(`${origin}/login/brand?error=exchange_failed`)
   }
 
   // Get the authenticated user

@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
   // Only these two. Anything else is refused so this route can never become a
   // general-purpose way to mint a session from an arbitrary email link.
   if (type !== 'recovery' && type !== 'signup') {
-    return NextResponse.redirect(`${origin}/login?error=unsupported_link_type`)
+    return NextResponse.redirect(`${origin}/login/brand?error=unsupported_link_type`)
   }
 
   const isRecovery = type === 'recovery'
-  const failureTarget = isRecovery ? '/reset-password' : '/login'
+  const failureTarget = isRecovery ? '/reset-password' : '/login/brand'
   const next = safeNext(searchParams.get('next'), isRecovery ? '/reset-password' : '/onboarding')
 
   if (!tokenHash && !code) {
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code!)
     if (error) {
       console.error('[auth/confirm] exchangeCodeForSession failed:', error.message)
-      return NextResponse.redirect(`${origin}/login?error=exchange_failed`)
+      return NextResponse.redirect(`${origin}/login/brand?error=exchange_failed`)
     }
   }
 

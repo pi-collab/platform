@@ -6,7 +6,7 @@ import CreatorTabs from './CreatorTabs'
 
 export default async function CreatorDetailPage({ params }: { params: { id: string } }) {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
   const { data: creator, error } = await admin

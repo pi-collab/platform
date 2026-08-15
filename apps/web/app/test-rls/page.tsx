@@ -6,7 +6,7 @@
  * using the current user's session (anon key + JWT).
  *
  * How to use:
- *  1. Log in at /login
+ *  1. Log in at /login/brand
  *  2. Visit /test-rls — results render server-side
  *  3. Log out, log in as Account B, visit /test-rls again for cross-brand tests
  */
@@ -27,7 +27,7 @@ export default async function TestRLSPage() {
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const results: Result[] = []
 

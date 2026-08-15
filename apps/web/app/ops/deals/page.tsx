@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 
 export default async function OpsDealsPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
 

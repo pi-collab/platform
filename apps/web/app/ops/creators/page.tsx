@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 export default async function OpsCreatorsPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
   const { data: creators, error } = await admin

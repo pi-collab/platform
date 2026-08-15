@@ -128,7 +128,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
           {/* The app cannot know whether they've clicked the link yet, so the
               CTA is phrased as the user's own claim rather than asserting a
               verification we haven't observed. */}
-          <Link href="/login" className="signup-form__cta signup-form__cta--link">
+          <Link href="/login/brand" className="signup-form__cta signup-form__cta--link">
             I&rsquo;ve verified — log in
           </Link>
           <ResendConfirmation email={email} />
@@ -232,9 +232,9 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
 
         {existingAccount && (
           <div className="signup-form__recover">
-            <Link href="/login" className="signup-form__recover-link">Log in</Link>
+            <Link href="/login/brand" className="signup-form__recover-link">Log in</Link>
             <span className="signup-form__recover-sep">or</span>
-            <Link href="/login?view=reset" className="signup-form__recover-link">Reset password</Link>
+            <Link href="/login/brand?view=reset" className="signup-form__recover-link">Reset password</Link>
           </div>
         )}
 

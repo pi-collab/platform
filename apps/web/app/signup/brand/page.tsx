@@ -50,7 +50,7 @@ export default async function BrandSignupPage({
           <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo" />
           <div className="signup-nav__right">
             <span className="signup-nav__label">Already have an account?</span>
-            <Link href="/login" className="signup-nav__cta">Log in</Link>
+            <Link href="/login/brand" className="signup-nav__cta">Log in</Link>
           </div>
         </nav>
       </div>

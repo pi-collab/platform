@@ -4,7 +4,8 @@
  * All marketing copy lives here. To update any text:
  *   - Find the relevant export below and edit the string.
  *   - Search for PLACEHOLDER to find copy that needs real content.
- *   - Brand CTAs → /login (Google OAuth handles signup + login; onboarding IS the signup experience)
+ *   - Brand CTAs → /signup/brand (early-access CTAs are signup intent; they
+ *     pointed at /login only while signup was a toggle inside that page)
  *   - Creator CTAs → /signup/creator (phone OTP signup)
  *
  * BRAND_NAME is the locked brand name used across the site.
@@ -20,7 +21,7 @@ export const nav = {
     { label: 'For creators',  href: '/creators' },
     { label: 'How it works',  href: '#how-it-works' },
   ],
-  login:      { label: 'Log in',           href: '/login'           },
+  login:      { label: 'Log in',           href: '/login/brand'           },
   brandCta:   { label: 'Get access',       href: '/signup/brand'    },
   creatorCta: { label: 'Join as creator',  href: '/signup/creator'  },
 }
@@ -147,7 +148,7 @@ export const brandPage = {
     headline:    'Stop overpaying for creator deals',
     subheadline: 'Run every collaboration directly — structured offer to final payment — without an agency taking 20% for work you can do yourself.',
     ctaText:     'Request early access',
-    ctaHref:     '/login',
+    ctaHref:     '/signup/brand',
     microcopy:   'Free to start · No commitment',
   },
 
@@ -195,7 +196,7 @@ export const brandPage = {
   midCta: {
     headline: 'Stop running campaigns over WhatsApp.',
     ctaText:  'Request early access',
-    ctaHref:  '/login',
+    ctaHref:  '/signup/brand',
   },
 
   // PLACEHOLDER: replace with real testimonials when available
@@ -225,13 +226,13 @@ export const brandPage = {
     headline:  'Ready to run deals without the agency?',
     sub:       'Join brands already managing creator campaigns directly.',
     ctaText:   'Request early access',
-    ctaHref:   '/login',
+    ctaHref:   '/signup/brand',
     microcopy: 'Free to start · No agency required',
   },
 
   mobileCta: {
     ctaText: 'Get early access',
-    ctaHref: '/login',
+    ctaHref: '/signup/brand',
   },
 }
 

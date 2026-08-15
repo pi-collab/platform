@@ -70,7 +70,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
                     Creator login
                   </Link>
                   <Link
-                    href="/login"
+                    href="/login/brand"
                     style={dropdownItemStyle}
                     onClick={() => setLoginOpen(false)}
                   >
@@ -157,7 +157,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
           <Link href="/login/creator" className="btn btn--ghost" onClick={() => setOpen(false)}>
             Creator login
           </Link>
-          <Link href="/login" className="btn btn--ghost" onClick={() => setOpen(false)}>
+          <Link href="/login/brand" className="btn btn--ghost" onClick={() => setOpen(false)}>
             Brand login
           </Link>
           <Link href="/ops" className="btn btn--ghost" style={{ fontSize: '0.8125rem', color: '#888' }} onClick={() => setOpen(false)}>

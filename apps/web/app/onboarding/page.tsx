@@ -16,7 +16,7 @@ export const metadata = { title: 'Your brand — Guapd', robots: { index: false,
 export default async function OnboardingPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   // If already onboarded, skip back to dashboard
   const { data: profile } = await supabase

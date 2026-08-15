@@ -10,7 +10,7 @@ export const metadata = {
 export default async function BrandPendingPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   return (
     <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#fafafa', padding: '1rem' }}>

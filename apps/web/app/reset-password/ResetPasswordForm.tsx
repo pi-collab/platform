@@ -56,7 +56,7 @@ export default function ResetPasswordForm() {
           re-renders against the now-signed-out session. It also means the CTA
           works if the action's redirect state is ever out of sync.
         */}
-        <a href="/login" style={{ ...styles.btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+        <a href="/login/brand" style={{ ...styles.btn, display: 'block', textAlign: 'center', textDecoration: 'none' }}>
           Go to login
         </a>
       </div>

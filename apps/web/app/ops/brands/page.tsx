@@ -6,7 +6,7 @@ import BrandStatusActions from './BrandStatusActions'
 
 export default async function OpsBrandsPage() {
   const user = await verifyOpsAccess()
-  if (!user) redirect('/login')
+  if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
   const { data: brands, error } = await admin
