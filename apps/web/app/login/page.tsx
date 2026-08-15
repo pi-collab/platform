@@ -1,20 +1,31 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
-import EmailAuthForm from '@/components/EmailAuthForm'
+import BrandLoginForm from './BrandLoginForm'
 import FormError from '@/components/FormError'
 
 export const metadata = {
-  title: 'Brand login',
+  title: 'Log in — Guapd',
   robots: { index: false, follow: false },
 }
 
+/**
+ * Brand login — design "Brand Login - Paged Flow".
+ *
+ * Same split shell as /signup/brand (step 1 of the same design), so it reuses
+ * the .signup-* styles rather than duplicating them under a second name.
+ */
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { error?: string; view?: string }
 }) {
+  // Signup used to be a view toggled inside this page. It has its own route
+  // now, so anything still pointing here goes there instead of finding a view
+  // that no longer exists.
+  if (searchParams.view === 'signup') redirect('/signup/brand')
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -44,123 +55,95 @@ export default async function LoginPage({
       if (membership) redirect('/deals')
     }
 
-    // Logged in but no brand — show page with "continue setup" prompt
+    // Signed in but no brand yet — the design's "You're in." screen, pointing
+    // at the step they actually still owe rather than a dashboard they have no
+    // brand for.
     return (
-      <main style={styles.main}>
-        <div style={styles.card}>
-          <h1 style={styles.heading}>Welcome back</h1>
-          <p style={styles.sub}>
-            You&apos;re signed in as {user.email}. Complete your brand profile to get started.
+      <Shell>
+        <div className="signup-panel__inner">
+          <div className="login-tick">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+          <h2 className="signup-panel__title">You&rsquo;re in.</h2>
+          <p className="signup-panel__sub">
+            Signed in as {user.email}. One step left — tell us about your brand and your
+            dashboard is ready.
           </p>
-          <a href="/onboarding" style={styles.btn}>
-            Set up my brand
-          </a>
-          <SignOutButton />
+          <div className="signup-form">
+            <Link href="/onboarding" className="signup-form__cta signup-form__cta--link">
+              Set up my brand
+            </Link>
+            <div className="signup-form__forgot">
+              <SignOutButton className="signup-form__forgot-link lnk" label="Sign out" />
+            </div>
+          </div>
         </div>
-      </main>
+      </Shell>
     )
   }
 
   return (
-    <main style={styles.main}>
-      <div style={styles.card}>
-        <h1 style={styles.heading}>Brand login</h1>
-        <p style={styles.sub}>Sign in to manage your creator deals.</p>
-
+    <Shell showCreateAccount>
+      <div className="signup-panel__inner">
         {searchParams.error && (
           <FormError>
-            Sign-in failed ({searchParams.error}). Please try again.
+            {searchParams.error === 'exchange_failed'
+              ? 'That sign-in link could not be completed. Try logging in below.'
+              : `Sign-in failed (${searchParams.error}). Please try again.`}
           </FormError>
         )}
 
-        {/* Only these two are linkable. 'confirm' is a post-submit state and
-            must not be reachable by URL, or it would show a "check your email"
-            screen for a mail nobody sent. */}
-        <EmailAuthForm
-          initialView={searchParams.view === 'reset' || searchParams.view === 'signup'
-            ? searchParams.view
-            : 'login'}
-        />
-
-        <div style={styles.divider}>
-          <hr style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <hr style={styles.dividerLine} />
-        </div>
-
-        <SignInButton />
+        {/* 'reset' is the only linkable view. The post-submit states are not
+            reachable by URL, or they would claim an email nobody sent. */}
+        <BrandLoginForm initialView={searchParams.view === 'reset' ? 'reset' : 'login'} />
       </div>
-    </main>
+    </Shell>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  main: {
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    minHeight:      '100vh',
-    background:     '#FDFAF6',
-  },
-  card: {
-    display:       'flex',
-    flexDirection: 'column',
-    alignItems:    'center',
-    gap:           '1.25rem',
-    padding:       '3rem 2.5rem',
-    background:    '#fff',
-    border:        '1px solid #DDD3BE',
-    borderRadius:  16,
-    width:         360,
-  },
-  heading: {
-    fontFamily:   'Georgia, serif',
-    fontSize:     '1.5rem',
-    fontWeight:   700,
-    color:        '#16100B',
-    margin:       0,
-  },
-  sub: {
-    fontSize:   '0.9375rem',
-    color:      '#7A6D61',
-    margin:     0,
-    textAlign:  'center',
-  },
-  error: {
-    fontSize:     '0.875rem',
-    color:        '#B91C1C',
-    background:   '#FEF2F2',
-    padding:      '0.625rem 1rem',
-    borderRadius: 8,
-    margin:       0,
-  },
-  btn: {
-    display:        'inline-block',
-    padding:        '0.625rem 1.5rem',
-    background:     '#16100B',
-    color:          '#fff',
-    border:         'none',
-    borderRadius:   8,
-    fontSize:       '0.9375rem',
-    fontWeight:     700,
-    textDecoration: 'none',
-    textAlign:      'center' as const,
-  },
-  divider: {
-    width:         '100%',
-    display:       'flex',
-    alignItems:    'center',
-    gap:           '0.75rem',
-    color:         '#B5A99A',
-    fontSize:      '0.8125rem',
-  },
-  dividerLine: {
-    flex:        1,
-    border:      'none',
-    borderTop:   '1px solid #DDD3BE',
-    margin:      0,
-  },
-  dividerText: {
-    flex:   'none',
-  },
+/** The split shell, shared with /signup/brand. */
+function Shell({
+  children,
+  showCreateAccount = false,
+}: {
+  children: React.ReactNode
+  showCreateAccount?: boolean
+}) {
+  return (
+    <main className="signup-shell">
+      <div className="signup-shell__dark" />
+
+      <div className="signup-nav-wrap">
+        <nav className="signup-nav">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo" />
+          {showCreateAccount && (
+            <div className="signup-nav__right">
+              <span className="signup-nav__label">New here?</span>
+              <Link href="/signup/brand" className="signup-nav__cta">Create account</Link>
+            </div>
+          )}
+        </nav>
+      </div>
+
+      <div className="signup-grid">
+        <section className="signup-pitch">
+          <div className="signup-pitch__inner">
+            <div className="signup-pitch__rule" />
+            <h1 className="signup-pitch__title">
+              Your whole deal<br />flow, one platform.
+            </h1>
+            <p className="signup-pitch__sub">
+              Source, negotiate and manage campaigns — all from one place built for brands.
+            </p>
+          </div>
+        </section>
+
+        <section className="signup-panel">{children}</section>
+      </div>
+    </main>
+  )
 }

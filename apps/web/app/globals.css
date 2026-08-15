@@ -1177,20 +1177,6 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   letter-spacing: 0;
 }
 
-/* The design's shared field shell. */
-.onboard-shell .fld-box {
-  outline: none;
-  border: 1.5px solid rgba(24, 28, 36, .14);
-  background: #fff;
-  border-radius: 13px;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  color: var(--ink);
-  padding: 0 18px;
-  box-sizing: border-box;
-  width: 100%;
-}
-
 .onboard-box {
   display: flex;
   align-items: center;
@@ -1365,3 +1351,37 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 /* Fields carry their own spacing; this exists so the form has a hook and the
    card's padding isn't fighting a default margin. */
 .onboard-form { margin: 0; }
+
+/* ── Login: "Forgot password?" / view switches ─────────────────────────────
+   Left-aligned under the CTA, per the design. A button rather than a link
+   because it swaps the panel's view in place instead of navigating. */
+.signup-form__forgot {
+  margin-top: 26px;
+  text-align: left;
+}
+
+.signup-form__forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.signup-form__forgot-link:hover { color: var(--ink-soft); }
+
+/* Signed-in-without-a-brand confirmation mark. */
+.login-tick {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--neon);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
