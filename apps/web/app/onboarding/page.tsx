@@ -25,7 +25,7 @@ export default async function OnboardingPage() {
   if (profile) {
     const { data: membership } = await supabase
       .from('brand_members').select('id').eq('user_id', profile.id).maybeSingle()
-    if (membership) redirect('/deals')
+    if (membership) redirect('/dashboard')
   }
 
   return (

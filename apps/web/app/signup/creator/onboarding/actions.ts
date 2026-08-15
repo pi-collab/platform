@@ -91,7 +91,7 @@ export async function saveOnboarding(data: {
 
   // Already vetted (stub claim) → go to deals
   if (creator.is_vetted) {
-    return { status: 'success', redirect: '/creator/deals' }
+    return { status: 'success', redirect: '/creator/dashboard' }
   }
 
   // New creator, pending vetting → show confirmation

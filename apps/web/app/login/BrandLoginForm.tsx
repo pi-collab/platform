@@ -81,7 +81,7 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
     }
 
     // Stays loading — the page navigates away and unmounts this form.
-    router.push('/deals')
+    router.push('/dashboard')
     router.refresh()
   }
 

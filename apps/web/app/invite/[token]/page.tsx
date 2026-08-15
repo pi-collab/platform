@@ -91,7 +91,7 @@ export default async function InvitePage({ params }: { params: { token: string }
   if (existingMembership) {
     if (existingMembership.brand_id === invite.brand_id) {
       // Already a member of this brand
-      redirect('/deals')
+      redirect('/dashboard')
     }
     return (
       <ErrorCard
@@ -125,7 +125,7 @@ async function acceptAndRedirect(
     .update({ status: 'accepted', accepted_by: userId })
     .eq('id', invite.id)
 
-  redirect('/deals')
+  redirect('/dashboard')
 }
 
 function ErrorCard({ message, sub }: { message: string; sub: string }) {

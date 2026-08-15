@@ -52,7 +52,7 @@ export default function OnboardingForm() {
   useEffect(() => {
     if (!done) return
     if (countdown <= 0) {
-      router.push('/deals')
+      router.push('/dashboard')
       router.refresh()
       return
     }
@@ -125,7 +125,7 @@ export default function OnboardingForm() {
             </p>
             <button
               type="button"
-              onClick={() => { router.push('/deals'); router.refresh() }}
+              onClick={() => { router.push('/dashboard'); router.refresh() }}
               className="onboard-celebrate__cta cta"
             >
               Go to dashboard now

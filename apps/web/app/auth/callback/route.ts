@@ -103,5 +103,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}${safeNext || '/deals'}`)
+  return NextResponse.redirect(`${origin}${safeNext || '/dashboard'}`)
 }

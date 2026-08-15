@@ -34,7 +34,7 @@ export default async function BrandSignupPage({
     if (profile) {
       const { data: membership } = await supabase
         .from('brand_members').select('brand_id').eq('user_id', profile.id).maybeSingle()
-      if (membership) redirect('/deals')
+      if (membership) redirect('/dashboard')
     }
     redirect('/onboarding')
   }

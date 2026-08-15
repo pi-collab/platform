@@ -24,7 +24,7 @@ export async function verifyAndSignIn(
   inputCode: string,
   next?: string,
 ): Promise<SignInResult> {
-  const redirectTo = safeNext(next, '/creator/deals')
+  const redirectTo = safeNext(next, '/creator/dashboard')
   const phone = normalizePhone(rawPhone)
   if (!phone) return { status: 'error', message: 'Invalid phone number.' }
 

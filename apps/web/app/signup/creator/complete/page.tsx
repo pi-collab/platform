@@ -21,7 +21,7 @@ export default function CreatorSignupCompletePage({
             <p style={styles.sub}>
               Your profile has been linked to your account. You&apos;re all set.
             </p>
-            <Link href="/creator/deals" style={styles.btn}>
+            <Link href="/creator/dashboard" style={styles.btn}>
               Go to my deals
             </Link>
           </>
@@ -31,7 +31,7 @@ export default function CreatorSignupCompletePage({
             <p style={styles.sub}>
               Your profile is under review. We&apos;ll notify you when you&apos;re approved — this usually takes 24-48 hours.
             </p>
-            <Link href="/creator/deals" style={styles.btn}>
+            <Link href="/creator/dashboard" style={styles.btn}>
               Check my status
             </Link>
           </>

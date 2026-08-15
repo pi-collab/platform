@@ -38,7 +38,7 @@ export default async function LoginPage({
       if (allowed.has(user.email.toLowerCase())) redirect('/ops')
     }
 
-    // Has a brand → deals
+    // Has a brand → dashboard
     const { data: profile } = await supabase
       .from('users')
       .select('id')
@@ -52,7 +52,7 @@ export default async function LoginPage({
         .eq('user_id', profile.id)
         .maybeSingle()
 
-      if (membership) redirect('/deals')
+      if (membership) redirect('/dashboard')
     }
 
     // Signed in but no brand yet — the design's "You're in." screen, pointing

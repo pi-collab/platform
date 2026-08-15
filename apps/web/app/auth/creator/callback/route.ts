@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error')
   // `next` is attacker-reachable (it rides in the OAuth redirect URL), so it
   // is validated as a same-origin path before being concatenated onto origin.
-  const next = safeNext(searchParams.get('next'), '/creator/deals')
+  const next = safeNext(searchParams.get('next'), '/creator/dashboard')
 
   if (error) {
     return NextResponse.redirect(`${origin}/login/creator?error=${encodeURIComponent(error)}`)

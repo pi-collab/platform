@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
  * route validates again on the way back. Defaults to the deals list for
  * callers with no specific destination (e.g. /signup/creator).
  */
-export default function CreatorSignInButton({ next = '/creator/deals' }: { next?: string }) {
+export default function CreatorSignInButton({ next = '/creator/dashboard' }: { next?: string }) {
   const [loading, setLoading] = useState(false)
 
   const handleSignIn = async () => {

@@ -17,7 +17,7 @@ export default async function CreatorLoginPage({
 }) {
   // Where to land after sign-in. Validated here, once, so every path below
   // (already-signed-in redirect, phone OTP, Google) gets a trusted value.
-  const next = safeNext(searchParams.next, '/creator/deals')
+  const next = safeNext(searchParams.next, '/creator/dashboard')
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
