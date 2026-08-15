@@ -52,6 +52,10 @@ const VISIBLE_VARS = [
   // Must be exactly https://eu.i.posthog.com — a US host would send Indian
   // users' analytics to the wrong region, contradicting the privacy policy.
   'NEXT_PUBLIC_POSTHOG_HOST',
+  // Where the "brand awaiting approval" nudge goes. Unset = the gate still
+  // works, the ops email just logs and no-ops — so its absence is silent and
+  // needs to be visible here.
+  'OPS_NOTIFY_EMAIL',
   'VERCEL_ENV',
   'VERCEL_GIT_COMMIT_REF',
   'VERCEL_GIT_COMMIT_SHA',
