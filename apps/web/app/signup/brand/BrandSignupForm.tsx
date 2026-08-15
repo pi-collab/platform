@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import ResendConfirmation from '@/components/ResendConfirmation'
 import { signUpWithEmail } from '@/app/login/actions'
 import { createClient } from '@/lib/supabase/client'
 import { validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/password'
@@ -107,6 +108,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
           <Link href="/login" className="signup-form__cta signup-form__cta--link">
             I&rsquo;ve verified — log in
           </Link>
+          <ResendConfirmation email={email} />
         </div>
       </>
     )

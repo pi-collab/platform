@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInWithEmail, signUpWithEmail, resetPassword } from '@/app/login/actions'
+import ResendConfirmation from '@/components/ResendConfirmation'
 import { validateNewPassword } from '@/lib/password'
 import { trackEvent } from '@/lib/analytics'
 import FormError from '@/components/FormError'
@@ -16,15 +17,24 @@ export default function EmailAuthForm() {
   const [password, setPassword] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
   const [error, setError] = useState('')
+  // Tracked separately from `error`: an unconfirmed account is not a failed
+  // login, it's a login that can't proceed yet, and it gets a resend button
+  // rather than just red text.
+  const [unconfirmed, setUnconfirmed] = useState(false)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setUnconfirmed(false)
     setLoading(true)
     const res = await signInWithEmail(email, password)
-    if (res.status === 'error') {
+    if (res.status === 'unconfirmed') {
+      setLoading(false)
+      setUnconfirmed(true)
+      setError(res.message)
+    } else if (res.status === 'error') {
       setLoading(false)
       setError(res.message)
     } else {
@@ -74,7 +84,7 @@ export default function EmailAuthForm() {
     return (
       <div style={styles.form}>
         <p style={styles.success}>{message}</p>
-        <button type="button" onClick={() => { setView('login'); setMessage(''); setError('') }} style={styles.link}>
+        <button type="button" onClick={() => { setView('login'); setMessage(''); setError(''); setUnconfirmed(false) }} style={styles.link}>
           Back to login
         </button>
       </div>
@@ -96,7 +106,7 @@ export default function EmailAuthForm() {
         <button type="submit" disabled={loading} style={styles.btn}>
           {loading ? 'Sending...' : 'Send reset link'}
         </button>
-        <button type="button" onClick={() => { setView('login'); setError('') }} style={styles.link}>
+        <button type="button" onClick={() => { setView('login'); setError(''); setUnconfirmed(false) }} style={styles.link}>
           Back to login
         </button>
       </form>
@@ -133,21 +143,22 @@ export default function EmailAuthForm() {
         />
       )}
       {error && <FormError>{error}</FormError>}
+      {unconfirmed && <ResendConfirmation email={email} />}
       <button type="submit" disabled={loading} style={styles.btn}>
         {loading ? 'Please wait...' : view === 'login' ? 'Log in' : 'Create account'}
       </button>
       {view === 'login' && (
         <>
-          <button type="button" onClick={() => { setView('reset'); setError('') }} style={styles.link}>
+          <button type="button" onClick={() => { setView('reset'); setError(''); setUnconfirmed(false) }} style={styles.link}>
             Forgot password?
           </button>
-          <button type="button" onClick={() => { setView('signup'); setError('') }} style={styles.link}>
+          <button type="button" onClick={() => { setView('signup'); setError(''); setUnconfirmed(false) }} style={styles.link}>
             Don&apos;t have an account? Sign up
           </button>
         </>
       )}
       {view === 'signup' && (
-        <button type="button" onClick={() => { setView('login'); setError('') }} style={styles.link}>
+        <button type="button" onClick={() => { setView('login'); setError(''); setUnconfirmed(false) }} style={styles.link}>
           Already have an account? Log in
         </button>
       )}

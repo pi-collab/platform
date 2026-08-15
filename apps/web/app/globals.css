@@ -957,3 +957,44 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   color: #8A6414;
   white-space: nowrap;
 }
+
+/* ── Resend confirmation ──────────────────────────────────────────────────
+   Shared by the /signup/brand confirmation screen and the /login unconfirmed
+   state. Sits under a CTA in both, so it stays quiet: this is the escape
+   hatch, not the main action. */
+.resend {
+  margin-top: 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--ink-soft, #6b6b6b);
+}
+
+.resend__button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink, #111);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.resend__button:hover:not(:disabled) { opacity: 0.7; }
+
+/* Covers the cooldown countdown too, so "Resend in 42s" reads as inert
+   status text rather than something still clickable. */
+.resend__button:disabled {
+  color: var(--ink-soft, #6b6b6b);
+  text-decoration: none;
+  cursor: default;
+}
+
+.resend__result {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--ink-soft, #6b6b6b);
+}
+
+.resend__result--error { color: #b42318; }
