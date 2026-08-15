@@ -140,6 +140,7 @@ export default async function DealsListPage({
         heldCount={heldCount ?? 0}
         status={brand.brandStatus}
         rejectionReason={brand.rejectionReason}
+        showDealsLink={false}
       />
 
       {/* ══════ HERO CARD ══════ */}

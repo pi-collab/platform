@@ -14,10 +14,14 @@ export default function HeldNotice({
   heldCount,
   status,
   rejectionReason,
+  showDealsLink = true,
 }: {
   heldCount: number
   status: string
   rejectionReason?: string | null
+  /** False on /deals itself, where the link would point at the page you are
+   *  already reading. */
+  showDealsLink?: boolean
 }) {
   if (status === 'rejected') {
     return (
@@ -45,7 +49,7 @@ export default function HeldNotice({
         Your account’s being reviewed before your first {heldCount === 1 ? 'deal goes' : 'deals go'} out
       </div>
       <p className="heldnotice__body">
-        {heldCount === 1 ? 'Your deal is' : `All ${heldCount} of your deals are`} saved and waiting — we check
+        {heldCount === 1 ? 'Your deal is' : `All ${heldCount} of your deals are`} saved and waiting. We check
         every brand once before their first deal reaches a creator. We’ll notify you as soon as you’re
         cleared, and <strong>everything you’ve sent goes out automatically</strong>. You don’t need to
         send anything again.
