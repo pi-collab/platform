@@ -10,9 +10,9 @@ import FormError from '@/components/FormError'
 
 type View = 'login' | 'signup' | 'reset' | 'confirm'
 
-export default function EmailAuthForm() {
+export default function EmailAuthForm({ initialView = 'login' }: { initialView?: View } = {}) {
   const router = useRouter()
-  const [view, setView] = useState<View>('login')
+  const [view, setView] = useState<View>(initialView)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
@@ -55,15 +55,35 @@ export default function EmailAuthForm() {
     }
     setLoading(true)
     const res = await signUpWithEmail(email, password)
-    if (res.status !== 'error') trackEvent('brand_signed_up', { method: 'email' })
+
+    // Credentials that already work: sign them in rather than reporting a
+    // failure. Stays loading — the page navigates away and unmounts this.
+    if (res.status === 'signed_in') {
+      router.push('/deals')
+      router.refresh()
+      return
+    }
+
+    // Existing account, different password. Drop them into the login view with
+    // the email carried over, so the fix is one field away.
+    if (res.status === 'exists') {
+      setLoading(false)
+      setPassword('')
+      setView('login')
+      setError(res.message)
+      return
+    }
+
     if (res.status === 'error') {
       setLoading(false)
       setError(res.message)
-    } else {
-      setLoading(false)
-      setMessage(res.message)
-      setView('confirm')
+      return
     }
+
+    trackEvent('brand_signed_up', { method: 'email' })
+    setLoading(false)
+    setMessage(res.message)
+    setView('confirm')
   }
 
   async function handleReset(e: React.FormEvent) {

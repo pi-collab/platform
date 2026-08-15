@@ -6,6 +6,21 @@ import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 import { validateWorkEmail } from '@/lib/work-email'
 
 /**
+ * Shown when signup hits an address that already has an account and the
+ * password given does not match it.
+ *
+ * DELIBERATE ENUMERATION TRADE-OFF (product decision, not an oversight):
+ * this confirms to anyone who asks that a given address is registered with
+ * Guapd. Supabase obfuscates it by default for exactly that reason. We reveal
+ * it because the alternative strands a returning brand on a screen telling
+ * them to check an inbox that will never receive anything, and because the
+ * signup surface is work-email-only, which narrows the address space an
+ * attacker can meaningfully probe. It does not eliminate it.
+ */
+const EXISTS_MESSAGE =
+  'An account with this email already exists. Log in instead, or reset your password if you have forgotten it.'
+
+/**
  * Where a signup confirmation link lands.
  *
  * /auth/confirm, NOT /auth/callback: the callback exchanges a PKCE code, which
@@ -53,7 +68,35 @@ export async function signUpWithEmail(email: string, password: string) {
 
   const supabase = createClient()
 
-  const { error } = await supabase.auth.signUp({
+  // ── Try signing in FIRST ────────────────────────────────────────────────────
+  // Someone submitting the signup form with credentials that already work is
+  // a returning user who forgot they had an account, not an error. Sign them
+  // in and let them through.
+  //
+  // Order matters: doing this before signUp avoids provoking a spurious
+  // "someone tried to sign up with your email" mail for an existing account,
+  // and means the common returning-user case never touches the mail system.
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (!signInError) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) await ensureBrandUserRow(supabase, user.id, user.email)
+    return { status: 'signed_in' as const, message: '' }
+  }
+
+  // Right password, unconfirmed account: definitely theirs, so treat it as the
+  // verification flow rather than a failed signup.
+  if (signInError.code === 'email_not_confirmed' || signInError.message.includes('Email not confirmed')) {
+    return {
+      status: 'confirm' as const,
+      message: 'Check your email for a confirmation link.',
+    }
+  }
+
+  // Anything else is ambiguous — no account, or an account with a different
+  // password. signUp below is what distinguishes them.
+
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: confirmRedirectUrl() },
@@ -61,9 +104,26 @@ export async function signUpWithEmail(email: string, password: string) {
 
   if (error) {
     if (error.message.includes('already registered')) {
-      return { status: 'error' as const, message: 'This email is already registered. Try logging in.' }
+      return { status: 'exists' as const, message: EXISTS_MESSAGE }
     }
     return { status: 'error' as const, message: error.message }
+  }
+
+  // ── Detecting an existing account ───────────────────────────────────────────
+  // With email confirmation on, Supabase does NOT error for an address that is
+  // already registered. It returns a fabricated user id, a null session, and an
+  // EMPTY identities array — deliberate anti-enumeration obfuscation. The empty
+  // array is the documented signal, and the only one available without a
+  // service-role lookup.
+  //
+  // Verified against the live project: signing up an existing confirmed address
+  // returns error=none, a user id that matches no real row, and identities=[].
+  //
+  // Without this check the caller sees the success shape and tells the user to
+  // check an inbox that will never receive anything, because Supabase sent no
+  // mail. That silent dead-end is the whole reason for this branch.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return { status: 'exists' as const, message: EXISTS_MESSAGE }
   }
 
   // With mailer_autoconfirm=false, user must confirm email before they can log in.

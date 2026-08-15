@@ -998,3 +998,24 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 }
 
 .resend__result--error { color: #b42318; }
+
+/* ── Signup: routes out of an "account already exists" error ───────────────
+   Sits directly under the FormError so the way forward is adjacent to the
+   problem, not buried at the foot of the form. */
+.signup-form__recover {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13.5px;
+}
+
+.signup-form__recover-link {
+  color: var(--ink, #111);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.signup-form__recover-link:hover { opacity: 0.7; }
+
+.signup-form__recover-sep { color: var(--ink-soft, #6b6b6b); }

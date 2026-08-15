@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ResendConfirmation from '@/components/ResendConfirmation'
 import { signUpWithEmail } from '@/app/login/actions'
@@ -19,12 +20,16 @@ import { trackEvent } from '@/lib/analytics'
  * decorative.
  */
 export default function BrandSignupForm({ oauthError }: { oauthError?: string }) {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [pwFocused, setPwFocused] = useState(false)
   const [error, setError] = useState('')
   const [errorField, setErrorField] = useState<'email' | 'password' | null>(null)
+  // Set when the address already has an account. Adds routes OUT of the error
+  // (log in / reset) rather than leaving them re-reading the same red text.
+  const [existingAccount, setExistingAccount] = useState(false)
   // The OAuth rejection arrives as a searchParam, so it can't clear itself when
   // the user edits the form — this dismisses it locally.
   const [oauthDismissed, setOauthDismissed] = useState(false)
@@ -35,6 +40,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
   function clearErrors() {
     setError('')
     setErrorField(null)
+    setExistingAccount(false)
     setOauthDismissed(true)
   }
   const [message, setMessage] = useState('')
@@ -58,6 +64,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
     if (loading) return
     setError('')
     setErrorField(null)
+    setExistingAccount(false)
 
     // Work-email rule, checked here for instant feedback. The server action
     // re-checks it — this is UX, not the gate. No bypass list on the client:
@@ -79,6 +86,22 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
 
     setLoading(true)
     const res = await signUpWithEmail(email, password)
+
+    // Credentials that already work: a returning user, not a signup. Stay in
+    // the loading state — the page navigates away and unmounts this form.
+    if (res.status === 'signed_in') {
+      router.push('/onboarding')
+      router.refresh()
+      return
+    }
+
+    if (res.status === 'exists') {
+      setLoading(false)
+      setError(res.message)
+      setErrorField('email')
+      setExistingAccount(true)
+      return
+    }
 
     if (res.status === 'error') {
       setLoading(false)
@@ -203,6 +226,14 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
                 ? 'That Google account uses a personal email. Please use your work email, like you@brand.com.'
                 : `Sign-in failed (${oauthError}). Please try again.`)}
           </FormError>
+        )}
+
+        {existingAccount && (
+          <div className="signup-form__recover">
+            <Link href="/login" className="signup-form__recover-link">Log in</Link>
+            <span className="signup-form__recover-sep">or</span>
+            <Link href="/login?view=reset" className="signup-form__recover-link">Reset password</Link>
+          </div>
         )}
 
         <button type="submit" disabled={loading} className="signup-form__cta cta">

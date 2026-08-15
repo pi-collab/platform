@@ -13,7 +13,7 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: { error?: string; view?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -73,7 +73,14 @@ export default async function LoginPage({
           </FormError>
         )}
 
-        <EmailAuthForm />
+        {/* Only these two are linkable. 'confirm' is a post-submit state and
+            must not be reachable by URL, or it would show a "check your email"
+            screen for a mail nobody sent. */}
+        <EmailAuthForm
+          initialView={searchParams.view === 'reset' || searchParams.view === 'signup'
+            ? searchParams.view
+            : 'login'}
+        />
 
         <div style={styles.divider}>
           <hr style={styles.dividerLine} />
