@@ -4,7 +4,17 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { resetAnalytics } from '@/lib/analytics'
 
-export default function SignOutButton({ redirectTo = '/login' }: { redirectTo?: string }) {
+export default function SignOutButton({
+  redirectTo = '/login',
+  className,
+  label = 'Sign out',
+}: {
+  redirectTo?: string
+  /** When given, replaces the default inline styling entirely so the button can
+   *  adopt a page's own design (e.g. the onboarding nav pill). */
+  className?: string
+  label?: string
+}) {
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -18,8 +28,12 @@ export default function SignOutButton({ redirectTo = '/login' }: { redirectTo?: 
   }
 
   return (
-    <button onClick={handleSignOut} style={styles.btn}>
-      Sign out
+    <button
+      onClick={handleSignOut}
+      className={className}
+      style={className ? undefined : styles.btn}
+    >
+      {label}
     </button>
   )
 }

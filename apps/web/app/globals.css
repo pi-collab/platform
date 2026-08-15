@@ -1019,3 +1019,349 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .signup-form__recover-link:hover { opacity: 0.7; }
 
 .signup-form__recover-sep { color: var(--ink-soft, #6b6b6b); }
+
+/* ══ Brand signup step 2 — "Brand Signup Profile - Paged Flow step 2" ═══════ */
+
+.onboard-shell {
+  /* Same scoping trap as .signup-shell: :root maps the font tokens to
+     Sora/Inter and never defines --card, while the design families live only
+     under .brand-main / .creator-main. This page sits in neither, so the tokens
+     are redeclared here. Values are guapd-skin.css, the design's stated single
+     source of truth. */
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-body: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+
+  --card: #FFFFFF;
+  --ink: #12151C;
+  --ink-soft: #565C68;
+  --ink-faint: #878D99;
+  --neon: #E8FF66;
+  --neon-deep: #D2F04A;
+
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #F5F7FA;
+  font-family: var(--font-ui);
+  color: var(--ink);
+}
+
+/* Dark band behind the nav and headline. Fixed 319px in the design; the card
+   below overlaps its lower edge, which is what produces the layered look. */
+.onboard-shell__dark {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 319px;
+  background: #181C24;
+}
+
+.onboard-shell__rule {
+  position: absolute;
+  top: 319px; left: 0; right: 0;
+  height: 2px;
+  background: var(--neon);
+}
+
+.onboard-nav-wrap {
+  position: relative;
+  z-index: 2;
+  padding: 22px clamp(20px, 4vw, 48px) 0;
+}
+
+.onboard-nav {
+  position: relative;
+  z-index: 4;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  padding: 9px 12px 9px 20px;
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(18, 21, 28, .03),
+    0 8px 16px rgba(18, 21, 28, .04),
+    0 32px 64px rgba(18, 21, 28, .05);
+}
+
+.onboard-nav__logo { height: 19px; width: auto; display: block; }
+
+.onboard-nav__cta {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--neon);
+  border: none;
+  border-radius: 999px;
+  padding: 9px 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.onboard-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(clamp(20px, 3vw, 32px) + 60px) clamp(20px, 4vw, 48px) 0;
+}
+
+.onboard-head__title {
+  width: 100%;
+  margin: 0 0 28px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(36px, 4.4vw, 52px);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #F5F7FA;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.onboard-head__sub {
+  margin: 0;
+  max-width: 560px;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: rgba(245, 247, 250, .85);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.onboard-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  padding: 96px clamp(20px, 4vw, 48px) 80px;
+}
+
+.onboard-card {
+  width: 100%;
+  max-width: 680px;
+  background: #fff;
+  border: 1px solid rgba(24, 28, 36, .08);
+  border-radius: 24px;
+  box-shadow: 0 40px 90px -36px rgba(24, 28, 36, .3);
+  padding: clamp(44px, 5.5vw, 64px);
+}
+
+.onboard-field + .onboard-field { margin-top: 18px; }
+
+.onboard-label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.onboard-label__optional {
+  margin-left: 5px;
+  text-transform: none;
+  font-weight: 500;
+  color: var(--ink-faint);
+  letter-spacing: 0;
+}
+
+/* The design's shared field shell. */
+.onboard-shell .fld-box {
+  outline: none;
+  border: 1.5px solid rgba(24, 28, 36, .14);
+  background: #fff;
+  border-radius: 13px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  color: var(--ink);
+  padding: 0 18px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.onboard-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 58px;
+}
+
+/* The design leaves the select at the .fld-box default of 54px while its text
+   inputs are overridden to 58px, so adjacent fields sit 4px apart. Matched to
+   58px here — a visible step between stacked fields reads as a bug, not a
+   choice. Revert this one line to track the export exactly. */
+.onboard-select {
+  height: 58px;
+  appearance: none;
+  -webkit-appearance: none;
+  font-weight: 500;
+  color: var(--ink);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235C5E52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+.onboard-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+  padding: 0;
+}
+
+.onboard-prefix {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+
+.onboard-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 22px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.onboard-terms input { margin-top: 2px; flex-shrink: 0; accent-color: var(--ink); }
+.onboard-terms a { color: var(--ink); font-weight: 600; text-decoration: underline; }
+
+.onboard-cta {
+  width: 100%;
+  height: 58px;
+  border: none;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15.5px;
+  margin-top: 34px;
+  cursor: pointer;
+}
+
+.onboard-cta:disabled { opacity: .6; cursor: default; transform: none; filter: none; }
+
+.onboard-foot {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-align: center;
+  margin: 18px 0 0;
+}
+
+/* ── Celebration ─────────────────────────────────────────────────────────── */
+.onboard-celebrate {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 28, 36, .5);
+  backdrop-filter: blur(4px);
+}
+
+.onboard-celebrate__card {
+  width: min(420px, 88vw);
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 40px 90px -20px rgba(24, 28, 36, .5);
+  padding: clamp(36px, 4vw, 44px);
+  text-align: center;
+}
+
+.onboard-celebrate__badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--neon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: 0 0 0 8px rgba(232, 255, 102, .16);
+}
+
+.onboard-celebrate__title {
+  margin: 22px 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 32px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.onboard-celebrate__sub {
+  margin: 10px 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.onboard-celebrate__cta {
+  width: 100%;
+  height: 52px;
+  border: none;
+  border-radius: 13px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14.5px;
+  margin-top: 24px;
+  cursor: pointer;
+}
+
+@keyframes onboardPop {
+  0%   { transform: scale(.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes onboardPopIn {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.onboard-celebrate__card { animation: onboardPopIn .3s cubic-bezier(.22, 1, .36, 1); }
+.onboard-celebrate__badge { animation: onboardPop .6s cubic-bezier(.22, 1, .36, 1) .1s both; }
+
+/* The design is a desktop export and sets white-space:nowrap on both header
+   lines, which forces a horizontal scrollbar on a phone. Released below the
+   width where they stop fitting. */
+@media (max-width: 720px) {
+  .onboard-head__title,
+  .onboard-head__sub { white-space: normal; }
+  .onboard-body { padding-top: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboard-celebrate__card,
+  .onboard-celebrate__badge { animation: none; }
+}
+
+/* Fields carry their own spacing; this exists so the form has a hook and the
+   card's padding isn't fighting a default margin. */
+.onboard-form { margin: 0; }
