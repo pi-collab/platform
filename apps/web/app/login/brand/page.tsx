@@ -20,7 +20,7 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; view?: string }
+  searchParams: { error?: string; view?: string; reset?: string }
 }) {
   // Signup used to be a view toggled inside this page. It has its own route
   // now, so anything still pointing here goes there instead of finding a view
@@ -89,6 +89,12 @@ export default async function LoginPage({
   return (
     <AuthShell navRight={<CreateAccountNav />}>
       <div className="signup-panel__inner">
+        {searchParams.reset === 'success' && (
+          <p className="signup-notice" role="status">
+            Password updated. Sign in with your new password.
+          </p>
+        )}
+
         {searchParams.error && (
           <FormError>
             {searchParams.error === 'exchange_failed'

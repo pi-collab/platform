@@ -6,8 +6,12 @@ import { validateNewPassword, MIN_PASSWORD_LENGTH } from '@/lib/password'
 import FormError from '@/components/FormError'
 
 /**
- * Owns its headings as well as its fields, because both change once the
- * password has been updated and a server component cannot react to that.
+ * Owns its heading as well as its fields, so the panel reads as one unit.
+ *
+ * There is no success state here. On success the action redirects to
+ * /login/brand — anything rendered on this page after the password changes is
+ * re-evaluated against the session that same action revoked, which turns a
+ * completed reset into "this link is no longer valid".
  */
 export default function ResetPasswordForm({ email }: { email: string }) {
   const [password, setPassword] = useState('')
@@ -15,7 +19,6 @@ export default function ResetPasswordForm({ email }: { email: string }) {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [done, setDone] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -32,9 +35,11 @@ export default function ResetPasswordForm({ email }: { email: string }) {
     setLoading(true)
     const res = await setNewPassword(password, confirmPw)
 
-    if (res.status === 'ok') {
-      setDone(true)
-      setLoading(false)
+    // Not normally reached: the action redirects, so this promise does not
+    // resolve. Kept as a hard fallback if that ever changes — a soft push
+    // would serve the router's cached, still-authenticated payload.
+    if (res?.status === 'ok') {
+      window.location.href = '/login/brand?reset=success'
       return
     }
 
@@ -44,30 +49,6 @@ export default function ResetPasswordForm({ email }: { email: string }) {
       return
     }
     setError(res.message)
-  }
-
-  if (done) {
-    return (
-      <>
-        <h2 className="signup-panel__title">Password updated.</h2>
-        <div className="signup-form">
-          <p className="signup-form__success">
-            You&rsquo;ve been signed out everywhere else. Sign in with your new password.
-          </p>
-          {/*
-            A real anchor with a FULL page load, not router.push. The server
-            action cleared the auth cookies, but Next's client router cache
-            still holds the RSC payload from when this page rendered
-            authenticated — a soft navigation can serve that stale state. A hard
-            load guarantees /login/brand re-renders against the signed-out
-            session.
-          */}
-          <a href="/login/brand" className="signup-form__cta signup-form__cta--link">
-            Go to log in
-          </a>
-        </div>
-      </>
-    )
   }
 
   return (

@@ -1,6 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { validateNewPassword } from '@/lib/password'
 import { RECOVERY_COOKIE } from '@/lib/recovery-cookie'
@@ -55,8 +56,11 @@ export async function setNewPassword(password: string, confirmation: string): Pr
   //        success screen's "go to login" CTA bounce straight back out.
   //      - Signing in again is what proves the new password actually works.
   //
-  //    The success screen is client state, so it still renders after the
-  //    session is gone.
+  //    The success screen CANNOT live on this page. Mutating cookies in a
+  //    server action makes Next re-render the route's server components, and
+  //    that fresh payload replaces the whole tree — client state included. The
+  //    re-render sees no session and no recovery marker, so it renders "this
+  //    link is no longer valid" over a reset that had just succeeded.
   const { error: signOutErr } = await supabase.auth.signOut({ scope: 'global' })
   if (signOutErr) {
     // Non-fatal: the password DID change. Log it rather than telling the user
@@ -64,5 +68,8 @@ export async function setNewPassword(password: string, confirmation: string): Pr
     console.error('[reset-password] failed to revoke sessions:', signOutErr.message)
   }
 
-  return { status: 'ok' }
+  // Leave the page entirely. Redirecting is not cosmetic here — it is the only
+  // way to show success, since anything rendered on /reset-password is
+  // re-evaluated against the session this action just revoked.
+  redirect('/login/brand?reset=success')
 }
