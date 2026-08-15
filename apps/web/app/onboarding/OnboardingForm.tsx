@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { submitOnboarding, type OnboardingState, BRAND_CATEGORIES } from './actions'
+import { submitOnboarding, type OnboardingState } from './actions'
+import { BRAND_CATEGORIES } from '@/lib/brand-categories'
 import FormError from '@/components/FormError'
 
 /** Seconds the celebration holds before it moves on by itself. */

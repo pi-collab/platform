@@ -4,43 +4,12 @@ import { createClient }      from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies }           from 'next/headers'
 import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
+import { BRAND_CATEGORIES } from '@/lib/brand-categories'
 
 export type OnboardingState =
   | { status: 'error'; error: string }
   | { status: 'ok' }
   | null
-
-/**
- * Industry options. The design's eleven, plus the four this product already
- * used, per the decision to keep both rather than replace one with the other.
- *
- * Two design entries were mapped rather than duplicated: "Finance" is dropped
- * in favour of the existing 'BFSI/Fintech', which is the wedge's own language
- * and already stored on live rows. 'EdTech' and 'Education' are BOTH kept —
- * they are not the same thing (a learning app is not a university), and
- * 'EdTech' is a value live brands already carry.
- *
- * The exact strings are stored on brands.category. Renaming one does not
- * migrate existing rows, so treat them as data, not labels.
- *
- * Alphabetical, because a thirteen-item list is scanned rather than read.
- */
-export const BRAND_CATEGORIES = [
-  'Beauty & Fashion',
-  'BFSI/Fintech',
-  'D2C',
-  'EdTech',
-  'Education',
-  'Entertainment & Media',
-  'Food & Beverage',
-  'Gaming',
-  'Health & Wellness',
-  'Home & Lifestyle',
-  'Sports & Fitness',
-  'Tech & Electronics',
-  'Travel & Hospitality',
-  'Other',
-] as const
 
 export async function submitOnboarding(
   _prev: OnboardingState,
@@ -94,7 +63,7 @@ export async function submitOnboarding(
     return { status: 'error' as const, error: 'Instagram handle must be 60 characters or fewer.' }
 
   // Industry must be one of the allowed values
-  if (!(BRAND_CATEGORIES as readonly string[]).includes(category))
+  if (!BRAND_CATEGORIES.includes(category))
     return { status: 'error' as const, error: 'Invalid industry selected.' }
 
   // Website: if provided, must be a valid http/https URL

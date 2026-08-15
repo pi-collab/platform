@@ -1,5 +1,9 @@
 'use client'
 
+// Shared with signup: a second list here meant a brand could pick a category
+// at onboarding that this dropdown did not offer, blanking it on first save.
+import { BRAND_CATEGORIES } from '@/lib/brand-categories'
+
 import { useState, useTransition, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -50,7 +54,6 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitter', label: 'X (Twitter)', prefix: '@', placeholder: 'yourbrand' },
 ]
 
-const BRAND_CATEGORIES = ['D2C', 'Fashion', 'Tech & finance', 'Beauty', 'Lifestyle', 'FMCG', 'Fintech', 'Health & fitness', 'Food & beverage', 'Education', 'Gaming', 'Travel', 'Other']
 
 /* ── Section Config ─────────────────────────────────────────────── */
 
