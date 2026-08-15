@@ -4,7 +4,6 @@ import CreatorSignInButton from '@/components/CreatorSignInButton'
 import PhoneLogin from './PhoneLogin'
 import { safeNext } from '@/lib/safe-next'
 import FormError from '@/components/FormError'
-import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = {
   title: 'Creator login — Guapd',
@@ -84,13 +83,11 @@ export default async function CreatorLoginPage({
           <a href="/signup/creator" style={styles.footerLink}>Sign up as a creator</a>
         </p>
 
-        {/* Mirrors the creator link on the brand login. */}
         <p style={styles.footer}>
           Looking to book creators?{' '}
           <a href="/login" style={styles.footerLink}>Log in as a brand</a>
         </p>
 
-        <AuthSupportLink className="auth-support auth-support--center" />
       </div>
     </main>
   )

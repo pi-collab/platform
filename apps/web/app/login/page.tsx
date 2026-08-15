@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import BrandLoginForm from './BrandLoginForm'
 import FormError from '@/components/FormError'
-import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = {
   title: 'Log in — Guapd',
@@ -143,10 +142,7 @@ function Shell({
           </div>
         </section>
 
-        <section className="signup-panel">
-          {children}
-          <AuthSupportLink />
-        </section>
+        <section className="signup-panel">{children}</section>
       </div>
     </main>
   )

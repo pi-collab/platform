@@ -2,7 +2,6 @@ import { redirect }     from 'next/navigation'
 import SignOutButton    from '@/components/SignOutButton'
 import { createClient } from '@/lib/supabase/server'
 import OnboardingForm   from './OnboardingForm'
-import AuthSupportLink from '@/components/AuthSupportLink'
 
 export const metadata = { title: 'Your brand — Guapd', robots: { index: false, follow: false } }
 
@@ -55,11 +54,8 @@ export default async function OnboardingPage() {
       </div>
 
       <div className="onboard-body">
-        <div>
-          <div className="onboard-card">
-            <OnboardingForm />
-          </div>
-          <AuthSupportLink className="auth-support auth-support--center" />
+        <div className="onboard-card">
+          <OnboardingForm />
         </div>
       </div>
     </main>

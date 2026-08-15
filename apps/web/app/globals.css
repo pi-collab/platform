@@ -187,7 +187,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-
 img, video { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font-family: inherit; }
@@ -786,7 +785,6 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   border-color: #C43D3D;
   box-shadow: 0 0 0 4px rgba(196, 61, 61, .13);
 }
-
 
 .fld-box__input {
   flex: 1;
@@ -1432,32 +1430,14 @@ button.signup-form__recover-link {
 }
 
 .signup-form__cross-link {
-  color: var(--ink);
+  /* Same ink as the question it follows — the underline alone carries that it
+     is a link. Full --ink here read as a third emphasis level competing with
+     the Sign in button. */
+  color: var(--ink-faint);
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.signup-form__cross-link:hover { color: var(--ink-soft); }
+.signup-form__cross-link:hover { color: var(--ink); }
 
-/* ── "Can't access your account? Contact us" ───────────────────────────────
-   Last line on every auth screen, and the only escape that doesn't assume the
-   user can still help themselves. Quiet by default: it should be findable when
-   someone is stuck, not compete with the form when they aren't. */
-.auth-support {
-  margin: 28px 0 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--ink-faint, #878D99);
-}
-
-.auth-support--center { text-align: center; }
-
-.auth-support__link {
-  color: var(--ink, #12151C);
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.auth-support__link:hover { color: var(--ink-soft, #565C68); }
