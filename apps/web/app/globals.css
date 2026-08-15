@@ -1385,3 +1385,13 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   justify-content: center;
   margin-bottom: 20px;
 }
+
+/* The recover row carries a Link on signup and a view-switching button on
+   login. Same affordance, so the button is stripped back to match the anchor. */
+button.signup-form__recover-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { signInWithEmail, resetPassword } from '@/app/login/actions'
 import ResendConfirmation from '@/components/ResendConfirmation'
 import FormError from '@/components/FormError'
@@ -30,12 +31,16 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
   // An unconfirmed account is not a failed login, it's one that can't proceed
   // yet, so it gets a resend control rather than only red text.
   const [unconfirmed, setUnconfirmed] = useState(false)
+  // Which way out to offer alongside the error: reset the password they got
+  // wrong, or create the account they don't have.
+  const [recover, setRecover] = useState<'reset' | 'signup' | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
   function clearErrors() {
     setError('')
     setUnconfirmed(false)
+    setRecover(null)
   }
 
   function switchTo(next: View) {
@@ -68,9 +73,10 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
       setError(res.message)
       return
     }
-    if (res.status === 'error') {
+    if (res.status === 'wrong_password' || res.status === 'no_account') {
       setLoading(false)
       setError(res.message)
+      setRecover(res.status === 'wrong_password' ? 'reset' : 'signup')
       return
     }
 
@@ -228,6 +234,19 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
 
         {error && <FormError>{error}</FormError>}
         {unconfirmed && <ResendConfirmation email={email} />}
+
+        {recover === 'reset' && (
+          <div className="signup-form__recover">
+            <button type="button" onClick={() => switchTo('reset')} className="signup-form__recover-link lnk">
+              Reset password
+            </button>
+          </div>
+        )}
+        {recover === 'signup' && (
+          <div className="signup-form__recover">
+            <Link href="/signup/brand" className="signup-form__recover-link">Create an account</Link>
+          </div>
+        )}
 
         <button type="submit" disabled={loading} className="signup-form__cta cta">
           {loading ? 'Signing in…' : 'Sign in'}

@@ -2,6 +2,7 @@
 
 import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 import { validateWorkEmail } from '@/lib/work-email'
 
@@ -186,6 +187,43 @@ export async function resendConfirmation(email: string) {
   }
 }
 
+/**
+ * Does an account exist for this address?
+ *
+ * Two sources, cheapest first:
+ *   1. our `users` table — indexed, one row, covers every normal account
+ *   2. auth.users — authoritative, and the only place an account shows up if it
+ *      confirmed but never completed a sign-in. That state is not theoretical:
+ *      social@guapd.com sat in it for an hour today, before signup confirmation
+ *      started creating the row.
+ *
+ * The fallback only runs when step 1 finds nothing, which is precisely the case
+ * we must not get wrong — telling a real user "no account" sends them to signup,
+ * where they are told the account already exists, and the loop closes.
+ *
+ * The listUsers page cap is 1000. Beyond that this needs an indexed lookup
+ * (a SECURITY DEFINER function over auth.users), so it warns rather than
+ * silently starting to report real accounts as missing.
+ */
+async function brandAccountExists(email: string): Promise<boolean> {
+  const admin = createAdminClient()
+
+  const { data: row } = await admin
+    .from('users').select('id').ilike('email', email).maybeSingle()
+  if (row) return true
+
+  const { data: list, error } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  if (error) {
+    console.error(`[auth] brandAccountExists lookup failed: ${error.message}`)
+    return false
+  }
+  if (list.users.length >= 1000) {
+    console.warn('[auth] brandAccountExists hit the 1000-user page cap — needs an indexed lookup')
+  }
+  const target = email.trim().toLowerCase()
+  return list.users.some((u: { email?: string }) => u.email?.toLowerCase() === target)
+}
+
 export async function signInWithEmail(email: string, password: string) {
   const supabase = createClient()
 
@@ -205,7 +243,24 @@ export async function signInWithEmail(email: string, password: string) {
         message: 'Confirm your email before logging in. Check your inbox for the link.',
       }
     }
-    return { status: 'error' as const, message: 'Invalid email or password.' }
+    // Supabase returns invalid_credentials for BOTH a wrong password and an
+    // address with no account, on purpose. We separate them.
+    //
+    // This reveals whether an account exists — but signup already does, by
+    // explicit decision (see EXISTS_MESSAGE). Withholding it HERE would protect
+    // nothing, since the same attacker can just ask the signup form; it would
+    // only mean the honest user gets less help than the attacker.
+    if (await brandAccountExists(email)) {
+      return {
+        status: 'wrong_password' as const,
+        message: 'That password is not right. Try again, or reset it.',
+      }
+    }
+
+    return {
+      status: 'no_account' as const,
+      message: 'No account found for this email. Check the address, or create an account.',
+    }
   }
 
   // Session established — ensure users row exists (same logic as OAuth callback)
