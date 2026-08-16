@@ -126,16 +126,32 @@ export default function NotifyPreferences({
       {waOn && (
         <div className="notifybox__field">
           <div className="notifybox__input">
-            <select
-              value={dial}
-              onChange={(e) => { setDial(e.target.value); touch() }}
-              aria-label="Country code"
-              className="notifybox__dial"
-            >
-              {DIAL_CODES.map((d) => (
-                <option key={d.code} value={d.code}>{d.code}</option>
-              ))}
-            </select>
+            {/* A real <select> carrying the interaction and accessibility,
+                sitting invisibly over a styled display. A native select forces
+                the closed state and the option list to share one string: full
+                country names overflow this narrow field, and bare ISO codes
+                are unreadable in the list. This way the field shows "IN +91"
+                and the list reads "India +91". */}
+            <span className="notifybox__dial">
+              <span className="notifybox__dial-text" aria-hidden="true">
+                {DIAL_CODES.find((d) => d.code === dial)?.iso ?? ''} {dial}
+              </span>
+              <svg className="notifybox__dial-caret" aria-hidden="true" width="12" height="12"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                   strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+              <select
+                value={dial}
+                onChange={(e) => { setDial(e.target.value); touch() }}
+                aria-label="Country code"
+                className="notifybox__dial-native"
+              >
+                {DIAL_CODES.map((d) => (
+                  <option key={d.iso} value={d.code}>{d.label} {d.code}</option>
+                ))}
+              </select>
+            </span>
             <span className="notifybox__rule" />
             <input
               type="tel"

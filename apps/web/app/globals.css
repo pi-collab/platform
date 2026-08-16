@@ -1881,23 +1881,39 @@ button.signup-form__recover-link {
 .review-step__title { font-family: var(--font-ui); font-weight: 600; font-size: 15.5px; color: var(--ink); }
 .review-step__body { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); margin-top: 2px; }
 
-/* Country code select inside the WhatsApp field. Styled to read as the
-   prefix text it replaces, not as a second control competing with the input. */
+/* Country code control inside the WhatsApp field. Reads as the prefix text it
+   replaces, not as a second control competing with the input. The native
+   select is transparent and stretched over this, so it keeps the keyboard and
+   screen-reader behaviour while the visible text stays compact. */
 .notifybox__dial {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
-  padding: 0 14px 0 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
   font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 500;
   color: var(--ink-soft);
   cursor: pointer;
-  flex-shrink: 0;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23878D99' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 2px center;
 }
 
-.notifybox__dial:focus { outline: none; color: var(--ink); }
+.notifybox__dial-text { white-space: nowrap; }
+.notifybox__dial-caret { color: var(--ink-faint); flex-shrink: 0; }
+
+.notifybox__dial-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  cursor: pointer;
+  /* Wider than the visible text on some platforms; clipped by the parent. */
+  font-size: 16px;
+}
+
+/* Focus lands on the hidden select, so the ring has to be drawn by the
+   wrapper or keyboard users get no indication at all. */
+.notifybox__dial:focus-within .notifybox__dial-text { color: var(--ink); }
+.notifybox__dial:focus-within .notifybox__dial-caret { color: var(--ink); }

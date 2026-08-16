@@ -44,26 +44,65 @@ export function isValidIndianMobile(raw: string): boolean {
 /**
  * Dial codes offered for a WhatsApp number.
  *
- * India first because that is the roster, but a creator with an Indian login
- * number may well read WhatsApp on a foreign one — that is exactly what this
- * exists for. Deliberately a short list rather than all ~200: a long select is
- * worse to use, and anything missing can be added in a line.
+ * India first because that is the roster, then the places Indian creators
+ * actually have second numbers — the Gulf, the UK, North America, Singapore
+ * and Australia — then the rest alphabetically.
+ *
+ * `iso` is what the closed field shows, because "IN +91" fits a narrow control
+ * and "India" does not. The full name appears in the open list, where a
+ * two-letter code alone would be unreadable for anyone who does not already
+ * know AE from AU.
+ *
+ * Not all ~200 countries: a list nobody can scan is worse than a short one,
+ * and adding a row is one line.
  */
-export const DIAL_CODES: { code: string; label: string }[] = [
-  { code: '+91', label: 'India' },
-  { code: '+44', label: 'United Kingdom' },
-  { code: '+1', label: 'United States / Canada' },
-  { code: '+971', label: 'United Arab Emirates' },
-  { code: '+65', label: 'Singapore' },
-  { code: '+61', label: 'Australia' },
-  { code: '+60', label: 'Malaysia' },
-  { code: '+49', label: 'Germany' },
-  { code: '+33', label: 'France' },
-  { code: '+31', label: 'Netherlands' },
-  { code: '+62', label: 'Indonesia' },
-  { code: '+94', label: 'Sri Lanka' },
-  { code: '+977', label: 'Nepal' },
-  { code: '+880', label: 'Bangladesh' },
+export const DIAL_CODES: { code: string; iso: string; label: string }[] = [
+  { code: '+91', iso: 'IN', label: 'India' },
+  { code: '+971', iso: 'AE', label: 'United Arab Emirates' },
+  { code: '+44', iso: 'UK', label: 'United Kingdom' },
+  { code: '+1', iso: 'US', label: 'United States / Canada' },
+  { code: '+65', iso: 'SG', label: 'Singapore' },
+  { code: '+61', iso: 'AU', label: 'Australia' },
+  { code: '+966', iso: 'SA', label: 'Saudi Arabia' },
+  { code: '+974', iso: 'QA', label: 'Qatar' },
+  { code: '+965', iso: 'KW', label: 'Kuwait' },
+  { code: '+968', iso: 'OM', label: 'Oman' },
+  { code: '+973', iso: 'BH', label: 'Bahrain' },
+  { code: '+60', iso: 'MY', label: 'Malaysia' },
+  { code: '+62', iso: 'ID', label: 'Indonesia' },
+  { code: '+66', iso: 'TH', label: 'Thailand' },
+  { code: '+63', iso: 'PH', label: 'Philippines' },
+  { code: '+84', iso: 'VN', label: 'Vietnam' },
+  { code: '+81', iso: 'JP', label: 'Japan' },
+  { code: '+82', iso: 'KR', label: 'South Korea' },
+  { code: '+86', iso: 'CN', label: 'China' },
+  { code: '+852', iso: 'HK', label: 'Hong Kong' },
+  { code: '+64', iso: 'NZ', label: 'New Zealand' },
+  { code: '+49', iso: 'DE', label: 'Germany' },
+  { code: '+33', iso: 'FR', label: 'France' },
+  { code: '+34', iso: 'ES', label: 'Spain' },
+  { code: '+39', iso: 'IT', label: 'Italy' },
+  { code: '+31', iso: 'NL', label: 'Netherlands' },
+  { code: '+41', iso: 'CH', label: 'Switzerland' },
+  { code: '+46', iso: 'SE', label: 'Sweden' },
+  { code: '+47', iso: 'NO', label: 'Norway' },
+  { code: '+45', iso: 'DK', label: 'Denmark' },
+  { code: '+353', iso: 'IE', label: 'Ireland' },
+  { code: '+351', iso: 'PT', label: 'Portugal' },
+  { code: '+48', iso: 'PL', label: 'Poland' },
+  { code: '+7', iso: 'RU', label: 'Russia / Kazakhstan' },
+  { code: '+90', iso: 'TR', label: 'Turkey' },
+  { code: '+27', iso: 'ZA', label: 'South Africa' },
+  { code: '+234', iso: 'NG', label: 'Nigeria' },
+  { code: '+254', iso: 'KE', label: 'Kenya' },
+  { code: '+20', iso: 'EG', label: 'Egypt' },
+  { code: '+55', iso: 'BR', label: 'Brazil' },
+  { code: '+52', iso: 'MX', label: 'Mexico' },
+  { code: '+54', iso: 'AR', label: 'Argentina' },
+  { code: '+94', iso: 'LK', label: 'Sri Lanka' },
+  { code: '+977', iso: 'NP', label: 'Nepal' },
+  { code: '+880', iso: 'BD', label: 'Bangladesh' },
+  { code: '+92', iso: 'PK', label: 'Pakistan' },
 ]
 
 /**
