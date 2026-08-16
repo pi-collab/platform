@@ -100,11 +100,11 @@ export default function CreatorProfileForm() {
             both, and finds they cannot. Single-select is still right: each
             platform carries its own handle, so a real multi-select means a
             handle field per platform — exactly the weight this step avoids.
-            The rest go on the storefront. */}
-        <label className="onboard-label">
-          Primary platform
-          <span className="onboard-label__optional">you can add others later</span>
-        </label>
+            The rest go on the storefront.
+
+            No "you can add others later" hint: "primary" already says there
+            are others, and the card footer already promises them. */}
+        <label className="onboard-label">Primary platform</label>
         {/* Buttons rather than a select: two options are faster to hit than to
             open, and the choice is visible without interacting. */}
         <div className="seg-row">
