@@ -2271,7 +2271,10 @@ button.signup-form__cross-link {
     letter-spacing: -0.01em;
   }
 
-  .signup-panel__title--sm { font-size: 26px; }
+  /* The verify screen's heading is the SAME size as the entry screen's on a
+     phone — only the desktop export shrinks it, because there it competes
+     with a 38px display face. */
+  .signup-panel__title--sm { font-size: 32px; }
   .signup-panel__sub { font-size: 14px; }
 
   /* The export has 16px between the heading and the first field. Screens that
@@ -2310,10 +2313,26 @@ button.signup-form__cross-link {
   .signup-form__cross { text-align: center; margin-top: 28px; }
   .signup-form__forgot { text-align: center; }
 
-  /* Six cells in a 390px column: the desktop gap leaves them too narrow to
-     read a digit in. */
-  .otp { gap: 6px; }
-  .otp__cell { height: 52px; font-size: 20px; border-radius: 14px; }
+  /* Six 44px cells in a 390px column, spread across the full width rather
+     than flexed to fill: the export fixes their width so the row keeps its
+     rhythm instead of the cells stretching. */
+  .otp {
+    gap: 7px;
+    margin-top: 26px;
+    justify-content: space-between;
+  }
+
+  .otp__cell {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 52px;
+    font-size: 20px;
+    border-radius: 14px;
+  }
+
+  .otp-sentto { font-size: 14px; margin-top: 10px; }
+  .otp-hint { margin-top: 16px; }
+  .otp-resend-row { margin-top: 16px; }
 }
 
 /* ══ Profile / status shell — mobile ══════════════════════════════════════
@@ -2376,27 +2395,60 @@ button.signup-form__cross-link {
 
   .review-sub strong { color: var(--ink); }
 
+  /* On the STATUS screens the exports move the badge and heading inside the
+     card. They live in a separate container here, so head and card are styled
+     as the two halves of one continuous card instead — same result, no DOM
+     change to make a breakpoint work. */
   .review-head,
   .review-head--nonav {
-    align-items: flex-start;
-    padding: 34px 26px 0;
+    width: min(338px, 100%);
+    margin: 26px auto 0;
+    padding: 28px 22px 0;
+    align-items: center;
+    background: #fff;
+    border: 1.5px solid rgba(24, 28, 36, .1);
+    border-bottom: none;
+    border-radius: 20px 20px 0 0;
   }
 
-  .onboard-body { padding: 26px 26px 56px; }
+  .review-title,
+  .approved-title,
+  .denied-title {
+    font-size: 26px;
+    line-height: 1.35;
+    text-align: center;
+    margin-top: 22px;
+  }
 
-  /* No card: the page is the card. */
+  .review-sub { text-align: center; }
+
+  .onboard-body { padding: 0 26px 56px; }
+
   .onboard-card {
+    width: min(338px, 100%);
+    max-width: 338px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1.5px solid rgba(24, 28, 36, .1);
+    border-top: none;
+    border-radius: 0 0 20px 20px;
+    box-shadow: none;
+    padding: 0 22px 32px;
+  }
+
+  /* The PROFILE step is the exception: its export has no card at all, so the
+     form runs down the page. */
+  .onboard-card--bare {
+    width: auto;
+    max-width: none;
     background: none;
     border: none;
-    box-shadow: none;
     border-radius: 0;
     padding: 0;
   }
-
-  .onboard-card--flush { padding: 0; }
   .notifybox { margin: 0; }
-  .review-next { padding: 28px 0 0; }
-  .denied-card { padding: 0; }
+  .review-next { padding: 24px 0 0; }
+  .denied-card { padding: 0 22px 32px; }
 
   .onboard-cta,
   .approved-cta { border-radius: 16px; }

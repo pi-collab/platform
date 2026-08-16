@@ -44,7 +44,7 @@ export default async function CreatorOnboardingPage() {
       </div>
 
       <div className="onboard-body">
-        <div className="onboard-card">
+        <div className="onboard-card onboard-card--bare">
           <CreatorProfileForm />
         </div>
       </div>
