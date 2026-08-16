@@ -143,37 +143,38 @@ export default function CreatorSignupForm() {
             autoFocus
           />
 
+          {/* While the timer runs this is a status line, not a control; once it
+              expires the control replaces it. Showing both meant "Resend code"
+              appeared twice on one screen, once as a countdown and once as a
+              dead button. */}
           {error ? (
             <FormError>{error}</FormError>
-          ) : (
+          ) : resendIn > 0 ? (
             <p className="otp-hint">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8" /><path d="M3 4v4h4" />
               </svg>
-              {resendIn > 0
-                ? `Resend code in 0:${String(resendIn).padStart(2, '0')}`
-                : 'You can request a new code now.'}
+              Resend code in 0:{String(resendIn).padStart(2, '0')}
             </p>
-          )}
+          ) : null}
 
           <button type="submit" disabled={loading || code.length < 6} className="signup-form__cta cta">
             {loading ? 'Verifying…' : error ? 'Try again' : 'Verify & continue'}
           </button>
 
-          <div className="signup-form__forgot">
-            <button
-              type="button"
-              onClick={() => send(true)}
-              disabled={loading || resendIn > 0}
-              className="signup-form__forgot-link lnk"
-            >
-              {/* Always "Resend code" — the countdown lives in the hint above.
-                  Both carrying it meant "Resend code in 0:24" appeared twice
-                  on the same screen. */}
-              Resend code
-            </button>
-          </div>
+          {resendIn === 0 && (
+            <div className="signup-form__forgot">
+              <button
+                type="button"
+                onClick={() => send(true)}
+                disabled={loading}
+                className="signup-form__forgot-link lnk"
+              >
+                Resend code
+              </button>
+            </div>
+          )}
         </form>
       </>
     )
