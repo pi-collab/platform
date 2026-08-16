@@ -46,11 +46,18 @@ export default async function CreatorApprovedPage() {
 
       <Confetti />
 
-      {/* No header at all. The page moved out of the creator layout so the app
-          nav is gone, and it does not put a logo back: this is a single
-          moment with one action on it, and the only way out is the button
-          below — nothing here should offer a way around it. */}
-      <div className="review-head review-head--nonav">
+      {/* The same logo bar as the under-review and denied screens. What was
+          wrong before was the creator layout's app nav — Dashboard, Deals,
+          Payments — not the logo; moving the page under /signup removed that
+          and this restores the header the other two status screens have. */}
+      <div className="onboard-nav-wrap">
+        <nav className="onboard-nav onboard-nav--bare">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />
+        </nav>
+      </div>
+
+      <div className="review-head">
         <div className="approved-badge">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#181C24"
                strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
