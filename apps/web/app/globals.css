@@ -1610,3 +1610,35 @@ button.signup-form__recover-link {
 
 /* The verify screen's heading is smaller than the entry screen's. */
 .signup-panel__title--sm { font-size: 26px; }
+
+/* ── Resend control ────────────────────────────────────────────────────────
+   One element, two states. Live it is the design's inked, underlined link;
+   counting down it is faint status text with the refresh mark. Previously the
+   live state kept the faint colour, so a button that WAS clickable still read
+   as disabled. */
+.otp-resend-row { margin-top: 20px; text-align: left; }
+
+.otp-resend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.otp-resend:hover:not(:disabled) { color: var(--ink-soft); }
+
+.otp-resend:disabled {
+  color: var(--ink-faint);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: default;
+}
