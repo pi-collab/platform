@@ -109,7 +109,17 @@ export default function CreatorProfileForm() {
       </div>
 
       <div className="onboard-field onboard-field--wide">
-        <label className="onboard-label">Where you post</label>
+        {/* "Primary platform", not the design's "Where you post". This is
+            single-select, and a creator on both Instagram and YouTube reads
+            "where you post" as a question about all of them, tries to tick
+            both, and finds they cannot. Single-select is still right: each
+            platform carries its own handle, so a real multi-select means a
+            handle field per platform — exactly the weight this step avoids.
+            The rest go on the storefront. */}
+        <label className="onboard-label">
+          Primary platform
+          <span className="onboard-label__optional">you can add others later</span>
+        </label>
         {/* Buttons rather than a select: two options are faster to hit than to
             open, and the choice is visible without interacting. */}
         <div className="seg-row">
