@@ -122,13 +122,14 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
   const matchedStubs = stubs ?? []
   const unclaimed = matchedStubs.filter((s) => !s.user_id)
 
-  // Case 2c: phone exists and ALL matches are already claimed → account exists
-  if (matchedStubs.length > 0 && unclaimed.length === 0) {
-    return {
-      status: 'ok',
-      redirect: '/login/creator?error=account_exists',
-    }
-  }
+  // Case 2c: the number already has a claimed account.
+  //
+  // This used to bounce to /login/creator?error=account_exists — asking
+  // someone who had JUST proved possession of the number to type it again and
+  // wait for a second code. With OTP there is no difference between signing up
+  // and signing in; the code is the whole proof. It falls through and signs
+  // them in below instead.
+  const alreadyClaimed = matchedStubs.length > 0 && unclaimed.length === 0
 
   // Multi-stub: multiple unclaimed stubs with same phone → ops alert, block signup
   if (unclaimed.length > 1) {
@@ -223,7 +224,12 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
 
   let redirect: string
 
-  if (unclaimed.length === 1) {
+  if (alreadyClaimed) {
+    // Nothing to create or claim. The dashboard is the right destination
+    // whatever their state: the creator layout sends an unvetted creator to
+    // the review screen and shows a rejected one their own screen.
+    redirect = '/creator/dashboard'
+  } else if (unclaimed.length === 1) {
     // Case 2b: claim the unclaimed stub
     const stub = unclaimed[0]
 

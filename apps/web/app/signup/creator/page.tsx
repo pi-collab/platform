@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AuthShell, { CREATOR_PITCH } from '@/components/AuthShell'
 import CreatorSignupForm from './CreatorSignupForm'
@@ -33,16 +32,12 @@ export default async function CreatorSignupPage() {
     }
   }
 
+  // No "already have an account?" nav here. With OTP this form IS the login:
+  // a number that already has one is signed straight in after the code, so
+  // offering a separate door would send them to type the same number and wait
+  // for a second code.
   return (
-    <AuthShell
-      pitch={CREATOR_PITCH}
-      navRight={
-        <div className="signup-nav__right">
-          <span className="signup-nav__label">Already have an account?</span>
-          <Link href="/login/creator" className="signup-nav__cta">Log in</Link>
-        </div>
-      }
-    >
+    <AuthShell pitch={CREATOR_PITCH}>
       <div className="signup-panel__inner">
         <CreatorSignupForm />
       </div>
