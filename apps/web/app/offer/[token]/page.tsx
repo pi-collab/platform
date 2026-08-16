@@ -81,7 +81,14 @@ export default async function OfferPage({ params }: { params: { token: string } 
   }
 
   return (
-    <main style={wrapper}>
+    <main className="onboard-shell offer-shell">
+      <div className="onboard-nav-wrap">
+        <nav className="onboard-nav onboard-nav--bare">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />
+        </nav>
+      </div>
+
       <OfferCard
         token={token}
         deal={{

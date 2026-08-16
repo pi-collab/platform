@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { acceptOffer, declineOffer } from './actions'
-import { trackEvent } from '@/lib/analytics'
+import { useRouter } from 'next/navigation'
 import OtpInput from '@/components/OtpInput'
 import FormError from '@/components/FormError'
+import { trackEvent } from '@/lib/analytics'
 import { sendOfferOTP, verifyOfferOTP } from './otp-actions'
 
 interface Deal {
@@ -24,15 +24,6 @@ interface Deal {
   creator_name: string
 }
 
-type ViewState =
-  | { step: 'offer' }
-  | { step: 'auth' }
-  | { step: 'code'; masked: string }
-  | { step: 'declining'; reason: string }
-  | { step: 'loading'; action: 'accept' | 'decline' }
-  | { step: 'done'; action: 'accepted' | 'declined' }
-  | { step: 'error'; message: string }
-
 interface ItemInfo {
   id: string
   label: string
@@ -41,468 +32,164 @@ interface ItemInfo {
   price_paise: number | null
 }
 
+type ViewState =
+  | { step: 'offer' }
+  | { step: 'code'; masked: string }
+
+function formatINR(paise: number | null): string {
+  if (paise == null) return '—'
+  return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
+}
+
+function formatDate(d: string | null): string {
+  if (!d) return 'To be agreed'
+  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/**
+ * The web accept-page — a creator's first contact, opened from a WhatsApp
+ * link before they have an account.
+ *
+ * It shows the offer and opens the door; it does not decide anything. Both
+ * actions lead to the same place: verify the number, then the deal page, where
+ * accept, decline AND counter all live. Countering was impossible here, so an
+ * "Accept or Decline" choice was a false one — the third answer, the one most
+ * negotiations actually need, had no button.
+ */
 export default function OfferCard({ deal, token, items = [] }: { deal: Deal; token: string; items?: ItemInfo[] }) {
+  const router = useRouter()
   const [view, setView] = useState<ViewState>({ step: 'offer' })
-  const [pendingAction, setPendingAction] = useState<'accept' | 'decline' | null>(null)
   const [code, setCode] = useState('')
-  const [otpError, setOtpError] = useState('')
+  const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  /** Send the code to the number this offer was already sent to. */
-  async function handleSendCode() {
+  const firstName = deal.creator_name?.split(' ')[0] || 'there'
+
+  async function handleRespond(intent: 'accept' | 'decline') {
     if (busy) return
     setBusy(true)
-    setOtpError('')
+    setError('')
+    trackEvent('offer_respond_started', { intent, surface: 'web' })
+
     const res = await sendOfferOTP(token)
     setBusy(false)
-    if (res.status === 'error') { setOtpError(res.message); return }
+    if (res.status === 'error') { setError(res.message); return }
     setCode('')
     setView({ step: 'code', masked: res.masked })
   }
 
-  /** Verify, then retry the action they were mid-way through. */
   async function handleVerify(submitted: string) {
     if (busy) return
     setBusy(true)
-    setOtpError('')
+    setError('')
+
     const res = await verifyOfferOTP(token, submitted)
-    setBusy(false)
-    if (res.status === 'error') { setOtpError(res.message); return }
-    if (pendingAction) await handleAction(pendingAction)
-  }
-
-  async function handleAction(action: 'accept' | 'decline', reason?: string) {
-    setView({ step: 'loading', action })
-
-    const result = action === 'accept'
-      ? await acceptOffer(token)
-      : await declineOffer(token, reason)
-
-    if (result.status === 'auth_required') {
-      setPendingAction(action)
-      setView({ step: 'auth' })
+    if (res.status === 'error') {
+      setBusy(false)
+      setError(res.message)
       return
     }
-
-    if (result.status === 'error') {
-      setView({ step: 'error', message: result.message })
-      return
-    }
-
-    trackEvent(action === 'accept' ? 'offer_accepted' : 'offer_declined', { surface: 'web' })
-    setView({ step: 'done', action: action === 'accept' ? 'accepted' : 'declined' })
+    // Stays busy — the page navigates away and unmounts this.
+    router.push(`/creator/deals/${res.dealId}`)
+    router.refresh()
   }
 
-  // -- Done state --
-  if (view.step === 'done') {
-    const accepted = view.action === 'accepted'
-    return (
-      <div style={card}>
-        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{accepted ? '\u2705' : '\u274C'}</div>
-          <h2 style={headingStyle}>
-            {accepted ? 'Offer Accepted' : 'Offer Declined'}
-          </h2>
-          <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 0' }}>
-            {accepted
-              ? 'The deal terms are locked. Sign in to manage deliverables and chat.'
-              : 'The brand has been notified.'}
-          </p>
-          {accepted && (
-            <a
-              href="/login/creator"
-              style={{ display: 'inline-block', marginTop: '1rem', padding: '0.5rem 1.25rem', background: '#111', color: '#fff', borderRadius: 8, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none' }}
-            >
-              Go to my deals
-            </a>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // -- Error state --
-  if (view.step === 'error') {
-    return (
-      <div style={card}>
-        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <h2 style={headingStyle}>Something went wrong</h2>
-          <p style={{ color: '#dc2626', fontSize: '0.875rem', margin: '0.5rem 0 1.5rem' }}>
-            {view.message}
-          </p>
-          <button onClick={() => setView({ step: 'offer' })} style={secondaryBtn}>
-            Go back
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // -- Auth step --
-  if (view.step === 'auth') {
-    return (
-      <div style={card}>
-        <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <h2 style={headingStyle}>Verify it&rsquo;s you</h2>
-          <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 1.5rem' }}>
-            We&rsquo;ll send a code to the number this offer was sent to, so we know
-            it&rsquo;s you {pendingAction === 'accept' ? 'accepting' : 'declining'} it.
-          </p>
-          {otpError && <FormError>{otpError}</FormError>}
-          <button onClick={handleSendCode} disabled={busy} style={primaryBtn}>
-            {busy ? 'Sending…' : 'Send code'}
-          </button>
-          <button
-            onClick={() => setView({ step: 'offer' })}
-            style={{ ...secondaryBtn, marginTop: '0.75rem' }}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // -- Code entry --
+  // ── Verify ─────────────────────────────────────────────────────────────────
   if (view.step === 'code') {
     return (
-      <div style={card}>
-        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-          <h2 style={headingStyle}>Enter your code</h2>
-          <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 1.5rem' }}>
-            Sent to {view.masked}
-          </p>
+      <div className="offer-card">
+        <h1 className="offer-card__title">Verify it&rsquo;s you.</h1>
+        <p className="offer-card__sub">Code sent to {view.masked}</p>
 
-          <div style={{ textAlign: 'left' }}>
-            <OtpInput
-              value={code}
-              onChange={(v) => { setCode(v); setOtpError('') }}
-              onComplete={handleVerify}
-              error={Boolean(otpError)}
-              disabled={busy}
-              autoFocus
-            />
-          </div>
-
-          {otpError && <div style={{ marginTop: '0.75rem' }}><FormError>{otpError}</FormError></div>}
-
-          <button
-            onClick={() => handleVerify(code)}
-            disabled={busy || code.length < 6}
-            style={{ ...primaryBtn, marginTop: '1.25rem', opacity: busy || code.length < 6 ? 0.5 : 1 }}
-          >
-            {busy ? 'Verifying…' : `Verify & ${pendingAction === 'accept' ? 'accept' : 'decline'}`}
-          </button>
-
-          <button
-            onClick={handleSendCode}
+        <form onSubmit={(e) => { e.preventDefault(); handleVerify(code) }}>
+          <OtpInput
+            value={code}
+            onChange={(v) => { setCode(v); setError('') }}
+            onComplete={handleVerify}
+            error={Boolean(error)}
             disabled={busy}
-            style={{ ...secondaryBtn, marginTop: '0.75rem' }}
-          >
-            Resend code
+            autoFocus
+          />
+
+          {error && <FormError>{error}</FormError>}
+
+          <button type="submit" disabled={busy || code.length < 6} className="offer-cta cta">
+            {busy ? 'Verifying…' : error ? 'Try again' : 'Verify & continue'}
           </button>
-        </div>
+
+          <div className="otp-resend-row">
+            <button
+              type="button"
+              onClick={() => handleRespond('accept')}
+              disabled={busy}
+              className="otp-resend lnk"
+            >
+              Resend code
+            </button>
+          </div>
+        </form>
       </div>
     )
   }
 
-  // -- Decline reason step --
-  if (view.step === 'declining') {
-    return (
-      <div style={card}>
-        <div style={{ padding: '1.5rem' }}>
-          <h2 style={{ ...headingStyle, textAlign: 'left' }}>Decline this offer?</h2>
-          <p style={{ color: 'var(--color-muted)', fontSize: '0.8125rem', margin: '0.25rem 0 1rem' }}>
-            Optionally share a reason with the brand.
-          </p>
-          <textarea
-            value={view.reason}
-            onChange={(e) => setView({ step: 'declining', reason: e.target.value })}
-            placeholder="e.g. Budget too low, timeline doesn't work..."
-            style={textArea}
-            rows={3}
-          />
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <button
-              onClick={() => setView({ step: 'offer' })}
-              style={{ ...secondaryBtn, flex: 1 }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleAction('decline', view.reason)}
-              style={{ ...declineBtn, flex: 1 }}
-            >
-              Decline offer
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // ── The offer ──────────────────────────────────────────────────────────────
+  const rows: [string, string][] = [
+    ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '—'],
+    ['Timeline', formatDate(deal.timeline_date)],
+    ['Revisions', `${deal.revision_limit} included`],
+    ['Usage rights', deal.usage_rights || 'To be agreed'],
+    ['Payment', deal.payment_terms || 'To be agreed'],
+  ]
 
-  const isLoading = view.step === 'loading'
-
-  // -- Main offer view --
   return (
-    <div style={card}>
-      {/* Header */}
-      <div style={cardHeader}>
-        <p style={fromLabel}>Offer from</p>
-        <h1 style={brandName}>{deal.brand_name}</h1>
-        <p style={forLabel}>for {deal.creator_name}</p>
+    <div className="offer-card">
+      <span className="offer-card__eyebrow">New offer</span>
+      <h1 className="offer-card__title">
+        {deal.brand_name} wants to work with you, {firstName}.
+      </h1>
+
+      <div className="offer-amount">
+        <span className="offer-amount__value">{formatINR(deal.price_paise)}</span>
+        <span className="offer-amount__note">
+          {deal.fee_mode === 'deducted' ? 'before platform fee' : 'you receive in full'}
+        </span>
       </div>
 
-      {/* Title */}
-      {deal.title && (
-        <div style={section}>
-          <h2 style={titleStyle}>{deal.title}</h2>
-        </div>
-      )}
-
-      {/* Terms */}
-      <div style={termsGrid}>
-        {items.length > 0 ? (
-          <div>
-            <p style={termLabel}>Deliverables</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              {items.map((item) => {
-                const displayHandle = item.handle.startsWith('@') ? item.handle : `@${item.handle}`
-                return (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--color-heading, #111)' }}>
-                      {item.label} <span style={{ color: 'var(--color-muted, #888)', fontSize: '0.8125rem' }}>({item.platform} {displayHandle})</span>
-                    </span>
-                    {item.price_paise != null && item.price_paise > 0 && (
-                      <span style={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--color-heading, #111)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
-                        {formatMoney(item.price_paise, deal.currency)}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+      <dl className="offer-terms">
+        {rows.map(([k, v]) => (
+          <div key={k} className="offer-terms__row">
+            <dt>{k}</dt>
+            <dd>{v}</dd>
           </div>
-        ) : (
-          deal.deliverables && <Term label="Deliverables" value={deal.deliverables} />
-        )}
-        {deal.price_paise != null && deal.price_paise > 0 && (() => {
-          const isDeducted = deal.fee_mode === 'deducted' && deal.fee_percent > 0
-          if (isDeducted) {
-            const feePaise = Math.round(deal.price_paise * deal.fee_percent / 100)
-            const netPaise = deal.price_paise - feePaise
-            return (
-              <div>
-                <p style={termLabel}>You receive</p>
-                <p style={{ ...termValue, fontSize: '1.0625rem', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {formatMoney(netPaise, deal.currency)}
-                </p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-muted, #888)', margin: '0.15rem 0 0' }}>
-                  {formatMoney(deal.price_paise, deal.currency)} deal value − {formatMoney(feePaise, deal.currency)} platform fee ({deal.fee_percent}%)
-                </p>
-              </div>
-            )
-          }
-          return <Term label="Total Price" value={formatMoney(deal.price_paise, deal.currency)} />
-        })()}
-        {deal.timeline_date && (
-          <Term
-            label="Delivery by"
-            value={new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', {
-              day: 'numeric', month: 'short', year: 'numeric',
-            })}
-          />
-        )}
-        <Term label="Revisions included" value={String(deal.revision_limit)} />
-        {deal.price_per_extra_revision_paise > 0 && (
-          <Term label="Per extra revision" value={formatMoney(deal.price_per_extra_revision_paise, deal.currency)} />
-        )}
-        {deal.usage_rights && <Term label="Usage rights" value={deal.usage_rights} />}
-        {deal.payment_terms && <Term label="Payment terms" value={deal.payment_terms} />}
-      </div>
+        ))}
+      </dl>
 
-      {/* Actions */}
-      <div style={actionsArea}>
-        <button
-          onClick={() => handleAction('accept')}
-          disabled={isLoading}
-          style={{
-            ...primaryBtn,
-            width: '100%',
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {isLoading && view.action === 'accept' ? 'Accepting...' : 'Accept offer'}
-        </button>
-        <button
-          onClick={() => setView({ step: 'declining', reason: '' })}
-          disabled={isLoading}
-          style={{
-            ...secondaryBtn,
-            width: '100%',
-            marginTop: '0.5rem',
-            opacity: isLoading ? 0.6 : 1,
-          }}
-        >
-          {isLoading && view.action === 'decline' ? 'Declining...' : 'Decline'}
-        </button>
-      </div>
+      {error && <FormError>{error}</FormError>}
+
+      {/* Both lead to the same place. The label is the creator's intent, not a
+          decision — the deal page is where it is actually made, and where
+          countering is possible. */}
+      <button
+        type="button"
+        onClick={() => handleRespond('accept')}
+        disabled={busy}
+        className="offer-cta cta"
+      >
+        {busy ? 'One moment…' : 'Accept this offer'}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handleRespond('decline')}
+        disabled={busy}
+        className="offer-cta offer-cta--ghost ghost"
+      >
+        Decline
+      </button>
+
+      <p className="offer-card__foot">
+        You&rsquo;ll confirm your number first, then you can accept, counter or decline.
+      </p>
     </div>
   )
-}
-
-function Term({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p style={termLabel}>{label}</p>
-      <p style={termValue}>{value}</p>
-    </div>
-  )
-}
-
-function formatMoney(paise: number, currency: string): string {
-  const major = paise / 100
-  if (currency === 'INR') {
-    if (major >= 100000) return `\u20B9${(major / 100000).toFixed(1)}L`
-    if (major >= 1000) return `\u20B9${(major / 1000).toFixed(0)}K`
-    return `\u20B9${major.toLocaleString('en-IN')}`
-  }
-  return `${major.toLocaleString()} ${currency}`
-}
-
-/* ── Styles ─────────────────────────────────────────────────────── */
-
-const card: React.CSSProperties = {
-  background: 'var(--section-bg, #fff)',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 16,
-  maxWidth: 440,
-  width: '100%',
-  margin: '0 auto',
-  overflow: 'hidden',
-}
-
-const cardHeader: React.CSSProperties = {
-  padding: '2rem 1.5rem 1.25rem',
-  textAlign: 'center',
-  borderBottom: '1px solid var(--color-border, #e5e5e5)',
-}
-
-const fromLabel: React.CSSProperties = {
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-  color: 'var(--color-muted, #888)',
-  margin: '0 0 0.25rem',
-}
-
-const brandName: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.5rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: 0,
-}
-
-const forLabel: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: 'var(--color-muted, #888)',
-  margin: '0.25rem 0 0',
-}
-
-const section: React.CSSProperties = {
-  padding: '1rem 1.5rem 0',
-}
-
-const headingStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.25rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: 0,
-  textAlign: 'center',
-}
-
-const titleStyle: React.CSSProperties = {
-  fontFamily: 'var(--font-heading, inherit)',
-  fontSize: '1.125rem',
-  fontWeight: 700,
-  color: 'var(--color-heading, #111)',
-  margin: 0,
-}
-
-const termsGrid: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.875rem',
-}
-
-const termLabel: React.CSSProperties = {
-  fontSize: '0.6875rem',
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  color: 'var(--color-muted, #888)',
-  margin: '0 0 0.15rem',
-}
-
-const termValue: React.CSSProperties = {
-  fontSize: '0.9375rem',
-  fontWeight: 500,
-  color: 'var(--color-heading, #111)',
-  margin: 0,
-}
-
-const actionsArea: React.CSSProperties = {
-  padding: '0.75rem 1.5rem 1.5rem',
-}
-
-const primaryBtn: React.CSSProperties = {
-  padding: '0.75rem 1.5rem',
-  background: 'var(--brand-primary, #111)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: 9999,
-  fontSize: '0.9375rem',
-  fontWeight: 700,
-  cursor: 'pointer',
-  fontFamily: 'var(--font-body, inherit)',
-}
-
-const secondaryBtn: React.CSSProperties = {
-  padding: '0.625rem 1.5rem',
-  background: 'transparent',
-  color: 'var(--color-muted, #888)',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 9999,
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'var(--font-body, inherit)',
-}
-
-const declineBtn: React.CSSProperties = {
-  padding: '0.625rem 1.5rem',
-  background: '#fee2e2',
-  color: '#991b1b',
-  border: 'none',
-  borderRadius: 9999,
-  fontSize: '0.8125rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'var(--font-body, inherit)',
-}
-
-const textArea: React.CSSProperties = {
-  width: '100%',
-  padding: '0.625rem 0.75rem',
-  border: '1px solid var(--color-border, #e5e5e5)',
-  borderRadius: 8,
-  fontSize: '0.875rem',
-  fontFamily: 'var(--font-body, inherit)',
-  resize: 'vertical',
-  outline: 'none',
-  boxSizing: 'border-box',
 }

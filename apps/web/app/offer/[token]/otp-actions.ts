@@ -11,7 +11,8 @@ export type OfferOtpSend =
   | { status: 'error'; message: string }
 
 export type OfferOtpVerify =
-  | { status: 'ok' }
+  /** Signed in and linked; `dealId` is where to send them. */
+  | { status: 'ok'; dealId: string }
   | { status: 'error'; message: string }
 
 /** +91 98765 43210 → +91 •••••  43210, enough to recognise, not enough to leak. */
@@ -39,7 +40,7 @@ async function creatorForToken(token: string) {
     .from('creators').select('id, phone, user_id').eq('id', deal.creator_id).maybeSingle()
   if (!creator?.phone) return null
 
-  return creator
+  return { ...creator, dealId: deal.id }
 }
 
 /**
@@ -168,5 +169,43 @@ export async function verifyOfferOTP(token: string, inputCode: string): Promise<
     return { status: 'error', message: 'Sign-in failed. Please try again.' }
   }
 
-  return { status: 'ok' }
+  // ── Link the account to the creator profile ────────────────────────────────
+  // This used to happen inside acceptOffer, which no longer runs here: the
+  // creator now lands on their deal page and accepts, declines or counters
+  // there. The identity work still has to happen, and this is the only moment
+  // it can — possession of the number has just been proven.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { status: 'error', message: 'Sign-in failed. Please try again.' }
+
+  const { data: existing } = await admin
+    .from('users').select('id').eq('auth_id', user.id).maybeSingle()
+
+  let userId = existing?.id
+  if (!userId) {
+    const { data: created, error } = await admin
+      .from('users')
+      .insert({ auth_id: user.id, phone, role: 'creator' })
+      .select('id')
+      .single()
+    if (error || !created) {
+      console.error('[offer-otp] users row failed:', error?.message)
+      return { status: 'error', message: 'Sign-in failed. Please try again.' }
+    }
+    userId = created.id
+  }
+
+  // Claim the stub, guarded so a race cannot take one already claimed.
+  if (!creator.user_id) {
+    await admin
+      .from('creators')
+      .update({ user_id: userId })
+      .eq('id', creator.id)
+      .is('user_id', null)
+  } else if (creator.user_id !== userId) {
+    // Belongs to a different account. Cannot happen through this door, since
+    // the code went to this creator's own number, but refusing beats guessing.
+    return { status: 'error', message: 'This offer belongs to a different account.' }
+  }
+
+  return { status: 'ok', dealId: creator.dealId }
 }
