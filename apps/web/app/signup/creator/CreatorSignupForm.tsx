@@ -14,8 +14,27 @@ const RESEND_SECONDS = 30
 
 /** 98765 43210 — how Indian mobile numbers are read aloud and written down. */
 function formatPhone(digits: string) {
-  const d = digits.replace(/\D/g, '').slice(0, 10)
+  const d = digits.slice(0, 10)
   return d.length > 5 ? `${d.slice(0, 5)} ${d.slice(5)}` : d
+}
+
+/**
+ * What the field is allowed to hold: at most ten subscriber digits.
+ *
+ * Clamped as it is typed rather than validated afterwards, so an eleventh
+ * keystroke is ignored instead of silently invalidating a number that still
+ * LOOKS like ten digits on screen — the display was already truncating, so the
+ * field and the check disagreed and the button went dead for no visible reason.
+ *
+ * A pasted +91 or leading 0 is stripped rather than counted. Taking the first
+ * ten digits of "919876543210" would give 9198765432 — a different number that
+ * happens to pass every rule, so the code would go somewhere real and wrong.
+ */
+function takePhoneInput(raw: string): string {
+  let d = raw.replace(/\D/g, '')
+  if (d.length > 10 && d.startsWith('91')) d = d.slice(2)
+  else if (d.length > 10 && d.startsWith('0')) d = d.slice(1)
+  return d.slice(0, 10)
 }
 
 /**
@@ -40,7 +59,8 @@ export default function CreatorSignupForm() {
     return () => clearTimeout(t)
   }, [resendIn])
 
-  const digits = phone.replace(/\D/g, '')
+  // `phone` holds digits only — takePhoneInput guarantees it.
+  const digits = phone
   // Same rule as the server, so the button cannot arm on a number sendOTP will
   // reject. The server still re-checks — this is UX, not the boundary.
   const phoneValid = isValidIndianMobile(digits)
@@ -163,7 +183,7 @@ export default function CreatorSignupForm() {
             placeholder="98765 43210"
             aria-label="Mobile number"
             value={formatPhone(phone)}
-            onChange={(e) => { setPhone(e.target.value); setError('') }}
+            onChange={(e) => { setPhone(takePhoneInput(e.target.value)); setError('') }}
             autoComplete="tel-national"
             required
             autoFocus
