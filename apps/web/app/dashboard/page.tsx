@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
 import HeldNotice from '@/components/HeldNotice'
+import ApprovalNotice from '@/components/ApprovalNotice'
+import { shouldShowApprovalNotice } from '@/lib/approval-notice'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -53,6 +55,11 @@ export default async function DashboardPage({
     .from('deals')
     .select('id', { count: 'exact', head: true })
     .not('held_at', 'is', null)
+
+  // Only asked once the brand is approved, so unapproved brands do not pay for
+  // two event lookups on every dashboard load.
+  const showApproval =
+    brand.brandStatus === 'approved' && (await shouldShowApprovalNotice(brand.brandId))
 
 
   // Date range filtering
@@ -174,6 +181,8 @@ export default async function DashboardPage({
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>
           {/* Above the hero: a brand whose first deal is sitting unsent needs
               to know that before anything else on the page. */}
+          {showApproval && <ApprovalNotice />}
+
           <HeldNotice
             heldCount={heldCount ?? 0}
             status={brand.brandStatus}
@@ -221,6 +230,8 @@ export default async function DashboardPage({
             that before anything else on the page. Rendered in BOTH dashboard
             states — the empty one is where a brand held on its FIRST send
             actually lands, so it is the one that matters most. */}
+        {showApproval && <ApprovalNotice />}
+
         <HeldNotice
           heldCount={heldCount ?? 0}
           status={brand.brandStatus}

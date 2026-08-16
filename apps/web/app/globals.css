@@ -1491,3 +1491,26 @@ button.signup-form__recover-link {
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }
 }
+
+/* Approved variant of the held notice. Same shape deliberately: it replaces
+   the warning in the same position, so the brand reads the resolution of the
+   thing they were told about rather than a new object elsewhere on the page. */
+.heldnotice--approved {
+  background: #F7FFE8;
+  border-left-color: var(--neon-deep, #D2F04A);
+}
+
+.heldnotice__ok {
+  margin-top: 12px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ink, #12151C);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.heldnotice__ok:hover { opacity: .88; }
