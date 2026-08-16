@@ -2248,12 +2248,14 @@ button.signup-form__cross-link {
   /* The heading has to clear the diagonal, whose low edge is at 44vh on the
      left. The nav above occupies a fixed ~84px, so the panel's own offset is
      what remains: on the export's 844px frame the heading sits at 380px, i.e.
-     84px of nav plus 35vh. Expressed in vh so the gap to the diagonal holds on
-     a phone that is not 844px tall, with a floor so a very short viewport
-     cannot pull the text up into the dark. */
+     84px of nav plus 35vh. That is the export's own spacing and it leaves the
+     cap height roughly 8px under the band's left edge, which reads as the
+     heading being clipped by the black. 39vh buys a clear gap without pushing
+     the button below the fold. Expressed in vh so it holds on a phone that is
+     not 844px tall, with a floor for very short viewports. */
   .signup-panel {
     display: block;
-    padding: max(35vh, 210px) 26px 96px;
+    padding: max(39vh, 240px) 26px 96px;
     margin-top: 0;
   }
 

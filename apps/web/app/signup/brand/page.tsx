@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import AuthShell from '@/components/AuthShell'
 import BrandSignupForm from './BrandSignupForm'
 
 export const metadata = {
@@ -40,44 +41,21 @@ export default async function BrandSignupPage({
   }
 
   return (
-    <main className="signup-shell">
-      {/* Dark field bleeding to the viewport edge behind the left column. */}
-      <div className="signup-shell__dark" />
-
-      <div className="signup-nav-wrap">
-        <nav className="signup-nav">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo" />
-          <div className="signup-nav__right">
-            <span className="signup-nav__label">Already have an account?</span>
-            <Link href="/login/brand" className="signup-nav__cta">Log in</Link>
-          </div>
-        </nav>
+    <AuthShell
+      navRight={
+        <div className="signup-nav__right">
+          <span className="signup-nav__label">Already have an account?</span>
+          <Link href="/login/brand" className="signup-nav__cta">Log in</Link>
+        </div>
+      }
+    >
+      <div className="signup-panel__inner">
+        {/* Heading lives INSIDE the form: it has to change once the
+            confirmation state is showing, and a server component can't react
+            to that. Same split that had /login titled "Brand login" over a
+            signup form. */}
+        <BrandSignupForm oauthError={searchParams.error} />
       </div>
-
-      <div className="signup-grid">
-        <section className="signup-pitch">
-          <div className="signup-pitch__inner">
-            <div className="signup-pitch__rule" />
-            <h1 className="signup-pitch__title">
-              Your whole deal<br />flow, one platform.
-            </h1>
-            <p className="signup-pitch__sub">
-              Source, negotiate and manage campaigns, all from one place built for brands.
-            </p>
-          </div>
-        </section>
-
-        <section className="signup-panel">
-          <div className="signup-panel__inner">
-            {/* Heading lives INSIDE the form: it has to change once the
-                confirmation state is showing, and a server component can't
-                react to that. Same split that had /login titled "Brand login"
-                over a signup form. */}
-            <BrandSignupForm oauthError={searchParams.error} />
-          </div>
-        </section>
-      </div>
-    </main>
+    </AuthShell>
   )
 }
