@@ -208,15 +208,6 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
           {loading ? 'Sending…' : 'Send code'}
         </button>
 
-        <div className="signup-form__forgot">
-          {/* A mailto rather than the design's toast: there is no account
-              recovery flow to open, and a link that does nothing is worse than
-              one that reaches a person. */}
-          <a href="mailto:contact@guapd.com" className="signup-form__forgot-link">
-            Trouble signing in?
-          </a>
-        </div>
-
         <p className="signup-form__cross">
           Looking to book creators?{' '}
           <Link href="/login/brand" className="signup-form__cross-link">Log in as a brand</Link>
