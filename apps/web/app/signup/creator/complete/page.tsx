@@ -61,6 +61,7 @@ export default async function CreatorSignupCompletePage({
     notifyWhatsapp: prefs.notify_whatsapp === true,
     whatsappPhone: typeof prefs.whatsapp_phone === 'string' ? prefs.whatsapp_phone : null,
   }
+  const answered = saved.notifyEmail || saved.notifyWhatsapp || Boolean(saved.whatsappPhone)
 
   return (
     <main className="onboard-shell onboard-shell--tall">
@@ -93,7 +94,11 @@ export default async function CreatorSignupCompletePage({
         <div className="onboard-card onboard-card--flush">
           <NotifyPreferences knownEmail={knownEmail} signupPhone={signupPhone} saved={saved} />
 
-          <div className="review-next">
+          {/* Only after they have answered. The export's notification screen
+              carries the panel alone; the list is what the complete screen
+              adds once the preferences are in — the reward for finishing the
+              step, not competition for it. */}
+          <div className={`review-next${answered ? '' : ' review-next--hidden'}`}>
             <span className="review-next__head">What happens next</span>
             {STEPS.map((s, i) => (
               <div key={s.title} className="review-step">

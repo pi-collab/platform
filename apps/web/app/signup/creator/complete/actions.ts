@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revalidatePath } from 'next/cache'
 import { normalizeE164 } from '@/lib/phone'
 
 type Result = { status: 'ok' } | { status: 'error'; message: string }
@@ -86,6 +87,11 @@ export async function saveNotifyPreferences(input: {
       added_whatsapp: Boolean(whatsappPhone),
     },
   })
+
+  // The page decides server-side whether "what happens next" is shown, so it
+  // has to re-render for the list to appear on save rather than only on the
+  // next visit.
+  revalidatePath('/signup/creator/complete')
 
   return { status: 'ok' }
 }

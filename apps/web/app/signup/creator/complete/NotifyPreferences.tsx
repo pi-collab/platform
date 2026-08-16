@@ -92,44 +92,24 @@ export default function NotifyPreferences({
     setSaved(true)
   }
 
-  // ── Answered: show what they chose, not the controls ─────────────────────
+  // ── Answered ─────────────────────────────────────────────────────────────
+  // A single confirmation rather than a read-back of the channels. The export
+  // makes this the moment the screen changes state: the panel is replaced and
+  // "what happens next" appears behind it. Repeating the addresses here would
+  // re-open a decision they have just closed.
   if (alreadyAnswered || saved) {
-    const waNumber = savedPrefs.whatsappPhone
-      ?? (wa.trim() ? normalizeE164(dial, wa) : null)
-    const showEmail = saved ? emailOn : savedPrefs.notifyEmail
-    const showWa = saved ? waOn : savedPrefs.notifyWhatsapp
-
     return (
-      <div className="notifybox">
-        <div className="notifybox__head">How we&rsquo;ll notify you</div>
-
-        {showEmail && (
-          <div className="notifybox__row notifybox__row--static">
-            <span className="notifybox__label">Email</span>
-            <span className="notifybox__value">{knownEmail ?? email}</span>
-          </div>
-        )}
-
-        {showEmail && showWa && <div className="notifybox__divider" />}
-
-        {showWa && (
-          <div className="notifybox__row notifybox__row--static">
-            <span className="notifybox__label">WhatsApp</span>
-            <span className="notifybox__value">
-              {waNumber ?? (signupPhone ? `+91 ${signupPhone}` : 'Your signup number')}
-            </span>
-          </div>
-        )}
-
-        {!showEmail && !showWa && (
-          <div className="notifybox__row notifybox__row--static">
-            <span className="notifybox__value">
-              You&rsquo;ve turned off notifications, so we won&rsquo;t contact you about this.
-            </span>
-          </div>
-        )}
-
-        <div className="notifybox__pad" />
+      <div className="savedmark">
+        <span className="savedmark__tick" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff"
+               strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </span>
+        <div>
+          <div className="savedmark__title">Notification preferences saved</div>
+          <div className="savedmark__body">We&rsquo;ll reach out as soon as you&rsquo;re approved.</div>
+        </div>
       </div>
     )
   }
