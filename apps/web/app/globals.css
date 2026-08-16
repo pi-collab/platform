@@ -2005,7 +2005,7 @@ button.signup-form__recover-link {
   padding-top: 26px;
 }
 
-.denied-textarea {
+textarea.denied-textarea {
   margin-top: 14px;
   height: 96px;
   padding: 14px 16px;
@@ -2343,6 +2343,22 @@ button.signup-form__cross-link {
 }
 
 /* ══ Profile / status shell — mobile ══════════════════════════════════════
+   ── The shared measurements, taken from all 14 mobile exports ─────────────
+   They agree with each other, so any new screen starts here rather than
+   being measured on its own — treating each as bespoke is what had every
+   one of them coming out slightly wrong until it was looked at.
+
+     page side padding   26px
+     card                338px wide, centred
+     card side padding   22px
+     card vertical       32 top / 40 bottom   (28 top on under-review)
+     logo                20px, 64px from the top, centred on status screens
+     heading             26px serif italic
+     sub                 13.5px / 400 / 1.55, 16px below the heading
+     eyebrow             10.5px / 700, 0.1em tracking, uppercase
+     body rows           13.5px / 500, values 12px
+     controls            44-52px tall, 12-16px radius
+   ─────────────────────────────────────────────────────────────────────────
    The phone exports drop the dark band and the card entirely: a white card on
    a light page is a desktop device for holding a form inside a wide viewport,
    and at 390px it is just an inset with rounded corners. The form runs down
@@ -2457,6 +2473,11 @@ button.signup-form__cross-link {
      the only place that needs it. */
   .onboard-body { padding: 0 26px 56px; }
 
+  /* ── The card, one definition ───────────────────────────────────────────
+     Every mobile export agrees: 338px wide, 26px of page either side of it,
+     22px of padding inside, 32px above the content and 40px below. These were
+     being set per screen, which is why each one came out slightly wrong until
+     it was looked at. */
   .onboard-card {
     width: min(338px, 100%);
     max-width: 338px;
@@ -2466,7 +2487,7 @@ button.signup-form__cross-link {
     border-top: none;
     border-radius: 0 0 20px 20px;
     box-shadow: none;
-    padding: 0 22px 32px;
+    padding: 0 22px 40px;
   }
 
   /* The PROFILE step is the exception: its export has no card at all, so the
@@ -2578,13 +2599,23 @@ button.signup-form__cross-link {
   .denied-note__title { font-size: 13.5px; }
   .denied-note__body { font-size: 12.5px; margin-top: 4px; }
   .denied-appeal { margin-top: 24px; padding-top: 22px; }
-  .denied-textarea { margin-top: 12px; border-radius: 14px; padding: 12px 14px; height: 84px; }
+  /* Needs the extra specificity: .onboard-shell .fld-box sets a 52px control
+     height and outranks a single class, which collapsed the appeal box to one
+     line. The export has the same collision — its textarea carries .fld-box
+     too — so matching it literally would ship a one-line box with resize
+     disabled, which is why this is three rows instead. */
+  .onboard-shell textarea.denied-textarea {
+    height: 84px;
+    margin-top: 12px;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
   .denied-send { height: 46px; margin-top: 10px; border-radius: 14px; font-size: 13px; }
   .denied-sent { margin-top: 10px; font-size: 12px; text-align: center; }
 
   .savedmark { margin: 28px 0 0; }
   .review-next { padding: 24px 0 0; }
-  .denied-card { padding: 0 22px 32px; }
+  .denied-card { padding: 0 22px 36px; }
 
   .onboard-cta,
   .approved-cta { border-radius: 16px; }
