@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import SignOutButton from '@/components/SignOutButton'
+import BackButton from '@/components/BackButton'
 import CreatorProfileForm from './CreatorProfileForm'
 
 export const metadata = {
@@ -27,12 +27,9 @@ export default async function CreatorOnboardingPage() {
 
       <div className="onboard-nav-wrap">
         <nav className="onboard-nav">
+          <BackButton className="onboard-nav__back" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />
-          {/* The design shows "Log in", which this page cannot offer: reaching
-              it requires a verified session. The useful escape here is leaving
-              a wrong account, same as the brand step. */}
-          <SignOutButton className="onboard-nav__cta" label="Sign out" redirectTo="/login/creator" />
         </nav>
       </div>
 

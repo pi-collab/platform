@@ -83,13 +83,15 @@ export default function CreatorProfileForm() {
     <form onSubmit={handleSubmit} className="onboard-form">
       {error && <FormError>{error}</FormError>}
 
+      {/* No label row. The export leans on the placeholder for these two, and
+          the placeholder names the field rather than showing an example, so
+          nothing is lost when it clears. aria-label keeps it announced. */}
       <div className="onboard-field">
-        <label className="onboard-label">Full name</label>
         <div className="fld-box onboard-box">
           <input
             value={fullName}
             onChange={(e) => { setFullName(e.target.value); setError('') }}
-            placeholder="Jordan Reyes"
+            placeholder="Full name"
             aria-label="Full name"
             autoComplete="name"
             required
@@ -131,13 +133,12 @@ export default function CreatorProfileForm() {
       {/* After the platform, because the handle belongs to it. Asked first, it
           is "handle of what?" — and the label can now answer that. */}
       <div className="onboard-field">
-        <label className="onboard-label">{platform} handle</label>
         <div className="fld-box onboard-box">
           <span className="onboard-prefix">@</span>
           <input
             value={handle}
             onChange={(e) => { setHandle(e.target.value.replace(/^@/, '')); setError('') }}
-            placeholder="jordanreyes"
+            placeholder={`${platform.toLowerCase()} handle`}
             aria-label={`${platform} handle`}
             required
             className="onboard-input"

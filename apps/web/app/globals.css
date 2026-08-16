@@ -1188,11 +1188,14 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   letter-spacing: 0;
 }
 
+/* 52px at 16px radius, matching the export. The 58px here was carried over
+   from the brand step, whose export genuinely uses it. */
 .onboard-box {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 58px;
+  height: 52px;
+  border-radius: 16px;
 }
 
 /* The design leaves the select at the .fld-box default of 54px while its text
@@ -1200,7 +1203,7 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
    58px here — a visible step between stacked fields reads as a bug, not a
    choice. Revert this one line to track the export exactly. */
 .onboard-select {
-  height: 58px;
+  height: 52px;
   appearance: none;
   -webkit-appearance: none;
   font-weight: 500;
@@ -2509,3 +2512,18 @@ button.signup-form__cross-link {
   /* The confetti band no longer exists on mobile. */
   .confetti { display: none; }
 }
+
+/* Back chevron beside the logo on a flow step. */
+.onboard-nav__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-right: 10px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.onboard-nav__back:hover { opacity: .7; }
