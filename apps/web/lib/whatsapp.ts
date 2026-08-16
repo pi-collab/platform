@@ -139,18 +139,18 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
   try {
     const config = readConfig()
     if (!config) {
-      return fail(template, dealId, 'not_configured', 'MSG91_WHATSAPP_ENABLED is not exactly "true", or auth key / number is missing')
+      return await fail(template, dealId, 'not_configured', 'MSG91_WHATSAPP_ENABLED is not exactly "true", or auth key / number is missing')
     }
 
     const to = toMsg91Number(toPhone)
     if (!to) {
-      return fail(template, dealId, 'unusable_phone', `stored value ${maskPhone(toPhone)} could not be normalised to an E.164 recipient`)
+      return await fail(template, dealId, 'unusable_phone', `stored value ${maskPhone(toPhone)} could not be normalised to an E.164 recipient`)
     }
 
     // WhatsApp rejects empty body parameters — catch it here rather than
     // burning a send and getting an opaque template-mismatch error back.
     if (bodyVars.some((v) => !v || !v.trim())) {
-      return fail(template, dealId, 'empty_body_var', `${bodyVars.length} body vars, at least one blank`)
+      return await fail(template, dealId, 'empty_body_var', `${bodyVars.length} body vars, at least one blank`)
     }
 
     console.info(`[whatsapp] → sending template=${template} deal=${dealId ?? 'n/a'} to=${maskPhone(to)} lang=${config.lang} host=${config.baseUrl}`)
@@ -217,6 +217,7 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
       parsed = raw ? JSON.parse(raw) : {}
     } catch {
       // Accepted but unparseable: treat as sent rather than risk a false alarm.
+      await recordAttempt({ template, dealId, ok: true, reason: 'unparseable_response', to: toPhone })
       return { ok: true }
     }
 
@@ -228,6 +229,7 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
     if (reportsFailure) {
       const label = parsed.status ?? parsed.type ?? 'error'
       logFailure(template, dealId, `msg91_${label}`, raw)
+      await recordAttempt({ template, dealId, ok: false, reason: `msg91_${label}`, to: toPhone })
       return { ok: false, reason: `msg91_${label}` }
     }
 
@@ -238,10 +240,14 @@ export async function sendWhatsAppTemplate(params: SendTemplateParams): Promise<
     console.info(
       `[whatsapp] ✓ accepted (queued, not yet delivered) template=${template} deal=${dealId ?? 'n/a'} request_id=${parsed.request_id ?? 'n/a'}`
     )
+    await recordAttempt({
+      template, dealId, ok: true, requestId: parsed.request_id, to: toPhone,
+    })
     return { ok: true }
   } catch (err) {
     const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timeout' : 'network_error'
     logFailure(template, dealId, reason, err instanceof Error ? err.message : String(err))
+    await recordAttempt({ template, dealId, ok: false, reason, to: toPhone })
     return { ok: false, reason }
   }
 }
@@ -261,8 +267,65 @@ function logFailure(template: string, dealId: string | undefined, reason: string
   )
 }
 
-/** Log and return a failure in one step, so no early return can skip the log. */
-function fail(template: string, dealId: string | undefined, reason: string, detail: string): WhatsAppResult {
+/**
+ * Persist the outcome of an attempt so "did the creator actually get pinged?"
+ * is a query rather than a hunt through Vercel logs.
+ *
+ * console.error alone was not enough: three separate times we could not answer
+ * that question without opening the dashboard, and by then the logs for the
+ * moment in question had scrolled.
+ *
+ * request_id is the reconciliation key and the reason this records SUCCESSES
+ * too. MSG91 accepting a message is not Meta delivering it — an unapproved
+ * template, a recipient who never opted in, or a policy block all surface in a
+ * delivery report afterwards and never in the API response. Without the id
+ * stored next to the deal, a queued-but-undelivered message is untraceable.
+ *
+ * Never throws and never blocks the send: a failure to record is logged and
+ * swallowed, because losing the audit line must not cost the notification.
+ */
+async function recordAttempt(args: {
+  template: string
+  dealId?: string
+  ok: boolean
+  reason?: string
+  requestId?: string
+  to?: string | null
+}): Promise<void> {
+  try {
+    const { createAdminClient } = await import('@/lib/supabase/admin')
+    await createAdminClient().from('events').insert({
+      deal_id: args.dealId ?? null,
+      event_type: args.ok ? 'notification.whatsapp_sent' : 'notification.whatsapp_failed',
+      detail: {
+        template: args.template,
+        ok: args.ok,
+        ...(args.reason && { reason: args.reason }),
+        ...(args.requestId && { request_id: args.requestId }),
+        ...(args.to && { to_masked: maskPhone(args.to) }),
+      },
+    })
+  } catch (err) {
+    console.error(
+      `[whatsapp] could not record attempt: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+}
+
+/**
+ * Log, record and return a failure in one step, so no early return can skip
+ * any of the three. Awaited rather than fire-and-forget: a serverless function
+ * can freeze before a floating promise resolves, which would lose exactly the
+ * rows we added this for.
+ */
+async function fail(
+  template: string,
+  dealId: string | undefined,
+  reason: string,
+  detail: string,
+  to?: string | null,
+): Promise<WhatsAppResult> {
   logFailure(template, dealId, reason, detail)
+  await recordAttempt({ template, dealId, ok: false, reason, to })
   return { ok: false, reason }
 }
