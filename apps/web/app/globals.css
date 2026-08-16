@@ -1880,3 +1880,24 @@ button.signup-form__recover-link {
 
 .review-step__title { font-family: var(--font-ui); font-weight: 600; font-size: 15.5px; color: var(--ink); }
 .review-step__body { font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); margin-top: 2px; }
+
+/* Country code select inside the WhatsApp field. Styled to read as the
+   prefix text it replaces, not as a second control competing with the input. */
+.notifybox__dial {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0 14px 0 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23878D99' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+}
+
+.notifybox__dial:focus { outline: none; color: var(--ink); }

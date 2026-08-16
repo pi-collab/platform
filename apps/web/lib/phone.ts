@@ -39,3 +39,51 @@ export function normalizePhone(raw: string): string | null {
 export function isValidIndianMobile(raw: string): boolean {
   return normalizePhone(raw) !== null
 }
+
+
+/**
+ * Dial codes offered for a WhatsApp number.
+ *
+ * India first because that is the roster, but a creator with an Indian login
+ * number may well read WhatsApp on a foreign one — that is exactly what this
+ * exists for. Deliberately a short list rather than all ~200: a long select is
+ * worse to use, and anything missing can be added in a line.
+ */
+export const DIAL_CODES: { code: string; label: string }[] = [
+  { code: '+91', label: 'India' },
+  { code: '+44', label: 'United Kingdom' },
+  { code: '+1', label: 'United States / Canada' },
+  { code: '+971', label: 'United Arab Emirates' },
+  { code: '+65', label: 'Singapore' },
+  { code: '+61', label: 'Australia' },
+  { code: '+60', label: 'Malaysia' },
+  { code: '+49', label: 'Germany' },
+  { code: '+33', label: 'France' },
+  { code: '+31', label: 'Netherlands' },
+  { code: '+62', label: 'Indonesia' },
+  { code: '+94', label: 'Sri Lanka' },
+  { code: '+977', label: 'Nepal' },
+  { code: '+880', label: 'Bangladesh' },
+]
+
+/**
+ * Normalize an international number to +<digits>, or null.
+ *
+ * Used for the WhatsApp recipient, NOT for login. normalizePhone stays
+ * India-only on purpose: that number is the identity the OTP is sent to, and
+ * OTP delivery is Indian. This one only has to be somewhere WhatsApp reaches.
+ *
+ * 8 to 15 digits is E.164's own range, and matches what toMsg91Number will
+ * accept downstream — so a number that passes here cannot be rejected later
+ * for its shape.
+ */
+export function normalizeE164(dialCode: string, nationalNumber: string): string | null {
+  const cc = dialCode.replace(/\D/g, '')
+  const national = nationalNumber.replace(/\D/g, '').replace(/^0+/, '')
+  if (!cc || !national) return null
+
+  const full = `${cc}${national}`
+  if (full.length < 8 || full.length > 15) return null
+
+  return `+${full}`
+}

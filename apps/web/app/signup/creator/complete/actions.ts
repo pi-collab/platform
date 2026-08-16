@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { normalizePhone } from '@/lib/phone'
+import { normalizeE164 } from '@/lib/phone'
 
 type Result = { status: 'ok' } | { status: 'error'; message: string }
 
@@ -21,6 +21,8 @@ export async function saveNotifyPreferences(input: {
   notifyEmail: boolean
   notifyWhatsapp: boolean
   email?: string
+  /** Dial code the number was entered under, e.g. "+91". */
+  whatsappDialCode?: string
   whatsappPhone?: string
 }): Promise<Result> {
   const supabase = createClient()
@@ -40,9 +42,11 @@ export async function saveNotifyPreferences(input: {
   // Re-validate server-side; the form checks are convenience.
   let whatsappPhone: string | null = null
   if (input.whatsappPhone) {
-    whatsappPhone = normalizePhone(input.whatsappPhone)
+    // E.164, not the Indian rule: this is a WhatsApp recipient, not a login
+    // identity, and it only has to be somewhere WhatsApp reaches.
+    whatsappPhone = normalizeE164(input.whatsappDialCode ?? '+91', input.whatsappPhone)
     if (!whatsappPhone) {
-      return { status: 'error', message: 'Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.' }
+      return { status: 'error', message: 'Enter a valid WhatsApp number for the country code selected.' }
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import FormError from '@/components/FormError'
-import { isValidIndianMobile } from '@/lib/phone'
+import { DIAL_CODES, normalizeE164 } from '@/lib/phone'
 import { saveNotifyPreferences } from './actions'
 
 /**
@@ -32,6 +32,10 @@ export default function NotifyPreferences({
   const [email, setEmail] = useState('')
   const [waOn, setWaOn] = useState(true)
   const [wa, setWa] = useState('')
+  // Defaults to India because that is the roster, but a creator whose LOGIN
+  // number is Indian may read WhatsApp on a foreign one — which is the whole
+  // reason this is selectable rather than the design's fixed +91.
+  const [dial, setDial] = useState('+91')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -52,8 +56,8 @@ export default function NotifyPreferences({
       setError('Enter a valid email address.')
       return
     }
-    if (waOn && wa.trim() && !isValidIndianMobile(wa)) {
-      setError('Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.')
+    if (waOn && wa.trim() && !normalizeE164(dial, wa)) {
+      setError('Enter a valid WhatsApp number for the country code selected.')
       return
     }
 
@@ -62,6 +66,7 @@ export default function NotifyPreferences({
       notifyEmail: emailOn,
       notifyWhatsapp: waOn,
       email: needsEmail ? email.trim() : undefined,
+      whatsappDialCode: dial,
       whatsappPhone: wa.trim() || undefined,
     })
     setSaving(false)
@@ -118,7 +123,16 @@ export default function NotifyPreferences({
       {waOn && (
         <div className="notifybox__field">
           <div className="notifybox__input">
-            <span className="notifybox__prefix">+91</span>
+            <select
+              value={dial}
+              onChange={(e) => { setDial(e.target.value); touch() }}
+              aria-label="Country code"
+              className="notifybox__dial"
+            >
+              {DIAL_CODES.map((d) => (
+                <option key={d.code} value={d.code}>{d.code}</option>
+              ))}
+            </select>
             <span className="notifybox__rule" />
             <input
               type="tel"
@@ -126,13 +140,15 @@ export default function NotifyPreferences({
               placeholder="Add your number"
               aria-label="WhatsApp number"
               value={wa}
-              onChange={(e) => { setWa(e.target.value.replace(/\D/g, '').slice(0, 10)); touch() }}
+              // 14 digits: E.164 allows 15 including the country code, so this
+              // cannot clamp away a digit any supported country still needs.
+              onChange={(e) => { setWa(e.target.value.replace(/\D/g, '').slice(0, 14)); touch() }}
             />
           </div>
           {signupPhone && (
             <button
               type="button"
-              onClick={() => { setWa(signupPhone); touch() }}
+              onClick={() => { setDial('+91'); setWa(signupPhone); touch() }}
               className="notifybox__same lnk"
             >
               Same as the number I signed up with
