@@ -86,7 +86,11 @@ export default async function CreatorSignupCompletePage({
           Your profile is under <span className="review-title__em">review.</span>
         </h1>
         <p className="review-sub">
-          Check back in <strong>24&ndash;48 hours</strong>. Meanwhile, tell us how to reach you.
+          Check back in <strong>24&ndash;48 hours</strong>.
+          {/* Only while the panel below still needs an answer. Once they have
+              given it, the sentence is asking for something they have already
+              done — the export drops it on the saved screen too. */}
+          {!answered && ' Meanwhile, tell us how to reach you.'}
         </p>
       </div>
 
