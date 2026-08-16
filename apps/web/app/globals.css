@@ -2524,7 +2524,15 @@ button.signup-form__cross-link {
   .notifybox__rule { height: 15px; }
   .notifybox__same { font-size: 11.5px; }
   .notifybox__save { padding: 4px 0 0; }
-  .notifybox__cta { height: 46px; border-radius: 14px; }
+  .notifybox__cta { height: 46px; border-radius: 14px; font-size: 13.5px; }
+
+  /* The what-happens-next block, all four sizes. Each was one step larger,
+     inherited from the desktop rules — together that is why the card read as
+     heavier than the export even once the spacing was right. */
+  .review-next__head { font-size: 10.5px; }
+  .review-step__num { font-size: 12px; }
+  .review-step__title { font-size: 14px; }
+  .review-step__body { font-size: 12.5px; line-height: 1.5; }
 
   /* Neon on a phone, where it is the only accent on a white card. The desktop
      export tints it instead, because there it sits on the dark band. */
