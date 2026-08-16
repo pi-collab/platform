@@ -25,7 +25,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const [{ data: deal }, { data: events }, { data: messages }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_pct_override, brand_id, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name, platform_fee_percent), creators(id, full_name, handle)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_pct_override, brand_id, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name, platform_fee_percent), creators(id, full_name, handle)')
       .eq('id', params.id)
       .single(),
     admin
@@ -70,6 +70,17 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
             </span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: '#666', margin: 0 }}>
+            {/* The ref leads: it is what a deal is called in an email, a
+                WhatsApp message and an invoice, so it is the thing you arrive
+                here holding. */}
+            {(deal as { deal_ref?: string }).deal_ref && (
+              <>
+                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#111' }}>
+                  {(deal as { deal_ref?: string }).deal_ref}
+                </span>
+                {' · '}
+              </>
+            )}
             {brand} &rarr; {creator?.full_name ?? '—'}{creator?.handle ? ` (${creator.handle})` : ''}
           </p>
         </div>

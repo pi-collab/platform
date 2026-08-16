@@ -11,7 +11,7 @@ export default async function OpsOffersPage() {
 
   const { data: deals, error } = await admin
     .from('deals')
-    .select('id, title, status, price_paise, created_at, brands(name), creators(full_name)')
+    .select('id, deal_ref, title, status, price_paise, created_at, brands(name), creators(full_name)')
     .eq('status', 'negotiating')
     .order('created_at', { ascending: false })
 
@@ -50,7 +50,12 @@ export default async function OpsOffersPage() {
                   <td style={td}>
                     <span style={{ fontWeight: 600 }}>{d.title || 'Untitled'}</span>
                     <br />
-                    <span style={{ fontSize: '0.6875rem', color: '#888' }}>{d.id.slice(0, 8)}...</span>
+                    {/* The deal ref, not the uuid prefix. GD-1064 is what
+                        everyone actually says out loud and searches for; a
+                        truncated uuid identifies a row to nobody. */}
+                    <span style={{ fontSize: '0.6875rem', color: '#888', fontFamily: 'monospace' }}>
+                      {d.deal_ref || d.id.slice(0, 8)}
+                    </span>
                   </td>
                   <td style={td}>{brand}</td>
                   <td style={td}>{creator}</td>
