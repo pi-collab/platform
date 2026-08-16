@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import AuthShell, { CreateAccountNav } from '@/components/AuthShell'
+import AuthShell from '@/components/AuthShell'
 import Toast from '@/components/Toast'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
@@ -88,7 +88,7 @@ export default async function LoginPage({
   }
 
   return (
-    <AuthShell navRight={<CreateAccountNav />}>
+    <AuthShell>
       <div className="signup-panel__inner">
         {searchParams.error && (
           <FormError>

@@ -1,4 +1,3 @@
-import Link from 'next/link'
 
 /**
  * The split shell from "Brand Login - Paged Flow": dark pitch panel on the
@@ -72,15 +71,5 @@ export default function AuthShell({
         <section className="signup-panel">{children}</section>
       </div>
     </main>
-  )
-}
-
-/** The "New here? Create account" pair, for pages that offer signup. */
-export function CreateAccountNav() {
-  return (
-    <div className="signup-nav__right">
-      <span className="signup-nav__label">New here?</span>
-      <Link href="/signup/brand" className="signup-nav__cta">Create account</Link>
-    </div>
   )
 }
