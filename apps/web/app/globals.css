@@ -2350,7 +2350,19 @@ button.signup-form__cross-link {
   .onboard-shell__dark,
   .onboard-shell__rule { display: none; }
 
-  .onboard-nav-wrap { padding: 40px 26px 0; }
+  /* ── Vertical rhythm, taken as a whole from the export ──────────────────
+       logo        32 from the top (the export's 64 is a phone-frame inset)
+       heading     42 below the logo
+       sub         10 below the heading
+       first field 26 below the sub
+       fields       12 apart
+       platform    20 below the last field, its label 10 above the buttons
+       CTA         28 below
+       footer      16 below
+     These were being set one at a time, which is how the sub ended up
+     touching the first field: .onboard-body had no top padding at all. */
+  .onboard-nav-wrap { padding: 32px 26px 0; }
+  .onboard-nav__logo { height: 20px; }
 
   .onboard-nav {
     background: none;
@@ -2370,7 +2382,7 @@ button.signup-form__cross-link {
 
   .onboard-head {
     align-items: flex-start;
-    padding: 26px 26px 0;
+    padding: 42px 26px 0;
   }
 
   /* Left-aligned and dark: it sits on the page now, not over a dark field. */
@@ -2396,7 +2408,7 @@ button.signup-form__cross-link {
     color: var(--ink-soft);
     white-space: normal;
     max-width: none;
-    margin-top: 8px;
+    margin-top: 10px;
   }
 
   .review-sub strong { color: var(--ink); }
@@ -2428,7 +2440,9 @@ button.signup-form__cross-link {
 
   .review-sub { text-align: center; }
 
-  .onboard-body { padding: 0 26px 56px; }
+  /* 26 to the first field. Zero here is what made the screen read as having
+     no spacing at all — the sub sat directly on the field below it. */
+  .onboard-body { padding: 26px 26px 56px; }
 
   .onboard-card {
     width: min(338px, 100%);
@@ -2443,15 +2457,23 @@ button.signup-form__cross-link {
   }
 
   /* The PROFILE step is the exception: its export has no card at all, so the
-     form runs down the page. */
+     form runs down the page and the fields align with the heading above them.
+     Stated absolutely rather than by unsetting the card, so nothing inherited
+     can quietly inset them again. */
   .onboard-card--bare {
-    width: auto;
+    width: 100%;
     max-width: none;
+    margin: 0;
+    padding: 0;
     background: none;
     border: none;
     border-radius: 0;
-    padding: 0;
+    box-shadow: none;
   }
+
+  .onboard-card--bare .onboard-form,
+  .onboard-card--bare .onboard-field,
+  .onboard-card--bare .fld-box { width: 100%; }
   .notifybox { margin: 0; }
   .review-next { padding: 24px 0 0; }
   .denied-card { padding: 0 22px 32px; }
