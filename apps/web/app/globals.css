@@ -2364,7 +2364,7 @@ button.signup-form__cross-link {
 
   .onboard-head {
     align-items: flex-start;
-    padding: 34px 26px 0;
+    padding: 26px 26px 0;
   }
 
   /* Left-aligned and dark: it sits on the page now, not over a dark field. */
@@ -2453,8 +2453,55 @@ button.signup-form__cross-link {
   .onboard-cta,
   .approved-cta { border-radius: 16px; }
 
-  /* Two full-width buttons rather than a cramped pair. */
-  .seg-row { grid-template-columns: 1fr; }
+  /* Side by side, 8px apart — the export keeps them on one row at 390px and
+     they fit. My first pass stacked them, which is the single most visible
+     difference on this screen. */
+  .seg-row { display: flex; gap: 8px; }
+
+  .seg {
+    flex: 1;
+    height: 52px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+
+  .seg svg { width: 16px; height: 16px; }
+
+  /* Fields: 52px at 16px radius, stacked 12px apart with no per-field label
+     row — the export leans on the label above the group and the field's own
+     placeholder. Labels are kept but dropped to the export's 12px
+     sentence-case, rather than the desktop uppercase eyebrow. */
+  .onboard-shell .fld-box,
+  .onboard-box {
+    height: 52px;
+    border-radius: 16px;
+    padding: 0 16px;
+  }
+
+  .onboard-field + .onboard-field { margin-top: 12px; }
+  .onboard-field--wide { margin-top: 20px !important; }
+
+  .onboard-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    margin-bottom: 10px;
+  }
+
+  .onboard-input { font-size: 15px; }
+
+  .onboard-cta {
+    height: 52px;
+    margin-top: 28px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+
+  .onboard-foot { font-size: 11.5px; margin-top: 16px; }
+  .onboard-terms { margin-top: 20px; font-size: 12.5px; }
+
+  .onboard-head__sub { font-size: 14px; line-height: 1.55; margin-top: 10px; }
 
   /* The confetti band no longer exists on mobile. */
   .confetti { display: none; }
