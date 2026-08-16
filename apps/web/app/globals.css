@@ -2170,10 +2170,12 @@ button.signup-form__cross-link {
     z-index: 1;
   }
 
+  /* Static, like the nav inside it. Either one being positioned captures the
+     bottom link's absolute placement, which is what kept landing it at the top
+     of the page instead of the foot. */
   .signup-nav-wrap {
-    position: relative;
+    position: static;
     padding: 64px 26px 0;
-    z-index: 4;
   }
 
   /* The pill is a desktop device; here the logo sits bare on the dark field. */
