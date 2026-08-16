@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { acceptOffer, declineOffer } from './actions'
 import { trackEvent } from '@/lib/analytics'
+import OtpInput from '@/components/OtpInput'
+import FormError from '@/components/FormError'
+import { sendOfferOTP, verifyOfferOTP } from './otp-actions'
 
 interface Deal {
   id: string
@@ -25,6 +27,7 @@ interface Deal {
 type ViewState =
   | { step: 'offer' }
   | { step: 'auth' }
+  | { step: 'code'; masked: string }
   | { step: 'declining'; reason: string }
   | { step: 'loading'; action: 'accept' | 'decline' }
   | { step: 'done'; action: 'accepted' | 'declined' }
@@ -41,6 +44,32 @@ interface ItemInfo {
 export default function OfferCard({ deal, token, items = [] }: { deal: Deal; token: string; items?: ItemInfo[] }) {
   const [view, setView] = useState<ViewState>({ step: 'offer' })
   const [pendingAction, setPendingAction] = useState<'accept' | 'decline' | null>(null)
+  const [code, setCode] = useState('')
+  const [otpError, setOtpError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  /** Send the code to the number this offer was already sent to. */
+  async function handleSendCode() {
+    if (busy) return
+    setBusy(true)
+    setOtpError('')
+    const res = await sendOfferOTP(token)
+    setBusy(false)
+    if (res.status === 'error') { setOtpError(res.message); return }
+    setCode('')
+    setView({ step: 'code', masked: res.masked })
+  }
+
+  /** Verify, then retry the action they were mid-way through. */
+  async function handleVerify(submitted: string) {
+    if (busy) return
+    setBusy(true)
+    setOtpError('')
+    const res = await verifyOfferOTP(token, submitted)
+    setBusy(false)
+    if (res.status === 'error') { setOtpError(res.message); return }
+    if (pendingAction) await handleAction(pendingAction)
+  }
 
   async function handleAction(action: 'accept' | 'decline', reason?: string) {
     setView({ step: 'loading', action })
@@ -62,17 +91,6 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
 
     trackEvent(action === 'accept' ? 'offer_accepted' : 'offer_declined', { surface: 'web' })
     setView({ step: 'done', action: action === 'accept' ? 'accepted' : 'declined' })
-  }
-
-  function handleSignIn() {
-    const supabase = createClient()
-    // Redirect back to this offer page after auth
-    supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/creator/callback?next=${encodeURIComponent(window.location.pathname)}`,
-      },
-    })
   }
 
   // -- Done state --
@@ -125,18 +143,63 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
     return (
       <div style={card}>
         <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-          <h2 style={headingStyle}>Verify your identity</h2>
+          <h2 style={headingStyle}>Verify it&rsquo;s you</h2>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 1.5rem' }}>
-            Sign in to {pendingAction === 'accept' ? 'accept' : 'decline'} this offer. This links your account to your creator profile.
+            We&rsquo;ll send a code to the number this offer was sent to, so we know
+            it&rsquo;s you {pendingAction === 'accept' ? 'accepting' : 'declining'} it.
           </p>
-          <button onClick={handleSignIn} style={primaryBtn}>
-            Continue with Google
+          {otpError && <FormError>{otpError}</FormError>}
+          <button onClick={handleSendCode} disabled={busy} style={primaryBtn}>
+            {busy ? 'Sending…' : 'Send code'}
           </button>
           <button
             onClick={() => setView({ step: 'offer' })}
             style={{ ...secondaryBtn, marginTop: '0.75rem' }}
           >
             Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // -- Code entry --
+  if (view.step === 'code') {
+    return (
+      <div style={card}>
+        <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
+          <h2 style={headingStyle}>Enter your code</h2>
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.875rem', margin: '0.5rem 0 1.5rem' }}>
+            Sent to {view.masked}
+          </p>
+
+          <div style={{ textAlign: 'left' }}>
+            <OtpInput
+              value={code}
+              onChange={(v) => { setCode(v); setOtpError('') }}
+              onComplete={handleVerify}
+              error={Boolean(otpError)}
+              disabled={busy}
+              autoFocus
+            />
+          </div>
+
+          {otpError && <div style={{ marginTop: '0.75rem' }}><FormError>{otpError}</FormError></div>}
+
+          <button
+            onClick={() => handleVerify(code)}
+            disabled={busy || code.length < 6}
+            style={{ ...primaryBtn, marginTop: '1.25rem', opacity: busy || code.length < 6 ? 0.5 : 1 }}
+          >
+            {busy ? 'Verifying…' : `Verify & ${pendingAction === 'accept' ? 'accept' : 'decline'}`}
+          </button>
+
+          <button
+            onClick={handleSendCode}
+            disabled={busy}
+            style={{ ...secondaryBtn, marginTop: '0.75rem' }}
+          >
+            Resend code
           </button>
         </div>
       </div>
