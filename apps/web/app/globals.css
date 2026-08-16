@@ -892,10 +892,14 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .lnk { cursor: pointer; }
 .cta:disabled, .ghost:disabled { opacity: .6; cursor: default; transform: none; filter: none; }
 
-/* Design is a 1280px desktop composition. Below the split's natural break the
-   dark panel would crush the headline, so it stacks and the pitch is dropped
-   rather than shown at an unusable size — the mobile design is a separate file. */
-@media (max-width: 900px) {
+/* The awkward middle: narrower than the 1280px desktop composition, wider than
+   the phone layout below. The split would crush the headline here, so it
+   stacks and the pitch is dropped.
+   
+   Lower-bounded at 721px on purpose. Unbounded, its display:none on the dark
+   band also applied at phone widths and silently cancelled the mobile
+   design's diagonal — the band vanished while the neon edge kept drawing. */
+@media (min-width: 721px) and (max-width: 900px) {
   .signup-shell__dark { display: none; }
   .signup-grid { grid-template-columns: minmax(0, 1fr); }
   .signup-pitch { display: none; }
@@ -2173,7 +2177,11 @@ button.signup-form__cross-link {
   }
 
   /* The pill is a desktop device; here the logo sits bare on the dark field. */
+  /* Static so the bottom link anchors to .signup-shell rather than the nav.
+     Left relative, it resolved bottom:38px against the nav itself and landed
+     at the very top of the page. */
   .signup-nav {
+    position: static;
     background: none;
     box-shadow: none;
     padding: 0;
@@ -2223,13 +2231,16 @@ button.signup-form__cross-link {
   .signup-grid { grid-template-columns: 1fr; }
   .signup-pitch { display: none; }
 
-  /* 46vh puts the panel just past the diagonal's lowest point (44%), which is
-     the export's absolute top:380px on its 844px frame — expressed as a
-     proportion so it holds on any phone rather than only that one. */
+  /* The heading has to clear the diagonal, whose low edge is at 44vh on the
+     left. The nav above occupies a fixed ~84px, so the panel's own offset is
+     what remains: on the export's 844px frame the heading sits at 380px, i.e.
+     84px of nav plus 35vh. Expressed in vh so the gap to the diagonal holds on
+     a phone that is not 844px tall, with a floor so a very short viewport
+     cannot pull the text up into the dark. */
   .signup-panel {
     display: block;
-    padding: 0 26px 96px;
-    margin-top: 6vh;
+    padding: max(35vh, 210px) 26px 96px;
+    margin-top: 0;
   }
 
   .signup-panel__inner { max-width: 460px; margin: 0 auto; }
