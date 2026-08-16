@@ -65,6 +65,15 @@ export default function CreatorSignupForm() {
   // reject. The server still re-checks — this is UX, not the boundary.
   const phoneValid = isValidIndianMobile(digits)
 
+  // The rule has exactly one content failure: a first digit outside 6-9. Every
+  // other rejection is just "not finished yet". So it can be reported on the
+  // first keystroke rather than after ten, and a disabled button never sits
+  // there unexplained.
+  const badPrefix = digits.length > 0 && !/^[6-9]/.test(digits)
+  const phoneError = badPrefix
+    ? 'Indian mobile numbers start with 6, 7, 8 or 9.'
+    : ''
+
   async function send(isResend = false) {
     if (loading) return
     setError('')
@@ -174,7 +183,7 @@ export default function CreatorSignupForm() {
       <p className="signup-panel__sub">We&rsquo;ll send a one-time code to verify your number.</p>
 
       <form onSubmit={(e) => { e.preventDefault(); send() }} className="signup-form">
-        <div className="fld-box">
+        <div className={`fld-box${phoneError ? ' fld-box--error' : ''}`}>
           <span className="phone-prefix">+91</span>
           <span className="phone-divider" />
           <input
@@ -187,11 +196,12 @@ export default function CreatorSignupForm() {
             autoComplete="tel-national"
             required
             autoFocus
+            aria-invalid={Boolean(phoneError)}
             className="fld-box__input"
           />
         </div>
 
-        {error && <FormError>{error}</FormError>}
+        {(error || phoneError) && <FormError>{error || phoneError}</FormError>}
 
         <button
           type="submit"
