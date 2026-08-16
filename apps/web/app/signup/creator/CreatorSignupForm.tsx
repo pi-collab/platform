@@ -29,7 +29,6 @@ export default function CreatorSignupForm() {
   const [screen, setScreen] = useState<'phone' | 'verify'>('phone')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
-  const [terms, setTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resendIn, setResendIn] = useState(0)
@@ -170,26 +169,9 @@ export default function CreatorSignupForm() {
 
         {error && <FormError>{error}</FormError>}
 
-        {/* Not in the design, kept deliberately: acceptance is recorded against
-            a terms version when the account is created (actions.ts). */}
-        <label className="onboard-terms">
-          <input
-            type="checkbox"
-            checked={terms}
-            onChange={(e) => setTerms(e.target.checked)}
-            required
-          />
-          <span>
-            I agree to the{' '}
-            <Link href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link>
-            {' '}and{' '}
-            <Link href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
-          </span>
-        </label>
-
         <button
           type="submit"
-          disabled={loading || digits.length !== 10 || !terms}
+          disabled={loading || digits.length !== 10}
           className="signup-form__cta cta"
         >
           {loading ? 'Sending…' : 'Send code'}
@@ -202,6 +184,17 @@ export default function CreatorSignupForm() {
         </div>
 
         <CreatorSignInButton className="signup-form__google ghost" />
+
+        {/* Notice rather than a checkbox, matching /signup/brand. Placed after
+            both actions because it qualifies both: the code and Google each
+            create the account, and acceptance is recorded at that point
+            (signup/creator/actions.ts). The explicit tick lives on the profile
+            form, where the account is actually completed. */}
+        <p className="signup-form__legal">
+          By continuing, you agree to guapd&rsquo;s{' '}
+          <Link href="/terms" className="signup-form__legal-link">Terms</Link> and{' '}
+          <Link href="/privacy" className="signup-form__legal-link">Privacy Policy</Link>.
+        </p>
 
         <p className="signup-form__cross">
           Looking to book creators?{' '}
