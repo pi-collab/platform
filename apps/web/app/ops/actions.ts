@@ -2,6 +2,7 @@
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected } from '@/lib/account-emails'
 import { logOpsEvent } from '@/lib/ops-audit'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
@@ -128,6 +129,10 @@ export async function vetCreator(creatorId: string) {
     after: { is_vetted: true, is_rejected: false },
   })
 
+  // Only on a real transition. Re-vetting an already-vetted creator is an ops
+  // no-op and must not email them a second time about the same decision.
+  if (!before?.is_vetted) await notifyCreatorApproved(creatorId)
+
   revalidatePath('/ops/creators')
   return { success: true }
 }
@@ -157,6 +162,10 @@ export async function rejectCreator(creatorId: string) {
     before: { is_vetted: before?.is_vetted, is_rejected: before?.is_rejected },
     after: { is_vetted: false, is_rejected: true },
   })
+
+  // Only on a real transition, so re-rejecting does not send the same bad news
+  // twice. This is the one email nobody wants to receive by accident.
+  if (!before?.is_rejected) await notifyCreatorRejected(creatorId)
 
   revalidatePath('/ops/creators')
   return { success: true }
@@ -358,8 +367,18 @@ export async function approveBrand(brandId: string) {
   // you've sent goes out automatically" promise true.
   const released = await releaseHeldDeals(brandId, user.email ?? 'ops')
 
+  // Tell the brand. Until now approval was silent on their side: the held
+  // notice simply vanished next time they happened to log in, and the promise
+  // that we would "notify you as soon as you're cleared" went unkept.
+  //
+  // After the release, so the email's claim that queued deals have gone out is
+  // true when it is read. Only on a real transition — re-approving an already
+  // approved brand is an ops no-op and must not congratulate them again.
+  if (before?.brand_status !== 'approved') await notifyBrandApproved(brandId)
+
   revalidatePath('/ops/brands')
   revalidatePath('/deals')
+  revalidatePath('/dashboard')
   return { success: true, released }
 }
 

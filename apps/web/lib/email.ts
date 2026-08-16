@@ -211,3 +211,21 @@ function fail(dealId: string | undefined, reason: string, detail: string): Email
   logFailure(dealId, reason, detail)
   return { ok: false, reason }
 }
+
+
+/**
+ * Send an account-level email (approval, rejection) to one or more addresses.
+ *
+ * Delegates to the same transport as sendDealEmail — which is generic despite
+ * its name, taking dealId only for log correlation. This exists so account
+ * call sites do not read as if they were sending about a deal.
+ */
+export async function sendAccountEmail(params: {
+  to: string[]
+  subject: string
+  html: string
+  text: string
+  idempotencyKey?: string
+}): Promise<EmailResult> {
+  return sendDealEmail(params)
+}

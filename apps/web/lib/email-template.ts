@@ -195,3 +195,116 @@ export function renderDealEmail(content: DealEmailContent): { html: string; text
 
   return { html, text }
 }
+
+
+/** Content for an ACCOUNT email — approvals, rejections, anything not tied to
+ *  a deal. Deliberately has no deal row or amount: those columns are the whole
+ *  reason renderDealEmail exists, and an empty one reads as a bug. */
+export interface AccountEmailContent {
+  heading: string
+  /** One or more paragraphs. Each renders separately; keep them short. */
+  body: string[]
+  /** Absolute URL for the CTA. Omit for mail with nothing to act on. */
+  ctaUrl?: string
+  ctaLabel?: string
+  /** Replaces the default footer sentence. */
+  footerNote?: string
+}
+
+/**
+ * Render an account-level email.
+ *
+ * Shares the chrome rules of renderDealEmail — tables, inline styles, 600px,
+ * text wordmark, plain-text alternative — but not its body: that one always
+ * shows a deal and an amount, and an approval email has neither.
+ *
+ * NOTE: the outer shell is intentionally similar to renderDealEmail's. If a
+ * third kind of email appears, extract the shell rather than copying it twice
+ * more.
+ */
+export function renderAccountEmail(content: AccountEmailContent): { html: string; text: string } {
+  const { heading, body, ctaUrl, ctaLabel = 'Open Guapd', footerNote } = content
+
+  const paragraphs = body
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:${COLORS.muted};">${esc(p)}</p>`
+    )
+    .join('\n              ')
+
+  const cta = ctaUrl
+    ? `
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
+                <tr>
+                  <td align="center" bgcolor="${COLORS.button}" style="border-radius:8px;">
+                    <a href="${ctaUrl}" style="display:inline-block;padding:12px 26px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:${COLORS.buttonText};text-decoration:none;border-radius:8px;">
+                      ${esc(ctaLabel)}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:18px 0 0 0;font-size:12px;line-height:1.5;color:${COLORS.faint};">
+                Or paste this into your browser:<br>
+                <span style="color:${COLORS.muted};">${ctaUrl}</span>
+              </p>`
+    : ''
+
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(heading)}</title>
+</head>
+<body style="margin:0;padding:0;background:${COLORS.pageBg};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(body[0] ?? '')}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pageBg};padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${WIDTH}px;">
+
+          <tr>
+            <td style="padding:0 0 16px 4px;font-family:Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:${COLORS.ink};">
+              ${esc(BRAND_NAME)}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:${COLORS.cardBg};border:1px solid ${COLORS.border};border-radius:12px;padding:28px 28px 24px 28px;font-family:Helvetica,Arial,sans-serif;">
+
+              <h1 style="margin:0 0 12px 0;font-size:20px;line-height:1.35;font-weight:700;color:${COLORS.ink};">
+                ${esc(heading)}
+              </h1>
+
+              ${paragraphs}
+${cta}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 4px 0 4px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${COLORS.faint};">
+              ${esc(footerNote ?? `This is an automated notification from ${BRAND_NAME}.`)}<br>
+              ${esc(siteHost())}
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  const text = [
+    heading,
+    '',
+    ...body,
+    ...(ctaUrl ? ['', `${ctaLabel}: ${ctaUrl}`] : []),
+    '',
+    footerNote ?? `This is an automated notification from ${BRAND_NAME}.`,
+  ].join('\n')
+
+  return { html, text }
+}
