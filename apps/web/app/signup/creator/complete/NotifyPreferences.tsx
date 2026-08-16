@@ -28,9 +28,14 @@ export default function NotifyPreferences({
 }) {
   const hasEmail = Boolean(knownEmail)
 
-  const [emailOn, setEmailOn] = useState(true)
+  // Nothing pre-selected. A pre-ticked box records a choice the creator never
+  // made; these are ticked because they want them, not because we defaulted
+  // them on. The cost is that someone who ignores this screen chooses nothing
+  // — which is why the wait time on the headline above matters more than the
+  // panel being tidy.
+  const [emailOn, setEmailOn] = useState(false)
   const [email, setEmail] = useState('')
-  const [waOn, setWaOn] = useState(true)
+  const [waOn, setWaOn] = useState(false)
   const [wa, setWa] = useState('')
   // Defaults to India because that is the roster, but a creator whose LOGIN
   // number is Indian may read WhatsApp on a foreign one — which is the whole
@@ -40,13 +45,14 @@ export default function NotifyPreferences({
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
-  function touch() { setError(''); setSaved(false) }
+  const [touched, setTouched] = useState(false)
+
+  function touch() { setError(''); setSaved(false); setTouched(true) }
 
   const needsEmail = emailOn && !hasEmail
-  const needsWa = waOn && !signupPhone
-  // Something to save only if they can actually add something we don't have.
-  const dirty = (needsEmail && email.trim().length > 0) || (waOn && wa.trim().length > 0)
-    || !emailOn || !waOn
+  // Save appears once they have actually chosen something, rather than
+  // sitting there from the start inviting a click that saves nothing.
+  const dirty = touched
 
   async function handleSave() {
     if (saving) return
@@ -87,9 +93,6 @@ export default function NotifyPreferences({
           type="checkbox"
           checked={emailOn}
           onChange={(e) => { setEmailOn(e.target.checked); touch() }}
-          // Locked when we already hold the address: unticking would opt them
-          // out of the only channel we can reach them on.
-          disabled={hasEmail}
         />
         <span className="notifybox__label">Email</span>
         {hasEmail && <span className="notifybox__value">{knownEmail}</span>}
