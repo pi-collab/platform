@@ -1230,7 +1230,11 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 }
 
 .onboard-terms input { margin-top: 2px; flex-shrink: 0; accent-color: var(--ink); }
-.onboard-terms a { color: var(--ink); font-weight: 600; text-decoration: underline; }
+/* Same weight and colour as the sentence around them. The underline alone
+   marks them as links; bolding made "Terms of Service" and "Privacy Policy"
+   read as the point of the line rather than a checkbox someone is ticking. */
+.onboard-terms a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.onboard-terms a:hover { color: var(--ink); }
 
 .onboard-cta {
   width: 100%;
