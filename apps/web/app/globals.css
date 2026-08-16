@@ -2272,6 +2272,8 @@ button.signup-form__cross-link {
   .signup-panel__title--sm { font-size: 26px; }
   .signup-panel__sub { font-size: 14px; }
 
+  /* The export has 16px between the heading and the first field. Screens that
+     keep a sub-line get the same gap below it. */
   .signup-form { margin-top: 16px; }
 
   .signup-shell .fld-box {

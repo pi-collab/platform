@@ -176,7 +176,6 @@ export default function CreatorSignupForm() {
   return (
     <>
       <h2 className="signup-panel__title">Create your account.</h2>
-      <p className="signup-panel__sub">We&rsquo;ll send a one-time code to verify your number.</p>
 
       <form onSubmit={(e) => { e.preventDefault(); send() }} className="signup-form">
         <div className={`fld-box${phoneError ? ' fld-box--error' : ''}`}>

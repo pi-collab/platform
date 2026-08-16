@@ -182,7 +182,6 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
   return (
     <>
       <h2 className="signup-panel__title">Let&rsquo;s get you in.</h2>
-      <p className="signup-panel__sub">We&rsquo;ll send a one-time code to sign you in.</p>
 
       <form onSubmit={(e) => { e.preventDefault(); send() }} className="signup-form">
         <div className={`fld-box${phoneError ? ' fld-box--error' : ''}`}>
