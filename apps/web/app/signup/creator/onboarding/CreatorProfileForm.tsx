@@ -93,21 +93,6 @@ export default function CreatorProfileForm() {
         </div>
       </div>
 
-      <div className="onboard-field">
-        <label className="onboard-label">Handle</label>
-        <div className="fld-box onboard-box">
-          <span className="onboard-prefix">@</span>
-          <input
-            value={handle}
-            onChange={(e) => { setHandle(e.target.value.replace(/^@/, '')); setError('') }}
-            placeholder="jordanreyes"
-            aria-label="Handle"
-            required
-            className="onboard-input"
-          />
-        </div>
-      </div>
-
       <div className="onboard-field onboard-field--wide">
         {/* "Primary platform", not the design's "Where you post". This is
             single-select, and a creator on both Instagram and YouTube reads
@@ -135,6 +120,23 @@ export default function CreatorProfileForm() {
               {p.key}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* After the platform, because the handle belongs to it. Asked first, it
+          is "handle of what?" — and the label can now answer that. */}
+      <div className="onboard-field">
+        <label className="onboard-label">{platform} handle</label>
+        <div className="fld-box onboard-box">
+          <span className="onboard-prefix">@</span>
+          <input
+            value={handle}
+            onChange={(e) => { setHandle(e.target.value.replace(/^@/, '')); setError('') }}
+            placeholder="jordanreyes"
+            aria-label={`${platform} handle`}
+            required
+            className="onboard-input"
+          />
         </div>
       </div>
 
