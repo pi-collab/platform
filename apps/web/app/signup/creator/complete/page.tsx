@@ -75,7 +75,7 @@ export default async function CreatorSignupCompletePage({
         </nav>
       </div>
 
-      <div className="review-head">
+      <div className="review-head review-head--low">
         <div className="review-badge">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

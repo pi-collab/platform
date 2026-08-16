@@ -18,7 +18,7 @@ const CLEANUP_MS = 3600
  * Removes itself when the animation ends, so 60 absolutely-positioned nodes do
  * not sit in the tree for the rest of the session.
  */
-export default function Confetti({ height = 340 }: { height?: number }) {
+export default function Confetti() {
   const layer = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,5 +50,7 @@ export default function Confetti({ height = 340 }: { height?: number }) {
     return () => { clearTimeout(t); el.innerHTML = '' }
   }, [])
 
-  return <div ref={layer} className="confetti" style={{ height }} aria-hidden="true" />
+  // Height comes from CSS, not an inline style: the phone export clips the
+  // burst to 220px and an inline value cannot be overridden by a breakpoint.
+  return <div ref={layer} className="confetti" aria-hidden="true" />
 }

@@ -2089,6 +2089,7 @@ button.signup-form__recover-link {
   top: 0;
   left: 0;
   right: 0;
+  height: 340px;
   overflow: hidden;
   pointer-events: none;
   z-index: 3;
@@ -2417,11 +2418,13 @@ button.signup-form__cross-link {
      card. They live in a separate container here, so head and card are styled
      as the two halves of one continuous card instead — same result, no DOM
      change to make a breakpoint work. */
+  /* 24px under the logo on the decision screens; the under-review one sits
+     lower, and says so with its own modifier. */
   .review-head,
   .review-head--nonav {
     width: min(338px, 100%);
-    margin: 44px auto 0;
-    padding: 28px 22px 0;
+    margin: 24px auto 0;
+    padding: 32px 22px 0;
     align-items: center;
     background: #fff;
     border: 1.5px solid rgba(24, 28, 36, .1);
@@ -2536,11 +2539,48 @@ button.signup-form__cross-link {
 
   /* Neon on a phone, where it is the only accent on a white card. The desktop
      export tints it instead, because there it sits on the dark band. */
+  /* Under review is neon on a phone; the denied badge stays tinted, since a
+     celebratory colour on a refusal reads wrong. */
+  /* The under-review card sits 44px under the logo; the decision screens sit
+     at 24. Same class, so the difference is named rather than averaged. */
+  .review-head--low { margin-top: 44px; padding-top: 28px; }
+
   .review-badge {
     width: 54px;
     height: 54px;
     background: var(--neon);
   }
+
+  .approved-badge {
+    width: 54px;
+    height: 54px;
+    box-shadow: 0 0 0 7px rgba(232, 255, 102, .16);
+  }
+
+  .denied-badge { width: 54px; height: 54px; }
+
+  /* Steps: 30px markers 14px from their text, per the export. */
+  .review-step { gap: 14px; margin-top: 20px; }
+  .review-step:first-of-type { margin-top: 20px; }
+  .review-step__num { width: 30px; height: 30px; }
+
+  .approved-cta {
+    height: 50px;
+    margin-top: 28px;
+    border-radius: 15px;
+    font-size: 13.5px;
+  }
+
+  /* Denied: the lede is left-aligned even though the badge and heading above
+     it are centred — it is three lines of explanation, not a title. */
+  .denied-lede { text-align: left; font-size: 13.5px; line-height: 1.55; margin-top: 16px; }
+  .denied-note { margin-top: 24px; border-radius: 14px; padding: 16px; }
+  .denied-note__title { font-size: 13.5px; }
+  .denied-note__body { font-size: 12.5px; margin-top: 4px; }
+  .denied-appeal { margin-top: 24px; padding-top: 22px; }
+  .denied-textarea { margin-top: 12px; border-radius: 14px; padding: 12px 14px; height: 84px; }
+  .denied-send { height: 46px; margin-top: 10px; border-radius: 14px; font-size: 13px; }
+  .denied-sent { margin-top: 10px; font-size: 12px; text-align: center; }
 
   .savedmark { margin: 28px 0 0; }
   .review-next { padding: 24px 0 0; }
@@ -2607,8 +2647,9 @@ button.signup-form__cross-link {
     margin-top: 10px;
   }
 
-  /* The confetti band no longer exists on mobile. */
-  .confetti { display: none; }
+  /* The burst stays on a phone — the export keeps it, clipped to 220px, which
+     is roughly the card's top edge. */
+  .confetti { height: 220px; }
 }
 
 /* Back chevron beside the logo on a flow step. */
