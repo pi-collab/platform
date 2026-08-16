@@ -2192,7 +2192,19 @@ button.signup-form__cross-link {
   }
 
   .signup-nav__logo--dark { display: none; }
-  .signup-nav__logo--light { display: block; height: 19px; }
+
+  /* Positioned so it paints ABOVE the dark band. The band is absolutely
+     positioned and the nav is not, and a positioned element paints over an
+     unpositioned one — so a white logo on a dark field was rendering behind
+     it. The z-index goes on the logo rather than the nav or its wrapper,
+     because positioning either of those makes it the containing block for the
+     bottom link and drags that link back to the top of the page. */
+  .signup-nav__logo--light {
+    display: block;
+    height: 19px;
+    position: relative;
+    z-index: 4;
+  }
 
   /* The design puts "Already have an account? Log in" at the FOOT of the
      form, not in the nav. It cannot be moved there in CSS from a different
