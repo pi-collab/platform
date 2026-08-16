@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AuthShell, { CREATOR_LOGIN_PITCH } from '@/components/AuthShell'
 import FormError from '@/components/FormError'
@@ -42,16 +41,12 @@ export default async function CreatorLoginPage({
     }
   }
 
+  // No "new here?" nav. sendLoginOTP resolves whether the number has an
+  // account BEFORE spending a code, and an unknown one gets the "No account
+  // yet." screen with its own route to signup — so a permanent link would
+  // offer that door to everyone, including the people who do not need it.
   return (
-    <AuthShell
-      pitch={CREATOR_LOGIN_PITCH}
-      navRight={
-        <div className="signup-nav__right">
-          <span className="signup-nav__label">New here?</span>
-          <Link href="/signup/creator" className="signup-nav__cta">Create account</Link>
-        </div>
-      }
-    >
+    <AuthShell pitch={CREATOR_LOGIN_PITCH}>
       <div className="signup-panel__inner">
         {searchParams.error === 'no_account' && (
           <FormError>
