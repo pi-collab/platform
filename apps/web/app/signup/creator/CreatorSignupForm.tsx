@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import CreatorSignInButton from '@/components/CreatorSignInButton'
 import OtpInput from '@/components/OtpInput'
 import FormError from '@/components/FormError'
 import { sendOTP, verifyAndMatch } from './actions'
@@ -207,14 +206,6 @@ export default function CreatorSignupForm() {
         >
           {loading ? 'Sending…' : 'Send code'}
         </button>
-
-        <div className="signup-form__divider">
-          <span className="signup-form__rule" />
-          <span className="signup-form__or">or</span>
-          <span className="signup-form__rule" />
-        </div>
-
-        <CreatorSignInButton className="signup-form__google ghost" />
 
         {/* Notice rather than a checkbox, matching /signup/brand. Placed after
             both actions because it qualifies both: the code and Google each

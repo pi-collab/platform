@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import CreatorSignInButton from '@/components/CreatorSignInButton'
 import OtpInput from '@/components/OtpInput'
 import FormError from '@/components/FormError'
 import { isValidIndianMobile } from '@/lib/phone'
@@ -209,14 +208,6 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
         <button type="submit" disabled={loading || !phoneValid} className="signup-form__cta cta">
           {loading ? 'Sending…' : 'Send code'}
         </button>
-
-        <div className="signup-form__divider">
-          <span className="signup-form__rule" />
-          <span className="signup-form__or">or</span>
-          <span className="signup-form__rule" />
-        </div>
-
-        <CreatorSignInButton className="signup-form__google ghost" next={next} />
 
         <div className="signup-form__forgot">
           {/* A mailto rather than the design's toast: there is no account
