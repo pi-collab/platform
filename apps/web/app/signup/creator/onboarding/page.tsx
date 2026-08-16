@@ -38,8 +38,11 @@ export default async function CreatorOnboardingPage() {
 
       <div className="onboard-head">
         <h1 className="onboard-head__title">Your details.</h1>
+        {/* The mobile export's line, used on both. It says what the fields are
+            FOR — a brand reads these — where the desktop export's "help us
+            know you better" says only that we are asking. */}
         <p className="onboard-head__sub">
-          Help us know you better, so we can get you the best deals.
+          This is what brands see when they find you.
         </p>
       </div>
 
