@@ -6,6 +6,8 @@ import { DateFilter } from '@/app/dashboard/DashboardControls'
 import { periodToDateRange } from '@/app/dashboard/period-utils'
 import type { Period } from '@/app/dashboard/period-utils'
 import type { Metadata } from 'next'
+import { shouldShowCreatorApproved } from '@/lib/creator-approval'
+import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
@@ -25,6 +27,11 @@ export default async function CreatorDashboardPage({
   searchParams: { period?: string; from?: string; to?: string }
 }) {
   const { creatorId, creatorName } = await verifyCreator()
+
+  // Newly-vetted creators see the approval screen once before the dashboard.
+  // Checked here rather than in the layout: post-approval login lands on this
+  // page, so it catches everyone without adding a query to every creator route.
+  if (await shouldShowCreatorApproved(creatorId)) redirect('/creator/approved')
   const supabase = createClient()
 
   // Date range filtering

@@ -2028,3 +2028,45 @@ button.signup-form__recover-link {
   font-weight: 600;
   color: var(--ink-soft);
 }
+
+/* ── Creator: approved ─────────────────────────────────────────────────────
+   Design "Creator Signup Approved - Paged Flow". Shares the review shell; the
+   badge is the celebratory one. */
+.approved-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--neon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 8px rgba(232, 255, 102, .16);
+}
+
+.approved-title {
+  margin: 24px 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(36px, 4.4vw, 52px);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #F5F7FA;
+  text-align: center;
+}
+
+.approved-cta {
+  width: 100%;
+  height: 54px;
+  margin-top: 28px;
+  border: none;
+  border-radius: 13px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.approved-cta:disabled { opacity: .6; cursor: default; transform: none; filter: none; }
