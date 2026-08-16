@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { shouldShowCreatorApproved } from '@/lib/creator-approval'
+import Confetti from '@/components/Confetti'
 import GoToDashboard from './GoToDashboard'
 
 export const metadata = {
@@ -43,14 +44,12 @@ export default async function CreatorApprovedPage() {
       <div className="onboard-shell__dark" />
       <div className="onboard-shell__rule" />
 
-      <div className="onboard-nav-wrap">
-        <nav className="onboard-nav onboard-nav--bare">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />
-        </nav>
-      </div>
+      {/* No logo bar here: this page renders inside the creator layout, which
+          already has the app nav. The design is a standalone screen, so it
+          carries its own — repeating it gave two headers stacked. */}
+      <Confetti />
 
-      <div className="review-head">
+      <div className="review-head review-head--nonav">
         <div className="approved-badge">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#181C24"
                strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">

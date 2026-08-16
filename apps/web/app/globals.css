@@ -2070,3 +2070,37 @@ button.signup-form__recover-link {
 }
 
 .approved-cta:disabled { opacity: .6; cursor: default; transform: none; filter: none; }
+
+/* ── Confetti ──────────────────────────────────────────────────────────────
+   One burst over the dark band on approval. Clipped to the band so pieces
+   vanish at the neon rule rather than drifting over the card below. */
+.confetti {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.confetti__piece {
+  position: absolute;
+  top: -20px;
+  animation-name: confettiFall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(380px) rotate(540deg); opacity: 0; }
+}
+
+/* Without the logo bar above it, the badge needs the spacing that bar was
+   providing or it sits hard against the top of the band. */
+.review-head--nonav { padding-top: 78px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti__piece { animation: none; display: none; }
+}
