@@ -47,8 +47,15 @@ export default function AuthShell({
 
       <div className="signup-nav-wrap">
         <nav className="signup-nav">
+          {/* Two files, toggled by breakpoint. On desktop the logo sits in a
+              white pill; on mobile it sits directly on the dark band, so it
+              needs the light artwork. An img src cannot be swapped in CSS, and
+              inverting the dark one shifts its colour rather than using the
+              asset that exists. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo" />
+          <img src="/guapd-logo-dark.svg" alt="guapd" className="signup-nav__logo signup-nav__logo--dark" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/guapd-logo-light.svg" alt="" aria-hidden="true" className="signup-nav__logo signup-nav__logo--light" />
           {navRight}
         </nav>
       </div>
