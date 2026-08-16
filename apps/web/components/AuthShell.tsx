@@ -22,6 +22,11 @@ export const BRAND_PITCH = {
   sub: 'Source, negotiate and manage campaigns, all from one place built for brands.',
 }
 
+export const CREATOR_LOGIN_PITCH = {
+  title: <>Every deal.<br />Every payout.</>,
+  sub: 'Track offers, manage deals and get paid, all from one place built for creators.',
+}
+
 export const CREATOR_PITCH = {
   title: <>Everything a<br />collaboration needs.</>,
   sub: 'From the first offer to the final payout, guapd keeps brands and creators on the same page.',

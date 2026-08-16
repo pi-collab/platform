@@ -5,10 +5,56 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
 import { safeNext } from '@/lib/safe-next'
+import { sendOTP } from '@/app/signup/creator/actions'
 
 type SignInResult =
   | { status: 'ok'; redirect: string }
   | { status: 'error'; message: string }
+
+export type LoginSendResult =
+  | { status: 'sent' }
+  /** No creator at all for this number. */
+  | { status: 'not_found' }
+  /** An ops-created profile nobody has claimed yet; claiming happens at signup. */
+  | { status: 'unclaimed' }
+  | { status: 'error'; message: string }
+
+/**
+ * Send a sign-in code, but only to a number that can actually sign in.
+ *
+ * The existence check happens BEFORE the send, which is the point of this
+ * existing separately from the signup sender. Previously login used that one,
+ * so an unknown number was texted a code, the person typed it in, and only
+ * then were they told there was no account — an SMS spent, and a minute wasted
+ * on a dead end that was knowable up front.
+ *
+ * This does reveal whether a number is registered. That is the same trade
+ * already taken on the brand side: withholding it here would protect nothing,
+ * since the signup form answers the same question, and would only make the
+ * honest user work harder than an attacker.
+ */
+export async function sendLoginOTP(rawPhone: string): Promise<LoginSendResult> {
+  const phone = normalizePhone(rawPhone)
+  if (!phone) {
+    return { status: 'error', message: 'Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.' }
+  }
+
+  const admin = createAdminClient()
+  const { data: creators } = await admin
+    .from('creators')
+    .select('id, user_id')
+    .eq('phone', phone)
+
+  const matched = creators ?? []
+  if (matched.length === 0) return { status: 'not_found' }
+  // A stub has a profile but no login; claiming it is a signup flow, not a
+  // sign-in, so sending a code here would lead nowhere.
+  if (!matched.some((c) => c.user_id)) return { status: 'unclaimed' }
+
+  const sent = await sendOTP(phone)
+  if (sent.status === 'error') return { status: 'error', message: sent.message }
+  return { status: 'sent' }
+}
 
 /**
  * Verify OTP and sign in an existing creator.

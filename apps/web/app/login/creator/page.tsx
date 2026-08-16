@@ -1,12 +1,13 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import CreatorSignInButton from '@/components/CreatorSignInButton'
-import PhoneLogin from './PhoneLogin'
-import { safeNext } from '@/lib/safe-next'
+import AuthShell, { CREATOR_LOGIN_PITCH } from '@/components/AuthShell'
 import FormError from '@/components/FormError'
+import CreatorLoginForm from './CreatorLoginForm'
+import { safeNext } from '@/lib/safe-next'
 
 export const metadata = {
-  title: 'Creator login · Guapd',
+  title: 'Creator log in · Guapd',
   robots: { index: false, follow: false },
 }
 
@@ -42,124 +43,33 @@ export default async function CreatorLoginPage({
   }
 
   return (
-    <main style={styles.main}>
-      <div style={styles.card}>
-        <h1 style={styles.heading}>Creator login</h1>
-        <p style={styles.sub}>Sign in to manage your deals.</p>
-
+    <AuthShell
+      pitch={CREATOR_LOGIN_PITCH}
+      navRight={
+        <div className="signup-nav__right">
+          <span className="signup-nav__label">New here?</span>
+          <Link href="/signup/creator" className="signup-nav__cta">Create account</Link>
+        </div>
+      }
+    >
+      <div className="signup-panel__inner">
         {searchParams.error === 'no_account' && (
           <FormError>
-            No creator account found.{' '}
-            <a href="/signup/creator" className="formerr__link">
-              Sign up as a creator &rarr;
-            </a>
+            No creator account found for that sign-in.{' '}
+            <a href="/signup/creator" className="formerr__link">Sign up as a creator &rarr;</a>
           </FormError>
         )}
-
         {searchParams.error === 'account_exists' && (
-          <FormError>
-            This phone is already registered. Sign in below.
-          </FormError>
+          <FormError>This phone is already registered. Sign in below.</FormError>
         )}
+        {searchParams.error &&
+          searchParams.error !== 'no_account' &&
+          searchParams.error !== 'account_exists' && (
+            <FormError>Sign-in failed ({searchParams.error}). Please try again.</FormError>
+          )}
 
-        {searchParams.error && searchParams.error !== 'no_account' && searchParams.error !== 'account_exists' && (
-          <FormError>
-            Sign-in failed ({searchParams.error}). Please try again.
-          </FormError>
-        )}
-
-        <PhoneLogin next={next} />
-
-        <div style={styles.divider}>
-          <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>or</span>
-          <span style={styles.dividerLine} />
-        </div>
-
-        <CreatorSignInButton next={next} />
-
-        <p style={styles.footer}>
-          Don&apos;t have an account?{' '}
-          <a href="/signup/creator" style={styles.footerLink}>Sign up as a creator</a>
-        </p>
-
-        <p style={styles.footer}>
-          Looking to book creators?{' '}
-          <a href="/login/brand" style={styles.footerLink}>Log in as a brand</a>
-        </p>
-
+        <CreatorLoginForm next={next} />
       </div>
-    </main>
+    </AuthShell>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  main: {
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    minHeight:      '100vh',
-    background:     '#fafafa',
-  },
-  card: {
-    display:       'flex',
-    flexDirection: 'column',
-    alignItems:    'center',
-    gap:           '1.25rem',
-    padding:       '3rem 2.5rem',
-    background:    '#fff',
-    border:        '1px solid #e5e5e5',
-    borderRadius:  16,
-    minWidth:      320,
-    maxWidth:      380,
-    width:         '100%',
-  },
-  heading: {
-    fontSize:     '1.5rem',
-    fontWeight:   700,
-    color:        '#111',
-    margin:       0,
-  },
-  sub: {
-    fontSize:   '0.9375rem',
-    color:      '#888',
-    margin:     0,
-    textAlign:  'center',
-  },
-  error: {
-    fontSize:     '0.875rem',
-    color:        '#854d0e',
-    background:   '#fef9c3',
-    padding:      '0.625rem 1rem',
-    borderRadius: 8,
-    margin:       0,
-    textAlign:    'center',
-    lineHeight:   1.5,
-  },
-  divider: {
-    display:    'flex',
-    alignItems: 'center',
-    gap:        '0.75rem',
-    width:      '100%',
-  },
-  dividerLine: {
-    flex:       1,
-    height:     1,
-    background: '#e5e5e5',
-  },
-  dividerText: {
-    fontSize:   '0.75rem',
-    color:      '#bbb',
-    fontWeight: 500,
-    textTransform: 'uppercase',
-  },
-  footer: {
-    fontSize:   '0.8125rem',
-    color:      '#888',
-    margin:     0,
-  },
-  footerLink: {
-    color:      '#111',
-    fontWeight: 600,
-  },
 }
