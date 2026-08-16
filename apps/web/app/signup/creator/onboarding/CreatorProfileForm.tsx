@@ -146,6 +146,11 @@ export default function CreatorProfileForm() {
         </div>
       </div>
 
+      {/* NOT in the export, kept by explicit decision (confirmed twice).
+          Acceptance is recorded against a terms version and enforced in
+          saveOnboarding, which refuses without it — so this box is load
+          bearing, not decoration. It is also why the CTA reads as disabled
+          until it is ticked. Do not remove it to match the design. */}
       <label className="onboard-terms">
         <input
           type="checkbox"
