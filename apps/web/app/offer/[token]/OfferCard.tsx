@@ -22,6 +22,10 @@ interface Deal {
   payment_terms: string | null
   brand_name: string
   creator_name: string
+  brief_has_pitch: boolean
+  brief_has_guidelines: boolean
+  brief_has_avoid: boolean
+  brief_attachment_count: number
 }
 
 interface ItemInfo {
@@ -133,6 +137,15 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
   }
 
   // ── The offer ──────────────────────────────────────────────────────────────
+  // Named contents, never the contents themselves.
+  const briefParts = [
+    deal.brief_has_pitch && 'a pitch',
+    deal.brief_has_guidelines && 'guidelines',
+    deal.brief_has_avoid && 'things to avoid',
+    deal.brief_attachment_count > 0 &&
+      `${deal.brief_attachment_count} attachment${deal.brief_attachment_count > 1 ? 's' : ''}`,
+  ].filter(Boolean) as string[]
+
   const rows: [string, string][] = [
     ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '—'],
     ['Timeline', formatDate(deal.timeline_date)],
@@ -163,6 +176,26 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
           </div>
         ))}
       </dl>
+
+      {briefParts.length > 0 && (
+        /* Says a brief exists and what is in it, not what it says. The brand's
+           campaign is unreleased and this link travels over WhatsApp, so the
+           contents wait until a verified number is on the other side. */
+        <div className="offer-brief">
+          <div className="offer-brief__head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+            </svg>
+            Campaign brief
+          </div>
+          <p className="offer-brief__body">
+            {deal.brand_name} has shared {briefParts.join(', ')}. You&rsquo;ll see it in full on
+            the deal once you&rsquo;re in.
+          </p>
+        </div>
+      )}
 
       {error && <FormError>{error}</FormError>}
 

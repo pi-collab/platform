@@ -2897,3 +2897,28 @@ button.signup-form__cross-link {
 
   .offer-terms__row dd { text-align: left; }
 }
+
+/* Brief notice on the offer page: names what is inside, never shows it. */
+.offer-brief {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--sec);
+  border-radius: 14px;
+}
+
+.offer-brief__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.offer-brief__body {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}

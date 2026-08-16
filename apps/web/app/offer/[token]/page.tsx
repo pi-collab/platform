@@ -32,7 +32,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
   const [{ data: deal }, { data: items }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, usage_rights, payment_terms, status, brands(name), creators(full_name)')
+      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, usage_rights, payment_terms, status, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name), creators(full_name)')
       .eq('id', parsed.dealId)
       .single(),
     admin
@@ -104,6 +104,17 @@ export default async function OfferPage({ params }: { params: { token: string } 
           fee_mode: (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top',
           usage_rights: deal.usage_rights,
           payment_terms: deal.payment_terms,
+          // What the brief CONTAINS, never the brief itself. A brief carries a
+          // brand's unreleased campaign, and this link is forwardable — anyone
+          // holding it would be reading it before the creator has agreed to
+          // anything. The counts say it is worth opening; the deal page, behind
+          // a verified number, is where it is actually read.
+          brief_has_pitch: Boolean((deal as Record<string, unknown>).brief_pitch),
+          brief_has_guidelines: Boolean((deal as Record<string, unknown>).brief_guidelines),
+          brief_has_avoid: Boolean((deal as Record<string, unknown>).brief_avoid),
+          brief_attachment_count: Array.isArray((deal as Record<string, unknown>).brief_attachments)
+            ? ((deal as Record<string, unknown>).brief_attachments as unknown[]).length
+            : 0,
           brand_name: brandName,
           creator_name: creatorName,
         }}
