@@ -2140,7 +2140,7 @@ button.signup-form__cross-link {
     inset: 0;
     width: auto;
     height: auto;
-    clip-path: polygon(0 0, 100% 0, 100% 24%, 0 44%);
+    clip-path: polygon(0 0, 100% 0, 100% 20%, 0 38%);
   }
 
   /* The neon edge — a second layer clipped to a sliver along the same line,
@@ -2150,7 +2150,7 @@ button.signup-form__cross-link {
     position: absolute;
     inset: 0;
     background: var(--neon);
-    clip-path: polygon(0 44%, 100% 24%, 100% calc(24% + 2px), 0 calc(44% + 2px));
+    clip-path: polygon(0 38%, 100% 20%, 100% calc(20% + 2px), 0 calc(38% + 2px));
     pointer-events: none;
     z-index: 1;
   }
@@ -2162,7 +2162,7 @@ button.signup-form__cross-link {
     content: '';
     position: absolute;
     left: 0;
-    top: 44%;
+    top: 38%;
     bottom: 0;
     width: 2px;
     background: var(--neon);
@@ -2173,9 +2173,12 @@ button.signup-form__cross-link {
   /* Static, like the nav inside it. Either one being positioned captures the
      bottom link's absolute placement, which is what kept landing it at the top
      of the page instead of the foot. */
+  /* 32px, not 64. The export's deep inset is a phone-frame composition; on a
+     real device below a status bar it reads as the header having slipped down
+     the page. */
   .signup-nav-wrap {
     position: static;
-    padding: 64px 26px 0;
+    padding: 32px 26px 0;
   }
 
   /* The pill is a desktop device; here the logo sits bare on the dark field. */
@@ -2201,7 +2204,7 @@ button.signup-form__cross-link {
      bottom link and drags that link back to the top of the page. */
   .signup-nav__logo--light {
     display: block;
-    height: 19px;
+    height: 24px;
     position: relative;
     z-index: 4;
   }
@@ -2248,14 +2251,14 @@ button.signup-form__cross-link {
   /* The heading has to clear the diagonal, whose low edge is at 44vh on the
      left. The nav above occupies a fixed ~84px, so the panel's own offset is
      what remains: on the export's 844px frame the heading sits at 380px, i.e.
-     84px of nav plus 35vh. That is the export's own spacing and it leaves the
-     cap height roughly 8px under the band's left edge, which reads as the
-     heading being clipped by the black. 39vh buys a clear gap without pushing
-     the button below the fold. Expressed in vh so it holds on a phone that is
-     not 844px tall, with a floor for very short viewports. */
+     the nav above (now 56px) plus the panel's own offset. The band's low edge
+     is at 38vh, so 35vh leaves roughly 30px of clear space under it — enough
+     that the cap height never reads as touching the black, which it did at
+     the export's own spacing. In vh so it holds on a phone that is not 844px
+     tall, with a floor for very short viewports. */
   .signup-panel {
     display: block;
-    padding: max(39vh, 240px) 26px 96px;
+    padding: max(35vh, 215px) 26px 96px;
     margin-top: 0;
   }
 
