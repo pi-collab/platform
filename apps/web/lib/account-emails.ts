@@ -1,6 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendAccountEmail } from '@/lib/email'
+import { sendAccountEmail, isEmailConfigured } from '@/lib/email'
 import { renderAccountEmail } from '@/lib/email-template'
 import { BRAND_NAME } from '@/lib/content'
 
@@ -195,5 +195,87 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
     })
   } catch (err) {
     console.error(`[account-email] notifyCreatorRejected failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+
+/**
+ * Tell ops a creator has submitted their profile and is waiting on vetting.
+ *
+ * The mirror of the brand gate's notifyOpsOnce. Without it a creator sits on
+ * "check back in 24 to 48 hours" while nobody knows to look: the ops queue is
+ * a page somebody has to remember to open, and the creator has been given a
+ * deadline we never agreed to internally.
+ *
+ * Sent ONCE per creator. The event guard is on existence rather than a time
+ * window, so re-saving the profile does not re-notify.
+ */
+export async function notifyOpsCreatorPending(creatorId: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+
+    const { data: already } = await admin
+      .from('events')
+      .select('id')
+      .eq('event_type', 'creator.pending_review_notified')
+      .contains('detail', { creator_id: creatorId })
+      .limit(1)
+      .maybeSingle()
+
+    if (already) return
+
+    const to = process.env.OPS_NOTIFY_EMAIL
+    if (!to) {
+      console.warn('[account-email] OPS_NOTIFY_EMAIL unset, skipping creator review notice')
+      return
+    }
+    if (!isEmailConfigured()) {
+      console.warn('[account-email] email not configured, skipping creator review notice')
+      return
+    }
+
+    const { data: creator } = await admin
+      .from('creators')
+      .select('full_name, handle, primary_platform, phone')
+      .eq('id', creatorId)
+      .maybeSingle()
+
+    const name = creator?.full_name?.trim() || 'A creator'
+    const handle = creator?.handle ? `@${creator.handle}` : 'no handle'
+
+    const { html, text } = renderAccountEmail({
+      heading: `${name} is waiting on vetting`,
+      body: [
+        `${name} (${handle}) has completed their profile and is waiting to be reviewed.`,
+        // They have been promised a window; ops needs to know the clock is on.
+        'They have been told to check back in 24 to 48 hours, so this one is on a clock.',
+      ],
+      // Straight to the creator, not the list. The queue is where you end up
+      // hunting for the row this email is about.
+      ctaUrl: `${siteBase()}/ops/creators/${creatorId}`,
+      ctaLabel: 'Review this creator',
+      footerNote: `Sent to the ops address for ${BRAND_NAME}.`,
+    })
+
+    const res = await sendAccountEmail({
+      to: [to],
+      subject: `Creator awaiting vetting: ${name}`,
+      html,
+      text,
+      idempotencyKey: `creator-pending-${creatorId}`,
+    })
+
+    // Recorded only on success, so a transient failure retries on the next
+    // submit rather than burning the single notice this creator gets.
+    if (res.ok) {
+      await record('creator.pending_review_notified', {
+        creator_id: creatorId,
+        to_masked: to.replace(/(.{2}).*(@.*)/, '$1***$2'),
+      })
+    } else {
+      console.error(`[account-email] ops creator notice failed creator=${creatorId}: ${res.reason}`)
+    }
+  } catch (err) {
+    console.error(`[account-email] notifyOpsCreatorPending failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }

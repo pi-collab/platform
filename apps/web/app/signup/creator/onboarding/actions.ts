@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyOpsCreatorPending } from '@/lib/account-emails'
 
 export type OnboardingResult =
   | { status: 'success'; redirect: string }
@@ -111,6 +112,10 @@ export async function saveOnboarding(data: {
     return { status: 'success', redirect: '/creator/dashboard' }
   }
 
-  // New creator, pending vetting → show confirmation
+  // New creator, pending vetting. Tell ops there is something to review —
+  // the creator has just been given a 24 to 48 hour promise, and nothing else
+  // in the system announces that the queue has grown.
+  await notifyOpsCreatorPending(creator.id)
+
   return { status: 'success', redirect: '/signup/creator/complete' }
 }
