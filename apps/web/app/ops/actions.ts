@@ -3,6 +3,7 @@
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected } from '@/lib/account-emails'
+import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
 import { logOpsEvent } from '@/lib/ops-audit'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
@@ -166,6 +167,17 @@ export async function rejectCreator(creatorId: string) {
   // Only on a real transition, so re-rejecting does not send the same bad news
   // twice. This is the one email nobody wants to receive by accident.
   if (!before?.is_rejected) await notifyCreatorRejected(creatorId)
+
+  // Clear any past acknowledgement of the approved screen. Without this a
+  // creator who was approved, saw it, was later rejected, and is then approved
+  // again would land straight on the dashboard — the acknowledgement is
+  // permanent, but the approval it acknowledged is not. Rejection is the point
+  // where that record stops being true.
+  await admin
+    .from('events')
+    .delete()
+    .eq('event_type', CREATOR_APPROVAL_ACK)
+    .contains('detail', { creator_id: creatorId })
 
   revalidatePath('/ops/creators')
   return { success: true }
