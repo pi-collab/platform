@@ -2084,6 +2084,10 @@ textarea.denied-textarea {
 /* ── Confetti ──────────────────────────────────────────────────────────────
    One burst over the dark band on approval. Clipped to the band so pieces
    vanish at the neon rule rather than drifting over the card below. */
+/* Above everything. .review-head carries z-index 4 so it clears the dark band
+   on desktop, and at 3 the confetti fell behind the card the moment it reached
+   it — which reads as the pieces vanishing rather than falling. Nothing here is
+   interactive, and pointer-events are off, so sitting on top costs nothing. */
 .confetti {
   position: absolute;
   top: 0;
@@ -2092,7 +2096,7 @@ textarea.denied-textarea {
   height: 340px;
   overflow: hidden;
   pointer-events: none;
-  z-index: 3;
+  z-index: 20;
 }
 
 .confetti__piece {

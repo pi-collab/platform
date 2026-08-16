@@ -44,11 +44,12 @@ export default async function CreatorApprovedPage() {
       <div className="onboard-shell__dark" />
       <div className="onboard-shell__rule" />
 
-      {/* No logo bar here: this page renders inside the creator layout, which
-          already has the app nav. The design is a standalone screen, so it
-          carries its own — repeating it gave two headers stacked. */}
       <Confetti />
 
+      {/* No header at all. The page moved out of the creator layout so the app
+          nav is gone, and it does not put a logo back: this is a single
+          moment with one action on it, and the only way out is the button
+          below — nothing here should offer a way around it. */}
       <div className="review-head review-head--nonav">
         <div className="approved-badge">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#181C24"

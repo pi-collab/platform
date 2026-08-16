@@ -31,7 +31,7 @@ export default async function CreatorDashboardPage({
   // Newly-vetted creators see the approval screen once before the dashboard.
   // Checked here rather than in the layout: post-approval login lands on this
   // page, so it catches everyone without adding a query to every creator route.
-  if (await shouldShowCreatorApproved(creatorId)) redirect('/creator/approved')
+  if (await shouldShowCreatorApproved(creatorId)) redirect('/signup/creator/approved')
   const supabase = createClient()
 
   // Date range filtering
