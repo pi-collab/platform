@@ -2114,3 +2114,183 @@ button.signup-form__cross-link {
   font: inherit;
   cursor: pointer;
 }
+
+/* ══ Auth shell — mobile ══════════════════════════════════════════════════
+   Design "… - Mobile". Not a stacked version of the desktop split: the dark
+   field becomes a DIAGONAL band across the top, deeper on the left, with the
+   neon rule following its edge. The pitch panel is dropped entirely — the
+   phone exports carry no pitch copy, and on a small screen it would push the
+   form below the fold on the one screen someone came here to complete. */
+@media (max-width: 720px) {
+  .signup-shell {
+    display: block;
+    overflow: hidden;
+  }
+
+  /* Angled rather than a vertical split. clip-path is the only way to get the
+     slant without an image, and both edges are percentages so the band scales
+     with the viewport instead of drifting on a taller phone. */
+  .signup-shell__dark {
+    inset: 0;
+    width: auto;
+    height: auto;
+    clip-path: polygon(0 0, 100% 0, 100% 24%, 0 44%);
+  }
+
+  /* The neon edge is a second layer clipped to a 2px sliver along the same
+     line, because a border cannot follow a clip-path. */
+  .signup-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--neon);
+    clip-path: polygon(0 44%, 100% 24%, 100% calc(24% + 2px), 0 calc(44% + 2px));
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .signup-nav-wrap {
+    position: relative;
+    padding: 40px 22px 0;
+    z-index: 4;
+  }
+
+  /* The pill nav is a desktop device; on a phone the logo sits bare on the
+     dark field and the "Log in" action moves to the bottom of the form, where
+     the design puts it. */
+  .signup-nav {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .signup-nav__logo { filter: invert(1) brightness(2); }
+  .signup-nav__right { display: none; }
+
+  .signup-grid { grid-template-columns: 1fr; }
+  .signup-pitch { display: none; }
+
+  .signup-panel {
+    display: block;
+    padding: 96px 26px 56px;
+  }
+
+  .signup-panel__inner { max-width: 460px; margin: 0 auto; }
+
+  /* Serif italic at 32px on a phone, per the export — the display face at
+     38px wraps to three lines in a 390px column. */
+  .signup-panel__title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 32px;
+    letter-spacing: -0.01em;
+  }
+
+  .signup-panel__title--sm { font-size: 26px; }
+
+  .signup-form__cta,
+  .signup-form__google { border-radius: 16px; }
+
+  .signup-form__legal { font-size: 10.5px; text-align: center; margin: 16px 12px 0; }
+  .signup-form__cross { text-align: center; margin-top: 42px; }
+  .signup-form__forgot { text-align: center; }
+
+  /* Six cells in a 390px column: the desktop gap leaves them too narrow to
+     read a digit in. */
+  .otp { gap: 6px; }
+  .otp__cell { height: 52px; font-size: 20px; }
+}
+
+/* ══ Profile / status shell — mobile ══════════════════════════════════════
+   The phone exports drop the dark band and the card entirely: a white card on
+   a light page is a desktop device for holding a form inside a wide viewport,
+   and at 390px it is just an inset with rounded corners. The form runs down
+   the page instead. */
+@media (max-width: 720px) {
+  .onboard-shell__dark,
+  .onboard-shell__rule { display: none; }
+
+  .onboard-nav-wrap { padding: 40px 26px 0; }
+
+  .onboard-nav {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  .onboard-nav__cta {
+    background: none;
+    padding: 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .onboard-head {
+    align-items: flex-start;
+    padding: 34px 26px 0;
+  }
+
+  /* Left-aligned and dark: it sits on the page now, not over a dark field. */
+  .onboard-head__title,
+  .review-title,
+  .approved-title,
+  .denied-title {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.25;
+    color: var(--ink);
+    text-align: left;
+    white-space: normal;
+    width: 100%;
+    margin: 0;
+  }
+
+  .onboard-head__sub,
+  .review-sub {
+    text-align: left;
+    color: var(--ink-soft);
+    white-space: normal;
+    max-width: none;
+    margin-top: 8px;
+  }
+
+  .review-sub strong { color: var(--ink); }
+
+  .review-head,
+  .review-head--nonav {
+    align-items: flex-start;
+    padding: 34px 26px 0;
+  }
+
+  .onboard-body { padding: 26px 26px 56px; }
+
+  /* No card: the page is the card. */
+  .onboard-card {
+    background: none;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .onboard-card--flush { padding: 0; }
+  .notifybox { margin: 0; }
+  .review-next { padding: 28px 0 0; }
+  .denied-card { padding: 0; }
+
+  .onboard-cta,
+  .approved-cta { border-radius: 16px; }
+
+  /* Two full-width buttons rather than a cramped pair. */
+  .seg-row { grid-template-columns: 1fr; }
+
+  /* The confetti band no longer exists on mobile. */
+  .confetti { display: none; }
+}
