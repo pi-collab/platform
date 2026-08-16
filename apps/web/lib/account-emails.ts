@@ -175,9 +175,14 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
       heading: `An update on your ${BRAND_NAME} profile`,
       body: [
         `Hi ${name}, we've reviewed your profile and can't approve it for ${BRAND_NAME} right now.`,
-        'This is usually about fit with the brands currently hiring, not the quality of your work, and it can change as more brands join.',
-        'If you think we have got this wrong, reply to this email and we will take another look.',
+        'Review looks at a few different parameters, and this is not a judgement on the quality of your work.',
+        // NOT "reply to this email": EMAIL_REPLY_TO is unset, so a reply goes
+        // nowhere. The appeal box on their profile page does reach us, and it
+        // records what they wrote rather than depending on mail routing.
+        'If you think we have got this wrong, open your profile and send us a note. We will take another look.',
       ],
+      ctaUrl: `${siteBase()}/creator/dashboard`,
+      ctaLabel: 'View your profile status',
       footerNote: `This is an automated notification from ${BRAND_NAME}.`,
     })
 

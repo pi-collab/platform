@@ -35,7 +35,12 @@ export default function HeldNotice({
           )}
         </p>
         <p className="heldnotice__body">
-          If you think this is a mistake, reply to your signup email and we’ll take another look.
+          {/* Not "reply to your signup email": that was sent by Supabase with
+              no reply-to, so a reply reaches nobody. A mailto at least opens
+              somewhere real, without printing the address as body text. */}
+          If you think this is a mistake,{' '}
+          <a href="mailto:contact@guapd.com" className="heldnotice__link">get in touch</a>{' '}
+          and we’ll take another look.
         </p>
       </div>
     )
