@@ -18,12 +18,17 @@ export async function saveOnboarding(data: {
   fullName: string
   platform: string
   handle: string
+  /** The explicit tick on this form. Signup already recorded acceptance
+   *  against the notice on the account screen; this upgrades that record to a
+   *  deliberate act, which is why it overwrites rather than skips. */
+  termsAccepted?: boolean
   productType?: string
   productPricePaise?: number
 }): Promise<OnboardingResult> {
-  const { fullName, platform, handle, productType, productPricePaise } = data
+  const { fullName, platform, handle, termsAccepted, productType, productPricePaise } = data
 
-  // Validate required fields
+  // Validate required fields. Checked here and not only in the form: a server
+  // action is directly callable, so the form is convenience, not the boundary.
   if (!fullName.trim()) return { status: 'error', message: 'Name is required.' }
   if (!platform.trim()) return { status: 'error', message: 'Select a platform.' }
   if (!handle.trim()) return { status: 'error', message: 'Enter your handle.' }
@@ -77,6 +82,14 @@ export async function saveOnboarding(data: {
     .eq('id', creator.id)
 
   if (updateErr) return { status: 'error', message: 'Failed to save profile.' }
+
+  // Record the explicit acceptance over the implicit one taken at signup.
+  if (termsAccepted) {
+    await admin.from('users').update({
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: '2026-07-23',
+    }).eq('id', profile.id)
+  }
 
   // Create product if provided
   if (productType?.trim() && productPricePaise != null && productPricePaise > 0) {

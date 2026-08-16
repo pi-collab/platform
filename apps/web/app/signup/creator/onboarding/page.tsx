@@ -1,273 +1,53 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import SignOutButton from '@/components/SignOutButton'
+import CreatorProfileForm from './CreatorProfileForm'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { saveOnboarding } from './actions'
-import { PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
-import { trackEvent } from '@/lib/analytics'
-import FormError from '@/components/FormError'
+export const metadata = {
+  title: 'Your details · Guapd',
+  robots: { index: false, follow: false },
+}
 
-const PLATFORMS = ['Instagram', 'YouTube', 'X', 'LinkedIn']
-
-export default function CreatorOnboardingPage() {
-  const router = useRouter()
-  const [fullName, setFullName] = useState('')
-  const [platform, setPlatform] = useState('')
-  const [handle, setHandle] = useState('')
-  const [productType, setProductType] = useState('')
-  const [productPrice, setProductPrice] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const canSubmit = fullName.trim() && platform && handle.trim() && !loading
-
-  // Get available product types for the selected platform
-  const platformKey = platform.toLowerCase()
-  const availableTypes = PRODUCT_TYPES_BY_PLATFORM[platformKey] ?? PRODUCT_TYPES_BY_PLATFORM['other'] ?? []
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!canSubmit) return
-
-    setError(null)
-    setLoading(true)
-
-    const pricePaise = productPrice ? Math.round(parseFloat(productPrice) * 100) : undefined
-
-    const result = await saveOnboarding({
-      fullName: fullName.trim(),
-      platform,
-      handle: handle.trim(),
-      productType: productType || undefined,
-      productPricePaise: pricePaise && pricePaise > 0 ? pricePaise : undefined,
-    })
-
-    if (result.status === 'error') {
-      setLoading(false)
-      setError(result.message)
-      return
-    }
-
-    // Stay in loading state — page navigates away
-    trackEvent('creator_onboarded')
-    router.push(result.redirect)
-  }
+/**
+ * Creator signup step 2 — design "Creator Signup Profile - Paged Flow".
+ *
+ * Same shell as the brand's step 2: dark band, neon hairline, floating nav,
+ * serif headline, white card. Both are "tell us about yourself" after an
+ * account exists, so they share the layout rather than each inventing one.
+ */
+export default async function CreatorOnboardingPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/signup/creator')
 
   return (
-    <main style={styles.main}>
-      <div style={styles.card}>
-        <h1 style={styles.heading}>Set up your profile</h1>
-        <p style={styles.sub}>
-          Tell us the basics so brands can find and offer you deals.
+    <main className="onboard-shell">
+      <div className="onboard-shell__dark" />
+      <div className="onboard-shell__rule" />
+
+      <div className="onboard-nav-wrap">
+        <nav className="onboard-nav">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />
+          {/* The design shows "Log in", which this page cannot offer: reaching
+              it requires a verified session. The useful escape here is leaving
+              a wrong account, same as the brand step. */}
+          <SignOutButton className="onboard-nav__cta" label="Sign out" redirectTo="/login/creator" />
+        </nav>
+      </div>
+
+      <div className="onboard-head">
+        <h1 className="onboard-head__title">Your details.</h1>
+        <p className="onboard-head__sub">
+          Help us know you better, so we can get you the best deals.
         </p>
+      </div>
 
-        {error && <FormError>{error}</FormError>}
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Name */}
-          <div>
-            <label style={styles.label}>Full name *</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="Your name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              disabled={loading}
-              autoFocus
-            />
-          </div>
-
-          {/* Primary platform */}
-          <div>
-            <label style={styles.label}>Primary platform *</label>
-            <div style={styles.platformRow}>
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => { setPlatform(p); setProductType('') }}
-                  style={{
-                    ...styles.platformBtn,
-                    background: platform === p ? '#111' : '#fff',
-                    color: platform === p ? '#fff' : '#111',
-                    borderColor: platform === p ? '#111' : '#e5e5e5',
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Handle */}
-          <div>
-            <label style={styles.label}>Handle *</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="@yourhandle"
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Divider */}
-          <div style={styles.dividerLine} />
-
-          {/* Optional: first product */}
-          <p style={styles.optionalLabel}>
-            Add your first product (optional, you can add more later)
-          </p>
-
-          {platform ? (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <div style={{ flex: 2 }}>
-                <label style={styles.label}>Product type</label>
-                <select
-                  style={styles.input}
-                  value={productType}
-                  onChange={(e) => setProductType(e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="">Select...</option>
-                  {availableTypes.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Price (INR)</label>
-                <input
-                  style={styles.input}
-                  type="number"
-                  placeholder="50000"
-                  value={productPrice}
-                  onChange={(e) => setProductPrice(e.target.value)}
-                  disabled={loading}
-                  min="0"
-                />
-              </div>
-            </div>
-          ) : (
-            <p style={{ fontSize: '0.8125rem', color: '#bbb', margin: 0 }}>
-              Select a platform above to see product types.
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            style={{
-              ...styles.btn,
-              opacity: canSubmit ? 1 : 0.5,
-              marginTop: '0.5rem',
-            }}
-          >
-            {loading ? 'Saving...' : 'Continue'}
-          </button>
-        </form>
+      <div className="onboard-body">
+        <div className="onboard-card">
+          <CreatorProfileForm />
+        </div>
       </div>
     </main>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  main: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: '#fafafa',
-    padding: '1rem',
-  },
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.25rem',
-    padding: '2.5rem 2rem',
-    background: '#fff',
-    border: '1px solid #e5e5e5',
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 440,
-  },
-  heading: {
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    color: '#111',
-    margin: 0,
-  },
-  sub: {
-    fontSize: '0.875rem',
-    color: '#888',
-    margin: 0,
-  },
-  error: {
-    fontSize: '0.875rem',
-    color: '#854d0e',
-    background: '#fef9c3',
-    padding: '0.625rem 1rem',
-    borderRadius: 8,
-    margin: 0,
-    lineHeight: 1.5,
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.875rem',
-  },
-  label: {
-    display: 'block',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    color: '#555',
-    marginBottom: '0.25rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-  },
-  input: {
-    padding: '0.5rem 0.75rem',
-    border: '1px solid #e5e5e5',
-    borderRadius: 8,
-    fontSize: '0.9375rem',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-  },
-  platformRow: {
-    display: 'flex',
-    gap: '0.375rem',
-    flexWrap: 'wrap',
-  },
-  platformBtn: {
-    padding: '0.375rem 0.75rem',
-    border: '1px solid #e5e5e5',
-    borderRadius: 9999,
-    fontSize: '0.8125rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    background: '#fff',
-  },
-  dividerLine: {
-    height: 1,
-    background: '#e5e5e5',
-    margin: '0.25rem 0',
-  },
-  optionalLabel: {
-    fontSize: '0.8125rem',
-    color: '#888',
-    margin: 0,
-  },
-  btn: {
-    padding: '0.625rem 1rem',
-    background: '#111',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: '0.9375rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
 }

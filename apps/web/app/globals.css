@@ -1642,3 +1642,38 @@ button.signup-form__recover-link {
   text-decoration: none;
   cursor: default;
 }
+
+/* ── Segmented choice ──────────────────────────────────────────────────────
+   Two-up platform picker on the creator profile step. Selection is carried by
+   the border and ink, not a fill, so the card stays quiet. */
+.seg-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 62px;
+  border-radius: 13px;
+  border: 1.5px solid rgba(24, 28, 36, .14);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color .16s ease, color .16s ease;
+}
+
+.seg[aria-pressed="true"] {
+  border-color: var(--neon-deep, #D2F04A);
+  color: var(--ink);
+}
+
+/* "Where you post" sits further from the field above it than the fields do
+   from each other, per the design — it is a different kind of question. */
+.onboard-field--wide { margin-top: 30px !important; }
