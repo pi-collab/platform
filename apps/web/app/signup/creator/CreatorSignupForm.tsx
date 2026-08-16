@@ -168,7 +168,10 @@ export default function CreatorSignupForm() {
               disabled={loading || resendIn > 0}
               className="signup-form__forgot-link lnk"
             >
-              {resendIn > 0 ? `Resend code in 0:${String(resendIn).padStart(2, '0')}` : 'Resend code'}
+              {/* Always "Resend code" — the countdown lives in the hint above.
+                  Both carrying it meant "Resend code in 0:24" appeared twice
+                  on the same screen. */}
+              Resend code
             </button>
           </div>
         </form>
