@@ -32,6 +32,12 @@ export default function NotifyPreferences({
   const hasEmail = Boolean(knownEmail)
   const savedWa = splitE164(savedPrefs.whatsappPhone)
 
+  // Once they have answered, this stops being a question. A form with empty
+  // checkboxes and a Save button reads as still unanswered, which is exactly
+  // wrong on a screen whose job is to reassure them we know how to reach them.
+  const alreadyAnswered =
+    savedPrefs.notifyEmail || savedPrefs.notifyWhatsapp || Boolean(savedPrefs.whatsappPhone)
+
   // Nothing pre-selected — a pre-ticked box records a choice the creator never
   // made. A previously SAVED choice is different: that one they did make, so
   // it is reflected rather than reset.
@@ -84,6 +90,48 @@ export default function NotifyPreferences({
       return
     }
     setSaved(true)
+  }
+
+  // ── Answered: show what they chose, not the controls ─────────────────────
+  if (alreadyAnswered || saved) {
+    const waNumber = savedPrefs.whatsappPhone
+      ?? (wa.trim() ? normalizeE164(dial, wa) : null)
+    const showEmail = saved ? emailOn : savedPrefs.notifyEmail
+    const showWa = saved ? waOn : savedPrefs.notifyWhatsapp
+
+    return (
+      <div className="notifybox">
+        <div className="notifybox__head">How we&rsquo;ll notify you</div>
+
+        {showEmail && (
+          <div className="notifybox__row notifybox__row--static">
+            <span className="notifybox__label">Email</span>
+            <span className="notifybox__value">{knownEmail ?? email}</span>
+          </div>
+        )}
+
+        {showEmail && showWa && <div className="notifybox__divider" />}
+
+        {showWa && (
+          <div className="notifybox__row notifybox__row--static">
+            <span className="notifybox__label">WhatsApp</span>
+            <span className="notifybox__value">
+              {waNumber ?? (signupPhone ? `+91 ${signupPhone}` : 'Your signup number')}
+            </span>
+          </div>
+        )}
+
+        {!showEmail && !showWa && (
+          <div className="notifybox__row notifybox__row--static">
+            <span className="notifybox__value">
+              You&rsquo;ve turned off notifications, so we won&rsquo;t contact you about this.
+            </span>
+          </div>
+        )}
+
+        <div className="notifybox__pad" />
+      </div>
+    )
   }
 
   return (

@@ -1917,3 +1917,9 @@ button.signup-form__recover-link {
    wrapper or keyboard users get no indication at all. */
 .notifybox__dial:focus-within .notifybox__dial-text { color: var(--ink); }
 .notifybox__dial:focus-within .notifybox__dial-caret { color: var(--ink); }
+
+/* Read-only rows once the creator has answered: same rhythm as the editable
+   ones, without the checkbox column or the pointer. */
+.notifybox__row--static { cursor: default; padding-left: 26px; }
+.notifybox__row--static .notifybox__value { color: var(--ink-soft); }
+.notifybox__pad { height: 10px; }
