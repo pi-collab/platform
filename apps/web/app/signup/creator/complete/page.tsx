@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Sign up complete — Guapd',
+  title: 'Sign up complete · Guapd',
   robots: { index: false, follow: false },
 }
 
@@ -29,7 +29,7 @@ export default function CreatorSignupCompletePage({
           <>
             <h1 style={styles.heading}>You&apos;re all set!</h1>
             <p style={styles.sub}>
-              Your profile is under review. We&apos;ll notify you when you&apos;re approved — this usually takes 24-48 hours.
+              Your profile is under review. We&apos;ll notify you when you&apos;re approved. This usually takes 24-48 hours.
             </p>
             <Link href="/creator/dashboard" style={styles.btn}>
               Check my status

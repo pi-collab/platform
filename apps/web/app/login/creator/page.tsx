@@ -6,7 +6,7 @@ import { safeNext } from '@/lib/safe-next'
 import FormError from '@/components/FormError'
 
 export const metadata = {
-  title: 'Creator login — Guapd',
+  title: 'Creator login · Guapd',
   robots: { index: false, follow: false },
 }
 

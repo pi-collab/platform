@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import BrandSignupForm from './BrandSignupForm'
 
 export const metadata = {
-  title: 'Create your account — Guapd',
+  title: 'Create your account · Guapd',
   robots: { index: false, follow: false },
 }
 
@@ -63,7 +63,7 @@ export default async function BrandSignupPage({
               Your whole deal<br />flow, one platform.
             </h1>
             <p className="signup-pitch__sub">
-              Source, negotiate and manage campaigns — all from one place built for brands.
+              Source, negotiate and manage campaigns, all from one place built for brands.
             </p>
           </div>
         </section>

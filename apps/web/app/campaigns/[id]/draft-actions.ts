@@ -339,7 +339,7 @@ export async function bulkSendCampaignDrafts(
 
     const dealResult = await createDeal({
       creator_id: draft.creator_id,
-      title: `${campaign.name} — ${creatorName}`,
+      title: `${campaign.name} · ${creatorName}`,
       deliverables: placementSummaryText(placements),
       price_paise: draft.total_price_paise,
       revision_limit: 2,

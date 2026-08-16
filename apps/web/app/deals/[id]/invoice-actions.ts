@@ -87,7 +87,7 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
 
   if (!invoice) return { status: 'error', message: 'Invoice not found.' }
   if (invoice.status !== 'accepted') {
-    return { status: 'error', message: `Cannot mark as paid — invoice is "${invoice.status}".` }
+    return { status: 'error', message: `Cannot mark as paid: invoice is "${invoice.status}".` }
   }
 
   // ── STUB: simulate successful payment (no real money moves) ──

@@ -69,10 +69,10 @@ export async function sendPaymentReminder(invoiceId: string): Promise<Result> {
     invoice.deal_id,
     'brand',
     'payment_reminder',
-    (t) => `Payment reminder for ${t} — the creator is waiting for payment`,
+    (t) => `Payment reminder for ${t}: the creator is waiting for payment`,
     {
       email: (ctx) => ({
-        subject: `Payment reminder from ${ctx.creatorName} — ${ctx.dealLabel}`,
+        subject: `Payment reminder from ${ctx.creatorName}: ${ctx.dealLabel}`,
         heading: `${ctx.creatorName} is waiting on payment`,
         body: `The work on this deal is done and the invoice is outstanding. Settling it closes the deal out.`,
         // The invoice is authoritative for what is actually owed — it can

@@ -169,7 +169,7 @@ async function notifyOpsOnce(brandId: string): Promise<void> {
 
   const { html, text } = renderDealEmail({
     heading: `${brandName} is awaiting approval`,
-    body: `${brandName} tried to send their first deal. It’s being held until you approve the account. Review them in the ops queue — approving releases every held deal automatically.`,
+    body: `${brandName} tried to send their first deal. It’s being held until you approve the account. Review them in the ops queue. Approving releases every held deal automatically.`,
     dealLabel: brandName,
     dealUrl: `${base}/ops/brands`,
     ctaLabel: 'Open brand review queue',
@@ -177,7 +177,7 @@ async function notifyOpsOnce(brandId: string): Promise<void> {
 
   const result = await sendDealEmail({
     to: [to],
-    subject: `Brand awaiting approval — ${brandName}`,
+    subject: `Brand awaiting approval: ${brandName}`,
     html,
     text,
     // Stable key: one send per brand even if this is somehow reached twice.

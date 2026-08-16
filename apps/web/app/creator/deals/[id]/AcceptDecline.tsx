@@ -221,7 +221,7 @@ export default function AcceptDecline({
             <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Counter this offer</h3>
-                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>Change only what you want to move — blank fields keep the brand&apos;s terms.</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>Change only what you want to move. Blank fields keep the brand&apos;s terms.</div>
               </div>
               <button
                 className="viewlink"
@@ -266,7 +266,7 @@ export default function AcceptDecline({
                   className="dinput"
                   style={{ marginTop: 7 }}
                   type="text"
-                  placeholder="One line on why — optional"
+                  placeholder="One line on why (optional)"
                   value={counterNote}
                   onChange={(e) => setCounterNote(e.target.value)}
                   disabled={loading}

@@ -145,7 +145,7 @@ export default function NegotiationCard({
         {/* Actions */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 26, paddingTop: 22, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
           <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', maxWidth: 380 }}>
-            Accepting locks in {creatorFirstName.toLowerCase()}&apos;s terms below. Countering sends a new number — {creatorFirstName.toLowerCase()} can accept, counter again, or decline.
+            Accepting locks in {creatorFirstName.toLowerCase()}&apos;s terms below. Countering sends a new number. {creatorFirstName.toLowerCase()} can accept, counter again, or decline.
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
@@ -179,7 +179,7 @@ export default function NegotiationCard({
             <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Counter back</h3>
-                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>Change only what you want to move — blank fields keep current terms.</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>Change only what you want to move. Blank fields keep current terms.</div>
               </div>
               <button
                 className="viewlink"
@@ -224,7 +224,7 @@ export default function NegotiationCard({
                   className="dinput"
                   style={{ marginTop: 7 }}
                   type="text"
-                  placeholder="One line on why — optional"
+                  placeholder="One line on why (optional)"
                   value={counterNote}
                   onChange={(e) => setCounterNote(e.target.value)}
                   disabled={loading}

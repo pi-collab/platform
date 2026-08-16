@@ -717,7 +717,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Attachments</div>
-              <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginBottom: 12 }}>Mood boards, brand guidelines, reference videos — up to 50 MB each.</div>
+              <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginBottom: 12 }}>Mood boards, brand guidelines, reference videos, up to 50 MB each.</div>
               {briefAttachments.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                   {briefAttachments.map((att, i) => (
@@ -770,7 +770,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Message</div>
-              <textarea className="dinput" rows={3} placeholder="Optional — a note to send with the offer." value={message} onChange={(e) => setMessage(e.target.value)} style={{ width: '100%' }} />
+              <textarea className="dinput" rows={3} placeholder="Optional: a note to send with the offer." value={message} onChange={(e) => setMessage(e.target.value)} style={{ width: '100%' }} />
               <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 9 }}>This becomes the first message in your thread with {firstName}.</div>
             </div>
           </div>

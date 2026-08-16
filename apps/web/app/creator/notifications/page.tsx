@@ -3,7 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import NotificationFeed from '@/components/NotificationFeed'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Notifications — Guapd Creator' }
+export const metadata: Metadata = { title: 'Notifications · Guapd Creator' }
 
 export default async function CreatorNotificationsPage() {
   await verifyCreator()

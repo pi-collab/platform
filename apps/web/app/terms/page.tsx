@@ -3,7 +3,7 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — Guapd',
+  title: 'Terms of Service · Guapd',
   robots: 'index, follow',
 }
 

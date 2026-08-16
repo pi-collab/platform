@@ -316,7 +316,7 @@ export async function generateOfferLink(dealId: string) {
     .maybeSingle()
 
   if (!deal) return { error: 'Deal not found' }
-  if (deal.status !== 'negotiating') return { error: `Deal status is "${deal.status}" — can only generate links for negotiating deals` }
+  if (deal.status !== 'negotiating') return { error: `Deal status is "${deal.status}": can only generate links for negotiating deals` }
 
   const token = generateOfferToken(dealId)
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001'
@@ -575,7 +575,7 @@ export async function setDealFeeOverride(dealId: string, feePercent: number | nu
 
   if (!deal) return { error: 'Deal not found.' }
   if (deal.status !== 'negotiating') {
-    return { error: `Cannot change fee — deal is "${deal.status}". Fee is immutable once the creator has accepted.` }
+    return { error: `Cannot change fee: deal is "${deal.status}". Fee is immutable once the creator has accepted.` }
   }
 
   // If clearing the override, restore to brand's current rate

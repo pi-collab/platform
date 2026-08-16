@@ -390,14 +390,14 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
           <span style={formLabelTextStyle}>Social account</span>
           <select style={formInputStyle} value={accountIdx} onChange={(e) => { setAccountIdx(parseInt(e.target.value, 10)); setProductType('') }}>
             {accounts.map((a, i) => (
-              <option key={i} value={i}>{a.platform} — {a.handle?.startsWith('@') ? a.handle : `@${a.handle}`}</option>
+              <option key={i} value={i}>{a.platform} · {a.handle?.startsWith('@') ? a.handle : `@${a.handle}`}</option>
             ))}
           </select>
         </label>
       )}
       {existing && (
         <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
-          Account: <strong style={{ textTransform: 'capitalize' }}>{existing.platform}</strong> — {existing.handle?.startsWith('@') ? existing.handle : `@${existing.handle}`}
+          Account: <strong style={{ textTransform: 'capitalize' }}>{existing.platform}</strong> · {existing.handle?.startsWith('@') ? existing.handle : `@${existing.handle}`}
         </p>
       )}
 
@@ -695,7 +695,7 @@ function PairRateForm({ creatorId, brandId: initialBrandId, brandName, standardR
         </label>
       ) : (
         <p style={{ fontSize: '0.8125rem', margin: 0 }}>
-          <strong>{displayBrandName}</strong> — standard rate: <span style={{ fontFamily: 'monospace' }}>{standardRate}%</span>
+          <strong>{displayBrandName}</strong> · standard rate: <span style={{ fontFamily: 'monospace' }}>{standardRate}%</span>
         </p>
       )}
 

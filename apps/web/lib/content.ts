@@ -32,7 +32,7 @@ export const homePage = {
   badge: 'Brand × Creator',
   headline: 'Brand–creator deals without the chaos',
   subheadline:
-    'One platform for the whole collaboration — offer, negotiate, deliver, and get paid. No WhatsApp threads, no agency middlemen, no chasing.',
+    'One platform for the whole collaboration: offer, negotiate, deliver, and get paid. No WhatsApp threads, no agency middlemen, no chasing.',
 
   audienceSplit: {
     brand: {
@@ -76,12 +76,12 @@ export const homePage = {
   howItWorks: {
     id: 'how-it-works',
     eyebrow: 'How it works',
-    headline: 'Brief to paid — in one place',
+    headline: 'Brief to paid, in one place',
     steps: [
       {
         number: '01',
         title:  'Brand sends a structured offer',
-        body:   'Deliverables, rate, timeline, revision count, and payment terms — all in a single structured form. Creator gets a WhatsApp ping.',
+        body:   'Deliverables, rate, timeline, revision count, and payment terms, all in a single structured form. Creator gets a WhatsApp ping.',
       },
       {
         number: '02',
@@ -91,7 +91,7 @@ export const homePage = {
       {
         number: '03',
         title:  'Creator delivers, brand reviews',
-        body:   'Files uploaded in the platform. Brand approves or requests a revision — tracked against the agreed limit.',
+        body:   'Files uploaded in the platform. Brand approves or requests a revision, tracked against the agreed limit.',
       },
       {
         number: '04',
@@ -121,7 +121,7 @@ export const homePage = {
       label:   'For creators',
       href:    '/creators',
       points: [
-        'Free for creators — always',
+        'Free for creators, always',
         'One inbox for every brand deal',
         'Terms on record, scope protected',
         'Upload files and track revisions',
@@ -146,7 +146,7 @@ export const brandPage = {
   hero: {
     badge:       'For brands',
     headline:    'Stop overpaying for creator deals',
-    subheadline: 'Run every collaboration directly — structured offer to final payment — without an agency taking 20% for work you can do yourself.',
+    subheadline: 'Run every collaboration directly, structured offer to final payment, without an agency taking 20% for work you can do yourself.',
     ctaText:     'Request early access',
     ctaHref:     '/signup/brand',
     microcopy:   'Free to start · No commitment',
@@ -162,20 +162,20 @@ export const brandPage = {
     {
       label:    'Offers',
       headline: 'Send a structured brief in minutes',
-      body:     'Build a precise offer with deliverables, timeline, revision count, usage rights, and payment terms — all in a structured form. No ambiguity, no back-and-forth over WhatsApp to agree on scope.',
+      body:     'Build a precise offer with deliverables, timeline, revision count, usage rights, and payment terms, all in a structured form. No ambiguity, no back-and-forth over WhatsApp to agree on scope.',
       visual:   'offer-builder' as const,
     },
     {
       label:    'Negotiation',
       headline: 'Agree on terms with a full paper trail',
-      body:     "Every counter, edit, and acceptance is timestamped and on record. When terms are agreed, they are locked — and both sides have the same written record. No more 'I said this, not that' disputes.",
+      body:     "Every counter, edit, and acceptance is timestamped and on record. When terms are agreed, they are locked, and both sides have the same written record. No more 'I said this, not that' disputes.",
       visual:   'thread' as const,
       reverse:  true,
     },
     {
       label:    'Payments',
       headline: 'Track payment status without chasing',
-      body:     'Send a Razorpay payment link and watch status update automatically — invoiced, link sent, paid. No spreadsheet, no follow-up DM asking "has it gone through?"',
+      body:     'Send a Razorpay payment link and watch status update automatically: invoiced, link sent, paid. No spreadsheet, no follow-up DM asking "has it gone through?"',
       visual:   'payment' as const,
     },
   ],
@@ -186,7 +186,7 @@ export const brandPage = {
     cards: [
       { icon: '📋', title: 'Structured briefs',       body: 'Define deliverables, timeline, and revision limits upfront. Both sides see the same terms.' },
       { icon: '🔒', title: 'Agreed terms on record',  body: 'No verbal misunderstandings. Every agreed term is written, locked, and auditable.' },
-      { icon: '📁', title: 'Deliverable review',      body: 'Review files in one place. Approve or request a revision — it counts against the agreed limit.' },
+      { icon: '📁', title: 'Deliverable review',      body: 'Review files in one place. Approve or request a revision · it counts against the agreed limit.' },
       { icon: '💳', title: 'Payment tracking',        body: 'Razorpay link → status updates automatically. Know exactly where your payment is.' },
       { icon: '🔁', title: 'One-tap re-engagement',   body: 'Worked with a creator before? Re-engage in one tap, with previous terms pre-filled.' },
       { icon: '📊', title: 'Full deal timeline',      body: 'Every event logged from offer to payment. Your audit trail, automatically.' },
@@ -210,7 +210,7 @@ export const brandPage = {
         role:  '', // PLACEHOLDER
       },
       {
-        quote: 'Our agency was taking 20% for coordination work we could handle ourselves — if we had the right system.',
+        quote: 'Our agency was taking 20% for coordination work we could handle ourselves, if we had the right system.',
         name:  'Growth lead, D2C brand',
         role:  '', // PLACEHOLDER
       },
@@ -242,7 +242,7 @@ export const creatorPage = {
   hero: {
     badge:       'For creators',
     headline:    'One inbox for every brand deal',
-    subheadline: 'Stop managing collaborations across DMs, email, and WhatsApp. Accept offers, negotiate terms, upload deliverables, and track payment — all in one place.',
+    subheadline: 'Stop managing collaborations across DMs, email, and WhatsApp. Accept offers, negotiate terms, upload deliverables, and track payment, all in one place.',
     ctaText:     'Join as a creator',
     ctaHref:     '/signup/creator',
     microcopy:   'Free for creators · Always',
@@ -258,13 +258,13 @@ export const creatorPage = {
     {
       label:    'Inbox',
       headline: 'Every deal, one place',
-      body:     'No more offers buried in Instagram DMs. Every brand brief arrives as a structured card — deliverables, rate, timeline, all laid out clearly. Accept, counter, or decline in one tap.',
+      body:     'No more offers buried in Instagram DMs. Every brand brief arrives as a structured card: deliverables, rate, timeline, all laid out clearly. Accept, counter, or decline in one tap.',
       visual:   'offer-builder' as const,
     },
     {
       label:    'Deliverables',
       headline: 'Upload and get approved without the back-and-forth',
-      body:     'Upload your content, track revision requests, and see exactly how many rounds are left. The revision count was in the original terms — no scope creep, no surprises.',
+      body:     'Upload your content, track revision requests, and see exactly how many rounds are left. The revision count was in the original terms, so no scope creep and no surprises.',
       visual:   'thread' as const,
       reverse:  true,
     },
@@ -280,7 +280,7 @@ export const creatorPage = {
     label:    'Everything you need',
     headline: 'Built so you never miss a deal or a payment',
     cards: [
-      { icon: '📥', title: 'Deal inbox',             body: 'All offers in one place — structured, clear, and easy to respond to.' },
+      { icon: '📥', title: 'Deal inbox',             body: 'All offers in one place · structured, clear, and easy to respond to.' },
       { icon: '✅', title: 'Accept or counter',      body: 'Respond to offers in one tap. Counter on any line item with a reason.' },
       { icon: '📂', title: 'File upload',            body: 'Upload content, track revisions, and stay within agreed scope.' },
       { icon: '💰', title: 'Payment status',         body: 'Watch payment move from pending to paid in real time. No guessing.' },

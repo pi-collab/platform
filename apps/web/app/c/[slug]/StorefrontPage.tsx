@@ -41,7 +41,7 @@ export default function StorefrontPage({ data }: { data: StorefrontData }) {
 
   function openPitchWithPackage(pkg: { platform: string; product_type: string; price_paise: number }) {
     trackEvent('pitch_started', { slug: data.slug, package: pkg.product_type })
-    setPitchDeliverables(`1 ${pkg.platform} ${pkg.product_type} — ₹${formatPaise(pkg.price_paise)}`)
+    setPitchDeliverables(`1 ${pkg.platform} ${pkg.product_type} · ₹${formatPaise(pkg.price_paise)}`)
     setShowPitch(true)
   }
 

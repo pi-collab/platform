@@ -670,10 +670,10 @@ function DealBreadcrumb({ status }: { status: string }) {
 function DealStatusLabel({ status }: { status: string }) {
   const map: Record<string, { label: string; bg: string }> = {
     negotiating: { label: 'Negotiating', bg: 'var(--sec-2)' },
-    agreed: { label: 'Agreed — awaiting content', bg: 'var(--sec-2)' },
-    delivered: { label: 'Submitted — to review', bg: 'var(--lime-200)' },
+    agreed: { label: 'Agreed, awaiting content', bg: 'var(--sec-2)' },
+    delivered: { label: 'Submitted, to review', bg: 'var(--lime-200)' },
     revision: { label: 'Revision requested', bg: 'var(--sec-2)' },
-    approved: { label: 'Approved — awaiting payment', bg: 'var(--sec-2)' },
+    approved: { label: 'Approved, awaiting payment', bg: 'var(--sec-2)' },
   }
   const s = map[status] ?? { label: status, bg: 'var(--sec-2)' }
   return (

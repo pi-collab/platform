@@ -3,7 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
 
-export const metadata: Metadata = { title: 'My Deals — Guapd Creator' }
+export const metadata: Metadata = { title: 'My Deals · Guapd Creator' }
 
 export default async function CreatorDealsPage() {
   const ctx = await verifyCreator()

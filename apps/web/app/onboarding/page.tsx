@@ -3,7 +3,7 @@ import SignOutButton    from '@/components/SignOutButton'
 import { createClient } from '@/lib/supabase/server'
 import OnboardingForm   from './OnboardingForm'
 
-export const metadata = { title: 'Your brand — Guapd', robots: { index: false, follow: false } }
+export const metadata = { title: 'Your brand · Guapd', robots: { index: false, follow: false } }
 
 /**
  * Brand signup — step 2 of the paged flow (brand profile). Step 1 is

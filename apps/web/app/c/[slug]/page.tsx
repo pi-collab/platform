@@ -45,13 +45,13 @@ function formatStat(n: number): string {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await getPublicStorefront(params.slug)
-  if (!data) return { title: 'Creator Not Found — Guapd' }
+  if (!data) return { title: 'Creator Not Found · Guapd' }
 
   return {
-    title: `${data.display_name} — Guapd`,
+    title: `${data.display_name} · Guapd`,
     description: data.headline || `${data.display_name} on Guapd`,
     openGraph: {
-      title: `${data.display_name} — Guapd`,
+      title: `${data.display_name} · Guapd`,
       description: data.headline || `${data.display_name} on Guapd`,
       type: 'profile',
     },

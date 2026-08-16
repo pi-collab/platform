@@ -201,7 +201,7 @@ export default function CampaignBrief({
           className="ffield"
           value={pitch}
           onChange={(e) => setPitch(e.target.value)}
-          placeholder="Describe the campaign — what it is, who it's for, and why creators should be excited to participate..."
+          placeholder="Describe the campaign: what it is, who it's for, and why creators should be excited to participate..."
           rows={5}
         />
       </div>

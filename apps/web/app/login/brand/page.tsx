@@ -8,7 +8,7 @@ import BrandLoginForm from './BrandLoginForm'
 import FormError from '@/components/FormError'
 
 export const metadata = {
-  title: 'Log in — Guapd',
+  title: 'Log in · Guapd',
   robots: { index: false, follow: false },
 }
 
@@ -71,7 +71,7 @@ export default async function LoginPage({
           </div>
           <h2 className="signup-panel__title">You&rsquo;re in.</h2>
           <p className="signup-panel__sub">
-            Signed in as {user.email}. One step left — tell us about your brand and your
+            Signed in as {user.email}. One step left. Tell us about your brand and your
             dashboard is ready.
           </p>
           <div className="signup-form">

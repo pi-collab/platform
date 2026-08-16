@@ -5,7 +5,7 @@ import AuthShell from '@/components/AuthShell'
 import ResetPasswordForm from './ResetPasswordForm'
 
 export const metadata = {
-  title: 'Set a new password — Guapd',
+  title: 'Set a new password · Guapd',
   robots: { index: false, follow: false },
 }
 

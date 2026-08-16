@@ -132,7 +132,7 @@ export default function CreatorThread({
 
         <div style={messagesArea}>
           {messages.length === 0 ? (
-            <p style={emptyState}>No messages yet — send a message to the brand.</p>
+            <p style={emptyState}>No messages yet. Send a message to the brand.</p>
           ) : (
             <div style={messageList}>
               {messages.map((msg) => {
@@ -158,7 +158,7 @@ export default function CreatorThread({
 
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>This deal is {dealStatus} — messaging is closed.</p>
+            <p style={closedNotice}>This deal is {dealStatus}, so messaging is closed.</p>
           ) : (
             <>
               {emojiOpen && (

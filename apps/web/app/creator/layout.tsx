@@ -97,7 +97,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
                 Your application wasn&apos;t approved this time
               </h1>
               <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
-                We weren&apos;t able to approve your profile right now, but don&apos;t worry — we&apos;re always looking for talented creators like you. Reach out to us and we&apos;d love to reconsider.
+                We weren&apos;t able to approve your profile right now, but don&apos;t worry, we&apos;re always looking for talented creators like you. Reach out to us and we&apos;d love to reconsider.
               </p>
             </>
           ) : (

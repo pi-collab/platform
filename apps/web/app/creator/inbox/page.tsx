@@ -3,7 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Inbox — Guapd Creator' }
+export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
 export default async function CreatorInboxPage() {
   await verifyCreator()

@@ -119,9 +119,9 @@ export async function acceptOffer(token: string): Promise<OfferActionResult> {
   }
 
   // Notify brand: deal agreed (via offer link)
-  await notifyDealParty(deal.id, 'brand', 'deal_agreed', (t) => `${t} — deal agreed`, {
+  await notifyDealParty(deal.id, 'brand', 'deal_agreed', (t) => `${t}: deal agreed`, {
     email: (ctx) => ({
-      subject: `${ctx.creatorName} accepted your offer — ${ctx.dealLabel}`,
+      subject: `${ctx.creatorName} accepted your offer: ${ctx.dealLabel}`,
       heading: `${ctx.creatorName} accepted your offer`,
       body: `The terms are now agreed and the deal has moved forward. You can view the full terms and next steps on the deal.`,
       amountPaise: ctx.brandPaysPaise,
@@ -239,7 +239,7 @@ export async function declineOffer(token: string, reason?: string): Promise<Offe
   // Notify brand: offer declined (via offer link)
   await notifyDealParty(deal.id, 'brand', 'offer_declined', (t) => `Offer declined: ${t}`, {
     email: (ctx) => ({
-      subject: `${ctx.creatorName} declined your offer — ${ctx.dealLabel}`,
+      subject: `${ctx.creatorName} declined your offer: ${ctx.dealLabel}`,
       heading: `${ctx.creatorName} declined your offer`,
       body: `This deal will not go ahead. Any reason they gave is on the deal thread. You can re-engage them with revised terms at any time.`,
     }),

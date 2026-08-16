@@ -191,7 +191,7 @@ export default function DeliverableItems({
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>
                 {dealStatus === 'approved' || dealStatus === 'paid' || dealStatus === 'complete'
                   ? 'Deliverables approved'
-                  : `Submitted for review — ${brandName ? `${brandName} has` : 'the brand has'} been notified`}
+                  : `Submitted for review. ${brandName ? `${brandName} has` : 'the brand has'} been notified`}
               </div>
               <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, maxWidth: 560 }}>
                 {dealStatus === 'approved' || dealStatus === 'paid' || dealStatus === 'complete'
@@ -289,9 +289,9 @@ export default function DeliverableItems({
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>Approved as submitted — nothing more to do here</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>Approved as submitted, nothing more to do here</div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5 }}>
-                        {brandName ? `${brandName} approved this asset with no changes — it counts as delivered.` : 'This asset was approved with no changes — it counts as delivered.'}
+                        {brandName ? `${brandName} approved this asset with no changes, so it counts as delivered.` : 'This asset was approved with no changes, so it counts as delivered.'}
                       </div>
                       {item.approved_at && (
                         <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>Approved {formatDateTime(item.approved_at)}</div>

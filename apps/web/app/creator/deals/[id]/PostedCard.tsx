@@ -59,8 +59,8 @@ export default function PostedCard({ dealId, items, timelineDate }: Props) {
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em' }}>
               {items.length === 1
-                ? 'Your deliverable is approved — ready for your feed'
-                : `All ${items.length} assets are approved — ready for your feed`}
+                ? 'Your deliverable is approved and ready for your feed'
+                : `All ${items.length} assets are approved and ready for your feed`}
             </div>
             <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, maxWidth: 560 }}>
               {dateRange
@@ -188,7 +188,7 @@ function SinglePostCard({ dealId, timelineDate }: { dealId: string; timelineDate
           <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>Content posted</span>
         </div>
         <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '8px 0 0' }}>
-          Marked as posted — the brand has been notified.
+          Marked as posted. The brand has been notified.
         </p>
       </>
     )

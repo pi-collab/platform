@@ -231,7 +231,7 @@ export default function AddCreatorForm() {
 
       {/* ── Rate Card ───────────────────────────────────────── */}
       <fieldset style={fieldsetStyle}>
-        <legend style={legendStyle}>Rate card (optional — enter amounts in ₹)</legend>
+        <legend style={legendStyle}>Rate card (optional, enter amounts in ₹)</legend>
         <p style={hintStyle}>Leave blank to skip. Stored as paise internally.</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
           <Field label="Reel price (₹)">

@@ -218,7 +218,7 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
   if (olderItems.length > 0) buckets.push({ key: 'older', label: 'Earlier', items: olderItems })
 
   const summary = effectiveUnread === 0
-    ? "You're all caught up — nothing needs your attention."
+    ? "You're all caught up. Nothing needs your attention."
     : `You have ${effectiveUnread} unread ${effectiveUnread === 1 ? 'notification' : 'notifications'}.`
 
   return (
@@ -277,7 +277,7 @@ export default function NotificationFeed({ notifications, dealLinkPrefix, unread
             </p>
             <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint)', margin: '8px 0 0', lineHeight: 1.5, maxWidth: 320 }}>
               {filter === 'unread'
-                ? 'No unread notifications — new submissions, deals and payments will land here.'
+                ? 'No unread notifications. New submissions, deals and payments will land here.'
                 : 'There are no notifications in this filter right now.'}
             </p>
           </div>

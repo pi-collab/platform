@@ -129,7 +129,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
               CTA is phrased as the user's own claim rather than asserting a
               verification we haven't observed. */}
           <Link href="/login/brand" className="signup-form__cta signup-form__cta--link">
-            I&rsquo;ve verified — log in
+            I&rsquo;ve verified, log me in
           </Link>
           <ResendConfirmation email={email} />
         </div>

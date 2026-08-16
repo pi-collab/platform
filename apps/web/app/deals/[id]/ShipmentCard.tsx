@@ -37,7 +37,7 @@ export default function ShipmentCard({
     const result = await markShipped(
       dealId,
       newTrackingLink.trim() || undefined,
-      `${carrierName}${trackingNumber.trim() ? ` — ${trackingNumber.trim()}` : ''}`,
+      `${carrierName}${trackingNumber.trim() ? ` · ${trackingNumber.trim()}` : ''}`,
     )
     setLoading(false)
     if (result.status === 'error') setError(result.message)
@@ -82,7 +82,7 @@ export default function ShipmentCard({
       {shipmentStatus === 'pending' && (
         <>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-            {creatorFirstName} has 5 days to deliver once he receives this — mark it shipped and add tracking so that window starts.
+            {creatorFirstName} has 5 days to deliver once he receives this, so mark it shipped and add tracking so that window starts.
           </p>
 
           {shippingAddress ? (

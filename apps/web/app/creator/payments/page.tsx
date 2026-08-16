@@ -3,7 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
 
-export const metadata: Metadata = { title: 'Payments — Guapd Creator' }
+export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
 export default async function CreatorPaymentsPage() {
   await verifyCreator()

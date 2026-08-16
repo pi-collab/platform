@@ -120,7 +120,7 @@ export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creato
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 18 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 6 9 17l-5-5" /></svg>
-          <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Payment completed — this deal is wrapped.</span>
+          <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Payment completed. This deal is wrapped.</span>
         </div>
       </>
     )
@@ -183,7 +183,7 @@ export default function InvoiceCard({ dealId, dealRef, invoice, isPosted, creato
       {/* Footer with action */}
       <div style={{ padding: '20px 0 0', marginTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)', maxWidth: 440 }}>
-          {!isPosted ? 'Invoicing opens as soon as the post is marked live.' : 'Ready to invoice — raise it to notify the brand.'}
+          {!isPosted ? 'Invoicing opens as soon as the post is marked live.' : 'Ready to invoice. Raise it to notify the brand.'}
         </span>
         <button
           className="neonbtn"

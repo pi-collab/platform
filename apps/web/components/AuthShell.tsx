@@ -40,7 +40,7 @@ export default function AuthShell({
               Your whole deal<br />flow, one platform.
             </h1>
             <p className="signup-pitch__sub">
-              Source, negotiate and manage campaigns — all from one place built for brands.
+              Source, negotiate and manage campaigns, all from one place built for brands.
             </p>
           </div>
         </section>

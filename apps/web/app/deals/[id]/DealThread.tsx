@@ -146,7 +146,7 @@ export default function DealThread({
         {/* Messages area */}
         <div style={messagesArea}>
           {messages.length === 0 ? (
-            <p style={emptyState}>No messages yet — start the conversation.</p>
+            <p style={emptyState}>No messages yet. Start the conversation.</p>
           ) : (
             <div style={messageList}>
               {messages.map((msg) => {
@@ -184,7 +184,7 @@ export default function DealThread({
         {/* Compose */}
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>This deal is {dealStatus} — messaging is closed.</p>
+            <p style={closedNotice}>This deal is {dealStatus}, so messaging is closed.</p>
           ) : (
             <>
               {emojiOpen && (

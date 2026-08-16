@@ -42,7 +42,7 @@ export async function markShipped(
   if (!deal) return { status: 'error', message: 'Deal not found.' }
   if (!deal.requires_shipment) return { status: 'error', message: 'This deal does not require a product shipment.' }
   if (deal.shipment_status !== 'pending') {
-    return { status: 'error', message: `Cannot mark as shipped — shipment is already "${deal.shipment_status}".` }
+    return { status: 'error', message: `Cannot mark as shipped: shipment is already "${deal.shipment_status}".` }
   }
   if (deal.status === 'negotiating' || deal.status === 'declined' || deal.status === 'cancelled') {
     return { status: 'error', message: `Cannot ship for a deal that is "${deal.status}".` }
@@ -85,7 +85,7 @@ export async function markShipmentDelivered(dealId: string): Promise<Result> {
   if (!deal) return { status: 'error', message: 'Deal not found.' }
   if (!deal.requires_shipment) return { status: 'error', message: 'This deal does not require a product shipment.' }
   if (deal.shipment_status !== 'shipped') {
-    return { status: 'error', message: `Cannot mark as delivered — shipment is "${deal.shipment_status}".` }
+    return { status: 'error', message: `Cannot mark as delivered: shipment is "${deal.shipment_status}".` }
   }
 
   const { error } = await supabase

@@ -105,7 +105,7 @@ export async function markItemPosted(dealId: string, itemId: string, postedUrl: 
   if (allPosted) {
     await notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`, {
     email: (ctx) => ({
-      subject: `${ctx.creatorName} posted the content — ${ctx.dealLabel}`,
+      subject: `${ctx.creatorName} posted the content: ${ctx.dealLabel}`,
       heading: `${ctx.creatorName} posted the content`,
       body: `The content is now live. The live link is on the deal.`,
       // No amount: posting is a delivery milestone, not a money event.
@@ -167,7 +167,7 @@ export async function markPosted(dealId: string, postedUrl: string): Promise<Res
 
   await notifyDealParty(dealId, 'brand', 'content_posted', (t) => `Content posted for ${t}`, {
     email: (ctx) => ({
-      subject: `${ctx.creatorName} posted the content — ${ctx.dealLabel}`,
+      subject: `${ctx.creatorName} posted the content: ${ctx.dealLabel}`,
       heading: `${ctx.creatorName} posted the content`,
       body: `The content is now live. The live link is on the deal.`,
       // No amount: posting is a delivery milestone, not a money event.

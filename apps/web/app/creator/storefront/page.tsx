@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getMyStorefront } from './actions'
 import StorefrontManager from './StorefrontManager'
 
-export const metadata: Metadata = { title: 'My Storefront — Guapd Creator' }
+export const metadata: Metadata = { title: 'My Storefront · Guapd Creator' }
 
 export default async function StorefrontPage() {
   const ctx = await verifyCreator()

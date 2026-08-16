@@ -22,7 +22,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           {user ? (
             <>
               <p style={{ fontSize: '0.875rem', color: '#888', margin: '0 0 1rem' }}>
-                Signed in as {user.email} — this account doesn&apos;t have ops access. Sign out first, then sign in with an authorized Google account.
+                Signed in as {user.email}. This account doesn&apos;t have ops access. Sign out first, then sign in with an authorized Google account.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
                 <SignOutButton redirectTo="/ops" />

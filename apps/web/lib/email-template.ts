@@ -165,7 +165,7 @@ export function renderDealEmail(content: DealEmailContent): { html: string; text
 
           <tr>
             <td style="padding:18px 4px 0 4px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${COLORS.faint};">
-              This is an automated notification — manage this deal in your dashboard at ${esc(siteHost())}.<br>
+              This is an automated notification. Manage this deal in your dashboard at ${esc(siteHost())}.<br>
               You're receiving this because you're a member of this brand on ${esc(BRAND_NAME)}.
             </td>
           </tr>
@@ -187,7 +187,7 @@ export function renderDealEmail(content: DealEmailContent): { html: string; text
     '',
     `${ctaLabel}: ${dealUrl}`,
     '',
-    `This is an automated notification — manage this deal in your dashboard at ${siteHost()}.`,
+    `This is an automated notification. Manage this deal in your dashboard at ${siteHost()}.`,
     `You're receiving this because you're a member of this brand on ${BRAND_NAME}.`,
   ]
     .filter((line) => line !== null)

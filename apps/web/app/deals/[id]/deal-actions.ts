@@ -24,7 +24,7 @@ export async function acceptCounterOffer(dealId: string): Promise<ActionResult> 
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
-  if (deal.status !== 'negotiating') return { status: 'error', message: `Cannot accept — deal is "${deal.status}".` }
+  if (deal.status !== 'negotiating') return { status: 'error', message: `Cannot accept: deal is "${deal.status}".` }
 
   // Find the latest creator counter to apply its prices
   const admin = createAdminClient()
@@ -98,7 +98,7 @@ export async function brandCounterOffer(
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
-  if (deal.status !== 'negotiating') return { status: 'error', message: `Cannot counter — deal is "${deal.status}".` }
+  if (deal.status !== 'negotiating') return { status: 'error', message: `Cannot counter: deal is "${deal.status}".` }
 
   const totalPaise = counterItems.reduce((sum, i) => sum + i.price_paise, 0)
   if (totalPaise <= 0) return { status: 'error', message: 'Counter total must be greater than zero.' }

@@ -118,7 +118,7 @@ export default function CreatorOnboardingPage() {
 
           {/* Optional: first product */}
           <p style={styles.optionalLabel}>
-            Add your first product (optional — you can add more later)
+            Add your first product (optional, you can add more later)
           </p>
 
           {platform ? (

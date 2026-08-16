@@ -390,7 +390,7 @@ export default function BrandInboxView({
                   {selectedMessages.length === 0 ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-faint)' }}>
-                        No messages yet — start the conversation.
+                        No messages yet. Start the conversation.
                       </p>
                     </div>
                   ) : (
@@ -436,7 +436,7 @@ export default function BrandInboxView({
                       <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
                     <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-faint)' }}>
-                      This deal is {selectedThread.dealStatus} — messaging is closed.
+                      This deal is {selectedThread.dealStatus}, so messaging is closed.
                     </span>
                   </div>
                 ) : (

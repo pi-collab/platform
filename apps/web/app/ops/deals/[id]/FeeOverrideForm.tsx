@@ -116,7 +116,7 @@ export default function FeeOverrideForm({
 
       {!isNegotiating ? (
         <p style={{ fontSize: '0.8125rem', color: '#991b1b', background: '#fee2e2', padding: '0.5rem 0.75rem', borderRadius: 6, margin: 0 }}>
-          Fee is immutable — deal is &quot;{dealStatus}&quot;. Overrides can only be set while negotiating.
+          Fee is immutable: deal is &quot;{dealStatus}&quot;. Overrides can only be set while negotiating.
         </p>
       ) : (
         <form onSubmit={handleSubmit}>

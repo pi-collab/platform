@@ -53,7 +53,7 @@ function DefaultVisual({ index }: { index: number }) {
         fontSize: '0.8125rem',
       }}
     >
-      Product screenshot — coming soon
+      Product screenshot coming soon
     </div>
   )
 }

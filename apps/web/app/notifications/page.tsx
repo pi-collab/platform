@@ -3,7 +3,7 @@ import { verifyBrand } from '@/lib/brand-auth'
 import NotificationFeed from '@/components/NotificationFeed'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Notifications — Guapd' }
+export const metadata: Metadata = { title: 'Notifications · Guapd' }
 
 export default async function BrandNotificationsPage() {
   await verifyBrand()

@@ -401,7 +401,7 @@ export default function ShopfrontPreview({
                 <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Rate card</span>
                 <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Build your deal</h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap', margin: '0 0 clamp(16px,2vw,22px)' }}>
-                  Add what you need at {firstName}&apos;s set rates — the total updates as you go.
+                  Add what you need at {firstName}&apos;s set rates. The total updates as you go.
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0, marginBottom: 'clamp(16px,2vw,22px)' }}>
@@ -686,7 +686,7 @@ export default function ShopfrontPreview({
                               <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(24px,2.6vw,32px)', color: 'var(--ink)' }}>%</span>
                             </div>
                             <p className="t-body" style={{ color: 'var(--ink-soft)', margin: '10px 0 0' }}>
-                              are aged {top.label} — {firstName}&apos;s <span className="t-accent">core</span> buying audience.
+                              are aged {top.label}, {firstName}&apos;s <span className="t-accent">core</span> buying audience.
                             </p>
                           </div>
                         )
@@ -868,7 +868,7 @@ export default function ShopfrontPreview({
               <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Past collaborations</span>
               <div style={{ margin: '10px 0 clamp(10px,1.3vw,16px)' }}>
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>Brands {firstName} has delivered for</h2>
-                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: 0 }}>Real campaigns, real numbers — brands who booked {firstName} and came back.</p>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: 0 }}>Real campaigns, real numbers from brands who booked {firstName} and came back.</p>
                 <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>{data.brandCollabs.length} brands booked on our platform</div>
               </div>
             </div>
@@ -932,7 +932,7 @@ export default function ShopfrontPreview({
                 <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Work with {firstName}</span>
                 <h2 className="t-title" style={{ lineHeight: 1.03, margin: '14px 0 0' }}>Make {firstName} an <span className="t-accent">offer</span></h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 420, margin: '18px 0 0' }}>
-                  Pick deliverables at {firstName}&apos;s set rates and {firstName} gets a structured offer — not a DM. They review, then accept, counter, or decline. Nothing is locked until you both agree.
+                  Pick deliverables at {firstName}&apos;s set rates and {firstName} gets a structured offer, not a DM. They review, then accept, counter, or decline. Nothing is locked until you both agree.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 26 }}>
                   {['Transparent, itemised pricing', 'Written terms before anyone commits', `Replies in ${data.replyTime}`].map((point, i) => (

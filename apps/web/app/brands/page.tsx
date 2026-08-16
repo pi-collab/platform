@@ -17,11 +17,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'For Brands',
   description:
-    'Stop overpaying for creator deals. Run every collaboration directly — from structured offer to final payment — without an agency in the middle.',
+    'Stop overpaying for creator deals. Run every collaboration directly, from structured offer to final payment, without an agency in the middle.',
   openGraph: {
-    title: `For Brands — ${BRAND_NAME}`,
+    title: `For Brands · ${BRAND_NAME}`,
     description:
-      'Stop overpaying for creator deals. Run every collaboration directly — from structured offer to final payment — without an agency in the middle.',
+      'Stop overpaying for creator deals. Run every collaboration directly, from structured offer to final payment, without an agency in the middle.',
     url: '/brands',
   },
   alternates: { canonical: '/brands' },
@@ -96,7 +96,7 @@ function ThreadMock() {
       </div>
 
       <div className="thread-mock__message brand">
-        ₹48,000 — final. Same terms.
+        ₹48,000 final. Same terms.
       </div>
 
       <div className="thread-mock__message creator">

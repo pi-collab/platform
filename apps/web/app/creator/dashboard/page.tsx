@@ -7,7 +7,7 @@ import { periodToDateRange } from '@/app/dashboard/period-utils'
 import type { Period } from '@/app/dashboard/period-utils'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Dashboard — Guapd Creator' }
+export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
 interface InvoiceRow {
   deal_id: string
@@ -397,7 +397,7 @@ export default async function CreatorDashboardPage({
                 Brand–creator deals<br />without the <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.12em' }}>chaos</span>.
               </h2>
               <p style={{ fontFamily: 'var(--font-ui)', fontSize: 15, lineHeight: 1.6, color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: 400 }}>
-                One home for offers, contracts, content, and payments — so you can focus on making, not chasing.
+                One home for offers, contracts, content, and payments, so you can focus on making, not chasing.
               </p>
               {storefront?.is_published ? (
                 <Link href={`/c/${storefront.slug}`} className="neonbtn" style={{ ...neonBtn, marginTop: 26 }}>

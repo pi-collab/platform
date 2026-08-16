@@ -18,11 +18,11 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'For Creators',
   description:
-    'One inbox for every brand deal. Accept offers, negotiate terms, upload deliverables, and track payment — all in one place. Free for creators, always.',
+    'One inbox for every brand deal. Accept offers, negotiate terms, upload deliverables, and track payment, all in one place. Free for creators, always.',
   openGraph: {
-    title: `For Creators — ${BRAND_NAME}`,
+    title: `For Creators · ${BRAND_NAME}`,
     description:
-      'One inbox for every brand deal. Accept offers, negotiate terms, upload deliverables, and track payment — all in one place. Free for creators, always.',
+      'One inbox for every brand deal. Accept offers, negotiate terms, upload deliverables, and track payment, all in one place. Free for creators, always.',
     url: '/creators',
   },
   alternates: { canonical: '/creators' },
@@ -108,7 +108,7 @@ function DeliverableMock() {
       >
         <div style={{ fontSize: '1.5rem', marginBottom: 4 }}>📤</div>
         <div style={{ fontSize: '0.8125rem', color: 'var(--color-muted)' }}>Drop file or click to upload</div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-subtle)', marginTop: 2 }}>v2 — this replaces your previous upload</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-subtle)', marginTop: 2 }}>v2. This replaces your previous upload</div>
       </div>
     </div>
   )

@@ -562,7 +562,7 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
           Showing {visibleRows.length} of {deals.length} deals
         </span>
         <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
-          You receive your rate in full — the 15% platform fee is paid by the brand.
+          You receive your rate in full. The 15% platform fee is paid by the brand.
         </span>
       </div>
     </>

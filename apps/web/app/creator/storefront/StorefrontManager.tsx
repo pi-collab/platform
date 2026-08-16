@@ -699,7 +699,7 @@ export default function StorefrontManager({
             {/* ═══ Left column ════════════════════════════ */}
             <div>
               {/* ── URL ─────────────────────────────────── */}
-              <Section title="Storefront link" subtitle="This goes in your bio — pick something short and memorable" icon={IconLink} defaultOpen>
+              <Section title="Storefront link" subtitle="This goes in your bio, so pick something short and memorable" icon={IconLink} defaultOpen>
                 <div style={{
                   display: 'flex', alignItems: 'center',
                   border: `1.5px solid ${slugStatus === 'available' ? 'var(--lime-400)' : slugStatus === 'taken' || slugStatus === 'invalid' ? 'var(--danger, #D2545A)' : '#D3DBE6'}`,
@@ -735,7 +735,7 @@ export default function StorefrontManager({
                 <Field label="Display name">
                   <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} style={dinput} />
                 </Field>
-                <Field label="Bio" hint="One or two lines — tell brands what you bring to the table.">
+                <Field label="Bio" hint="One or two lines telling brands what you bring to the table.">
                   <textarea value={edit.bio} onChange={e => set('bio', e.target.value)} placeholder="Everyday money, style and slow travel for a young Indian audience that actually buys." maxLength={500} rows={3} style={dtextarea} />
                 </Field>
                 <Field label="Your niches" hint={edit.niches.length < 5 ? 'Type and press Enter or click Add. Up to 5.' : undefined}>
@@ -770,7 +770,7 @@ export default function StorefrontManager({
               </Section>
 
               {/* ── Content showcase ───────────────────────── */}
-              <Section title="Content showcase" subtitle="Your best work — brands expand each piece to see the stats" icon={IconFilm}>
+              <Section title="Content showcase" subtitle="Your best work. Brands expand each piece to see the stats" icon={IconFilm}>
                 <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                   Add your top-performing content. Tap a piece to fill in details and paste the reel or video link.
                 </p>
@@ -791,12 +791,12 @@ export default function StorefrontManager({
                   <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
                 </div>
                 {edit.contentItems.length >= 8 && (
-                  <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces — remove one to add another.</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces. Remove one to add another.</div>
                 )}
               </Section>
 
               {/* ── Past collabs ───────────────────────────── */}
-              <Section title="Past collaborations" subtitle="Brands you've delivered for — they scroll as a marquee on your page" icon={IconHandshake}>
+              <Section title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
                 <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                   Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.
                 </p>
@@ -835,7 +835,7 @@ export default function StorefrontManager({
                   padding: '10px 14px', borderRadius: 12, background: '#F4F6F2', border: `1px solid ${BHL}`,
                   fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5,
                 }}>
-                  Your rate card pulls from your products — <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
+                  Your rate card pulls from your products. <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
                 </div>
               </Section>
 
@@ -1016,7 +1016,7 @@ export default function StorefrontManager({
               fontFamily: 'var(--font-ui)', fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)',
               margin: '0 0 24px', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto',
             }}>
-              This is the page brands see when they want to work with you — your rates, your best content, your audience, all in one place. Share the link in your bio and let brands come to you.
+              This is the page brands see when they want to work with you: your rates, your best content, your audience, all in one place. Share the link in your bio and let brands come to you.
             </p>
             <button onClick={() => setMode('edit')} style={{
               ...primaryBtn,
@@ -1028,7 +1028,7 @@ export default function StorefrontManager({
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
             </button>
             <p style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', margin: '14px 0 0', lineHeight: 1.5 }}>
-              What you see below is a sample — replace the numbers with yours.
+              What you see below is a sample. Replace the numbers with yours.
             </p>
           </div>
         </div>

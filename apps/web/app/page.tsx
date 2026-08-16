@@ -10,13 +10,13 @@ import { homePage, BRAND_NAME } from '@/lib/content'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: `${BRAND_NAME} — Brand–creator deals without the chaos`,
+  title: `${BRAND_NAME} · Brand–creator deals without the chaos`,
   description:
-    'One platform for brand–creator collaborations in India. Offer, negotiate, deliver, and pay — without agencies or WhatsApp threads.',
+    'One platform for brand–creator collaborations in India. Offer, negotiate, deliver, and pay. No agencies or WhatsApp threads.',
   openGraph: {
-    title: `${BRAND_NAME} — Brand–creator deals without the chaos`,
+    title: `${BRAND_NAME} · Brand–creator deals without the chaos`,
     description:
-      'One platform for brand–creator collaborations in India. Offer, negotiate, deliver, and pay — without agencies or WhatsApp threads.',
+      'One platform for brand–creator collaborations in India. Offer, negotiate, deliver, and pay. No agencies or WhatsApp threads.',
     url: '/',
   },
   alternates: { canonical: '/' },

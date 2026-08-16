@@ -320,7 +320,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '12px 0 0', maxWidth: 640 }}>
               {firstName} accepted at {deal.price_paise ? formatRupees(deal.price_paise) : 'the offered terms'}.
               {deal.requires_shipment
-                ? ` A product kit needs to get to ${firstName.toLowerCase()} to get the deal going — ship it below to start the delivery window.`
+                ? ` A product kit needs to get to ${firstName.toLowerCase()} to get the deal going. Ship it below to start the delivery window.`
                 : deal.status === 'agreed'
                   ? ` Awaiting ${firstName.toLowerCase()} to submit deliverables.`
                   : ''}
@@ -398,7 +398,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
               <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-soft)' }}>Waiting to go live</span>
             </div>
             <h3 style={{ fontSize: 26, lineHeight: 1.25, margin: '14px 0 0' }}>
-              Deliverables are approved — waiting for <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400 }}>{firstName}</span> to post
+              Deliverables are approved, waiting for <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400 }}>{firstName}</span> to post
             </h3>
             <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '12px 0 0', maxWidth: 440 }}>
               All assets are approved. {firstName}&apos;s invoice opens once the content is marked live.
@@ -613,7 +613,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 {/* Helper note for agreed status */}
                 {deal.status === 'agreed' && (
                   <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 16 }}>
-                    {firstName} submits directly through their deal page — there&apos;s nothing for you to upload here.
+                    {firstName} submits directly through their deal page, so there&apos;s nothing for you to upload here.
                   </div>
                 )}
 
