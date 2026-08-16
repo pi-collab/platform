@@ -86,7 +86,7 @@ export default async function CreatorSignupCompletePage({
           Your profile is under <span className="review-title__em">review.</span>
         </h1>
         <p className="review-sub">
-          Check back in <strong>24&ndash;48 hours</strong>.
+          Check back in <strong>24&ndash;48 hours</strong>. Meanwhile, tell us how to reach you.
         </p>
       </div>
 
