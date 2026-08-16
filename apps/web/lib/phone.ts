@@ -126,3 +126,30 @@ export function normalizeE164(dialCode: string, nationalNumber: string): string 
 
   return `+${full}`
 }
+
+
+/**
+ * Split a stored E.164 number back into a dial code and the national part,
+ * so a saved number can be shown in the control it was entered with.
+ *
+ * Longest prefix wins: +1 would otherwise swallow numbers belonging to +91,
+ * and +9 shapes overlap heavily (+91, +92, +94, +971, +977).
+ *
+ * Falls back to the default dial code with the digits intact rather than
+ * returning null — showing a number under the wrong flag is recoverable by
+ * the user; showing them an empty field after they saved one is not.
+ */
+export function splitE164(
+  stored: string | null | undefined,
+  fallbackDial = '+91',
+): { dial: string; national: string } {
+  if (!stored) return { dial: fallbackDial, national: '' }
+
+  const digits = stored.replace(/\D/g, '')
+  const match = [...DIAL_CODES]
+    .sort((a, b) => b.code.length - a.code.length)
+    .find((d) => digits.startsWith(d.code.replace('+', '')))
+
+  if (!match) return { dial: fallbackDial, national: digits }
+  return { dial: match.code, national: digits.slice(match.code.length - 1) }
+}

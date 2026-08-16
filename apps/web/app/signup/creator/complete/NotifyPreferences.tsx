@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import FormError from '@/components/FormError'
-import { DIAL_CODES, normalizeE164 } from '@/lib/phone'
+import { DIAL_CODES, normalizeE164, splitE164 } from '@/lib/phone'
 import { saveNotifyPreferences } from './actions'
 
 /**
@@ -21,26 +21,28 @@ import { saveNotifyPreferences } from './actions'
 export default function NotifyPreferences({
   knownEmail,
   signupPhone,
+  saved: savedPrefs,
 }: {
   knownEmail: string | null
   /** Ten digits, no country code. Null for Google signups. */
   signupPhone: string | null
+  /** What this creator already chose, if anything. */
+  saved: { notifyEmail: boolean; notifyWhatsapp: boolean; whatsappPhone: string | null }
 }) {
   const hasEmail = Boolean(knownEmail)
+  const savedWa = splitE164(savedPrefs.whatsappPhone)
 
-  // Nothing pre-selected. A pre-ticked box records a choice the creator never
-  // made; these are ticked because they want them, not because we defaulted
-  // them on. The cost is that someone who ignores this screen chooses nothing
-  // — which is why the wait time on the headline above matters more than the
-  // panel being tidy.
-  const [emailOn, setEmailOn] = useState(false)
+  // Nothing pre-selected — a pre-ticked box records a choice the creator never
+  // made. A previously SAVED choice is different: that one they did make, so
+  // it is reflected rather than reset.
+  const [emailOn, setEmailOn] = useState(savedPrefs.notifyEmail)
   const [email, setEmail] = useState('')
-  const [waOn, setWaOn] = useState(false)
-  const [wa, setWa] = useState('')
+  const [waOn, setWaOn] = useState(savedPrefs.notifyWhatsapp)
+  const [wa, setWa] = useState(savedWa.national)
   // Defaults to India because that is the roster, but a creator whose LOGIN
   // number is Indian may read WhatsApp on a foreign one — which is the whole
   // reason this is selectable rather than the design's fixed +91.
-  const [dial, setDial] = useState('+91')
+  const [dial, setDial] = useState(savedWa.dial)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)

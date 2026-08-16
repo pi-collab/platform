@@ -35,7 +35,7 @@ export default async function CreatorSignupCompletePage({
 
   const admin = createAdminClient()
   const { data: profile } = await admin
-    .from('users').select('id, email').eq('auth_id', user.id).maybeSingle()
+    .from('users').select('id, email, preferences').eq('auth_id', user.id).maybeSingle()
 
   const { data: creator } = profile
     ? await admin
@@ -51,6 +51,16 @@ export default async function CreatorSignupCompletePage({
   const knownEmail = creator?.contact_email ?? profile?.email ?? null
   // Stored as +91XXXXXXXXXX; the field takes the ten subscriber digits.
   const signupPhone = creator?.phone?.replace(/^\+91/, '') ?? null
+
+  // Read back what they already chose. Without this a reload showed the saved
+  // email — that comes back via contact_email — but lost the WhatsApp number
+  // and both toggles, which looked like the save had half worked.
+  const prefs = (profile?.preferences ?? {}) as Record<string, unknown>
+  const saved = {
+    notifyEmail: prefs.notify_email === true,
+    notifyWhatsapp: prefs.notify_whatsapp === true,
+    whatsappPhone: typeof prefs.whatsapp_phone === 'string' ? prefs.whatsapp_phone : null,
+  }
 
   return (
     <main className="onboard-shell onboard-shell--tall">
@@ -81,7 +91,7 @@ export default async function CreatorSignupCompletePage({
 
       <div className="onboard-body">
         <div className="onboard-card onboard-card--flush">
-          <NotifyPreferences knownEmail={knownEmail} signupPhone={signupPhone} />
+          <NotifyPreferences knownEmail={knownEmail} signupPhone={signupPhone} saved={saved} />
 
           <div className="review-next">
             <span className="review-next__head">What happens next</span>
