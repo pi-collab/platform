@@ -303,6 +303,32 @@ export async function notifyDealParty(
     if (cr?.user_id) targetUserIds.push(cr.user_id)
     creatorName = cr?.full_name ?? null
     creatorPhone = cr?.phone ?? null
+
+    // A creator can nominate a different WhatsApp number on the under-review
+    // screen. creators.phone is their LOGIN identity and often is not where
+    // they read WhatsApp, so the nominated number wins where one exists.
+    //
+    // Falls back rather than failing: a stub creator has no users row at all,
+    // and for them WhatsApp is the only channel that reaches them.
+    if (cr?.user_id) {
+      const { data: prefsRow } = await admin
+        .from('users')
+        .select('preferences')
+        .eq('id', cr.user_id)
+        .maybeSingle()
+
+      const prefs = (prefsRow?.preferences ?? {}) as Record<string, unknown>
+      const nominated = typeof prefs.whatsapp_phone === 'string' ? prefs.whatsapp_phone : null
+      if (nominated) creatorPhone = nominated
+
+      // An explicit opt-out is honoured. Absent means opted in: every creator
+      // predates this setting, and defaulting them to silence would stop deal
+      // notifications for the entire existing roster.
+      if (prefs.notify_whatsapp === false) {
+        console.info(`[whatsapp] ✗ skipped deal=${dealId} reason=creator_opted_out`)
+        creatorPhone = null
+      }
+    }
   }
 
   // ── Channel #1: in-app feed (always first, never gated) ──

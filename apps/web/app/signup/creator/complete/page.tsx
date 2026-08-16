@@ -12,7 +12,7 @@ export const metadata = {
 const STEPS = [
   { title: 'You get notified', body: 'We’ll reach out the moment you’re approved.' },
   { title: 'Offers start coming in', body: 'Brands can find and message you right away.' },
-  { title: 'You get guapped 💸', body: 'Time to get paid. Ka-ching!' },
+  { title: 'You get guapd 💸', body: 'Time to get paid. Ka-ching!' },
 ]
 
 /**

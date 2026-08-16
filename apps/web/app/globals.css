@@ -1037,6 +1037,12 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   --ink-faint: #878D99;
   --neon: #E8FF66;
   --neon-deep: #D2F04A;
+  /* Secondary tints. Same trap as the fonts: these are declared only under
+     .brand-main / .creator-main, so on this shell they resolved to nothing and
+     the preferences panel fell back to a blue that is not in the palette.
+     Values from the design's guapd-skin.css. */
+  --sec: #F4F8FC;
+  --sec-2: #F7F4FB;
 
   position: relative;
   min-height: 100vh;
@@ -1703,7 +1709,7 @@ button.signup-form__recover-link {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--sec-2, #E7F1FC);
+  background: var(--sec-2);
   color: var(--ink);
   display: flex;
   align-items: center;
@@ -1742,7 +1748,7 @@ button.signup-form__recover-link {
 /* ── Notification preferences ── */
 .notifybox {
   margin: clamp(36px, 4vw, 48px) clamp(36px, 4vw, 48px) 0;
-  background: var(--sec-2, #E7F1FC);
+  background: var(--sec-2);
   border-radius: 18px;
   overflow: hidden;
 }
