@@ -26,7 +26,7 @@ export default async function CreatorOnboardingPage() {
       <div className="onboard-shell__rule" />
 
       <div className="onboard-nav-wrap">
-        <nav className="onboard-nav">
+        <nav className="onboard-nav onboard-nav--back">
           <BackButton className="onboard-nav__back" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/guapd-logo-dark.svg" alt="guapd" className="onboard-nav__logo" />

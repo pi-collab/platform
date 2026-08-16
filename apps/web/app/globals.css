@@ -2514,6 +2514,11 @@ button.signup-form__cross-link {
 }
 
 /* Back chevron beside the logo on a flow step. */
+/* The chevron and logo are one unit on the left, 10px apart. .onboard-nav is
+   space-between for the pages that carry an action on the right; with only
+   these two children it flung them to opposite edges. */
+.onboard-nav--back { justify-content: flex-start; gap: 10px; }
+
 .onboard-nav__back {
   display: flex;
   align-items: center;
@@ -2521,9 +2526,9 @@ button.signup-form__cross-link {
   background: none;
   border: none;
   padding: 0;
-  margin-right: 10px;
   color: var(--ink);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .onboard-nav__back:hover { opacity: .7; }
