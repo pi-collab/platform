@@ -5,6 +5,7 @@ import SignOutButton from '@/components/SignOutButton'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { currentPath } from '@/lib/creator-auth'
 import { creatorLoginUrl } from '@/lib/safe-next'
+import CreatorRejected from '@/components/CreatorRejected'
 
 export default async function CreatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -25,12 +26,14 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   let creatorPhoto: string | null = null
   let isVetted = false
   let isRejected = false
+  let creatorId: string | null = null
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('full_name, is_vetted, is_rejected, profile_photo_url')
+      .select('id, full_name, is_vetted, is_rejected, profile_photo_url')
       .eq('user_id', profile.id)
       .maybeSingle()
+    creatorId = creator?.id ?? null
     creatorName = creator?.full_name ?? null
     creatorPhoto = creator?.profile_photo_url ?? null
     isVetted = creator?.is_vetted ?? false
@@ -80,39 +83,30 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     }
   }
 
-  // Vetting gate: unvetted creators see a pending or rejected interstitial
+  // Vetting gate. Two outcomes, two designed screens.
+  //
+  // Pending redirects to /signup/creator/complete rather than rendering a
+  // second under-review message here: that page is the designed one, and it
+  // also carries the notification preferences, which are the whole reason a
+  // waiting creator would want to be on it.
   if (!isVetted) {
-    return (
-      <div>
-        <header style={gateHeader}>
-          <span style={gateLogo}>
-            Guapd <span style={gateBadge}>Creator</span>
-          </span>
-          <SignOutButton redirectTo="/login/creator" />
-        </header>
-        <main style={{ padding: '3rem 1rem', textAlign: 'center', maxWidth: 480, margin: '0 auto' }}>
-          {isRejected ? (
-            <>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', marginBottom: '0.75rem' }}>
-                Your application wasn&apos;t approved this time
-              </h1>
-              <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
-                We weren&apos;t able to approve your profile right now, but don&apos;t worry, we&apos;re always looking for talented creators like you. Reach out to us and we&apos;d love to reconsider.
-              </p>
-            </>
-          ) : (
-            <>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111', marginBottom: '0.75rem' }}>
-                Your account is under review
-              </h1>
-              <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
-                We&apos;ll notify you when you&apos;re approved. This usually takes 24-48 hours.
-              </p>
-            </>
-          )}
-        </main>
-      </div>
-    )
+    if (isRejected) {
+      // Whether they have already appealed, so the box does not invite a
+      // second note the action would refuse anyway.
+      const { data: appeal } = creatorId
+        ? await supabase
+            .from('events')
+            .select('id')
+            .eq('event_type', 'creator.appeal_submitted')
+            .contains('detail', { creator_id: creatorId })
+            .limit(1)
+            .maybeSingle()
+        : { data: null }
+
+      return <CreatorRejected alreadyAppealed={Boolean(appeal)} />
+    }
+
+    redirect('/signup/creator/complete')
   }
 
   return (

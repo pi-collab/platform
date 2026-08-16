@@ -1923,3 +1923,108 @@ button.signup-form__recover-link {
 .notifybox__row--static { cursor: default; padding-left: 26px; }
 .notifybox__row--static .notifybox__value { color: var(--ink-soft); }
 .notifybox__pad { height: 10px; }
+
+/* ── Creator: not approved ─────────────────────────────────────────────────
+   Design "Creator Signup Denied - Paged Flow". Shorter dark band than the
+   review screen: there is no preferences panel to sit against, so the card
+   starts higher. */
+.onboard-shell--denied .onboard-shell__dark { height: 280px; }
+.onboard-shell--denied .onboard-shell__rule { top: 280px; }
+
+.denied-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--sec-2);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.denied-title {
+  margin: 24px 0 0;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #F5F7FA;
+  text-align: center;
+}
+
+.denied-body { padding-top: 64px; }
+
+.denied-card {
+  max-width: 580px;
+  padding: clamp(36px, 4vw, 48px);
+}
+
+.denied-lede {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.denied-note {
+  margin-top: 24px;
+  background: var(--sec-2);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+
+.denied-note__title {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.denied-note__body {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.denied-appeal {
+  margin-top: 28px;
+  border-top: 1px solid rgba(24, 28, 36, .1);
+  padding-top: 26px;
+}
+
+.denied-textarea {
+  margin-top: 14px;
+  height: 96px;
+  padding: 14px 16px;
+  resize: none;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  display: block;
+}
+
+.denied-send {
+  width: 100%;
+  height: 48px;
+  margin-top: 12px;
+  border-radius: 13px;
+  background: #fff;
+  border: 1.5px solid rgba(24, 28, 36, .16);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.denied-send:disabled { opacity: .55; cursor: default; transform: none; box-shadow: none; }
+
+.denied-sent {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}

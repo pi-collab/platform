@@ -279,3 +279,52 @@ export async function notifyOpsCreatorPending(creatorId: string): Promise<void> 
     console.error(`[account-email] notifyOpsCreatorPending failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+
+/**
+ * Forward a rejected creator's appeal to ops.
+ *
+ * The appeal is already stored as an event before this runs, so a mail
+ * failure loses the notification, not what they wrote.
+ */
+export async function notifyOpsCreatorAppeal(creatorId: string, note: string): Promise<void> {
+  try {
+    const to = process.env.OPS_NOTIFY_EMAIL
+    if (!to || !isEmailConfigured()) {
+      console.warn('[account-email] ops address or email not configured, appeal not forwarded')
+      return
+    }
+
+    const admin = createAdminClient()
+    const { data: creator } = await admin
+      .from('creators').select('full_name, handle').eq('id', creatorId).maybeSingle()
+
+    const name = creator?.full_name?.trim() || 'A creator'
+
+    const { html, text } = renderAccountEmail({
+      heading: `${name} has appealed their rejection`,
+      body: [
+        `${name}${creator?.handle ? ` (@${creator.handle})` : ''} was not approved and has asked us to look again.`,
+        note,
+      ],
+      ctaUrl: `${siteBase()}/ops/creators/${creatorId}`,
+      ctaLabel: 'Open their profile',
+      footerNote: `Sent to the ops address for ${BRAND_NAME}.`,
+    })
+
+    const res = await sendAccountEmail({
+      to: [to],
+      subject: `Appeal from ${name}`,
+      html,
+      text,
+      idempotencyKey: `creator-appeal-${creatorId}`,
+    })
+
+    await record(res.ok ? 'creator.appeal_notified' : 'creator.appeal_notify_failed', {
+      creator_id: creatorId,
+      ...(res.ok ? {} : { reason: res.reason }),
+    })
+  } catch (err) {
+    console.error(`[account-email] notifyOpsCreatorAppeal failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
