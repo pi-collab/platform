@@ -17,7 +17,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
 
   if (error || !creator) notFound()
 
-  const [{ data: products }, { data: deals }, { data: pairRates }] = await Promise.all([
+  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
@@ -33,6 +33,15 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
       .select('id, brand_id, fee_pct, reason, set_by, updated_at, brands(id, name, platform_fee_percent)')
       .eq('creator_id', params.id)
       .order('updated_at', { ascending: false }),
+    // Appeals from a rejected creator. Shown here, not only mailed, because
+    // this is the page the decision gets reversed on - reading the appeal in
+    // an inbox and acting on it here means holding it in your head in between.
+    admin
+      .from('events')
+      .select('detail, created_at')
+      .eq('event_type', 'creator.appeal_submitted')
+      .contains('detail', { creator_id: params.id })
+      .order('created_at', { ascending: false }),
   ])
 
   return (
@@ -72,7 +81,66 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </Link>
       </div>
 
+      {(appeals ?? []).length > 0 && (
+        <div style={appealBox}>
+          <div style={appealHead}>
+            Appeal from this creator
+            <span style={appealDate}>
+              {new Date((appeals as { created_at: string }[])[0].created_at).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric',
+              })}
+            </span>
+          </div>
+          {(appeals as { detail: { note?: string } }[]).map((a, i) => (
+            <p key={i} style={appealNote}>{a.detail?.note ?? '(no note)'}</p>
+          ))}
+          <p style={appealHint}>
+            They were told we&rsquo;d come back within 3&ndash;5 days. Vetting them sends the
+            approval email automatically.
+          </p>
+        </div>
+      )}
+
       <CreatorTabs creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
     </div>
   )
+}
+
+/* ── Appeal panel ─────────────────────────────────────────────────────────
+   Deliberately loud. It appears only on a rejected creator who has written in,
+   which is rare and time-bound, and it is easy to miss a quiet note above a
+   tabbed interface. */
+const appealBox: React.CSSProperties = {
+  border: '1px solid #E3B3B3',
+  background: '#FFF7F7',
+  borderRadius: 10,
+  padding: '1rem 1.125rem',
+  marginBottom: '1.25rem',
+}
+
+const appealHead: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '0.75rem',
+  fontSize: '0.8125rem',
+  fontWeight: 700,
+  color: '#8A2F2F',
+  marginBottom: '0.5rem',
+}
+
+const appealDate: React.CSSProperties = { fontWeight: 500, color: '#A8756F' }
+
+const appealNote: React.CSSProperties = {
+  margin: '0 0 0.5rem',
+  fontSize: '0.875rem',
+  lineHeight: 1.6,
+  color: '#3F2222',
+  whiteSpace: 'pre-wrap',
+}
+
+const appealHint: React.CSSProperties = {
+  margin: '0.5rem 0 0',
+  fontSize: '0.75rem',
+  color: '#A8756F',
 }
