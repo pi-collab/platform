@@ -21,7 +21,7 @@ export async function saveOnboarding(data: {
   /** The explicit tick on this form. Signup already recorded acceptance
    *  against the notice on the account screen; this upgrades that record to a
    *  deliberate act, which is why it overwrites rather than skips. */
-  termsAccepted?: boolean
+  termsAccepted: boolean
   productType?: string
   productPricePaise?: number
 }): Promise<OnboardingResult> {
@@ -32,6 +32,12 @@ export async function saveOnboarding(data: {
   if (!fullName.trim()) return { status: 'error', message: 'Name is required.' }
   if (!platform.trim()) return { status: 'error', message: 'Select a platform.' }
   if (!handle.trim()) return { status: 'error', message: 'Enter your handle.' }
+  // Enforced here, not only by the checkbox. The brand action does the same:
+  // without it, a directly-called action completes onboarding and writes an
+  // acceptance timestamp for a tick that never happened.
+  if (!termsAccepted) {
+    return { status: 'error', message: 'You must agree to the Terms of Service and Privacy Policy.' }
+  }
 
   // Get authenticated user
   const supabase = createClient()
@@ -84,12 +90,10 @@ export async function saveOnboarding(data: {
   if (updateErr) return { status: 'error', message: 'Failed to save profile.' }
 
   // Record the explicit acceptance over the implicit one taken at signup.
-  if (termsAccepted) {
-    await admin.from('users').update({
-      terms_accepted_at: new Date().toISOString(),
-      terms_version: '2026-07-23',
-    }).eq('id', profile.id)
-  }
+  await admin.from('users').update({
+    terms_accepted_at: new Date().toISOString(),
+    terms_version: '2026-07-23',
+  }).eq('id', profile.id)
 
   // Create product if provided
   if (productType?.trim() && productPricePaise != null && productPricePaise > 0) {

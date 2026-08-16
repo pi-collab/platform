@@ -51,6 +51,11 @@ export default function CreatorProfileForm() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // The button shows whether it can be pressed. `required` alone blocks the
+  // submit but leaves the CTA looking live, so the only feedback is a browser
+  // tooltip after a click that appeared to do nothing.
+  const canSubmit = Boolean(fullName.trim()) && Boolean(handle.trim()) && terms
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (loading) return
@@ -155,7 +160,7 @@ export default function CreatorProfileForm() {
         </span>
       </label>
 
-      <button type="submit" disabled={loading} className="onboard-cta cta">
+      <button type="submit" disabled={loading || !canSubmit} className="onboard-cta cta">
         {loading ? 'Setting up…' : 'Complete setup'}
       </button>
       <p className="onboard-foot">You can set up your storefront and add more details later.</p>
