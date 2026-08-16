@@ -26,7 +26,7 @@ export async function verifyAndSignIn(
 ): Promise<SignInResult> {
   const redirectTo = safeNext(next, '/creator/dashboard')
   const phone = normalizePhone(rawPhone)
-  if (!phone) return { status: 'error', message: 'Invalid phone number.' }
+  if (!phone) return { status: 'error', message: 'Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.' }
 
   const trimmedCode = inputCode.trim()
   if (!/^\d{6}$/.test(trimmedCode)) return { status: 'error', message: 'Enter a 6-digit code.' }

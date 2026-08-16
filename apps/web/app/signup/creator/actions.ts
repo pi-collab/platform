@@ -32,7 +32,7 @@ function isStagingEnv(): boolean {
 
 export async function sendOTP(rawPhone: string): Promise<OTPResult> {
   const phone = normalizePhone(rawPhone)
-  if (!phone) return { status: 'error', message: 'Enter a valid 10-digit Indian phone number.' }
+  if (!phone) return { status: 'error', message: 'Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.' }
 
   const admin = createAdminClient()
 
@@ -74,7 +74,7 @@ export async function sendOTP(rawPhone: string): Promise<OTPResult> {
 
 export async function verifyAndMatch(rawPhone: string, inputCode: string): Promise<VerifyResult> {
   const phone = normalizePhone(rawPhone)
-  if (!phone) return { status: 'error', message: 'Invalid phone number.' }
+  if (!phone) return { status: 'error', message: 'Enter a valid 10-digit Indian mobile number, starting 6, 7, 8 or 9.' }
 
   const trimmedCode = inputCode.trim()
   if (!/^\d{6}$/.test(trimmedCode)) return { status: 'error', message: 'Enter a 6-digit code.' }

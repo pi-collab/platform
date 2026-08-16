@@ -7,6 +7,7 @@ import CreatorSignInButton from '@/components/CreatorSignInButton'
 import OtpInput from '@/components/OtpInput'
 import FormError from '@/components/FormError'
 import { sendOTP, verifyAndMatch } from './actions'
+import { isValidIndianMobile } from '@/lib/phone'
 
 /** Seconds before "Resend code" re-arms, matching the design's countdown. */
 const RESEND_SECONDS = 30
@@ -40,6 +41,9 @@ export default function CreatorSignupForm() {
   }, [resendIn])
 
   const digits = phone.replace(/\D/g, '')
+  // Same rule as the server, so the button cannot arm on a number sendOTP will
+  // reject. The server still re-checks — this is UX, not the boundary.
+  const phoneValid = isValidIndianMobile(digits)
 
   async function send(isResend = false) {
     if (loading) return
@@ -171,7 +175,7 @@ export default function CreatorSignupForm() {
 
         <button
           type="submit"
-          disabled={loading || digits.length !== 10}
+          disabled={loading || !phoneValid}
           className="signup-form__cta cta"
         >
           {loading ? 'Sending…' : 'Send code'}
