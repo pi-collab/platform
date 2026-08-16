@@ -12,13 +12,29 @@ import Link from 'next/link'
  * `navRight` is whatever sits opposite the logo. Password reset passes nothing:
  * the user arrived from an email mid-task, and offering "Create account" there
  * invites them to abandon it.
+ *
+ * `pitch` overrides the left panel. It defaults to the brand copy because that
+ * is what three of the four screens using this shell say; the creator flow
+ * addresses a different reader and gets its own.
  */
+export const BRAND_PITCH = {
+  title: <>Your whole deal<br />flow, one platform.</>,
+  sub: 'Source, negotiate and manage campaigns, all from one place built for brands.',
+}
+
+export const CREATOR_PITCH = {
+  title: <>Everything a<br />collaboration needs.</>,
+  sub: 'From the first offer to the final payout, guapd keeps brands and creators on the same page.',
+}
+
 export default function AuthShell({
   children,
   navRight,
+  pitch = BRAND_PITCH,
 }: {
   children: React.ReactNode
   navRight?: React.ReactNode
+  pitch?: { title: React.ReactNode; sub: string }
 }) {
   return (
     <main className="signup-shell">
@@ -36,12 +52,8 @@ export default function AuthShell({
         <section className="signup-pitch">
           <div className="signup-pitch__inner">
             <div className="signup-pitch__rule" />
-            <h1 className="signup-pitch__title">
-              Your whole deal<br />flow, one platform.
-            </h1>
-            <p className="signup-pitch__sub">
-              Source, negotiate and manage campaigns, all from one place built for brands.
-            </p>
+            <h1 className="signup-pitch__title">{pitch.title}</h1>
+            <p className="signup-pitch__sub">{pitch.sub}</p>
           </div>
         </section>
 

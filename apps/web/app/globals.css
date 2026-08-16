@@ -1514,3 +1514,95 @@ button.signup-form__recover-link {
 }
 
 .heldnotice__ok:hover { opacity: .88; }
+
+/* ── One-time code entry ───────────────────────────────────────────────────
+   Six cells from the creator signup/login designs. */
+.otp {
+  display: flex;
+  gap: 9px;
+  margin-top: 28px;
+}
+
+.otp__cell {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 58px;
+  text-align: center;
+  border-radius: 13px;
+  border: 1.5px solid rgba(24, 28, 36, .14);
+  background: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 23px;
+  color: var(--ink);
+  outline: none;
+  padding: 0;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.otp__cell--active {
+  border-color: var(--neon-deep, #D2F04A);
+  box-shadow: 0 0 0 3px rgba(232, 255, 102, .35);
+}
+
+.otp__cell--error {
+  border-color: #E3B3B3;
+  color: #C43D3D;
+}
+
+.otp__cell:disabled { opacity: .6; }
+
+/* "Code sent to +91 …" with the change-number pencil sitting inline. */
+.otp-sentto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.otp-sentto strong { color: var(--ink); }
+
+.otp-edit {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(24, 28, 36, .06);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.otp-edit:hover { background: rgba(24, 28, 36, .12); }
+
+.otp-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+/* Country prefix inside the phone field. */
+.phone-prefix {
+  color: var(--ink-soft);
+  font-weight: 500;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.phone-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(24, 28, 36, .12);
+  flex-shrink: 0;
+  margin: 0 6px 0 0;
+}
+
+/* The verify screen's heading is smaller than the entry screen's. */
+.signup-panel__title--sm { font-size: 26px; }
