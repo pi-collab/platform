@@ -106,24 +106,6 @@ export default function BrandsPageClient() {
 
   return (
     <div className="brands-page">
-        {/* ============ NAV ============ */}
-        <div style={{position: 'sticky', top: '0', zIndex: '100', padding: '26px clamp(14px,4vw,28px) 0'}}>
-          <nav style={{maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', padding: '8px 10px 8px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--card)', boxShadow: '0 12px 36px -22px rgba(40,45,25,.45)'}}>
-            <a href="#top" style={{display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', color: 'var(--ink)'}}>
-              <img src="/guapd-wordmark.svg" alt="guapd" style={{height: '26px', width: 'auto', display: 'block'}} />
-            </a>
-            <div style={{display: 'flex', alignItems: 'center', gap: '24px', fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '500', color: 'var(--ink-soft)', whiteSpace: 'nowrap'}}>
-              <a href="#brands" style={{color: 'var(--ink)', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '7px'}}><span style={{width: '7px', height: '7px', borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: '0'}}></span>For brands</a>
-              <a href="#creators" style={{color: 'var(--ink-soft)', textDecoration: 'none'}}>For creators</a>
-              <a href="#how" style={{color: 'var(--ink-soft)', textDecoration: 'none'}}>How it works</a>
-            </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '10px', flexShrink: '0', whiteSpace: 'nowrap'}}>
-              <a href="#login" style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '600', color: 'var(--ink)', textDecoration: 'none', padding: '0 4px'}}>Log in</a>
-              <a href="/signup/brand" className="bp-btn" style={{whiteSpace: 'nowrap'}}>Book demo</a>
-            </div>
-          </nav>
-        </div>
-
         {/* ============ HERO ============ */}
         {/* ============ GLASS PANEL SHOWCASE ============ */}
         <section style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', marginTop: 'clamp(-96px,-8vw,-70px)', overflow: 'hidden', background: '#fff', zIndex: '0', paddingBottom: '40px'}}>
