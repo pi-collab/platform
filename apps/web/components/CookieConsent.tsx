@@ -1,10 +1,36 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false)
+  const bar = useRef<HTMLDivElement>(null)
+
+  /**
+   * Publish the bar's height as --consent-bar-h so full-height screens can lay
+   * out above it.
+   *
+   * The bar is position:fixed, so it covers content without adding any page
+   * height — a screen can measure as fitting perfectly while its buttons sit
+   * underneath and cannot be tapped. That is exactly what happened on the
+   * offer page, on a first visit, which is every creator arriving from a
+   * WhatsApp link. Measured rather than hard-coded because the height depends
+   * on how the copy wraps at a given width.
+   */
+  useEffect(() => {
+    const el = bar.current
+    const root = document.documentElement
+    if (!visible || !el) { root.style.removeProperty('--consent-bar-h'); return }
+
+    const publish = () => root.style.setProperty(
+      '--consent-bar-h', `${Math.ceil(el.getBoundingClientRect().height)}px`)
+    publish()
+
+    const ro = new ResizeObserver(publish)
+    ro.observe(el)
+    return () => { ro.disconnect(); root.style.removeProperty('--consent-bar-h') }
+  }, [visible])
 
   useEffect(() => {
     const consent = localStorage.getItem('guapd_analytics_consent')
@@ -44,68 +70,33 @@ export default function CookieConsent() {
   if (!visible) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: '#181C24',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        padding: '16px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-        fontFamily: 'var(--font-inter), system-ui, sans-serif',
-        fontSize: '14px',
-        color: 'rgba(255,255,255,0.8)',
-      }}
-    >
-      <p style={{ margin: 0, maxWidth: '600px', lineHeight: 1.5 }}>
-        We use cookies to keep you signed in (essential) and, with your consent, to understand how
-        the platform is used (analytics).{' '}
-        <Link
-          href="/privacy"
-          style={{ color: '#DAFE0C', textDecoration: 'underline' }}
-        >
+    <div ref={bar} className="cookie-bar" role="region" aria-label="Cookie consent">
+      {/* Two phrasings of the same disclosure. The full sentence wraps to
+          three lines on a phone, which pushed the bar to ~119px and left it
+          covering the offer page's own buttons; the short form says the same
+          two things (essential cookies, analytics only by consent) in one. */}
+      <p className="cookie-bar__text">
+        <span className="cookie-bar__long">
+          We use cookies to keep you signed in (essential) and, with your consent, to understand
+          how the platform is used (analytics).
+        </span>
+        <span className="cookie-bar__short">
+          Cookies keep you signed in. Analytics only with your consent.
+        </span>{' '}
+        <Link href="/privacy" className="cookie-bar__link">
           Privacy Policy
         </Link>
       </p>
-      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        <button
-          onClick={handleAccept}
-          style={{
-            background: '#DAFE0C',
-            color: '#181C24',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
+      <div className="cookie-bar__actions">
+        <button onClick={handleAccept} className="cookie-bar__btn cookie-bar__btn--accept">
           Accept analytics
         </button>
-        <button
-          onClick={handleDecline}
-          style={{
-            background: 'transparent',
-            color: 'rgba(255,255,255,0.8)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Decline
+        {/* "Only essential", not "Decline". On the offer page this bar sits
+            directly beneath the offer's own Decline button, and two adjacent
+            buttons reading the same word — one refusing analytics, one
+            refusing a paid deal — is a mis-tap waiting to happen. */}
+        <button onClick={handleDecline} className="cookie-bar__btn">
+          Only essential
         </button>
       </div>
     </div>

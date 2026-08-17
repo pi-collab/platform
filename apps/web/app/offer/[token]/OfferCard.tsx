@@ -146,12 +146,15 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
       `${deal.brief_attachment_count} attachment${deal.brief_attachment_count > 1 ? 's' : ''}`,
   ].filter(Boolean) as string[]
 
+  // Three terms, not five. This screen has to land in one view on a phone —
+  // a viewport is ~750px once the address bar and home indicator are taken,
+  // not the 844px the device claims — and five stacked rows alone cost 220 of
+  // them. These three are what someone decides to engage on; usage rights and
+  // payment terms are read carefully, which happens on the deal.
   const rows: [string, string][] = [
     ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '—'],
     ['Timeline', formatDate(deal.timeline_date)],
     ['Revisions', `${deal.revision_limit} included`],
-    ['Usage rights', deal.usage_rights || 'To be agreed'],
-    ['Payment', deal.payment_terms || 'To be agreed'],
   ]
 
   return (
@@ -201,27 +204,35 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
 
       {/* Both lead to the same place. The label is the creator's intent, not a
           decision — the deal page is where it is actually made, and where
-          countering is possible. */}
-      <button
-        type="button"
-        onClick={() => handleRespond('accept')}
-        disabled={busy}
-        className="offer-cta cta"
-      >
-        {busy ? 'One moment…' : 'Accept this offer'}
-      </button>
+          countering is possible.
 
-      <button
-        type="button"
-        onClick={() => handleRespond('decline')}
-        disabled={busy}
-        className="offer-cta offer-cta--ghost ghost"
-      >
-        Decline
-      </button>
+          Sticks to the bottom of the viewport on a phone, so the two actions
+          are reachable whatever the screen height and whatever else is on
+          screen. Decline sits left and Accept right: the affirmative action
+          lands under the right thumb, and the destructive one is the harder
+          reach rather than the default. */}
+      <div className="offer-actions">
+        <button
+          type="button"
+          onClick={() => handleRespond('decline')}
+          disabled={busy}
+          className="offer-cta offer-cta--ghost ghost"
+        >
+          Decline
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleRespond('accept')}
+          disabled={busy}
+          className="offer-cta cta"
+        >
+          {busy ? 'One moment…' : 'Accept'}
+        </button>
+      </div>
 
       <p className="offer-card__foot">
-        You&rsquo;ll confirm your number first, then you can accept, counter or decline.
+        Confirm your number, then accept, counter or decline.
       </p>
     </div>
   )
