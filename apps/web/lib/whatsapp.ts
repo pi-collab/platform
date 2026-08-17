@@ -106,8 +106,14 @@ export function toMsg91Number(phone: string | null | undefined): string | null {
   return null
 }
 
-/** Mask a phone for logs — enough to identify it, not enough to leak it. */
-function maskPhone(phone: string | null | undefined): string {
+/**
+ * Mask a phone for logs — enough to identify it, not enough to leak it.
+ *
+ * Exported alongside toMsg91Number because both are MSG91-generic rather than
+ * WhatsApp-specific; lib/sms.ts uses them so the two channels normalise and
+ * mask identically instead of drifting apart.
+ */
+export function maskPhone(phone: string | null | undefined): string {
   if (!phone) return 'none'
   const digits = phone.replace(/\D/g, '')
   return digits.length <= 4 ? '****' : `****${digits.slice(-4)}`

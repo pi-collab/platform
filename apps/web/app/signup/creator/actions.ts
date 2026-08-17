@@ -4,6 +4,8 @@ import crypto from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
+import { isSmsConfigured, sendOtpSms } from '@/lib/sms'
+import { maskPhone } from '@/lib/whatsapp'
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -20,8 +22,6 @@ type VerifyResult =
 // STAGING ONLY — OTP bypass for demo/testing when no SMS provider is configured.
 // Never set STAGING_OTP_BYPASS on production. Remove before public launch.
 function isStagingEnv(): boolean {
-  // TODO: Remove this log after confirming VERCEL_ENV reads correctly on staging
-  console.log(`[STAGING_ENV_CHECK] VERCEL_ENV=${process.env.VERCEL_ENV}, STAGING_OTP_BYPASS=${process.env.STAGING_OTP_BYPASS}`)
   return (
     process.env.STAGING_OTP_BYPASS === 'true' &&
     process.env.VERCEL_ENV !== 'production'
@@ -51,11 +51,15 @@ export async function sendOTP(rawPhone: string): Promise<OTPResult> {
   // Generate 6-digit code
   const code = String(Math.floor(100000 + Math.random() * 900000))
 
-  const { error } = await admin.from('phone_verifications').insert({
-    phone,
-    code,
-    expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
-  })
+  const { data: inserted, error } = await admin
+    .from('phone_verifications')
+    .insert({
+      phone,
+      code,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 min
+    })
+    .select('id')
+    .single()
 
   if (error) {
     // On staging with bypass enabled, let user proceed to code entry even if insert fails
@@ -63,9 +67,89 @@ export async function sendOTP(rawPhone: string): Promise<OTPResult> {
     return { status: 'error', message: 'Failed to send code. Please try again.' }
   }
 
-  // PLUGGABLE: In production, replace this with real SMS (Twilio/MSG91).
-  // For now, log to server console for dev testing.
-  console.log(`[OTP] Code for ${phone}: ${code}`)
+  // ── Delivery ────────────────────────────────────────────────────────────
+  //
+  // The code is already generated, stored and rate-limited above; all that
+  // happens here is getting it to the phone. Generation and verification stay
+  // ours — MSG91 only carries the digits.
+  //
+  // Ordered so delivery comes AFTER the insert: a code that was texted but not
+  // stored would be a code that cannot be verified, which is worse than one
+  // stored but not sent.
+  const result = await deliver(phone, code)
+
+  // Give the rate-limit slot back when nothing was delivered.
+  //
+  // The limit counts unused, unexpired codes, so an undelivered one holds a
+  // slot for ten minutes. Three failed sends and the person is told "too many
+  // codes sent" having received none — and fixing SMS does not release them,
+  // they simply wait it out. That is the exact shape of the next few days:
+  // sends can fail until the DLT PE-TM chain is fully Active, and the people
+  // hitting it would be locked out of a working login.
+  //
+  // Marked used rather than deleted so the attempt still shows in the table;
+  // it is only made unusable, which is already true of a code nobody received.
+  if (result.status === 'error' && inserted?.id) {
+    await admin.from('phone_verifications').update({ used: true }).eq('id', inserted.id)
+  }
+
+  return result
+}
+
+/**
+ * Get the code to the phone, and decide what the caller is told.
+ *
+ * Three modes, in priority order:
+ *
+ *   1. Staging bypass on  → send nothing. 000000/123456 already work, so a
+ *      real SMS would burn a DLT-metered message to test a code path that
+ *      ignores it. The code is logged instead, for whoever is testing.
+ *
+ *   2. SMS not configured → send nothing, report success. This is what makes
+ *      the feature deployable dark: until the DLT PE-TM chain goes Active,
+ *      MSG91_SMS_ENABLED stays unset and this behaves exactly as it did
+ *      before. Outside production the code is logged so local dev still works.
+ *      ON PRODUCTION it is a loud failure instead — an unconfigured switch
+ *      there means no creator can log in, and silently logging codes nobody
+ *      reads would hide that behind a "code sent" screen.
+ *
+ *   3. SMS configured     → really send. A definitive failure is reported to
+ *      the caller rather than swallowed: for a notification, never-block is
+ *      right, but here the SMS IS the flow. Saying "code sent" when it wasn't
+ *      leaves someone watching an empty inbox with no way forward.
+ *
+ * Never throws — sendOtpSms upholds that, and nothing here adds a throw path.
+ */
+async function deliver(phone: string, code: string): Promise<OTPResult> {
+  // The code is a credential. It is only ever logged where no real message is
+  // going out and the environment is not production, and never with the full
+  // number attached.
+  const logCode = () =>
+    console.log(`[OTP] no SMS sent — code for ${maskPhone(phone)}: ${code}`)
+
+  if (isStagingEnv()) {
+    logCode()
+    return { status: 'sent' }
+  }
+
+  if (!isSmsConfigured()) {
+    if (process.env.VERCEL_ENV === 'production') {
+      console.error(
+        '[OTP] SMS is not configured on production — no code can reach anyone. ' +
+        'Set MSG91_SMS_ENABLED/MSG91_SMS_TEMPLATE_ID/MSG91_SMS_VAR_NAME.'
+      )
+      return { status: 'error', message: 'We could not send the code just now. Please try again shortly.' }
+    }
+    logCode()
+    return { status: 'sent' }
+  }
+
+  const sent = await sendOtpSms({ toPhone: phone, code })
+  if (!sent.ok) {
+    // Already logged and recorded to `events` by the sender; this only decides
+    // what the person staring at the form is told.
+    return { status: 'error', message: 'We could not send the code just now. Please try again shortly.' }
+  }
 
   return { status: 'sent' }
 }

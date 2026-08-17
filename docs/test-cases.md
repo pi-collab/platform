@@ -74,6 +74,38 @@
 - [ ] **Bypass rejected on prod**: even with `STAGING_OTP_BYPASS=true`, bypass codes rejected when `VERCEL_ENV === 'production'`.
 - [ ] **Real OTP path unchanged**: real 6-digit codes from `phone_verifications` still work normally regardless of bypass flag.
 
+### OTP SMS Delivery (MSG91 Flow API)
+Delivery only — generation and verification stay in `phone_verifications`. MSG91's own
+OTP endpoints are deliberately unused. All three entry points (signup, `sendLoginOTP`,
+`sendOfferOTP`) funnel through `sendOTP`, so these cover all three.
+- [x] **Wire format**: POST `/api/v5/flow` with `authkey` header, `template_id` = MSG91's
+      flow id (24-hex, NOT the numeric DLT id), `realTimeResponse: "1"`, `mobiles` as
+      `91XXXXXXXXXX` (no `+`), variable key from `MSG91_SMS_VAR_NAME` (= `number`, per the
+      `##number##` template preview). No `short_url`. *(verified against a mock endpoint)*
+- [x] **Kill switch off (dark deploy)**: `MSG91_SMS_ENABLED` unset → NO HTTP request at all,
+      returns `sent`, code logged with masked phone. This is the pre-DLT-Active state.
+- [x] **Switch must be exactly `'true'`** — any other value counts as off.
+- [x] **Staging bypass wins over SMS**: bypass on + SMS enabled → no send, no metered
+      message burned. To test real delivery on staging, turn `STAGING_OTP_BYPASS` off.
+- [x] **HTTP 200 is not success**: MSG91 error bodies (`type: 'error'`) and
+      `hasError: true` alongside `status: 'success'` are both treated as failures.
+- [x] **Failure surfaces to the user**: a definitive send failure returns an error rather
+      than a false "code sent" — for OTP the SMS *is* the flow.
+- [x] **Failed sends do not consume the rate limit**: the limit counts unused, unexpired
+      codes, so an undelivered code held a slot for 10 min — 3 failures locked a creator
+      out having received nothing, and fixing SMS did not release them. Undelivered codes
+      are now marked used. Genuine limit (3 *successful* sends) still blocks.
+- [x] **Timeout bounded** at 4s; never throws, never blocks login.
+- [x] **The code is never logged or stored outside `phone_verifications`** — not in
+      `[sms]` logs, not in the `events` row. Verified no 6-digit value in event detail.
+- [x] **Audit**: every attempt writes `notification.sms_sent` / `notification.sms_failed`
+      to `events` (null `deal_id`) with masked phone and MSG91 request id.
+- [ ] **LIVE, once DLT PE-TM chain is Active**: flip `MSG91_SMS_ENABLED=true`, send to a
+      real handset, confirm the received text matches the approved template
+      character-for-character and the header reads GUAPD.
+- [ ] **LIVE**: confirm MSG91's real success-response shape and tighten the parser if it
+      differs from the mock (`{ message, type }`).
+
 ### Vetting Gate
 - [ ] Unvetted creator blocked from receiving deals.
 - [ ] Vetted creator (is_vetted = true) can receive and manage deals.
@@ -106,6 +138,11 @@
 - [ ] deal_paid → creator
 - [ ] new message → OTHER party (not sender)
 - [ ] offer-link accept/decline → brand
+
+### Channels
+- [ ] WhatsApp (creators) — accepted ≠ delivered; reconcile via `request_id`.
+- [ ] Email (brands) — Resend.
+- [ ] SMS (OTP only) — see *OTP SMS Delivery* above. Not used for deal notifications.
 
 ### Self-Notification Guard
 - [ ] Sender does NOT receive a notification for their own action.
