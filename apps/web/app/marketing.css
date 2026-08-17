@@ -1150,15 +1150,9 @@
 }
 .mobile-bottom-cta .btn { width: 100%; }
 
-/* The spacer, not `body`, reserves room for the fixed bar. This rule used to
-   be `body { padding-bottom: 72px }`, but marketing.css loads in the root
-   layout, so it applied to every mobile page — including the ones with no bar,
-   where it was dead space that forced a scroll. */
-.mobile-bottom-cta__spacer { display: none; }
-
 @media (max-width: 768px) {
   .mobile-bottom-cta { display: block; }
-  .mobile-bottom-cta__spacer { display: block; height: 72px; }
+  body { padding-bottom: 72px; }
 }
 
 /* ── FLOATING HERO CHIPS ──────────────────────────────────────── */
