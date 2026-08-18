@@ -98,6 +98,53 @@ if i != -1:
     html = html[:i] + html[k:]
 step("export footer placeholder removed", n_foot, html.count('<dc-import'))
 
+# ── 1d. Sections with no real data behind them. ───────────────────────────
+# Each of these is a shell in the export: campaigns names three brands that are
+# not ours, recent deals has nothing to show and real deal data is confidential
+# anyway, and the creator roster and brand logos are both still behind their
+# feature flags. They render as empty card frames, so they are removed rather
+# than shipped blank.
+#
+# Removal is INDEX-BASED and runs BACK TO FRONT. Doing it with str.replace on
+# the brands page spliced one section's wrapper inside another's, because the
+# offsets of everything after a removal shift.
+HIDE = [
+    'Recent deals on',      # Deals on guapd
+    'Featured',             # Featured campaigns  (id="campaigns")
+    'Find vetted',          # Creators on guapd
+    'Brands you',           # Brands we work with
+]
+spans = []
+for needle in HIDE:
+    at = html.find(needle)
+    if at == -1:
+        print(f"    WARNING: section marker not found: {needle!r}")
+        continue
+    start = html.rfind('<section', 0, at)
+    if start == -1:
+        print(f"    WARNING: no <section> wraps: {needle!r}")
+        continue
+    # Match the closing tag by scanning, so a nested <section> cannot end it early.
+    depth, k = 0, start
+    while True:
+        m = re.compile(r'<(/?)section\b[^>]*>').search(html, k)
+        depth += -1 if m.group(1) else 1
+        k = m.end()
+        if depth == 0:
+            break
+    spans.append((start, k, needle))
+for start, end, needle in sorted(spans, reverse=True):
+    html = html[:start] + html[end:]
+step("data-less sections removed", len(spans), 0)
+
+# ── 1e. The scroll-progress bar takes the brand colour. ───────────────────
+# The export draws it in --ink, which reads as a black hairline creeping across
+# the top. Neon is the brand's own accent and is what the rest of the page uses
+# to mark progress.
+before = html.count('id="scrollProgress"')
+html = re.sub(r'(id="scrollProgress"[^>]*?)background:var\(--ink\)', r'\1background:var(--neon-deep)', html)
+step("progress bar → brand colour", before, len(re.findall(r'id="scrollProgress"[^>]*background:var\(--neon-deep\)', html)))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.
@@ -321,6 +368,33 @@ def _img(m):
 before = len(re.findall(r'<img\b', html))
 html = re.sub(r'<img\b[^>]*/>', _img, html)
 step("img loading hints", before, len(re.findall(r'loading="lazy"', html)))
+
+# ── 11b. Intrinsic dimensions on every image. ─────────────────────────────
+# A lazy image with `width:100%;height:auto` and no width/height attributes has
+# no aspect ratio to reserve space with, so it lays out at zero until it loads —
+# which collapsed the "Everything, always in view" section to 0px high, because
+# its only content is one such image and it sits far enough down the page never
+# to have loaded by the time it is measured.
+#
+# Added ONLY where the style declares neither aspect-ratio nor an explicit
+# height: the HTML attributes map to a presentational `height` that OVERRIDES
+# CSS aspect-ratio, and on the brands page that stretched a section by 265px.
+from PIL import Image as _PILImage
+def _dims(m):
+    tag = m.group(0)
+    src = re.search(r'src="(/landing/[^"]+)"', tag)
+    if not src or 'width=' in tag:
+        return tag
+    if 'aspectRatio' in tag or re.search(r"height: '(?!auto)", tag):
+        return tag
+    path = os.path.join(os.path.dirname(__file__), '..', 'public', src.group(1).lstrip('/'))
+    if not os.path.exists(path):
+        return tag
+    w, h = _PILImage.open(path).size
+    return tag[:-2].rstrip() + f' width={{{w}}} height={{{h}}} />'
+before = len(re.findall(r'<img\b[^>]*width=', html))
+html = re.sub(r'<img\b[^>]*/>', _dims, html)
+step("intrinsic image dimensions", before, len(re.findall(r'<img\b[^>]*width=', html)))
 
 # ── 12. Heading hierarchy. ─────────────────────────────────────────────────
 # The export already marks the page's actual subject — "Creator deals without

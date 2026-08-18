@@ -164,6 +164,17 @@ FOOTER = """
    creates a scroll container, and the pinned sections measure against the
    window. */
 .landing-page { overflow-x: clip; }
+
+/* The header floats OVER the hero artwork, which is what the export draws — its
+   nav sits inside the page with the showcase running up behind it.
+   <MarketingNav> is sticky, so it keeps its full height in flow and the page
+   began 86px down: a white band above the capsule and another below it, with
+   the artwork starting only after. Pulling the page up by exactly that height
+   puts the artwork back under the header.
+
+   86px is the nav wrapper's measured height — 26px of top padding above a 60px
+   capsule. If either changes, this changes with it. */
+.landing-page { margin-top: -86px; }
 """
 
 open(OUT, 'w').write(HEADER + scoped + FOOTER)

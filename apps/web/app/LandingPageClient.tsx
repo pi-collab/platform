@@ -55,7 +55,7 @@ export default function LandingPageClient() {
     <div className="landing-page">
       <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', background: '#fff'}}>
 
-        <div id="scrollProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--ink)', zIndex: '200'}}></div>
+        <div id="scrollProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200'}}></div>
 
         {/* NAV */}
         <div style={{position: 'sticky', top: '0', zIndex: '100', padding: '26px clamp(14px,4vw,28px) 0'}}>
@@ -65,7 +65,7 @@ export default function LandingPageClient() {
         {/* ============ CAMPAIGN DASHBOARD SHOWCASE (from For Brands) ============ */}
         <section style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', marginTop: 'clamp(-96px,-8vw,-70px)', overflow: 'hidden', background: '#fff', zIndex: '0', paddingBottom: '40px'}}>
           <div style={{position: 'relative', overflow: 'hidden', width: '92%', margin: '0 auto'}}>
-            <img src="/landing/gemini-generated-image-waw95uwaw95uwaw9.webp" alt="guapd campaign brief, creator, invoice and deliverable glass panel" style={{position: 'relative', top: '-145px', left: '0', width: '100%', height: 'auto', display: 'block', marginBottom: '-145px'}} decoding="async" />
+            <img src="/landing/gemini-generated-image-waw95uwaw95uwaw9.webp" alt="guapd campaign brief, creator, invoice and deliverable glass panel" style={{position: 'relative', top: '-145px', left: '0', width: '100%', height: 'auto', display: 'block', marginBottom: '-145px'}} decoding="async" width={1800} height={1344} />
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', left: '0', width: '8%', background: 'linear-gradient(to right,#fff 0%,rgba(255,255,255,0) 100%)', pointerEvents: 'none', zIndex: '1'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', right: '0', width: '8%', background: 'linear-gradient(to left,#fff 0%,rgba(255,255,255,0) 100%)', pointerEvents: 'none', zIndex: '1'}}></div>
           </div>
@@ -91,7 +91,7 @@ export default function LandingPageClient() {
         {/* ============ GLASS PANEL SHOWCASE (Built for brands) ============ */}
         <section className="sr" style={{position: 'relative', background: '#fff', padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)', overflow: 'hidden'}}>
           <div style={{position: 'relative', maxWidth: '1200px', margin: '0 auto', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 20px 40px -30px rgba(40,45,25,.18)'}}>
-            <img src="/landing/chatgpt-image-aug-18-2026-05-22-57-pm.webp" alt="Glass panels showing brand-side creator discovery, campaign management, approvals, and reporting" style={{width: '80%', height: 'auto', display: 'block', marginLeft: 'auto', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" />
+            <img src="/landing/chatgpt-image-aug-18-2026-05-22-57-pm.webp" alt="Glass panels showing brand-side creator discovery, campaign management, approvals, and reporting" style={{width: '80%', height: 'auto', display: 'block', marginLeft: 'auto', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" width={1672} height={941} />
             <div aria-hidden="true" style={{position: 'absolute', top: '0', right: '0', width: '80%', height: '100%', background: 'linear-gradient(200deg,rgba(80,140,230,0.14),rgba(80,140,230,0.03) 60%)', mixBlendMode: 'multiply', pointerEvents: 'none'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', left: '0', width: '34%', background: 'linear-gradient(to right,#fff 0%,#fff 55%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
             <div style={{position: 'absolute', top: '50%', left: '9%', transform: 'translateY(-50%)', width: 'min(30%,360px)', minWidth: '220px', textAlign: 'left'}}>
@@ -318,7 +318,7 @@ export default function LandingPageClient() {
         {/* ============ GLASS PANEL SHOWCASE (Built for creators) ============ */}
         <section style={{position: 'relative', background: '#fff', padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)', overflow: 'hidden'}}>
           <div style={{position: 'relative', maxWidth: '1200px', margin: '0 auto', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 20px 40px -30px rgba(40,45,25,.18)'}}>
-            <img src="/landing/rectangle-84.webp" alt="Creator dashboard shown as glass panels — creator profile, opportunities, active deals, payment status" style={{width: '80%', height: 'auto', display: 'block', marginLeft: '-24px', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" />
+            <img src="/landing/rectangle-84.webp" alt="Creator dashboard shown as glass panels — creator profile, opportunities, active deals, payment status" style={{width: '80%', height: 'auto', display: 'block', marginLeft: '-24px', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" width={1800} height={1151} />
             <div aria-hidden="true" style={{position: 'absolute', top: '0', left: '0', width: '80%', height: '100%', background: 'linear-gradient(160deg,rgba(80,140,230,0.14),rgba(80,140,230,0.03) 60%)', mixBlendMode: 'multiply', pointerEvents: 'none'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', right: '0', width: '46%', background: 'linear-gradient(to left,#fff 0%,#fff 55%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
             <div style={{position: 'absolute', top: '50%', right: '6%', transform: 'translateY(-50%)', width: 'min(30%,360px)', minWidth: '220px', textAlign: 'left'}}>
@@ -333,7 +333,7 @@ export default function LandingPageClient() {
         <section id="expandSection" style={{position: 'relative', height: '220vh'}}>
           <div id="expandPin" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
             <img id="bgImg" src="/landing/hero-outer-bg.webp" alt="" style={{position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover', willChange: 'opacity'}} decoding="async" />
-            <img id="expandImg" src="/landing/hero-inner-mascot.webp" alt="guapd" style={{position: 'relative', zIndex: '1', borderRadius: '24px', boxShadow: '0 30px 70px -20px rgba(20,22,10,.35)', objectFit: 'cover', willChange: 'width,height'}} decoding="async" />
+            <img id="expandImg" src="/landing/hero-inner-mascot.webp" alt="guapd" style={{position: 'relative', zIndex: '1', borderRadius: '24px', boxShadow: '0 30px 70px -20px rgba(20,22,10,.35)', objectFit: 'cover', willChange: 'width,height'}} decoding="async" width={1254} height={1254} />
           </div>
         </section>
 
@@ -465,7 +465,7 @@ export default function LandingPageClient() {
 
         {/* ============ APP SHOWCASE ============ */}
         <section style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', overflow: 'hidden', marginTop: 'clamp(48px,6vw,88px)'}}>
-          <img src="/landing/app-showcase-clouds.webp" alt="guapd deals dashboard with offer accepted, campaign live, deliverable approved, payment received, and earnings received notifications" style={{width: '100%', height: 'auto', display: 'block'}} decoding="async" loading="lazy" />
+          <img src="/landing/app-showcase-clouds.webp" alt="guapd deals dashboard with offer accepted, campaign live, deliverable approved, payment received, and earnings received notifications" style={{width: '100%', height: 'auto', display: 'block'}} decoding="async" loading="lazy" width={1800} height={1013} />
           <div style={{position: 'absolute', left: 'calc(clamp(20px,5vw,72px) + 120px)', top: '0', bottom: '0', width: '26%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', background: 'transparent'}}>
             <div style={{textAlign: 'left'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Your deals, your dashboard</span>
@@ -477,91 +477,20 @@ export default function LandingPageClient() {
         </section>
 
         {/* PRODUCT SHOWCASE */}
-        <section style={{padding: 'clamp(64px,7vw,100px) clamp(20px,5vw,72px) clamp(32px,4vw,52px)'}}>
-
-          <div className="gx" style={{textAlign: 'center'}}>
-            <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Deals on guapd</span>
-            <h2 className="t-title" style={{fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(20px,2.4vw,30px)'}}>Recent deals on <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>guapd</span></h2>
-            <div className="sf-exprow" style={{gap: '20px'}}>
-              <div className="sf-exp">
-                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Skincare routine</div></div>
-                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Skincare routine</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Nykaa · Jun 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>2.4M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>8.1%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>34K</b></div></div></div></div>
-              </div>
-              <div className="sf-exp">
-                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Goa on ₹5k</div></div>
-                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Goa on ₹5k</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>MakeMyTrip · May 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.1M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>6.4%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>21K</b></div></div></div></div>
-              </div>
-              <div className="sf-exp">
-                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Get ready with me</div></div>
-                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Get ready with me</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Sugar · May 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.7M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>7.2%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>28K</b></div></div></div></div>
-              </div>
-              <div className="sf-exp">
-                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">SIP explained</div></div>
-                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>SIP explained</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Groww · Apr 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.1M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>6.4%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>22K</b></div></div></div></div>
-              </div>
-            </div>
-          </div>
-        </section>
+  
 
         {/* CAMPAIGNS */}
-        <section id="campaigns" style={{background: 'var(--card)', padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
-          <div className="gx">
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.035em', lineHeight: '1.04', textAlign: 'center', fontSize: 'clamp(28px,3.8vw,48px)', margin: '0 0 40px', color: 'var(--ink)'}}>Featured <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>campaigns</span></h2>
-          {campaigns.map((p, i) => (
-            <div className="pcard" data-pcard style={{top: '{p.top}px', marginBottom: '28px', height: '85vh', maxWidth: '1080px', marginLeft: 'auto', marginRight: 'auto', padding: 'clamp(16px,2vw,32px)', background: 'var(--card)', border: '1px solid var(--hairline)', borderRadius: '40px', boxShadow: 'var(--sh-2)', position: 'sticky'}}>
-              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap'}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
-                  <span className="t-meta" style={{color: 'var(--sec-ink)', width: '28px'}}>{p.num}</span>
-                  <div>
-                    <div className="t-meta" style={{color: 'var(--ink-faint)'}}>Brand &middot; {p.category}</div>
-                    <div style={{color: 'var(--ink)', fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.02em', fontSize: 'clamp(18px,2.2vw,26px)', marginTop: '4px'}}>{p.name}</div>
-                  </div>
-                </div>
-                <a href="#" className="g-btn-secondary" style={{padding: '11px 26px'}}>{p.deliverables} deliverables</a>
-              </div>
-              <div style={{display: 'flex', gap: '24px', marginTop: '24px', height: 'calc(100% - 100px)'}}>
-                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
-                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
-                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
-              </div>
-            </div>
-          ))}
-          </div>
-        </section>
+  
 
 
 
 
         {/* ============ FAQ ============ */}
         {/* CREATORS & BRANDS (borrowed from For Brands page) */}
-        <section className="sr" style={{padding: 'clamp(36px,4vw,56px) clamp(20px,5vw,72px)'}}>
-          <div className="gx">
-            <div style={{textAlign: 'center', maxWidth: '620px', margin: '0 auto clamp(36px,4.5vw,56px)'}}>
-              <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Creators on guapd</span>
-              <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '12px 0 0', color: 'var(--ink)'}}>Find vetted <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creators</span></h2>
-            </div>
-            <div style={{display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(16px,2.4vw,34px)', maxWidth: '980px', margin: '0 auto'}}>
-              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@aisha.fin</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Finance</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>180K followers</span></div></div></div>
-              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@rohan.tech</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Tech</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>92K followers</span></div></div></div>
-              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@priya.career</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Careers</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>95K followers</span></div></div></div>
-              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@maya.money</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Lifestyle</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>210K followers</span></div></div></div>
-            </div>
-          </div>
-        </section>
+  
 
         {/* BRANDS WE WORK WITH (borrowed from For Brands page) */}
-        <section className="sr" style={{padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
-          <div style={{maxWidth: '980px', margin: '0 auto', border: '1.2px solid var(--hairline)', borderRadius: '24px', background: 'var(--card)', boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(32px,4.5vw,56px) clamp(20px,4vw,48px)', textAlign: 'center'}}>
-            <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Brands we work with</span>
-      <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(24px,3.2vw,34px)', color: 'var(--ink)'}}>Brands you <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>know</span></h2>
-            <div id="brandPillRow" className="brand-pill-row" style={{display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '14px', overflow: 'hidden'}}>
-              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Groww</span></div>
-              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Zerodha</span></div>
-              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Fi Money</span></div>
-              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>CRED</span></div>
-            </div>
-          </div>
-        </section>
+  
   
 
 
