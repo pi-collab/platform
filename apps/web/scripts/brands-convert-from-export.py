@@ -1,12 +1,13 @@
 import re, sys
 S="/private/tmp/claude-501/-Users-palakjain/98efe6a8-2823-4c79-8309-ba18d97dc82d/scratchpad"
-html=open(f"{S}/body-raw.html").read()
+html=open(f"{S}/body-raw-v2.html").read()
 
-IMG={"e81e2a6c-5776-43d5-8770-0cba20cb6292":"/guapd-wordmark.svg",
-     "70029eda-cccf-4b9d-b8f5-46b05cccbe15":"/brands/glass-panel.webp",
-     "8ed9710e-c83e-4cde-ab5c-10a1425a4600":"/brands/showcase-a.webp",
-     "9279e4cd-3585-4ec0-b6ef-0bf0ff52bb48":"/brands/showcase-b.webp",
-     "97368813-21d5-4ef7-8f67-ea5dfcfe8514":"/brands/showcase-c.webp"}
+IMG={"86fa8917-bbb4-4442-8916-478a30fcf8ea":"/guapd-wordmark.svg",
+     "9862b2aa-dcc2-4444-97e6-67e173601482":"/brands/glass-panel.webp",
+     "8b36eb09-98f6-4d62-953c-a356418ed9f4":"/brands/showcase-a.webp",
+     "46b629c2-de25-4bd4-9430-8f6fb9c746fb":"/brands/brand-team.webp",
+     "d688a626-99e1-4541-986b-851a22d5bee3":"/brands/showcase-b.webp",
+     "c9889d00-a17e-4ec4-9476-a3317f564c1d":"/brands/showcase-c.webp"}
 for k,v in IMG.items(): html=html.replace(k,v)
 
 # ── 1. x-import → real elements, matching close tags by scanning ────────────
@@ -48,28 +49,10 @@ html=re.sub(r'<style>.*?</style>','',html,flags=re.S)
 # the style value, leaving `;style=" --sr-delay:0s;"=""`. Fold the custom
 # property back into the same declaration list, which is the evident intent.
 html=html.replace(';style=" --sr-delay:0s;"=""', ';--sr-delay:0s;"')
-# ── 6c2. Overlap the "operating system" headline with its image.
-#
-# The design coordinates THREE values with the same clamp:
-#   container  padding-top : reserves the band, so the image starts at y = H
-#   heading    height      : the band, text bottom-aligned inside it
-#   fade       top         : white->transparent gradient placed exactly at the
-#                            image's top edge, so the image dissolves into white
-#
-# To overlap the headline onto the image, the image must start ABOVE the band's
-# bottom — so padding-top shrinks to X — and the fade has to follow it to X, or
-# the gradient sits below the image's edge and a hard seam appears. The band's
-# own height stays at H so the headline does not move.
-#
-# Changing padding-top alone (the first attempt) is exactly that seam.
-BAND = 'clamp(320px,40vh,480px)'
-IMG_TOP = 'clamp(210px,26vh,330px)'
-html = html.replace(f'padding-top:{BAND}', f'padding-top:{IMG_TOP}')
-html = html.replace(f'top:{BAND};left:0;right:0;height:20%', f'top:{IMG_TOP};left:0;right:0;height:20%')
-# The band's own height is what holds the headline down the page (its content is
-# bottom-aligned), so shrinking it lifts the whole block and closes the gap to
-# the ticker above. Kept comfortably taller than IMG_TOP so the overlap remains.
-html = html.replace(f'height:{BAND};display:flex', 'height:clamp(250px,31vh,390px);display:flex')
+# NOTE: the earlier overlap tweak (moving the image top and fade up, shrinking
+# the band) is deliberately gone. The new export addresses the same feedback in
+# the design itself — a taller, softer fade (20% -> 34% with an extra stop) —
+# so the page should follow the export rather than carry a local override.
 
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
@@ -148,13 +131,24 @@ for tag in ['img','br','hr','input','source']:
 # ── 6f. Image attributes. Intrinsic width/height let the browser reserve space
 # (no layout shift), and everything below the fold can load lazily.
 IMG_DIMS = {'glass-panel.webp':(2825,1806), 'showcase-a.webp':(1672,941),
-            'showcase-b.webp':(1672,941),  'showcase-c.webp':(1536,1024)}
+            'brand-team.webp':(1402,1122), 'showcase-b.webp':(1672,941),
+            'showcase-c.webp':(1536,1024)}
 def _imgattrs(m):
     tag = m.group(0)
     for name,(w,h) in IMG_DIMS.items():
-        if name in tag and 'width=' not in tag:
-            lazy = '' if name == 'glass-panel.webp' else ' loading="lazy"'
-            return tag[:-2].rstrip() + f' width={{{w}}} height={{{h}}}{lazy} decoding="async" />'
+        if name not in tag or 'width=' in tag:
+            continue
+        lazy = '' if name == 'glass-panel.webp' else ' loading="lazy"'
+        # Only add intrinsic width/height where the style does NOT already
+        # declare aspect-ratio or an explicit height. The HTML attributes map to
+        # a presentational `height`, which OVERRIDES CSS aspect-ratio — adding
+        # them to a slot styled `width:100%; aspect-ratio:1672/941` rendered the
+        # image at its full 941px instead of the 675px the ratio implies, and
+        # stretched that section by 265px. Where aspect-ratio is present it
+        # already prevents layout shift, so the attributes add nothing.
+        has_ratio = 'aspectRatio' in tag or 'aspect-ratio' in tag
+        dims = '' if has_ratio else f' width={{{w}}} height={{{h}}}'
+        return tag[:-2].rstrip() + f'{dims}{lazy} decoding="async" />'
     return tag
 html = re.sub(r'<img\b[^>]*?/?>', _imgattrs, html)
 

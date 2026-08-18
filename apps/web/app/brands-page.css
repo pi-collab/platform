@@ -614,27 +614,8 @@
   line-height: normal;
 }
 
-/* ── Adjustments requested after review ────────────────────────────────────
-   1. The "why brands switch" comparison sat beside an empty half: its image
-   slot is a "Brand team photo" we do not have. Hiding the box alone would
-   leave a 1fr gap, so the grid collapses to a single centred column. Restore
-   both rules when the photograph exists. */
-.brands-page .ws-grid {
-  grid-template-columns: 1fr;
-}
+/* The "why brands switch" grid and the opening headline no longer need local
+   overrides: the updated export ships the brand-team photograph that its image
+   slot was missing, and raises the headline clamp to 44-56px itself. Both were
+   fixed at source, so carrying the workarounds here would now fight the design. */
 
-.brands-page .ws-imgwrap {
-  display: none;
-}
-
-.brands-page .ws-right {
-  max-width: 760px;
-  margin: 0 auto;
-}
-
-/* 2. A larger opening headline. The export's clamp tops out at 40px, which
-   reads small against the hero imagery beside it. !important because the
-   value is an inline style carried over from the export. */
-.brands-page > section:first-of-type h2 {
-  font-size: clamp(32px, 3.8vw, 48px) !important;
-}
