@@ -31,7 +31,12 @@
   --ink-faint: #9EA096;
 
   position: relative;
-  margin-top: clamp(72px, 8vw, 120px);
+  /* The export sets margin-top: clamp(72px,8vw,120px), which assumes the paper
+     background it was drawn on. On our pages the section above ends in artwork,
+     so that margin rendered as a bare white band between the artwork and the
+     footer's rounded top. The footer butts straight up against the section
+     instead, which is what the 40px top corners are for. */
+  margin-top: 0;
   border-radius: 40px 40px 0 0;
   background: #12151C;
   font-family: var(--font-ui);
