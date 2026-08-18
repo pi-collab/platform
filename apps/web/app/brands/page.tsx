@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Nav from '@/components/Nav'
+import BrandsNav from '@/components/BrandsNav'
 import BrandsPageClient from './BrandsPageClient'
 import Footer from '@/components/Footer'
 import MobileBottomCTA from '@/components/MobileBottomCTA'
@@ -24,16 +24,17 @@ export const metadata: Metadata = {
 }
 
 /**
- * The export ships its own nav, but the site-wide <Nav> is used instead so the
- * header matches every other page — per PJ. The export's nav is stripped
- * during conversion rather than hidden with CSS, so two headers can never
- * stack. The footer is the same story from the other direction: the export
- * only references it as an external component, so the site's Footer is used.
+ * The header is the export's design rebuilt as <BrandsNav>, carrying our own
+ * links and CTAs rather than the mockup's in-page anchors. The export's own nav
+ * markup is still stripped during conversion, so two headers can never stack.
+ *
+ * The footer is the opposite case: the export only references it as an
+ * external component it does not contain, so the site's Footer is used.
  */
 export default function BrandsPage() {
   return (
     <>
-      <Nav />
+      <BrandsNav />
       <main>
         <BrandsPageClient />
       </main>
