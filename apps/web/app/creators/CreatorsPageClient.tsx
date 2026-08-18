@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 /**
  * The "For Creators" marketing page, ported from the design export.
@@ -22,9 +23,14 @@ declare module 'react' {
 }
 
 const SHOW_BRAND_LOGOS = false
-const SHOW_TESTIMONIALS = false
+/** The creator roster ("Made for creators like you") shows invented creators. */
+const SHOW_CREATOR_ROSTER = false
 
 export default function CreatorsPageClient() {
+  const router = useRouter()
+  /** The hero CTA is a dead button in the export; creators sign up here. */
+  const goToSignup = () => router.push('/signup/creator')
+
   /**
    * Reveal-on-scroll. Every .sr element starts at opacity 0 and only becomes
    * visible once .sr-in is added, so without this the page renders blank. The
@@ -75,7 +81,7 @@ export default function CreatorsPageClient() {
             </h1>
             <p className="hero-fade" style={{fontFamily: 'var(--font-ui)', fontSize: '18px', fontWeight: '400', lineHeight: '1.45', color: '#565C68', maxWidth: '30ch', margin: '24px 0 0', animationDelay: '160ms'}}>Keep every opportunity, deliverable and payment in one place.</p>
             <div className="hero-fade" style={{margin: '44px 0 0', animationDelay: '240ms'}}>
-              <button type="button" className="hero-cta" style={{background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '17px 34px', fontFamily: 'var(--font-ui)', fontSize: '16px', fontWeight: '600', letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center', cursor: 'pointer'}}>Get early access<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: '12px'}}><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+              <button type="button" onClick={goToSignup} className="hero-cta" style={{background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '17px 34px', fontFamily: 'var(--font-ui)', fontSize: '16px', fontWeight: '600', letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center', cursor: 'pointer'}}>Get early access<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: '12px'}}><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
             </div>
           </div>
         </section>
@@ -404,7 +410,8 @@ export default function CreatorsPageClient() {
           </div>
         </section>
 
-        {/* ============ CREATORS & BRANDS ============ */}
+        {SHOW_CREATOR_ROSTER && (<>
+      {/* ============ CREATORS & BRANDS ============ */}
         <section style={{padding: '0 clamp(20px,5vw,72px) clamp(56px,6vw,88px)'}}>
           <div className="gx">
             <div style={{textAlign: 'center', maxWidth: '620px', margin: '0 auto clamp(36px,4.5vw,56px)'}}>
@@ -420,7 +427,9 @@ export default function CreatorsPageClient() {
           </div>
         </section>
 
-        {SHOW_BRAND_LOGOS && (<>
+  
+      </>)}
+      {SHOW_BRAND_LOGOS && (<>
       {/* ============ BRANDS WE WORK WITH ============ */}
         <section style={{padding: '0 clamp(20px,5vw,72px) clamp(56px,6vw,88px)'}}>
           <div className="sr gx" style={{border: '1.2px solid var(--hairline)', borderRadius: '24px', background: 'var(--card)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', padding: 'clamp(32px,4.5vw,56px) clamp(20px,4vw,48px)', textAlign: 'center'}}>
@@ -437,7 +446,6 @@ export default function CreatorsPageClient() {
 
   
       </>)}
-      {SHOW_TESTIMONIALS && (<>
       {/* ============ TESTIMONIALS ============ */}
         <section id="creators" style={{padding: '0', marginTop: '0'}}>
           <div style={{position: 'relative', minHeight: '640px'}}>
@@ -448,8 +456,16 @@ export default function CreatorsPageClient() {
             </div>
             <div style={{position: 'absolute', left: '0', right: '0', bottom: '0', padding: '0 0 clamp(112px,12vw,148px)'}}>
             <div style={{position: 'relative'}}>
-            <div ref="{{ trackRef }}" className="creatorsTrack" style={{display: 'flex', gap: '52px', overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '0 clamp(24px,5vw,72px)'}}>
-        
+            <div className="creatorsTrack" style={{display: 'flex', gap: '52px', overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '0 clamp(24px,5vw,72px)'}}>
+              <div className="card sr" style={{'--sr-delay': '0s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+                <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
+                <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: '#fff'}}>Written terms, finally</h3>
+                <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,.72)', margin: '8px 0 0'}}>I have had brands forget what we agreed verbally three times in one campaign. Written terms would have saved all of it.</p>
+                <div style={{marginTop: '16px', borderTop: '1px solid rgba(255,255,255,.16)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: '#fff'}}>Creator</span>
+                  <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'rgba(255,255,255,.6)'}}>@uvichar_</span>
+                </div>
+              </div>
         
         
             </div>
@@ -457,8 +473,6 @@ export default function CreatorsPageClient() {
             </div>
           </div>
         </section>
-
-      </>)}
     </div>
   )
 }

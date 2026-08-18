@@ -152,6 +152,18 @@ html = html.replace('>Create deal</button>', ' onClick={goToSignup}>Create deal<
 html = html.replace('>Book demo</button>', ' onClick={openDemo}>Book demo</button>')
 html = html.replace('>Book a demo</button>', ' onClick={openDemo}>Book a demo</button>')
 
+# -- 6m. Wire the hero CTA. The export is a mockup, so "Get early access" is a
+# dead <button>. Creators sign up at /signup/creator.
+html = html.replace('<button type="button" class="hero-cta"', '<button type="button" onClick={goToSignup} class="hero-cta"')
+
+# -- 6n. Strip the design tool's own ref bindings.
+#
+# The export leaves ref="{{ trackRef }}" on the marquee track — a handle for its
+# runtime. React reads that as a STRING REF, which function components reject:
+# it throws during hydration, the server HTML is discarded and the page renders
+# blank. Nothing here needs the handle, so it is removed.
+html = re.sub(r'\s*\bref="\{\{[^}]*\}\}"', '', html)
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()
@@ -263,7 +275,7 @@ for a,b,name in reversed(bounds):
     if any(name.startswith(k) for k in REMOVE):
         html = html[:a] + html[b:]
 
-HIDE={'BRANDS WE WORK WITH':'SHOW_BRAND_LOGOS','TESTIMONIALS':'SHOW_TESTIMONIALS'}
+HIDE={'BRANDS WE WORK WITH':'SHOW_BRAND_LOGOS','CREATORS & BRANDS':'SHOW_CREATOR_ROSTER'}
 # Splice by index, back to front. Doing this with str.replace() put the second
 # wrapper INSIDE the first section, because positions shift after each edit and
 # replace() hits the first match rather than the intended one.
@@ -281,19 +293,33 @@ nav_start = html.index('{/* ============ NAV')
 nav_end = html.index('{/*', nav_start + 10)
 html = html[:nav_start] + html[nav_end:]
 
-# ("Run deals directly. Stay calm.") on the page, but the three quotes are not
-# real yet. Each card is the div wrapping a five-star run, removed by scanning
-# for its matching close rather than by regex, since the cards nest.
-while chr(9733)*5 in html:
-    i = html.index(chr(9733)*5)
-    start = html.rfind('<div', 0, i)
-    depth, j = 1, html.index('>', start) + 1
-    while depth:
-        nd, cd = html.find('<div', j), html.find('</div>', j)
-        if cd == -1: break
-        if nd != -1 and nd < cd: depth += 1; j = nd + 4
-        else: depth -= 1; j = cd + 6
-    html = html[:start] + html[j:]
+# -- 8e. Testimonials: one real review, not three placeholders.
+#
+# The export ships three invented creators (@aisha.fin, @rohan.tech,
+# @priya.career). Only one review is real, so the other two cards are removed
+# and the survivor is attributed to @uvichar_ — showing three fabricated
+# testimonials would be the kind of thing a visitor can smell.
+_first = html.find(chr(9733) * 5)
+if _first != -1:
+    # Drop cards 2 and 3 (work backwards so indices stay valid).
+    while html.count(chr(9733) * 5) > 1:
+        i = html.rfind(chr(9733) * 5)
+        start = html.rfind('<div', 0, i)
+        depth, j = 1, html.index('>', start) + 1
+        while depth:
+            nd, cd = html.find('<div', j), html.find('</div>', j)
+            if cd == -1: break
+            if nd != -1 and nd < cd: depth += 1; j = nd + 4
+            else: depth -= 1; j = cd + 6
+        html = html[:start] + html[j:]
+    # Scope the attribution swap to the testimonial. @aisha.fin also appears in
+    # the creator-roster section, which is hidden but should not be silently
+    # rewritten.
+    _t = html.find(chr(9733) * 5)
+    _end = html.find('</section>', _t)
+    _seg = html[_t:_end]
+    _seg = _seg.replace('>Finance creator<', '>Creator<').replace('>@aisha.fin<', '>@uvichar_<')
+    html = html[:_t] + _seg + html[_end:]
 
 # ── 9. ghost text ───────────────────────────────────────────────────────────
 html=re.sub(r'(<div id="dealGhost"[^>]*>)(</div>)',r'\1{ghost}\2',html)
