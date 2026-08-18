@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { footer } from '@/lib/content'
 import CookiePrefsLink from '@/components/CookiePrefsLink'
+import Wordmark from '@/components/Wordmark'
 import '@/app/footer.css'
 
 /**
@@ -23,9 +24,8 @@ export default function Footer() {
       <div className="gfoot__inner">
         <div className="gfoot__top">
           <div className="gfoot__brand">
-            {/* The white-ink wordmark — the default one is #12151C on #12151C. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/guapd-wordmark-light.svg" alt="Guapd" className="gfoot__wordmark" />
+            {/* White ink — the default wordmark is #12151C on a #12151C panel. */}
+            <Wordmark height={28} tone="light" className="gfoot__wordmark" />
 
             <p className="gfoot__tagline">{footer.tagline}</p>
 

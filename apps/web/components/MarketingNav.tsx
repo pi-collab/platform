@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
+import Wordmark from '@/components/Wordmark'
 
 /**
  * The header from the design exports, shared by both marketing pages.
@@ -141,8 +142,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           }}
         >
           <Link href="/" aria-label="Guapd home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/guapd-wordmark.svg" alt="Guapd" style={{ height: '24px', width: 'auto', display: 'block' }} />
+            <Wordmark height={24} />
           </Link>
 
           <span className="mnav-rule" aria-hidden="true" style={rule} />

@@ -37,7 +37,10 @@
      footer's rounded top. The footer butts straight up against the section
      instead, which is what the 40px top corners are for. */
   margin-top: 0;
-  border-radius: 40px 40px 0 0;
+  /* The export rounds the top corners 40px. Against our light artwork the curve
+     left two visible wedges of page background at the edges, which read as a
+     gap rather than as a lifted panel, so the footer is squared off. */
+  border-radius: 0;
   background: #12151C;
   font-family: var(--font-ui);
   color: #EDEDE7;
@@ -65,7 +68,7 @@
 
 .gfoot__brand { max-width: 340px; }
 
-.gfoot__wordmark { height: 28px; width: auto; display: block; }
+.gfoot__wordmark { display: block; }
 
 .gfoot__tagline {
   margin: 18px 0 0;
