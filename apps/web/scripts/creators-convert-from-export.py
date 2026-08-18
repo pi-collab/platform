@@ -126,9 +126,10 @@ html = html.replace('text-align:left;max-width:460px;', 'text-align:left;max-wid
 # The testimonials copy sat at 17% from the top, which was right when three
 # review cards filled the space beneath it. With the cards gone it reads as
 # stranded, so it is centred in the frame instead.
-html = html.replace(
-    'position:absolute;left:0;right:0;top:17%;text-align:center;padding:0 20px;',
-    'position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 20px;')
+# NOTE: the brands converter re-centres this block vertically (top:17% -> 50%)
+# because its review cards are removed and the copy would otherwise sit stranded
+# above empty space. The creators page KEEPS its cards, so centring drops the
+# heading straight on top of them. Left at the export's own 17%.
 
 # -- 6k. Match the export's actual rendered weight.
 #

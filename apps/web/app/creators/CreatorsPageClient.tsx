@@ -450,7 +450,7 @@ export default function CreatorsPageClient() {
         <section id="creators" style={{padding: '0', marginTop: '0'}}>
           <div style={{position: 'relative', minHeight: '640px'}}>
             <img src="/creators/testimonials.webp" alt="Creator lifestyle photo — moody, editorial" style={{...{width: '100%', height: '80vh', minHeight: '640px', display: 'block', objectPosition: 'top'}, objectFit: 'cover'}} width={1536} height={1024} loading="lazy" decoding="async" />
-            <div style={{position: 'absolute', left: '0', right: '0', top: '50%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 20px'}}>
+            <div style={{position: 'absolute', left: '0', right: '0', top: '17%', textAlign: 'center', padding: '0 20px'}}>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(34px,3vw,46px)', margin: '0 auto', maxWidth: '45%', color: '#12151C'}}>Why creators are making the <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>switch</span></h2>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.5', color: '#12151C', maxWidth: '56ch', margin: '40px auto 0'}}>Real creators, real deals, real reasons to leave DMs behind. Hear directly from the people running their business on guapd every day.</p>
             </div>
