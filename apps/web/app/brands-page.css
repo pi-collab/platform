@@ -803,6 +803,21 @@
   margin-top: 20px;
   border: none;
   cursor: pointer;
+  /* Dark, like the hero's "Book demo", rather than the neon nav pill. The neon
+     is the page's accent for a single nav CTA; inside the dialog the dark
+     treatment is the primary action, matching the buttons in the design. */
+  background: #12151C;
+  color: #fff;
+}
+
+.brands-page .bd-submit:hover {
+  background: #000;
+  box-shadow: 0 10px 24px -12px rgba(24, 28, 36, .55);
+}
+
+.brands-page .bd-submit:disabled {
+  opacity: .55;
+  cursor: default;
 }
 
 .brands-page .bd-error {
