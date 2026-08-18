@@ -99,7 +99,7 @@ export default function LandingPageClient() {
             <div style={{position: 'absolute', top: '50%', left: '9%', transform: 'translateY(-50%)', width: 'min(30%,360px)', minWidth: '220px', textAlign: 'left'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Built for you</span>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(30px,3.1vw,44px)', margin: '12px 0 0', color: '#12151C'}}>Every campaign, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>on track.</span></h2>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.55', color: '#565C68', margin: '16px 0 0', maxWidth: '30ch'}}>Discover creators, manage campaigns, approve deliverables and track reporting — all tracked in one dashboard.</p>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.55', color: '#565C68', margin: '16px 0 0', maxWidth: '30ch'}}>Discover creators, manage campaigns, approve deliverables and track reporting, all tracked in one dashboard.</p>
             </div>
           </div>
         </section>
@@ -182,7 +182,7 @@ export default function LandingPageClient() {
               <div style={{overflow: 'hidden', paddingBottom: '6px', marginTop: 'clamp(18px,2.4vw,28px)'}}>
                 <h3 className="hw-head" style={{fontFamily: 'var(--font-display)', fontWeight: '800', fontSize: 'clamp(26px,2.6vw,32px)', letterSpacing: '-.03em', lineHeight: '1.08', margin: '0', maxWidth: '14ch'}}>Send a structured brief</h3>
               </div>
-              <p style={{fontFamily: 'var(--font-ui)', fontWeight: '400', fontSize: 'clamp(16px,1.15vw,18px)', lineHeight: '1.6', color: 'var(--ink-soft)', maxWidth: '30em', margin: 'clamp(14px,1.6vw,20px) 0 0'}}>Deliverables, rate, timeline and payment split — written down and agreed before any work starts.</p>
+              <p style={{fontFamily: 'var(--font-ui)', fontWeight: '400', fontSize: 'clamp(16px,1.15vw,18px)', lineHeight: '1.6', color: 'var(--ink-soft)', maxWidth: '30em', margin: 'clamp(14px,1.6vw,20px) 0 0'}}>Deliverables, rate, timeline and payment split, written down and agreed before any work starts.</p>
             </div>
             <div className="hw-text" data-hw-text="1">
               <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
@@ -233,7 +233,7 @@ export default function LandingPageClient() {
                   <span style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '12.5px', letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>Offer</span>
                 </div>
                 <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '800', fontSize: 'clamp(26px,2.6vw,32px)', letterSpacing: '-0.035em', lineHeight: '1.14', margin: '14px 0 0'}}>Send a structured brief</h3>
-                <p style={{fontFamily: 'var(--font-ui)', fontWeight: '500', fontSize: '17px', lineHeight: '1.55', color: 'var(--ink)', margin: '12px 0 0'}}>Deliverables, rate, timeline, and payment split — written down before any work starts.</p>
+                <p style={{fontFamily: 'var(--font-ui)', fontWeight: '500', fontSize: '17px', lineHeight: '1.55', color: 'var(--ink)', margin: '12px 0 0'}}>Deliverables, rate, timeline, and payment split, written down before any work starts.</p>
               </div>
             </div>
             <div className="sr" style={{display: 'grid', gridTemplateColumns: '1fr', gap: '24px', padding: 'clamp(28px,5vw,40px) 0', borderTop: '1px solid var(--hairline)'}}>
@@ -255,7 +255,7 @@ export default function LandingPageClient() {
                   <span style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '12.5px', letterSpacing: '.09em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>Deliver</span>
                 </div>
                 <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '800', fontSize: 'clamp(26px,2.6vw,32px)', letterSpacing: '-0.035em', lineHeight: '1.14', margin: '14px 0 0'}}>Upload and get approved</h3>
-                <p style={{fontFamily: 'var(--font-ui)', fontWeight: '500', fontSize: '17px', lineHeight: '1.55', color: 'var(--ink)', margin: '12px 0 0'}}>Revisions are counted against what was agreed — no quiet scope creep later.</p>
+                <p style={{fontFamily: 'var(--font-ui)', fontWeight: '500', fontSize: '17px', lineHeight: '1.55', color: 'var(--ink)', margin: '12px 0 0'}}>Revisions are counted against what was agreed, no quiet scope creep later.</p>
               </div>
             </div>
             <div className="sr" style={{display: 'grid', gridTemplateColumns: '1fr', gap: '24px', padding: 'clamp(28px,5vw,40px) 0', borderTop: '1px solid var(--hairline)'}}>
@@ -304,7 +304,7 @@ export default function LandingPageClient() {
             </div>
             <div style={{background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', textAlign: 'left', padding: 'clamp(28px,5vw,64px) clamp(36px,6vw,88px)', gap: '20px', border: '1.5px solid rgba(18,21,28,.14)'}}>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.04em', lineHeight: '1.02', fontSize: 'clamp(28px,3.8vw,48px)', color: '#12151C', margin: '0'}}>For <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creators</span>.</h2>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: 'clamp(14px,1.4vw,16px)', lineHeight: '1.6', color: '#565C68', maxWidth: '340px', margin: '0'}}>Accept, counter, deliver, and get paid &mdash; without a single DM.</p>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: 'clamp(14px,1.4vw,16px)', lineHeight: '1.6', color: '#565C68', maxWidth: '340px', margin: '0'}}>Accept, counter, deliver, and get paid, without a single DM.</p>
               <a href="/creators" style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: '#12151C', background: 'transparent', border: '1.5px solid rgba(18,21,28,.3)', borderRadius: '999px', padding: '11px 22px', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none'}}>Explore for creators <span aria-hidden="true">&rarr;</span></a>
             </div>
           </div>
@@ -320,13 +320,13 @@ export default function LandingPageClient() {
         {/* ============ GLASS PANEL SHOWCASE (Built for creators) ============ */}
         <section style={{position: 'relative', background: '#fff', padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)', overflow: 'hidden'}}>
           <div style={{position: 'relative', maxWidth: '1200px', margin: '0 auto', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 20px 40px -30px rgba(40,45,25,.18)'}}>
-            <img src="/landing/rectangle-84.webp" alt="Creator dashboard shown as glass panels — creator profile, opportunities, active deals, payment status" style={{width: '80%', height: 'auto', display: 'block', marginLeft: '-24px', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" width={1800} height={1151} />
+            <img src="/landing/rectangle-84.webp" alt="Creator dashboard shown as glass panels, creator profile, opportunities, active deals, payment status" style={{width: '80%', height: 'auto', display: 'block', marginLeft: '-24px', filter: 'saturate(0.9) contrast(1.08) brightness(1.02)'}} decoding="async" loading="lazy" width={1800} height={1151} />
             <div aria-hidden="true" style={{position: 'absolute', top: '0', left: '0', width: '80%', height: '100%', background: 'linear-gradient(160deg,rgba(80,140,230,0.14),rgba(80,140,230,0.03) 60%)', mixBlendMode: 'multiply', pointerEvents: 'none'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', right: '0', width: '46%', background: 'linear-gradient(to left,#fff 0%,#fff 55%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
             <div style={{position: 'absolute', top: '50%', right: '6%', transform: 'translateY(-50%)', width: 'min(30%,360px)', minWidth: '220px', textAlign: 'left'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Built for you</span>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(30px,3.1vw,44px)', margin: '12px 0 0', color: '#12151C'}}>Your whole hustle, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>organized.</span></h2>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.55', color: '#565C68', margin: '16px 0 0', maxWidth: '30ch'}}>Your profile, open opportunities, active deals and payment status — all tracked in one dashboard, so nothing slips through DMs.</p>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.55', color: '#565C68', margin: '16px 0 0', maxWidth: '30ch'}}>Your profile, open opportunities, active deals and payment status, all tracked in one dashboard, so nothing slips through DMs.</p>
             </div>
           </div>
         </section>
@@ -472,7 +472,7 @@ export default function LandingPageClient() {
             <div style={{textAlign: 'left'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Your deals, your dashboard</span>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '12px 0 0', color: 'var(--ink)'}}>Everything, always in <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>view</span></h2>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.5', color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: '320px'}}>Campaigns, earnings, and reviews — all live in one dashboard.</p>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.5', color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: '320px'}}>Campaigns, earnings, and reviews, all live in one dashboard.</p>
               <div style={{marginTop: '24px'}}><div className="magnet"><a href="/signup/brand" className="lp-btn">Get early access</a></div></div>
             </div>
           </div>
@@ -521,7 +521,7 @@ export default function LandingPageClient() {
 
         {/* VISION */}
         <section className="on-dark sr" style={{background: '#12151C', borderRadius: '28px', maxWidth: '1200px', margin: 'clamp(56px,6vw,88px) auto clamp(56px,6vw,88px)', padding: 'clamp(44px,5.5vw,64px) clamp(24px,4vw,44px)', textAlign: 'center'}}>
-          <p style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: 'clamp(19px,2vw,24px)', lineHeight: '1.5', letterSpacing: '-0.01em', margin: '0', color: '#F3F4EE'}}>Soon, agents handle the busywork &mdash; you stay in <span style={{fontFamily: '\'Instrument Serif\',serif', fontStyle: 'italic', fontWeight: '400', color: 'var(--lime)'}}>control</span>.</p>
+          <p style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: 'clamp(19px,2vw,24px)', lineHeight: '1.5', letterSpacing: '-0.01em', margin: '0', color: '#F3F4EE'}}>Soon, agents handle the busywork, you stay in <span style={{fontFamily: '\'Instrument Serif\',serif', fontStyle: 'italic', fontWeight: '400', color: 'var(--lime)'}}>control</span>.</p>
           <a href="#" style={{display: 'inline-block', marginTop: '14px', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: '#9EA096'}}>See the vision &rarr;</a>
         </section>
 
@@ -540,7 +540,7 @@ export default function LandingPageClient() {
                 <div style={{position: 'relative', zIndex: '2', maxWidth: '560px', textAlign: 'center', padding: '0 24px'}}>
                   <div id="cvEyebrow" style={{color: '#12151C', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', letterSpacing: '.14em', opacity: '0'}}>TWO SIDES</div>
                   <h2 id="cvHead" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C', opacity: '0'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>guap.</span></h2>
-                  <p id="cvSub" style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts &mdash; built for both sides of the deal.</p>
+                  <p id="cvSub" style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
                   <button type="button" id="cvBtn" onClick={() => setDemoOpen(true)} style={{marginTop: '26px', display: 'inline-flex', opacity: '0'}}>
                     <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid #12151C', color: '#12151C', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
                   </button>
@@ -552,7 +552,7 @@ export default function LandingPageClient() {
               <div style={{position: 'relative', zIndex: '2', maxWidth: '560px', textAlign: 'center', padding: '0 24px'}}>
                 <div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', letterSpacing: '.14em', color: '#12151C'}}>TWO SIDES</div>
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>meet.</span></h2>
-                <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0'}}>One flow for briefs, terms and payouts &mdash; built for both sides of the deal.</p>
+                <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
                 <div style={{marginTop: '26px', display: 'inline-flex'}}>
                   <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid #12151C', color: '#12151C', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
                 </div>

@@ -55,7 +55,7 @@ const CTA_STYLE: React.CSSProperties = {
   borderRadius: '999px',
   background: '#E8FF66',
   color: '#181C24',
-  fontSize: '13.5px',
+  fontSize: '14.5px',
   fontWeight: 700,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
@@ -178,7 +178,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
               display: 'flex',
               alignItems: 'center',
               gap: '22px',
-              fontSize: '14px',
+              fontSize: '15px',
               fontWeight: 500,
               color: '#4A4F58',
               whiteSpace: 'nowrap',
@@ -222,7 +222,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             // page it has to send creators to their own login instead — it was
             // dropping them on the brand sign-in.
             href={audience === 'creator' ? '/login/creator' : nav.login.href}
-            style={{ fontSize: '14px', fontWeight: 600, color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap' }}
+            style={{ fontSize: '15px', fontWeight: 600, color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap' }}
           >
             {nav.login.label}
           </Link>
@@ -249,7 +249,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
               borderRadius: '999px',
               background: '#E8FF66',
               color: '#181C24',
-              fontSize: '13.5px',
+              fontSize: '14.5px',
               fontWeight: 700,
               textDecoration: 'none',
               whiteSpace: 'nowrap',

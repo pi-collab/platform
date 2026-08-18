@@ -396,6 +396,23 @@ before = len(re.findall(r'<!--', html))
 html = re.sub(r'<!--(.*?)-->', lambda m: '{/*' + m.group(1).replace('*/', '* /') + '*/}', html, flags=re.S)
 step("comments converted", before, len(re.findall(r'<!--', html)))
 
+# ── 9b. Em dashes in visible copy. ────────────────────────────────────────
+# The design leans on them as a general-purpose connector, which reads as a tic
+# when there are seven on one page. A dash joining two clauses becomes a comma;
+# dashes standing in for an absent value are left alone, as are the ones inside
+# JSX comments, which nobody reads on the page.
+def _dedash(chunk):
+    chunk = chunk.replace('&mdash;', '\u2014')
+    # " word — word " → " word, word ". Requires spaces on both sides so an
+    # em dash used as a value placeholder ("—" alone in a cell) is untouched.
+    return re.sub(r'(\w)\s+\u2014\s+(\w)', r'\1, \2', chunk)
+
+parts = re.split(r'(\{/\*.*?\*/\})', html, flags=re.S)
+before = sum(p.count('\u2014') + p.count('&mdash;') for p in parts[::2])
+parts[::2] = [_dedash(p) for p in parts[::2]]
+html = ''.join(parts)
+step("em dashes in copy → commas", before, sum(p.count('\u2014') for p in html.split('{/*')[:1]))
+
 # ── 10. Void elements must be self-closed. ─────────────────────────────────
 for tag in ['img', 'br', 'hr', 'input', 'source', 'path', 'circle', 'rect', 'line', 'polyline', 'ellipse', 'stop', 'use']:
     html = re.sub(rf'<{tag}\b([^>]*?)\s*/?>', lambda m: f'<{tag}{m.group(1).rstrip()} />', html)

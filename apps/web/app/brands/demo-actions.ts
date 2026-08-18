@@ -76,14 +76,14 @@ export async function requestDemo(input: DemoRequestInput): Promise<DemoRequestR
     // 1. Tell the team. Reply-to is the requester so hitting reply just works.
     const internal = renderNoticeEmail({
       heading: `New demo request from ${brand}`,
-      body: [`${name} asked for a demo. Their details are below — reply to this email to reach them directly.`],
+      body: [`${name} asked for a demo. Their details are below. Reply to this email to reach them directly.`],
       rows,
       footerNote: 'Sent from the For Brands page on guapd.com.',
     })
 
     const sent = await sendDealEmail({
       to: [DEMO_INBOX],
-      subject: `Demo request — ${brand}`,
+      subject: `Demo request: ${brand}`,
       html: internal.html,
       text: internal.text,
       replyTo: email,
@@ -99,7 +99,7 @@ export async function requestDemo(input: DemoRequestInput): Promise<DemoRequestR
     //    Failure here must not surface as an error: their request IS recorded,
     //    and telling them it failed would invite a duplicate submission.
     const confirm = renderNoticeEmail({
-      heading: 'Thanks — your demo request is in.',
+      heading: 'Thanks, your demo request is in.',
       body: [
         `Hi ${name.split(' ')[0]}, thanks for asking about ${BRAND_NAME}.`,
         'Someone from our team will reach out within one working day to find a time that suits you. The walkthrough usually takes about 20 minutes, and we can run it against the kind of campaigns you actually brief.',

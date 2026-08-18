@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { footer } from '@/lib/content'
 import CookiePrefsLink from '@/components/CookiePrefsLink'
+import ContactLink from '@/components/ContactLink'
 import Wordmark from '@/components/Wordmark'
 import '@/app/footer.css'
 
@@ -38,6 +39,8 @@ export default function Footer() {
                   {col.links.map((link) =>
                     link.href === '#cookie-preferences' ? (
                       <CookiePrefsLink key={link.href} />
+                    ) : link.href === '#contact' ? (
+                      <ContactLink key={link.href} className="gf-link" />
                     ) : link.href.startsWith('mailto:') ? (
                       <a key={link.href} href={link.href} className="gf-link">{link.label}</a>
                     ) : (

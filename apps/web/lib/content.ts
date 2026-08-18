@@ -17,8 +17,8 @@ export const BRAND_NAME = 'Guapd'
 
 export const nav = {
   links: [
-    { label: 'For brands',    href: '/brands'   },
-    { label: 'For creators',  href: '/creators' },
+    { label: 'For Brands',    href: '/brands'   },
+    { label: 'For Creators',  href: '/creators' },
     { label: 'How it works',  href: '#how-it-works' },
   ],
   login:      { label: 'Log in',           href: '/login/brand'           },
@@ -346,11 +346,15 @@ export const creatorPage = {
  * redirects anonymous visitors to /login/brand, so in a public footer it is a
  * login wall rather than a directory.
  *
+ * Contact's href is a sentinel, not a destination: <Footer> renders it as a
+ * dialog trigger. A mailto loses the message when someone has no mail client
+ * configured, and records nothing our side.
+ *
  * All of them go back in as their pages land; the column structure already fits
  * them.
  */
 export const footer = {
-  tagline: 'Match, deal and grow — all in one calm, trusted place. No chasing, no awkward DMs.',
+  tagline: 'Match, deal and grow, all in one calm, trusted place. No chasing, no awkward DMs.',
 
   columns: [
     {
@@ -363,7 +367,7 @@ export const footer = {
     {
       heading: 'Company',
       links: [
-        { label: 'Contact', href: 'mailto:contact@guapd.com' },
+        { label: 'Contact', href: '#contact' },
       ],
     },
     {
