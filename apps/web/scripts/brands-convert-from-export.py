@@ -54,6 +54,66 @@ html=html.replace(';style=" --sr-delay:0s;"=""', ';--sr-delay:0s;"')
 # the design itself — a taller, softer fade (20% -> 34% with an extra stop) —
 # so the page should follow the export rather than carry a local override.
 
+# ── 6g. Value ticker: eyebrow type, and a track wide enough to actually loop.
+#
+# The chips were sentence-case 12px body text; PJ wants them set as eyebrow
+# labels — uppercase, small, letter-spaced — matching .t-meta in the design
+# system. Rewritten in the inline style so no !important is needed.
+html = html.replace(
+    'font-family:var(--font-ui);font-size:12px;color:var(--ink-soft);background:var(--card);'
+    'border:1.2px solid var(--hairline);border-radius:var(--radius-pill);padding:9px 16px;',
+    'font-family:var(--font-ui);font-size:9.5px;font-weight:500;letter-spacing:.14em;'
+    'text-transform:uppercase;color:var(--ink-soft);background:var(--card);'
+    'border:1.2px solid var(--hairline);border-radius:var(--radius-pill);padding:10px 16px;')
+
+# The marquee animates translateX(0 -> -50%), which is seamless ONLY if half the
+# track is at least as wide as the viewport. The export ships two copies of five
+# chips: 1298px total, so half is 649px against a 1440px viewport — the chips run
+# out and a blank stretch scrolls past before the cycle repeats. Repeating the
+# whole track content four times keeps the two-copy symmetry the -50% relies on
+# while making each half ~2600px, enough for any realistic desktop.
+_open = '<div style="display:flex;width:max-content;gap:0;animation:mqMove 32s linear infinite;">'
+_i = html.find(_open)
+if _i != -1:
+    _start = _i + len(_open)
+    _depth, _j = 1, _start
+    while _depth:
+        _nd = html.find('<div', _j); _cd = html.find('</div>', _j)
+        if _cd == -1: break
+        if _nd != -1 and _nd < _cd: _depth += 1; _j = _nd + 4
+        else:
+            _depth -= 1; _j = _cd + 6
+    _inner = html[_start:_j - 6]
+    html = html[:_start] + (_inner * 4) + html[_j - 6:]
+
+# -- 6h. Reveal the elements the export's own script animated in.
+#
+# Six elements (pvEyebrow / pvHead / pvBody and three pv-rows) carry an inline
+# opacity:0 with a transition, and were faded in by the export's runtime, which
+# is not ported. They are not .sr elements, so the observer never touched them
+# and the whole "As private as your spreadsheet" section rendered blank.
+#
+# Inline opacity beats any class, so the declaration has to come OUT of the
+# style attribute; the motion is reinstated via .pv-reveal, which the observer
+# handles alongside .sr.
+def _reveal(m):
+    tag, style = m.group(0), m.group(1)
+    new = re.sub(r'opacity:0;?', '', style)
+    new = re.sub(r'transform:translateY\([^)]*\);?', '', new)
+    tag = tag.replace(style, new)
+    if 'class="' in tag:
+        return re.sub(r'class="([^"]*)"', lambda c: 'class="%s pv-reveal"' % c.group(1), tag, count=1)
+    return re.sub(r'^<(\w+)', lambda t: '<%s class="pv-reveal"' % t.group(1), tag)
+
+html = re.sub(r'<(?:div|h2|p)\b[^>]*style="([^"]*opacity:0;[^"]*transition:opacity[^"]*)"[^>]*>',
+              _reveal, html)
+
+# -- 6i. "See what's working, at a glance" wrapped onto two lines in its column.
+# Shortened, keeping the serif accent the design puts on the second half.
+html = html.replace(
+    '>See what\'s working, <span class="t-accent">at a glance</span>',
+    '>See what\'s <span class="t-accent">working</span>')
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()
@@ -164,7 +224,7 @@ for a,b,name in reversed(bounds):
     if any(name.startswith(k) for k in REMOVE):
         html = html[:a] + html[b:]
 
-HIDE={'BRANDS WE WORK WITH':'SHOW_BRAND_LOGOS','TESTIMONIALS':'SHOW_TESTIMONIALS'}
+HIDE={'BRANDS WE WORK WITH':'SHOW_BRAND_LOGOS'}
 # Splice by index, back to front. Doing this with str.replace() put the second
 # wrapper INSIDE the first section, because positions shift after each edit and
 # replace() hits the first match rather than the intended one.
@@ -181,6 +241,21 @@ for a,b,name in reversed(bounds):
 nav_start = html.index('{/* ============ NAV')
 nav_end = html.index('{/*', nav_start + 10)
 html = html[:nav_start] + html[nav_end:]
+
+# -- 8d. Keep the testimonials section, drop the reviews. PJ wants the section
+# ("Run deals directly. Stay calm.") on the page, but the three quotes are not
+# real yet. Each card is the div wrapping a five-star run, removed by scanning
+# for its matching close rather than by regex, since the cards nest.
+while chr(9733)*5 in html:
+    i = html.index(chr(9733)*5)
+    start = html.rfind('<div', 0, i)
+    depth, j = 1, html.index('>', start) + 1
+    while depth:
+        nd, cd = html.find('<div', j), html.find('</div>', j)
+        if cd == -1: break
+        if nd != -1 and nd < cd: depth += 1; j = nd + 4
+        else: depth -= 1; j = cd + 6
+    html = html[:start] + html[j:]
 
 # ── 9. ghost text ───────────────────────────────────────────────────────────
 html=re.sub(r'(<div id="dealGhost"[^>]*>)(</div>)',r'\1{ghost}\2',html)
