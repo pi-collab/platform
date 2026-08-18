@@ -192,7 +192,11 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
         <div style={{ ...group, paddingLeft: split ? '24px' : '16px', paddingRight: '8px', gap: '16px' }}>
           <Link
             className="mnav-login"
-            href={nav.login.href}
+            // nav.login.href is the brand login, because the site-wide <Nav>
+            // that also reads it sits on brand-facing pages. On the creators
+            // page it has to send creators to their own login instead — it was
+            // dropping them on the brand sign-in.
+            href={audience === 'creator' ? '/login/creator' : nav.login.href}
             style={{ fontSize: '14px', fontWeight: 600, color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap' }}
           >
             {nav.login.label}

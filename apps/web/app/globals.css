@@ -616,6 +616,12 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   padding: 0 clamp(20px, 4vw, 48px);
 }
 
+/* Same capsule as the marketing header: 60px tall, 24px logo, 44px CTA, same
+   shadow. The design is still the auth shell's own — the sizing is what is
+   shared. Height is fixed rather than derived from the contents because the
+   creator screens pass no navRight, and a content-height capsule collapsed to
+   37px there while the brand screens sat at 57.6px: two different headers on
+   two halves of the same flow. */
 .signup-nav {
   position: relative;
   z-index: 4;
@@ -625,18 +631,18 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   align-items: center;
   justify-content: space-between;
   gap: 26px;
-  padding: 9px 12px 9px 20px;
+  height: 60px;
+  padding: 0 8px 0 20px;
   border-radius: 999px;
   background: var(--card);
   box-shadow:
-    0 1px 2px rgba(18, 21, 28, .03),
-    0 8px 16px rgba(18, 21, 28, .04),
-    0 32px 64px rgba(18, 21, 28, .05);
+    0 18px 40px -20px rgba(24, 28, 36, .28),
+    0 2px 8px -2px rgba(24, 28, 36, .10);
 }
 
 /* Dark artwork for the white desktop pill; the light one is revealed only
    under the mobile breakpoint, where the logo sits on the dark band. */
-.signup-nav__logo { height: 19px; width: auto; display: block; }
+.signup-nav__logo { display: inline-flex; }
 .signup-nav__logo--light { display: none; }
 .signup-nav__right { display: flex; align-items: center; gap: 10px; }
 .signup-nav__label { font-size: 13px; color: var(--ink-soft); }
@@ -649,7 +655,10 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   text-decoration: none;
   background: var(--neon);
   border-radius: 999px;
-  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 20px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -2197,6 +2206,7 @@ button.signup-form__cross-link {
     position: static;
     background: none;
     box-shadow: none;
+    height: auto;
     padding: 0;
     border-radius: 0;
     justify-content: flex-start;
@@ -2211,8 +2221,7 @@ button.signup-form__cross-link {
      because positioning either of those makes it the containing block for the
      bottom link and drags that link back to the top of the page. */
   .signup-nav__logo--light {
-    display: block;
-    height: 24px;
+    display: inline-flex;
     position: relative;
     z-index: 4;
   }
@@ -2245,6 +2254,7 @@ button.signup-form__cross-link {
 
   .signup-nav__cta {
     background: none;
+    height: auto;
     padding: 0;
     font-size: 12.5px;
     font-weight: 500;
