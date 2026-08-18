@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Nav from '@/components/Nav'
+import MarketingNav from '@/components/MarketingNav'
 import CreatorsPageClient from './CreatorsPageClient'
 import Footer from '@/components/Footer'
 import MobileBottomCTA from '@/components/MobileBottomCTA'
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
 }
 
 /**
- * The export's own nav is stripped during conversion; the site-wide <Nav> is
- * used so the header matches the rest of the site. The footer is the opposite
- * case — the export only references it as an external component, so the site's
- * Footer is used.
+ * Same header as /brands — the design's pill nav — with the creator CTA. The
+ * export's own nav is stripped during conversion so two headers cannot stack.
+ * The footer is the opposite case: the export only references it as an external
+ * component, so the site's Footer is used.
  */
 export default function CreatorsPage() {
   return (
     <>
-      <Nav audience="creator" />
+      <MarketingNav audience="creator" />
       <main>
         <CreatorsPageClient />
       </main>

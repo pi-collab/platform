@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import BrandsNav from '@/components/BrandsNav'
+import MarketingNav from '@/components/MarketingNav'
 import BrandsPageClient from './BrandsPageClient'
 import Footer from '@/components/Footer'
 import MobileBottomCTA from '@/components/MobileBottomCTA'
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 }
 
 /**
- * The header is the export's design rebuilt as <BrandsNav>, carrying our own
+ * The header is the export's design rebuilt as <MarketingNav>, carrying our own
  * links and CTAs rather than the mockup's in-page anchors. The export's own nav
  * markup is still stripped during conversion, so two headers can never stack.
  *
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 export default function BrandsPage() {
   return (
     <>
-      <BrandsNav />
+      <MarketingNav audience="brand" />
       <main>
         <BrandsPageClient />
       </main>
