@@ -457,7 +457,7 @@ export default function CreatorsPageClient() {
             <div style={{position: 'absolute', left: '0', right: '0', bottom: '0', padding: '0 0 clamp(112px,12vw,148px)'}}>
             <div style={{position: 'relative'}}>
             <div className="creatorsTrack" style={{display: 'flex', gap: '52px', overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '0 clamp(24px,5vw,72px)'}}>
-              <div className="card sr review-card" style={{'--sr-delay': '0s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+              <div className="card sr" style={{'--sr-delay': '0s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
                 <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
                 <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: '#fff'}}>Written terms, finally</h3>
                 <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,.72)', margin: '8px 0 0'}}>I have had brands forget what we agreed verbally three times in one campaign. Written terms would have saved all of it.</p>
@@ -466,7 +466,7 @@ export default function CreatorsPageClient() {
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'rgba(255,255,255,.6)'}}>@uvichar_</span>
                 </div>
               </div>
-              <div className="card sr review-card" style={{'--sr-delay': '.06s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(255,255,255,.78)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+              <div className="card sr" style={{'--sr-delay': '.06s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(255,255,255,.78)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
                 <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
                 <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: 'var(--ink)'}}>No more chasing payment</h3>
                 <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'var(--ink-soft)', margin: '8px 0 0'}}>The worst part of brand deals is chasing payment. If I could see exactly where it is, I would sleep better.</p>
@@ -475,7 +475,7 @@ export default function CreatorsPageClient() {
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--ink-faint)'}}>@utkarsh_verma_</span>
                 </div>
               </div>
-              <div className="card sr review-card" style={{'--sr-delay': '.12s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+              <div className="card sr" style={{'--sr-delay': '.12s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
                 <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
                 <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: '#fff'}}>An actual inbox for deals</h3>
                 <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,.72)', margin: '8px 0 0'}}>I miss offers because they get buried in DMs. An actual inbox for deals would change how I work.</p>

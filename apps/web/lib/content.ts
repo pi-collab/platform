@@ -334,46 +334,51 @@ export const creatorPage = {
 
 // ── FOOTER ─────────────────────────────────────────────────────────────────
 
+/**
+ * Site footer content.
+ *
+ * Only routes that exist AND are reachable logged-out are listed. The design
+ * export also draws Pricing, About us, Careers, Blog, Help centre, Community,
+ * Creator guides and Trust & safety — none of which we have a page for — and
+ * shipping them as href="#" would put eight dead links on every marketing page.
+ *
+ * "Browse creators" is left out for a different reason: /browse exists, but it
+ * redirects anonymous visitors to /login/brand, so in a public footer it is a
+ * login wall rather than a directory.
+ *
+ * All of them go back in as their pages land; the column structure already fits
+ * them.
+ */
 export const footer = {
-  tagline: 'Brand–creator deals without the chaos.',
+  tagline: 'Match, deal and grow — all in one calm, trusted place. No chasing, no awkward DMs.',
+
+  cta: { label: 'Get brand deals', href: '/signup/creator' },
 
   columns: [
     {
-      heading: 'Platform',
+      heading: 'Product',
       links: [
-        { label: 'For brands',    href: '/brands'       },
-        { label: 'For creators',  href: '/creators'     },
-        { label: 'How it works',  href: '#how-it-works' },
+        { label: 'For creators', href: '/creators' },
+        { label: 'For brands',   href: '/brands'   },
       ],
     },
     {
       heading: 'Company',
       links: [
-        { label: 'About',    href: '#about'   },
-        { label: 'Blog',     href: '#blog'    },
-        { label: 'Careers',  href: '#careers' },
+        { label: 'Contact', href: 'mailto:contact@guapd.com' },
       ],
     },
     {
       heading: 'Legal',
       links: [
-        { label: 'Privacy policy',   href: '/privacy' },
         { label: 'Terms of service', href: '/terms'   },
+        { label: 'Privacy policy',   href: '/privacy' },
+        { label: 'Cookie preferences', href: '#cookie-preferences' },
       ],
     },
   ],
 
-  social: [
-    { label: 'in',  href: '#linkedin'   },
-    { label: '𝕏',   href: '#twitter'    },
-    { label: 'ig',  href: '#instagram'  },
-  ],
-
   copyright: `© 2026 ${BRAND_NAME}. All rights reserved.`,
 
-  legal: [
-    { label: 'Privacy policy',   href: '/privacy' },
-    { label: 'Terms of service', href: '/terms'   },
-    { label: 'Cookie preferences', href: '#cookie-preferences' },
-  ],
+  origin: 'Made in India',
 }

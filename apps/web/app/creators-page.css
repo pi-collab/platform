@@ -391,38 +391,3 @@
    sideways under your thumb. `clip` rather than `hidden` because `hidden` would
    make this a scroll container and break position:sticky for anything inside. */
 .creators-page { overflow-x: clip; }
-
-/* ── Review card hover ─────────────────────────────────────────────────────
-   The cards already lifted on hover via .card:hover, but inherited .sr's 0.85s
-   entrance transition, so the lift crawled and read as nothing happening. Once
-   revealed (.sr-in) they take a short transition of their own, plus a lift and
-   a real shadow — the neon rule at the top is the page's own accent, used here
-   to reward the hover rather than decorate it.
-
-   Scoped to .sr-in so this never fights the entrance animation, and the whole
-   thing is dropped for anyone who asked for less motion. */
-.creators-page .review-card.sr-in {
-  transition:
-    transform .3s cubic-bezier(.22, 1, .36, 1),
-    box-shadow .3s cubic-bezier(.22, 1, .36, 1);
-  will-change: transform;
-}
-
-.creators-page .review-card.sr-in:hover {
-  transform: translateY(-8px) scale(1.015);
-  box-shadow: 0 30px 60px -26px rgba(24, 28, 36, .45);
-}
-
-.creators-page .review-card.sr-in:focus-within {
-  transform: translateY(-8px) scale(1.015);
-  box-shadow: 0 30px 60px -26px rgba(24, 28, 36, .45);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .creators-page .review-card.sr-in,
-  .creators-page .review-card.sr-in:hover,
-  .creators-page .review-card.sr-in:focus-within {
-    transform: none;
-    transition: none;
-  }
-}

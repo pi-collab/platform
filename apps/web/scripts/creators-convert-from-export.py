@@ -328,19 +328,6 @@ for _role in ('Finance creator', 'Tech creator', 'Career creator'):
     if _t != -1:
         html = html[:_t] + html[_t:].replace('>' + _role + '<', '>Creator<', 1)
 
-# -- 8f. Tag the review cards so they can carry their own hover.
-# They are the only .card.sr on the page, but naming them means a later export
-# adding another card/sr combination cannot silently inherit the treatment.
-_i = 0
-while True:
-    _t = html.find(chr(9733) * 5, _i)
-    if _t == -1:
-        break
-    _start = html.rfind('<div', 0, _t)
-    # Runs after class -> className, so match the converted attribute.
-    html = html[:_start] + html[_start:].replace('className="card sr"', 'className="card sr review-card"', 1)
-    _i = _t + 5
-
 # ── 9. ghost text ───────────────────────────────────────────────────────────
 html=re.sub(r'(<div id="dealGhost"[^>]*>)(</div>)',r'\1{ghost}\2',html)
 open(f"{S}/creators-final.txt","w").write(html)

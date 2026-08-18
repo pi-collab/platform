@@ -13,8 +13,9 @@ export default function CookiePrefsLink() {
         // not "mostly, until you navigate", so force it.
         window.location.reload()
       }}
-      className="footer__legal-link"
-      style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit', padding: 0 }}
+      // Styled as one of the footer links beside it; app/footer.css carries a
+      // button.gf-link rule that strips the native button chrome.
+      className="gf-link"
     >
       Cookie preferences
     </button>

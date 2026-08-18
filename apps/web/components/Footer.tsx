@@ -1,56 +1,66 @@
 import Link from 'next/link'
 import { footer } from '@/lib/content'
-import Logo from '@/components/Logo'
 import CookiePrefsLink from '@/components/CookiePrefsLink'
+import '@/app/footer.css'
 
+/**
+ * The site footer, ported from the "GUAPD Site Footer" design export.
+ *
+ * Renders on the home page, /brands, /creators, /privacy and /terms, so it is
+ * fully self-contained: its tokens, colours and type live in app/footer.css
+ * under .gfoot rather than being inherited from whichever page it lands on.
+ *
+ * Two things the export draws are deliberately not here:
+ *   - The social row (Instagram / X / LinkedIn / YouTube). Every href in the
+ *     export is "#", and we have no confirmed handles to point them at.
+ *   - The "All systems operational" pill. Nothing monitors anything yet, so a
+ *     green dot claiming uptime would be asserting a fact we cannot check.
+ * Both are a few lines to restore once there is something real behind them.
+ */
 export default function Footer() {
   return (
-    <footer className="footer">
-      <div className="footer__inner">
-        <div className="footer__top">
-          {/* Brand column */}
-          <div className="footer__brand">
-            <span className="footer__logo"><Logo size={40} /></span>
-            <p className="footer__tagline">{footer.tagline}</p>
-            <div className="footer__social">
-              {footer.social.map((s) => (
-                <Link key={s.href} href={s.href} className="footer__social-link" aria-label={s.label}>
-                  {s.label}
-                </Link>
-              ))}
-            </div>
+    <footer className="gfoot">
+      <div className="gfoot__inner">
+        <div className="gfoot__top">
+          <div className="gfoot__brand">
+            {/* The white-ink wordmark — the default one is #12151C on #12151C. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/guapd-wordmark-light.svg" alt="Guapd" className="gfoot__wordmark" />
+
+            <p className="gfoot__tagline">{footer.tagline}</p>
+
+            <Link href={footer.cta.href} className="gfoot__cta">
+              {footer.cta.label}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
           </div>
 
-          {/* Link columns */}
-          <div className="footer__columns">
+          <div className="gfoot__grid">
             {footer.columns.map((col) => (
               <div key={col.heading}>
-                <p className="footer__column-heading">{col.heading}</p>
-                <div className="footer__column-links">
-                  {col.links.map((link) => (
-                    <Link key={link.href} href={link.href} className="footer__link">
-                      {link.label}
-                    </Link>
-                  ))}
+                <div className="gf-meta">{col.heading}</div>
+                <div className="gfoot__links">
+                  {col.links.map((link) =>
+                    link.href === '#cookie-preferences' ? (
+                      <CookiePrefsLink key={link.href} />
+                    ) : link.href.startsWith('mailto:') ? (
+                      <a key={link.href} href={link.href} className="gf-link">{link.label}</a>
+                    ) : (
+                      <Link key={link.href} href={link.href} className="gf-link">{link.label}</Link>
+                    ),
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="footer__bottom">
-          <span className="footer__copyright">{footer.copyright}</span>
-          <div className="footer__legal">
-            {footer.legal.map((link) =>
-              link.href === '#cookie-preferences' ? (
-                <CookiePrefsLink key={link.href} />
-              ) : (
-                <Link key={link.href} href={link.href} className="footer__legal-link">
-                  {link.label}
-                </Link>
-              )
-            )}
-          </div>
+        <div className="gfoot__bottom">
+          <div className="gfoot__fine">{footer.copyright}</div>
+          <div className="gfoot__fine">{footer.origin}</div>
         </div>
       </div>
     </footer>
