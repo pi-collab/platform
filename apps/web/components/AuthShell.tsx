@@ -1,4 +1,5 @@
 
+import Link from 'next/link'
 import Wordmark from '@/components/Wordmark'
 
 /**
@@ -31,6 +32,26 @@ export const CREATOR_LOGIN_PITCH = {
 export const CREATOR_PITCH = {
   title: <>Everything a<br />collaboration needs.</>,
   sub: 'From the first offer to the final payout, guapd keeps brands and creators on the same page.',
+}
+
+/**
+ * The prompt opposite the logo. Every auth screen carries one, pointing at the
+ * flow the reader is NOT in: signup offers the way to log in, login offers the
+ * way to sign up. Password reset is the exception and passes nothing — see the
+ * note on `navRight`.
+ *
+ * A component rather than four copies of the same two elements, because the
+ * markup is what the breakpoint rules key on: below the fold it is re-pinned to
+ * the foot of the form with a neon dot before it, and a hand-rolled copy that
+ * missed a class would silently lose that.
+ */
+export function AuthNavRight({ label, ctaLabel, href }: { label: string; ctaLabel: string; href: string }) {
+  return (
+    <div className="signup-nav__right">
+      <span className="signup-nav__label">{label}</span>
+      <Link href={href} className="signup-nav__cta">{ctaLabel}</Link>
+    </div>
+  )
 }
 
 export default function AuthShell({

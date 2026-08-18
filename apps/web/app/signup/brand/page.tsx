@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import AuthShell from '@/components/AuthShell'
+import AuthShell, { AuthNavRight } from '@/components/AuthShell'
 import BrandSignupForm from './BrandSignupForm'
 
 export const metadata = {
@@ -42,12 +42,7 @@ export default async function BrandSignupPage({
 
   return (
     <AuthShell
-      navRight={
-        <div className="signup-nav__right">
-          <span className="signup-nav__label">Already have an account?</span>
-          <Link href="/login/brand" className="signup-nav__cta">Log in</Link>
-        </div>
-      }
+      navRight={<AuthNavRight label="Already have an account?" ctaLabel="Log in" href="/login/brand" />}
     >
       <div className="signup-panel__inner">
         {/* Heading lives INSIDE the form: it has to change once the

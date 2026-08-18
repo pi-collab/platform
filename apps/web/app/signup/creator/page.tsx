@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import AuthShell, { CREATOR_PITCH } from '@/components/AuthShell'
+import AuthShell, { AuthNavRight, CREATOR_PITCH } from '@/components/AuthShell'
 import CreatorSignupForm from './CreatorSignupForm'
 
 export const metadata = {
@@ -37,7 +37,10 @@ export default async function CreatorSignupPage() {
   // offering a separate door would send them to type the same number and wait
   // for a second code.
   return (
-    <AuthShell pitch={CREATOR_PITCH}>
+    <AuthShell
+      pitch={CREATOR_PITCH}
+      navRight={<AuthNavRight label="Already have an account?" ctaLabel="Log in" href="/login/creator" />}
+    >
       <div className="signup-panel__inner">
         <CreatorSignupForm />
       </div>

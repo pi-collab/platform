@@ -32,15 +32,17 @@
 
   position: relative;
   /* The export sets margin-top: clamp(72px,8vw,120px), which assumes the paper
-     background it was drawn on. On our pages the section above ends in artwork,
-     so that margin rendered as a bare white band between the artwork and the
-     footer's rounded top. The footer butts straight up against the section
-     instead, which is what the 40px top corners are for. */
-  margin-top: 0;
-  /* The export rounds the top corners 40px. Against our light artwork the curve
-     left two visible wedges of page background at the edges, which read as a
-     gap rather than as a lifted panel, so the footer is squared off. */
-  border-radius: 0;
+     background it was drawn on. Our sections end in artwork, so that margin
+     rendered as a bare white band above the footer.
+     
+     Zero was not enough on its own: the footer is a sibling AFTER <main>, so at
+     margin-top:0 its rounded corners revealed the body's white rather than the
+     artwork, leaving two white wedges that read as the same gap in miniature.
+     Lifting it by exactly the corner radius puts the curve over the last 40px
+     of the section above, so what shows through the corners is that section —
+     which is what the design draws. */
+  margin-top: -40px;
+  border-radius: 40px 40px 0 0;
   background: #12151C;
   font-family: var(--font-ui);
   color: #EDEDE7;

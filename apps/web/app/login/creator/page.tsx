@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import AuthShell, { CREATOR_LOGIN_PITCH } from '@/components/AuthShell'
+import AuthShell, { AuthNavRight, CREATOR_LOGIN_PITCH } from '@/components/AuthShell'
 import FormError from '@/components/FormError'
 import CreatorLoginForm from './CreatorLoginForm'
 import { safeNext } from '@/lib/safe-next'
@@ -46,7 +46,10 @@ export default async function CreatorLoginPage({
   // yet." screen with its own route to signup — so a permanent link would
   // offer that door to everyone, including the people who do not need it.
   return (
-    <AuthShell pitch={CREATOR_LOGIN_PITCH}>
+    <AuthShell
+      pitch={CREATOR_LOGIN_PITCH}
+      navRight={<AuthNavRight label="New to Guapd?" ctaLabel="Join as creator" href="/signup/creator" />}
+    >
       <div className="signup-panel__inner">
         {searchParams.error === 'no_account' && (
           <FormError>

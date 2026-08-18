@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import AuthShell from '@/components/AuthShell'
+import AuthShell, { AuthNavRight } from '@/components/AuthShell'
 import Toast from '@/components/Toast'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
@@ -88,7 +88,7 @@ export default async function LoginPage({
   }
 
   return (
-    <AuthShell>
+    <AuthShell navRight={<AuthNavRight label="New to Guapd?" ctaLabel="Get access" href="/signup/brand" />}>
       <div className="signup-panel__inner">
         {searchParams.error && (
           <FormError>
