@@ -667,3 +667,174 @@
   height: 46vh !important;
   min-height: 360px !important;
 }
+
+/* ── Book-demo dialog ──────────────────────────────────────────────────────
+   Styled from this page's design system, not the app's form styles: the card,
+   hairline border, inset field shadow and neon button are the same treatments
+   the export uses for the deal builder, so the dialog reads as part of the
+   page. Scoped under .brands-page like everything else here. */
+.brands-page.bd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(18, 21, 28, .42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+
+.brands-page .bd-card {
+  position: relative;
+  width: min(520px, 100%);
+  margin: auto;
+  padding: clamp(26px, 3.4vw, 40px);
+  background: var(--card, #fff);
+  border: 1px solid var(--hairline);
+  border-radius: 28px;
+  box-shadow: 0 40px 90px -36px rgba(40, 45, 25, .45);
+}
+
+.brands-page .bd-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.brands-page .bd-close:hover { color: var(--ink); }
+
+.brands-page .bd-eyebrow {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.brands-page .bd-title {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+  font-size: clamp(24px, 2.6vw, 30px);
+  color: #12151C;
+}
+
+.brands-page .bd-accent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.brands-page .bd-sub {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.55;
+  color: #565C68;
+}
+
+.brands-page .bd-form { margin-top: 22px; }
+
+.brands-page .bd-label {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.brands-page .bd-optional {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+
+.brands-page .bd-field {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 1px 3px rgba(24, 28, 36, .06);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+  outline: none;
+}
+
+.brands-page .bd-field::placeholder { color: var(--ink-faint); }
+
+.brands-page .bd-field:focus {
+  border-color: var(--neon-deep, #D2F04A);
+  box-shadow: inset 0 1px 3px rgba(24, 28, 36, .06), 0 0 0 3px rgba(210, 240, 74, .28);
+}
+
+.brands-page .bd-select { appearance: none; background-image: none; }
+.brands-page .bd-textarea { resize: vertical; min-height: 76px; }
+
+.brands-page .bd-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.brands-page .bd-submit {
+  width: 100%;
+  margin-top: 20px;
+  border: none;
+  cursor: pointer;
+}
+
+.brands-page .bd-error {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: #C0392B;
+}
+
+.brands-page .bd-fine {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.brands-page .bd-done { text-align: center; }
+
+.brands-page .bd-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--neon, #E8FF66);
+  color: #12151C;
+}
+
+@media (max-width: 560px) {
+  .brands-page .bd-row { grid-template-columns: 1fr; }
+}

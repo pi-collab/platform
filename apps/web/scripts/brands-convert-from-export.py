@@ -143,6 +143,15 @@ html = html.replace(
 # the fix belongs in the export's embedded weights, not here.
 html = html.replace('font-weight:800', 'font-weight:700')
 
+# -- 6l. Wire the page's calls to action.
+#
+# The export is a mockup: "Create deal" and both "Book demo" buttons do nothing.
+# "Create deal" now sends people to brand signup, which is what the deal builder
+# is a preview of; "Book demo" opens the request form.
+html = html.replace('>Create deal</button>', ' onClick={goToSignup}>Create deal</button>')
+html = html.replace('>Book demo</button>', ' onClick={openDemo}>Book demo</button>')
+html = html.replace('>Book a demo</button>', ' onClick={openDemo}>Book a demo</button>')
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()

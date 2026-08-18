@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import BookDemoModal from '@/components/BookDemoModal'
 
 /**
  * The export sets CSS custom properties inline (--sr-delay, --oh-delay,
@@ -39,6 +41,11 @@ const GHOST_LINES = [
 ]
 
 export default function BrandsPageClient() {
+  const router = useRouter()
+  const [demoOpen, setDemoOpen] = useState(false)
+  const openDemo = () => setDemoOpen(true)
+  // The deal builder is a preview of brand signup, so its CTA goes there.
+  const goToSignup = () => router.push('/signup/brand')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [ghost, setGhost] = useState('')
   const [typed, setTyped] = useState(false)
@@ -117,7 +124,7 @@ export default function BrandsPageClient() {
           <div style={{position: 'absolute', zIndex: '2', left: 'calc(6% + 80px)', top: 'calc(50% - 30px)', transform: 'translateY(-50%)', width: 'min(36%,420px)', minWidth: '200px', textAlign: 'left'}}>
             <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(44px,3.2vw,56px)', margin: '0', color: '#12151C'}}>Everything your team needs, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>in one place.</span></h1>
             <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.55', color: '#565C68', margin: '22px 0 0'}}>Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal — all in one shared space.</p>
-            <button type="button" style={{marginTop: '28px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '12px 24px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}}>Book demo</button>
+            <button type="button" style={{marginTop: '28px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '12px 24px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}} onClick={openDemo}>Book demo</button>
           </div>
         </section>
 
@@ -135,7 +142,7 @@ export default function BrandsPageClient() {
                   <textarea id="dealInput" rows={1} ref={inputRef} onChange={onType} style={{width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontFamily: 'var(--font-ui)', fontSize: '14.5px', lineHeight: '1.5', color: 'var(--ink)', position: 'relative', zIndex: '2', overflow: 'hidden', whiteSpace: 'nowrap'}}></textarea>
                   <div id="dealGhost" aria-hidden="true" style={{position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-ui)', fontSize: '14.5px', lineHeight: '1.5', color: 'var(--ink-faint)', pointerEvents: 'none', zIndex: '1', whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%'}}>{ghost}</div>
                 </div>
-                <div id="createDealBtn"><button type="button" style={{background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '11px 22px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap'}}>Create deal</button></div>
+                <div id="createDealBtn"><button type="button" style={{background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '11px 22px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap'}} onClick={goToSignup}>Create deal</button></div>
               </div>
               <div style={{display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap'}}>
                 <button onClick={() => fillFromChip("1 Reel with a fashion brand, budget ₹45K")} style={{cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink-soft)', background: '#fff', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '6px 12px', whiteSpace: 'nowrap'}}>Reel · ₹45K</button>
@@ -274,7 +281,7 @@ export default function BrandsPageClient() {
               <div style={{maxWidth: '900px'}}>
                 <h2 className="hero-fade" style={{margin: '0', color: '#12151C', fontSize: 'clamp(44px,3.2vw,56px)', fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.06', '--sr-delay': '0s'}}>The operating system<br />for <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creator collabs.</span></h2>
                 <p className="t-body hero-fade" style={{color: '#565C68', margin: '16px 0 0', '--sr-delay': '0.12s'}}>One place for creators, approvals, deliverables, contracts and payments.</p>
-                <button type="button" className="t-content hero-fade" style={{pointerEvents: 'auto', marginTop: '24px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '14px 36px', minHeight: '48px', cursor: 'pointer', transition: 'transform .2s cubic-bezier(.16,1,.3,1)', '--sr-delay': '0.22s'}}>Book a demo</button>
+                <button type="button" className="t-content hero-fade" style={{pointerEvents: 'auto', marginTop: '24px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '14px 36px', minHeight: '48px', cursor: 'pointer', transition: 'transform .2s cubic-bezier(.16,1,.3,1)', '--sr-delay': '0.22s'}} onClick={openDemo}>Book a demo</button>
               </div>
             </div>
             <img src="/brands/showcase-a.webp" alt="Glass panels showing campaign brief, creators, approvals, deliverables and payments" style={{display: 'block', width: '84%', height: 'auto', margin: '0 auto', aspectRatio: '1672/941', objectFit: 'cover'}} loading="lazy" decoding="async" />
@@ -526,6 +533,7 @@ export default function BrandsPageClient() {
         </section>
 
   
+      <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   )
 }
