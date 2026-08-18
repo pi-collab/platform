@@ -619,3 +619,22 @@
    slot was missing, and raises the headline clamp to 44-56px itself. Both were
    fixed at source, so carrying the workarounds here would now fight the design. */
 
+
+/* ── Bind the design tokens to the real webfonts ───────────────────────────
+   The export declares its families by literal name ('Schibsted Grotesk') and
+   ships matching @font-face rules. Those rules point at bundler UUIDs, so they
+   are stripped during the port — which left the literal names bound to nothing.
+   next/font self-hosts under obfuscated families (__Schibsted_Grotesk_064a64),
+   so the literal name never matches and the whole page silently rendered in
+   system-ui and Georgia.
+
+   Measured: 'Schibsted Grotesk' rendered identically to system-ui (759px for
+   the same string), and 'Instrument Serif' identically to Georgia (811px). The
+   real faces measure 786px and 525px. Declared last so these win over every
+   token block ported above. */
+.brands-page {
+  --font-display: var(--font-schibsted), system-ui, sans-serif;
+  --font-ui: var(--font-schibsted), system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-mono: var(--font-schibsted), ui-monospace, monospace;
+}
