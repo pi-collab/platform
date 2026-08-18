@@ -89,10 +89,72 @@ for a in SVG_ATTRS:
     camel_a = re.sub(r'-([a-z])', lambda m: m.group(1).upper(), a)
     html = html.replace(f'{a}="', f'{camel_a}="')
 
+# ── 6c. Design-tool attribute prefixes. sc-camel-view-box is really viewBox —
+# React drops the unknown attribute, and an SVG without a viewBox does not
+# scale. The sc-camel-on-mouse-* handlers call tool-internal logic that does
+# not exist here, so they are removed rather than rewired.
+html = re.sub(r'sc-camel-on-[a-z-]+="\{\{[^}]*\}\}"\s*', '', html)
+html = re.sub(r'sc-camel-([a-z-]+)=',
+              lambda m: re.sub(r'-([a-z])', lambda g: g.group(1).upper(), m.group(1)) + '=',
+              html)
+
+# ── 6c2. Pull the "operating system" showcase up so the heading overlaps the
+# image instead of floating above a band of white. The container reserves
+# padding-top for the absolutely-positioned heading block; shrinking that
+# padding moves the image up under it.
+# Runs after the style->JSX conversion, so match the converted form too.
+html = html.replace("padding-top:clamp(320px,40vh,480px)", "padding-top:clamp(200px,25vh,330px)")
+html = html.replace("paddingTop: 'clamp(320px,40vh,480px)'", "paddingTop: 'clamp(200px,25vh,330px)'")
+
+# ── 6d. Inline DOM event handlers. The export wrote hover/press effects as
+# on*="this.style.transform=..." strings, which React cannot accept (they are
+# handler props, not attributes). They are replaced with a data-lift hook and
+# reproduced in CSS, which is where a hover effect belongs anyway — it also
+# keeps working for keyboard focus, which the inline version never did.
+had_lift = 'onMouseOver="this.style.transform' in html
+html = re.sub(r'\s*on(?:MouseOver|MouseOut|MouseDown|MouseUp)="this\.style\.transform=[^"]*"', '', html)
+if had_lift:
+    html = html.replace('<button ', '<button data-lift ', 0) if False else html
+
+# ── 6e. Heading hierarchy for SEO/a11y. The export uses <h1> for several
+# section headings, which gives the page three H1s and starts the outline at
+# H2. Demote every export H1 to H2, then promote the opening headline — the
+# page's actual subject — to the single H1.
+html = html.replace('<h1 ', '<h2 ').replace('</h1>', '</h2>')
+_first = html.find('<h2 ')
+if _first != -1:
+    html = html[:_first] + '<h1 ' + html[_first+4:]
+    _close = html.find('</h2>', _first)
+    html = html[:_close] + '</h1>' + html[_close+5:]
+
 # ── 7. void elements ────────────────────────────────────────────────────────
 for tag in ['img','br','hr','input','source']:
     html=re.sub(rf'<{tag}\b([^>]*?)\s*/?>',lambda m:f'<{tag}{m.group(1).rstrip()} />',html)
+# ── 6f. Image attributes. Intrinsic width/height let the browser reserve space
+# (no layout shift), and everything below the fold can load lazily.
+IMG_DIMS = {'glass-panel.webp':(2825,1806), 'showcase-a.webp':(1672,941),
+            'showcase-b.webp':(1672,941),  'showcase-c.webp':(1536,1024)}
+def _imgattrs(m):
+    tag = m.group(0)
+    for name,(w,h) in IMG_DIMS.items():
+        if name in tag and 'width=' not in tag:
+            lazy = '' if name == 'glass-panel.webp' else ' loading="lazy"'
+            return tag[:-2].rstrip() + f' width={{{w}}} height={{{h}}}{lazy} decoding="async" />'
+    return tag
+html = re.sub(r'<img\b[^>]*?/?>', _imgattrs, html)
+
 # ── 8. hide sections whose content is not real yet ──────────────────────────
+# ── 8c. Sections removed outright, not flagged. "Creators on guapd / Find
+# creators for every campaign" advertises a roster that does not exist yet;
+# unlike the flagged sections it is not a matter of missing copy, so it is cut
+# rather than hidden. Re-add from the export when there are creators to show.
+REMOVE = ['CREATORS & BRANDS']
+marks=[(m.start(),m.group(1).strip()) for m in re.finditer(r'\{/\* =+ ([^=]+?) =+ \*/\}',html)]
+bounds=[(marks[i][0], marks[i+1][0] if i+1<len(marks) else len(html), marks[i][1]) for i in range(len(marks))]
+for a,b,name in reversed(bounds):
+    if any(name.startswith(k) for k in REMOVE):
+        html = html[:a] + html[b:]
+
 HIDE={'BRANDS WE WORK WITH':'SHOW_BRAND_LOGOS','TESTIMONIALS':'SHOW_TESTIMONIALS'}
 # Splice by index, back to front. Doing this with str.replace() put the second
 # wrapper INSIDE the first section, because positions shift after each edit and
@@ -103,6 +165,13 @@ for a,b,name in reversed(bounds):
     for k,flag in HIDE.items():
         if name.startswith(k):
             html = html[:a] + f"{{{flag} && (<>\n" + html[a:b] + f"\n</>)}}\n" + html[b:]
+
+# ── 8b. Drop the export's own nav. PJ wants the site-wide <Nav> here so the
+# header stays consistent with the rest of staging; rendering both would stack
+# two headers. Removed from the comment banner up to the next section.
+nav_start = html.index('{/* ============ NAV')
+nav_end = html.index('{/*', nav_start + 10)
+html = html[:nav_start] + html[nav_end:]
 
 # ── 9. ghost text ───────────────────────────────────────────────────────────
 html=re.sub(r'(<div id="dealGhost"[^>]*>)(</div>)',r'\1{ghost}\2',html)

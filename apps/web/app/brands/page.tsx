@@ -6,9 +6,21 @@ import MobileBottomCTA from '@/components/MobileBottomCTA'
 import '../brands-page.css'
 
 export const metadata: Metadata = {
-  title: 'For brands · Guapd',
+  // Just 'For brands' — layout.tsx appends "| Guapd" via its title template,
+  // so including the brand here produced "For brands · Guapd | Guapd".
+  title: 'For brands',
   description:
     'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal — all in one shared space.',
+  // Without this every page inherits the site root as its canonical, telling
+  // search engines /brands is a duplicate of the homepage.
+  alternates: { canonical: '/brands' },
+  openGraph: {
+    title: 'For brands · Guapd',
+    description:
+      'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal — all in one shared space.',
+    url: '/brands',
+    type: 'website',
+  },
 }
 
 /**
@@ -22,7 +34,9 @@ export default function BrandsPage() {
   return (
     <>
       <Nav />
-      <BrandsPageClient />
+      <main>
+        <BrandsPageClient />
+      </main>
       <Footer />
       <MobileBottomCTA ctaText="Book demo" ctaHref="/signup/brand" />
     </>
