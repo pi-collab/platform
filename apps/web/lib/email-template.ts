@@ -3,61 +3,49 @@ import { BRAND_NAME } from '@/lib/content'
 import { formatPaiseINR } from '@/lib/money'
 
 /**
- * Branded transactional email shell, shared by every brand deal notification.
+ * Branded transactional email shell, shared by every email we send.
  *
- * Email HTML is not web HTML. Constraints this deliberately obeys:
+ * The three renderers below (deal, account, notice) all go through one shell()
+ * — the previous version copied the chrome twice and its own comment warned
+ * that a third would mean extracting it. The demo-request emails were that
+ * third.
+ *
+ * ── Design language ────────────────────────────────────────────────────────
+ * Matches the marketing site rather than generic transactional grey: Midnight
+ * Ink #12151C on a #F5F7FA page, hairline #E5E8EE borders, the 20px rounded
+ * white card, and the neon #E8FF66 accent used sparingly as a rule above the
+ * wordmark. Buttons are dark with a pill radius, as on the site.
+ *
+ * ── Email HTML is not web HTML. Constraints this deliberately obeys ────────
  *   - TABLES for layout. Outlook renders flexbox/grid unpredictably.
  *   - INLINE styles only. Gmail strips <style> blocks.
  *   - ~600px max width — the safe column for desktop clients.
- *   - A TEXT wordmark, not an image. There is no logo asset in public/, and
- *     most clients block remote images by default, so an image-based header
- *     would render as a broken box for a large share of recipients.
- *   - A plain-text alternative is always produced. Text-only clients need it
+ *   - A TEXT wordmark, not an image. Most clients block remote images by
+ *     default, so an image header renders as a broken box for many recipients.
+ *   - System font stack. Schibsted Grotesk cannot be webfont-loaded reliably in
+ *     mail, so the closest widely-available grotesque is used instead.
+ *   - A plain-text alternative is ALWAYS produced. Text-only clients need it
  *     and spam filters penalise HTML-only mail.
  */
 
 /** Safe column width for desktop email clients. */
 const WIDTH = 600
 
+/** Sampled from the site's own tokens so mail and web read as one product. */
 const COLORS = {
-  ink: '#111111',
-  muted: '#6b7280',
-  faint: '#9ca3af',
-  border: '#e5e7eb',
-  pageBg: '#f6f6f4',
-  cardBg: '#ffffff',
-  button: '#111111',
-  buttonText: '#ffffff',
+  ink: '#12151C',
+  muted: '#565C68',
+  faint: '#8A9099',
+  border: '#E5E8EE',
+  pageBg: '#F5F7FA',
+  cardBg: '#FFFFFF',
+  neon: '#E8FF66',
+  button: '#12151C',
+  buttonText: '#FFFFFF',
 }
 
-export interface DealEmailContent {
-  /** Headline, e.g. "Karan Malhotra accepted your offer". */
-  heading: string
-  /** One or two sentences of context. */
-  body: string
-  /** Deal name as shown to humans, e.g. "Diwali Reel (GD-1042)". */
-  dealLabel: string
-  /**
-   * Amount in paise, ALREADY resolved to what the BRAND PAYS (gross,
-   * inclusive of platform fee) — never the creator's net. Omit where an
-   * amount would be noise (declines, deliverable submissions, posts).
-   */
-  amountPaise?: number
-  /** Label for the amount row, e.g. "Deal value" or "Amount due". */
-  amountLabel?: string
-  /** Absolute URL for the CTA. MUST be a brand route — see buildDealUrl. */
-  dealUrl: string
-  /** CTA text. Defaults to "View deal". */
-  ctaLabel?: string
-}
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 
-/**
- * Absolute URL of the BRAND deal view.
- *
- * GUARD: brand emails must link to `/deals/{id}`, never `/creator/deals/{id}`.
- * The creator route is gated by verifyCreator() and would bounce a brand user
- * to the creator login — a dead end from an email they were told to act on.
- */
 export function buildDealUrl(dealId: string): string {
   return `${siteBase()}/deals/${dealId}`
 }
@@ -81,92 +69,78 @@ function esc(value: string): string {
     .replace(/'/g, '&#39;')
 }
 
-/** Render the HTML and plain-text bodies for a brand deal notification. */
-export function renderDealEmail(content: DealEmailContent): { html: string; text: string } {
-  const {
-    heading,
-    body,
-    dealLabel,
-    amountPaise,
-    amountLabel = 'Deal value',
-    dealUrl,
-    ctaLabel = 'View deal',
-  } = content
-
-  const amount = typeof amountPaise === 'number' ? formatPaiseINR(amountPaise) : null
-
-  const amountRow = amount
-    ? `
-          <tr>
-            <td style="padding:6px 0;font-size:14px;color:${COLORS.muted};">${esc(amountLabel)}</td>
-            <td align="right" style="padding:6px 0;font-size:14px;font-weight:700;color:${COLORS.ink};">${esc(amount)}</td>
-          </tr>`
-    : ''
-
-  const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(heading)}</title>
-</head>
-<body style="margin:0;padding:0;background:${COLORS.pageBg};">
-  <!-- Preheader: inbox preview text, hidden in the body -->
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(body)}</div>
-
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pageBg};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${WIDTH}px;">
-
-          <!-- Wordmark (text, not an image — clients block remote images) -->
-          <tr>
-            <td style="padding:0 0 16px 4px;font-family:Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:${COLORS.ink};">
-              ${esc(BRAND_NAME)}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="background:${COLORS.cardBg};border:1px solid ${COLORS.border};border-radius:12px;padding:28px 28px 24px 28px;font-family:Helvetica,Arial,sans-serif;">
-
-              <h1 style="margin:0 0 10px 0;font-size:20px;line-height:1.35;font-weight:700;color:${COLORS.ink};">
-                ${esc(heading)}
-              </h1>
-
-              <p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:${COLORS.muted};">
-                ${esc(body)}
-              </p>
-
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${COLORS.border};border-bottom:1px solid ${COLORS.border};margin:0 0 22px 0;padding:4px 0;">
+/** A dark pill button, table-wrapped so Outlook renders the block. */
+function button(url: string, label: string): string {
+  return `
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:2px 0 0 0;">
                 <tr>
-                  <td style="padding:6px 0;font-size:14px;color:${COLORS.muted};">Deal</td>
-                  <td align="right" style="padding:6px 0;font-size:14px;font-weight:600;color:${COLORS.ink};">${esc(dealLabel)}</td>
-                </tr>${amountRow}
-              </table>
-
-              <!-- CTA: table-wrapped so Outlook renders the block -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" bgcolor="${COLORS.button}" style="border-radius:8px;">
-                    <a href="${dealUrl}" style="display:inline-block;padding:12px 26px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:${COLORS.buttonText};text-decoration:none;border-radius:8px;">
-                      ${esc(ctaLabel)}
-                    </a>
+                  <td align="center" bgcolor="${COLORS.button}" style="border-radius:999px;">
+                    <a href="${url}" style="display:inline-block;padding:13px 30px;font-family:${FONT};font-size:15px;font-weight:700;color:${COLORS.buttonText};text-decoration:none;border-radius:999px;">${esc(label)}</a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin:18px 0 0 0;font-size:12px;line-height:1.5;color:${COLORS.faint};">
                 Or paste this into your browser:<br>
-                <span style="color:${COLORS.muted};">${dealUrl}</span>
-              </p>
+                <span style="color:${COLORS.muted};">${url}</span>
+              </p>`
+}
 
+/** Key/value rows inside a hairline-ruled block. */
+function detailRows(rows: [string, string][]): string {
+  if (!rows.length) return ''
+  const body = rows
+    .map(
+      ([k, v]) => `
+                <tr>
+                  <td style="padding:7px 0;font-size:14px;color:${COLORS.muted};">${esc(k)}</td>
+                  <td align="right" style="padding:7px 0;font-size:14px;font-weight:600;color:${COLORS.ink};">${esc(v)}</td>
+                </tr>`,
+    )
+    .join('')
+  return `
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${COLORS.border};border-bottom:1px solid ${COLORS.border};margin:4px 0 24px 0;padding:4px 0;">${body}
+              </table>`
+}
+
+/**
+ * The shared chrome: page background, neon rule, wordmark, white card, footer.
+ * Every email we send is this shell with a different middle.
+ */
+function shell(opts: { heading: string; preheader: string; inner: string; footer: string }): string {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(opts.heading)}</title>
+</head>
+<body style="margin:0;padding:0;background:${COLORS.pageBg};">
+  <!-- Preheader: inbox preview text, hidden in the body -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(opts.preheader)}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pageBg};padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${WIDTH}px;">
+
+          <!-- Wordmark, with the site's neon as a small accent rule -->
+          <tr>
+            <td style="padding:0 0 18px 2px;font-family:${FONT};">
+              <div style="width:26px;height:3px;background:${COLORS.neon};border-radius:2px;margin-bottom:10px;"></div>
+              <span style="font-size:19px;font-weight:700;letter-spacing:-0.03em;color:${COLORS.ink};">${esc(BRAND_NAME.toLowerCase())}</span>
             </td>
           </tr>
 
           <tr>
-            <td style="padding:18px 4px 0 4px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${COLORS.faint};">
-              This is an automated notification. Manage this deal in your dashboard at ${esc(siteHost())}.<br>
-              You're receiving this because you're a member of this brand on ${esc(BRAND_NAME)}.
+            <td style="background:${COLORS.cardBg};border:1px solid ${COLORS.border};border-radius:20px;padding:32px 30px 28px 30px;font-family:${FONT};">
+${opts.inner}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 4px 0 4px;font-family:${FONT};font-size:12px;line-height:1.6;color:${COLORS.faint};">
+              ${opts.footer}
             </td>
           </tr>
 
@@ -176,134 +150,132 @@ export function renderDealEmail(content: DealEmailContent): { html: string; text
   </table>
 </body>
 </html>`
+}
+
+function h1(text: string): string {
+  return `              <h1 style="margin:0 0 12px 0;font-size:22px;line-height:1.3;font-weight:700;letter-spacing:-0.02em;color:${COLORS.ink};">${esc(text)}</h1>`
+}
+
+function para(text: string): string {
+  return `              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:${COLORS.muted};">${esc(text)}</p>`
+}
+
+// ── Deal notifications ──────────────────────────────────────────────────────
+
+export interface DealEmailContent {
+  heading: string
+  body: string
+  /** Deal name as shown to humans, e.g. "Diwali Reel (GD-1042)". */
+  dealLabel: string
+  /**
+   * Amount in paise, ALREADY resolved to what the BRAND PAYS (gross, inclusive
+   * of platform fee) — never the creator's net. Omit where an amount would be
+   * noise (declines, deliverable submissions, posts).
+   */
+  amountPaise?: number
+  amountLabel?: string
+  /** Absolute URL for the CTA. MUST be a brand route — see buildDealUrl. */
+  dealUrl: string
+  ctaLabel?: string
+}
+
+export function renderDealEmail(content: DealEmailContent): { html: string; text: string } {
+  const {
+    heading, body, dealLabel, amountPaise,
+    amountLabel = 'Deal value', dealUrl, ctaLabel = 'View deal',
+  } = content
+
+  const amount = typeof amountPaise === 'number' ? formatPaiseINR(amountPaise) : null
+  const rows: [string, string][] = [['Deal', dealLabel]]
+  if (amount) rows.push([amountLabel, amount])
+
+  const html = shell({
+    heading,
+    preheader: body,
+    inner: [h1(heading), para(body), detailRows(rows), button(dealUrl, ctaLabel)].join('\n'),
+    footer:
+      `This is an automated notification. Manage this deal in your dashboard at ${esc(siteHost())}.<br>` +
+      `You&rsquo;re receiving this because you&rsquo;re a member of this brand on ${esc(BRAND_NAME)}.`,
+  })
 
   const text = [
-    heading,
-    '',
-    body,
-    '',
+    heading, '', body, '',
     `Deal: ${dealLabel}`,
     amount ? `${amountLabel}: ${amount}` : null,
-    '',
-    `${ctaLabel}: ${dealUrl}`,
-    '',
+    '', `${ctaLabel}: ${dealUrl}`, '',
     `This is an automated notification. Manage this deal in your dashboard at ${siteHost()}.`,
     `You're receiving this because you're a member of this brand on ${BRAND_NAME}.`,
-  ]
-    .filter((line) => line !== null)
-    .join('\n')
+  ].filter((l) => l !== null).join('\n')
 
   return { html, text }
 }
 
+// ── Account emails (approvals, rejections) ─────────────────────────────────
 
-/** Content for an ACCOUNT email — approvals, rejections, anything not tied to
- *  a deal. Deliberately has no deal row or amount: those columns are the whole
- *  reason renderDealEmail exists, and an empty one reads as a bug. */
 export interface AccountEmailContent {
   heading: string
   /** One or more paragraphs. Each renders separately; keep them short. */
   body: string[]
-  /** Absolute URL for the CTA. Omit for mail with nothing to act on. */
   ctaUrl?: string
   ctaLabel?: string
-  /** Replaces the default footer sentence. */
+  footerNote?: string
+}
+
+export function renderAccountEmail(content: AccountEmailContent): { html: string; text: string } {
+  const { heading, body, ctaUrl, ctaLabel = 'Open Guapd', footerNote } = content
+  const note = footerNote ?? `This is an automated notification from ${BRAND_NAME}.`
+
+  const html = shell({
+    heading,
+    preheader: body[0] ?? '',
+    inner: [h1(heading), ...body.map(para), ctaUrl ? button(ctaUrl, ctaLabel) : ''].filter(Boolean).join('\n'),
+    footer: `${esc(note)}<br>${esc(siteHost())}`,
+  })
+
+  const text = [
+    heading, '', ...body,
+    ...(ctaUrl ? ['', `${ctaLabel}: ${ctaUrl}`] : []),
+    '', note,
+  ].join('\n')
+
+  return { html, text }
+}
+
+// ── Notices (demo requests, and anything else with optional detail rows) ────
+
+export interface NoticeEmailContent {
+  heading: string
+  body: string[]
+  /** Optional key/value block, e.g. the fields someone submitted. */
+  rows?: [string, string][]
+  ctaUrl?: string
+  ctaLabel?: string
   footerNote?: string
 }
 
 /**
- * Render an account-level email.
- *
- * Shares the chrome rules of renderDealEmail — tables, inline styles, 600px,
- * text wordmark, plain-text alternative — but not its body: that one always
- * shows a deal and an amount, and an approval email has neither.
- *
- * NOTE: the outer shell is intentionally similar to renderDealEmail's. If a
- * third kind of email appears, extract the shell rather than copying it twice
- * more.
+ * A general notice. Same chrome as the others; the middle is paragraphs plus an
+ * optional detail table. renderDealEmail exists separately because its deal and
+ * amount rows are mandatory — an empty one reads as a bug rather than as a
+ * shorter email.
  */
-export function renderAccountEmail(content: AccountEmailContent): { html: string; text: string } {
-  const { heading, body, ctaUrl, ctaLabel = 'Open Guapd', footerNote } = content
+export function renderNoticeEmail(content: NoticeEmailContent): { html: string; text: string } {
+  const { heading, body, rows = [], ctaUrl, ctaLabel = 'Open Guapd', footerNote } = content
+  const note = footerNote ?? `This is an automated notification from ${BRAND_NAME}.`
 
-  const paragraphs = body
-    .map(
-      (p) =>
-        `<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:${COLORS.muted};">${esc(p)}</p>`
-    )
-    .join('\n              ')
-
-  const cta = ctaUrl
-    ? `
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px;">
-                <tr>
-                  <td align="center" bgcolor="${COLORS.button}" style="border-radius:8px;">
-                    <a href="${ctaUrl}" style="display:inline-block;padding:12px 26px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:${COLORS.buttonText};text-decoration:none;border-radius:8px;">
-                      ${esc(ctaLabel)}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin:18px 0 0 0;font-size:12px;line-height:1.5;color:${COLORS.faint};">
-                Or paste this into your browser:<br>
-                <span style="color:${COLORS.muted};">${ctaUrl}</span>
-              </p>`
-    : ''
-
-  const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(heading)}</title>
-</head>
-<body style="margin:0;padding:0;background:${COLORS.pageBg};">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(body[0] ?? '')}</div>
-
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pageBg};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="${WIDTH}" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:${WIDTH}px;">
-
-          <tr>
-            <td style="padding:0 0 16px 4px;font-family:Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.02em;color:${COLORS.ink};">
-              ${esc(BRAND_NAME)}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="background:${COLORS.cardBg};border:1px solid ${COLORS.border};border-radius:12px;padding:28px 28px 24px 28px;font-family:Helvetica,Arial,sans-serif;">
-
-              <h1 style="margin:0 0 12px 0;font-size:20px;line-height:1.35;font-weight:700;color:${COLORS.ink};">
-                ${esc(heading)}
-              </h1>
-
-              ${paragraphs}
-${cta}
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:18px 4px 0 4px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:${COLORS.faint};">
-              ${esc(footerNote ?? `This is an automated notification from ${BRAND_NAME}.`)}<br>
-              ${esc(siteHost())}
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`
+  const html = shell({
+    heading,
+    preheader: body[0] ?? '',
+    inner: [h1(heading), ...body.map(para), detailRows(rows), ctaUrl ? button(ctaUrl, ctaLabel) : '']
+      .filter(Boolean).join('\n'),
+    footer: `${esc(note)}<br>${esc(siteHost())}`,
+  })
 
   const text = [
-    heading,
-    '',
-    ...body,
+    heading, '', ...body,
+    ...(rows.length ? ['', ...rows.map(([k, v]) => `${k}: ${v}`)] : []),
     ...(ctaUrl ? ['', `${ctaLabel}: ${ctaUrl}`] : []),
-    '',
-    footerNote ?? `This is an automated notification from ${BRAND_NAME}.`,
+    '', note,
   ].join('\n')
 
   return { html, text }

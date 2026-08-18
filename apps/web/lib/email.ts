@@ -103,6 +103,14 @@ export interface SendDealEmailParams {
    * emails.
    */
   idempotencyKey?: string
+  /**
+   * Per-message Reply-To, overriding EMAIL_REPLY_TO.
+   *
+   * Exists for mail where the useful reply address is not the global one: a
+   * demo request should reply to the person who asked, and their confirmation
+   * should reply to the team. Falls back to config when omitted.
+   */
+  replyTo?: string
   /** Deal id, for log correlation only. */
   dealId?: string
 }
@@ -115,7 +123,7 @@ export interface SendDealEmailParams {
  * Never rejects.
  */
 export async function sendDealEmail(params: SendDealEmailParams): Promise<EmailResult> {
-  const { to, subject, html, text, idempotencyKey, dealId } = params
+  const { to, subject, html, text, idempotencyKey, replyTo, dealId } = params
 
   try {
     const config = readConfig()
@@ -156,7 +164,8 @@ export async function sendDealEmail(params: SendDealEmailParams): Promise<EmailR
       html,
       text,
     }
-    if (config.replyTo) body.reply_to = config.replyTo
+    const replyAddress = replyTo || config.replyTo
+    if (replyAddress) body.reply_to = replyAddress
 
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',

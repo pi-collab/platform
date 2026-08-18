@@ -1,10 +1,13 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { BRAND_NAME } from '@/lib/content'
 import { sendDealEmail, isEmailConfigured, isPlausibleEmail } from '@/lib/email'
+import { renderNoticeEmail } from '@/lib/email-template'
 
 /** Where demo requests go. The company address, not the ops alert address. */
 const DEMO_INBOX = process.env.DEMO_REQUEST_EMAIL || 'contact@guapd.com'
+const SITE_HOST = (process.env.NEXT_PUBLIC_SITE_URL || 'https://guapd.com').replace(/^https?:\/\//, '').replace(/\/+$/, '')
 
 export type DemoRequestResult =
   | { status: 'ok' }
@@ -17,10 +20,6 @@ export interface DemoRequestInput {
   phone?: string
   volume?: string
   message?: string
-}
-
-function esc(s: string): string {
-  return s.replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c] as string))
 }
 
 /**
@@ -71,35 +70,53 @@ export async function requestDemo(input: DemoRequestInput): Promise<DemoRequestR
       ['Brand', brand],
       ['Phone', phone || '—'],
       ['Deals a month', volume || '—'],
-      ['Message', message || '—'],
     ]
+    if (message) rows.push(['Message', message])
 
-    const html =
-      `<h2 style="font-family:system-ui,sans-serif;margin:0 0 16px">New demo request</h2>` +
-      `<table style="font-family:system-ui,sans-serif;font-size:14px;border-collapse:collapse">` +
-      rows
-        .map(
-          ([k, v]) =>
-            `<tr><td style="padding:6px 16px 6px 0;color:#666;vertical-align:top">${esc(k)}</td>` +
-            `<td style="padding:6px 0"><strong>${esc(v)}</strong></td></tr>`,
-        )
-        .join('') +
-      `</table>`
-
-    const text = `New demo request\n\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}`
+    // 1. Tell the team. Reply-to is the requester so hitting reply just works.
+    const internal = renderNoticeEmail({
+      heading: `New demo request from ${brand}`,
+      body: [`${name} asked for a demo. Their details are below — reply to this email to reach them directly.`],
+      rows,
+      footerNote: 'Sent from the For Brands page on guapd.com.',
+    })
 
     const sent = await sendDealEmail({
       to: [DEMO_INBOX],
       subject: `Demo request — ${brand}`,
-      html,
-      text,
+      html: internal.html,
+      text: internal.text,
+      replyTo: email,
     })
 
     if (!sent.ok) {
       // The request is already stored, so this is a notification failure rather
       // than a lost lead. Log loudly; do not fail the submission.
-      console.error(`[demo] request stored but email failed: ${sent.reason}`)
+      console.error(`[demo] request stored but team email failed: ${sent.reason}`)
     }
+
+    // 2. Confirm to the requester, so they know it landed and what happens next.
+    //    Failure here must not surface as an error: their request IS recorded,
+    //    and telling them it failed would invite a duplicate submission.
+    const confirm = renderNoticeEmail({
+      heading: 'Thanks — your demo request is in.',
+      body: [
+        `Hi ${name.split(' ')[0]}, thanks for asking about ${BRAND_NAME}.`,
+        'Someone from our team will reach out within one working day to find a time that suits you. The walkthrough usually takes about 20 minutes, and we can run it against the kind of campaigns you actually brief.',
+        'If anything changes in the meantime, just reply to this email.',
+      ],
+      footerNote: `You're receiving this because you requested a demo on ${SITE_HOST}.`,
+    })
+
+    const ack = await sendDealEmail({
+      to: [email],
+      subject: `Thanks for your interest in ${BRAND_NAME}`,
+      html: confirm.html,
+      text: confirm.text,
+      replyTo: DEMO_INBOX,
+    })
+
+    if (!ack.ok) console.error(`[demo] confirmation to requester failed: ${ack.reason}`)
 
     return { status: 'ok' }
   } catch (err) {
