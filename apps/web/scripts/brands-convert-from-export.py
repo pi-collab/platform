@@ -114,6 +114,44 @@ html = html.replace(
     '>See what\'s working, <span class="t-accent">at a glance</span>',
     '>See what\'s <span class="t-accent">working</span>')
 
+# -- 6j. Layout adjustments requested after review.
+
+# The privacy block's copy was capped at 460px, which set it in a narrow column
+# against a full-width card. Widened so the heading and the sentence below it
+# use the space they are sitting in.
+html = html.replace('text-align:left;max-width:460px;', 'text-align:left;max-width:760px;')
+
+# "All the reach of an agency. None of the retainer" broke onto two lines in its
+# grid column. Kept on one line by easing the clamp down; nowrap alone would
+# just overflow the column on smaller screens.
+html = html.replace(
+    'class="ws-headline" style="font-family:var(--font-display);font-weight:800;'
+    'letter-spacing:-0.03em;line-height:1.02;font-size:clamp(26px,3vw,38px);"',
+    'class="ws-headline" style="font-family:var(--font-display);font-weight:800;'
+    'letter-spacing:-0.03em;line-height:1.02;font-size:clamp(20px,2.1vw,29px);"')
+
+# The testimonials copy sat at 17% from the top, which was right when three
+# review cards filled the space beneath it. With the cards gone it reads as
+# stranded, so it is centred in the frame instead.
+html = html.replace(
+    'position:absolute;left:0;right:0;top:17%;text-align:center;padding:0 20px;',
+    'position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 20px;')
+
+# -- 6k. Match the export's actual rendered weight.
+#
+# The markup asks for font-weight:800 in twenty places, but the export only
+# EMBEDS Schibsted Grotesk at 400/500/600/700 — so every one of those renders as
+# 700 in the design. next/font loads a genuine 800, so the same markup came out
+# noticeably bolder here than in the file it was ported from.
+#
+# Measured on "Everything your team needs," at 46.08px: the export renders 606.3px
+# at both 700 and 800 (no 800 face to switch to), while this page rendered 620.2px
+# at 800. The heading was 10px wider and visibly heavier.
+#
+# Mapped to 700 so the page matches the design. If the intent was genuinely 800,
+# the fix belongs in the export's embedded weights, not here.
+html = html.replace('font-weight:800', 'font-weight:700')
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()
@@ -217,7 +255,7 @@ html = re.sub(r'<img\b[^>]*?/?>', _imgattrs, html)
 # creators for every campaign" advertises a roster that does not exist yet;
 # unlike the flagged sections it is not a matter of missing copy, so it is cut
 # rather than hidden. Re-add from the export when there are creators to show.
-REMOVE = ['CREATORS & BRANDS']
+REMOVE = ['CREATORS & BRANDS', 'INTERSTITIAL']
 marks=[(m.start(),m.group(1).strip()) for m in re.finditer(r'\{/\* =+ ([^=]+?) =+ \*/\}',html)]
 bounds=[(marks[i][0], marks[i+1][0] if i+1<len(marks) else len(html), marks[i][1]) for i in range(len(marks))]
 for a,b,name in reversed(bounds):
