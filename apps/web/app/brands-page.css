@@ -573,3 +573,43 @@
   transform: translateY(-1px);
   box-shadow: 0 10px 24px -12px rgba(40, 45, 25, .55);
 }
+
+/* The export wrote its hover/press feedback as inline
+   on*="this.style.transform=..." strings, which React cannot accept. Same
+   effect, done properly — and unlike the inline version this also responds to
+   keyboard focus. */
+.brands-page .lift {
+  transition: transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.brands-page .lift:hover,
+.brands-page .lift:focus-within {
+  transform: translateY(-4px);
+}
+
+.brands-page .lift:active {
+  transform: scale(.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brands-page .lift,
+  .brands-page .lift:hover,
+  .brands-page .lift:focus-within,
+  .brands-page .lift:active { transform: none; }
+}
+
+/* GlassCard's own padding. The .fgcard rule in the ported stylesheet carries
+   only background, border and radius — the 24px padding lived in the JS
+   component the export imported, which is not part of the CSS. Without it the
+   feature grid ran 95px short and the how-it-works column 46px short. */
+.brands-page .fgcard {
+  padding: 24px;
+}
+
+/* Reset the inherited line-height. globals.css sets body{line-height:1.6},
+   which cascades in here and inflates every element that does not set its own
+   — the export computes `normal`. This was worth 27px per how-it-works card.
+   Anything with an explicit line-height (most of the export) is unaffected. */
+.brands-page {
+  line-height: normal;
+}
