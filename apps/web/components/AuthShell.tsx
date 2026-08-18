@@ -82,12 +82,15 @@ export default function AuthShell({
               sets display inline-style, which outranks a class rule, so the
               breakpoint's `display: none` never took and both tones rendered
               side by side. */}
-          <span className="signup-nav__logo signup-nav__logo--dark">
+          {/* The wordmark is the way back out of the auth flow. It was inert,
+              which leaves someone who opened the wrong screen with no exit
+              short of the browser's back button. */}
+          <Link href="/" aria-label="Guapd home" className="signup-nav__logo signup-nav__logo--dark">
             <Wordmark height={24} />
-          </span>
-          <span className="signup-nav__logo signup-nav__logo--light" aria-hidden="true">
+          </Link>
+          <Link href="/" aria-label="Guapd home" className="signup-nav__logo signup-nav__logo--light">
             <Wordmark height={24} tone="light" />
-          </span>
+          </Link>
           {navRight}
         </nav>
       </div>

@@ -313,6 +313,39 @@
    the artwork starting only after. Pulling the page up by exactly that height
    puts the artwork back under the header.
 
-   86px is the nav wrapper's measured height — 26px of top padding above a 60px
-   capsule. If either changes, this changes with it. */
-.landing-page { margin-top: -86px; }
+   The offset is the nav wrapper's 26px of top padding, NOT its full 86px
+   height. Pulling by the full height over-corrected by exactly 60px — measured
+   against the export at 1440, the heading sat 20px below the capsule instead of
+   80, and the hero artwork started at -215 instead of -155. The capsule itself
+   should still occupy its own 60px; only the padding above it is reclaimed, and
+   the artwork runs up behind both. */
+.landing-page { margin-top: -26px; }
+
+/* The design system's primary button. The export renders these through an
+   <x-import> that resolves to its Button component; the conversion turns them
+   into links, which arrived unstyled — 20px of bare text where a 52px pill
+   belongs. Neon, as the same component renders in the nav. */
+.landing-page .lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 999px;
+  background: var(--neon);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.landing-page .lp-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -12px rgba(40,45,25,.5); }
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .lp-btn { transition: none; }
+  .landing-page .lp-btn:hover { transform: none; }
+}

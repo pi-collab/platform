@@ -352,8 +352,6 @@ export const creatorPage = {
 export const footer = {
   tagline: 'Match, deal and grow — all in one calm, trusted place. No chasing, no awkward DMs.',
 
-  cta: { label: 'Get brand deals', href: '/signup/creator' },
-
   columns: [
     {
       heading: 'Product',

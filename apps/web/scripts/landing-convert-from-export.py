@@ -145,6 +145,45 @@ before = html.count('id="scrollProgress"')
 html = re.sub(r'(id="scrollProgress"[^>]*?)background:var\(--ink\)', r'\1background:var(--neon-deep)', html)
 step("progress bar → brand colour", before, len(re.findall(r'id="scrollProgress"[^>]*background:var\(--neon-deep\)', html)))
 
+# ── 1f. FAQ answers fill their column. ────────────────────────────────────
+# The export caps each answer at 520px inside a 942px column, so every answer
+# wraps early and leaves 400px of empty space to its right. Matching the export
+# here reproduces the defect rather than the design intent; the cap is lifted so
+# the text uses the column it is given.
+before = html.count("max-width:520px")
+html = re.sub(r'(<p style="[^"]*?)max-width:520px;?', r'\1max-width:none;', html)
+step("FAQ answer width uncapped", before, html.count("max-width:520px"))
+
+# ── 1g. The opening headline holds two lines. ─────────────────────────────
+# "The operating system for creator deals." sits in a min(46%,520px) column
+# while its font scales to 56px, so it broke to three lines at 1440 and 1920 and
+# four at 900. The column is widened enough for the designed two-line break to
+# hold, and the break is made explicit rather than left to chance.
+before = html.count("width:min(46%,520px)")
+html = html.replace("width:min(46%,520px)", "width:min(58%,700px)")
+html = html.replace("The operating system for <span", "The operating system for<br /><span")
+step("headline column widened", before, html.count("width:min(46%,520px)"))
+
+# ── 1h. The converge section's call to action is not a control. ───────────
+# The export draws it as <div id="cvBtn"><span>Book demo</span></div> — styled
+# like a button but with nothing to click. It becomes a real button that opens
+# the same dialog as the header, keeping the export's own pill styling on the
+# inner span.
+before = html.count('id="cvBtn"')
+html = html.replace('<div id="cvBtn"', '<button type="button" id="cvBtn" onClick="__DEMO__"')
+if before:
+    # close the matching </div> as </button>
+    at = html.index('id="cvBtn"')
+    depth, k = 0, html.rindex('<', 0, at)
+    while True:
+        m = re.compile(r'<(/?)(?:div|button)\b[^>]*>').search(html, k)
+        depth += -1 if m.group(1) else 1
+        k = m.end()
+        if depth == 0:
+            break
+    html = html[:k - len('</div>')] + '</button>' + html[k:]
+step("end-of-page CTA made clickable", before, html.count('<button type="button" id="cvBtn"'))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.
@@ -161,7 +200,13 @@ def replace_ximports(s):
         style = re.search(r'style="([^"]*)"', tag)
         sty = f' style="{style.group(1)}"' if style else ''
         out.append(s[:m.start()])
-        out.append(f'<a href="__CTA__" className="lp-btn"{sty}>{label}</a>')
+        # "Book demo" opens the dialog, as it does in the header. The others are
+        # navigation. Emitting a link for all of them left the one at the foot
+        # of the page pointing at signup, which is not what it says it does.
+        if label.strip().lower() == 'book demo':
+            out.append(f'<button type="button" className="lp-btn" onClick={{() => setDemoOpen(true)}}{sty}>{label}</button>')
+        else:
+            out.append(f'<a href="__CTA__" className="lp-btn"{sty}>{label}</a>')
         s = s[end + len('</x-import>'):]
         count += 1
     return ''.join(out), count
@@ -414,6 +459,7 @@ step("single H1", h1s, len(re.findall(r'<h1\b', html)))
 # ── 13. Calls to action. ───────────────────────────────────────────────────
 before = html.count('__CTA__')
 html = html.replace('href="__CTA__"', 'href="/signup/brand"')
+html = html.replace('onClick="__DEMO__"', 'onClick={() => setDemoOpen(true)}')
 html = html.replace('href="For Brands.dc.html"', 'href="/brands"')
 html = html.replace('href="For Creators.dc.html"', 'href="/creators"')
 html = html.replace('href="#login"', 'href="/login/brand"')

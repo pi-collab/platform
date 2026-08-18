@@ -247,6 +247,14 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
           <Link href="/terms" className="signup-form__legal-link">Terms</Link> and{' '}
           <Link href="/privacy" className="signup-form__legal-link">Privacy Policy</Link>.
         </p>
+
+        {/* The creator flow has its own signup, and nothing else on this page
+            says so. /login/brand already carries the mirror of this; without it
+            here, a creator who lands on brand signup has no way across. */}
+        <p className="signup-form__cross">
+          Are you a creator?{' '}
+          <Link href="/signup/creator" className="signup-form__cross-link">Sign up here instead</Link>
+        </p>
       </form>
     </>
   )
