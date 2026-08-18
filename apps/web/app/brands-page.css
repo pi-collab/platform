@@ -853,3 +853,11 @@
 @media (max-width: 560px) {
   .brands-page .bd-row { grid-template-columns: 1fr; }
 }
+
+/* Contain horizontal overflow, as the export does.
+   The export wraps its whole page in a container with overflow-x hidden; that
+   containment was lost in the port, so full-bleed 100vw blocks and fixed-width
+   cards pushed the DOCUMENT wide — 846px on a 390px screen, and the page drifted
+   sideways under your thumb. `clip` rather than `hidden` because `hidden` would
+   make this a scroll container and break position:sticky for anything inside. */
+.brands-page { overflow-x: clip; }

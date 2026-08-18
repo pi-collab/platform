@@ -383,3 +383,11 @@
 /* GlassCard padding, which lives in the JS component the export imports and
    therefore never reaches the CSS. */
 .creators-page .fgcard { padding: 24px; }
+
+/* Contain horizontal overflow, as the export does.
+   The export wraps its whole page in a container with overflow-x hidden; that
+   containment was lost in the port, so full-bleed 100vw blocks and fixed-width
+   cards pushed the DOCUMENT wide — 846px on a 390px screen, and the page drifted
+   sideways under your thumb. `clip` rather than `hidden` because `hidden` would
+   make this a scroll container and break position:sticky for anything inside. */
+.creators-page { overflow-x: clip; }
