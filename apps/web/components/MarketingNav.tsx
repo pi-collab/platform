@@ -1,55 +1,83 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
 
 /**
  * The header from the design exports, shared by both marketing pages.
  *
- * Was BrandsNav, scoped to one page. The creators page needs the same header —
- * only the CTA differs — so it takes an `audience` instead of being duplicated.
+ * Two states. At the top of the page it is ONE wide capsule, exactly as the
+ * export draws it. Once you scroll it splits in two — wordmark and links on the
+ * left, account actions on the right — and the page artwork shows between them.
  *
- * The export's own nav is a static mockup: its links point at in-page anchors
- * (#brands, #creators, #login) and its button says "Book demo". The structure
- * and styling here are the design's; the destinations and labels come from
- * lib/content.ts, so the header actually navigates and stays in step if that
- * content changes.
+ * The split moves the pill treatment rather than swapping markup: the same
+ * groups are always rendered, and the white background, shadow and padding
+ * transfer from the wrapper to the two halves. Rendering two navs and
+ * cross-fading would double the DOM and hand screen readers two copies of the
+ * same links.
  *
- * Split into TWO capsules — wordmark and links on the left, account actions on
- * the right — rather than one wide pill. The single pill left a large empty
- * middle at desktop widths; splitting it turns that emptiness into deliberate
- * space and lets the page's own artwork show between them.
+ * Both halves share a fixed height. Left holds a 24px wordmark and right a 44px
+ * button, so content-derived heights came out 40px and 60px — different sizes
+ * AND different top edges, which reads as a broken header rather than a pair.
  *
- * Styling is fully inline rather than leaning on .bp-btn or the page token
- * scopes. Those tokens are defined separately in brands-page.css and
- * creators-page.css, so a component depending on them would render correctly on
- * one page and unstyled on the other — and would break again on any third page.
- * Self-contained is the only version that travels.
+ * "How it works" is not in the header: it pointed at an anchor that exists on
+ * neither page.
+ *
+ * Styling is inline rather than in brands-page.css or creators-page.css,
+ * because this renders on both pages and a rule in either stylesheet would
+ * apply on only one of them.
  */
-/** The pill shared by both halves — same treatment as the single-capsule version. */
-const capsule: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '8px 10px',
-  borderRadius: '999px',
-  background: '#FFFFFF',
-  boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)',
-  flexShrink: 0,
-}
+
+const CAPSULE_HEIGHT = 60
+const PILL = '#FFFFFF'
+const SHADOW = '0 20px 44px -28px rgba(40,45,25,.16)'
+const EASE = 'cubic-bezier(.22,1,.36,1)'
+
+/** How far you scroll before the header splits. */
+const SPLIT_AT = 24
 
 export default function MarketingNav({ audience }: { audience: 'brand' | 'creator' }) {
   const cta = audience === 'creator' ? nav.creatorCta : nav.brandCta
   const currentHref = audience === 'creator' ? '/creators' : '/brands'
+  // Anchor-only entries ("How it works") are dropped — those targets do not
+  // exist on these pages.
+  const links = nav.links.filter((l) => l.href.startsWith('/'))
+
+  const [split, setSplit] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setSplit(window.scrollY > SPLIT_AT)
+    onScroll() // reloading partway down should start in the right state
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const group: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    height: `${CAPSULE_HEIGHT}px`,
+    borderRadius: '999px',
+    background: split ? PILL : 'transparent',
+    boxShadow: split ? SHADOW : 'none',
+    flexShrink: 0,
+    transition: `background .28s ${EASE}, box-shadow .28s ${EASE}, padding .28s ${EASE}`,
+  }
+
+  const rule: React.CSSProperties = {
+    width: '1px',
+    height: '22px',
+    background: 'rgba(24,28,36,.12)',
+    flexShrink: 0,
+    opacity: split ? 1 : 0,
+    transition: `opacity .2s ${EASE}`,
+  }
 
   return (
     <div style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0', background: 'transparent' }}>
-      {/* Scoped stylesheet rather than a class in brands-page.css or
-          creators-page.css: this component renders on both pages, and a rule
-          living in one of them would only apply on one. */}
       <style>{`
         @media (max-width: 780px) {
-          .mnav-links, .mnav-rule { display: none !important; }
-          .mnav-login { display: none !important; }
+          .mnav-links, .mnav-rule, .mnav-login { display: none !important; }
         }
       `}</style>
 
@@ -62,20 +90,47 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '16px',
+          height: `${CAPSULE_HEIGHT}px`,
+          borderRadius: '999px',
+          background: split ? 'transparent' : PILL,
+          boxShadow: split ? 'none' : SHADOW,
           fontFamily: 'var(--font-schibsted), system-ui, sans-serif',
+          transition: `background .28s ${EASE}, box-shadow .28s ${EASE}`,
         }}
       >
-        {/* Left capsule: wordmark, then the section links */}
-        <div style={{ ...capsule, paddingLeft: '20px', paddingRight: '22px', gap: '20px' }}>
+        {/* Wordmark + links. Grows to fill when joined so the links sit centred
+            as they do in the export; hugs them when split. */}
+        <div
+          style={{
+            ...group,
+            flex: split ? '0 0 auto' : '1 1 auto',
+            paddingLeft: split ? '22px' : '20px',
+            paddingRight: split ? '24px' : '0px',
+            gap: '20px',
+          }}
+        >
           <Link href="/" aria-label="Guapd home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/guapd-wordmark.svg" alt="Guapd" style={{ height: '24px', width: 'auto', display: 'block' }} />
           </Link>
 
-          <span className="mnav-rule" aria-hidden="true" style={{ width: '1px', height: '22px', background: 'rgba(24,28,36,.12)', flexShrink: 0 }} />
+          <span className="mnav-rule" aria-hidden="true" style={rule} />
 
-          <div className="mnav-links" style={{ display: 'flex', alignItems: 'center', gap: '22px', fontSize: '14px', fontWeight: 500, color: '#4A4F58', whiteSpace: 'nowrap' }}>
-            {nav.links.map((link) => {
+          <div
+            className="mnav-links"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '22px',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#4A4F58',
+              whiteSpace: 'nowrap',
+              margin: split ? '0' : '0 auto',
+              transition: `margin .28s ${EASE}`,
+            }}
+          >
+            {links.map((link) => {
               const current = link.href === currentHref
               return (
                 <Link
@@ -101,13 +156,17 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           </div>
         </div>
 
-        {/* Right capsule: log in, then the audience CTA */}
-        <div style={{ ...capsule, paddingLeft: '22px', paddingRight: '8px', gap: '16px' }}>
-          <Link className="mnav-login" href={nav.login.href} style={{ fontSize: '14px', fontWeight: 600, color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        {/* Log in + the audience CTA */}
+        <div style={{ ...group, paddingLeft: split ? '24px' : '16px', paddingRight: '8px', gap: '16px' }}>
+          <Link
+            className="mnav-login"
+            href={nav.login.href}
+            style={{ fontSize: '14px', fontWeight: 600, color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap' }}
+          >
             {nav.login.label}
           </Link>
 
-          <span className="mnav-rule" aria-hidden="true" style={{ width: '1px', height: '22px', background: 'rgba(24,28,36,.12)', flexShrink: 0 }} />
+          <span className="mnav-rule" aria-hidden="true" style={rule} />
 
           <Link
             href={cta.href}

@@ -93,12 +93,12 @@ export default function CreatorsPageClient() {
           <div style={{maxWidth: '1200px', margin: '0 auto', position: 'relative', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '32px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', padding: 'clamp(40px,5vw,64px)', overflow: 'visible'}}>
           <div aria-hidden="true" style={{position: 'absolute', left: '-10%', top: '-20%', width: '520px', height: '520px', borderRadius: '32px 0 0 32px', overflow: 'hidden', pointerEvents: 'none'}}><div style={{position: 'absolute', left: '0', top: '0', width: '520px', height: '520px', borderRadius: '50%', background: 'radial-gradient(circle,#E7F1FC 0%,rgba(231,241,252,0) 70%)'}}></div></div>
           <div style={{maxWidth: '1200px', margin: '0 auto', position: 'relative', display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: '64px', alignItems: 'center'}}>
-            <div style={{position: 'relative', zIndex: '1'}}>
+            <div className="sr" style={{'--sr-delay': '0s', position: 'relative', zIndex: '1'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)', fontSize: '12px'}}>For creators</span>
               <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(22px,2.5vw,32px)', margin: '12px 0 0', color: '#12151C', maxWidth: 'none'}}>Every brand deal you're offered.<br /><span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>All tracked in one place.</span></h2>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.5', color: '#565C68', maxWidth: '48ch', margin: '14px 0 0'}}>Stop managing collaborations across DMs, email, and WhatsApp. Accept offers, negotiate terms, upload deliverables, and track payment — all in one place.</p>
             </div>
-            <div style={{position: 'relative', minHeight: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <div className="sr" style={{'--sr-delay': '.12s', position: 'relative', minHeight: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               <div aria-hidden="true" className="card oh-float" style={{position: 'absolute', zIndex: '1', width: '88%', maxWidth: '420px', top: '8%', right: '-4%', borderRadius: '20px', background: '#E7F1FC', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', height: '110px', transform: 'rotate(3deg)'}}></div>
               <div className="card oh-deals-card" style={{position: 'relative', zIndex: '2', width: '100%', maxWidth: '387px', borderRadius: '20px', background: '#fff', border: '1px solid rgba(18,21,28,.1)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', overflow: 'hidden'}}>
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-hairline)'}}><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '15px'}}>Deals and campaigns</span><span style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}><span className="oh-livedot" style={{width: '7px', height: '7px', borderRadius: '50%', background: 'var(--neon-deep)'}}></span>3 active</span></div>
@@ -120,7 +120,7 @@ export default function CreatorsPageClient() {
           <div style={{maxWidth: '1200px', margin: '0 auto', position: 'relative', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '32px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', padding: 'clamp(40px,5vw,64px)', overflow: 'visible'}}>
           <div aria-hidden="true" style={{position: 'absolute', right: '-10%', top: '-20%', width: '520px', height: '520px', borderRadius: '0 32px 32px 0', overflow: 'hidden', pointerEvents: 'none', zIndex: '0'}}><div style={{position: 'absolute', right: '0', top: '0', width: '520px', height: '520px', borderRadius: '50%', background: 'radial-gradient(circle,#E7F1FC 0%,rgba(231,241,252,0) 70%)'}}></div></div>
           <div style={{maxWidth: '1200px', margin: '0 auto', position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: '64px', alignItems: 'center'}}>
-            <div style={{position: 'relative', minHeight: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <div className="sr" style={{'--sr-delay': '.12s', position: 'relative', minHeight: '380px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
               <div aria-hidden="true" className="card eg-float" style={{position: 'absolute', zIndex: '1', width: '88%', maxWidth: '420px', top: '8%', left: '-4%', borderRadius: '20px', background: '#E7F1FC', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', height: '110px', transform: 'rotate(-3deg)'}}></div>
               <div className="card eg-chart" style={{position: 'relative', zIndex: '2', width: '100%', maxWidth: '387px', borderRadius: '20px', background: '#fff', border: '1px solid rgba(18,21,28,.1)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', overflow: 'hidden', padding: '20px'}}>
                 <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
@@ -466,8 +466,24 @@ export default function CreatorsPageClient() {
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'rgba(255,255,255,.6)'}}>@uvichar_</span>
                 </div>
               </div>
-        
-        
+              <div className="card sr" style={{'--sr-delay': '.06s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(255,255,255,.78)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+                <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
+                <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: 'var(--ink)'}}>No more chasing payment</h3>
+                <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'var(--ink-soft)', margin: '8px 0 0'}}>The worst part of brand deals is chasing payment. If I could see exactly where it is, I would sleep better.</p>
+                <div style={{marginTop: '16px', borderTop: '1px solid var(--border-hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>Creator</span>
+                  <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--ink-faint)'}}>@utkarsh_verma_</span>
+                </div>
+              </div>
+              <div className="card sr" style={{'--sr-delay': '.12s', scrollSnapAlign: 'start', flex: '0 0 30%', minWidth: '280px', background: 'rgba(43,51,36,.72)', backdropFilter: 'blur(6px)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+                <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
+                <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: '#fff'}}>An actual inbox for deals</h3>
+                <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: 'rgba(255,255,255,.72)', margin: '8px 0 0'}}>I miss offers because they get buried in DMs. An actual inbox for deals would change how I work.</p>
+                <div style={{marginTop: '16px', borderTop: '1px solid rgba(255,255,255,.16)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: '#fff'}}>Creator</span>
+                  <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'rgba(255,255,255,.6)'}}>@uvichar_</span>
+                </div>
+              </div>
             </div>
             </div>
             </div>

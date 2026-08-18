@@ -164,6 +164,23 @@ html = html.replace('<button type="button" class="hero-cta"', '<button type="but
 # blank. Nothing here needs the handle, so it is removed.
 html = re.sub(r'\s*\bref="\{\{[^}]*\}\}"', '', html)
 
+# -- 6o. Give the deals and earnings sections the brands page's reveal.
+#
+# On the brands page "Create your next deal." and "Every campaign, on track."
+# fade up as you reach them, because their two columns carry class="sr" with a
+# staggered --sr-delay. The creators equivalents — "Every brand deal you're
+# offered" and "Watch your earnings add up" — ship with no reveal class at all,
+# so they simply appear. PJ wants them to match.
+#
+# The text column leads and the card follows at .12s, the same stagger the
+# brands export uses, so the card feels like it answers the sentence.
+html = html.replace(
+    '<div style="position:relative;z-index:1;">',
+    '<div class="sr" style="--sr-delay:0s;position:relative;z-index:1;">')
+html = html.replace(
+    '<div style="position:relative;min-height:380px;display:flex;align-items:center;justify-content:center;">',
+    '<div class="sr" style="--sr-delay:.12s;position:relative;min-height:380px;display:flex;align-items:center;justify-content:center;">')
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()
@@ -293,33 +310,22 @@ nav_start = html.index('{/* ============ NAV')
 nav_end = html.index('{/*', nav_start + 10)
 html = html[:nav_start] + html[nav_end:]
 
-# -- 8e. Testimonials: one real review, not three placeholders.
-#
-# The export ships three invented creators (@aisha.fin, @rohan.tech,
-# @priya.career). Only one review is real, so the other two cards are removed
-# and the survivor is attributed to @uvichar_ — showing three fabricated
-# testimonials would be the kind of thing a visitor can smell.
-_first = html.find(chr(9733) * 5)
-if _first != -1:
-    # Drop cards 2 and 3 (work backwards so indices stay valid).
-    while html.count(chr(9733) * 5) > 1:
-        i = html.rfind(chr(9733) * 5)
-        start = html.rfind('<div', 0, i)
-        depth, j = 1, html.index('>', start) + 1
-        while depth:
-            nd, cd = html.find('<div', j), html.find('</div>', j)
-            if cd == -1: break
-            if nd != -1 and nd < cd: depth += 1; j = nd + 4
-            else: depth -= 1; j = cd + 6
-        html = html[:start] + html[j:]
-    # Scope the attribution swap to the testimonial. @aisha.fin also appears in
-    # the creator-roster section, which is hidden but should not be silently
-    # rewritten.
+# -- 8e. Testimonials: keep the section exactly as the export lays it out —
+# all three cards, heading left-aligned as designed — and only swap the invented
+# handles for real ones. The niches were invented too, so the role line drops to
+# a plain "Creator" rather than asserting a speciality nobody claimed.
+for _old, _new in (('@aisha.fin', '@uvichar_'),
+                   ('@rohan.tech', '@utkarsh_verma_'),
+                   ('@priya.career', '@uvichar_')):
     _t = html.find(chr(9733) * 5)
-    _end = html.find('</section>', _t)
-    _seg = html[_t:_end]
-    _seg = _seg.replace('>Finance creator<', '>Creator<').replace('>@aisha.fin<', '>@uvichar_<')
-    html = html[:_t] + _seg + html[_end:]
+    if _t == -1:
+        break
+    _seg = html[_t:]
+    html = html[:_t] + _seg.replace('>' + _old + '<', '>' + _new + '<', 1)
+for _role in ('Finance creator', 'Tech creator', 'Career creator'):
+    _t = html.find(chr(9733) * 5)
+    if _t != -1:
+        html = html[:_t] + html[_t:].replace('>' + _role + '<', '>Creator<', 1)
 
 # ── 9. ghost text ───────────────────────────────────────────────────────────
 html=re.sub(r'(<div id="dealGhost"[^>]*>)(</div>)',r'\1{ghost}\2',html)
