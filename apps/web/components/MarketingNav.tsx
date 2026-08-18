@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
+import BookDemoModal from '@/components/BookDemoModal'
 import Wordmark from '@/components/Wordmark'
 
 /**
@@ -43,6 +44,23 @@ const PILL = '#FFFFFF'
 const SHADOW = '0 18px 40px -20px rgba(24,28,36,.28), 0 2px 8px -2px rgba(24,28,36,.10)'
 const EASE = 'cubic-bezier(.22,1,.36,1)'
 
+/** The CTA pill. Shared so the home page's <button> cannot drift from the
+ *  <Link> the other two audiences render. */
+const CTA_STYLE: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: '44px',
+  padding: '0 20px',
+  borderRadius: '999px',
+  background: '#E8FF66',
+  color: '#181C24',
+  fontSize: '13.5px',
+  fontWeight: 700,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+}
+
 /** How long the join/split takes. Slow enough to read as one movement. */
 const MORPH = '.55s'
 
@@ -53,9 +71,16 @@ const MORPH = '.55s'
  */
 const SPLIT_FALLBACK = 520
 
-export default function MarketingNav({ audience }: { audience: 'brand' | 'creator' }) {
-  const cta = audience === 'creator' ? nav.creatorCta : nav.brandCta
-  const currentHref = audience === 'creator' ? '/creators' : '/brands'
+export default function MarketingNav({ audience }: { audience: 'brand' | 'creator' | 'home' }) {
+  // The landing page addresses nobody in particular, so its CTA is the demo
+  // rather than either signup — which is what its own export draws.
+  const [demoOpen, setDemoOpen] = useState(false)
+  const cta =
+    audience === 'creator' ? nav.creatorCta :
+    audience === 'home' ? { label: 'Book demo', href: '#book-demo' } :
+    nav.brandCta
+  // No nav item is "current" on the landing page; it is not one of the two.
+  const currentHref = audience === 'creator' ? '/creators' : audience === 'home' ? '' : '/brands'
   const links = nav.links.map((l) =>
     l.href.startsWith('#') ? { ...l, href: '#how', anchorOnly: true } : { ...l, anchorOnly: false },
   )
@@ -204,6 +229,15 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
 
           <span className="mnav-rule" aria-hidden="true" style={rule} />
 
+          {audience === 'home' ? (
+            <button
+              type="button"
+              onClick={() => setDemoOpen(true)}
+              style={{ border: 'none', cursor: 'pointer', font: 'inherit', ...CTA_STYLE }}
+            >
+              {cta.label}
+            </button>
+          ) : (
           <Link
             href={cta.href}
             style={{
@@ -223,8 +257,11 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           >
             {cta.label}
           </Link>
+          )}
         </div>
       </nav>
+
+      {audience === 'home' && <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />}
     </div>
   )
 }

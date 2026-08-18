@@ -20,7 +20,7 @@ const VIEW_W = 392
 const VIEW_H = 104
 
 /** Orb size and gap, as multiples of the wordmark height. */
-const ORB_SCALE = 1.15
+const ORB_SCALE = 1.0
 const GAP_SCALE = 0.4
 
 export default function Wordmark({
