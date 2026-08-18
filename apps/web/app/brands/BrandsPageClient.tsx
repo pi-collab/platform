@@ -222,8 +222,8 @@ export default function BrandsPageClient() {
 
         {/* ============ HOW IT WORKS (Offers / Negotiation / Payments) ============ */}
         <section style={{padding: 'clamp(28px,3.5vw,48px) 0 0'}}>
-          <div style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', overflow: 'hidden', background: '#fff', paddingTop: 'clamp(200px,25vh,330px)'}}>
-            <div style={{position: 'absolute', top: '0', left: '0', right: '0', height: 'clamp(320px,40vh,480px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '0px', textAlign: 'center', pointerEvents: 'none', zIndex: '2'}}>
+          <div style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', overflow: 'hidden', background: '#fff', paddingTop: 'clamp(210px,26vh,330px)'}}>
+            <div style={{position: 'absolute', top: '0', left: '0', right: '0', height: 'clamp(250px,31vh,390px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', paddingBottom: '0px', textAlign: 'center', pointerEvents: 'none', zIndex: '2'}}>
               <div style={{maxWidth: '900px'}}>
                 <h2 className="hero-fade" style={{margin: '0', color: '#12151C', fontSize: 'clamp(32px,4.2vw,52px)', fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.06', '--sr-delay': '0s'}}>The operating system<br />for <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creator collabs.</span></h2>
                 <p className="t-body hero-fade" style={{color: '#565C68', margin: '16px 0 0', '--sr-delay': '0.12s'}}>One place for creators, approvals, deliverables, contracts and payments.</p>
@@ -231,7 +231,7 @@ export default function BrandsPageClient() {
               </div>
             </div>
             <img src="/brands/showcase-a.webp" alt="Glass panels showing campaign brief, creators, approvals, deliverables and payments" style={{display: 'block', width: '84%', height: 'auto', margin: '0 auto', aspectRatio: '1672/941', objectFit: 'cover'}} width={1672} height={941} loading="lazy" decoding="async" />
-            <div aria-hidden="true" style={{position: 'absolute', top: 'clamp(320px,40vh,480px)', left: '0', right: '0', height: '20%', background: 'linear-gradient(to bottom,#FFFFFF 0%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
+            <div aria-hidden="true" style={{position: 'absolute', top: 'clamp(210px,26vh,330px)', left: '0', right: '0', height: '20%', background: 'linear-gradient(to bottom,#FFFFFF 0%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', left: '0', width: '16%', background: 'linear-gradient(to right,#FFFFFF 0%,#FFFFFF 50%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
             <div aria-hidden="true" style={{position: 'absolute', top: '0', bottom: '0', right: '0', width: '16%', background: 'linear-gradient(to left,#FFFFFF 0%,#FFFFFF 50%,rgba(255,255,255,0) 100%)', pointerEvents: 'none'}}></div>
           </div>

@@ -48,6 +48,29 @@ html=re.sub(r'<style>.*?</style>','',html,flags=re.S)
 # the style value, leaving `;style=" --sr-delay:0s;"=""`. Fold the custom
 # property back into the same declaration list, which is the evident intent.
 html=html.replace(';style=" --sr-delay:0s;"=""', ';--sr-delay:0s;"')
+# ── 6c2. Overlap the "operating system" headline with its image.
+#
+# The design coordinates THREE values with the same clamp:
+#   container  padding-top : reserves the band, so the image starts at y = H
+#   heading    height      : the band, text bottom-aligned inside it
+#   fade       top         : white->transparent gradient placed exactly at the
+#                            image's top edge, so the image dissolves into white
+#
+# To overlap the headline onto the image, the image must start ABOVE the band's
+# bottom — so padding-top shrinks to X — and the fade has to follow it to X, or
+# the gradient sits below the image's edge and a hard seam appears. The band's
+# own height stays at H so the headline does not move.
+#
+# Changing padding-top alone (the first attempt) is exactly that seam.
+BAND = 'clamp(320px,40vh,480px)'
+IMG_TOP = 'clamp(210px,26vh,330px)'
+html = html.replace(f'padding-top:{BAND}', f'padding-top:{IMG_TOP}')
+html = html.replace(f'top:{BAND};left:0;right:0;height:20%', f'top:{IMG_TOP};left:0;right:0;height:20%')
+# The band's own height is what holds the headline down the page (its content is
+# bottom-aligned), so shrinking it lifts the whole block and closes the gap to
+# the ticker above. Kept comfortably taller than IMG_TOP so the overlap remains.
+html = html.replace(f'height:{BAND};display:flex', 'height:clamp(250px,31vh,390px);display:flex')
+
 # ── 4. style="..." → JSX object ─────────────────────────────────────────────
 def camel(p):
     p=p.strip()
@@ -97,14 +120,6 @@ html = re.sub(r'sc-camel-on-[a-z-]+="\{\{[^}]*\}\}"\s*', '', html)
 html = re.sub(r'sc-camel-([a-z-]+)=',
               lambda m: re.sub(r'-([a-z])', lambda g: g.group(1).upper(), m.group(1)) + '=',
               html)
-
-# ── 6c2. Pull the "operating system" showcase up so the heading overlaps the
-# image instead of floating above a band of white. The container reserves
-# padding-top for the absolutely-positioned heading block; shrinking that
-# padding moves the image up under it.
-# Runs after the style->JSX conversion, so match the converted form too.
-html = html.replace("padding-top:clamp(320px,40vh,480px)", "padding-top:clamp(200px,25vh,330px)")
-html = html.replace("paddingTop: 'clamp(320px,40vh,480px)'", "paddingTop: 'clamp(200px,25vh,330px)'")
 
 # ── 6d. Inline DOM event handlers. The export wrote hover/press effects as
 # on*="this.style.transform=..." strings, which React cannot accept (they are
