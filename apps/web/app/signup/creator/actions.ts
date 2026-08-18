@@ -99,24 +99,33 @@ export async function sendOTP(rawPhone: string): Promise<OTPResult> {
 /**
  * Get the code to the phone, and decide what the caller is told.
  *
+ * DELIVERY AND THE STAGING BYPASS ARE INDEPENDENT. The bypass is a
+ * *verification* affordance — it makes 000000/123456 acceptable at the verify
+ * step — and it deliberately does NOT suppress the send. It used to: staging
+ * short-circuited here and no SMS went out, which meant staging could never
+ * test the thing it exists to test. Now the real code is sent whenever SMS is
+ * configured, and the bypass codes keep working alongside it, so the delivery
+ * path can be exercised on staging without giving up the shortcut.
+ *
+ * The trade is real and deliberate: every OTP request on a staging deployment
+ * with SMS enabled now costs a DLT-metered message. Unset MSG91_SMS_ENABLED
+ * there to stop sending; the bypass is unaffected either way.
+ *
  * Three modes, in priority order:
  *
- *   1. Staging bypass on  → send nothing. 000000/123456 already work, so a
- *      real SMS would burn a DLT-metered message to test a code path that
- *      ignores it. The code is logged instead, for whoever is testing.
+ *   1. SMS configured     → really send, in every environment. A definitive
+ *      failure is reported to the caller rather than swallowed: for a
+ *      notification, never-block is right, but here the SMS IS the flow.
+ *      Saying "code sent" when it wasn't leaves someone watching an empty
+ *      inbox with no way forward.
  *
- *   2. SMS not configured → send nothing, report success. This is what makes
- *      the feature deployable dark: until the DLT PE-TM chain goes Active,
- *      MSG91_SMS_ENABLED stays unset and this behaves exactly as it did
- *      before. Outside production the code is logged so local dev still works.
- *      ON PRODUCTION it is a loud failure instead — an unconfigured switch
+ *   2. Not configured, on production → loud failure. An unconfigured switch
  *      there means no creator can log in, and silently logging codes nobody
  *      reads would hide that behind a "code sent" screen.
  *
- *   3. SMS configured     → really send. A definitive failure is reported to
- *      the caller rather than swallowed: for a notification, never-block is
- *      right, but here the SMS IS the flow. Saying "code sent" when it wasn't
- *      leaves someone watching an empty inbox with no way forward.
+ *   3. Not configured, anywhere else → log the code and report success. This
+ *      is what makes the feature deployable dark, and what keeps local dev
+ *      working with no MSG91 account at all.
  *
  * Never throws — sendOtpSms upholds that, and nothing here adds a throw path.
  */
@@ -126,11 +135,6 @@ async function deliver(phone: string, code: string): Promise<OTPResult> {
   // number attached.
   const logCode = () =>
     console.log(`[OTP] no SMS sent — code for ${maskPhone(phone)}: ${code}`)
-
-  if (isStagingEnv()) {
-    logCode()
-    return { status: 'sent' }
-  }
 
   if (!isSmsConfigured()) {
     if (process.env.VERCEL_ENV === 'production') {
@@ -148,6 +152,15 @@ async function deliver(phone: string, code: string): Promise<OTPResult> {
   if (!sent.ok) {
     // Already logged and recorded to `events` by the sender; this only decides
     // what the person staring at the form is told.
+    //
+    // On staging the bypass codes still work, so a delivery failure must not
+    // strand the tester on the phone step — that would make a broken MSG91
+    // config also break the shortcut that exists to work around it. Let them
+    // through to code entry; the failure is in the logs and in `events`.
+    if (isStagingEnv()) {
+      console.warn('[OTP] send failed on staging — continuing, bypass codes still accepted')
+      return { status: 'sent' }
+    }
     return { status: 'error', message: 'We could not send the code just now. Please try again shortly.' }
   }
 

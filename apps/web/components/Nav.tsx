@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
-import Logo from '@/components/Logo'
+import Wordmark from '@/components/Wordmark'
 
 interface NavProps {
   /** Which CTA to show in the top-right. Defaults to brandCta. */
@@ -38,7 +38,7 @@ export default function Nav({ audience = 'brand' }: NavProps) {
       <nav className="nav">
         <div className="nav__inner">
           <Link href="/" className="nav__logo">
-            <Logo size={34} />
+            <Wordmark height={24} />
           </Link>
 
           {/* Desktop links */}
