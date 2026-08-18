@@ -121,15 +121,6 @@ html = html.replace(
 # use the space they are sitting in.
 html = html.replace('text-align:left;max-width:460px;', 'text-align:left;max-width:760px;')
 
-# "All the reach of an agency. None of the retainer" broke onto two lines in its
-# grid column. Kept on one line by easing the clamp down; nowrap alone would
-# just overflow the column on smaller screens.
-html = html.replace(
-    'class="ws-headline" style="font-family:var(--font-display);font-weight:800;'
-    'letter-spacing:-0.03em;line-height:1.02;font-size:clamp(26px,3vw,38px);"',
-    'class="ws-headline" style="font-family:var(--font-display);font-weight:800;'
-    'letter-spacing:-0.03em;line-height:1.02;font-size:clamp(20px,2.1vw,29px);"')
-
 # The testimonials copy sat at 17% from the top, which was right when three
 # review cards filled the space beneath it. With the cards gone it reads as
 # stranded, so it is centred in the frame instead.

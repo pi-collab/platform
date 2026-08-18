@@ -394,7 +394,7 @@ export default function BrandsPageClient() {
             <div className="ws-right">
               <div className="ws-content">
                 <div className="t-meta" style={{color: '#878D99', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase'}}>Why brands switch</div>
-                <h2 className="ws-headline" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(20px,2.1vw,29px)'}}>
+                <h2 className="ws-headline" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(26px,3vw,38px)'}}>
                   <span style={{color: '#12151C'}}>All the reach of an agency. None of the <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>retainer</span></span>
                 </h2>
                 <div className="ws-table">

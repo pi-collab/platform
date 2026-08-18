@@ -667,10 +667,3 @@
   height: 46vh !important;
   min-height: 360px !important;
 }
-
-/* The GUAPD/AGENCY tick columns sat hard against the right edge of a very wide
-   label column. Capping the table pulls them inward without changing the row
-   rhythm or the column widths themselves. */
-.brands-page .ws-table {
-  max-width: 560px;
-}
