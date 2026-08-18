@@ -556,8 +556,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 40px;
-  padding: 0 18px;
+  height: 44px;
+  padding: 0 20px;
   border-radius: var(--radius-pill, 999px);
   background: var(--neon, #E8FF66);
   color: var(--ink, #181C24);

@@ -21,7 +21,20 @@ import { nav } from '@/lib/content'
  */
 export default function BrandsNav() {
   return (
-    <div className="brands-page" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0' }}>
+    <div
+      className="brands-page"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        padding: '26px clamp(14px,4vw,28px) 0',
+        // The class is here only for the tokens. It also carries the export's
+        // body rule (background:#FFFFFF), which painted an opaque white band
+        // across the top and hid the hero image that is supposed to show behind
+        // and above the pill — that is what made the header look detached.
+        background: 'transparent',
+      }}
+    >
       <nav
         style={{
           maxWidth: '1200px',
