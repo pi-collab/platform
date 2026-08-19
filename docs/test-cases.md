@@ -1067,6 +1067,29 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] A creator who signed up before the field existed shows "—" in ops and "not answered" in the email, rather than breaking the page or the send
 - [ ] The value is read from `social_accounts[].follower_range` through `followerRangeOf()` — jsonb written by several paths, so anything unexpected must read as "not answered", never throw inside a page render or an email
 
+### 23. Brand creation authorization (SECURITY)
+
+- [ ] A user with `users.role = 'creator'` calling `submitOnboarding` is refused. This is not theoretical — it happened on production within hours of launch and produced a brand whose contact was `creator_<phone>@auth.guapd.internal`
+- [ ] A brand signing up with a work email via Google still completes (ensureBrandUserRow creates the row with `role = 'brand_member'`, so the check passes)
+- [ ] A free-inbox address (gmail, outlook…) is refused by `validateWorkEmail` on this path, not only in `/auth/callback`
+- [ ] An `@auth.guapd.internal` address is refused explicitly. `validateWorkEmail` is a BLOCKLIST of free providers, so our synthetic domain passes it — the explicit check is what stops phone-only accounts, not the work-email rule
+- [ ] The invite accept flow still works for a genuine teammate
+- [ ] KNOWN GAP: the invite flow does not apply this role check, so a brand can still invite a creator-role user into its team. Separate fix
+
+### 24. Creator PII column privileges (SECURITY)
+
+- [ ] `authenticated` and `anon` CANNOT select `phone`, `contact_email` or `rate_card` from `creators` — verify with `has_column_privilege`, and confirm `select *` fails outright
+- [ ] `service_role` still reads every column (ops, creator settings, email/notification senders, the offer OTP lookup all depend on it)
+- [ ] These user-scoped queries still work: `campaigns/[id]/page.tsx`, `creator/layout.tsx`, `creator/storefront/page.tsx`, `lib/creator-auth.ts`, `auth/creator/callback`
+- [ ] The creator's own settings page still shows their phone and contact email (it reads through the admin client, so it is unaffected)
+- [ ] Adding a column to `creators` does NOT grant it automatically — new columns are unreadable by `authenticated` until added to the GRANT in `rls.sql`. That is the intended fail-closed direction; remember it when adding a column meant to be public
+
+### 25. my_brand_id() with two memberships
+
+- [ ] A user holding `brand_members` rows for two brands can still use the app — before the fix every brand-side policy raised "more than one row returned by a subquery" at once, locking them out of everything
+- [ ] The brand resolved is the OLDEST membership (`ORDER BY created_at`), consistently across queries
+- [ ] KNOWN GAP: the second brand is invisible rather than supported. If one account should ever span two brands, this function and every policy calling it need rethinking; if never, `brand_members` wants `UNIQUE (user_id)`
+
 ---
 
 | When | What to run |

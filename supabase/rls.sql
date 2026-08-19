@@ -23,10 +23,20 @@ SET search_path = public AS $$
   SELECT id FROM users WHERE auth_id = auth.uid()
 $$;
 
+-- ORDER BY + LIMIT are load bearing. brand_members is UNIQUE (brand_id,
+-- user_id), so one user can hold rows for two brands; used as a scalar, a
+-- two-row subquery raises "more than one row returned by a subquery used as an
+-- expression" on every brand-side policy at once, locking that user out of
+-- everything. Reachable via the invite accept path, which inserts a membership
+-- with no one-brand check. See migration 0470.
 CREATE OR REPLACE FUNCTION my_brand_id()
 RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public AS $$
-  SELECT brand_id FROM brand_members WHERE user_id = my_user_id()
+  SELECT brand_id
+  FROM brand_members
+  WHERE user_id = my_user_id()
+  ORDER BY created_at
+  LIMIT 1
 $$;
 
 CREATE OR REPLACE FUNCTION my_creator_id()
@@ -682,6 +692,33 @@ CREATE POLICY creator_read_own_review ON deal_reviews
       )
     )
   );
+
+
+-- ================================================================
+-- COLUMN PRIVILEGES
+-- ================================================================
+--
+-- RLS decides WHICH ROWS. These decide WHICH COLUMNS, and the two are needed
+-- together: creators_read grants row access to every vetted creator for any
+-- authenticated user, and because RLS is row level that would otherwise hand
+-- over phone, contact_email and rate_card as well. Signup is open, so
+-- "authenticated" costs one OTP.
+--
+-- Every legitimate read of the three withheld columns uses the service role,
+-- which bypasses this entirely — ops, the creator's own settings page, the
+-- email and notification senders, the offer OTP lookup. Nothing in the app
+-- reads them through the user-scoped client, and if something ever tries it
+-- will fail with "permission denied for column" rather than leak.
+--
+-- Re-runnable: REVOKE then GRANT is idempotent.
+
+REVOKE SELECT ON public.creators FROM anon, authenticated;
+
+GRANT SELECT (
+  id, user_id, full_name, niche, niches, handle, bio, profile_photo_url,
+  worked_with, portfolio_links, social_accounts, location, primary_platform,
+  is_vetted, is_rejected, created_at, updated_at
+) ON public.creators TO anon, authenticated;
 
 
 -- ================================================================

@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies }           from 'next/headers'
 import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
 import { BRAND_CATEGORIES } from '@/lib/brand-categories'
+import { validateWorkEmail } from '@/lib/work-email'
 
 export type OnboardingState =
   | { status: 'error'; error: string }
@@ -23,8 +24,48 @@ export async function submitOnboarding(
 
   // 2. Resolve internal user id from our users table
   const { data: profile } = await supabase
-    .from('users').select('id').eq('auth_id', user.id).maybeSingle()
+    .from('users').select('id, role').eq('auth_id', user.id).maybeSingle()
   if (!profile) return { status: 'error' as const, error: 'User profile not found.' }
+
+  // 2a. AUTHORISED, not merely authenticated.
+  //
+  // Without this, any signed-in session could create a brand — including a
+  // creator who signed up with a phone and an OTP. That is not a hypothetical:
+  // it happened on production within hours of launch, producing a brand whose
+  // contact address was the synthetic creator_<phone>@auth.guapd.internal that
+  // the OTP path generates.
+  //
+  // Blocked outright rather than allowed-with-caveats. users.role is an enum of
+  // exactly two values, so the schema models ONE role per person; a creator who
+  // also owns a brand has no representation here, and letting it happen
+  // corrupts the model rather than enabling a use case. Anyone who genuinely
+  // needs both sides needs two accounts.
+  if (profile.role === 'creator') {
+    return {
+      status: 'error' as const,
+      error: 'This account is registered as a creator. Brands need a separate account — sign up with your work email.',
+    }
+  }
+
+  // 2b. The work-email rule, enforced here as well as in /auth/callback.
+  //
+  // It was only ever applied to the OAuth callback, so this action was a way
+  // around it. Note it would NOT have stopped the case above on its own:
+  // validateWorkEmail is a blocklist of free consumer providers, and our own
+  // synthetic domain is not on it, so the address would have passed. Hence the
+  // explicit rejection first — a phone-only account has no real address, and
+  // cannot satisfy a work-email rule by definition.
+  const email = user.email ?? ''
+  if (email.endsWith('@auth.guapd.internal')) {
+    return {
+      status: 'error' as const,
+      error: 'This account has no email address. Brands need a work email — sign up with one.',
+    }
+  }
+  const emailCheck = validateWorkEmail(email, process.env.OPS_ALLOWED_EMAILS)
+  if (!emailCheck.ok) {
+    return { status: 'error' as const, error: emailCheck.message }
+  }
 
   // 3. Enforce one brand per user
   const { data: existing } = await supabase
