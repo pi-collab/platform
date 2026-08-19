@@ -265,6 +265,14 @@ html[data-lp-pinned] .mnav-wrap {
 /* The converge section's CTA is a <button> wrapping the export's own pill, so
    the button itself must contribute nothing — otherwise the browser draws its
    default grey box around the pill. */
+.landing-page .faqitem p a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.landing-page .faqitem p a:hover { text-decoration-thickness: 2px; }
+
 .landing-page .cv-cta {
   background: none;
   border: none;

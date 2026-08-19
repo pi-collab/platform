@@ -356,6 +356,12 @@ export const creatorPage = {
 export const footer = {
   tagline: 'Match, deal and grow, all in one calm, trusted place. No chasing, no awkward DMs.',
 
+  // Social accounts we actually have. The export draws four; the rest go in as
+  // they exist, rather than shipping "#" links that go nowhere.
+  social: [
+    { label: 'Instagram', href: 'https://www.instagram.com/guapd.it/' },
+  ],
+
   columns: [
     {
       heading: 'Product',

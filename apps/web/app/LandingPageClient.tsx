@@ -28,30 +28,109 @@ const CAMPAIGNS = [
       { id:'lc3', num:'03', category:'Solaris Digital', name:'Product spotlight', deliverables: 4, top: 152 }
     ]
 
-const FAQ = [
+/**
+ * Answers carry JSX so they can link. Everything asserted here is checked
+ * against the code: Instagram and YouTube are the two platforms the creator
+ * profile offers, campaigns group deals for real, and the roster is vetted.
+ *
+ * Two things deliberately NOT claimed. Pricing: the revenue model is still an
+ * open decision, and a homepage is the wrong place to pin it. Performance
+ * measurement: content metrics need the Meta API, which is not built, so the
+ * answer says what the deal record actually gives you and no more.
+ */
+const FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: 'What is guapd?',
-    a: 'One place to run a brand and creator collaboration from start to finish: the offer, the negotiation, the deliverables, the approvals and the payment status. Everything that currently lives across WhatsApp, email and a spreadsheet lives on one deal instead.',
+    a: (
+      <>
+        One place to run a brand and creator collaboration from start to finish: the offer,
+        the negotiation, the deliverables, the approvals and the payment status. Everything
+        that currently lives across WhatsApp, email and a spreadsheet lives on one deal instead.
+      </>
+    ),
   },
   {
-    q: 'Who is it for?',
-    a: 'Brands who run creator campaigns directly rather than through an agency, and the creators they work with. It is built for the deals you already have, not for finding new ones.',
+    q: 'What types of businesses can use guapd?',
+    a: (
+      <>
+        Any brand that works with creators directly rather than through an agency, from a
+        founder running their first campaign to a marketing team running several a month.
+        There is more detail on the <a href="/brands">brands page</a>, and creators can see
+        their side on the <a href="/creators">creators page</a>.
+      </>
+    ),
   },
   {
-    q: 'What does it cost?',
-    a: 'It is free for creators. Brands pay a 15% fee, added on top of the rate rather than taken out of it, so the creator receives the full amount they quoted.',
+    q: 'How does guapd work?',
+    a: (
+      <>
+        You build a structured offer: deliverables, rate, timeline, revisions, usage rights
+        and payment terms. The creator accepts, counters or declines. Once agreed, the terms
+        are locked and everything that follows, the work, the approvals and the payment
+        status, is tracked against that same deal.
+      </>
+    ),
   },
   {
-    q: 'Do we still need a contract?',
-    a: 'Every term is agreed in the offer itself: deliverables, rate, timeline, revisions, usage rights and payment terms. Once both sides agree, those terms are locked and timestamped, so there is one written record instead of a scroll back through a chat.',
+    q: 'What platforms can I use guapd for?',
+    a: (
+      <>
+        Instagram and YouTube today, including Reels, Stories and video. The deal itself is
+        platform-agnostic, so anything you agree in writing can be run through it.
+      </>
+    ),
   },
   {
-    q: 'How does payment work?',
-    a: 'Payment terms are agreed up front and the deal tracks where the money is, from invoice through to paid. Nobody has to ask whether it went through, and nobody has to chase.',
+    q: 'How do I find the right creators for my brand?',
+    a: (
+      <>
+        Every creator on guapd is vetted before they appear, so you are browsing people we
+        have checked rather than an open directory. Many publish a shopfront with their
+        packages and rates, so you can see what they offer before you make an offer. You can
+        also bring a creator you already work with.
+      </>
+    ),
   },
   {
-    q: 'How do we get started?',
-    a: 'Brands can book a demo and we will walk through it against the kind of campaigns you actually run. Creators can join directly. Either way, the first deal takes minutes rather than a setup project.',
+    q: 'How are payments managed?',
+    a: (
+      <>
+        Payment terms are agreed in the offer itself, so there is no separate conversation
+        about them later. The deal then tracks where the payment is, from invoice through to
+        paid, and both sides see the same status. Nobody has to ask whether it went through.
+      </>
+    ),
+  },
+  {
+    q: 'Can I run multiple campaigns at once?',
+    a: (
+      <>
+        Yes. Campaigns group deals, so you can brief several creators from one place, send
+        the offers together and see every deal in that campaign side by side, while each one
+        stays its own agreement with its own terms.
+      </>
+    ),
+  },
+  {
+    q: 'How will I know whether it is working?',
+    a: (
+      <>
+        Every deal carries its own history: what was offered, what was agreed, when the work
+        landed, how many revisions it took and when it was paid. Across campaigns that gives
+        you a straight read on which collaborations run smoothly and who to work with again.
+        Content performance reporting is not part of guapd yet.
+      </>
+    ),
+  },
+  {
+    q: 'How do I get started?',
+    a: (
+      <>
+        Brands can <a href="/signup/brand">create an account</a> or book a demo and we will
+        walk through it against the campaigns you actually run. Creators can{' '}
+        <a href="/signup/creator">join here</a>. Either way the first deal takes minutes.
+      </>
+    ),
   },
 ]
 

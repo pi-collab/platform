@@ -29,6 +29,28 @@ export default function Footer() {
             <Wordmark height={28} tone="light" className="gfoot__wordmark" />
 
             <p className="gfoot__tagline">{footer.tagline}</p>
+
+            {/* Only the accounts we have. The export draws four; the others go
+                in as they exist rather than as "#" links that go nowhere. */}
+            <div className="gfoot__social">
+              {footer.social.map((s) => (
+                <a
+                  key={s.href}
+                  href={s.href}
+                  aria-label={s.label}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="gf-soc"
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect width="20" height="20" x="2" y="2" rx="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                  </svg>
+                </a>
+              ))}
+            </div>
           </div>
 
           <div className="gfoot__grid">

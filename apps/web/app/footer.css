@@ -80,6 +80,31 @@
   text-wrap: pretty;
 }
 
+/* The social row, as the export draws it. */
+.gfoot__social { display: flex; gap: 11px; margin-top: 30px; }
+
+.gf-soc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #C6C8BE;
+  transition: transform .16s ease, background .16s ease, border-color .16s ease;
+}
+.gf-soc:hover, .gf-soc:focus-visible {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, .14);
+  border-color: var(--lime);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gf-soc { transition: none; }
+  .gf-soc:hover { transform: none; }
+}
+
 .gfoot__cta {
   display: inline-flex;
   align-items: center;
