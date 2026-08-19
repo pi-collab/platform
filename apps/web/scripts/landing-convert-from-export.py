@@ -252,6 +252,22 @@ before = html.count('font-weight:800')
 html = html.replace('font-weight:800', 'font-weight:700')
 step("font-weight 800 → 700", before, html.count('font-weight:800'))
 
+# ── 1m. Real companies out of the mockups. ────────────────────────────────
+# The "Every deal, one queue" card lists Groww, Zerodha and Fi Money against
+# invented deal values. They are real Indian fintechs and none of them is a
+# customer, so on a public homepage that reads as a client list. Replaced with
+# invented names in the same register as the ones the export already uses
+# elsewhere on the page (Glow Labs, Move Athletics, Bawa Labs).
+FAKE_BRANDS = {
+    'Groww': 'Glow Labs',
+    'Zerodha': 'Move Athletics',
+    'Fi Money': 'Bawa Labs',
+}
+before = sum(html.count(k) for k in FAKE_BRANDS)
+for real, invented in FAKE_BRANDS.items():
+    html = html.replace(f'>{real}<', f'>{invented}<')
+step("real company names replaced", before, sum(html.count(f'>{k}<') for k in FAKE_BRANDS))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.

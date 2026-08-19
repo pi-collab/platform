@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     description:
       'Get paid on time, keep every deal in one place, and work with brands directly — no agency in the middle.',
     url: '/creators',
+    // A page-level openGraph REPLACES the layout's rather than merging,
+    // so the image has to be repeated here or the card renders bare.
+    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Guapd' }],
     type: 'website',
   },
 }

@@ -16,6 +16,9 @@ export const metadata: Metadata = {
     description:
       'One platform for brand–creator collaborations in India. Send a structured brief, lock the terms in writing, upload and approve, and watch the money move. No agencies, no WhatsApp threads.',
     url: '/',
+    // A page-level openGraph REPLACES the layout's rather than merging,
+    // so the image has to be repeated here or the card renders bare.
+    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Guapd' }],
   },
   alternates: { canonical: '/' },
 }

@@ -3,8 +3,15 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service · Guapd',
+  // Title carries no brand name: the root layout's template appends
+  // "| Guapd", and spelling it here too rendered "Terms of Service · Guapd | Guapd".
+  title: 'Terms of Service',
+  description:
+    "The terms that govern using Guapd to agree, run and get paid for brand and creator collaborations.",
   robots: 'index, follow',
+  // Its own canonical. Without one it inherited the layout's, which
+  // pointed at the home page and declared this a duplicate of it.
+  alternates: { canonical: '/terms' },
 }
 
 const containerStyle: React.CSSProperties = {

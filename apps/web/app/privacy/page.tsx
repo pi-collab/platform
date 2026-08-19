@@ -3,8 +3,15 @@ import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy · Guapd',
+  // Title carries no brand name: the root layout's template appends
+  // "| Guapd", and spelling it here too rendered "Privacy Policy · Guapd | Guapd".
+  title: 'Privacy Policy',
+  description:
+    "How Guapd collects, uses and protects personal data, and the rights you have over it under India's DPDP Act.",
   robots: 'index, follow',
+  // Its own canonical. Without one it inherited the layout's, which
+  // pointed at the home page and declared this a duplicate of it.
+  alternates: { canonical: '/privacy' },
 }
 
 const containerStyle: React.CSSProperties = {
