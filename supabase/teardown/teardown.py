@@ -244,7 +244,11 @@ def main():
         vals = f[key]
         print(f"  {label:<18} {len(vals)}" + (f"  {vals}" if vals and len(vals) <= 6 else ""))
 
-    if not any(f[k] for k in ('creator_ids', 'brand_ids', 'user_ids')):
+    # auth_ids counts as a match on its own. An abandoned OAuth sign-in leaves an
+    # auth user with no creator, brand or profile row, so checking only those
+    # three reports "nothing matched" and returns — leaving behind the working
+    # login that was the entire reason for naming that address.
+    if not any(f[k] for k in ('creator_ids', 'brand_ids', 'user_ids', 'auth_ids')):
         print("\n  Nothing matched. No account with those identifiers exists.")
         return
 

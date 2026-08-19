@@ -492,6 +492,42 @@ export default function BrandsPageClient() {
           </div>
         </section>
 
+        {/* ============ RUN DEALS DIRECTLY ============
+            The export carries three testimonial cards under this heading. They
+            are not here, and will not be until the quotes are real — invented
+            praise from invented brands is not something to put on a page that
+            asks people to trust us with their money.
+
+            With the cards gone the heading is centred in the frame rather than
+            sitting at the export's 17%, where it read as stranded above empty
+            space. The second sentence of the export's standfirst ("Hear
+            directly from the people running campaigns on guapd every day")
+            went with the cards: it points at testimonials that are not below
+            it. */}
+        <section id="creators" style={{padding: '0', marginTop: '0'}}>
+          <div style={{position: 'relative', minHeight: '640px'}}>
+            <img
+              id="brandsWhySwitchImg"
+              src="/brands/showcase-c.webp"
+              alt=""
+              style={{width: '100%', height: '80vh', minHeight: '640px', display: 'block', objectFit: 'cover', objectPosition: 'top', opacity: 0.5}}
+              decoding="async"
+              loading="lazy"
+            />
+            <div className="sr" style={{position: 'absolute', left: '0', right: '0', top: '50%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 20px'}}>
+              {/* 700, not the export's 800: Schibsted Grotesk is embedded at
+                  400/500/600/700 only, so 800 renders as 700 anyway and asking
+                  for it just makes this heading disagree with its neighbours. */}
+              <h2 style={{fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(34px,3vw,46px)', margin: '0 auto', maxWidth: '45%', color: '#12151C'}}>
+                Run deals directly. Stay <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400}}>calm.</span>
+              </h2>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.5', color: '#12151C', maxWidth: '56ch', margin: '40px auto 0'}}>
+                Real brand teams, real deals, real reasons to skip the agency.
+              </p>
+            </div>
+          </div>
+        </section>
+
 
         {SHOW_BRAND_LOGOS && (<>
       {/* ============ BRANDS WE WORK WITH ============ */}
