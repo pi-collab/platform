@@ -71,6 +71,24 @@ const MORPH = '.55s'
  */
 const SPLIT_FALLBACK = 520
 
+/** Line icons for the two audiences, drawn to match the site's 2px stroke. */
+const ICONS = {
+  creator: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m22 8-6 4 6 4V8Z" />
+      <rect width="14" height="12" x="2" y="6" rx="2" />
+    </svg>
+  ),
+  brand: (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 21h18M5 21V7l7-4 7 4v14" />
+      <path d="M10 21v-5h4v5" />
+    </svg>
+  ),
+}
+
 /**
  * A menu on the landing page's two account actions.
  *
@@ -78,18 +96,29 @@ const SPLIT_FALLBACK = 520
  * cannot pick a side — each opens the two-way choice instead of guessing. On
  * /brands and /creators the audience is known and both stay plain links.
  *
- * Closes on Escape, on outside click and on choosing an item, and reports its
- * state through aria-expanded so it is not a mouse-only control.
+ * Hover opens it, which is what makes it feel quick. Hover is only ever an
+ * ENHANCEMENT here: the trigger is a real button that toggles on click and
+ * reports aria-expanded, so keyboard and touch — where hover does not exist —
+ * get the same menu. Closing is deliberately delayed a beat, because the cursor
+ * has to cross a gap between the trigger and the card and an instant close
+ * makes the menu impossible to reach.
  */
 function NavMenu({
-  label, items, variant,
+  label, caption, items, variant,
 }: {
   label: string
-  items: { label: string; href: string }[]
+  caption: string
+  items: { label: string; href: string; icon: keyof typeof ICONS }[]
   variant: 'plain' | 'pill'
 }) {
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancelClose = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null } }
+  const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(() => setOpen(false), 160) }
+
+  useEffect(() => () => cancelClose(), [])
 
   useEffect(() => {
     if (!open) return
@@ -108,7 +137,12 @@ function NavMenu({
         cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }
 
   return (
-    <div ref={wrap} style={{ position: 'relative', flexShrink: 0 }}>
+    <div
+      ref={wrap}
+      style={{ position: 'relative', flexShrink: 0 }}
+      onMouseEnter={() => { cancelClose(); setOpen(true) }}
+      onMouseLeave={scheduleClose}
+    >
       <button type="button" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((v) => !v)} style={trigger}>
         {label}
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
@@ -121,22 +155,34 @@ function NavMenu({
       {open && (
         <div
           style={{
-            position: 'absolute', top: 'calc(100% + 10px)', right: 0, minWidth: '196px',
-            background: '#FFFFFF', borderRadius: '16px', padding: '6px',
-            boxShadow: '0 18px 40px -18px rgba(24,28,36,.30), 0 2px 8px -2px rgba(24,28,36,.10)',
-            display: 'flex', flexDirection: 'column', zIndex: 10,
+            position: 'absolute', top: 'calc(100% + 12px)', right: 0, minWidth: '212px',
+            background: '#FFFFFF', borderRadius: '20px', padding: '16px 12px 12px',
+            boxShadow: '0 24px 48px -20px rgba(24,28,36,.34), 0 2px 10px -3px rgba(24,28,36,.12)',
+            display: 'flex', flexDirection: 'column', gap: '2px', zIndex: 10,
           }}
         >
-          {items.map((it) => (
+          <span style={{
+            fontSize: '11px', fontWeight: 600, letterSpacing: '.10em', textTransform: 'uppercase',
+            color: '#8B90A0', padding: '0 12px 8px',
+          }}>
+            {caption}
+          </span>
+
+          {items.map((it, i) => (
             <Link
               key={it.href}
               href={it.href}
               onClick={() => setOpen(false)}
+              className="mnav-item"
               style={{
-                padding: '10px 14px', borderRadius: '11px', fontSize: '14.5px', fontWeight: 600,
-                color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '11px 12px', borderRadius: '13px',
+                fontSize: '16px', fontWeight: 600, color: '#181C24', textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                borderTop: i ? '1px solid #EFF1F4' : 'none',
               }}
             >
+              <span style={{ color: '#8B90A0', display: 'inline-flex' }}>{ICONS[it.icon]}</span>
               {it.label}
             </Link>
           ))}
@@ -299,10 +345,11 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             <div className="mnav-login">
               <NavMenu
                 label={nav.login.label}
+                caption="Log in as a"
                 variant="plain"
                 items={[
-                  { label: 'Log in as a creator', href: '/login/creator' },
-                  { label: 'Log in as a brand', href: '/login/brand' },
+                  { label: 'Creator', href: '/login/creator', icon: 'creator' },
+                  { label: 'Brand', href: '/login/brand', icon: 'brand' },
                 ]}
               />
             </div>
@@ -325,10 +372,11 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           {audience === 'home' ? (
             <NavMenu
               label="Get access"
+              caption="Sign up as a"
               variant="pill"
               items={[
-                { label: "I'm a creator", href: '/signup/creator' },
-                { label: "I'm a brand", href: '/signup/brand' },
+                { label: 'Creator', href: '/signup/creator', icon: 'creator' },
+                { label: 'Brand', href: '/signup/brand', icon: 'brand' },
               ]}
             />
           ) : (

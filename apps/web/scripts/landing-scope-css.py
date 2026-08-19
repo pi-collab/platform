@@ -206,6 +206,12 @@ FOOTER = """
    Deliberately NOT scoped to .landing-page: the header sits outside it. The
    attribute is set only by that page's own effect and removed on unmount, so
    this cannot fire anywhere else. */
+/* Menu rows light up on hover AND on focus, so the keyboard path is not a
+   second-class one. Unscoped for the same reason as .mnav-wrap: the header
+   sits outside .landing-page. */
+.mnav-item { transition: background .14s ease; }
+.mnav-item:hover, .mnav-item:focus-visible { background: #F5F7FA; }
+
 .mnav-wrap { transition: opacity .28s ease, transform .28s ease; }
 html[data-lp-pinned] .mnav-wrap {
   opacity: 0;
