@@ -187,23 +187,38 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     (trimmedCode === '000000' || trimmedCode === '123456') &&
     isStagingEnv()
 
-  if (!isStagingBypass) {
-    const { data: verification } = await admin
-      .from('phone_verifications')
-      .select('id')
-      .eq('phone', phone)
-      .eq('code', trimmedCode)
-      .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+  // The OTP check and the stub lookup are independent — the second needs only
+  // the phone number — so they go out together rather than one after the other.
+  // Each round-trip here costs the full distance between the function and the
+  // database, and this action makes a lot of them.
+  //
+  // Reading stubs before the code is verified leaks nothing: the result is only
+  // ever used AFTER the check below returns successfully, and a wrong code
+  // still returns the same message it always did.
+  const [verifyResult, stubResult] = await Promise.all([
+    isStagingBypass
+      ? Promise.resolve({ data: null })
+      : admin
+          .from('phone_verifications')
+          .select('id')
+          .eq('phone', phone)
+          .eq('code', trimmedCode)
+          .eq('used', false)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+    admin.from('creators').select('id, user_id, full_name, is_vetted').eq('phone', phone),
+  ])
 
+  if (!isStagingBypass) {
+    const verification = verifyResult.data
     if (!verification) {
       return { status: 'error', message: 'Invalid or expired code. Try again.' }
     }
 
-    // Mark as used (prevent replay)
+    // Mark as used (prevent replay). Stays sequential and stays AFTER the
+    // check — it is a write, and it must not happen for a code that failed.
     await admin
       .from('phone_verifications')
       .update({ used: true })
@@ -212,10 +227,9 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
 
   // ── 2. Stub-match ──
 
-  const { data: stubs } = await admin
-    .from('creators')
-    .select('id, user_id, full_name, is_vetted')
-    .eq('phone', phone)
+  const { data: stubs } = stubResult as {
+    data: { id: string; user_id: string | null; is_vetted: boolean; full_name: string | null }[] | null
+  }
 
   const matchedStubs = stubs ?? []
   const unclaimed = matchedStubs.filter((s) => !s.user_id)

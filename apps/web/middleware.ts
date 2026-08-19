@@ -76,9 +76,24 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // This call is what actually refreshes the token.
-  // Do NOT remove it or short-circuit before it runs.
-  await supabase.auth.getUser()
+  // This call is what actually refreshes the token, and it is a network
+  // round-trip to Supabase on the critical path of the request.
+  //
+  // It is skipped for requests that carry NO Supabase auth cookie, because
+  // there is then no session to refresh — the call would go out, find nothing
+  // and come back. That is every anonymous visit to a marketing page, which is
+  // most of our traffic. Anyone signed in always carries the cookie, so their
+  // token still refreshes on every request exactly as before.
+  //
+  // Do NOT weaken this further: short-circuiting when the cookie IS present
+  // would let sessions expire mid-use.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'))
+
+  if (hasAuthCookie) {
+    await supabase.auth.getUser()
+  }
 
   // ── Storefront attribution (FUNCTIONAL cookie, not analytics) ──────────────
   // Records which creator's storefront a visitor arrived through, so a brand
@@ -114,7 +129,9 @@ function basicAuthChallenge() {
 
 export const config = {
   matcher: [
-    // Run on all routes except Next.js internals and static files
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Run on all routes except Next.js internals and static files.
+    // robots.txt, sitemap.xml and the icons are static and public: nothing in
+    // here applies to them, and matching them only adds work to a crawl.
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|icon.png|apple-icon.png|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml)$).*)',
   ],
 }

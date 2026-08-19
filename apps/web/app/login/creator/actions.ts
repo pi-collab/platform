@@ -88,22 +88,37 @@ export async function verifyAndSignIn(
     process.env.STAGING_OTP_BYPASS === 'true' &&
     process.env.VERCEL_ENV !== 'production'
 
-  if (!isStagingBypass) {
-    const { data: verification } = await admin
-      .from('phone_verifications')
-      .select('id')
-      .eq('phone', phone)
-      .eq('code', trimmedCode)
-      .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+  // The OTP check and the creator lookup are independent — the second needs
+  // only the phone — so they go out together. Each round-trip costs the full
+  // distance between the function and the database.
+  //
+  // Reading the creator before the code is verified leaks nothing: the result
+  // is only used AFTER the check below returns successfully, and a wrong code
+  // still gets the same message it always did.
+  const [verifyResult, creatorResult] = await Promise.all([
+    isStagingBypass
+      ? Promise.resolve({ data: null })
+      : admin
+          .from('phone_verifications')
+          .select('id')
+          .eq('phone', phone)
+          .eq('code', trimmedCode)
+          .eq('used', false)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+    admin.from('creators').select('id, user_id').eq('phone', phone),
+  ])
 
+  if (!isStagingBypass) {
+    const verification = verifyResult.data
     if (!verification) {
       return { status: 'error', message: 'Invalid or expired code. Try again.' }
     }
 
+    // Stays sequential and stays AFTER the check: it is a write, and it must
+    // not happen for a code that failed.
     await admin
       .from('phone_verifications')
       .update({ used: true })
@@ -111,10 +126,7 @@ export async function verifyAndSignIn(
   }
 
   // ── 2. Find creator by phone ──
-  const { data: creators } = await admin
-    .from('creators')
-    .select('id, user_id')
-    .eq('phone', phone)
+  const { data: creators } = creatorResult as { data: { id: string; user_id: string | null }[] | null }
 
   const matched = creators ?? []
 
