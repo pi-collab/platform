@@ -321,6 +321,12 @@
    the artwork runs up behind both. */
 .landing-page { margin-top: -26px; }
 
+/* The "How it works" heading sits at the top of a pinned section, where the
+   sticky header passes over it. The export puts it at clamp(30px,6vh,60px) from
+   the top of the pin, which on our page lands it under the capsule. Pushed down
+   so it clears the header with room to breathe. */
+.landing-page .hw-topbar { top: clamp(90px, 6vh + 60px, 120px); }
+
 /* The header steps aside while a pinned section owns the viewport.
    Deliberately NOT scoped to .landing-page: the header sits outside it. The
    attribute is set only by that page's own effect and removed on unmount, so
