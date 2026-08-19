@@ -458,7 +458,12 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
               expected to behave and the only obvious way out for a thumb. */}
           <div className="mnav-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />
         <div className="mnav-panel" role="dialog" aria-modal="true" aria-label="Menu">
-          {links.filter((l) => !l.anchorOnly || audience === 'home').map((l) => (
+          {/* Home first, then the two audience pages. "How it works" is dropped:
+              it is an anchor into whichever page you happen to be on, which
+              means nothing from a menu that also offers to move you between
+              pages. */}
+          <Link href="/" className="mnav-panel-row" onClick={() => setMenuOpen(false)}>Home</Link>
+          {links.filter((l) => !l.anchorOnly).map((l) => (
             <Link key={l.href} href={l.href} className="mnav-panel-row" onClick={() => setMenuOpen(false)}>
               {l.label}
             </Link>
@@ -508,16 +513,15 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             </>
           ) : (
             <>
-              {/* The audience is known here, so both go straight through. */}
+              {/* Log in is the drawer's button. The audience CTA is already on
+                  the bar outside it, so repeating it here would give the same
+                  action twice on one screen. */}
               <Link
                 href={audience === 'creator' ? '/login/creator' : nav.login.href}
-                className="mnav-panel-row"
+                className="mnav-panel-cta"
                 onClick={() => setMenuOpen(false)}
               >
                 {nav.login.label}
-              </Link>
-              <Link href={cta.href} className="mnav-panel-cta" onClick={() => setMenuOpen(false)}>
-                {cta.label}
               </Link>
             </>
           )}

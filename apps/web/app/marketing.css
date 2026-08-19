@@ -1009,10 +1009,16 @@
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
 }
 .mobile-bottom-cta .btn { width: 100%; }
+.mobile-bottom-cta__spacer { display: none; }
 
 @media (max-width: 768px) {
   .mobile-bottom-cta { display: block; }
-  body { padding-bottom: 72px; }
+  /* The bar is fixed, so it needs room reserved beneath the page — but that
+     allowance belongs to the bar, not to <body>. As a body rule it applied on
+     every page at this width, including ones with no bar, and left 72px of
+     dead scroll past the end of the footer. The component renders its own
+     spacer instead. */
+  .mobile-bottom-cta__spacer { display: block; height: 72px; }
 }
 
 /* ── FLOATING HERO CHIPS ──────────────────────────────────────── */

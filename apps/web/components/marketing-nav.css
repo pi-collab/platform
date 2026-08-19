@@ -50,8 +50,9 @@
     box-shadow: none !important;
     flex: 0 0 auto !important;
   }
-  .mnav-mark--dark { display: none !important; }
-  .mnav-mark--light { display: flex !important; }
+  /* No wordmark on the bar. It is in the footer, and on a 390px bar it was
+     competing with the two controls that actually do something. */
+  .mnav-mark--dark, .mnav-mark--light { display: none !important; }
   /* Burger and wordmark sit together on the left, with the CTA opposite —
      the export's arrangement. `order: -1` alone put the burger first but left
      space-between spreading the wordmark into the middle of the bar. */
@@ -84,7 +85,11 @@
     max-width: none;
     margin: 0;
     padding: 12px 10px 20px;
-    border-radius: 0 22px 22px 0;
+    /* Square, and joined to the bar it hangs from. A radius on the top edge
+       reads as a separate floating card rather than the header opening.
+       !important because the base .mnav-panel rule is declared LATER in this
+       file and would otherwise win on order despite the media query. */
+    border-radius: 0 !important;
     overflow-y: auto;
     animation: mnavSlide .22s cubic-bezier(.22, 1, .36, 1);
   }
