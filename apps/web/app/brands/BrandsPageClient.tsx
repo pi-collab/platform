@@ -505,12 +505,17 @@ export default function BrandsPageClient() {
             went with the cards: it points at testimonials that are not below
             it. */}
         <section id="creators" style={{padding: '0', marginTop: '0'}}>
-          <div style={{position: 'relative', minHeight: '640px'}}>
+          {/* No min-height. brands-page.css trims the image to 46vh precisely
+              because the export's 80vh/640px assumes three review cards filling
+              the lower half; pinning the wrapper to 640 while the image obeys
+              the stylesheet is what left a band of white under it. The wrapper
+              hugs the image, so the section is exactly as tall as its picture. */}
+          <div style={{position: 'relative'}}>
             <img
               id="brandsWhySwitchImg"
               src="/brands/showcase-c.webp"
               alt=""
-              style={{width: '100%', height: '80vh', minHeight: '640px', display: 'block', objectFit: 'cover', objectPosition: 'top', opacity: 0.5}}
+              style={{width: '100%', display: 'block', objectFit: 'cover', objectPosition: 'top', opacity: 0.5}}
               decoding="async"
               loading="lazy"
             />
