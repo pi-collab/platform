@@ -285,6 +285,20 @@ html = html.replace(
     "background:var(--ink);border:none;color:#fff;")
 step("Book demo pill blackened", before, html.count("background:#fff;"))
 
+# ── 4m. The hero background has to cover, not sit at natural size. ───────
+# The export centres #bgImg at its intrinsic 900x507 with object-fit:none.
+# Inside the export's own 390px device-preview frame that looks full-bleed, but
+# on a real phone the stage is a full viewport tall, so a 507px-tall image
+# leaves white bands above and below it. The desktop layout already covers;
+# this makes the mobile one behave the same.
+before = html.count("object-fit:none")
+html = html.replace(
+    "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"
+    "width:auto;height:auto;max-width:none;object-fit:none;will-change:opacity;",
+    "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"
+    "object-position:center;will-change:opacity;")
+step("hero background set to cover", before, html.count("object-fit:none"))
+
 # ── NOTE on the closing converge section ────────────────────────────────
 # The section this export ships (a circle that fades up, no pin, no bars) is
 # NOT what the page uses. LandingMobileClient rebuilds it on the desktop's

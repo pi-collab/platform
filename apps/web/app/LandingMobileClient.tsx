@@ -203,7 +203,7 @@ export default function LandingMobileClient() {
         {/* SCROLL EXPAND MASCOT */}
         <section className="sr sr" id="expandSection-m" style={{position: 'relative', height: '130vh'}}>
           <div id="expandPin-m" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
-            <img id="bgImg-m" src="/landing-mobile/942fb4b1.webp" alt="" style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'auto', height: 'auto', maxWidth: 'none', objectFit: 'none', willChange: 'opacity'}} width={900} height={507} decoding="async" loading="lazy" />
+            <img id="bgImg-m" src="/landing-mobile/942fb4b1.webp" alt="" style={{position: 'absolute', inset: '0', width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', willChange: 'opacity'}} width={900} height={507} decoding="async" loading="lazy" />
             <img id="expandImg-m" src="/landing-mobile/01531bb2.webp" alt="guapd" style={{position: 'relative', zIndex: '1', borderRadius: '24px', boxShadow: '0 30px 70px -20px rgba(20,22,10,.35)', objectFit: 'cover', willChange: 'width,height'}} width={900} height={900} decoding="async" loading="lazy" />
           </div>
         </section>
