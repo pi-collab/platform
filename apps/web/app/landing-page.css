@@ -345,6 +345,17 @@
   transition: transform .16s ease, box-shadow .16s ease;
 }
 .landing-page .lp-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -12px rgba(40,45,25,.5); }
+
+/* The converge section's CTA is a <button> wrapping the export's own pill, so
+   the button itself must contribute nothing — otherwise the browser draws its
+   default grey box around the pill. */
+.landing-page .cv-cta {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
 @media (prefers-reduced-motion: reduce) {
   .landing-page .lp-btn { transition: none; }
   .landing-page .lp-btn:hover { transform: none; }

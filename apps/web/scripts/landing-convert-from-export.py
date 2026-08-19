@@ -161,7 +161,10 @@ step("FAQ answer width uncapped", before, html.count("max-width:520px"))
 # hold, and the break is made explicit rather than left to chance.
 before = html.count("width:min(46%,520px)")
 html = html.replace("width:min(46%,520px)", "width:min(58%,700px)")
-html = html.replace("The operating system for <span", "The operating system for<br /><span")
+# The export breaks after "system", not after "for" — "The operating system /
+# for creator deals." Breaking after "for" leaves a preposition stranded at the
+# end of the line, which is what the design avoids.
+html = html.replace("The operating system for <span", "The operating system<br />for <span")
 step("headline column widened", before, html.count("width:min(46%,520px)"))
 
 # ── 1h. The converge section's call to action is not a control. ───────────
@@ -182,6 +185,16 @@ if before:
         if depth == 0:
             break
     html = html[:k - len('</div>')] + '</button>' + html[k:]
+    # Strip the browser's own button chrome — it was drawing a grey box around
+    # the export's pill — and make the pill neon, like every other Book demo on
+    # the site. The export draws this one white-on-outline, which reads as a
+    # secondary action when it is the page's closing call to action.
+    html = html.replace(
+        'background:#FFFFFF;border:1px solid #12151C;color:#12151C;',
+        'background:var(--neon);border:none;color:var(--ink);', 1)
+    html = html.replace(
+        '<button type="button" id="cvBtn"',
+        '<button type="button" id="cvBtn" class="cv-cta"', 1)
 step("end-of-page CTA made clickable", before, html.count('<button type="button" id="cvBtn"'))
 
 # ── 2. x-import → a real element. ──────────────────────────────────────────
