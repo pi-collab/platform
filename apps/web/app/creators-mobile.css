@@ -616,6 +616,19 @@
   font-family: var(--font-ui);
 }
 
+/* The review carousel starts flush against the left edge, not scrolled past its
+   own padding.
+
+   .snap-track has 24px of horizontal padding and its cards carry
+   scroll-snap-align: start. Snapping ignores the padding, so on load the browser
+   settled at scrollLeft 24 and the first card sat at x=0 while every later card
+   kept its inset — the first review looked broken and the others did not.
+   scroll-padding tells the snap where the content really begins. */
+.creators-mobile .snap-track {
+  scroll-padding-left: 24px;
+  scroll-padding-right: 24px;
+}
+
 /* Never scrolls sideways. `clip` rather than `hidden`, which would create a
    scroll container and break any sticky inside it. */
 .creators-mobile { overflow-x: clip; }

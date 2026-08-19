@@ -3,7 +3,6 @@ import MarketingNav from '@/components/MarketingNav'
 import CreatorsPageClient from './CreatorsPageClient'
 import CreatorsMobileClient from './CreatorsMobileClient'
 import Footer from '@/components/Footer'
-import MobileBottomCTA from '@/components/MobileBottomCTA'
 import '../creators-page.css'
 import '../creators-mobile.css'
 
@@ -45,7 +44,6 @@ export default function CreatorsPage() {
         <CreatorsMobileClient />
       </main>
       <Footer />
-      <MobileBottomCTA ctaText="Join as creator" ctaHref="/signup/creator" />
     </>
   )
 }

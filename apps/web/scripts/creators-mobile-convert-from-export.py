@@ -118,6 +118,59 @@ for start, end, _needle in sorted(spans, reverse=True):
     html = html[:start] + html[end:]
 step("flagged-off sections removed", len(spans), 0)
 
+# ── 4b. The export's own footer. ───────────────────────────────────────────
+# The page renders the site <Footer>, the one ported from the footer design.
+# Leaving the export's would put two footers on every phone.
+n_foot = html.count('<footer')
+i = html.find('<footer')
+if i != -1:
+    depth, k = 0, i
+    while True:
+        m = re.compile(r'<(/?)footer\b[^>]*>').search(html, k)
+        depth += -1 if m.group(1) else 1
+        k = m.end()
+        if depth == 0:
+            break
+    html = html[:i] + html[k:]
+step("export footer removed", n_foot, html.count('<footer'))
+
+# ── 4c. Reviews match the desktop page. ────────────────────────────────────
+# Same three, same two handles, same "Creator" label — the export ships three
+# invented personas, and the two pages would otherwise quote different people
+# saying different things about the same product.
+REVIEWS = [
+    ('Finance creator', '@aisha.fin', 'Creator', '@uvichar_'),
+    ('Tech creator', '@rohan.tech', 'Creator', '@utkarsh_verma_'),
+    ('Career creator', '@priya.career', 'Creator', '@uvichar_'),
+]
+before = sum(html.count(old_h) for _, old_h, _, _ in REVIEWS)
+for old_role, old_handle, new_role, new_handle in REVIEWS:
+    html = html.replace(f'>{old_role}<', f'>{new_role}<')
+    html = html.replace(f'>{old_handle}<', f'>{new_handle}<')
+step("reviews matched to desktop", before, sum(html.count(h) for _, h, _, _ in REVIEWS))
+
+# ── 4d. Ticker chips set as eyebrows. ──────────────────────────────────────
+# Same treatment as the desktop page: uppercase, small, letter-spaced, matching
+# .t-meta in the design system rather than sentence-case body text.
+before = html.count("font-size:11.5px;color:var(--ink-soft)")
+html = html.replace(
+    "font-family:var(--font-ui);font-size:11.5px;color:var(--ink-soft);",
+    "font-family:var(--font-ui);font-size:9.5px;font-weight:500;letter-spacing:.14em;"
+    "text-transform:uppercase;color:var(--ink-soft);")
+step("ticker chips → eyebrow type", before, html.count("font-size:11.5px;color:var(--ink-soft)"))
+
+# ── 4e. The reviews heading sits closer to its cards. ──────────────────────
+# 20px above the heading and 32px below it pushed the section down far enough
+# that the heading and the first card did not read as one block.
+# The rule has to run on the RAW markup: at this point class= has not yet become
+# className= and the style is still a CSS string.
+before = html.count("line-height:1.2;font-size:23px;margin:20px 0 0;")
+html = html.replace("line-height:1.2;font-size:23px;margin:20px 0 0;",
+                    "line-height:1.2;font-size:23px;margin:6px 0 0;")
+html = html.replace('class="snap-track" style="gap:20px;padding:0 24px;margin-top:32px;"',
+                    'class="snap-track" style="gap:20px;padding:0 24px;margin-top:20px;"')
+step("reviews heading raised", before, html.count("line-height:1.2;font-size:23px;margin:20px 0 0;"))
+
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
 for uid, out in ASSETS.items():

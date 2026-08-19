@@ -93,18 +93,18 @@ export default function CreatorsMobileClient() {
         <section className="hr" style={{padding: '24px 0'}}>
           <div style={{position: 'relative', overflow: 'hidden', WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)'}}>
             <div style={{display: 'flex', width: 'max-content', gap: '10px', animation: 'mqMove 26s linear infinite', paddingRight: '10px'}}>
-              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
-              <span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
-              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#8FD4A8'}}></span>on-time payouts</span>
-              <span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
-              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#E8B36B'}}></span>full paper trail</span>
-              <span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
-              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#C9A0E0'}}></span>no chasing brands</span>
-              <span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
-              <span aria-hidden="true" style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
-              <span aria-hidden="true" style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
-              <span aria-hidden="true" style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#8FD4A8'}}></span>on-time payouts</span>
-              <span aria-hidden="true" style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-soft)'}}>·</span>
+              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
+              <span style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
+              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#8FD4A8'}}></span>on-time payouts</span>
+              <span style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
+              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#E8B36B'}}></span>full paper trail</span>
+              <span style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
+              <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#C9A0E0'}}></span>no chasing brands</span>
+              <span style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
+              <span aria-hidden="true" style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
+              <span aria-hidden="true" style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
+              <span aria-hidden="true" style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#8FD4A8'}}></span>on-time payouts</span>
+              <span aria-hidden="true" style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
             </div>
           </div>
         </section>
@@ -158,7 +158,7 @@ export default function CreatorsMobileClient() {
         {/* EVERYTHING YOU NEED */}
         <section className="hr" style={{padding: '56px 24px', background: 'var(--ink)', color: '#fff'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Everything you need</span>
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '20px 0 0', color: '#fff'}}>Everything you <span className="opit" style={{color: 'var(--neon)'}}>need</span></h2>
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: '#fff'}}>Everything you <span className="opit" style={{color: 'var(--neon)'}}>need</span></h2>
           <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '32px'}}>
             <div style={{padding: '18px', border: '1px solid rgba(255,255,255,.14)', borderRadius: '14px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(232,255,102,.12)', marginBottom: '14px'}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--neon)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg></span><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px'}}>Deal inbox</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: '#9EA096', marginTop: '5px'}}>Structured, easy to answer</div></div>
             <div style={{padding: '18px', border: '1px solid rgba(255,255,255,.14)', borderRadius: '14px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(232,255,102,.12)', marginBottom: '14px'}}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--neon)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M7 11V7a5 5 0 0 1 10 0v4" /><rect x="3" y="11" width="18" height="10" rx="2" /><path d="m9 16 2 2 4-4" /></svg></span><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px'}}>Accept or counter</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: '#9EA096', marginTop: '5px'}}>One tap, or with a reason</div></div>
@@ -170,7 +170,7 @@ export default function CreatorsMobileClient() {
         {/* BUILT FOR TRUST */}
         <section id="privacySec" className="hr" style={{padding: '56px 24px'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Built for trust</span>
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '20px 0 0', color: 'var(--ink)'}}>Your deals, <span className="opit">protected.</span></h2>
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: 'var(--ink)'}}>Your deals, <span className="opit">protected.</span></h2>
           <p style={{fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.6', color: 'var(--ink-2)', margin: '14px 0 0'}}>Every collaboration on guapd is backed by a written contract and a payment that's tracked from day one.</p>
           <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '26px'}}>
             <div style={{display: 'flex', gap: '16px', alignItems: 'center', padding: '20px', border: '1px solid var(--hairline)', borderRadius: '16px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '12px', background: '#E9F7F0', flexShrink: '0'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="1.6"><path d="M12 2 4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6z" /></svg></span><div style={{flex: '1'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>Written contracts, every time</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--ink-2)', marginTop: '3px'}}>Terms locked before work starts</div></div></div>
@@ -196,16 +196,16 @@ export default function CreatorsMobileClient() {
         <section id="creators" className="hr" style={{padding: '36px 0'}}>
           <div style={{padding: '0 24px'}}>
             <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Testimonials</span>
-            <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '20px 0 0', color: 'var(--ink)'}}>Why creators are making the <span className="opit">switch.</span></h2>
+            <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: 'var(--ink)'}}>Why creators are making the <span className="opit">switch.</span></h2>
           </div>
-          <div className="snap-track" style={{gap: '20px', padding: '0 24px', marginTop: '32px'}}>
+          <div className="snap-track" style={{gap: '20px', padding: '0 24px', marginTop: '20px'}}>
             <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
               <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '36px', color: 'var(--ink-faint)', lineHeight: '1'}}>“</span>
               <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>Written terms, finally</h3>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>I have had brands forget what we agreed verbally three times in one campaign.</p>
               <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Finance creator</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@aisha.fin</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Creator</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@uvichar_</span>
               </div>
             </div>
             <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
@@ -213,8 +213,8 @@ export default function CreatorsMobileClient() {
               <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>No more chasing payment</h3>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>If I could see exactly where a payment is, I would sleep better.</p>
               <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Tech creator</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@rohan.tech</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Creator</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@utkarsh_verma_</span>
               </div>
             </div>
             <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
@@ -222,39 +222,14 @@ export default function CreatorsMobileClient() {
               <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>An actual inbox for deals</h3>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>I miss offers because they get buried in DMs.</p>
               <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Career creator</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@priya.career</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Creator</span>
+                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>@uvichar_</span>
               </div>
             </div>
           </div>
         </section>
 
-        <footer style={{background: 'var(--ink)', color: '#EDEDE7', padding: '36px 24px 26px'}}>
-          <img src="/guapd-wordmark.svg" alt="guapd" style={{height: '20px', width: 'auto', display: 'block'}} decoding="async" loading="lazy" />
-          <p style={{margin: '12px 0 0', fontSize: '13px', lineHeight: '1.6', color: '#9EA096'}}>Match, deal and grow, all in one calm, trusted place.</p>
-          <a href="/signup/creator" style={{display: 'inline-flex', alignItems: 'center', gap: '7px', marginTop: '18px', background: 'var(--lime)', color: 'var(--lime-950)', fontWeight: '700', fontSize: '13px', padding: '12px 22px', borderRadius: '999px', textDecoration: 'none'}}>Join as a creator <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '22px', marginTop: '28px'}}>
-            <div>
-              <div className="t-meta" style={{fontSize: '10.5px', letterSpacing: '.08em', color: '#6E7066'}}>Product</div>
-              <div style={{display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '12px'}}>
-                <a href="/creators" style={{fontSize: '12.5px', color: '#9EA096', textDecoration: 'none'}}>For creators</a>
-                <a href="/brands" style={{fontSize: '12.5px', color: '#9EA096', textDecoration: 'none'}}>For brands</a>
-          
-              </div>
-            </div>
-            <div>
-              <div className="t-meta" style={{fontSize: '10.5px', letterSpacing: '.08em', color: '#6E7066'}}>Company</div>
-              <div style={{display: 'flex', flexDirection: 'column', gap: '11px', marginTop: '12px'}}>
-                <a href="#" style={{fontSize: '12.5px', color: '#9EA096', textDecoration: 'none'}}>About us</a>
-                <a href="#" style={{fontSize: '12.5px', color: '#9EA096', textDecoration: 'none'}}>Careers</a>
-                <a href="#" style={{fontSize: '12.5px', color: '#9EA096', textDecoration: 'none'}}>Contact</a>
-              </div>
-            </div>
-          </div>
-          <div style={{borderTop: '1px solid rgba(255,255,255,.12)', marginTop: '26px', paddingTop: '18px'}}>
-            <div style={{fontSize: '11.5px', color: '#7E8076'}}>© 2026 GUAPD Technologies. All rights reserved.</div>
-          </div>
-        </footer>
+  
 
       </div>
       </div>
