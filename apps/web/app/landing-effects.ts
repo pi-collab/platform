@@ -87,6 +87,7 @@ export function initLandingEffects(): () => void {
         pin.style.width = r.width + 'px';
         pin.style.left = r.left + 'px';
       } else {
+        document.documentElement.removeAttribute('data-lp-pinned');
         pin.style.position = 'absolute';
         pin.style.width = '100%';
         pin.style.left = '0px';
@@ -149,11 +150,18 @@ export function initLandingEffects(): () => void {
       if (bg) bg.style.opacity = String(1 - progress);
       // sticky fails inside this page's overflow wrapper — pin with fixed instead
       if (rect.top <= 0 && rect.bottom >= window.innerHeight) {
+        // While this section owns the whole viewport its card grows to fill it,
+        // and the sticky header sits on top of the card the entire way through.
+        // The export never hits this because its own nav is inside an overflow
+        // wrapper and stops sticking; ours is a real sticky header, so it is
+        // faded out for the duration and comes back after.
+        document.documentElement.setAttribute('data-lp-pinned', '');
         pin.style.position = 'fixed';
         pin.style.top = '0px';
         pin.style.width = rect.width + 'px';
         pin.style.left = rect.left + 'px';
       } else {
+        document.documentElement.removeAttribute('data-lp-pinned');
         pin.style.position = 'absolute';
         pin.style.width = '100%';
         pin.style.left = '0px';
@@ -429,6 +437,7 @@ export function initLandingEffects(): () => void {
 
   // ── componentWillUnmount ─────────────────────────────────────────────────
   return () => {
+    document.documentElement.removeAttribute('data-lp-pinned');
     if (state._cvCleanup) state._cvCleanup();
     if (state._onStackScroll) { window.removeEventListener('scroll', state._onStackScroll); window.removeEventListener('resize', state._onStackScroll); }
     if (state._onScroll) { window.removeEventListener('scroll', state._onScroll); window.removeEventListener('resize', state._onScroll); }

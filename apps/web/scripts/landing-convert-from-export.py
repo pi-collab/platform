@@ -424,6 +424,12 @@ parts = re.split(r'(\{/\*.*?\*/\})', html, flags=re.S)
 before = sum(p.count('\u2014') + p.count('&mdash;') for p in parts[::2])
 parts[::2] = [_dedash(p) for p in parts[::2]]
 html = ''.join(parts)
+
+# One dash was doing real work and a comma broke the sentence. In
+# "in one shared space \u2014 offers, approvals, deliverables and payments" the dash
+# introduces the list; swapping it for a comma made "space" read as the first
+# item of that list. A colon does the job the dash was doing.
+html = html.replace('in one shared space, offers,', 'in one shared space: offers,')
 step("em dashes in copy → commas", before, sum(p.count('\u2014') for p in html.split('{/*')[:1]))
 
 # ── 10. Void elements must be self-closed. ─────────────────────────────────

@@ -131,7 +131,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
   }
 
   return (
-    <div style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0', background: 'transparent' }}>
+    <div className="mnav-wrap" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0', background: 'transparent' }}>
       <style>{`
         @media (max-width: 780px) {
           .mnav-links, .mnav-rule, .mnav-login { display: none !important; }
@@ -187,7 +187,11 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             }}
           >
             {links.map((link) => {
-              const current = link.href === currentHref
+              // On the landing page neither audience link is "current", but the
+              // page does own the #how anchor — the export marks it with the
+              // neon dot, and without it the header has no current-section
+              // marker at all there.
+              const current = audience === 'home' ? link.anchorOnly : link.href === currentHref
               return (
                 <Link
                   key={link.href}

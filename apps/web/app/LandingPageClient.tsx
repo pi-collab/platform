@@ -74,7 +74,7 @@ export default function LandingPageClient() {
           <div style={{position: 'absolute', zIndex: '2', left: '14%', top: 'calc(8% + 105px)', width: 'min(58%,700px)', minWidth: '200px', textAlign: 'left'}}>
             <div aria-hidden="true" style={{position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: '680px', height: '680px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,0.85) 0%,rgba(255,255,255,0) 70%)', zIndex: '-1', pointerEvents: 'none'}}></div>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(44px,3.2vw,56px)', margin: '0', color: '#12151C'}}>The operating system<br />for <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creator deals.</span></h2>
-            <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.55', color: '#565C68', margin: '22px 0 0', maxWidth: '44ch'}}>Brands and creators, in one shared space, offers, approvals, deliverables and payments, start to finish.</p>
+            <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.55', color: '#565C68', margin: '22px 0 0', maxWidth: '44ch'}}>Brands and creators, in one shared space: offers, approvals, deliverables and payments, start to finish.</p>
             <button type="button" style={{marginTop: '28px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '12px 24px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}}>Book demo</button>
           </div>
         </section>
