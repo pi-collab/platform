@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
 import BookDemoModal from '@/components/BookDemoModal'
+import '@/components/marketing-nav.css'
 import Wordmark from '@/components/Wordmark'
 
 /**
@@ -104,12 +105,13 @@ const ICONS = {
  * makes the menu impossible to reach.
  */
 function NavMenu({
-  label, caption, items, variant,
+  label, caption, items, variant, className,
 }: {
   label: string
   caption: string
   items: { label: string; href: string; icon: keyof typeof ICONS }[]
   variant: 'plain' | 'pill'
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
@@ -139,6 +141,7 @@ function NavMenu({
   return (
     <div
       ref={wrap}
+      className={className}
       style={{ position: 'relative', flexShrink: 0 }}
       onMouseEnter={() => { cancelClose(); setOpen(true) }}
       onMouseLeave={scheduleClose}
@@ -208,6 +211,30 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
 
   const [split, setSplit] = useState(false)
 
+  // The mobile panel. Below 780px the links, the rule and Log in are all hidden,
+  // which left the header with a wordmark and a CTA and no way to reach any
+  // other page — this is that way.
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [expanded, setExpanded] = useState<'login' | 'access' | null>(null)
+
+  // Close on route change is handled by unmount; this closes on resize back to
+  // desktop, where the panel is hidden but would still be holding the scroll
+  // lock and would re-appear on the next narrow resize.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onResize = () => { if (window.innerWidth > 780) setMenuOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('resize', onResize)
+    document.addEventListener('keydown', onKey)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('resize', onResize)
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prev
+    }
+  }, [menuOpen])
+
   useEffect(() => {
     // Split once the first section is behind you. Measured rather than
     // hardcoded, because the hero is a different height on each page and at
@@ -253,11 +280,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
 
   return (
     <div className="mnav-wrap" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0', background: 'transparent' }}>
-      <style>{`
-        @media (max-width: 780px) {
-          .mnav-links, .mnav-rule, .mnav-login { display: none !important; }
-        }
-      `}</style>
+
 
       <nav
         aria-label="Main"
@@ -339,6 +362,23 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           </div>
         </div>
 
+        {/* Hamburger. Only below 780px, where the links are hidden. */}
+        <button
+          type="button"
+          className="mnav-burger"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          onClick={() => { setMenuOpen((v) => !v); setExpanded(null) }}
+        >
+          {menuOpen ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" /></svg>
+          )}
+        </button>
+
         {/* Log in + the audience CTA */}
         <div style={{ ...group, paddingLeft: split ? '24px' : '16px', paddingRight: '8px', gap: '16px' }}>
           {audience === 'home' ? (
@@ -373,6 +413,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             <NavMenu
               label="Get access"
               caption="Sign up as a"
+              className="mnav-cta"
               variant="pill"
               items={[
                 { label: 'Creator', href: '/signup/creator', icon: 'creator' },
@@ -382,6 +423,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           ) : (
           <Link
             href={cta.href}
+            className="mnav-cta"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -402,6 +444,76 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           )}
         </div>
       </nav>
+
+      {/* The mobile panel. Sits under the capsule, in the same sticky wrapper, so
+          it travels with the header rather than being pinned to the document. */}
+      {menuOpen && (
+        <div className="mnav-panel" role="dialog" aria-modal="true" aria-label="Menu">
+          {links.filter((l) => !l.anchorOnly || audience === 'home').map((l) => (
+            <Link key={l.href} href={l.href} className="mnav-panel-row" onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </Link>
+          ))}
+
+          {audience === 'home' ? (
+            <>
+              <button
+                type="button"
+                className="mnav-panel-row mnav-panel-toggle"
+                aria-expanded={expanded === 'login'}
+                onClick={() => setExpanded(expanded === 'login' ? null : 'login')}
+              >
+                {nav.login.label}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                     style={{ transform: expanded === 'login' ? 'rotate(180deg)' : 'none', transition: `transform .2s ${EASE}` }}>
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              {expanded === 'login' && (
+                <div className="mnav-panel-sub">
+                  <Link href="/login/creator" className="mnav-panel-subrow" onClick={() => setMenuOpen(false)}>Creator</Link>
+                  <Link href="/login/brand" className="mnav-panel-subrow" onClick={() => setMenuOpen(false)}>Brand</Link>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="mnav-panel-cta mnav-panel-toggle"
+                aria-expanded={expanded === 'access'}
+                onClick={() => setExpanded(expanded === 'access' ? null : 'access')}
+              >
+                Get access
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+                     strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                     style={{ transform: expanded === 'access' ? 'rotate(180deg)' : 'none', transition: `transform .2s ${EASE}` }}>
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              {expanded === 'access' && (
+                <div className="mnav-panel-sub">
+                  <Link href="/signup/creator" className="mnav-panel-subrow" onClick={() => setMenuOpen(false)}>I&rsquo;m a creator</Link>
+                  <Link href="/signup/brand" className="mnav-panel-subrow" onClick={() => setMenuOpen(false)}>I&rsquo;m a brand</Link>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* The audience is known here, so both go straight through. */}
+              <Link
+                href={audience === 'creator' ? '/login/creator' : nav.login.href}
+                className="mnav-panel-row"
+                onClick={() => setMenuOpen(false)}
+              >
+                {nav.login.label}
+              </Link>
+              <Link href={cta.href} className="mnav-panel-cta" onClick={() => setMenuOpen(false)}>
+                {cta.label}
+              </Link>
+            </>
+          )}
+        </div>
+      )}
 
       {audience === 'home' && <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />}
     </div>

@@ -359,7 +359,9 @@ export const footer = {
   // Social accounts we actually have. The export draws four; the rest go in as
   // they exist, rather than shipping "#" links that go nowhere.
   social: [
-    { label: 'Instagram', href: 'https://www.instagram.com/guapd.it/' },
+    { label: 'Instagram', href: 'https://www.instagram.com/guapd.it/', icon: 'instagram' as const },
+    { label: 'X', href: 'https://x.com/guapd_it', icon: 'x' as const },
+    { label: 'YouTube', href: 'https://www.youtube.com/@Guapd', icon: 'youtube' as const },
   ],
 
   columns: [
