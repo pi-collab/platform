@@ -447,6 +447,22 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             {cta.label}
           </Link>
           )}
+
+          {/* The landing page's CTA is a dropdown, and a dropdown is hidden on a
+              phone bar because it would open over the drawer offering the same
+              two choices. That left the landing header with nothing on the
+              right, while /brands and /creators both carry a CTA there. This is
+              the phone-only stand-in: Book demo, the landing page's own call to
+              action, as a plain button that opens the same modal. */}
+          {audience === 'home' && (
+            <button
+              type="button"
+              className="mnav-cta-home"
+              onClick={() => setDemoOpen(true)}
+            >
+              Book demo
+            </button>
+          )}
         </div>
       </nav>
 

@@ -31,6 +31,10 @@
 
    820px matches where the creators page swaps to its mobile layout, so the
    header and the page change together rather than 40px apart. */
+/* Phone-only CTA for the landing bar. Hidden by default so it never appears
+   beside the desktop nav, which has its own Get access dropdown. */
+.mnav-cta-home { display: none; }
+
 @media (max-width: 820px) {
   .mnav-wrap { padding: 0 !important; }
   .mnav-wrap nav {
@@ -122,6 +126,23 @@
   /* div.mnav-cta is the landing page's dropdown; a[href] is the direct link on
      /brands and /creators. Only the link belongs on a phone bar. */
   div.mnav-cta { display: none !important; }
+  /* …which leaves the landing bar with no CTA, so this takes its place. */
+  button.mnav-cta-home {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 15px;
+    border: none;
+    border-radius: 999px;
+    background: #E8FF66;
+    color: #181C24;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
   .mnav-wrap nav .mnav-cta[href] {
     height: 34px !important;
     padding: 0 15px !important;

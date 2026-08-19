@@ -40,56 +40,7 @@ export default function LandingMobileClient() {
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
-    const stop = initLandingEffects(root, '-m')
-
-    // The closing section has its OWN choreography on mobile, and the desktop
-    // driver in landing-effects cannot run it: that one needs #cvPin and a pair
-    // of converging bars, neither of which exists in this export. It bails on
-    // the missing pin — which is why the neon circle stayed at scale(0) and the
-    // four content elements sat at opacity 0, so the section read as missing.
-    //
-    // Transcribed from _initConverge in the export's own script, values intact:
-    // the circle blows up to 30x with a quarter turn while the words fade up.
-    const sec = root.querySelector<HTMLElement>('#cvSec-m')
-    const circle = root.querySelector<HTMLElement>('#cvCircle-m')
-    const content = ['cvEyebrow-m', 'cvHead-m', 'cvSub-m', 'cvBtn-m']
-      .map((id) => root.querySelector<HTMLElement>('#' + id))
-
-    const play = () => {
-      if (circle) {
-        circle.style.transition = 'transform 1.1s cubic-bezier(.16,1,.3,1)'
-        requestAnimationFrame(() => {
-          circle.style.transform = 'translate(-50%,-50%) scale(30) rotate(90deg)'
-        })
-      }
-      content.forEach((el) => {
-        if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)' }
-      })
-    }
-
-    // Reduced motion still has to SHOW the section: the elements start hidden
-    // in the markup, so doing nothing would leave it permanently blank.
-    if (typeof IntersectionObserver === 'undefined' ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      content.forEach((el) => {
-        if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)' }
-      })
-      if (circle) circle.style.transform = 'translate(-50%,-50%) scale(30)'
-      return stop
-    }
-
-    let cvObserver: IntersectionObserver | undefined
-    if (sec && circle) {
-      cvObserver = new IntersectionObserver(
-        (entries) => entries.forEach((e) => {
-          if (e.isIntersecting) { play(); cvObserver?.disconnect() }
-        }),
-        { threshold: 0.4 },
-      )
-      cvObserver.observe(sec)
-    }
-
-    return () => { cvObserver?.disconnect(); stop() }
+    return initLandingEffects(root, '-m')
   }, [])
 
   useEffect(() => {
@@ -123,7 +74,8 @@ export default function LandingMobileClient() {
           }
         })
       },
-      { rootMargin: '0px 0px -12% 0px', threshold: 0.05 },
+      // Matches the export's own observer: threshold .15, rootMargin -8%.
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.15 },
     )
     nodes.forEach((n) => io.observe(n))
     return () => { io.disconnect(); stopScroll() }
@@ -144,7 +96,7 @@ export default function LandingMobileClient() {
         {/* HERO */}
         <section className="sr hr" style={{padding: '56px 24px 32px', textAlign: 'center'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}><span style={{width: '5px', height: '5px', borderRadius: '50%', background: 'var(--ink)', flexShrink: '0'}}></span>Brands &amp; creators</span>
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '30px', lineHeight: '1.35', margin: '24px 0 0', color: 'var(--ink)'}}>Where collaborations <span className="opit">get guapd.</span></h2>
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '30px', lineHeight: '1.35', margin: '24px 0 0', color: 'var(--ink)'}}>Where brands and creators get <span className="opit">guapd.</span></h2>
           <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '24px auto 0', maxWidth: '30ch'}}>No more DMs, spreadsheets or awkward payment follow-ups. Just deals that move.</p>
         </section>
         <div style={{padding: '0 24px', marginTop: '24px', marginBottom: '56px'}}><img src="/landing-mobile/93c762d7.webp" alt="guapd total earnings, my deals, and upcoming payment" style={{width: '100%', aspectRatio: '1060/1484', objectFit: 'contain', display: 'block', borderRadius: '28px'}} decoding="async" loading="lazy" /></div>
@@ -289,14 +241,30 @@ export default function LandingMobileClient() {
         </section>
 
         {/* CONVERGE, two sides meet */}
-        <section className="sr sr" id="cvSec-m" style={{position: 'relative', width: '100%', minHeight: '70vh', padding: '64px 24px', overflow: 'hidden', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-          <div id="cvCircle-m" style={{position: 'absolute', left: '50%', top: '50%', width: '90px', height: '90px', borderRadius: '50%', background: 'var(--neon)', marginLeft: '-45px', marginTop: '-45px', transform: 'scale(0)', transition: 'transform .7s cubic-bezier(.16,1,.3,1)'}}></div>
-          <div style={{position: 'relative', zIndex: '2', maxWidth: '300px', textAlign: 'center'}}>
-            <div id="cvEyebrow-m" style={{color: 'var(--ink)', fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '600', letterSpacing: '.12em', textTransform: 'uppercase', opacity: '0', transition: 'opacity .5s ease .15s,transform .5s ease .15s', transform: 'translateY(12px)'}}>Two sides</div>
-            <h2 id="cvHead-m" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.15', fontSize: '26px', margin: '14px 0 0', color: 'var(--ink)', opacity: '0', transition: 'opacity .5s ease .22s,transform .5s ease .22s', transform: 'translateY(12px)'}}>Where collaborations <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>get guapd.</span></h2>
-            <p id="cvSub-m" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0', transition: 'opacity .5s ease .29s,transform .5s ease .29s', transform: 'translateY(12px)'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
-            <div id="cvBtn-m" style={{marginTop: '22px', display: 'inline-flex', opacity: '0', transition: 'opacity .5s ease .36s,transform .5s ease .36s', transform: 'translateY(12px)'}}>
-              <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#fff', borderRadius: '999px', padding: '12px 22px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px'}}>Book demo</span>
+        {/* The closing converge, structured exactly like the desktop one so the
+            shared scroll-driven routine in landing-effects can run it: a tall
+            section, a pinned viewport-height stage, two bars that slide
+            together, and a circle that blows up behind the words. The mobile
+            export shipped a simpler fade-in version with no pin and no bars,
+            which is why this markup is rebuilt rather than converted. */}
+        <section id="cvSec-m" style={{position: 'relative', width: '100%', height: '200vh', overflow: 'hidden', background: '#fff'}}>
+          <div id="cvPin-m" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+            <div style={{position: 'absolute', inset: '0'}}>
+              <div id="cvBarLeft-m" style={{position: 'absolute', left: '0', top: '50%', width: '50vw', height: '4px', borderRadius: '2px', background: '#E8FF66', transformOrigin: 'left center'}}></div>
+              <div id="cvBarRight-m" style={{position: 'absolute', right: '0', top: '50%', width: '50vw', height: '4px', borderRadius: '2px', background: '#E8FF66', transformOrigin: 'right center'}}></div>
+              <div id="cvCircle-m" style={{position: 'absolute', left: '50%', top: '50%', width: '90px', height: '90px', borderRadius: '50%', background: '#E8FF66', marginLeft: '-45px', marginTop: '-45px'}}></div>
+            </div>
+            <div style={{position: 'absolute', inset: '0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+              {/* No CSS transitions on these four: the routine writes opacity and
+                  transform on every scroll frame, and a transition would lag it. */}
+              <div style={{position: 'relative', zIndex: '2', maxWidth: '300px', textAlign: 'center', padding: '0 24px'}}>
+                <div id="cvEyebrow-m" style={{color: 'var(--ink)', fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '600', letterSpacing: '.12em', textTransform: 'uppercase', opacity: '0'}}>TWO SIDES</div>
+                <h2 id="cvHead-m" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.15', fontSize: '26px', margin: '14px 0 0', color: 'var(--ink)', opacity: '0'}}>Get going. <span className="opit">Get guapd.</span></h2>
+                <p id="cvSub-m" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
+                <div id="cvBtn-m" style={{marginTop: '22px', display: 'inline-flex', opacity: '0'}}>
+                  <button type="button" onClick={() => setDemoOpen(true)} style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#fff', borderRadius: '999px', padding: '12px 22px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', cursor: 'pointer'}}>Book demo</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>

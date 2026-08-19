@@ -276,13 +276,21 @@ step("agency-table rows rewritten", before, sum(html.count(f'>{k}<') for k in AG
 # White on a light panel read as an outline rather than a button. Black, to
 # match the hero CTA and the desktop page's closing one.
 #
-# The converge headline is NOT touched: this export closes on "Where
-# collaborations get guapd.", and that is the copy.
+# Neither headline is touched. This export opens on "Where brands and creators
+# get guapd." and closes on "Where collaborations get guapd." — two different
+# lines, and an earlier pass flattened both into one. They stay as exported.
 before = html.count("background:#fff;")
 html = html.replace(
     "background:#fff;border:1px solid var(--ink);color:var(--ink);",
     "background:var(--ink);border:none;color:#fff;")
 step("Book demo pill blackened", before, html.count("background:#fff;"))
+
+# ── NOTE on the closing converge section ────────────────────────────────
+# The section this export ships (a circle that fades up, no pin, no bars) is
+# NOT what the page uses. LandingMobileClient rebuilds it on the desktop's
+# structure — tall section, pinned stage, two converging bars — so the shared
+# scroll-driven routine in landing-effects drives both layouts identically.
+# If you re-run this converter, do not paste that section over the rebuilt one.
 
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
