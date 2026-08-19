@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -33,6 +34,9 @@ export default function GetAccessModal({
 }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [chosen, setChosen] = useState<string | null>(null)
   const closeRef = useRef(onClose)
   closeRef.current = onClose
   const card = useRef<HTMLDivElement>(null)
@@ -48,6 +52,31 @@ export default function GetAccessModal({
     card.current?.querySelector<HTMLElement>('a')?.focus()
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
+
+
+  /**
+   * Navigate first, close second.
+   *
+   * The obvious version — <Link onClick={onClose}> — unmounts this dialog
+   * during the click that is supposed to follow the link. The anchor is gone
+   * from the document before the browser acts on it, and the navigation is
+   * dropped: the sheet closes and nothing happens. It is timing-dependent,
+   * which is why it survives a headless click and fails on a phone.
+   *
+   * Pushing imperatively takes the anchor out of the equation entirely.
+   */
+  const go = (href: string) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    setChosen(href)
+    // Held open until the route commits. Both signup routes are rendered per
+    // request, so on a phone there is a real wait between the tap and the new
+    // screen — and closing immediately spends it showing the page they were
+    // already looking at, which reads as the tap not having worked.
+    startTransition(() => {
+      router.push(href)
+      onClose()
+    })
+  }
 
   if (!open || !mounted) return null
 
@@ -69,7 +98,9 @@ export default function GetAccessModal({
         <h2 className="ga-title">Get <span className="ga-italic">guapd.</span></h2>
 
         <div className="ga-options">
-          <Link href="/signup/creator" className="ga-option" onClick={onClose}>
+          <Link href="/signup/creator" className={`ga-option${chosen === '/signup/creator' ? ' ga-option--busy' : ''}`}
+            aria-busy={pending && chosen === '/signup/creator'}
+            onClick={go('/signup/creator')}>
             <span className="ga-option-icon" aria-hidden="true">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -83,7 +114,9 @@ export default function GetAccessModal({
             </span>
           </Link>
 
-          <Link href="/signup/brand" className="ga-option" onClick={onClose}>
+          <Link href="/signup/brand" className={`ga-option${chosen === '/signup/brand' ? ' ga-option--busy' : ''}`}
+            aria-busy={pending && chosen === '/signup/brand'}
+            onClick={go('/signup/brand')}>
             <span className="ga-option-icon" aria-hidden="true">
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                    strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -99,7 +132,7 @@ export default function GetAccessModal({
         </div>
 
         <p className="ga-foot">
-          Already have an account? <Link href="/login/creator" onClick={onClose}>Log in</Link>
+          Already have an account? <Link href="/login/creator" onClick={go('/login/creator')}>Log in</Link>
         </p>
       </div>
     </div>
