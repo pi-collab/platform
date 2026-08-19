@@ -247,6 +247,34 @@ for old, new in CARDS.items():
     html = html.replace(f'>{old}<', f'>{new}<')
 print(f"  brand cards rewritten: {_before} → {sum(html.count(chr(62) + k + chr(60)) for k in CARDS)} (expect 0)")
 
+# ── 6n. The guapd vs agency table.
+AGENCY_ROWS = {
+    # vs an agency, the point is not "we have messaging" — it is that nobody
+    # sits between you and the creator.
+    'Message creators directly': 'Talk to the creator, not a middleman',
+
+    # "One contract, both sides sign" / "both sign" is an OVERCLAIM. Nothing in
+    # the product signs anything: Aadhaar eSign is on the deferred list, and the
+    # brief explicitly says not to treat a click-accept screen as definitively
+    # legally binding. What is true is that the terms are written, agreed by
+    # both parties and timestamped — which is what this now says.
+    'One contract, both sides sign': 'Terms in writing, agreed by both sides',
+    'One contract, both sign': 'Terms in writing, agreed by both sides',
+
+    # The agency contrast is that the middleman knows every rate in the market.
+    # RLS scopes deals to the owning brand and that isolation is adversarially
+    # tested, so this is a claim we can stand behind.
+    'Your data stays private': 'No middleman knows what you pay',
+
+    'One workflow, start to finish': 'Brief to payout in one place',
+    'Every approval on record': 'Every approval timestamped, not remembered',
+    'Multiple deals at once': 'A whole campaign from one brief',
+}
+_before = sum(html.count(f'>{k}<') for k in AGENCY_ROWS)
+for old, new in AGENCY_ROWS.items():
+    html = html.replace(f'>{old}<', f'>{new}<')
+print(f"  agency-table rows rewritten: {_before} → {sum(html.count(chr(62)+k+chr(60)) for k in AGENCY_ROWS)} (expect 0)")
+
 # ── 7. void elements ────────────────────────────────────────────────────────
 for tag in ['img','br','hr','input','source']:
     html=re.sub(rf'<{tag}\b([^>]*?)\s*/?>',lambda m:f'<{tag}{m.group(1).rstrip()} />',html)

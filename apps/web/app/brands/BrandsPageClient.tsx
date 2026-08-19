@@ -408,23 +408,23 @@ export default function BrandsPageClient() {
                   <div className="ws-cell ws-cell-head ws-mark ws-meta" style={{color: '#878D99', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', textAlign: 'center'}}>Guapd</div>
                   <div className="ws-cell ws-cell-head ws-mark ws-meta" style={{color: '#878D99', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', textAlign: 'center'}}>Agency</div>
 
-                  <div className="ws-cell ws-cell-body ws-label t-subhead">Message creators directly</div>
+                  <div className="ws-cell ws-cell-body ws-label t-subhead">Talk to the creator, not a middleman</div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-cell ws-cell-body ws-label t-subhead">One contract, both sides sign</div>
+                  <div className="ws-cell ws-cell-body ws-label t-subhead">Terms in writing, agreed by both sides</div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
 
-                  <div className="ws-cell ws-cell-body ws-label t-subhead">Your data stays private</div>
+                  <div className="ws-cell ws-cell-body ws-label t-subhead">No middleman knows what you pay</div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-cell ws-cell-body ws-label t-subhead">One workflow, start to finish</div>
+                  <div className="ws-cell ws-cell-body ws-label t-subhead">Brief to payout in one place</div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-cell ws-cell-body ws-label t-subhead">Every approval on record</div>
+                  <div className="ws-cell ws-cell-body ws-label t-subhead">Every approval timestamped, not remembered</div>
                   <div className="ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 

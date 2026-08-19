@@ -236,6 +236,26 @@ for old, new in COPY.items():
     html = html.replace(f'>{old}<', f'>{new}<')
 step("comparison rows rewritten", before, sum(html.count(f'>{k}<') for k in COPY))
 
+# ── 4k. The guapd vs agency table. ────────────────────────────────────────
+# Same rewrite as the desktop page. The row that mattered: "One contract, both
+# sign" is an OVERCLAIM — nothing in the product signs anything. Aadhaar eSign
+# is on the deferred list and the brief says explicitly not to treat a
+# click-accept screen as definitively legally binding. What IS true is that the
+# terms are written, agreed by both parties and timestamped.
+AGENCY_ROWS = {
+    'Message creators directly': 'Talk to the creator, not a middleman',
+    'One contract, both sides sign': 'Terms in writing, agreed by both sides',
+    'One contract, both sign': 'Terms in writing, agreed by both sides',
+    'Your data stays private': 'No middleman knows what you pay',
+    'One workflow, start to finish': 'Brief to payout in one place',
+    'Every approval on record': 'Every approval timestamped, not remembered',
+    'Multiple deals at once': 'A whole campaign from one brief',
+}
+before = sum(html.count(f'>{k}<') for k in AGENCY_ROWS)
+for old, new in AGENCY_ROWS.items():
+    html = html.replace(f'>{old}<', f'>{new}<')
+step("agency-table rows rewritten", before, sum(html.count(f'>{k}<') for k in AGENCY_ROWS))
+
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
 for uid, out in ASSETS.items():
