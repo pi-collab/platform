@@ -70,6 +70,9 @@ def resolve(phones, emails):
     """Find every id belonging to the named accounts, before anything is cut."""
     found = {k: [] for k in
              ('creator_ids', 'brand_ids', 'user_ids', 'auth_ids', 'deal_ids', 'item_ids')}
+    # Kept on the result so the plan can match rows keyed by phone rather than
+    # by id — OTP codes and the masked-number events.
+    found['phones'] = list(phones)
 
     if phones:
         found['creator_ids'] += [r['id'] for r in sql(
@@ -91,12 +94,32 @@ def resolve(phones, emails):
         found['auth_ids'] += [r['auth_id'] for r in sql(
             f"select auth_id from users where id in {lit(found['user_ids'])} and auth_id is not null")]
 
+    # Auth users are ALSO looked up directly, not only through users.auth_id.
+    # A Google sign-in that never finished onboarding leaves an auth user with
+    # no profile row at all — nothing in public schema points at it, so
+    # resolving only through `users` would walk straight past it and leave a
+    # working login behind. Exactly what prod verification produced.
+    #
+    # Phone is matched BOTH ways: normalizePhone stores +91XXXXXXXXXX in our
+    # tables, but GoTrue stores auth.users.phone without the plus. This is the
+    # same mismatch that made retried signups fail, and it would silently halve
+    # the match rate here.
+    if emails:
+        found['auth_ids'] += [r['id'] for r in sql(
+            f"select id from auth.users where lower(email) in {lit([e.lower() for e in emails])}")]
+    if phones:
+        both = list(phones) + [p.lstrip('+') for p in phones]
+        found['auth_ids'] += [r['id'] for r in sql(
+            f"select id from auth.users where phone in {lit(both)}")]
+
     # A creator row may carry the user link the other way round.
     if found['creator_ids']:
         found['user_ids'] += [r['user_id'] for r in sql(
             f"select user_id from creators where id in {lit(found['creator_ids'])} and user_id is not null")]
 
     for k in found:
+        if k == 'phones':
+            continue
         found[k] = sorted(set(x for x in found[k] if x))
 
     # Deals on either side, and their deliverable items — collected NOW, because
@@ -153,14 +176,32 @@ def build_plan(f):
     # 6. profile rows.
     plan.append(("users", f"delete from users where id in {u}"))
 
+    # 6b. OTP codes. Keyed by phone, not by any id, so nothing above reaches
+    #     them — including codes sent to a number that never completed signup
+    #     and therefore has no creator, user or auth row to hang off.
+    if f['phones']:
+        plan.append(("phone_verifications",
+                     f"delete from phone_verifications where phone in {lit(f['phones'])}"))
+
     # 7. events that never had a deal to cascade from — welcome mails, SMS
     #    attempts, demo and contact submissions. Matched on their payload.
     ids = f['user_ids'] + f['creator_ids'] + f['brand_ids']
+    conds = []
     if ids:
-        conds = " or ".join(
-            f"detail->>'{k}' in {lit(ids)}" for k in ('user_id', 'creator_id', 'brand_id'))
-        plan.append(("events with no deal (welcome, sms, demo, contact)",
-                     f"delete from events where deal_id is null and ({conds})"))
+        conds += [f"detail->>'{k}' in {lit(ids)}" for k in ('user_id', 'creator_id', 'brand_id')]
+
+    # notification.sms_sent carries NO id — only a masked number and a gateway
+    # request id. Matching on ids alone leaves one row per OTP sent, each still
+    # holding the last four digits of a real phone number. The mask is
+    # reconstructable from the number itself, which keeps this as scoped as
+    # every other statement here.
+    if f['phones']:
+        masks = ['****' + p[-4:] for p in f['phones']]
+        conds.append(f"detail->>'to_masked' in {lit(masks)}")
+
+    if conds:
+        plan.append(("events with no deal (welcome, sms, ops, prefs)",
+                     f"delete from events where deal_id is null and ({' or '.join(conds)})"))
 
     return plan
 
@@ -207,12 +248,28 @@ def main():
         print("\n  Nothing matched. No account with those identifiers exists.")
         return
 
-    # Guard: an identifier that resolves to several accounts is ambiguous, and
+    # Guard: ONE identifier resolving to several accounts is ambiguous, and
     # guessing on a production database is not acceptable.
-    for key, label in (('creator_ids', 'creators'), ('brand_ids', 'brands')):
-        if len(f[key]) > 1:
-            print(f"\n  REFUSED: {len(f[key])} {label} matched. Name them individually.")
-            sys.exit(2)
+    #
+    # Checked per identifier, not on the total. Naming three phones and getting
+    # three creators is the script working correctly; the dangerous case is one
+    # phone matching two creators, where deleting both means deleting one the
+    # caller never named.
+    ambiguous = []
+    if args.phone:
+        ambiguous += [f"phone {r['phone']} matches {r['n']} creators" for r in sql(
+            f"select phone, count(*)::int as n from creators where phone in {lit(args.phone)} "
+            f"group by phone having count(*) > 1")]
+    if args.email:
+        ambiguous += [f"email {r['contact_email']} matches {r['n']} brands" for r in sql(
+            f"select contact_email, count(*)::int as n from brands "
+            f"where lower(contact_email) in {lit([e.lower() for e in args.email])} "
+            f"group by contact_email having count(*) > 1")]
+    if ambiguous:
+        print("\n  REFUSED — an identifier is ambiguous:")
+        for a in ambiguous:
+            print(f"    {a}")
+        sys.exit(2)
 
     plan = build_plan(f)
     prefixes = storage_prefixes(f)
