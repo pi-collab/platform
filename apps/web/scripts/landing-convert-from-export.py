@@ -197,6 +197,22 @@ if before:
         '<button type="button" id="cvBtn" class="cv-cta"', 1)
 step("end-of-page CTA made clickable", before, html.count('<button type="button" id="cvBtn"'))
 
+# ── 1i. The page wrapper must not become a scroll container. ──────────────
+# The export's outermost div carries overflow-x:hidden. CSS then computes
+# overflow-y as `auto` — a visible/non-visible pair is not allowed — which makes
+# it a scroll container, and position:sticky does not work inside one.
+#
+# That silently broke the card stack in "Everything, in one place": the export
+# pins its first card at top=96 and lets the rest pile up behind it, while ours
+# let every card scroll off the top and overlap on the way (measured: card one
+# ran 0 → -1000 where the export holds it at 96 throughout).
+#
+# `clip` gives the same visual containment with no scroll container, which is
+# the same reason .landing-page uses clip rather than hidden.
+before = html.count("overflow-x:hidden")
+html = html.replace("overflow-x:hidden", "overflow-x:clip")
+step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.

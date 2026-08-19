@@ -55,7 +55,7 @@ export default function LandingPageClient() {
 
   return (
     <div className="landing-page">
-      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', background: '#fff'}}>
+      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'clip', background: '#fff'}}>
 
         <div id="scrollProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200'}}></div>
 
