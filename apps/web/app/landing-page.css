@@ -339,9 +339,16 @@
   position: sticky;
   top: 96px;
   z-index: 30;
+  /* Opaque and full-width: cards travel up behind this, and they have to
+     disappear cleanly rather than show through or peek out at the sides. The
+     extra width either side covers the cards' own shadows. */
   background: var(--card);
-  padding-bottom: 18px;
+  padding: 20px clamp(24px, 4vw, 64px) 22px;
+  margin-left: calc(clamp(24px, 4vw, 64px) * -1);
+  margin-right: calc(clamp(24px, 4vw, 64px) * -1);
 }
+/* Its own children keep the measure the design gave them. */
+.landing-page .stack-head > * { max-width: 560px; margin-left: auto; margin-right: auto; }
 
 /* The header steps aside while a pinned section owns the viewport.
    Deliberately NOT scoped to .landing-page: the header sits outside it. The

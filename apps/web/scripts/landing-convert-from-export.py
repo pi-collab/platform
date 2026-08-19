@@ -222,9 +222,13 @@ step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
 # the stylesheet hold it in place while the cards pile up underneath, instead of
 # letting it scroll away before the stacking even begins.
 before = html.count('class="stack-head"')
+# The 560px cap goes with it. The heading holds while cards travel up behind it,
+# so its background has to cover the full width of the column — capped at 560 it
+# painted as a floating white rectangle with the cards visible either side of it.
+# The text stays centred on its own.
 html = html.replace(
     '<div style="text-align:center;max-width:560px;margin:0 auto clamp(44px,5.5vw,64px);">',
-    '<div class="stack-head" style="text-align:center;max-width:560px;margin:0 auto clamp(44px,5.5vw,64px);">', 1)
+    '<div class="stack-head" style="text-align:center;margin:0 auto clamp(44px,5.5vw,64px);">', 1)
 step("stack heading tagged", before, html.count('class="stack-head"'))
 
 # The cards pin BELOW that heading, not behind it. Their offset is inline in the

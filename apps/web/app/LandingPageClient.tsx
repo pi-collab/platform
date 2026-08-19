@@ -30,28 +30,28 @@ const CAMPAIGNS = [
 
 const FAQ = [
   {
-    q: 'How do usage rights work?',
-    a: 'Usage rights are part of the offer, not an afterthought. Pick a one-time social post, six months across all platforms, or perpetual across all media, or write your own, and set an optional end date. Paid boosting is agreed per deliverable with its own duration in months. The creator confirms the rights on record, and that confirmation is timestamped.',
+    q: 'What is guapd?',
+    a: 'One place to run a brand and creator collaboration from start to finish: the offer, the negotiation, the deliverables, the approvals and the payment status. Everything that currently lives across WhatsApp, email and a spreadsheet lives on one deal instead.',
   },
   {
-    q: 'What about revisions?',
-    a: 'Every deal states how many revisions are included and what each extra one costs. The used-against-included count is tracked as revisions are requested, and anything beyond the included count is priced at the rate already agreed, so an overrun is an arithmetic question rather than a negotiation.',
+    q: 'Who is it for?',
+    a: 'Brands who run creator campaigns directly rather than through an agency, and the creators they work with. It is built for the deals you already have, not for finding new ones.',
   },
   {
-    q: 'When does the creator get paid?',
-    a: 'Payment terms are agreed in the offer: 50% advance and 50% on approval, 100% on approval, or 100% advance. By default our 15% fee is added on top and paid by the brand, so the creator receives the full rate they quoted.',
+    q: 'What does it cost?',
+    a: 'It is free for creators. Brands pay a 15% fee, added on top of the rate rather than taken out of it, so the creator receives the full amount they quoted.',
   },
   {
-    q: 'What if the brand is sending a product?',
-    a: 'The brand marks the deal as needing a shipment and adds the address, carrier note and tracking link. The deal then tracks the product alongside the content, so both sides can see it has arrived before the shoot is due to start.',
+    q: 'Do we still need a contract?',
+    a: 'Every term is agreed in the offer itself: deliverables, rate, timeline, revisions, usage rights and payment terms. Once both sides agree, those terms are locked and timestamped, so there is one written record instead of a scroll back through a chat.',
   },
   {
-    q: 'Can a creator negotiate an offer?',
-    a: 'Yes. Every offer can be accepted, countered or declined, and a counter can change the price per deliverable with a note explaining it. The thread stays on the deal, so what was proposed and what was agreed are one record.',
+    q: 'How does payment work?',
+    a: 'Payment terms are agreed up front and the deal tracks where the money is, from invoice through to paid. Nobody has to ask whether it went through, and nobody has to chase.',
   },
   {
-    q: 'What happens if there is a disagreement?',
-    a: 'Every offer, counter, agreed term, submission, approval and payment is timestamped and written to the deal as it happens, by the database itself rather than by anyone remembering to log it. There is one record both sides can read, instead of a scroll back through WhatsApp.',
+    q: 'How do we get started?',
+    a: 'Brands can book a demo and we will walk through it against the kind of campaigns you actually run. Creators can join directly. Either way, the first deal takes minutes rather than a setup project.',
   },
 ]
 
@@ -361,7 +361,7 @@ export default function LandingPageClient() {
         {/* FOUR REASONS — single bounded container, spaced cards */}
         <section style={{padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
         <div className="gx" style={{background: '#fff', border: '1px solid var(--hairline)', borderRadius: '36px', boxShadow: '0 40px 90px -50px rgba(40,45,25,.3)', padding: 'clamp(44px,5.5vw,72px) clamp(24px,4vw,48px)'}}>
-          <div className="stack-head" style={{textAlign: 'center', maxWidth: '560px', margin: '0 auto clamp(44px,5.5vw,64px)'}}>
+          <div className="stack-head" style={{textAlign: 'center', margin: '0 auto clamp(44px,5.5vw,64px)'}}>
             <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>One connected system</span>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.035em', lineHeight: '1.05', fontSize: 'clamp(30px,4vw,52px)', margin: '12px 0 0', color: 'var(--ink)'}}>Everything, <span className="t-accent" style={{fontSize: '1.05em'}}>in one place</span></h2>
           </div>
