@@ -29,13 +29,31 @@ const CAMPAIGNS = [
     ]
 
 const FAQ = [
-      { q: 'How do usage rights work?', a: 'Usage rights are agreed as part of the offer \u2014 organic only, organic plus paid boosting, or full commercial \u2014 with an optional expiry date (blank means perpetual). Paid boosting is set per deliverable. Whatever you agree is recorded on the deal.' },
-      { q: 'What about revisions?', a: 'Each deal specifies how many revisions are included and the cost of any extra. As revisions are requested, the used-vs-included count is tracked automatically, so both sides always know where they stand.' },
-      { q: 'When does the creator get paid?', a: 'Payment terms are set in the offer \u2014 100% advance, 100% on approval, or 50-50. The creator always receives their full rate; GUAPD\u2019s 15% fee is added on top and paid by the brand.' },
-      { q: 'How do product shipments work?', a: 'If a deal involves shipping a product, the brand marks it as a shipment deal and adds shipping details. The deal then tracks a \u201cproduct delivered\u201d step alongside the content deliverables.' },
-      { q: 'What happens in a dispute?', a: 'Because every offer, counter, agreed term, submission and payment is timestamped and on record, there\u2019s a single source of truth \u2014 no WhatsApp screenshots. That record is what any dispute is resolved against.' },
-      { q: 'What if a creator has no shopfront?', a: 'A shopfront isn\u2019t required. Brands can send an offer to any creator profile; the creator receives it, and can accept, counter or decline just the same. A shopfront simply makes packages easier to browse.' }
-    ]
+  {
+    q: 'How do usage rights work?',
+    a: 'Usage rights are part of the offer, not an afterthought. Pick a one-time social post, six months across all platforms, or perpetual across all media, or write your own, and set an optional end date. Paid boosting is agreed per deliverable with its own duration in months. The creator confirms the rights on record, and that confirmation is timestamped.',
+  },
+  {
+    q: 'What about revisions?',
+    a: 'Every deal states how many revisions are included and what each extra one costs. The used-against-included count is tracked as revisions are requested, and anything beyond the included count is priced at the rate already agreed, so an overrun is an arithmetic question rather than a negotiation.',
+  },
+  {
+    q: 'When does the creator get paid?',
+    a: 'Payment terms are agreed in the offer: 50% advance and 50% on approval, 100% on approval, or 100% advance. By default our 15% fee is added on top and paid by the brand, so the creator receives the full rate they quoted.',
+  },
+  {
+    q: 'What if the brand is sending a product?',
+    a: 'The brand marks the deal as needing a shipment and adds the address, carrier note and tracking link. The deal then tracks the product alongside the content, so both sides can see it has arrived before the shoot is due to start.',
+  },
+  {
+    q: 'Can a creator negotiate an offer?',
+    a: 'Yes. Every offer can be accepted, countered or declined, and a counter can change the price per deliverable with a note explaining it. The thread stays on the deal, so what was proposed and what was agreed are one record.',
+  },
+  {
+    q: 'What happens if there is a disagreement?',
+    a: 'Every offer, counter, agreed term, submission, approval and payment is timestamped and written to the deal as it happens, by the database itself rather than by anyone remembering to log it. There is one record both sides can read, instead of a scroll back through WhatsApp.',
+  },
+]
 
 export default function LandingPageClient() {
   const [openFaq, setOpenFaq] = useState(0)
