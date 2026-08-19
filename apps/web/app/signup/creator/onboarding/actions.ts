@@ -5,7 +5,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOpsCreatorPending } from '@/lib/account-emails'
 
 /** Must stay in step with FOLLOWER_RANGES in CreatorProfileForm. */
-const FOLLOWER_RANGES = ['50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
+const FOLLOWER_RANGES = [
+  'Under 20k',
+  '20k \u2013 50k',
+  '50k \u2013 100k',
+  '100k \u2013 500k',
+  '500k \u2013 1M',
+  '1M+',
+]
 
 export type OnboardingResult =
   | { status: 'success'; redirect: string }

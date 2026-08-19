@@ -1030,11 +1030,11 @@ measurements in the port commits assert; re-run after any re-port.
 
 ### 18. Creator signup — audience size
 
-- [ ] The creator onboarding form asks for followers/subscribers after the handle, with four bands: 50k–100k, 100k–500k, 500k–1M, 1M+
+- [ ] The creator onboarding form asks for followers/subscribers after the handle, as a dropdown with six bands: Under 20k, 20k–50k, 50k–100k, 100k–500k, 500k–1M, 1M+
 - [ ] The submit button stays disabled until a band is picked (name, handle, band and the terms tick are all required)
 - [ ] The band is saved into `creators.social_accounts[0].follower_range`, and `follower_count` stays null — one is self-reported, the other is a verified number, and they must not be conflated
 - [ ] `saveOnboarding` called directly with a band outside the list is rejected — the action is directly callable, so the list is enforced server-side, not just in the form
-- [ ] KNOWN GAP: a creator under 50k has no truthful option. If sub-50k creators are ever accepted, a fifth band is required or they will be forced to over-report
+- [ ] Every creator has a truthful option — the bands start at "Under 20k", so nobody is forced to over-report (this was a real gap while the lowest band was 50k)
 
 ### 19. Marketing nav — phone
 

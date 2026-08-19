@@ -20,9 +20,17 @@ import { saveOnboarding } from './actions'
  *  the time anyone read it. Stored as the label, so the value still reads
  *  correctly if the bands are ever re-cut.
  *
- *  The lowest band starts at 50k by instruction. A creator below 50k has
- *  nothing truthful to pick \u2014 see the note on the field itself. */
-const FOLLOWER_RANGES = ['50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+'] as const
+ *  Six bands, so a dropdown rather than the platform row's buttons: as a grid
+ *  they would take more vertical space than the rest of the form put together,
+ *  and a list of six is what a select is for. */
+const FOLLOWER_RANGES = [
+  'Under 20k',
+  '20k \u2013 50k',
+  '50k \u2013 100k',
+  '100k \u2013 500k',
+  '500k \u2013 1M',
+  '1M+',
+] as const
 
 const PLATFORMS = [
   {
@@ -163,23 +171,22 @@ export default function CreatorProfileForm() {
           account \u2014 asked before it, there is no account for it to be about.
 
           Bands, not a number: a creator can answer from memory, and vetting only
-          needs the order of magnitude. Reuses the platform row's two-column
-          grid, so four bands sit as a tidy 2x2. */}
+          needs the order of magnitude. Reuses .onboard-select so it matches the
+          category dropdown on the brand onboarding form. */}
       <div className="onboard-field onboard-field--wide">
-        <label className="onboard-label">Followers / subscribers</label>
-        <div className="seg-row">
+        <label className="onboard-label" htmlFor="follower-range">Followers / subscribers</label>
+        <select
+          id="follower-range"
+          value={followerRange}
+          onChange={(e) => { setFollowerRange(e.target.value); setError('') }}
+          required
+          className="fld-box onboard-select"
+        >
+          <option value="" disabled>Select a range</option>
           {FOLLOWER_RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => { setFollowerRange(r); setError('') }}
-              aria-pressed={followerRange === r}
-              className="seg seg--compact"
-            >
-              {r}
-            </button>
+            <option key={r} value={r}>{r}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       {/* NOT in the export, kept by explicit decision (confirmed twice).

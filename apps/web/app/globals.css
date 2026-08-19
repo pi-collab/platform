@@ -1677,10 +1677,6 @@ button.signup-form__recover-link {
   gap: 14px;
 }
 
-/* Four bands in the same two-column grid as the two-option platform row, so
-   the buttons are shorter to keep the 2x2 from dominating the form. */
-.seg--compact { height: 52px; font-size: 14px; }
-
 .seg {
   display: flex;
   align-items: center;
@@ -3000,7 +2996,9 @@ button.signup-form__cross-link {
    about to cover half the screen. */
 @media (max-width: 820px) {
   .fld-box__input,
-  .onboard-input {
+  .onboard-input,
+  .onboard-select,
+  select.dinput {
     font-size: 16px;
   }
 }
