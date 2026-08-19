@@ -49,6 +49,20 @@ before = len(re.findall(r'<style', html))
 html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.S)
 step("inline <style> stripped", before, len(re.findall(r'<style', html)))
 
+# ── 1i. The page wrapper must not become a scroll container. ──────────────
+# The export's outermost div carries overflow-x:hidden. CSS then computes
+# overflow-y as `auto` — a visible/non-visible pair is not permitted — so the
+# whole page became a ~5,000px scroll container nested inside the window.
+# Scrolling moved that div, not the page: it read as sticking, and the
+# scroll-progress bar (which measures documentElement) never moved either.
+#
+# `clip` gives the same visual containment with no scroll container. Same fix as
+# the landing page, and the same root cause as the carousels swallowing vertical
+# swipes.
+before = html.count("overflow-x:hidden")
+html = html.replace("overflow-x:hidden", "overflow-x:clip")
+step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
+
 # ── 2. The export's own <nav>. ─────────────────────────────────────────────
 # The page renders the shared <MarketingNav>, so every marketing surface carries
 # one header with one set of behaviours.

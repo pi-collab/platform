@@ -31,7 +31,6 @@ declare module 'react' {
  */
 
 const SHOW_BRAND_LOGOS = false
-const SHOW_TESTIMONIALS = false
 
 /** Placeholder text that types itself into the deal builder when idle. */
 const GHOST_LINES = [
@@ -113,7 +112,7 @@ export default function BrandsPageClient() {
 
   return (
     <div className="brands-page">
-        {/* ============ HERO ============ */}
+      {/* ============ HERO ============ */}
         {/* ============ GLASS PANEL SHOWCASE ============ */}
         <section style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', marginTop: 'clamp(-96px,-8vw,-70px)', overflow: 'hidden', background: '#fff', zIndex: '0', paddingBottom: '40px'}}>
           <div style={{position: 'relative', overflow: 'hidden', paddingBottom: 'calc(63.92% - 60px)'}}>
@@ -512,28 +511,6 @@ export default function BrandsPageClient() {
 
   
       </>)}
-      {/* ============ TESTIMONIALS ============ */}
-        <section id="creators" style={{padding: '0', marginTop: '0'}}>
-          <div style={{position: 'relative', minHeight: '640px'}}>
-            <img src="/brands/showcase-c.webp" alt="Brand team lifestyle photo — moody, editorial" style={{...{width: '100%', height: '80vh', minHeight: '640px', display: 'block', objectPosition: 'top', opacity: '0.5'}, objectFit: 'cover'}} width={1536} height={1024} loading="lazy" decoding="async" />
-            <div style={{position: 'absolute', left: '0', right: '0', top: '50%', transform: 'translateY(-50%)', textAlign: 'center', padding: '0 20px'}}>
-              <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(34px,3vw,46px)', margin: '0 auto', maxWidth: '45%', color: '#12151C'}}>Run deals directly. Stay <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>calm.</span></h2>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.5', color: '#12151C', maxWidth: '56ch', margin: '40px auto 0'}}>Real brand teams, real deals, real reasons to skip the agency. Hear directly from the people running campaigns on guapd every day.</p>
-            </div>
-            <div style={{position: 'absolute', left: '0', right: '0', bottom: '0', padding: '0 0 clamp(90px,10vw,120px)'}}>
-            <div style={{position: 'relative'}}>
-            <div className="brandsTrack" style={{display: 'flex', gap: '52px', overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '0 clamp(24px,5vw,72px)'}}>
-        
-        
-        
-            </div>
-            </div>
-            </div>
-          </div>
-        </section>
-
-  
-      <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   )
 }

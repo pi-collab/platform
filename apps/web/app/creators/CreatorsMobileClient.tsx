@@ -76,7 +76,7 @@ export default function CreatorsMobileClient() {
       <div id="mobProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200', transition: 'width .1s linear'}}></div>
 
       <div className="mobile-frame">
-      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', background: '#fff'}}>
+      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'clip', background: '#fff'}}>
 
         {/* NAV */}
         <div style={{position: 'sticky', top: '0', zIndex: '100'}}>

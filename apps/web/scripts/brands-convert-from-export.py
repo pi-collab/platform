@@ -255,7 +255,10 @@ html = re.sub(r'<img\b[^>]*?/?>', _imgattrs, html)
 # creators for every campaign" advertises a roster that does not exist yet;
 # unlike the flagged sections it is not a matter of missing copy, so it is cut
 # rather than hidden. Re-add from the export when there are creators to show.
-REMOVE = ['CREATORS & BRANDS', 'INTERSTITIAL']
+# TESTIMONIALS joins them: the section was kept earlier with its review cards
+# stripped, which left a heading over empty space. There are no brand quotes to
+# put back, so the section goes rather than sitting there hollow.
+REMOVE = ['CREATORS & BRANDS', 'INTERSTITIAL', 'TESTIMONIALS']
 marks=[(m.start(),m.group(1).strip()) for m in re.finditer(r'\{/\* =+ ([^=]+?) =+ \*/\}',html)]
 bounds=[(marks[i][0], marks[i+1][0] if i+1<len(marks) else len(html), marks[i][1]) for i in range(len(marks))]
 for a,b,name in reversed(bounds):

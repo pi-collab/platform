@@ -49,6 +49,20 @@ before = len(re.findall(r'<style', html))
 html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.S)
 step("inline <style> stripped", before, len(re.findall(r'<style', html)))
 
+# ── 1i. The page wrapper must not become a scroll container. ──────────────
+# The export's outermost div carries overflow-x:hidden. CSS then computes
+# overflow-y as `auto` — a visible/non-visible pair is not permitted — so the
+# whole page became a ~5,000px scroll container nested inside the window.
+# Scrolling moved that div, not the page: it read as sticking, and the
+# scroll-progress bar (which measures documentElement) never moved either.
+#
+# `clip` gives the same visual containment with no scroll container. Same fix as
+# the landing page, and the same root cause as the carousels swallowing vertical
+# swipes.
+before = html.count("overflow-x:hidden")
+html = html.replace("overflow-x:hidden", "overflow-x:clip")
+step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
+
 # ── 2. The export's own <nav>. ─────────────────────────────────────────────
 # The page renders the shared <MarketingNav>, so every marketing surface carries
 # one header with one set of behaviours.
@@ -92,10 +106,11 @@ if dropped:
     print(f"    (dropped: {', '.join('</' + d + '>' for d in dropped)})")
 
 # ── 4. Sections with nothing real behind them. ─────────────────────────────
-# The same two the desktop port hides, for the same reasons: the creator roster
-# and the brand logos are both still behind their feature flags. Index-based and
+# The creator roster and the brand logos are both still behind their feature
+# flags. Testimonials goes too: there are no brand quotes to show, and the
+# desktop page does not carry the section either. Index-based and
 # back to front, because every offset after a removal shifts.
-HIDE = ['Find creators for every', 'Trusted by']
+HIDE = ['Find creators for every', 'Trusted by', 'Run deals directly']
 spans = []
 for needle in HIDE:
     at = html.find(needle)

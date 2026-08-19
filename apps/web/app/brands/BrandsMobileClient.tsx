@@ -64,7 +64,7 @@ export default function BrandsMobileClient() {
       <div id="brandProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200', transition: 'width .1s linear'}}></div>
 
       <div className="mobile-frame">
-      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', background: '#fff'}}>
+      <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'clip', background: '#fff'}}>
 
         {/* NAV */}
         <div style={{position: 'sticky', top: '0', zIndex: '100'}}>
@@ -191,41 +191,7 @@ export default function BrandsMobileClient() {
   
 
         {/* TESTIMONIALS */}
-        <section id="creators" className="sr hr" style={{padding: '36px 0'}}>
-          <div style={{padding: '0 24px'}}>
-            <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Testimonials</span>
-            <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: 'var(--ink)'}}>Run deals directly.<br />Stay <span className="opit">calm.</span></h2>
-          </div>
-          <div className="snap-track" style={{gap: '20px', padding: '0 24px', marginTop: '20px'}}>
-            <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
-              <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '36px', color: 'var(--ink-faint)', lineHeight: '1'}}>“</span>
-              <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>Three deals closed in a week</h3>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>Every term was agreed before a single frame was shot.</p>
-              <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Brand manager</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>fintech startup</span>
-              </div>
-            </div>
-            <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
-              <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '36px', color: 'var(--ink-faint)', lineHeight: '1'}}>“</span>
-              <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>The paper trail is worth it</h3>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>No more WhatsApp screenshots to settle a dispute.</p>
-              <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Growth lead</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>D2C brand</span>
-              </div>
-            </div>
-            <div style={{scrollSnapAlign: 'start', flex: '0 0 82%', minWidth: '0', background: '#fff', border: '1px solid var(--hairline)', borderRadius: '18px', padding: '28px 24px', display: 'flex', flexDirection: 'column'}}>
-              <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '36px', color: 'var(--ink-faint)', lineHeight: '1'}}>“</span>
-              <h3 style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.02em', margin: '10px 0 0', color: 'var(--ink)'}}>Payments are finally calm</h3>
-              <p style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', lineHeight: '1.55', color: 'var(--ink-soft)', margin: '8px 0 0'}}>I can see each payout without asking finance for an update.</p>
-              <div style={{marginTop: '16px', borderTop: '1px solid var(--hairline)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>Marketing head</span>
-                <span style={{fontFamily: 'var(--font-ui)', fontSize: '11px', color: 'var(--ink-faint)'}}>BFSI brand</span>
-              </div>
-            </div>
-          </div>
-        </section>
+  
 
   
 
