@@ -658,14 +658,26 @@
   .brands-page .pv-reveal { opacity: 1; transform: none; transition: none; }
 }
 
-/* The testimonials section keeps its heading but not its three review cards
-   (the quotes are not real yet). The backdrop was sized to stand behind those
-   cards — 80vh, min 640px — which without them leaves ~400px of empty space
-   under the subtitle. Trimmed so the section reads as finished rather than
-   broken. Restore the original height when the reviews go back in. */
+/* ── "Run deals directly" image ─────────────────────────────────────────────
+   Shown whole, at its own proportions, rather than cropped to a fixed height.
+
+   The export gives it 80vh with min-height 640px, which crops a 1536x1024
+   photo to roughly half its frame — fine there, because three review cards sit
+   over the lower half and hide the cut. Without the cards the bottom edge is
+   bare, and every fixed height slices the glass panels somewhere visible: 46vh
+   showed 43% of the picture, 62vh showed 58%, and both read as a photo that had
+   been chopped off.
+
+   height:auto lets width drive it, so the whole image is always on screen and
+   there is nothing to cut. The section is as tall as the picture is — about
+   960px at 1440 wide — and scales with the viewport.
+
+   If the reviews ever go back in, restore a fixed height: the cards need the
+   crop, and they will cover it. */
 .brands-page #brandsWhySwitchImg {
-  height: 46vh !important;
-  min-height: 360px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  object-position: center !important;
 }
 
 /* ── Book-demo dialog ──────────────────────────────────────────────────────

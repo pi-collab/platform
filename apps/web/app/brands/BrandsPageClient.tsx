@@ -515,7 +515,7 @@ export default function BrandsPageClient() {
               id="brandsWhySwitchImg"
               src="/brands/showcase-c.webp"
               alt=""
-              style={{width: '100%', display: 'block', objectFit: 'cover', objectPosition: 'top', opacity: 0.5}}
+              style={{width: '100%', display: 'block', objectFit: 'cover', opacity: 0.5}}
               decoding="async"
               loading="lazy"
             />
