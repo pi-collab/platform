@@ -958,6 +958,78 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 
 ---
 
+## 16. Welcome Email (first signup)
+
+Sent once per account by `lib/welcome-email.ts`. Never blocks signup — every
+failure path returns rather than throws, and the caller does not await a result
+it acts on.
+
+### Brand
+- [ ] Complete brand onboarding with a fresh account → welcome email arrives at the account's email
+- [ ] Subject reads "Welcome to Guapd"; CTA is "Create your first deal" and lands on `/deals/new`
+- [ ] Copy addresses the brand (offers, locked terms, tracked approvals and payment), not the creator
+- [ ] An `account.welcome_sent` event is written with the user id and `audience: 'brand'`
+
+### Creator
+- [ ] Complete creator signup **with no email on the account** → NO welcome sent, signup still succeeds, no error surfaces
+- [ ] Complete creator signup where the auth user HAS an email → welcome arrives, CTA "Open your dashboard" → `/creator/dashboard`
+- [ ] Copy addresses the creator (one inbox, accept/counter/decline, free for creators, fee paid on top by the brand)
+
+### Sent once
+- [ ] Reaching the end of signup twice (e.g. claiming a stub, retrying a failed step) sends exactly ONE welcome
+- [ ] The guard is keyed to `users.id`, not the email address — changing the address later does not re-trigger it
+- [ ] A FAILED send writes no `account.welcome_sent` row, so a later completion can still send it
+
+### Never blocks
+- [ ] With `EMAIL_ENABLED` unset: signup and onboarding complete normally, a warning is logged, no email
+- [ ] With an invalid `RESEND_API_KEY`: signup and onboarding still complete; the failure is logged only
+- [ ] Nothing in this path can throw into the signup transaction — the account exists before it runs
+
+---
+
+## 17. Marketing Site (landing, brands, creators, footer)
+
+Added after the design ports. These are visual/behavioural checks that the
+measurements in the port commits assert; re-run after any re-port.
+
+### Landing page (`/`)
+- [ ] Header floats over the hero artwork with no white band above or below it
+- [ ] Hero headline holds TWO lines from 900px to 1920px
+- [ ] "How it works" pinned sequence advances through all four cards on scroll
+- [ ] "Everything, in one place": heading holds at the top while cards stack beneath it, cards do not scroll away
+- [ ] The header fades out while the expanding-card section owns the viewport, and returns after
+- [ ] Both "Book demo" buttons (hero, page foot) open the demo dialog
+- [ ] Scroll-progress bar is the brand neon, not black
+- [ ] No horizontal scrollbar at 1440, 1080, 820, 520, 390
+
+### Header
+- [ ] Landing only: "Log in" and "Get access" open menus (Creator / Brand) — on hover, on click, and on Enter
+- [ ] Escape and an outside click close them; choosing an item navigates and closes
+- [ ] `/brands` and `/creators` show plain links, no dropdowns
+- [ ] Creators page "Log in" goes to `/login/creator`, brands page to `/login/brand`
+- [ ] Nothing is marked current on the landing page; `/brands` and `/creators` mark their own link
+
+### Footer (renders on `/`, `/brands`, `/creators`, `/privacy`, `/terms`)
+- [ ] Rounded top corners reveal the section above, not a white wedge
+- [ ] Contact opens the contact dialog — including on `/privacy` and `/terms`, which do not load brands-page.css
+- [ ] Cookie preferences still clears consent and reloads
+
+### Forms
+- [ ] Book demo: submit → row in `events` (`demo.requested`) BEFORE any email; team email reply-to is the requester; requester gets a confirmation
+- [ ] Contact: submit → row in `events` (`contact.submitted`); team email reply-to is the sender; sender gets a confirmation
+- [ ] Both: with email unconfigured the row is still written and the form reports success
+- [ ] Both: an over-long paste is rejected with a readable message, not a 500
+
+### SEO
+- [ ] `/`, `/brands`, `/creators`, `/privacy`, `/terms` each have a self-referencing canonical — NOT the homepage
+- [ ] Every title is unique and does not repeat the brand name twice
+- [ ] Every page emits an og:image (a page-level `openGraph` REPLACES the layout's, so each must set it)
+- [ ] `sitemap.xml` lists all five indexable pages
+- [ ] Exactly one H1 per page, no skipped heading levels, no image missing an `alt` attribute
+- [ ] App routes (`/dashboard`, `/ops`, `/login/*`, `/signup/*`, `/onboarding`) stay `index: false`
+
+---
+
 | When | What to run |
 |------|-------------|
 | After any query/auth/RLS change | CRITICAL: Security / RLS Checks (full) |

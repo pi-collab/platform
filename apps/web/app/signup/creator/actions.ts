@@ -1,6 +1,7 @@
 'use server'
 
 import crypto from 'crypto'
+import { sendWelcomeEmail } from '@/lib/welcome-email'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
@@ -365,6 +366,14 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     terms_accepted_at: new Date().toISOString(),
     terms_version: '2026-07-23',
   }).eq('id', userId)
+
+  // Welcome them in. Creators sign up by phone, so there is usually no address
+  // yet — sendWelcomeEmail returns quietly when there is none, and its
+  // once-only guard means a later completion can still send it once there is.
+  // Never awaited for a result it acts on: the account exists, and a failed
+  // email must not fail signup.
+  const { data: authUser } = await admin.auth.admin.getUserById(authId)
+  void sendWelcomeEmail({ userId, to: authUser?.user?.email, audience: 'creator' })
 
   // ── 6. Establish browser session ──
   // Sign in via the server-side Supabase client (writes session cookies).

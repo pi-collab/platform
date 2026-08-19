@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient }      from '@/lib/supabase/server'
+import { sendWelcomeEmail } from '@/lib/welcome-email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies }           from 'next/headers'
 import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
@@ -109,6 +110,11 @@ export async function submitOnboarding(
     terms_accepted_at: new Date().toISOString(),
     terms_version: '2026-07-23',
   }).eq('auth_id', user.id)
+
+  // Welcome them in. Deliberately not awaited for a result it acts on, and
+  // never able to throw: the brand exists by this point, and a failed email
+  // must not fail onboarding.
+  void sendWelcomeEmail({ userId: profile.id, to: user.email, audience: 'brand', name })
 
   // Attribution: resolve the first-touch storefront cookie onto this brand and
   // the brand↔creator pair. Set-once; never recomputed after this.
