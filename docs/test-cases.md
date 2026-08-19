@@ -1050,6 +1050,15 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] Every input on `/login/creator`, `/login/brand`, `/signup/creator`, `/signup/brand` computes to ≥16px at phone widths
 - [ ] On a real iPhone, focusing a field does NOT zoom the page. Safari zooms any focused input under 16px, and the zoomed page then pans to keep the caret visible — which reads to a user as the screen shifting sideways when the keyboard opens. This is not a layout bug and will not reproduce in a desktop browser
 
+### 21. Creator signup — OTP verify
+
+- [ ] A number whose auth user already exists (any retried signup) completes rather than failing. `normalizePhone` yields `+91…` but GoTrue stores `auth.users.phone` WITHOUT the plus, so the fallback lookup is tried both ways — querying only the plus form leaves that number permanently unable to sign up
+- [ ] Failure messages carry a code (E1–E5) identifying which step failed, and the matching `[SIGNUP]` line is in the server log
+- [ ] The `phone_verifications` row is still marked `used` after a successful verify (it is now awaited at the end rather than mid-action, so confirm the write still lands)
+- [ ] A verified code cannot be replayed
+- [ ] No `getUserById` round trip in the verify path — the address it read was the synthetic `@auth.guapd.internal` one, which cannot receive mail
+- [ ] iOS: tapping the SMS code suggestion above the keyboard fills all six boxes, not one. The full code arrives in a single event on whichever box has focus, so any box accepting >1 digit fills the whole row
+
 ---
 
 | When | What to run |

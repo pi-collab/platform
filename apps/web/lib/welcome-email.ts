@@ -32,7 +32,11 @@ export type Audience = 'brand' | 'creator'
 interface WelcomeArgs {
   /** users.id — the guard is keyed to this, not to the email address. */
   userId: string
-  to: string | null | undefined
+  /** Optional: creators sign up by phone and often have no address yet, and
+   *  the caller should not spend a round trip fetching one that may not exist.
+   *  Absent is treated exactly like an unusable address — nothing is sent, and
+   *  the once-only guard leaves the door open for a later, real one. */
+  to?: string | null
   audience: Audience
   /** First name if we have one. The copy reads fine without it. */
   name?: string | null

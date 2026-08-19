@@ -40,7 +40,20 @@ export default function OtpInput({
   }
 
   function handleChange(i: number, raw: string) {
-    const digit = raw.replace(/\D/g, '').slice(-1)
+    const digits = raw.replace(/\D/g, '')
+
+    // iOS drops the entire SMS code into whichever box is focused — usually the
+    // first — in one event. Taking only the last character of that turns
+    // "123456" into "6", which is why tapping the keyboard's code suggestion
+    // appeared to do nothing useful. More than one digit means an autofill or a
+    // paste, so it fills the whole row.
+    if (digits.length > 1) {
+      const filled = set(digits)
+      refs.current[Math.min(filled.length, LENGTH - 1)]?.focus()
+      return filled
+    }
+
+    const digit = digits.slice(-1)
     if (!digit) return
     const chars = value.padEnd(LENGTH, ' ').split('')
     chars[i] = digit
@@ -94,7 +107,7 @@ export default function OtpInput({
             inputMode="numeric"
             // Only the first cell claims the SMS code, or the browser offers
             // to autofill the whole code into every box.
-            autoComplete={i === 0 ? 'one-time-code' : 'off'}
+            autoComplete="one-time-code"
             maxLength={1}
             disabled={disabled}
             autoFocus={autoFocus && i === 0}

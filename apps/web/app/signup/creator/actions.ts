@@ -211,15 +211,19 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     admin.from('creators').select('id, user_id, full_name, is_vetted').eq('phone', phone),
   ])
 
+  let markUsed: PromiseLike<unknown> | null = null
+
   if (!isStagingBypass) {
     const verification = verifyResult.data
     if (!verification) {
       return { status: 'error', message: 'Invalid or expired code. Try again.' }
     }
 
-    // Mark as used (prevent replay). Stays sequential and stays AFTER the
-    // check — it is a write, and it must not happen for a code that failed.
-    await admin
+    // Mark as used, to prevent replay. Started here but awaited at the end: it
+    // must not happen for a code that failed, which is why it stays after the
+    // check — but nothing below reads it, so blocking the rest of signup on
+    // the round trip only adds latency to every successful verification.
+    markUsed = admin
       .from('phone_verifications')
       .update({ used: true })
       .eq('id', verification.id)
@@ -288,13 +292,28 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
   if (newAuth?.user) {
     authId = newAuth.user.id
   } else {
-    // Auth user may already exist (partial previous signup attempt).
-    // Look up by phone via DB function and reset password so we can sign in.
-    const { data: existingAuthId } = await admin.rpc('get_auth_id_by_phone', { p_phone: phone })
+    // Auth user already exists — a previous attempt with this number got as far
+    // as creating one. Find it and reset the password so we can sign in below.
+    //
+    // Looked up BOTH ways on purpose. normalizePhone produces E.164 with a
+    // leading plus (+917384928410), but GoTrue stores auth.users.phone without
+    // it (917384928410). Querying only the plus form matches nothing, this
+    // branch returns "Failed to create account", and the number is then stuck
+    // for good: every retry hits the same dead end, because the auth user the
+    // lookup cannot find is the very thing stopping createUser from succeeding.
+    const withoutPlus = phone.replace(/^\+/, '')
+    let existingAuthId: string | null = null
+    for (const form of [withoutPlus, phone]) {
+      const { data } = await admin.rpc('get_auth_id_by_phone', { p_phone: form })
+      if (data) { existingAuthId = data as string; break }
+    }
 
     if (!existingAuthId) {
-      console.error('[SIGNUP] createUser failed and no existing auth user found:', createAuthErr?.message)
-      return { status: 'error', message: 'Failed to create account. Please try again.' }
+      console.error(
+        '[SIGNUP] createUser failed and no existing auth user found.',
+        'phone:', phone, 'createUser error:', createAuthErr?.message,
+      )
+      return { status: 'error', message: 'Failed to create account. Please try again. (E1)' }
     }
 
     authId = existingAuthId
@@ -303,7 +322,7 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     const { error: updateErr } = await admin.auth.admin.updateUserById(authId, { password })
     if (updateErr) {
       console.error('[SIGNUP] Failed to update auth user password:', updateErr.message)
-      return { status: 'error', message: 'Failed to create account. Please try again.' }
+      return { status: 'error', message: 'Failed to create account. Please try again. (E2)' }
     }
   }
 
@@ -327,7 +346,8 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
       .single()
 
     if (profileErr || !newProfile) {
-      return { status: 'error', message: 'Failed to create profile. Please try again.' }
+      console.error('[SIGNUP] users insert failed:', profileErr?.message)
+      return { status: 'error', message: 'Failed to create profile. Please try again. (E3)' }
     }
     userId = newProfile.id
   }
@@ -352,7 +372,8 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
       .is('user_id', null) // guard: only if still unclaimed (race protection)
 
     if (claimErr) {
-      return { status: 'error', message: 'Failed to link your account. Please try again.' }
+      console.error('[SIGNUP] stub claim failed:', claimErr.message)
+      return { status: 'error', message: 'Failed to link your account. Please try again. (E4)' }
     }
 
     // Vetted stub with a name → straight to deals
@@ -369,7 +390,8 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
     })
 
     if (createErr) {
-      return { status: 'error', message: 'Failed to create creator profile. Please try again.' }
+      console.error('[SIGNUP] creators insert failed:', createErr.message)
+      return { status: 'error', message: 'Failed to create creator profile. Please try again. (E5)' }
     }
 
     redirect = '/signup/creator/onboarding'
@@ -386,15 +408,22 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
   // once-only guard means a later completion can still send it once there is.
   // Never awaited for a result it acts on: the account exists, and a failed
   // email must not fail signup.
-  const { data: authUser } = await admin.auth.admin.getUserById(authId)
-  void sendWelcomeEmail({ userId, to: authUser?.user?.email, audience: 'creator' })
+  // No getUserById here. It spent a round trip reading an address we already
+  // know: the synthetic one this action generates, creator_<phone>@
+  // auth.guapd.internal — not a real domain, and unable to receive mail.
+  // sendWelcomeEmail returns quietly without an address, and its once-only
+  // guard means it still sends later, once onboarding supplies a real one.
+  void sendWelcomeEmail({ userId, audience: 'creator' })
 
   // ── 6. Establish browser session ──
   // Sign in via the server-side Supabase client (writes session cookies).
   // This is a server action, so cookies().set() works.
 
   const supabase = createClient()
-  const { error: signInErr } = await supabase.auth.signInWithPassword({ email: syntheticEmail, password })
+  const [{ error: signInErr }] = await Promise.all([
+    supabase.auth.signInWithPassword({ email: syntheticEmail, password }),
+    markUsed ?? Promise.resolve(),
+  ])
 
   if (signInErr) {
     console.error('[SIGNUP] signInWithPassword failed:', signInErr.message)
