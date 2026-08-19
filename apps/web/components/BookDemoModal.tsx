@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { requestDemo } from '@/app/brands/demo-actions'
 
 /**
@@ -17,7 +18,19 @@ import { requestDemo } from '@/app/brands/demo-actions'
  * Phone and message are optional, and the volume select is there because it is
  * the one answer that changes how the call is run.
  */
+/**
+ * Rendered into document.body rather than in place.
+ *
+ * MarketingNav's wrapper is position:sticky with a z-index, which makes it a
+ * stacking context — a dialog rendered inside it is trapped beneath that
+ * context no matter how high its own z-index goes, and the cookie bar (fixed,
+ * z-index 9999, at the bottom of the viewport where this opens) painted over
+ * it and swallowed taps. A portal takes the dialog out of the nav's context
+ * entirely, which is where a modal belongs anyway.
+ */
 export default function BookDemoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -46,7 +59,7 @@ export default function BookDemoModal({ open, onClose }: { open: boolean; onClos
     return () => { clearTimeout(t); document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
   }, [open])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -66,7 +79,7 @@ export default function BookDemoModal({ open, onClose }: { open: boolean; onClos
     setDone(true)
   }
 
-  return (
+  return createPortal(
     <div
       className="brands-page bd-overlay"
       role="dialog"
@@ -153,5 +166,7 @@ export default function BookDemoModal({ open, onClose }: { open: boolean; onClos
         )}
       </div>
     </div>
+    ,
+    document.body,
   )
 }

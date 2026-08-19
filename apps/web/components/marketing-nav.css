@@ -219,3 +219,131 @@
   text-decoration: none;
   cursor: pointer;
 }
+
+/* ── Get access modal (phone only) ──────────────────────────────────────────
+   The landing header's CTA is a dropdown on desktop. Dropdowns do not work on
+   a phone, so there the CTA opens this fork instead. Scoped nowhere in
+   particular because the modal is only ever rendered from the mobile bar. */
+.ga-overlay {
+  position: fixed;
+  inset: 0;
+  /* Above the cookie bar (9999). It is position:fixed at the bottom of the
+     viewport, which is exactly where this sheet opens — at 1200 the bar sat on
+     top of the "I'm a brand" option and swallowed taps meant for it. */
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(16, 18, 24, .55);
+  padding: 16px;
+  animation: gaFade .18s ease;
+}
+@keyframes gaFade { from { opacity: 0 } to { opacity: 1 } }
+
+.ga-card {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 22px;
+  padding: 26px 20px 20px;
+  animation: gaRise .24s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes gaRise { from { transform: translateY(14px); opacity: 0 } to { transform: none; opacity: 1 } }
+
+/* Bottom sheet on a phone, centred card once there is room for one. */
+@media (min-width: 560px) {
+  .ga-overlay { align-items: center; }
+}
+
+.ga-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(24, 28, 36, .06);
+  color: #181C24;
+  cursor: pointer;
+}
+
+.ga-eyebrow {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(24, 28, 36, .5);
+}
+
+.ga-title {
+  margin: 6px 0 18px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: #181C24;
+}
+
+.ga-options { display: grid; gap: 10px; }
+
+.ga-option {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 15px;
+  border: 1.5px solid rgba(24, 28, 36, .12);
+  border-radius: 14px;
+  text-decoration: none;
+  color: #181C24;
+  transition: border-color .16s ease, background .16s ease;
+}
+.ga-option:hover,
+.ga-option:focus-visible { border-color: #181C24; background: rgba(232, 255, 102, .16); }
+
+.ga-option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #E8FF66;
+  color: #181C24;
+}
+
+.ga-option-text { display: flex; flex-direction: column; gap: 2px; }
+.ga-option-label { font-family: var(--font-ui); font-size: 15px; font-weight: 700; }
+.ga-option-sub   { font-family: var(--font-ui); font-size: 12.5px; color: rgba(24, 28, 36, .6); }
+
+.ga-foot {
+  margin: 16px 0 0;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: rgba(24, 28, 36, .6);
+}
+.ga-foot a { color: #181C24; font-weight: 600; }
+
+/* The wordmark's serif italic, the same treatment the landing headlines use
+   on the brand word. */
+.ga-italic { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+
+/* Secondary drawer rows — Contact us, and Book demo on the brand side. Quieter
+   than the page links above them: they are useful, not the reason the menu was
+   opened. Buttons, because both open a modal rather than navigating. */
+.mnav-panel-row--quiet {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  opacity: .72;
+}

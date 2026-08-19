@@ -13,6 +13,17 @@ import { saveOnboarding } from './actions'
  * and adds the rest on the storefront afterwards. The stored value is the
  * lowercased key on creators.social_accounts, so these strings are data.
  */
+/** Audience size, asked as a band rather than a number.
+ *
+ *  A band is what a creator can answer honestly without opening their app, and
+ *  it is all vetting needs: the exact figure moves weekly and would be stale by
+ *  the time anyone read it. Stored as the label, so the value still reads
+ *  correctly if the bands are ever re-cut.
+ *
+ *  The lowest band starts at 50k by instruction. A creator below 50k has
+ *  nothing truthful to pick \u2014 see the note on the field itself. */
+const FOLLOWER_RANGES = ['50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+'] as const
+
 const PLATFORMS = [
   {
     key: 'Instagram',
@@ -47,6 +58,7 @@ export default function CreatorProfileForm() {
   const [fullName, setFullName] = useState('')
   const [handle, setHandle] = useState('')
   const [platform, setPlatform] = useState('Instagram')
+  const [followerRange, setFollowerRange] = useState('')
   const [terms, setTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -54,7 +66,7 @@ export default function CreatorProfileForm() {
   // The button shows whether it can be pressed. `required` alone blocks the
   // submit but leaves the CTA looking live, so the only feedback is a browser
   // tooltip after a click that appeared to do nothing.
-  const canSubmit = Boolean(fullName.trim()) && Boolean(handle.trim()) && terms
+  const canSubmit = Boolean(fullName.trim()) && Boolean(handle.trim()) && Boolean(followerRange) && terms
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,6 +78,7 @@ export default function CreatorProfileForm() {
       fullName: fullName.trim(),
       platform,
       handle: handle.trim().replace(/^@/, ''),
+      followerRange,
       termsAccepted: terms,
     })
 
@@ -143,6 +156,29 @@ export default function CreatorProfileForm() {
             required
             className="onboard-input"
           />
+        </div>
+      </div>
+
+      {/* Audience size. After the handle, because it is a question about that
+          account \u2014 asked before it, there is no account for it to be about.
+
+          Bands, not a number: a creator can answer from memory, and vetting only
+          needs the order of magnitude. Reuses the platform row's two-column
+          grid, so four bands sit as a tidy 2x2. */}
+      <div className="onboard-field onboard-field--wide">
+        <label className="onboard-label">Followers / subscribers</label>
+        <div className="seg-row">
+          {FOLLOWER_RANGES.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => { setFollowerRange(r); setError('') }}
+              aria-pressed={followerRange === r}
+              className="seg seg--compact"
+            >
+              {r}
+            </button>
+          ))}
         </div>
       </div>
 

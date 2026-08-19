@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOpsCreatorPending } from '@/lib/account-emails'
 
+/** Must stay in step with FOLLOWER_RANGES in CreatorProfileForm. */
+const FOLLOWER_RANGES = ['50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
+
 export type OnboardingResult =
   | { status: 'success'; redirect: string }
   | { status: 'error'; message: string }
@@ -19,6 +22,10 @@ export async function saveOnboarding(data: {
   fullName: string
   platform: string
   handle: string
+  /** One of FOLLOWER_RANGES from the form. Stored as the label rather than a
+   *  parsed number: the answer is a band, and turning it into a fake precise
+   *  count would invent data the creator never gave. */
+  followerRange: string
   /** The explicit tick on this form. Signup already recorded acceptance
    *  against the notice on the account screen; this upgrades that record to a
    *  deliberate act, which is why it overwrites rather than skips. */
@@ -26,13 +33,19 @@ export async function saveOnboarding(data: {
   productType?: string
   productPricePaise?: number
 }): Promise<OnboardingResult> {
-  const { fullName, platform, handle, termsAccepted, productType, productPricePaise } = data
+  const { fullName, platform, handle, followerRange, termsAccepted, productType, productPricePaise } = data
 
   // Validate required fields. Checked here and not only in the form: a server
   // action is directly callable, so the form is convenience, not the boundary.
   if (!fullName.trim()) return { status: 'error', message: 'Name is required.' }
   if (!platform.trim()) return { status: 'error', message: 'Select a platform.' }
   if (!handle.trim()) return { status: 'error', message: 'Enter your handle.' }
+  // Validated against the list, not merely checked for presence: this action is
+  // directly callable, and a free-text band would make the field useless for
+  // vetting the moment anyone posted something else.
+  if (!FOLLOWER_RANGES.includes(followerRange)) {
+    return { status: 'error', message: 'Select your follower range.' }
+  }
   // Enforced here, not only by the checkbox. The brand action does the same:
   // without it, a directly-called action completes onboarding and writes an
   // acceptance timestamp for a tick that never happened.
@@ -75,6 +88,10 @@ export async function saveOnboarding(data: {
     handle: cleanHandle,
     url: null,
     follower_count: null,
+    // The band the creator picked. follower_count stays null: it is a verified
+    // number and this is a self-reported range, so collapsing one into the
+    // other would launder a claim into a measurement.
+    follower_range: followerRange,
     verified: false,
   }
 

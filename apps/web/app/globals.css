@@ -1677,6 +1677,10 @@ button.signup-form__recover-link {
   gap: 14px;
 }
 
+/* Four bands in the same two-column grid as the two-option platform row, so
+   the buttons are shorter to keep the 2x2 from dominating the form. */
+.seg--compact { height: 52px; font-size: 14px; }
+
 .seg {
   display: flex;
   align-items: center;
@@ -2982,4 +2986,21 @@ button.signup-form__cross-link {
 
   .offer-actions .offer-cta { margin-top: 0; height: 50px; }
   .offer-actions .offer-cta--ghost { margin-top: 9px; }
+}
+
+
+/* ── iOS zooms any focused field under 16px ────────────────────────────────
+   Safari treats a sub-16px input as too small to read and zooms the page in to
+   meet it. The page is then wider than the visual viewport, so it pans to keep
+   the caret in view and everything appears to shift sideways — which is what a
+   phone user sees as "the screen jumps left" when the keyboard opens. Nothing
+   is mis-laid-out; the fix is to give the field a size Safari accepts.
+
+   Phone widths only: 15px is the intended size everywhere a keyboard is not
+   about to cover half the screen. */
+@media (max-width: 820px) {
+  .fld-box__input,
+  .onboard-input {
+    font-size: 16px;
+  }
 }

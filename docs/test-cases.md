@@ -1028,6 +1028,28 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] Exactly one H1 per page, no skipped heading levels, no image missing an `alt` attribute
 - [ ] App routes (`/dashboard`, `/ops`, `/login/*`, `/signup/*`, `/onboarding`) stay `index: false`
 
+### 18. Creator signup — audience size
+
+- [ ] The creator onboarding form asks for followers/subscribers after the handle, with four bands: 50k–100k, 100k–500k, 500k–1M, 1M+
+- [ ] The submit button stays disabled until a band is picked (name, handle, band and the terms tick are all required)
+- [ ] The band is saved into `creators.social_accounts[0].follower_range`, and `follower_count` stays null — one is self-reported, the other is a verified number, and they must not be conflated
+- [ ] `saveOnboarding` called directly with a band outside the list is rejected — the action is directly callable, so the list is enforced server-side, not just in the form
+- [ ] KNOWN GAP: a creator under 50k has no truthful option. If sub-50k creators are ever accepted, a fifth band is required or they will be forced to over-report
+
+### 19. Marketing nav — phone
+
+- [ ] Landing header CTA reads "Get access" and opens the audience modal; /brands reads "Join as a brand"; /creators reads "Join as creator"
+- [ ] The modal's two options go to `/signup/creator` and `/signup/brand`
+- [ ] The modal renders ABOVE the cookie consent bar and both options are tappable. It is portalled to `document.body` because `.mnav-wrap` is `position: sticky` with a z-index and therefore a stacking context — a modal rendered inside it is trapped under the bar (z-index 9999) no matter how high its own z-index goes
+- [ ] Same portal check for the Book demo and Contact modals, which are now opened from the nav too
+- [ ] Every drawer carries "Contact us"; the /brands drawer also carries "Book demo"; the /creators drawer does NOT (the demo is of the brand workflow)
+- [ ] Escape closes each modal, and the backdrop tap closes it
+
+### 20. Mobile input sizing (iOS)
+
+- [ ] Every input on `/login/creator`, `/login/brand`, `/signup/creator`, `/signup/brand` computes to ≥16px at phone widths
+- [ ] On a real iPhone, focusing a field does NOT zoom the page. Safari zooms any focused input under 16px, and the zoomed page then pans to keep the caret visible — which reads to a user as the screen shifting sideways when the keyboard opens. This is not a layout bug and will not reproduce in a desktop browser
+
 ---
 
 | When | What to run |

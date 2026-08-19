@@ -22,7 +22,7 @@ export const nav = {
     { label: 'How it works',  href: '#how-it-works' },
   ],
   login:      { label: 'Log in',           href: '/login/brand'           },
-  brandCta:   { label: 'Get access',       href: '/signup/brand'    },
+  brandCta:   { label: 'Join as a brand',  href: '/signup/brand'    },
   creatorCta: { label: 'Join as creator',  href: '/signup/creator'  },
 }
 

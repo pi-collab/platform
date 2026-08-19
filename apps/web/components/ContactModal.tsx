@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { submitContact } from '@/app/contact/actions'
 // The dialog's .bd-* rules live in brands-page.css. Imported here rather than
 // from each page, so every page that renders <Footer> gets them — the footer is
@@ -23,7 +24,19 @@ import '@/app/brands-page.css'
  * Field set is short on purpose: name, email, an optional subject, and the
  * message. Anything more is a form people abandon.
  */
+/**
+ * Rendered into document.body rather than in place.
+ *
+ * MarketingNav's wrapper is position:sticky with a z-index, which makes it a
+ * stacking context — a dialog rendered inside it is trapped beneath that
+ * context no matter how high its own z-index goes, and the cookie bar (fixed,
+ * z-index 9999, at the bottom of the viewport where this opens) painted over
+ * it and swallowed taps. A portal takes the dialog out of the nav's context
+ * entirely, which is where a modal belongs anyway.
+ */
 export default function ContactModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -47,7 +60,7 @@ export default function ContactModal({ open, onClose }: { open: boolean; onClose
     return () => { clearTimeout(t); document.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
   }, [open])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -65,7 +78,7 @@ export default function ContactModal({ open, onClose }: { open: boolean; onClose
     setDone(true)
   }
 
-  return (
+  return createPortal(
     <div
       className="brands-page bd-overlay"
       role="dialog"
@@ -134,5 +147,7 @@ export default function ContactModal({ open, onClose }: { open: boolean; onClose
         )}
       </div>
     </div>
+    ,
+    document.body,
   )
 }

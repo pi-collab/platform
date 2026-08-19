@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
 import BookDemoModal from '@/components/BookDemoModal'
+import GetAccessModal from '@/components/GetAccessModal'
+import ContactModal from '@/components/ContactModal'
 import '@/components/marketing-nav.css'
 import Wordmark from '@/components/Wordmark'
 
@@ -199,6 +201,8 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
   // The landing page addresses nobody in particular, so its CTA is the demo
   // rather than either signup — which is what its own export draws.
   const [demoOpen, setDemoOpen] = useState(false)
+  const [accessOpen, setAccessOpen] = useState(false)
+  const [contactOpen, setContactOpen] = useState(false)
   const cta =
     audience === 'creator' ? nav.creatorCta :
     audience === 'home' ? { label: 'Book demo', href: '#book-demo' } :
@@ -449,18 +453,18 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           )}
 
           {/* The landing page's CTA is a dropdown, and a dropdown is hidden on a
-              phone bar because it would open over the drawer offering the same
-              two choices. That left the landing header with nothing on the
-              right, while /brands and /creators both carry a CTA there. This is
-              the phone-only stand-in: Book demo, the landing page's own call to
-              action, as a plain button that opens the same modal. */}
+              phone bar because it would open over the drawer. That left the
+              landing header with nothing on the right, while /brands and
+              /creators both carry a CTA there. This is the phone-only
+              stand-in: the same Get access choice, as a modal instead of a
+              menu hanging off the bar. */}
           {audience === 'home' && (
             <button
               type="button"
               className="mnav-cta-home"
-              onClick={() => setDemoOpen(true)}
+              onClick={() => setAccessOpen(true)}
             >
-              Book demo
+              Get access
             </button>
           )}
         </div>
@@ -541,11 +545,41 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
               </Link>
             </>
           )}
+
+              {/* Book demo, brand side only. A creator has nothing to be shown —
+                  the demo is of the brand workflow — so offering it on the
+                  creator drawer would send them to a form that is not for them. */}
+              {audience === 'brand' && (
+                <button
+                  type="button"
+                  className="mnav-panel-row mnav-panel-row--quiet"
+                  onClick={() => { setMenuOpen(false); setDemoOpen(true) }}
+                >
+                  Book demo
+                </button>
+              )}
+
+              {/* Contact on every drawer. The footer has one, but a phone user
+                  looking for a way to reach us opens the menu, not the bottom of
+                  a long page. Same modal, so a message still lands in events
+                  before it is emailed. */}
+              <button
+                type="button"
+                className="mnav-panel-row mnav-panel-row--quiet"
+                onClick={() => { setMenuOpen(false); setContactOpen(true) }}
+              >
+                Contact us
+              </button>
         </div>
         </>
       )}
 
-      {audience === 'home' && <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />}
+      {/* No longer home-only: the brand drawer opens the demo modal too. */}
+      {(audience === 'home' || audience === 'brand') && (
+        <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+      )}
+      {audience === 'home' && <GetAccessModal open={accessOpen} onClose={() => setAccessOpen(false)} />}
+      <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   )
 }
