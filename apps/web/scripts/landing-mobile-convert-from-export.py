@@ -63,6 +63,22 @@ before = html.count("overflow-x:hidden")
 html = html.replace("overflow-x:hidden", "overflow-x:clip")
 step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
 
+# ── 1o. Suffix every id. ──────────────────────────────────────────────────
+# Both layouts of this page are in the DOM at once, and the export gives them
+# the SAME ids — cvSec, expandSection, expandImg, how, top and eight more. Two
+# elements sharing an id is invalid, makes #how and #top ambiguous, and made
+# getElementById in the effects return the desktop element on a phone, where
+# that layout is hidden. Suffixing the mobile copy keeps the document valid and
+# lets each layout drive its own animation.
+IDS = ['bgImg', 'cvBtn', 'cvCircle', 'cvEyebrow', 'cvHead', 'cvSec', 'cvSub',
+       'expandImg', 'expandPin', 'expandSection', 'how', 'top', 'cvBarLeft',
+       'cvBarRight', 'cvPin', 'hwTopbar']
+before = sum(html.count(f'id="{i}"') for i in IDS)
+for i in IDS:
+    html = html.replace(f'id="{i}"', f'id="{i}-m"')
+    html = html.replace(f'href="#{i}"', f'href="#{i}-m"')
+step("mobile ids suffixed", before, sum(html.count(f'id="{i}"') for i in IDS))
+
 # ── 2. The export's own <nav>. ─────────────────────────────────────────────
 # The page renders the shared <MarketingNav>, so every marketing surface carries
 # one header with one set of behaviours.
@@ -256,21 +272,17 @@ for old, new in AGENCY_ROWS.items():
     html = html.replace(f'>{old}<', f'>{new}<')
 step("agency-table rows rewritten", before, sum(html.count(f'>{k}<') for k in AGENCY_ROWS))
 
-# ── 4l. Converge headline, and the Book demo pill. ────────────────────────
-# Same rewording as the desktop layout, so the two layouts of this page close
-# on the same line. The animation is untouched.
+# ── 4l. The Book demo pill. ──────────────────────────────────────────────
+# White on a light panel read as an outline rather than a button. Black, to
+# match the hero CTA and the desktop page's closing one.
 #
-# The Book demo pill was white on a light panel, which read as an outline rather
-# than a button. Black, matching the hero CTA and the desktop page's closing one.
-before = html.count('Where brands and creators get') + html.count("background:#fff;")
-html = html.replace(
-    'Where brands and creators get <span class="opit">guapd.</span>',
-    'Get going. <span class="opit">Get guapd.</span>')
+# The converge headline is NOT touched: this export closes on "Where
+# collaborations get guapd.", and that is the copy.
+before = html.count("background:#fff;")
 html = html.replace(
     "background:#fff;border:1px solid var(--ink);color:var(--ink);",
     "background:var(--ink);border:none;color:#fff;")
-step("headline reworded, CTA blackened", before,
-     html.count('Where brands and creators get'))
+step("Book demo pill blackened", before, html.count("background:#fff;"))
 
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)

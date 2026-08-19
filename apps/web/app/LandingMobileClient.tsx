@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BookDemoModal from '@/components/BookDemoModal'
+import { initLandingEffects } from '@/app/landing-effects'
 import { FAQ } from '@/app/LandingPageClient'
 
 /**
@@ -19,6 +20,7 @@ import { FAQ } from '@/app/LandingPageClient'
  * and both are in the DOM at once.
  */
 export default function LandingMobileClient() {
+  const rootRef = useRef<HTMLDivElement>(null)
   const [demoOpen, setDemoOpen] = useState(false)
   const [openFaq, setOpenFaq] = useState(0)
 
@@ -29,6 +31,66 @@ export default function LandingMobileClient() {
     num: String(i + 1).padStart(2, '0'),
     icon: openFaq === i ? 'M5 12h14' : 'M12 5v14M5 12h14',
   }))
+
+  // The same scroll choreography the desktop layout runs — the expanding
+  // showcase and the converge panel — pointed at THIS layout's copies via the
+  // -m id suffix. Without it the mobile page had no showcase animation and its
+  // converge panel stayed at opacity 0, because the effects were driving the
+  // hidden desktop elements.
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const stop = initLandingEffects(root, '-m')
+
+    // The closing section has its OWN choreography on mobile, and the desktop
+    // driver in landing-effects cannot run it: that one needs #cvPin and a pair
+    // of converging bars, neither of which exists in this export. It bails on
+    // the missing pin — which is why the neon circle stayed at scale(0) and the
+    // four content elements sat at opacity 0, so the section read as missing.
+    //
+    // Transcribed from _initConverge in the export's own script, values intact:
+    // the circle blows up to 30x with a quarter turn while the words fade up.
+    const sec = root.querySelector<HTMLElement>('#cvSec-m')
+    const circle = root.querySelector<HTMLElement>('#cvCircle-m')
+    const content = ['cvEyebrow-m', 'cvHead-m', 'cvSub-m', 'cvBtn-m']
+      .map((id) => root.querySelector<HTMLElement>('#' + id))
+
+    const play = () => {
+      if (circle) {
+        circle.style.transition = 'transform 1.1s cubic-bezier(.16,1,.3,1)'
+        requestAnimationFrame(() => {
+          circle.style.transform = 'translate(-50%,-50%) scale(30) rotate(90deg)'
+        })
+      }
+      content.forEach((el) => {
+        if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)' }
+      })
+    }
+
+    // Reduced motion still has to SHOW the section: the elements start hidden
+    // in the markup, so doing nothing would leave it permanently blank.
+    if (typeof IntersectionObserver === 'undefined' ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      content.forEach((el) => {
+        if (el) { el.style.opacity = '1'; el.style.transform = 'translateY(0)' }
+      })
+      if (circle) circle.style.transform = 'translate(-50%,-50%) scale(30)'
+      return stop
+    }
+
+    let cvObserver: IntersectionObserver | undefined
+    if (sec && circle) {
+      cvObserver = new IntersectionObserver(
+        (entries) => entries.forEach((e) => {
+          if (e.isIntersecting) { play(); cvObserver?.disconnect() }
+        }),
+        { threshold: 0.4 },
+      )
+      cvObserver.observe(sec)
+    }
+
+    return () => { cvObserver?.disconnect(); stop() }
+  }, [])
 
   useEffect(() => {
     const bar = document.getElementById('landProgress')
@@ -68,7 +130,7 @@ export default function LandingMobileClient() {
   }, [])
 
   return (
-    <div className="landing-mobile">
+    <div className="landing-mobile" ref={rootRef}>
       <div id="landProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200', transition: 'width .1s linear'}}></div>
 
       <div className="mobile-frame">
@@ -82,7 +144,7 @@ export default function LandingMobileClient() {
         {/* HERO */}
         <section className="sr hr" style={{padding: '56px 24px 32px', textAlign: 'center'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}><span style={{width: '5px', height: '5px', borderRadius: '50%', background: 'var(--ink)', flexShrink: '0'}}></span>Brands &amp; creators</span>
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '30px', lineHeight: '1.35', margin: '24px 0 0', color: 'var(--ink)'}}>Get going. <span className="opit">Get guapd.</span></h2>
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '30px', lineHeight: '1.35', margin: '24px 0 0', color: 'var(--ink)'}}>Where collaborations <span className="opit">get guapd.</span></h2>
           <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '24px auto 0', maxWidth: '30ch'}}>No more DMs, spreadsheets or awkward payment follow-ups. Just deals that move.</p>
         </section>
         <div style={{padding: '0 24px', marginTop: '24px', marginBottom: '56px'}}><img src="/landing-mobile/93c762d7.webp" alt="guapd total earnings, my deals, and upcoming payment" style={{width: '100%', aspectRatio: '1060/1484', objectFit: 'contain', display: 'block', borderRadius: '28px'}} decoding="async" loading="lazy" /></div>
@@ -129,7 +191,7 @@ export default function LandingMobileClient() {
         </section>
 
         {/* HERO */}
-        <section className="sr sr" id="top" style={{position: 'relative'}}>
+        <section className="sr sr" id="top-m" style={{position: 'relative'}}>
           <div style={{position: 'relative', aspectRatio: '4/5', overflow: 'hidden'}}>
             <img src="/landing-mobile/8fd5a2c6.webp" alt="guapd campaign brief, creator, invoice and deliverable glass panel" style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 55%', display: 'block'}} width={900} height={672} decoding="async" loading="lazy" />
             <div style={{position: 'absolute', inset: '0', background: 'linear-gradient(180deg,#fff 0%,rgba(255,255,255,.95) 30%,rgba(255,255,255,.55) 55%,rgba(255,255,255,0) 75%)'}}></div>
@@ -174,7 +236,7 @@ export default function LandingMobileClient() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how" className="sr hr" style={{background: 'var(--ink)', padding: '56px 24px', color: '#fff'}}>
+        <section id="how-m" className="sr hr" style={{background: 'var(--ink)', padding: '56px 24px', color: '#fff'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}>How it works</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '27px', margin: '18px 0 0', color: '#fff'}}>Four steps, <span className="opit" style={{color: 'var(--neon)'}}>start to finish.</span></h2>
           <div style={{marginTop: '32px', position: 'relative'}}>
@@ -187,10 +249,10 @@ export default function LandingMobileClient() {
         </section>
 
         {/* SCROLL EXPAND MASCOT */}
-        <section className="sr sr" id="expandSection" style={{position: 'relative', height: '130vh'}}>
-          <div id="expandPin" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
-            <img id="bgImg" src="/landing-mobile/942fb4b1.webp" alt="" style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'auto', height: 'auto', maxWidth: 'none', objectFit: 'none', willChange: 'opacity'}} width={900} height={507} decoding="async" loading="lazy" />
-            <img id="expandImg" src="/landing-mobile/01531bb2.webp" alt="guapd" style={{position: 'relative', zIndex: '1', borderRadius: '24px', boxShadow: '0 30px 70px -20px rgba(20,22,10,.35)', objectFit: 'cover', willChange: 'width,height'}} width={900} height={900} decoding="async" loading="lazy" />
+        <section className="sr sr" id="expandSection-m" style={{position: 'relative', height: '130vh'}}>
+          <div id="expandPin-m" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
+            <img id="bgImg-m" src="/landing-mobile/942fb4b1.webp" alt="" style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'auto', height: 'auto', maxWidth: 'none', objectFit: 'none', willChange: 'opacity'}} width={900} height={507} decoding="async" loading="lazy" />
+            <img id="expandImg-m" src="/landing-mobile/01531bb2.webp" alt="guapd" style={{position: 'relative', zIndex: '1', borderRadius: '24px', boxShadow: '0 30px 70px -20px rgba(20,22,10,.35)', objectFit: 'cover', willChange: 'width,height'}} width={900} height={900} decoding="async" loading="lazy" />
           </div>
         </section>
 
@@ -212,7 +274,7 @@ export default function LandingMobileClient() {
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '22px', margin: '20px 0 0', color: 'var(--ink)'}}>Questions, <span className="opit">answered.</span></h2>
           <div style={{marginTop: '16px'}}>
             {faqs.map((f, i) => (
-              <div onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="hr" style={{display: 'grid', gridTemplateColumns: '34px 1fr 16px', padding: '20px 0', cursor: 'pointer'}}>
+              <div key={i} onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="hr" style={{display: 'grid', gridTemplateColumns: '34px 1fr 16px', padding: '20px 0', cursor: 'pointer'}}>
                 <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: '19px', color: 'var(--ink-faint)', lineHeight: '1'}}>{f.num}</span>
                 <div>
                   <span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '15px'}}>{f.q}</span>
@@ -227,13 +289,13 @@ export default function LandingMobileClient() {
         </section>
 
         {/* CONVERGE, two sides meet */}
-        <section className="sr sr" id="cvSec" style={{position: 'relative', width: '100%', minHeight: '70vh', padding: '64px 24px', overflow: 'hidden', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-          <div id="cvCircle" style={{position: 'absolute', left: '50%', top: '50%', width: '90px', height: '90px', borderRadius: '50%', background: 'var(--neon)', marginLeft: '-45px', marginTop: '-45px', transform: 'scale(0)', transition: 'transform .7s cubic-bezier(.16,1,.3,1)'}}></div>
+        <section className="sr sr" id="cvSec-m" style={{position: 'relative', width: '100%', minHeight: '70vh', padding: '64px 24px', overflow: 'hidden', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <div id="cvCircle-m" style={{position: 'absolute', left: '50%', top: '50%', width: '90px', height: '90px', borderRadius: '50%', background: 'var(--neon)', marginLeft: '-45px', marginTop: '-45px', transform: 'scale(0)', transition: 'transform .7s cubic-bezier(.16,1,.3,1)'}}></div>
           <div style={{position: 'relative', zIndex: '2', maxWidth: '300px', textAlign: 'center'}}>
-            <div id="cvEyebrow" style={{color: 'var(--ink)', fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '600', letterSpacing: '.12em', textTransform: 'uppercase', opacity: '0', transition: 'opacity .5s ease .15s,transform .5s ease .15s', transform: 'translateY(12px)'}}>Two sides</div>
-            <h2 id="cvHead" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.15', fontSize: '26px', margin: '14px 0 0', color: 'var(--ink)', opacity: '0', transition: 'opacity .5s ease .22s,transform .5s ease .22s', transform: 'translateY(12px)'}}>Where collaborations <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>get guapd.</span></h2>
-            <p id="cvSub" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0', transition: 'opacity .5s ease .29s,transform .5s ease .29s', transform: 'translateY(12px)'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
-            <div id="cvBtn" style={{marginTop: '22px', display: 'inline-flex', opacity: '0', transition: 'opacity .5s ease .36s,transform .5s ease .36s', transform: 'translateY(12px)'}}>
+            <div id="cvEyebrow-m" style={{color: 'var(--ink)', fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '600', letterSpacing: '.12em', textTransform: 'uppercase', opacity: '0', transition: 'opacity .5s ease .15s,transform .5s ease .15s', transform: 'translateY(12px)'}}>Two sides</div>
+            <h2 id="cvHead-m" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.15', fontSize: '26px', margin: '14px 0 0', color: 'var(--ink)', opacity: '0', transition: 'opacity .5s ease .22s,transform .5s ease .22s', transform: 'translateY(12px)'}}>Where collaborations <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>get guapd.</span></h2>
+            <p id="cvSub-m" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0', transition: 'opacity .5s ease .29s,transform .5s ease .29s', transform: 'translateY(12px)'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
+            <div id="cvBtn-m" style={{marginTop: '22px', display: 'inline-flex', opacity: '0', transition: 'opacity .5s ease .36s,transform .5s ease .36s', transform: 'translateY(12px)'}}>
               <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#fff', borderRadius: '999px', padding: '12px 22px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px'}}>Book demo</span>
             </div>
           </div>

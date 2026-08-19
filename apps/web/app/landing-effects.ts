@@ -21,18 +21,31 @@
  * converter emits, so it fails quietly if an element is missing rather than
  * throwing and taking the page down with it.
  */
-export function initLandingEffects(): () => void {
+export function initLandingEffects(root: HTMLElement, sfx = ''): () => void {
   const state: any = {}
 
+  // Every lookup below is scoped to `root` and suffixed with `sfx`.
+  //
+  // The transcription used document.getElementById, which was correct when this
+  // page had one layout. It now has two, both in the DOM at once, and twelve ids
+  // appear in both — so getElementById returned the DESKTOP element even on a
+  // phone, where that layout is display:none. The effects drove the hidden copy
+  // and the visible one never animated: the showcase never grew, and the
+  // converge panel's four opacity:0 elements stayed at zero, which is why the
+  // green closing section appeared to vanish entirely on mobile.
+  const byId = (id: string) => root.querySelector<HTMLElement>('#' + id + sfx)
+  const qs = (sel: string) => root.querySelector<HTMLElement>(sel)
+  const qsa = (sel: string) => Array.from(root.querySelectorAll<HTMLElement>(sel))
+
   function setupConverge(sec: any, pin: any) {
-    const barLeft = document.getElementById('cvBarLeft');
-    const barRight = document.getElementById('cvBarRight');
-    const circle = document.getElementById('cvCircle');
+    const barLeft = byId('cvBarLeft');
+    const barRight = byId('cvBarRight');
+    const circle = byId('cvCircle');
     const content = [
-      document.getElementById('cvEyebrow'),
-      document.getElementById('cvHead'),
-      document.getElementById('cvSub'),
-      document.getElementById('cvBtn'),
+      byId('cvEyebrow'),
+      byId('cvHead'),
+      byId('cvSub'),
+      byId('cvBtn'),
     ];
 
     const SCALE_FINAL = 30;
@@ -116,8 +129,8 @@ export function initLandingEffects(): () => void {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) return;
     const trySetup = (attemptsLeft) => {
-      const sec = document.getElementById('cvSec');
-      const pin = document.getElementById('cvPin');
+      const sec = byId('cvSec');
+      const pin = byId('cvPin');
       if (!sec || !pin) {
         if (attemptsLeft > 0) requestAnimationFrame(() => trySetup(attemptsLeft - 1));
         return;
@@ -128,10 +141,10 @@ export function initLandingEffects(): () => void {
   }
 
   function initExpandHero() {
-    const img = document.getElementById('expandImg');
-    const bg = document.getElementById('bgImg');
-    const section = document.getElementById('expandSection');
-    const pin = document.getElementById('expandPin');
+    const img = byId('expandImg');
+    const bg = byId('bgImg');
+    const section = byId('expandSection');
+    const pin = byId('expandPin');
     if (!img || !section || !pin) return;
     img.style.width = '260px';
     img.style.height = '260px';
@@ -180,9 +193,9 @@ export function initLandingEffects(): () => void {
 
     initConverge();
     initExpandHero();
-    const stackOuter = document.querySelector('.stack-outer');
-    const stackPin = document.querySelector('.stack-pin');
-    const stackCards = Array.from(document.querySelectorAll('[data-stack-card]'));
+    const stackOuter = qs('.stack-outer');
+    const stackPin = qs('.stack-pin');
+    const stackCards = qsa('[data-stack-card]');
     if (stackOuter && stackPin && stackCards.length > 1) {
       const N = stackCards.length;
       const peek = 40;
@@ -221,7 +234,7 @@ export function initLandingEffects(): () => void {
       onStackScroll();
     }
     const onCampaignScroll = () => {
-      const cards = Array.from(document.querySelectorAll('[data-pcard]'));
+      const cards = qsa('[data-pcard]');
       const n = cards.length;
       cards.forEach((card, i) => {
         const cRect = card.getBoundingClientRect();
@@ -236,7 +249,7 @@ export function initLandingEffects(): () => void {
     state._onCampaignScroll = onCampaignScroll;
     onCampaignScroll();
 
-    const brandRow = document.getElementById('brandPillRow');
+    const brandRow = byId('brandPillRow');
     if (brandRow) {
       const pills = Array.from(brandRow.querySelectorAll('.brand-pill'));
       if (pills.length > 4) {
@@ -252,8 +265,8 @@ export function initLandingEffects(): () => void {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // scroll progress + nav condense (native scroll — no smooth-scroll library)
-    const progress = document.getElementById('scrollProgress');
-    const navBar = document.getElementById('navBar');
+    const progress = byId('scrollProgress');
+    const navBar = byId('navBar');
     const onScroll = () => {
       const h = document.documentElement;
       const p = h.scrollTop / (h.scrollHeight - h.clientHeight || 1);
@@ -261,12 +274,12 @@ export function initLandingEffects(): () => void {
       if (navBar) navBar.style.padding = h.scrollTop > 20 ? '5px 8px 5px 16px' : '8px 10px 8px 20px';
     };
     // pinned How-it-works sequence (scroll-progress driven)
-    const hwSec = document.querySelector('.hw-sec');
-    const hwPin = document.querySelector('.hw-pin');
-    const hwCards = Array.from(document.querySelectorAll('[data-hw-card]'));
-    const hwTexts = Array.from(document.querySelectorAll('[data-hw-text]'));
-    const hwDots = Array.from(document.querySelectorAll('[data-hw-dot]'));
-    const hwTints = Array.from(document.querySelectorAll('[data-hw-tint]'));
+    const hwSec = qs('.hw-sec');
+    const hwPin = qs('.hw-pin');
+    const hwCards = qsa('[data-hw-card]');
+    const hwTexts = qsa('[data-hw-text]');
+    const hwDots = qsa('[data-hw-dot]');
+    const hwTints = qsa('[data-hw-tint]');
     const N = 4;
     const cl = (v, a, b) => Math.min(b, Math.max(a, v));
     // continuous scroll-scrubbed sequence: each step gets a dwell, transitions are big moves
@@ -294,7 +307,7 @@ export function initLandingEffects(): () => void {
         if (tint) tint.style.opacity = i === 0 ? '1' : String(cl(1 - (a - 0.5) / 0.85, 0, 1));
       }
       hwDots.forEach((el, i) => { i === near ? el.setAttribute('data-hw-on', '') : el.removeAttribute('data-hw-on'); });
-      const topbar = document.getElementById('hwTopbar');
+      const topbar = byId('hwTopbar');
       if (topbar) topbar.style.opacity = '1';
     };
     const updateHw = () => {
@@ -379,13 +392,13 @@ export function initLandingEffects(): () => void {
           else { e.target.classList.remove('anim-on'); }
         });
       }, { threshold: 0.01 });
-      document.querySelectorAll('.sr').forEach(el => io.observe(el));
+      qsa('.sr').forEach(el => io.observe(el));
       state._io = io;
     } else {
-      document.querySelectorAll('.sr').forEach(el => { el.classList.add('sr-in'); });
+      qsa('.sr').forEach(el => { el.classList.add('sr-in'); });
     }
 
-    const mosEls = document.querySelectorAll('[data-mos]');
+    const mosEls = qsa('[data-mos]');
     if (mosEls.length) {
       if (reduce) { mosEls.forEach(el => el.classList.add('mos-in')); }
       else {
@@ -414,13 +427,13 @@ export function initLandingEffects(): () => void {
         requestAnimationFrame(step);
       });
     }, { threshold: 0.2 });
-    document.querySelectorAll('[data-countup]').forEach(el => countIo.observe(el));
+    qsa('[data-countup]').forEach(el => countIo.observe(el));
     state._countIo = countIo;
 
     // magnetic buttons
     if (!reduce && window.matchMedia('(pointer:fine)').matches) {
       state._magnetCleanups = [];
-      document.querySelectorAll('.magnet').forEach((el) => {
+      qsa('.magnet').forEach((el) => {
         const onM = (e) => {
           const r = el.getBoundingClientRect();
           const mx = e.clientX - (r.left + r.width / 2), my = e.clientY - (r.top + r.height / 2);
