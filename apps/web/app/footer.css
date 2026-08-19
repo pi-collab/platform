@@ -187,6 +187,11 @@ button.gf-link {
 @media (max-width: 820px) {
   .gfoot__top { grid-template-columns: 1fr; gap: 28px; }
   .gfoot__grid { grid-template-columns: 1fr 1fr; }
+
+  /* Flat across the top on a phone. The 40px corners read as a panel lifted off
+     the page, which needs room either side to be legible; at this width they
+     just clip the corners of a full-bleed block. */
+  .gfoot { border-radius: 0; margin-top: 0; }
 }
 
 @media (max-width: 520px) {

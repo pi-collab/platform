@@ -92,7 +92,7 @@ export default function CreatorsMobileClient() {
         {/* VALUE TICKER */}
         <section className="hr" style={{padding: '24px 0'}}>
           <div style={{position: 'relative', overflow: 'hidden', WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)'}}>
-            <div style={{display: 'flex', width: 'max-content', gap: '10px', animation: 'mqMove 26s linear infinite', paddingRight: '10px'}}>
+            <div style={{display: 'flex', width: 'max-content', gap: '10px', animation: 'mqMove 17s linear infinite', paddingRight: '10px'}}>
               <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
               <span style={{fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)'}}>·</span>
               <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#8FD4A8'}}></span>on-time payouts</span>

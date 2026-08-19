@@ -310,8 +310,13 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             gap: '20px',
           }}
         >
-          <Link href="/" aria-label="Guapd home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <Link href="/" aria-label="Guapd home" className="mnav-mark mnav-mark--dark" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <Wordmark height={20} />
+          </Link>
+          {/* The mobile bar is dark, so it needs the light artwork. Two elements
+              toggled by breakpoint: an <img> src cannot be swapped in CSS. */}
+          <Link href="/" aria-label="Guapd home" className="mnav-mark mnav-mark--light" style={{ display: 'none', alignItems: 'center', textDecoration: 'none' }}>
+            <Wordmark height={20} tone="light" />
           </Link>
 
           <span className="mnav-rule" aria-hidden="true" style={rule} />
@@ -448,6 +453,10 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
       {/* The mobile panel. Sits under the capsule, in the same sticky wrapper, so
           it travels with the header rather than being pinned to the document. */}
       {menuOpen && (
+        <>
+          {/* Dimmed backdrop. Clicking it closes, which is how a drawer is
+              expected to behave and the only obvious way out for a thumb. */}
+          <div className="mnav-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />
         <div className="mnav-panel" role="dialog" aria-modal="true" aria-label="Menu">
           {links.filter((l) => !l.anchorOnly || audience === 'home').map((l) => (
             <Link key={l.href} href={l.href} className="mnav-panel-row" onClick={() => setMenuOpen(false)}>
@@ -513,6 +522,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             </>
           )}
         </div>
+        </>
       )}
 
       {audience === 'home' && <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />}

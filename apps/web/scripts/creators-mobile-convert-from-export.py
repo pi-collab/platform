@@ -171,6 +171,19 @@ html = html.replace('class="snap-track" style="gap:20px;padding:0 24px;margin-to
                     'class="snap-track" style="gap:20px;padding:0 24px;margin-top:20px;"')
 step("reviews heading raised", before, html.count("line-height:1.2;font-size:23px;margin:20px 0 0;"))
 
+# ── 4f. Ticker speed. ──────────────────────────────────────────────────────
+# The export's 32s crawl reads as static on a phone, where much less of the
+# track is on screen at once. The duration is inline, so it is set here rather
+# than in the stylesheet, which it would outrank.
+# The export runs two tracks at different speeds (22s and 26s); both are cut by
+# roughly a third rather than flattened to one number, so the two keep the
+# offset that stops them reading as a single band.
+SPEEDS = {'mqMove 22s': 'mqMove 14s', 'mqMove 26s': 'mqMove 17s'}
+before = sum(html.count(k) for k in SPEEDS)
+for slow, quick in SPEEDS.items():
+    html = html.replace(slow, quick)
+step("ticker speed increased", before, sum(html.count(k) for k in SPEEDS))
+
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
 for uid, out in ASSETS.items():

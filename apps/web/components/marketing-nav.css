@@ -24,16 +24,104 @@
   cursor: pointer;
   flex-shrink: 0;
 }
-@media (max-width: 780px) {
+/* ── Mobile: a full-bleed dark bar, as the mobile export draws it ──────────
+   Not the desktop capsule shrunk down. The export's own header is a sticky
+   black bar with the hamburger to the LEFT of the wordmark and a compact CTA
+   opposite, so that is what this becomes below the breakpoint.
+
+   820px matches where the creators page swaps to its mobile layout, so the
+   header and the page change together rather than 40px apart. */
+@media (max-width: 820px) {
+  .mnav-wrap { padding: 0 !important; }
+  .mnav-wrap nav {
+    max-width: none !important;
+    height: auto !important;
+    padding: 16px 22px !important;
+    gap: 12px !important;
+    border-radius: 0 !important;
+    background: #12151C !important;
+    box-shadow: none !important;
+  }
+  /* The two halves stop being pills and become plain rows on the bar. */
+  .mnav-wrap nav > div {
+    height: auto !important;
+    padding: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    flex: 0 0 auto !important;
+  }
+  .mnav-mark--dark { display: none !important; }
+  .mnav-mark--light { display: flex !important; }
+  /* Burger and wordmark sit together on the left, with the CTA opposite —
+     the export's arrangement. `order: -1` alone put the burger first but left
+     space-between spreading the wordmark into the middle of the bar. */
+  .mnav-wrap nav { justify-content: flex-start !important; }
+  .mnav-wrap nav > div:last-of-type { margin-left: auto; }
+  .mnav-burger { color: #FFFFFF; order: -1; margin-left: 0; width: 26px; }
+  /* ── The menu is a drawer on mobile ──────────────────────────────────────
+     It slides in from the left, under the hamburger that opens it, rather than
+     dropping down from the bar. A sheet the height of the screen holds the
+     whole menu without scrolling and leaves the page visible behind it, so it
+     is obvious what you are on top of. */
+  .mnav-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(12, 14, 18, .5);
+    animation: mnavFade .18s ease;
+  }
+  .mnav-panel {
+    position: fixed;
+    /* Below the bar, not over it. The drawer is opened from the hamburger and
+       closed from the same spot, so the bar has to stay visible and tappable —
+       covering it leaves the X you just pressed hidden underneath. 72px is the
+       bar's height: 16px of padding either side of a 40px row. */
+    top: 72px;
+    left: 0;
+    bottom: 0;
+    z-index: 95;
+    width: min(84%, 340px);
+    max-width: none;
+    margin: 0;
+    padding: 12px 10px 20px;
+    border-radius: 0 22px 22px 0;
+    overflow-y: auto;
+    animation: mnavSlide .22s cubic-bezier(.22, 1, .36, 1);
+  }
+  /* The scrim starts below the bar too, so the bar reads as still in charge. */
+  .mnav-scrim { top: 72px; }
+}
+
+@keyframes mnavFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes mnavSlide { from { transform: translateX(-100%) } to { transform: none } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mnav-scrim, .mnav-panel { animation: none; }
+}
+
+@media (max-width: 820px) {
+  /* The CTA comes back on the bar, compact, as the export draws it. It stays
+     hidden on the landing page, where it is a two-way menu that would open on
+     top of the drawer carrying the same choice. */
+  .mnav-cta { display: inline-flex !important; }
+  /* div.mnav-cta is the landing page's dropdown; a[href] is the direct link on
+     /brands and /creators. Only the link belongs on a phone bar. */
+  div.mnav-cta { display: none !important; }
+  .mnav-wrap nav .mnav-cta[href] {
+    height: 34px !important;
+    padding: 0 15px !important;
+    font-size: 11.5px !important;
+  }
+}
+
+@media (max-width: 820px) {
   .mnav-links, .mnav-rule, .mnav-login { display: none !important; }
   .mnav-burger { display: inline-flex; }
-  /* The header's CTA is a dropdown on the landing page, and its menu
-     would open on top of the panel that already carries the same
-     action. The panel's full-width button is one tap away and more
-     prominent, so the capsule keeps just the wordmark and the burger. */
-  .mnav-cta { display: none !important; }
+  /* Superseded: the CTA is shown on the bar above, and only the landing
+     page's dropdown variant is hidden there. Leaving this rule in place
+     would win on order and hide both. */
 }
-@media (min-width: 781px) {
+@media (min-width: 821px) {
   .mnav-panel { display: none !important; }
 }
 
