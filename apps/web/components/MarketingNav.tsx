@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { nav } from '@/lib/content'
 import BookDemoModal from '@/components/BookDemoModal'
@@ -70,6 +70,81 @@ const MORPH = '.55s'
  * shape while you are still reading the hero, and split once you have left it.
  */
 const SPLIT_FALLBACK = 520
+
+/**
+ * A menu on the landing page's two account actions.
+ *
+ * The home page addresses nobody in particular, so "Log in" and "Get access"
+ * cannot pick a side — each opens the two-way choice instead of guessing. On
+ * /brands and /creators the audience is known and both stay plain links.
+ *
+ * Closes on Escape, on outside click and on choosing an item, and reports its
+ * state through aria-expanded so it is not a mouse-only control.
+ */
+function NavMenu({
+  label, items, variant,
+}: {
+  label: string
+  items: { label: string; href: string }[]
+  variant: 'plain' | 'pill'
+}) {
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [open])
+
+  const trigger: React.CSSProperties = variant === 'pill'
+    ? { ...CTA_STYLE, border: 'none', cursor: 'pointer' }
+    : { fontSize: '15px', fontWeight: 600, color: '#181C24', background: 'none', border: 'none',
+        cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '6px' }
+
+  return (
+    <div ref={wrap} style={{ position: 'relative', flexShrink: 0 }}>
+      <button type="button" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((v) => !v)} style={trigger}>
+        {label}
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
+             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+             style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: 'absolute', top: 'calc(100% + 10px)', right: 0, minWidth: '196px',
+            background: '#FFFFFF', borderRadius: '16px', padding: '6px',
+            boxShadow: '0 18px 40px -18px rgba(24,28,36,.30), 0 2px 8px -2px rgba(24,28,36,.10)',
+            display: 'flex', flexDirection: 'column', zIndex: 10,
+          }}
+        >
+          {items.map((it) => (
+            <Link
+              key={it.href}
+              href={it.href}
+              onClick={() => setOpen(false)}
+              style={{
+                padding: '10px 14px', borderRadius: '11px', fontSize: '14.5px', fontWeight: 600,
+                color: '#181C24', textDecoration: 'none', whiteSpace: 'nowrap',
+              }}
+            >
+              {it.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function MarketingNav({ audience }: { audience: 'brand' | 'creator' | 'home' }) {
   // The landing page addresses nobody in particular, so its CTA is the demo
@@ -220,6 +295,18 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
 
         {/* Log in + the audience CTA */}
         <div style={{ ...group, paddingLeft: split ? '24px' : '16px', paddingRight: '8px', gap: '16px' }}>
+          {audience === 'home' ? (
+            <div className="mnav-login">
+              <NavMenu
+                label={nav.login.label}
+                variant="plain"
+                items={[
+                  { label: 'Log in as a creator', href: '/login/creator' },
+                  { label: 'Log in as a brand', href: '/login/brand' },
+                ]}
+              />
+            </div>
+          ) : (
           <Link
             className="mnav-login"
             // nav.login.href is the brand login, because the site-wide <Nav>
@@ -231,17 +318,19 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           >
             {nav.login.label}
           </Link>
+          )}
 
           <span className="mnav-rule" aria-hidden="true" style={rule} />
 
           {audience === 'home' ? (
-            <button
-              type="button"
-              onClick={() => setDemoOpen(true)}
-              style={{ border: 'none', cursor: 'pointer', font: 'inherit', ...CTA_STYLE }}
-            >
-              {cta.label}
-            </button>
+            <NavMenu
+              label="Get access"
+              variant="pill"
+              items={[
+                { label: "I'm a creator", href: '/signup/creator' },
+                { label: "I'm a brand", href: '/signup/brand' },
+              ]}
+            />
           ) : (
           <Link
             href={cta.href}
