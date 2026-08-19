@@ -322,14 +322,6 @@
 .ga-option-label { font-family: var(--font-ui); font-size: 15px; font-weight: 700; }
 .ga-option-sub   { font-family: var(--font-ui); font-size: 12.5px; color: rgba(24, 28, 36, .6); }
 
-.ga-foot {
-  margin: 16px 0 0;
-  text-align: center;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  color: rgba(24, 28, 36, .6);
-}
-.ga-foot a { color: #181C24; font-weight: 600; }
 
 /* The wordmark's serif italic, the same treatment the landing headlines use
    on the brand word. */

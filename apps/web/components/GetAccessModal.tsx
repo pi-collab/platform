@@ -131,9 +131,6 @@ export default function GetAccessModal({
           </Link>
         </div>
 
-        <p className="ga-foot">
-          Already have an account? <Link href="/login/creator" onClick={go('/login/creator')}>Log in</Link>
-        </p>
       </div>
     </div>
     ,
