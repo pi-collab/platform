@@ -167,7 +167,7 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
           }}
         >
           <Link href="/" aria-label="Guapd home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <Wordmark height={24} />
+            <Wordmark height={20} />
           </Link>
 
           <span className="mnav-rule" aria-hidden="true" style={rule} />
@@ -187,11 +187,12 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
             }}
           >
             {links.map((link) => {
-              // On the landing page neither audience link is "current", but the
-              // page does own the #how anchor — the export marks it with the
-              // neon dot, and without it the header has no current-section
-              // marker at all there.
-              const current = audience === 'home' ? link.anchorOnly : link.href === currentHref
+              // Nothing is marked on the landing page. The dot means "you are
+              // on this page", and the home page is not one of the three links
+              // — marking "How it works" implied it was a separate page you had
+              // navigated to. The wordmark is the way home, as it is on every
+              // other site, so no fourth link is needed.
+              const current = link.href === currentHref
               return (
                 <Link
                   key={link.href}

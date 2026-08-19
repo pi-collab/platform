@@ -189,9 +189,13 @@ if before:
     # the export's pill — and make the pill neon, like every other Book demo on
     # the site. The export draws this one white-on-outline, which reads as a
     # secondary action when it is the page's closing call to action.
+    # Dark, not neon: this button sits ON the neon panel, so a neon pill is
+    # invisible against it. Dark also matches the hero's Book demo. The export
+    # draws it white-on-outline, which reads as a secondary action for the
+    # page's closing call to action.
     html = html.replace(
         'background:#FFFFFF;border:1px solid #12151C;color:#12151C;',
-        'background:var(--neon);border:none;color:var(--ink);', 1)
+        'background:var(--ink);border:none;color:#FFFFFF;', 1)
     html = html.replace(
         '<button type="button" id="cvBtn"',
         '<button type="button" id="cvBtn" class="cv-cta"', 1)
@@ -212,6 +216,25 @@ step("end-of-page CTA made clickable", before, html.count('<button type="button"
 before = html.count("overflow-x:hidden")
 html = html.replace("overflow-x:hidden", "overflow-x:clip")
 step("page wrapper clip, not hidden", before, html.count("overflow-x:hidden"))
+
+# ── 1j. The stack heading needs a hook. ───────────────────────────────────
+# It is an unclassed div between the section and .stack-outer. Tagging it lets
+# the stylesheet hold it in place while the cards pile up underneath, instead of
+# letting it scroll away before the stacking even begins.
+before = html.count('class="stack-head"')
+html = html.replace(
+    '<div style="text-align:center;max-width:560px;margin:0 auto clamp(44px,5.5vw,64px);">',
+    '<div class="stack-head" style="text-align:center;max-width:560px;margin:0 auto clamp(44px,5.5vw,64px);">', 1)
+step("stack heading tagged", before, html.count('class="stack-head"'))
+
+# The cards pin BELOW that heading, not behind it. Their offset is inline in the
+# export ("top:96px"), which outranks any stylesheet rule, so it is rewritten
+# here: 96px is where the heading now sits, and a card sharing that offset
+# disappears behind it.
+n_pin = html.count('class="stack-pin" style="position:sticky;top:96px')
+html = html.replace('class="stack-pin" style="position:sticky;top:96px',
+                    'class="stack-pin" style="position:sticky;top:232px', 1)
+step("stack cards pin below the heading", n_pin, html.count('top:232px'))
 
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all

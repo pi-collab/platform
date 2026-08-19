@@ -186,6 +186,22 @@ FOOTER = """
    so it clears the header with room to breathe. */
 .landing-page .hw-topbar { top: clamp(90px, 6vh + 60px, 120px); }
 
+/* "Everything, in one place": the heading holds at the top while the cards pile
+   up beneath it. It used to scroll away before the stacking even began, so the
+   section's own title was gone by the time the thing it titles happened.
+
+   The cards pin below it rather than behind it — 96px (the export's own offset)
+   plus the heading's height and the gap under it. The heading carries the page
+   background so anything travelling up to the stack disappears cleanly behind
+   it rather than showing through. */
+.landing-page .stack-head {
+  position: sticky;
+  top: 96px;
+  z-index: 30;
+  background: var(--card);
+  padding-bottom: 18px;
+}
+
 /* The header steps aside while a pinned section owns the viewport.
    Deliberately NOT scoped to .landing-page: the header sits outside it. The
    attribute is set only by that page's own effect and removed on unmount, so

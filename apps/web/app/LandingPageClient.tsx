@@ -343,12 +343,12 @@ export default function LandingPageClient() {
         {/* FOUR REASONS — single bounded container, spaced cards */}
         <section style={{padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
         <div className="gx" style={{background: '#fff', border: '1px solid var(--hairline)', borderRadius: '36px', boxShadow: '0 40px 90px -50px rgba(40,45,25,.3)', padding: 'clamp(44px,5.5vw,72px) clamp(24px,4vw,48px)'}}>
-          <div style={{textAlign: 'center', maxWidth: '560px', margin: '0 auto clamp(44px,5.5vw,64px)'}}>
+          <div className="stack-head" style={{textAlign: 'center', maxWidth: '560px', margin: '0 auto clamp(44px,5.5vw,64px)'}}>
             <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>One connected system</span>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '800', letterSpacing: '-0.035em', lineHeight: '1.05', fontSize: 'clamp(30px,4vw,52px)', margin: '12px 0 0', color: 'var(--ink)'}}>Everything, <span className="t-accent" style={{fontSize: '1.05em'}}>in one place</span></h2>
           </div>
           <div className="stack-outer" style={{position: 'relative', height: '1900px', marginBottom: '70px'}}>
-          <div className="stack-pin" style={{position: 'sticky', top: '96px', height: 'auto', overflow: 'visible'}}>
+          <div className="stack-pin" style={{position: 'sticky', top: '232px', height: 'auto', overflow: 'visible'}}>
 
           {/* 01 — timeline that fills */}
           <div data-stack-card="0" style={{position: 'absolute', left: '0', right: '0', top: '0', willChange: 'transform'}}>
@@ -542,7 +542,7 @@ export default function LandingPageClient() {
                   <h2 id="cvHead" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C', opacity: '0'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>guap.</span></h2>
                   <p id="cvSub" style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
                   <button type="button" id="cvBtn" className="cv-cta" onClick={() => setDemoOpen(true)} style={{marginTop: '26px', display: 'inline-flex', opacity: '0'}}>
-                    <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--neon)', border: 'none', color: 'var(--ink)', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
+                    <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#FFFFFF', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
                   </button>
                 </div>
               </div>
