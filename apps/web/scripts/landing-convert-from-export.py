@@ -240,6 +240,18 @@ html = html.replace('class="stack-pin" style="position:sticky;top:96px',
                     'class="stack-pin" style="position:sticky;top:232px', 1)
 step("stack cards pin below the heading", n_pin, html.count('top:232px'))
 
+# ── 1k. font-weight 800 renders as 700 in the design. ─────────────────────
+# The export loads Schibsted Grotesk from Google Fonts as
+# `wght@400;500;600;700` — there is no 800 face in it. Every font-weight:800 in
+# the markup therefore renders at 700 in the design the page was signed off
+# against. next/font DOES ship 800, so ours came out heavier than the design.
+#
+# Measured, one string at 56px: the export's "800" is 591.7px, our 700 is
+# 591.7px, our 800 is 604.2px. 700 is the weight the designer actually saw.
+before = html.count('font-weight:800')
+html = html.replace('font-weight:800', 'font-weight:700')
+step("font-weight 800 → 700", before, html.count('font-weight:800'))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.

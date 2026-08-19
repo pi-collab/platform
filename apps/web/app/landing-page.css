@@ -58,9 +58,9 @@
 .landing-page .t-meta{ font-family:var(--font-ui); font-weight:500; font-size:9.5px; line-height:1.4; letter-spacing:.14em; text-transform:uppercase; color:var(--meta); }
 .landing-page .t-meta-tight{ font-family:var(--font-ui); font-weight:500; font-size:9.5px; line-height:1.4; letter-spacing:.06em; text-transform:uppercase; color:var(--meta); }
 .landing-page .t-accent{ font-family:var(--font-serif); font-style:italic; font-weight:400; letter-spacing:0; font-size:1.12em; }
-.landing-page .t-figure{ font-family:var(--font-display); font-weight:800; font-size:20px; letter-spacing:-0.03em; color:var(--ink); }
-.landing-page .t-figure-sm{ font-family:var(--font-display); font-weight:800; font-size:18px; letter-spacing:-0.03em; color:var(--ink); }
-.landing-page .g-wordmark{ font-family:var(--font-display); font-weight:800; letter-spacing:-0.02em; color:var(--ink); }
+.landing-page .t-figure{ font-family:var(--font-display); font-weight:700; font-size:20px; letter-spacing:-0.03em; color:var(--ink); }
+.landing-page .t-figure-sm{ font-family:var(--font-display); font-weight:700; font-size:18px; letter-spacing:-0.03em; color:var(--ink); }
+.landing-page .g-wordmark{ font-family:var(--font-display); font-weight:700; letter-spacing:-0.02em; color:var(--ink); }
 
 
 .landing-page .on-dark{ --ink:#EDEDE7; --meta:#9EA096; --ink-soft:#C6C8BE; --ink-faint:#9EA096; color:#EDEDE7; }

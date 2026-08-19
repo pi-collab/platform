@@ -122,6 +122,14 @@ def scope_block(src):
     return ''.join(out)
 
 
+# font-weight:800 renders as 700 in the design — the export's Google Fonts
+# import is wght@400;500;600;700, with no 800 face in it. next/font does ship
+# 800, so declaring it here would render heavier than the page was signed off
+# at. Measured at 56px: the export's "800" and our 700 are both 591.7px wide;
+# our real 800 is 604.2px.
+n_800 = len(re.findall(r'font-weight:\s*800', css))
+css = re.sub(r'font-weight:\s*800', 'font-weight:700', css)
+
 scoped = scope_block(css).strip()
 
 HEADER = """/* ── Landing page, ported from the "Landing - desktop" design export ─────────
@@ -275,6 +283,7 @@ open(OUT, 'w').write(HEADER + scoped + FOOTER)
 leaked = [s.strip() for s in re.findall(r'(?m)^\s*([^@{}\n][^{}\n]*)\{', scoped)
           if SCOPE not in s and not re.match(r'^\s*(\d+%|from|to)', s.strip())]
 print(f"    skin tokens folded in, @import rules dropped: {n_imports}")
+print(f"    font-weight 800 → 700: {n_800}")
 print(f"    scoped selectors: {scoped.count(SCOPE)}")
 print(f"    orphan blocks dropped: {len(dropped_orphans)}")
 print(f"    @keyframes left intact: {len(re.findall(r'@keyframes', scoped))}")
