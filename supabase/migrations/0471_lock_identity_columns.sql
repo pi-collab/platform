@@ -1,0 +1,47 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Stop a user rewriting their own identity columns.
+--
+-- Found while checking whether the role boundary was complete after 0470. It
+-- was not, and this is the hole that made the rest of it decorative.
+--
+-- users_update_own is:
+--     FOR UPDATE USING (auth_id = auth.uid())
+--
+-- with no WITH CHECK, so WITH CHECK defaults to the USING expression. That
+-- constrains WHICH ROW you may update — your own — and says nothing about WHICH
+-- COLUMNS. `role` is a column on that row.
+--
+-- So the escalation was:
+--     1. sign up as a creator (phone + OTP, open to anyone)
+--     2. update users set role = 'brand_member' where auth_id = auth.uid()
+--        -- allowed: the row is yours, and nothing checks the column
+--     3. call submitOnboarding, which now checks role, and pass
+--
+-- The application-side role checks added alongside this migration are correct
+-- and still wanted, but on their own they only ask a question the caller was
+-- free to answer for themselves.
+--
+-- Column privileges are the fix, as in 0470: RLS decides which rows, GRANT
+-- decides which columns. Every legitimate write to these three goes through the
+-- service role, which bypasses both.
+--
+--   role     - authorization. Set by the signup path that created the account
+--              (ensure-brand-user writes 'brand_member', the OTP paths write
+--              'creator') and never by the account holder.
+--   auth_id  - identity. Already protected in practice, because the defaulted
+--              WITH CHECK re-evaluates auth_id = auth.uid() against the NEW row
+--              and rejects any other value. Revoked anyway: relying on a
+--              defaulted clause to protect identity is a footgun, and adding an
+--              explicit WITH CHECK for some unrelated reason would silently
+--              remove the protection.
+--   email    - identity, and load bearing beyond display: ensureBrandUserRow
+--              matches an existing users row BY EMAIL to link a second auth
+--              method. A user who can set their own email can aim that match at
+--              someone else's address.
+--
+-- Deliberately NOT a blanket revoke of UPDATE. Everything else on users
+-- (full_name, preferences, terms_accepted_at…) is written through the service
+-- role today, but those are ordinary profile fields and a future user-scoped
+-- write to one of them should not have to come back through a migration.
+
+REVOKE UPDATE (role, auth_id, email) ON public.users FROM anon, authenticated;

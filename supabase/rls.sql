@@ -712,6 +712,23 @@ CREATE POLICY creator_read_own_review ON deal_reviews
 --
 -- Re-runnable: REVOKE then GRANT is idempotent.
 
+-- users: identity columns are not the account holder's to rewrite.
+--
+-- users_update_own is FOR UPDATE USING (auth_id = auth.uid()) with no WITH
+-- CHECK, so the clause defaults to USING. That constrains which ROW may be
+-- updated and says nothing about which COLUMNS — leaving `role` writable by its
+-- own owner, which made every application-side role check answerable by the
+-- caller. See migration 0471.
+-- Table-level first, then grant the columns back. Revoking only the column
+-- grants is a no-op while a table-level UPDATE grant exists — that is what
+-- migration 0471 got wrong, and 0472 corrected.
+REVOKE UPDATE ON public.users FROM anon, authenticated;
+
+GRANT UPDATE (
+  id, full_name, phone, managed_by, created_at, updated_at,
+  terms_accepted_at, terms_version, preferences
+) ON public.users TO anon, authenticated;
+
 REVOKE SELECT ON public.creators FROM anon, authenticated;
 
 GRANT SELECT (

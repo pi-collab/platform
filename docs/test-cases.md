@@ -1074,7 +1074,7 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] A free-inbox address (gmail, outlook…) is refused by `validateWorkEmail` on this path, not only in `/auth/callback`
 - [ ] An `@auth.guapd.internal` address is refused explicitly. `validateWorkEmail` is a BLOCKLIST of free providers, so our synthetic domain passes it — the explicit check is what stops phone-only accounts, not the work-email rule
 - [ ] The invite accept flow still works for a genuine teammate
-- [ ] KNOWN GAP: the invite flow does not apply this role check, so a brand can still invite a creator-role user into its team. Separate fix
+- [ ] A creator-role user opening a valid brand-team invite is refused ("This is a creator account"); the invite stays valid for the right person
 
 ### 24. Creator PII column privileges (SECURITY)
 
@@ -1089,6 +1089,18 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] A user holding `brand_members` rows for two brands can still use the app — before the fix every brand-side policy raised "more than one row returned by a subquery" at once, locking them out of everything
 - [ ] The brand resolved is the OLDEST membership (`ORDER BY created_at`), consistently across queries
 - [ ] KNOWN GAP: the second brand is invisible rather than supported. If one account should ever span two brands, this function and every policy calling it need rethinking; if never, `brand_members` wants `UNIQUE (user_id)`
+
+### 26. The role boundary is closed on every path (SECURITY)
+
+Only three paths can make someone a brand member. All three are now guarded:
+
+- [ ] `submitOnboarding` — refuses `role = 'creator'` (section 23)
+- [ ] invite accept — refuses `role = 'creator'`, and already refused a second brand
+- [ ] **self-service role change** — `users.role` is no longer writable by its owner. This was the one that mattered: `users_update_own` is `USING (auth_id = auth.uid())` with no `WITH CHECK`, so it constrains which ROW you may update and says nothing about which COLUMNS. A creator could set their own role to `brand_member` and then walk through the check in `submitOnboarding`. Verify with `has_column_privilege('authenticated','public.users','role','UPDATE')` → false
+- [ ] `role` is still READABLE by authenticated (the app reads it), and `service_role` still writes it (every signup path does)
+- [ ] `full_name`, `preferences`, `phone` remain writable — ordinary profile fields
+- [ ] `brand_members` has no INSERT policy, so no client can create a membership directly; both inserts are server-side with the service role
+- [ ] REGRESSION TRAP: `REVOKE UPDATE (col)` is a NO-OP while a table-level UPDATE grant exists. Migration 0471 did exactly that, reported success, and changed nothing. Always revoke at table level then grant columns back, and verify with `has_column_privilege` rather than trusting the migration ran
 
 ---
 

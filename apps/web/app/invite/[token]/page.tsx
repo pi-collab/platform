@@ -61,7 +61,7 @@ export default async function InvitePage({ params }: { params: { token: string }
   // Get internal user profile
   const { data: profile } = await supabase
     .from('users')
-    .select('id')
+    .select('id, role')
     .eq('auth_id', user.id)
     .maybeSingle()
 
@@ -79,6 +79,26 @@ export default async function InvitePage({ params }: { params: { token: string }
     }
 
     return await acceptAndRedirect(admin, invite, newProfile.id)
+  }
+
+  // A creator cannot join a brand team.
+  //
+  // Same boundary submitOnboarding enforces, and this was the other way across
+  // it: the profile was read as `select('id')`, so role never entered the
+  // decision and a brand could pull a creator-role account onto its team.
+  // users.role is an enum of two values, so a person who is both has no
+  // representation — the membership would exist while every role-based
+  // decision elsewhere still read 'creator'.
+  //
+  // The invite itself stays valid: it is addressed to an email, and the right
+  // person may yet accept it from a brand account.
+  if (profile.role === 'creator') {
+    return (
+      <ErrorCard
+        message="This is a creator account"
+        sub="Brand team invites can only be accepted by a brand account. Sign in with your work email, or ask your admin to invite that address instead."
+      />
+    )
   }
 
   // Check if already belongs to a brand
