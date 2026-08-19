@@ -1,9 +1,11 @@
 import MarketingNav from '@/components/MarketingNav'
 import Footer from '@/components/Footer'
 import LandingPageClient from './LandingPageClient'
+import LandingMobileClient from './LandingMobileClient'
 import { BRAND_NAME } from '@/lib/content'
 import './brands-page.css'
 import './landing-page.css'
+import './landing-mobile.css'
 
 import type { Metadata } from 'next'
 
@@ -41,6 +43,7 @@ export default function HomePage() {
       <MarketingNav audience="home" />
       <main>
         <LandingPageClient />
+        <LandingMobileClient />
       </main>
       <Footer />
     </>

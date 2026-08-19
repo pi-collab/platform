@@ -268,6 +268,22 @@ for real, invented in FAKE_BRANDS.items():
     html = html.replace(f'>{real}<', f'>{invented}<')
 step("real company names replaced", before, sum(html.count(f'>{k}<') for k in FAKE_BRANDS))
 
+# ── 1n. The converge headline. ────────────────────────────────────────────
+# The animation is unchanged — only the words. "Where brands and creators guap"
+# becomes "Get going. Get guapd." The italic serif span carries the brand word,
+# as it did before, so the treatment survives the rewrite.
+before = html.count('Where brands and creators')
+html = html.replace(
+    'Where brands and creators <span style="font-family:var(--font-serif);font-style:italic;font-weight:400;">guap.</span>',
+    'Get going. <span style="font-family:var(--font-serif);font-style:italic;font-weight:400;">Get guapd.</span>')
+# The section ships TWICE: the animated one and a .cv-reduced fallback shown
+# under prefers-reduced-motion. Both must say the same thing, or the page reads
+# differently depending on an accessibility preference.
+html = html.replace(
+    'Where brands and creators <span style="font-family:var(--font-serif);font-style:italic;font-weight:400;">meet.</span>',
+    'Get going. <span style="font-family:var(--font-serif);font-style:italic;font-weight:400;">Get guapd.</span>')
+step("converge headline reworded", before, html.count('Where brands and creators'))
+
 # ── 2. x-import → a real element. ──────────────────────────────────────────
 # Every one on this page is the design system's primary Button. They are all
 # calls to action, so they become links rather than buttons.

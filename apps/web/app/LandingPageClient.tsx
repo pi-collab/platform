@@ -38,7 +38,8 @@ const CAMPAIGNS = [
  * measurement: content metrics need the Meta API, which is not built, so the
  * answer says what the deal record actually gives you and no more.
  */
-const FAQ: { q: string; a: React.ReactNode }[] = [
+// Exported so the mobile layout of this page answers identically.
+export const FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: 'What is guapd?',
     a: (
@@ -636,7 +637,7 @@ export default function LandingPageClient() {
               <div style={{position: 'absolute', inset: '0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                 <div style={{position: 'relative', zIndex: '2', maxWidth: '560px', textAlign: 'center', padding: '0 24px'}}>
                   <div id="cvEyebrow" style={{color: '#12151C', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', letterSpacing: '.14em', opacity: '0'}}>TWO SIDES</div>
-                  <h2 id="cvHead" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C', opacity: '0'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>guap.</span></h2>
+                  <h2 id="cvHead" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C', opacity: '0'}}>Get going. <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>Get guapd.</span></h2>
                   <p id="cvSub" style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
                   <button type="button" id="cvBtn" className="cv-cta" onClick={() => setDemoOpen(true)} style={{marginTop: '26px', display: 'inline-flex', opacity: '0'}}>
                     <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#FFFFFF', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
@@ -648,7 +649,7 @@ export default function LandingPageClient() {
               <div style={{position: 'absolute', left: '50%', top: '50%', width: '120px', height: '120px', borderRadius: '50%', background: '#E8FF66', transform: 'translate(-50%,-50%) scale(30)'}}></div>
               <div style={{position: 'relative', zIndex: '2', maxWidth: '560px', textAlign: 'center', padding: '0 24px'}}>
                 <div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', letterSpacing: '.14em', color: '#12151C'}}>TWO SIDES</div>
-                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>meet.</span></h2>
+                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C'}}>Get going. <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>Get guapd.</span></h2>
                 <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
                 <div style={{marginTop: '26px', display: 'inline-flex'}}>
                   <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid #12151C', color: '#12151C', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
