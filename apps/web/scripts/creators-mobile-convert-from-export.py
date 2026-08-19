@@ -184,6 +184,34 @@ for slow, quick in SPEEDS.items():
     html = html.replace(slow, quick)
 step("ticker speed increased", before, sum(html.count(k) for k in SPEEDS))
 
+# ── 4g. Reveal-on-scroll, as the desktop page has. ────────────────────────
+# The mobile export ships no .sr elements at all — its sections simply appear.
+# The desktop port reveals 14 of them, so the same page animated on one layout
+# and not the other. Every top-level section gets the class; the component's
+# observer adds .sr-in as each comes into view, and creators-mobile.css carries
+# both states.
+before = len(re.findall(r'class="[^"]*\bsr\b', html))
+html = re.sub(r'<section\b(?![^>]*class=)', '<section class="sr"', html)
+html = re.sub(r'<section\b([^>]*?)class="([^"]*)"', r'<section\1class="sr \2"', html)
+step("sections given reveals", before, len(re.findall(r'class="sr', html)))
+
+# ── 4h. Scroll progress, in the brand colour. ─────────────────────────────
+# The landing page has one and this page is ~7,000px on a phone, so there was no
+# read on how far through you are. Same element and same colour as the landing
+# page's, driven by the component.
+before = html.count('id="mobProgress"')
+html = ('<div id="mobProgress" style="position:fixed;top:0;left:0;height:2px;width:0%;'
+        'background:var(--neon-deep);z-index:200;transition:width .1s linear;"></div>\n' + html)
+step("scroll progress added", before, html.count('id="mobProgress"'))
+
+# ── 4i. The earnings line fills its column. ───────────────────────────────
+# It carries max-width:30ch while the equivalent line in the trust section has
+# none, so on the same page one paragraph wrapped early and the other did not.
+# The cap goes; the column already sets the measure.
+before = html.count('max-width:30ch')
+html = html.replace(';max-width:30ch', '')
+step("earnings line uncapped", before, html.count('max-width:30ch'))
+
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
 for uid, out in ASSETS.items():

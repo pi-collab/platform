@@ -33,11 +33,28 @@ export default function CreatorsMobileClient() {
     // .sr-in once the element has been seen. Elements are revealed rather than
     // hidden if IntersectionObserver is missing, so nothing can end up stuck
     // invisible.
+    // Scroll progress, matching the landing page. Cheap enough to run on every
+    // scroll event: one read and one style write, no layout.
+    const bar = document.getElementById('mobProgress')
+    const onScroll = () => {
+      if (!bar) return
+      const d = document.documentElement
+      const p = d.scrollTop / ((d.scrollHeight - d.clientHeight) || 1)
+      bar.style.width = `${Math.min(100, Math.max(0, p * 100))}%`
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+
     const nodes = Array.from(document.querySelectorAll('.creators-mobile .sr'))
-    if (!nodes.length) return
+    const stopScroll = () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+    if (!nodes.length) return stopScroll
     if (typeof IntersectionObserver === 'undefined') {
       nodes.forEach((n) => n.classList.add('sr-in'))
-      return
+      return stopScroll
     }
     const io = new IntersectionObserver(
       (entries) => {
@@ -51,11 +68,13 @@ export default function CreatorsMobileClient() {
       { rootMargin: '0px 0px -12% 0px', threshold: 0.05 },
     )
     nodes.forEach((n) => io.observe(n))
-    return () => io.disconnect()
+    return () => { io.disconnect(); stopScroll() }
   }, [])
 
   return (
     <div className="creators-mobile">
+      <div id="mobProgress" style={{position: 'fixed', top: '0', left: '0', height: '2px', width: '0%', background: 'var(--neon-deep)', zIndex: '200', transition: 'width .1s linear'}}></div>
+
       <div className="mobile-frame">
       <div style={{fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', background: '#fff'}}>
 
@@ -65,15 +84,15 @@ export default function CreatorsMobileClient() {
         </div>
 
         {/* HERO */}
-        <section className="hr" style={{padding: '56px 24px 32px', textAlign: 'center'}}>
+        <section className="sr hr" style={{padding: '56px 24px 32px', textAlign: 'center'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}><span style={{width: '5px', height: '5px', borderRadius: '50%', background: 'var(--ink)', flexShrink: '0'}}></span>Built for creators</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '30px', lineHeight: '1.2', margin: '20px 0 0', color: 'var(--ink)'}}>The operating system for <span className="opit">creator collabs.</span></h2>
-          <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '16px auto 0', maxWidth: '30ch'}}>Keep every opportunity, deliverable and payment in one place.</p>
+          <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '16px auto 0'}}>Keep every opportunity, deliverable and payment in one place.</p>
         </section>
         <div style={{padding: '0 24px', marginTop: '32px', marginBottom: '56px'}}><img src="/creators-mobile/4e8cae69.webp" alt="guapd dashboard showing total earnings, overview, deals, and upcoming deliverables" style={{width: '100%', aspectRatio: '1060/1484', objectFit: 'cover', display: 'block', borderRadius: '28px'}} decoding="async" loading="lazy" /></div>
 
         {/* DEALS */}
-        <section id="top" className="hr" style={{padding: '48px 24px 44px', marginTop: '28px', background: 'var(--ink)', color: '#fff'}}>
+        <section id="top" className="sr hr" style={{padding: '48px 24px 44px', marginTop: '28px', background: 'var(--ink)', color: '#fff'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}>For creators</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '27px', lineHeight: '1.2', margin: '18px 0 0', color: '#fff'}}>Every deal you're offered, <span className="opit" style={{color: 'var(--neon)'}}>all tracked.</span></h2>
           <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.6', color: '#B8BAB0', margin: '14px 0 0'}}>Every offer, deliverable and payment, in one place instead of scattered across DMs and spreadsheets.</p>
@@ -90,7 +109,7 @@ export default function CreatorsMobileClient() {
         </section>
 
         {/* VALUE TICKER */}
-        <section className="hr" style={{padding: '24px 0'}}>
+        <section className="sr hr" style={{padding: '24px 0'}}>
           <div style={{position: 'relative', overflow: 'hidden', WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)'}}>
             <div style={{display: 'flex', width: 'max-content', gap: '10px', animation: 'mqMove 17s linear infinite', paddingRight: '10px'}}>
               <span style={{display: 'inline-flex', alignItems: 'center', gap: '7px', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '8px 0', whiteSpace: 'nowrap'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#7FA8E8'}}></span>locked terms</span>
@@ -110,10 +129,10 @@ export default function CreatorsMobileClient() {
         </section>
 
         {/* EARNINGS */}
-        <section className="hr" style={{padding: '56px 24px 40px'}}>
+        <section className="sr hr" style={{padding: '56px 24px 40px'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>For creators</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '26px', lineHeight: '1.2', margin: '20px 0 0', color: 'var(--ink)'}}>Watch your earnings <span className="opit">add up.</span></h2>
-          <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '16px 0 0', maxWidth: '30ch'}}>Every deal, past and present, rolls into one earnings view, so you always know what you've made.</p>
+          <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', lineHeight: '1.65', color: 'var(--ink-soft)', margin: '16px 0 0'}}>Every deal, past and present, rolls into one earnings view, so you always know what you've made.</p>
         </section>
         <div style={{padding: '0 24px'}}><img src="/creators-mobile/a777545a.webp" alt="guapd payment overview showing payment received, timeline, and payment details" style={{width: '100%', aspectRatio: '948/1330', objectFit: 'cover', objectPosition: 'center bottom', display: 'block', borderRadius: '16px'}} decoding="async" loading="lazy" /></div>
         <div style={{padding: '38px 24px 36px'}}>
@@ -128,7 +147,7 @@ export default function CreatorsMobileClient() {
         </div>
 
         {/* HOW IT WORKS */}
-        <section id="how" className="hr" style={{padding: '56px 24px', background: 'var(--ink)', color: '#fff'}}>
+        <section id="how" className="sr hr" style={{padding: '56px 24px', background: 'var(--ink)', color: '#fff'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '7px 18px'}}>How it works</span>
           <div style={{marginTop: '20px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,.16)', display: 'flex', gap: '16px'}}><span className="oavatar" style={{width: '26px', height: '26px', background: 'var(--neon)', color: 'var(--ink)', fontSize: '10.5px', flexShrink: '0'}}>01</span><div><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px'}}>Every deal, one place</div><p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: '#B8BAB0', margin: '8px 0 0'}}>No more offers buried in Instagram DMs. Every brand brief arrives as a structured card.</p></div></div>
           <div style={{paddingTop: '24px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,.16)', display: 'flex', gap: '16px'}}><span className="oavatar" style={{width: '26px', height: '26px', background: 'var(--neon)', color: 'var(--ink)', fontSize: '10.5px', flexShrink: '0'}}>02</span><div><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px'}}>Upload and get approved</div><p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: '#B8BAB0', margin: '8px 0 0'}}>Track revision requests and see exactly how many rounds are left.</p></div></div>
@@ -136,7 +155,7 @@ export default function CreatorsMobileClient() {
         </section>
 
         {/* WHY CREATORS SWITCH */}
-        <section className="hr" style={{padding: '56px 24px 32px'}}>
+        <section className="sr hr" style={{padding: '56px 24px 32px'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Why creators switch</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.22', fontSize: '24px', margin: '20px 0 0', color: 'var(--ink)'}}>Everything DMs can't <span className="opit">give you.</span></h2>
         </section>
@@ -156,7 +175,7 @@ export default function CreatorsMobileClient() {
         </div>
 
         {/* EVERYTHING YOU NEED */}
-        <section className="hr" style={{padding: '56px 24px', background: 'var(--ink)', color: '#fff'}}>
+        <section className="sr hr" style={{padding: '56px 24px', background: 'var(--ink)', color: '#fff'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Everything you need</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: '#fff'}}>Everything you <span className="opit" style={{color: 'var(--neon)'}}>need</span></h2>
           <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '32px'}}>
@@ -168,7 +187,7 @@ export default function CreatorsMobileClient() {
         </section>
 
         {/* BUILT FOR TRUST */}
-        <section id="privacySec" className="hr" style={{padding: '56px 24px'}}>
+        <section id="privacySec" className="sr hr" style={{padding: '56px 24px'}}>
           <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Built for trust</span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: 'var(--ink)'}}>Your deals, <span className="opit">protected.</span></h2>
           <p style={{fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.6', color: 'var(--ink-2)', margin: '14px 0 0'}}>Every collaboration on guapd is backed by a written contract and a payment that's tracked from day one.</p>
@@ -180,7 +199,7 @@ export default function CreatorsMobileClient() {
         </section>
 
         {/* ONE DASHBOARD SHOWCASE */}
-        <section className="hr" style={{padding: '52px 24px 0', textAlign: 'center'}}>
+        <section className="sr hr" style={{padding: '52px 24px 0', textAlign: 'center'}}>
           <span style={{width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep)', display: 'inline-block', marginBottom: '18px'}}></span>
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', fontSize: '28px', lineHeight: '1.2', margin: '0', color: 'var(--ink)'}}>Run your creator business from <span className="opit">one place.</span></h2>
         </section>
@@ -193,7 +212,7 @@ export default function CreatorsMobileClient() {
   
 
         {/* TESTIMONIALS */}
-        <section id="creators" className="hr" style={{padding: '36px 0'}}>
+        <section id="creators" className="sr hr" style={{padding: '36px 0'}}>
           <div style={{padding: '0 24px'}}>
             <span className="opill" style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.07em', background: 'var(--neon)', color: 'var(--ink)', padding: '6px 16px'}}>Testimonials</span>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.2', fontSize: '23px', margin: '6px 0 0', color: 'var(--ink)'}}>Why creators are making the <span className="opit">switch.</span></h2>

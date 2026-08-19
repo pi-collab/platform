@@ -50,9 +50,15 @@
     box-shadow: none !important;
     flex: 0 0 auto !important;
   }
-  /* No wordmark on the bar. It is in the footer, and on a 390px bar it was
-     competing with the two controls that actually do something. */
-  .mnav-mark--dark, .mnav-mark--light { display: none !important; }
+  /* The wordmark stays; only the orb comes off. On a 390px bar the lockup was
+     wide enough to crowd the two controls either side of it, and the orb is the
+     part that can go without the header losing its name. */
+  .mnav-mark--dark { display: none !important; }
+  .mnav-mark--light { display: flex !important; }
+  /* !important because Wordmark sets display inline on the orb, and an inline
+     style outranks any stylesheet rule. */
+  .mnav-mark--light img[aria-hidden="true"] { display: none !important; }
+  .mnav-mark--light > span { gap: 0 !important; }
   /* Burger and wordmark sit together on the left, with the CTA opposite —
      the export's arrangement. `order: -1` alone put the burger first but left
      space-between spreading the wordmark into the middle of the bar. */
@@ -83,7 +89,11 @@
     z-index: 95;
     width: min(84%, 340px);
     max-width: none;
-    margin: 0;
+    /* !important for the same reason as the radius below: the base .mnav-panel
+       rule is declared LATER in this file, and its `margin: 10px auto 0` was
+       winning on order — which is exactly the 10px gap between the bar and the
+       drawer. */
+    margin: 0 !important;
     padding: 12px 10px 20px;
     /* Square, and joined to the bar it hangs from. A radius on the top edge
        reads as a separate floating card rather than the header opening.
