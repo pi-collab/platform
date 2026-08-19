@@ -644,6 +644,25 @@
   .creators-mobile .sr { opacity: 1; transform: none; transition: none; }
 }
 
+/* ── Carousels must not swallow vertical scroll ────────────────────────────
+   The horizontal tracks are `overflow-x: auto`, and CSS then computes
+   `overflow-y` as auto — a visible/non-visible pair is not permitted. That
+   makes each track a VERTICAL scroll container too, so a finger landing on one
+   scrolls the track, which has nowhere to go, instead of the page. On a phone
+   these tracks are most of the screen, so the page appeared to stick after a
+   single swipe.
+
+   touch-action: pan-x says this element handles horizontal panning only;
+   anything vertical goes to the page. overscroll-behavior-x stops a swipe past
+   the end from triggering the browser's back gesture. */
+.creators-mobile .snap-track,
+.creators-mobile .creatorsTrack,
+.creators-mobile [style*="overflow-x:auto"] {
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  overflow-y: hidden;
+}
+
 /* Never scrolls sideways. `clip` rather than `hidden`, which would create a
    scroll container and break any sticky inside it. */
 .creators-mobile { overflow-x: clip; }

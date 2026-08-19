@@ -861,3 +861,16 @@
    sideways under your thumb. `clip` rather than `hidden` because `hidden` would
    make this a scroll container and break position:sticky for anything inside. */
 .brands-page { overflow-x: clip; }
+
+
+/* ── Carousels must not swallow vertical scroll ────────────────────────────
+   These tracks are `overflow-x: auto`, so CSS computes `overflow-y` as auto and
+   each becomes a vertical scroll container too. On any touch device a finger
+   landing on one scrolls the track, which has nowhere to go, instead of the
+   page. pan-x says this element handles horizontal panning only. */
+.brands-page .snap-track,
+.brands-page .creatorsTrack {
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  overflow-y: hidden;
+}
