@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import MarketingNav from '@/components/MarketingNav'
 import BrandsPageClient from './BrandsPageClient'
+import BrandsMobileClient from './BrandsMobileClient'
 import Footer from '@/components/Footer'
-import MobileBottomCTA from '@/components/MobileBottomCTA'
 import '../brands-page.css'
+import '../brands-mobile.css'
 
 export const metadata: Metadata = {
   // Just 'For brands' — layout.tsx appends "| Guapd" via its title template,
@@ -33,6 +34,10 @@ export const metadata: Metadata = {
  *
  * The footer is the opposite case: the export only references it as an
  * external component it does not contain, so the site's Footer is used.
+ *
+ * TWO LAYOUTS, one page — same arrangement as /creators. The mobile design is
+ * its own export, so both render and brands-mobile.css picks at 820px;
+ * `display: none` keeps the hidden one out of the accessibility tree.
  */
 export default function BrandsPage() {
   return (
@@ -40,9 +45,9 @@ export default function BrandsPage() {
       <MarketingNav audience="brand" />
       <main>
         <BrandsPageClient />
+        <BrandsMobileClient />
       </main>
       <Footer />
-      <MobileBottomCTA ctaText="Book demo" ctaHref="/signup/brand" />
     </>
   )
 }
