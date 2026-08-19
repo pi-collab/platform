@@ -217,8 +217,50 @@ FOOTER = """
 }
 .brands-mobile .sr.sr-in { opacity: 1; transform: none; }
 
+/* Children arrive in sequence rather than all at once, which is what makes a
+   section feel composed rather than switched on.
+
+   OPACITY ONLY on the children — deliberately. These exports position a lot of
+   decoration absolutely, and a transform on an element creates a containing
+   block for anything absolute inside it, which would move those decorations.
+   The section itself already carries the movement; the children carry the
+   timing. */
+.brands-mobile .sr > * {
+  opacity: 0;
+  transition: opacity .5s cubic-bezier(.22, 1, .36, 1);
+}
+.brands-mobile .sr.sr-in > * { opacity: 1; }
+.brands-mobile .sr.sr-in > *:nth-child(1) { transition-delay: .05s; }
+.brands-mobile .sr.sr-in > *:nth-child(2) { transition-delay: .11s; }
+.brands-mobile .sr.sr-in > *:nth-child(3) { transition-delay: .17s; }
+.brands-mobile .sr.sr-in > *:nth-child(4) { transition-delay: .23s; }
+.brands-mobile .sr.sr-in > *:nth-child(5) { transition-delay: .28s; }
+.brands-mobile .sr.sr-in > *:nth-child(n+6) { transition-delay: .32s; }
+
+/* Images settle rather than appear: a hair of scale coming off as they land.
+   Scoped to images so no positioned decoration is affected. */
+.brands-mobile .sr img {
+  transform: scale(1.03);
+  transition: transform .8s cubic-bezier(.22, 1, .36, 1), opacity .5s ease;
+}
+.brands-mobile .sr.sr-in img { transform: none; }
+
+/* Cards lift as they arrive. Only the ones that are already their own layer —
+   anything with a radius and a border is a card in these exports. */
+.brands-mobile .sr [style*="border-radius:18px"],
+.brands-mobile .sr [style*="border-radius:16px"] {
+  transition: transform .6s cubic-bezier(.22, 1, .36, 1), opacity .5s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .brands-mobile .sr { opacity: 1; transform: none; transition: none; }
+  .brands-mobile .sr,
+  .brands-mobile .sr > *,
+  .brands-mobile .sr img {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    transition-delay: 0s;
+  }
 }
 
 /* ── Carousels must not swallow vertical scroll ────────────────────────────
