@@ -253,6 +253,46 @@ if _first != -1:
     _close = html.find('</h2>', _first)
     html = html[:_close] + '</h1>' + html[_close+5:]
 
+# ── 6m. The comparison table's rows. ──────────────────────────────────────
+# Reviewed against what is actually built. Three problems with the export's set:
+#
+#   "Money released on approval" is FALSE. We do not hold or release money —
+#   v1 tracks payment, it does not escrow it, and holding funds is the single
+#   biggest thing the roadmap defers because it is RBI payment-aggregator
+#   territory. A creator would join expecting protection we do not provide.
+#
+#   "No content buried in DMs" restates the column it is compared against, so
+#   the row argues with itself rather than saying what you get.
+#
+#   The rest name features rather than the outcome that decides anything.
+#   "Revision tracking" is a label; "Revisions counted against what you agreed"
+#   is the reason it matters.
+#
+# Every replacement below is checked against the code: structured offers,
+# counterOffer, revision_limit/revisions_used/price_per_extra_revision_paise,
+# payment_terms, usage_rights + boosting_rights + rights_confirmed_at, and the
+# events audit trigger.
+ROWS = {
+    'Offers in one place':
+        'Every offer with rate, scope and dates',
+    'Written, locked terms':
+        'Terms locked the moment you accept',
+    'Revision tracking':
+        'Revisions counted against what you agreed',
+    'Real-time payment status':
+        'Payment terms agreed before you shoot',
+    'Counter any offer':
+        'Counter a price without an awkward DM',
+    'No content buried in DMs':
+        'Usage rights and boosting, with an end date',
+    'Money released on approval':
+        'Every change timestamped, by both sides',
+}
+_before = sum(html.count(f'>{k}<') for k in ROWS)
+for old, new in ROWS.items():
+    html = html.replace(f'>{old}<', f'>{new}<')
+print(f"  comparison rows rewritten: {_before} → {sum(html.count(chr(62) + k + chr(60)) for k in ROWS)} (expect 0)")
+
 # ── 7. void elements ────────────────────────────────────────────────────────
 for tag in ['img','br','hr','input','source']:
     html=re.sub(rf'<{tag}\b([^>]*?)\s*/?>',lambda m:f'<{tag}{m.group(1).rstrip()} />',html)

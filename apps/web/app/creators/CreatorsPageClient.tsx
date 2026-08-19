@@ -67,7 +67,7 @@ export default function CreatorsPageClient() {
 
   return (
     <div className="creators-page">
-        {/* ============ HERO ============ */}
+      {/* ============ HERO ============ */}
         <section id="top" style={{position: 'relative', width: '100vw', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', overflow: 'hidden', background: '#fff', marginTop: 'clamp(-96px,-8vw,-70px)', paddingBottom: '40px'}}>
           <div style={{position: 'relative', overflow: 'hidden', paddingBottom: 'calc(63.92% - 60px)'}}>
             <img src="/creators/hero.webp" alt="guapd creator dashboard cards showing opportunities, upcoming deliverables, earnings, payments, and recent activity" style={{position: 'absolute', top: '0', left: '0', width: '100%', height: 'auto', display: 'block', objectPosition: 'top'}} width={1672} height={941} decoding="async" />
@@ -320,31 +320,31 @@ export default function CreatorsPageClient() {
                   <div className="ws-fade ws-cell ws-cell-head ws-mark ws-meta" style={{color: '#878D99', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase'}}>Guapd</div>
                   <div className="ws-fade ws-cell ws-cell-head ws-mark ws-meta" style={{color: '#878D99', fontFamily: 'var(--font-ui)', fontSize: '9.5px', fontWeight: '500', letterSpacing: '.14em', textTransform: 'uppercase'}}>DMs &amp; email</div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Offers in one place</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Every offer with rate, scope and dates</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Written, locked terms</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Terms locked the moment you accept</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Revision tracking</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Revisions counted against what you agreed</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Real-time payment status</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Payment terms agreed before you shoot</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Counter any offer</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Counter a price without an awkward DM</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">No content buried in DMs</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Usage rights and boosting, with an end date</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
 
-                  <div className="ws-fade ws-cell ws-cell-body ws-label">Money released on approval</div>
+                  <div className="ws-fade ws-cell ws-cell-body ws-label">Every change timestamped, by both sides</div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><span className="ws-yes"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span></div>
                   <div className="ws-fade ws-cell ws-cell-body ws-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="1.75" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></div>
                 </div>

@@ -209,6 +209,33 @@ html = ('<div id="brandProgress" style="position:fixed;top:0;left:0;height:2px;w
         'background:var(--neon-deep);z-index:200;transition:width .1s linear;"></div>\n' + html)
 step("scroll progress added", before, html.count('id="brandProgress"'))
 
+# ── 4j. Comparison-table rows and card copy. ──────────────────────────────
+# The same rewrite the desktop ports carry, so the two layouts of one page do
+# not make different claims.
+#
+# The row that mattered: "Money released on approval" is FALSE. We track
+# payment, we do not hold or release it — escrow is the single biggest thing
+# the roadmap defers, because holding funds is RBI payment-aggregator
+# territory. A creator would join expecting protection we do not provide.
+COPY = {
+    'Offers in one place': 'Every offer with rate, scope and dates',
+    'Written, locked terms': 'Terms locked the moment you accept',
+    'Revision tracking': 'Revisions counted against what you agreed',
+    'Real-time payment status': 'Payment terms agreed before you shoot',
+    'Counter any offer': 'Counter a price without an awkward DM',
+    'No content buried in DMs': 'Usage rights and boosting, with an end date',
+    'Money released on approval': 'Every change timestamped, by both sides',
+    'Same format, every time.': 'No scope argument three weeks in.',
+    'Locked the moment you agree.': 'Neither side can quietly move them.',
+    'Approve and revise in one place.': 'Revisions counted against the limit you set.',
+    'Agreed to closed, live.': 'Nobody has to ask where the money is.',
+    'Re-run a deal in one tap.': 'Previous terms pre-filled, nothing renegotiated.',
+}
+before = sum(html.count(f'>{k}<') for k in COPY)
+for old, new in COPY.items():
+    html = html.replace(f'>{old}<', f'>{new}<')
+step("comparison rows rewritten", before, sum(html.count(f'>{k}<') for k in COPY))
+
 # ── 5. Images → the converted assets. ──────────────────────────────────────
 before = sum(html.count(f'src="{k}"') for k in ASSETS)
 for uid, out in ASSETS.items():

@@ -223,6 +223,30 @@ if _first != -1:
     _close = html.find('</h2>', _first)
     html = html[:_close] + '</h1>' + html[_close+5:]
 
+# ── 6m. The "everything in one deal" cards. ───────────────────────────────
+# Reviewed against what is built. The titles named features and the subtitles
+# restated the titles — "Structured briefs / Same format, every time" says one
+# thing twice. Each subtitle now carries the consequence a brand is actually
+# deciding on, and each is checked against the code: the structured offer form,
+# terms locked at agreement, revision_limit/revisions_used, the invoice states,
+# and the one-tap re-engage that pre-fills previous terms.
+CARDS = {
+    'Same format, every time.':
+        'No scope argument three weeks in.',
+    'Locked the moment you agree.':
+        'Neither side can quietly move them.',
+    'Approve and revise in one place.':
+        'Revisions counted against the limit you set.',
+    'Agreed to closed, live.':
+        'Nobody has to ask where the money is.',
+    'Re-run a deal in one tap.':
+        'Previous terms pre-filled, nothing renegotiated.',
+}
+_before = sum(html.count(f'>{k}<') for k in CARDS)
+for old, new in CARDS.items():
+    html = html.replace(f'>{old}<', f'>{new}<')
+print(f"  brand cards rewritten: {_before} → {sum(html.count(chr(62) + k + chr(60)) for k in CARDS)} (expect 0)")
+
 # ── 7. void elements ────────────────────────────────────────────────────────
 for tag in ['img','br','hr','input','source']:
     html=re.sub(rf'<{tag}\b([^>]*?)\s*/?>',lambda m:f'<{tag}{m.group(1).rstrip()} />',html)
