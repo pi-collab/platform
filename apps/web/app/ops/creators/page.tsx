@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { followerRangeOf } from '@/lib/follower-range'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -10,7 +11,7 @@ export default async function OpsCreatorsPage() {
   const admin = createAdminClient()
   const { data: creators, error } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, is_vetted, is_rejected, rate_card, created_at')
+    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, rate_card, created_at')
     .order('created_at', { ascending: false })
 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
@@ -54,6 +55,7 @@ export default async function OpsCreatorsPage() {
               <th style={thStyle}>Name</th>
               <th style={thStyle}>Handle</th>
               <th style={thStyle}>Niches</th>
+              <th style={thStyle}>Audience</th>
               <th style={thStyle}>Phone</th>
               <th style={thStyle}>Status</th>
               <th style={thStyle}>Created</th>

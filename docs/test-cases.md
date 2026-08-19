@@ -1059,6 +1059,14 @@ measurements in the port commits assert; re-run after any re-port.
 - [ ] No `getUserById` round trip in the verify path — the address it read was the synthetic `@auth.guapd.internal` one, which cannot receive mail
 - [ ] iOS: tapping the SMS code suggestion above the keyboard fills all six boxes, not one. The full code arrives in a single event on whichever box has focus, so any box accepting >1 digit fills the whole row
 
+### 22. Follower range in ops
+
+- [ ] `/ops/creators` shows an Audience column carrying the band the creator picked
+- [ ] `/ops/creators/[id]` shows it on the meta line beside handle and niches
+- [ ] The "creator awaiting vetting" email includes an Audience line
+- [ ] A creator who signed up before the field existed shows "—" in ops and "not answered" in the email, rather than breaking the page or the send
+- [ ] The value is read from `social_accounts[].follower_range` through `followerRangeOf()` — jsonb written by several paths, so anything unexpected must read as "not answered", never throw inside a page render or an email
+
 ---
 
 | When | What to run |

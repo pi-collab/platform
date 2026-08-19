@@ -1,4 +1,5 @@
 import 'server-only'
+import { followerRangeOf } from '@/lib/follower-range'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendAccountEmail, isEmailConfigured } from '@/lib/email'
 import { renderAccountEmail } from '@/lib/email-template'
@@ -241,17 +242,24 @@ export async function notifyOpsCreatorPending(creatorId: string): Promise<void> 
 
     const { data: creator } = await admin
       .from('creators')
-      .select('full_name, handle, primary_platform, phone')
+      .select('full_name, handle, primary_platform, phone, social_accounts')
       .eq('id', creatorId)
       .maybeSingle()
 
     const name = creator?.full_name?.trim() || 'A creator'
     const handle = creator?.handle ? `@${creator.handle}` : 'no handle'
+    const reach = followerRangeOf(creator?.social_accounts)
 
     const { html, text } = renderAccountEmail({
       heading: `${name} is waiting on vetting`,
       body: [
         `${name} (${handle}) has completed their profile and is waiting to be reviewed.`,
+        // The audience band they picked. It is the first thing anyone vetting
+        // wants, and putting it here means the obvious calls can be made from
+        // the mail without opening ops at all.
+        reach
+          ? `Audience: ${reach} followers.`
+          : 'Audience: not answered (profile predates the follower question).',
         // They have been promised a window; ops needs to know the clock is on.
         'They have been told to check back in 24 to 48 hours, so this one is on a clock.',
       ],
