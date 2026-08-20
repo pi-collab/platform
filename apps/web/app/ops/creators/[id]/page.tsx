@@ -101,6 +101,8 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
           Edit
         </Link>
 
+      </div>
+
       {/* Contact channels. Ops has to answer "how do we reach this person?"
           without opening the database — which is the whole point of asking them
           at signup. Shows what they chose and what they gave. */}
@@ -124,7 +126,6 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
             No notification channel opted into — platform notifications will not reach them.
           </p>
         )}
-      </div>
       </div>
 
       {(appeals ?? []).length > 0 && (
