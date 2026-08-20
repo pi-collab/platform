@@ -6,6 +6,7 @@ import { nav } from '@/lib/content'
 import BookDemoModal from '@/components/BookDemoModal'
 import GetAccessModal from '@/components/GetAccessModal'
 import ContactModal from '@/components/ContactModal'
+import NavProgress from '@/components/NavProgress'
 import '@/components/marketing-nav.css'
 import Wordmark from '@/components/Wordmark'
 
@@ -283,6 +284,8 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
   }
 
   return (
+    <>
+    <NavProgress />
     <div className="mnav-wrap" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '26px clamp(14px,4vw,28px) 0', background: 'transparent' }}>
 
 
@@ -581,5 +584,6 @@ export default function MarketingNav({ audience }: { audience: 'brand' | 'creato
       {audience === 'home' && <GetAccessModal open={accessOpen} onClose={() => setAccessOpen(false)} />}
       <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
+    </>
   )
 }

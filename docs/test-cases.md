@@ -1136,6 +1136,17 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] `/brands` mobile: same. The element existed but rendered no `{ghost}` and the file had no effect at all — the converter's ghost substitution reached the desktop file only
 - [ ] Typing in the box stops the cycling and clears the ghost
 
+### 32. Navigation progress bar (marketing pages)
+
+- [ ] A fast navigation (`/` → `/brands`, already prefetched) shows NO bar. This is the common case and a bar here would read as jank
+- [ ] A navigation slower than 150ms shows a thin neon bar at the top of the viewport
+- [ ] The bar clears when the new page renders (the component unmounts on pathname change)
+- [ ] An in-page anchor (`href="#..."`) never triggers it — it navigates nothing and would leave the bar running until the 8s giveaway timer
+- [ ] Modified clicks (cmd/ctrl/shift/alt, middle-click, `target=_blank`, `download`) never trigger it — those are the browser's to handle
+- [ ] Under `prefers-reduced-motion` the bar still appears but does not slide
+- [ ] It sits above the cookie bar (z-index 10001 vs 9999); both are fixed to the viewport edge
+- [ ] TESTING NOTE: two obvious tests are invalid here. Clicking a real `<a>` starts a full page navigation, so `page.evaluate` throws "execution context destroyed" and every sample comes back null — which looks like the bar never appeared. And Next PREFETCHES nav links, so a "slow navigation" test against `/brands` is instant and proves nothing. Test the show logic with navigation suppressed (`preventDefault` from a listener attached after the component's)
+
 ---
 
 | When | What to run |

@@ -350,3 +350,45 @@
 .ga-option--busy .ga-option-sub::after {
   content: ' \2026';
 }
+
+/* ── Navigation progress ────────────────────────────────────────────────────
+   Only rendered once a navigation has already taken longer than it should, so
+   this is never seen on a fast one.
+
+   Above the cookie bar's 9999 for the same reason the Get access modal is:
+   both are fixed to the viewport edge, and a progress bar underneath the bar
+   it overlaps is a progress bar nobody sees. */
+.navprog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 10001;
+  background: transparent;
+  pointer-events: none;
+}
+
+.navprog__bar {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #E8FF66;
+  /* Eases toward 90% and holds. It cannot know real progress, so it must not
+     pretend to: it slows as it goes and never reaches the end on its own. The
+     bar disappearing IS the completion, because the component unmounts when
+     the new pathname arrives. */
+  animation: navprogGrow 6s cubic-bezier(.12, .82, .28, 1) forwards;
+}
+
+@keyframes navprogGrow {
+  0%   { width: 0 }
+  30%  { width: 48% }
+  60%  { width: 74% }
+  100% { width: 90% }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still shown — it is information, not decoration — but it stops sliding. */
+  .navprog__bar { animation: none; width: 60%; }
+}
