@@ -10,6 +10,10 @@ interface NavProps {
   audience?: 'brand' | 'creator' | 'none'
 }
 
+/* No Ops entry here, deliberately. /ops is the internal console, gated by
+   OPS_ALLOWED_EMAILS — a link never granted access, but this nav renders on
+   /terms and /privacy, which are public and indexed, so it was advertising an
+   internal console to anyone reading the legal pages. Reach it by URL. */
 export default function Nav({ audience = 'brand' }: NavProps) {
   const [open, setOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -75,13 +79,6 @@ export default function Nav({ audience = 'brand' }: NavProps) {
                     onClick={() => setLoginOpen(false)}
                   >
                     Brand login
-                  </Link>
-                  <Link
-                    href="/ops"
-                    style={{ ...dropdownItemStyle, borderTop: '1px solid #e5e5e5', fontSize: '0.8125rem', color: '#888' }}
-                    onClick={() => setLoginOpen(false)}
-                  >
-                    Ops
                   </Link>
                 </div>
               )}
@@ -159,9 +156,6 @@ export default function Nav({ audience = 'brand' }: NavProps) {
           </Link>
           <Link href="/login/brand" className="btn btn--ghost" onClick={() => setOpen(false)}>
             Brand login
-          </Link>
-          <Link href="/ops" className="btn btn--ghost" style={{ fontSize: '0.8125rem', color: '#888' }} onClick={() => setOpen(false)}>
-            Ops
           </Link>
           {audience === 'none' ? (
             <>

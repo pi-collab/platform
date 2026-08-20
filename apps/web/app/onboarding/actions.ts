@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { cookies }           from 'next/headers'
 import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
 import { BRAND_CATEGORIES } from '@/lib/brand-categories'
+import { notifyOpsBrandSignup } from '@/lib/account-emails'
 import { validateWorkEmail } from '@/lib/work-email'
 
 export type OnboardingState =
@@ -146,6 +147,12 @@ export async function submitOnboarding(
   if (memberErr) {
     return { status: 'error' as const, error: `Failed to link brand member: ${memberErr.message}` }
   }
+
+  // Tell ops a brand has arrived — after the membership exists, so a signup
+  // that failed halfway is never announced as complete. Never awaited for a
+  // result it acts on: the account exists either way, and a failed
+  // notification must not fail signup.
+  void notifyOpsBrandSignup(brand.id)
 
   await admin.from('users').update({
     terms_accepted_at: new Date().toISOString(),

@@ -17,7 +17,10 @@ export const metadata: Metadata = {
 const containerStyle: React.CSSProperties = {
   maxWidth: 720,
   margin: '0 auto',
-  padding: '3rem 1.5rem 4rem',
+  // The nav is position:fixed, so the page has to reserve its height or the
+  // first heading renders underneath it — which is what was clipping the
+  // title here. 3rem of breathing room on top of that.
+  padding: 'calc(var(--nav-height, 64px) + 3rem) 1.5rem 4rem',
   fontFamily: 'var(--font-ui, Inter, sans-serif)',
   color: '#222',
   lineHeight: 1.7,

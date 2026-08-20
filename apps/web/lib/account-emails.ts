@@ -341,3 +341,101 @@ export async function notifyOpsCreatorAppeal(creatorId: string, note: string): P
     console.error(`[account-email] notifyOpsCreatorAppeal failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+
+/**
+ * Tell ops that a brand has signed up.
+ *
+ * The creator side has notifyOpsCreatorPending; the brand side had nothing at
+ * signup — notifyOpsOnce in send-gate.ts only fires later, when an unapproved
+ * brand tries to send a deal. So a brand could sit unreviewed in the queue with
+ * nobody told it had arrived.
+ *
+ * Carries the details rather than just a link, because the first question about
+ * a new brand is whether it looks real, and that can usually be answered from
+ * the name, the domain and the industry without opening anything.
+ *
+ * Once-only, keyed to the brand, so a retry cannot send twice. Never throws:
+ * this runs inside signup and a failed notification must not fail an account.
+ */
+export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+
+    const { data: already } = await admin
+      .from('events')
+      .select('id')
+      .eq('event_type', 'ops.brand_signup_notified')
+      .contains('detail', { brand_id: brandId })
+      .limit(1)
+      .maybeSingle()
+
+    if (already) return
+
+    const to = process.env.OPS_NOTIFY_EMAIL
+    if (!to) {
+      console.warn('[account-email] OPS_NOTIFY_EMAIL unset, skipping brand signup notice')
+      return
+    }
+    if (!isEmailConfigured()) {
+      console.warn('[account-email] email not configured, skipping brand signup notice')
+      return
+    }
+
+    const { data: brand } = await admin
+      .from('brands')
+      .select('name, category, website, contact_email, contact_name, company_size, location, social_accounts, created_at')
+      .eq('id', brandId)
+      .maybeSingle()
+
+    if (!brand) return
+
+    const name = brand.name?.trim() || 'A brand'
+    const social = Array.isArray(brand.social_accounts) ? brand.social_accounts : []
+    const instagram = social
+      .map((a) => (a && typeof a === 'object' ? (a as Record<string, unknown>) : null))
+      .find((a) => a && a.platform === 'instagram')
+    const handle = instagram && typeof instagram.handle === 'string' ? instagram.handle : null
+
+    // One fact per line. Anything missing says so rather than being dropped,
+    // because "no website" is itself worth knowing when judging a signup.
+    const detail = [
+      `Industry: ${brand.category || 'not given'}`,
+      `Website: ${brand.website || 'not given'}`,
+      `Instagram: ${handle ? '@' + handle : 'not given'}`,
+      `Company size: ${brand.company_size || 'not given'}`,
+      `Location: ${brand.location || 'not given'}`,
+      `Contact: ${brand.contact_name || 'not given'} (${brand.contact_email || 'no email'})`,
+    ].join('\n')
+
+    const { html, text } = renderAccountEmail({
+      heading: `${name} just signed up`,
+      body: [
+        `${name} created a brand account and is waiting to be reviewed.`,
+        detail,
+      ],
+      ctaUrl: `${siteBase()}/ops/brands`,
+      ctaLabel: 'Review this brand',
+      footerNote: `Sent to the ops address for ${BRAND_NAME}.`,
+    })
+
+    const res = await sendAccountEmail({
+      to: [to],
+      subject: `New brand signup: ${name}`,
+      html,
+      text,
+      idempotencyKey: `brand-signup-${brandId}`,
+    })
+
+    if (res.ok) {
+      await record('ops.brand_signup_notified', {
+        brand_id: brandId,
+        to_masked: to.replace(/(.{2}).*(@.*)/, '$1***$2'),
+      })
+    } else {
+      console.error(`[account-email] ops brand signup notice failed brand=${brandId}: ${res.reason}`)
+    }
+  } catch (err) {
+    console.error(`[account-email] notifyOpsBrandSignup failed brand=${brandId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}

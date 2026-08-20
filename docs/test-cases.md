@@ -1147,6 +1147,23 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] It sits above the cookie bar (z-index 10001 vs 9999); both are fixed to the viewport edge
 - [ ] TESTING NOTE: two obvious tests are invalid here. Clicking a real `<a>` starts a full page navigation, so `page.evaluate` throws "execution context destroyed" and every sample comes back null — which looks like the bar never appeared. And Next PREFETCHES nav links, so a "slow navigation" test against `/brands` is instant and proves nothing. Test the show logic with navigation suppressed (`preventDefault` from a listener attached after the component's)
 
+### 33. Ops link must not appear on public pages (SECURITY-adjacent)
+
+- [ ] `/terms` and `/privacy` render NO link to `/ops`, on desktop or mobile, including after opening the Log in dropdown and the mobile drawer
+- [ ] These two pages use `components/Nav.tsx`, NOT MarketingNav — a different, older nav. Check both when changing site-wide navigation
+- [ ] The link never granted access (`/ops` is gated by `OPS_ALLOWED_EMAILS`), but these pages are public and indexed, so it advertised the internal console to anyone reading the legal pages
+
+### 34. Legal page layout
+
+- [ ] The `<h1>` on `/terms` and `/privacy` sits BELOW the nav, not under it. `.nav` is `position: fixed`, so the page must reserve `var(--nav-height)` — it previously had only 3rem against a 64px bar and the heading was clipped
+
+### 35. Brand signup notifies ops
+
+- [ ] Completing brand onboarding emails `OPS_NOTIFY_EMAIL` with the brand's name, industry, website, Instagram, company size, location and contact
+- [ ] Missing fields read "not given" rather than being omitted — "no website" is itself a signal when judging a signup
+- [ ] Sent ONCE per brand (guarded by an `ops.brand_signup_notified` event), and only AFTER the brand_members row exists, so a signup that failed halfway is never announced as complete
+- [ ] A failed send never fails signup
+
 ---
 
 | When | What to run |
