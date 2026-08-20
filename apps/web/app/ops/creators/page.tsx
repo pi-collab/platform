@@ -1,22 +1,48 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
+
+/** Must match FOLLOWER_RANGES in the creator onboarding form. */
+const BANDS = ['Under 20k', '20k \u2013 50k', '50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
+const NOT_ANSWERED = 'none'
 import { followerRangeOf } from '@/lib/follower-range'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function OpsCreatorsPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function OpsCreatorsPage({ searchParams }: { searchParams: { page?: string; band?: string | string[] } }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
   const { page, from, to } = opsRange(searchParams?.page)
 
+  // Multi-select over follower_band. Repeated ?band= params, so the filter is a
+  // plain GET form with no client JavaScript and every result is a shareable
+  // URL. Unknown values are dropped rather than handed to the database.
+  const rawBand = searchParams?.band
+  const selected = (Array.isArray(rawBand) ? rawBand : rawBand ? [rawBand] : [])
+    .filter((b) => b === NOT_ANSWERED || BANDS.includes(b))
+  const wantsUnanswered = selected.includes(NOT_ANSWERED)
+  const wantsBands = selected.filter((b) => b !== NOT_ANSWERED)
+  const filterQuery = selected.map((b) => `band=${encodeURIComponent(b)}`).join('&')
+
   const admin = createAdminClient()
-  const { data: creators, error, count } = await admin
+  let listQuery = admin
     .from('creators')
     .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, rate_card, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .range(from, to)
+
+  // Unanswered is NULL, which .in() cannot express, so the two cases are
+  // separate filters rather than one clever OR. "Not answered" alongside bands
+  // is not supported and the form prevents choosing both — a mixed selection
+  // would need an or() carrying quoted values with spaces and an en-dash inside
+  // a comma-separated filter string, which fails at runtime, not at build.
+  if (wantsUnanswered) {
+    listQuery = listQuery.is('follower_band', null)
+  } else if (wantsBands.length) {
+    listQuery = listQuery.in('follower_band', wantsBands)
+  }
+
+  const { data: creators, error, count } = await listQuery.range(from, to)
 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
@@ -50,6 +76,31 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         </Link>
       </div>
 
+      {/* A GET form: no client component, no state, and the resulting URL is
+          the filter itself. Checkboxes because the question is "any of these". */}
+      <form method="get" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', margin: '0 0 1rem', padding: '0.7rem 0.85rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Followers</span>
+        {BANDS.map((b) => (
+          <label key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
+            <input type="checkbox" name="band" value={b} defaultChecked={wantsBands.includes(b)} />
+            {b}
+          </label>
+        ))}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem', color: '#6b7280' }}>
+          <input type="checkbox" name="band" value={NOT_ANSWERED} defaultChecked={wantsUnanswered} />
+          Not answered
+        </label>
+        <button type="submit" style={{ padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Apply</button>
+        {selected.length > 0 && (
+          <Link href="/ops/creators" style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}>Clear</Link>
+        )}
+        {wantsUnanswered && wantsBands.length > 0 && (
+          <span style={{ fontSize: '0.75rem', color: '#92400e' }}>
+            &ldquo;Not answered&rdquo; cannot be combined with bands &mdash; showing unanswered only.
+          </span>
+        )}
+      </form>
+
       {all.length === 0 ? (
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No creators yet.</p>
       ) : (
@@ -73,7 +124,14 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                   <tr key={c.id}>
                     <td style={tdStyle}>
                       <Link href={`/ops/creators/${c.id}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', fontSize: '0.8125rem' }}>
-                        {c.full_name}
+                        {/* 89 creators verified a phone and never finished the
+                            profile, so full_name is empty for them. Rendered raw
+                            it produced an empty link — nothing to click, and a row
+                            that reads as broken. The record still has to be
+                            reachable: these are exactly the ones worth looking at. */}
+                        {c.full_name?.trim()
+                          || (c.handle ? `@${c.handle}` : null)
+                          || <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 500 }}>Signup incomplete</span>}
                       </Link>
                     </td>
                     <td style={tdStyle}>{c.handle || '—'}</td>
@@ -96,7 +154,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
             </tbody>
         </table>
           </OpsTableScroll>
-        <OpsPagination page={page} total={count ?? 0} basePath="/ops/creators" />
+        <OpsPagination page={page} total={count ?? 0} basePath={filterQuery ? `/ops/creators?${filterQuery}` : '/ops/creators'} />
         </>
       )}
     </div>
