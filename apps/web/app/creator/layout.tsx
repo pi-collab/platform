@@ -40,7 +40,12 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     isRejected = creator?.is_rejected ?? false
   }
 
-  if (!creatorName) redirect('/')
+  // No name means they verified a phone and never finished the profile step.
+  // This used to send them to the marketing home page, which is the worst
+  // possible answer: they are half-registered, nothing says so, and there is no
+  // route back into the form. They land back in onboarding instead, so
+  // returning always resumes where they stopped.
+  if (!creatorName) redirect('/signup/creator/onboarding')
 
   // Unread notification count + recent notifications for dropdown
   let unreadCount = 0
