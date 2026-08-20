@@ -399,6 +399,21 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
 
     // One fact per line. Anything missing says so rather than being dropped,
     // because "no website" is itself worth knowing when judging a signup.
+    // A signal, not a verdict. When the sign-in domain and the website domain
+    // disagree it is worth a second look — but plenty of legitimate brands sign
+    // up from an agency address or a founder's own domain, so this must never
+    // block a signup. It goes in the mail so the judgement stays with a person.
+    let domainNote = ''
+    try {
+      const emailDomain = (brand.contact_email || '').split('@')[1]?.toLowerCase()
+      const siteDomain = brand.website
+        ? new URL(brand.website).hostname.toLowerCase().replace(/^www\./, '')
+        : null
+      if (emailDomain && siteDomain && emailDomain !== siteDomain) {
+        domainNote = `\nHeads up: the email domain (${emailDomain}) does not match the website (${siteDomain}).`
+      }
+    } catch { /* an unparseable website is not worth failing the notice over */ }
+
     const detail = [
       `Industry: ${brand.category || 'not given'}`,
       `Website: ${brand.website || 'not given'}`,
@@ -407,7 +422,7 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
       `Location: ${brand.location || 'not given'}`,
       `Contact: ${brand.contact_name || 'not given'} (${brand.contact_email || 'no email'})`,
       `Phone: ${brand.contact_phone || 'not given'}`,
-    ].join('\n')
+    ].join('\n') + domainNote
 
     const { html, text } = renderAccountEmail({
       heading: `${name} just signed up`,
