@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Nav from '@/components/Nav'
+import MarketingNav from '@/components/MarketingNav'
 import Footer from '@/components/Footer'
 
 export const metadata: Metadata = {
@@ -15,42 +15,57 @@ export const metadata: Metadata = {
 }
 
 const containerStyle: React.CSSProperties = {
-  maxWidth: 720,
+  maxWidth: 760,
   margin: '0 auto',
-  // The nav is position:fixed, so the page has to reserve its height or the
-  // first heading renders underneath it — which is what was clipping the
-  // title here. 3rem of breathing room on top of that.
-  padding: 'calc(var(--nav-height, 64px) + 3rem) 1.5rem 4rem',
-  fontFamily: 'var(--font-ui, Inter, sans-serif)',
-  color: '#222',
-  lineHeight: 1.7,
+  // No nav-height reservation: MarketingNav is position:sticky, so it occupies
+  // flow space rather than sitting over the page. The old Nav was fixed, which
+  // is what made the reservation necessary and, when it was too small, clipped
+  // the heading.
+  padding: 'clamp(40px,6vw,72px) clamp(20px,5vw,28px) clamp(64px,8vw,104px)',
+  fontFamily: 'var(--font-ui)',
+  color: 'var(--ink-soft)',
+  lineHeight: 1.75,
 }
 
 const h1Style: React.CSSProperties = {
-  fontFamily: 'var(--font-display, Sora, sans-serif)',
-  fontSize: '2rem',
+  fontFamily: 'var(--font-display)',
+  fontSize: 'clamp(32px,4.4vw,44px)',
   fontWeight: 700,
-  color: '#111',
-  margin: '0 0 0.5rem',
+  letterSpacing: '-0.03em',
+  lineHeight: 1.08,
+  color: 'var(--ink)',
+  margin: '0 0 10px',
 }
 
 const h2Style: React.CSSProperties = {
-  fontFamily: 'var(--font-display, Sora, sans-serif)',
-  fontSize: '1.25rem',
+  fontFamily: 'var(--font-display)',
+  fontSize: 'clamp(19px,2.2vw,22px)',
   fontWeight: 700,
-  color: '#111',
-  margin: '2rem 0 0.75rem',
+  letterSpacing: '-0.02em',
+  lineHeight: 1.25,
+  color: 'var(--ink)',
+  margin: '44px 0 12px',
 }
 
 const pStyle: React.CSSProperties = {
-  margin: '0 0 1rem',
-  fontSize: '0.9375rem',
+  margin: '0 0 16px',
+  fontSize: '15.5px',
+  lineHeight: 1.75,
+  color: 'var(--ink-soft)',
 }
 
 const metaStyle: React.CSSProperties = {
-  fontSize: '0.8125rem',
-  color: '#888',
-  margin: '0 0 2rem',
+  fontFamily: 'var(--font-ui)',
+  fontSize: '12px',
+  fontWeight: 600,
+  letterSpacing: '.1em',
+  textTransform: 'uppercase',
+  color: 'var(--ink-faint)',
+  // A rule under the meta line separates the document from its title the way
+  // the marketing pages separate a section from its heading.
+  margin: '0 0 40px',
+  paddingBottom: '20px',
+  borderBottom: '1px solid var(--hairline, rgba(24,28,36,.12))',
 }
 
 const ulStyle: React.CSSProperties = {
@@ -66,7 +81,7 @@ const liStyle: React.CSSProperties = {
 export default function TermsOfServicePage() {
   return (
     <>
-      <Nav audience="none" />
+      <MarketingNav audience="home" />
       <main style={containerStyle}>
         <h1 style={h1Style}>Terms of Service</h1>
         <p style={metaStyle}>Last updated: 23 July 2026</p>
