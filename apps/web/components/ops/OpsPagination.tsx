@@ -8,7 +8,7 @@ export const OPS_PAGE_SIZE = 50
  *
  * Tolerant on purpose: a hand-edited or stale URL should show page one, not an
  * error. Anything not a positive integer is treated as page one, and a page
- * past the end simply renders an empty table with working Previous link.
+ * past the end simply renders an empty table with a working Previous link.
  */
 export function opsRange(pageParam: string | string[] | undefined) {
   const raw = Array.isArray(pageParam) ? pageParam[0] : pageParam
@@ -19,14 +19,32 @@ export function opsRange(pageParam: string | string[] | undefined) {
 }
 
 /**
- * Previous / next for an ops table.
+ * Which page numbers to show.
+ *
+ * Always the first and last, always the current and its neighbours, with gaps
+ * elsewhere. Paging one step at a time through a list of 150 creators is the
+ * complaint this answers — you can jump.
+ */
+function pageWindow(page: number, lastPage: number): (number | 'gap')[] {
+  if (lastPage <= 7) {
+    return Array.from({ length: lastPage }, (_, i) => i + 1)
+  }
+  const out: (number | 'gap')[] = [1]
+  const start = Math.max(2, page - 1)
+  const end = Math.min(lastPage - 1, page + 1)
+  if (start > 2) out.push('gap')
+  for (let i = start; i <= end; i++) out.push(i)
+  if (end < lastPage - 1) out.push('gap')
+  out.push(lastPage)
+  return out
+}
+
+/**
+ * Pagination for an ops table.
  *
  * Links rather than buttons: each page is a real URL, so it can be shared,
- * bookmarked and reloaded, and the back button behaves. That matters here
- * because these lists are worked through over a session rather than glanced at.
- *
- * `total` comes from a count on the same query, so the last page is known and
- * Next can be disabled rather than leading somewhere empty.
+ * bookmarked and reloaded, and the back button behaves. These lists get worked
+ * through over a session rather than glanced at.
  */
 export default function OpsPagination({
   page,
@@ -44,12 +62,14 @@ export default function OpsPagination({
   const last = Math.min(page * OPS_PAGE_SIZE, total)
 
   return (
-    <div
+    <nav
+      aria-label="Pagination"
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '1rem',
+        flexWrap: 'wrap',
+        gap: '0.75rem',
         marginTop: '1rem',
         fontSize: '0.8125rem',
         color: '#555',
@@ -58,42 +78,83 @@ export default function OpsPagination({
       <span>
         {first}&ndash;{last} of {total}
       </span>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
+
+      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <PageLink href={`${basePath}?page=${page - 1}`} disabled={page <= 1}>
           Previous
         </PageLink>
-        <span style={{ alignSelf: 'center' }}>
-          Page {page} of {lastPage}
-        </span>
+
+        {pageWindow(page, lastPage).map((n, i) =>
+          n === 'gap' ? (
+            <span key={`gap-${i}`} style={{ padding: '0 0.25rem', color: '#bbb' }}>
+              &hellip;
+            </span>
+          ) : (
+            <PageLink
+              key={n}
+              href={`${basePath}?page=${n}`}
+              disabled={false}
+              current={n === page}
+            >
+              {n}
+            </PageLink>
+          ),
+        )}
+
         <PageLink href={`${basePath}?page=${page + 1}`} disabled={page >= lastPage}>
           Next
         </PageLink>
       </div>
-    </div>
+    </nav>
   )
 }
 
 function PageLink({
   href,
   disabled,
+  current,
   children,
 }: {
   href: string
   disabled: boolean
+  current?: boolean
   children: React.ReactNode
 }) {
   const style: React.CSSProperties = {
-    padding: '0.35rem 0.75rem',
+    minWidth: 32,
+    padding: '0.35rem 0.6rem',
     borderRadius: 6,
-    border: '1px solid #e5e7eb',
+    border: `1px solid ${current ? '#111' : '#e5e7eb'}`,
+    background: current ? '#111' : disabled ? '#fafafa' : '#fff',
+    color: current ? '#fff' : disabled ? '#bbb' : '#111',
     fontWeight: 600,
+    textAlign: 'center',
     textDecoration: 'none',
-    color: disabled ? '#bbb' : '#111',
-    background: disabled ? '#fafafa' : '#fff',
-    pointerEvents: disabled ? 'none' : undefined,
   }
-  // A disabled control must not be a link at all, or it stays keyboard
-  // focusable and reachable despite pointer-events.
-  if (disabled) return <span style={style} aria-disabled="true">{children}</span>
-  return <Link href={href} style={style}>{children}</Link>
+  // A disabled or current control is not a link. Rendering one anyway leaves it
+  // keyboard focusable and announces a destination that is where you already
+  // are, which is worse than it looking right.
+  if (disabled || current) {
+    return (
+      <span style={style} aria-current={current ? 'page' : undefined} aria-disabled={disabled || undefined}>
+        {children}
+      </span>
+    )
+  }
+  return (
+    <Link href={href} style={style}>
+      {children}
+    </Link>
+  )
+}
+
+/**
+ * Horizontal scroll for a wide table.
+ *
+ * The ops tables carry seven or more columns and had no container, so on
+ * anything narrower than a desktop they pushed the whole page sideways rather
+ * than scrolling themselves.
+ */
+export function OpsTableScroll({ children }: { children: React.ReactNode }) {
+  return <div style={{ overflowX: 'auto', width: '100%' }}>{children}</div>
 }

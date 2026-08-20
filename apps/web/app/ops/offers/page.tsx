@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import OpsPagination, { opsRange } from '@/components/ops/OpsPagination'
+import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import GenerateLinkButton from './GenerateLinkButton'
@@ -34,46 +34,48 @@ export default async function OpsOffersPage({ searchParams }: { searchParams: { 
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No deals in negotiating status.</p>
       ) : (
         <>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #e5e5e5', textAlign: 'left' }}>
-              <th style={th}>Deal</th>
-              <th style={th}>Brand</th>
-              <th style={th}>Creator</th>
-              <th style={th}>Price</th>
-              <th style={th}>Created</th>
-              <th style={th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((d) => {
-              const brand = (d.brands as any)?.name ?? '—'
-              const creator = (d.creators as any)?.full_name ?? '—'
-              const price = d.price_paise ? `₹${(d.price_paise / 100).toLocaleString('en-IN')}` : '—'
-              return (
-                <tr key={d.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td style={td}>
-                    <span style={{ fontWeight: 600 }}>{d.title || 'Untitled'}</span>
-                    <br />
-                    {/* The deal ref, not the uuid prefix. GD-1064 is what
-                        everyone actually says out loud and searches for; a
-                        truncated uuid identifies a row to nobody. */}
-                    <span style={{ fontSize: '0.6875rem', color: '#888', fontFamily: 'monospace' }}>
-                      {d.deal_ref || d.id.slice(0, 8)}
-                    </span>
-                  </td>
-                  <td style={td}>{brand}</td>
-                  <td style={td}>{creator}</td>
-                  <td style={td}>{price}</td>
-                  <td style={td}>{new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                  <td style={td}>
-                    <GenerateLinkButton dealId={d.id} />
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
+          <OpsTableScroll>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid #e5e5e5', textAlign: 'left' }}>
+                <th style={th}>Deal</th>
+                <th style={th}>Brand</th>
+                <th style={th}>Creator</th>
+                <th style={th}>Price</th>
+                <th style={th}>Created</th>
+                <th style={th}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {deals.map((d) => {
+                const brand = (d.brands as any)?.name ?? '—'
+                const creator = (d.creators as any)?.full_name ?? '—'
+                const price = d.price_paise ? `₹${(d.price_paise / 100).toLocaleString('en-IN')}` : '—'
+                return (
+                  <tr key={d.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={td}>
+                      <span style={{ fontWeight: 600 }}>{d.title || 'Untitled'}</span>
+                      <br />
+                      {/* The deal ref, not the uuid prefix. GD-1064 is what
+                          everyone actually says out loud and searches for; a
+                          truncated uuid identifies a row to nobody. */}
+                      <span style={{ fontSize: '0.6875rem', color: '#888', fontFamily: 'monospace' }}>
+                        {d.deal_ref || d.id.slice(0, 8)}
+                      </span>
+                    </td>
+                    <td style={td}>{brand}</td>
+                    <td style={td}>{creator}</td>
+                    <td style={td}>{price}</td>
+                    <td style={td}>{new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                    <td style={td}>
+                      <GenerateLinkButton dealId={d.id} />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
         </table>
+          </OpsTableScroll>
         <OpsPagination page={page} total={count ?? 0} basePath="/ops/offers" />
         </>
       )}

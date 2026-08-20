@@ -2157,7 +2157,7 @@ button.signup-form__cross-link {
     inset: 0;
     width: auto;
     height: auto;
-    clip-path: polygon(0 0, 100% 0, 100% 20%, 0 38%);
+    clip-path: polygon(0 0, 100% 0, 100% 20vh, 0 38vh);
   }
 
   /* The neon edge — a second layer clipped to a sliver along the same line,
@@ -2167,7 +2167,7 @@ button.signup-form__cross-link {
     position: absolute;
     inset: 0;
     background: var(--neon);
-    clip-path: polygon(0 38%, 100% 20%, 100% calc(20% + 2px), 0 calc(38% + 2px));
+    clip-path: polygon(0 38vh, 100% 20vh, 100% calc(20vh + 2px), 0 calc(38vh + 2px));
     pointer-events: none;
     z-index: 1;
   }
@@ -2179,7 +2179,7 @@ button.signup-form__cross-link {
     content: '';
     position: absolute;
     left: 0;
-    top: 38%;
+    top: 38vh;
     bottom: 0;
     width: 2px;
     background: var(--neon);

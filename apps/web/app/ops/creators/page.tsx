@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import OpsPagination, { opsRange } from '@/components/ops/OpsPagination'
+import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { followerRangeOf } from '@/lib/follower-range'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
@@ -54,46 +54,48 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No creators yet.</p>
       ) : (
         <>
-          <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Name</th>
-              <th style={thStyle}>Handle</th>
-              <th style={thStyle}>Niches</th>
-              <th style={thStyle}>Audience</th>
-              <th style={thStyle}>Phone</th>
-              <th style={thStyle}>Status</th>
-              <th style={thStyle}>Created</th>
-            </tr>
-          </thead>
-          <tbody>
-            {all.map((c) => {
-              return (
-                <tr key={c.id}>
-                  <td style={tdStyle}>
-                    <Link href={`/ops/creators/${c.id}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', fontSize: '0.8125rem' }}>
-                      {c.full_name}
-                    </Link>
-                  </td>
-                  <td style={tdStyle}>{c.handle || '—'}</td>
-                  <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
-                  <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '—'}</td>
-                  <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
-                  <td style={tdStyle}>
-                    {c.is_vetted ? (
-                      <span style={vettedBadge}>Vetted</span>
-                    ) : c.is_rejected ? (
-                      <span style={rejectedBadge}>Rejected</span>
-                    ) : (
-                      <span style={pendingBadge}>Pending</span>
-                    )}
-                  </td>
-                  <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
-                </tr>
-              )
-            })}
-          </tbody>
+          <OpsTableScroll>
+            <table style={tableStyle}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Name</th>
+                <th style={thStyle}>Handle</th>
+                <th style={thStyle}>Niches</th>
+                <th style={thStyle}>Audience</th>
+                <th style={thStyle}>Phone</th>
+                <th style={thStyle}>Status</th>
+                <th style={thStyle}>Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              {all.map((c) => {
+                return (
+                  <tr key={c.id}>
+                    <td style={tdStyle}>
+                      <Link href={`/ops/creators/${c.id}`} style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', fontSize: '0.8125rem' }}>
+                        {c.full_name}
+                      </Link>
+                    </td>
+                    <td style={tdStyle}>{c.handle || '—'}</td>
+                    <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
+                    <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '—'}</td>
+                    <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
+                    <td style={tdStyle}>
+                      {c.is_vetted ? (
+                        <span style={vettedBadge}>Vetted</span>
+                      ) : c.is_rejected ? (
+                        <span style={rejectedBadge}>Rejected</span>
+                      ) : (
+                        <span style={pendingBadge}>Pending</span>
+                      )}
+                    </td>
+                    <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
         </table>
+          </OpsTableScroll>
         <OpsPagination page={page} total={count ?? 0} basePath="/ops/creators" />
         </>
       )}
