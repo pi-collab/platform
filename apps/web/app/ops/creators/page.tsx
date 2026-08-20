@@ -48,9 +48,25 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
   const all = creators ?? []
-  const vetted = all.filter((c) => c.is_vetted).length
-  const rejected = all.filter((c) => c.is_rejected).length
-  const pending = all.length - vetted - rejected
+
+  // Counted across the whole filtered set, not the page. `all` used to be every
+  // creator, so counting it was right; once pagination landed it became the 50
+  // rows on screen and the line read "50 total" against a table of 378.
+  const applyBands = <T extends { is: Function; in: Function }>(q: T): T =>
+    wantsUnanswered
+      ? (q.is('follower_band', null) as T)
+      : wantsBands.length
+        ? (q.in('follower_band', wantsBands) as T)
+        : q
+
+  const [vettedRes, rejectedRes] = await Promise.all([
+    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true)),
+    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_rejected', true)),
+  ])
+  const total = count ?? 0
+  const vetted = vettedRes.count ?? 0
+  const rejected = rejectedRes.count ?? 0
+  const pending = total - vetted - rejected
 
   return (
     <div>
@@ -58,7 +74,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         <div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Creators</h1>
           <p style={{ color: '#666', fontSize: '0.8125rem', margin: '0.25rem 0 0' }}>
-            {all.length} total &middot; {vetted} vetted &middot; {pending} pending &middot; {rejected} rejected
+            {total} total &middot; {vetted} vetted &middot; {pending} pending &middot; {rejected} rejected
           </p>
         </div>
         <Link
