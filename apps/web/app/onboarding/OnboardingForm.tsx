@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { DIAL_CODES } from '@/lib/phone'
 import { useFormState, useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { submitOnboarding, type OnboardingState } from './actions'
@@ -84,6 +85,28 @@ export default function OnboardingForm() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+        </Field>
+
+        {/* Required. Brands are vetted by hand, and until now the only way to
+            reach one was the address they signed in with. The dial code is
+            selectable rather than fixed to +91: the roster is Indian, the
+            brands need not be. */}
+        <Field label="Phone number">
+          <div className="fld-box onboard-box">
+            <select name="phone_dial" defaultValue="+91" aria-label="Country code" className="onboard-dial">
+              {DIAL_CODES.map((d) => (
+                <option key={d.iso} value={d.code}>{d.code}</option>
+              ))}
+            </select>
+            <input
+              name="phone"
+              type="tel"
+              inputMode="numeric"
+              required
+              className="onboard-input"
+              placeholder="98765 43210"
+            />
+          </div>
         </Field>
 
         <Field label="Instagram handle" optional>

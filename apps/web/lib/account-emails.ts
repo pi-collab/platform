@@ -384,7 +384,7 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
 
     const { data: brand } = await admin
       .from('brands')
-      .select('name, category, website, contact_email, contact_name, company_size, location, social_accounts, created_at')
+      .select('name, category, website, contact_email, contact_phone, contact_name, company_size, location, social_accounts, created_at')
       .eq('id', brandId)
       .maybeSingle()
 
@@ -406,6 +406,7 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
       `Company size: ${brand.company_size || 'not given'}`,
       `Location: ${brand.location || 'not given'}`,
       `Contact: ${brand.contact_name || 'not given'} (${brand.contact_email || 'no email'})`,
+      `Phone: ${brand.contact_phone || 'not given'}`,
     ].join('\n')
 
     const { html, text } = renderAccountEmail({

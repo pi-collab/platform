@@ -11,7 +11,7 @@ export default async function OpsBrandsPage() {
   const admin = createAdminClient()
   const { data: brands, error } = await admin
     .from('brands')
-    .select('id, name, category, company_size, website, contact_name, contact_email, brand_status, created_at')
+    .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at')
     .order('created_at', { ascending: false })
 
   if (error) return <p style={{ color: 'red' }}>Error loading brands: {error.message}</p>
@@ -49,6 +49,8 @@ export default async function OpsBrandsPage() {
               <tr>
                 <th style={thStyle}>Brand</th>
                 <th style={thStyle}>Contact</th>
+              <th style={thStyle}>Phone</th>
+                <th style={thStyle}>Phone</th>
                 <th style={thStyle}>Held deals</th>
                 <th style={thStyle}>Actions</th>
               </tr>
@@ -60,6 +62,7 @@ export default async function OpsBrandsPage() {
                     <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link>
                   </td>
                   <td style={tdStyle} data-ph-mask>{b.contact_email || '—'}</td>
+                  <td style={tdStyle} data-ph-mask>{b.contact_phone || '—'}</td>
                   <td style={tdStyle}>
                     <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
                   </td>
@@ -107,6 +110,7 @@ export default async function OpsBrandsPage() {
                   {b.contact_name || '—'}
                   {b.contact_email && <div style={{ fontSize: '0.75rem', color: '#888' }}>{b.contact_email}</div>}
                 </td>
+                <td style={tdStyle} data-ph-mask>{b.contact_phone || '—'}</td>
                 <td style={tdStyle}>{new Date(b.created_at).toLocaleDateString()}</td>
                 <td style={tdStyle}>
                   <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

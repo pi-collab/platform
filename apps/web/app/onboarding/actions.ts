@@ -7,6 +7,7 @@ import { cookies }           from 'next/headers'
 import { captureSignupOrigin, ORIGIN_COOKIE } from '@/lib/attribution'
 import { BRAND_CATEGORIES } from '@/lib/brand-categories'
 import { notifyOpsBrandSignup } from '@/lib/account-emails'
+import { normalizeE164 } from '@/lib/phone'
 import { validateWorkEmail } from '@/lib/work-email'
 
 export type OnboardingState =
@@ -88,6 +89,33 @@ export async function submitOnboarding(
     ? (/^https?:\/\//i.test(websiteIn) ? websiteIn : `https://${websiteIn}`)
     : null
 
+  // A hostname has to look like one. Prepending https:// to whatever was typed
+  // turned "Asd" into "https://Asd" and stored it as a website — a real signup
+  // on production did exactly that. The rule: at least one dot, a label either
+  // side of it, and a TLD of two or more letters. Deliberately not a list of
+  // valid TLDs, which goes stale, and not a demand for .com, which would reject
+  // .in, .co.uk and .xyz — all of which real brands here use.
+  if (website) {
+    let host: string
+    try {
+      host = new URL(website).hostname
+    } catch {
+      return { status: 'error' as const, error: 'Enter a valid website, like acmestudio.com.' }
+    }
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/i.test(host)) {
+      return { status: 'error' as const, error: 'Enter a valid website, like acmestudio.com.' }
+    }
+  }
+
+  // Required, and validated here rather than trusting the form: this action is
+  // directly callable. normalizeE164 enforces a plausible length for the dial
+  // code given, which is all a contact number has to satisfy — it is somewhere
+  // to ring, not a login identity, so the strict Indian-mobile rule that guards
+  // creator signup would be wrong here.
+  const phoneDial = (formData.get('phone_dial') as string)?.trim() || '+91'
+  const phoneRaw  = (formData.get('phone') as string)?.trim() || ''
+  const contactPhone = phoneRaw ? normalizeE164(phoneDial, phoneRaw) : null
+
   const termsAccepted = formData.get('terms_accepted') === 'yes'
   if (!termsAccepted) return { status: 'error' as const, error: 'You must agree to the Terms of Service and Privacy Policy.' }
 
@@ -96,6 +124,8 @@ export async function submitOnboarding(
   // Required fields present
   if (!name)     return { status: 'error' as const, error: 'Company name is required.' }
   if (!category) return { status: 'error' as const, error: 'Industry is required.' }
+  if (!phoneRaw)      return { status: 'error' as const, error: 'Phone number is required.' }
+  if (!contactPhone)  return { status: 'error' as const, error: 'Enter a valid phone number for the country code selected.' }
 
   // Length caps
   if (name.length > 100)
@@ -132,7 +162,7 @@ export async function submitOnboarding(
 
   const { data: brand, error: brandErr } = await admin
     .from('brands')
-    .insert({ name, category, website, contact_email: user.email ?? null, social_accounts })
+    .insert({ name, category, website, contact_email: user.email ?? null, contact_phone: contactPhone, social_accounts })
     .select('id')
     .single()
 
