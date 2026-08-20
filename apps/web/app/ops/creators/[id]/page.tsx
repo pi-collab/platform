@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { followerRangeOf } from '@/lib/follower-range'
+import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -79,7 +80,15 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
           </div>
           <p style={{ color: '#888', fontSize: '0.75rem', margin: 0 }}>
             Added {new Date(creator.created_at).toLocaleDateString()}
-            {creator.handle && <> &middot; {creator.handle}</>}
+            {creator.handle && (() => {
+              const acct = primaryAccount(creator.social_accounts)
+              const url = socialProfileUrl(acct.platform, creator.handle)
+              return (
+                <> &middot; {url
+                  ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{creator.handle}</a>
+                  : creator.handle}</>
+              )
+            })()}
             {(creator.niches as string[])?.length > 0 && <> &middot; {(creator.niches as string[]).join(', ')}</>}
             {followerRangeOf(creator.social_accounts) && (
               <> &middot; {followerRangeOf(creator.social_accounts)} followers</>

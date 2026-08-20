@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
+import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 
 /** Must match FOLLOWER_RANGES in the creator onboarding form. */
 const BANDS = ['Under 20k', '20k \u2013 50k', '50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
@@ -134,7 +135,21 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                           || <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 500 }}>Signup incomplete</span>}
                       </Link>
                     </td>
-                    <td style={tdStyle}>{c.handle || '—'}</td>
+                    <td style={tdStyle}>
+                      {/* Opens the real profile, so a handle can be checked without
+                          retyping it. Platform comes from social_accounts — primary_platform
+                          is null on every row. An unknown platform renders plain text rather
+                          than a link that would 404. */}
+                      {(() => {
+                        const acct = primaryAccount(c.social_accounts)
+                        const label = c.handle || acct.handle
+                        if (!label) return '—'
+                        const url = socialProfileUrl(acct.platform, label)
+                        return url
+                          ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>@{label}</a>
+                          : <>@{label}</>
+                      })()}
+                    </td>
                     <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
                     <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '—'}</td>
                     <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
