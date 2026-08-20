@@ -1,19 +1,23 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import OpsPagination, { opsRange } from '@/components/ops/OpsPagination'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import GenerateLinkButton from './GenerateLinkButton'
 
-export default async function OpsOffersPage() {
+export default async function OpsOffersPage({ searchParams }: { searchParams: { page?: string } }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
+  const { page, from, to } = opsRange(searchParams?.page)
+
   const admin = createAdminClient()
 
-  const { data: deals, error } = await admin
+  const { data: deals, error, count } = await admin
     .from('deals')
-    .select('id, deal_ref, title, status, price_paise, created_at, brands(name), creators(full_name)')
+    .select('id, deal_ref, title, status, price_paise, created_at, brands(name), creators(full_name)', { count: 'exact' })
     .eq('status', 'negotiating')
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) {
     return <p style={{ color: '#dc2626' }}>Error: {error.message}</p>
@@ -29,7 +33,8 @@ export default async function OpsOffersPage() {
       {(!deals || deals.length === 0) ? (
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No deals in negotiating status.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+        <>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #e5e5e5', textAlign: 'left' }}>
               <th style={th}>Deal</th>
@@ -69,6 +74,8 @@ export default async function OpsOffersPage() {
             })}
           </tbody>
         </table>
+        <OpsPagination page={page} total={count ?? 0} basePath="/ops/offers" />
+        </>
       )}
     </div>
   )

@@ -1,25 +1,41 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import OpsPagination, { opsRange } from '@/components/ops/OpsPagination'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import BrandStatusActions from './BrandStatusActions'
 
-export default async function OpsBrandsPage() {
+export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string } }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
-  const { data: brands, error } = await admin
+  const { page, from, to } = opsRange(searchParams?.page)
+
+  // The review queue is fetched SEPARATELY and unpaginated. It used to be
+  // filtered out of the same list, which was fine while that list was
+  // everything — but paginate the list and the queue silently becomes "pending
+  // brands that happen to be on this page", which is the one table here that
+  // must never hide a row. It is small by nature: a brand leaves it as soon as
+  // it is approved or rejected.
+  const { data: pendingRows } = await admin
     .from('brands')
     .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at')
+    .eq('brand_status', 'pending_review')
     .order('created_at', { ascending: false })
+
+  const { data: brands, error, count } = await admin
+    .from('brands')
+    .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) return <p style={{ color: 'red' }}>Error loading brands: {error.message}</p>
 
   // Review queue: brands whose first send is held. ONE task per brand however
   // many deals a bulk send queued — the gate is on the brand, not the deal, and
   // approving releases all of them together.
-  const pending = (brands ?? []).filter((b) => b.brand_status === 'pending_review')
+  const pending = pendingRows ?? []
 
   const { data: heldRows } = await admin
     .from('deals')
@@ -79,7 +95,8 @@ export default async function OpsBrandsPage() {
       {!brands || brands.length === 0 ? (
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No brands registered yet.</p>
       ) : (
-        <table style={tableStyle}>
+        <>
+          <table style={tableStyle}>
           <thead>
             <tr>
               <th style={thStyle}>Name</th>
@@ -127,6 +144,8 @@ export default async function OpsBrandsPage() {
             ))}
           </tbody>
         </table>
+        <OpsPagination page={page} total={count ?? 0} basePath="/ops/brands" />
+        </>
       )}
     </div>
   )

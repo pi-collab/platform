@@ -1,18 +1,22 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import OpsPagination, { opsRange } from '@/components/ops/OpsPagination'
 import { followerRangeOf } from '@/lib/follower-range'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function OpsCreatorsPage() {
+export default async function OpsCreatorsPage({ searchParams }: { searchParams: { page?: string } }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
+  const { page, from, to } = opsRange(searchParams?.page)
+
   const admin = createAdminClient()
-  const { data: creators, error } = await admin
+  const { data: creators, error, count } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, rate_card, created_at')
+    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, rate_card, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
@@ -49,7 +53,8 @@ export default async function OpsCreatorsPage() {
       {all.length === 0 ? (
         <p style={{ color: '#888', fontSize: '0.875rem' }}>No creators yet.</p>
       ) : (
-        <table style={tableStyle}>
+        <>
+          <table style={tableStyle}>
           <thead>
             <tr>
               <th style={thStyle}>Name</th>
@@ -89,6 +94,8 @@ export default async function OpsCreatorsPage() {
             })}
           </tbody>
         </table>
+        <OpsPagination page={page} total={count ?? 0} basePath="/ops/creators" />
+        </>
       )}
     </div>
   )
