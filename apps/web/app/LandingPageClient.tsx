@@ -179,7 +179,7 @@ export default function LandingPageClient() {
             <div aria-hidden="true" style={{position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: '680px', height: '680px', borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,255,255,0.85) 0%,rgba(255,255,255,0) 70%)', zIndex: '-1', pointerEvents: 'none'}}></div>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.02', fontSize: 'clamp(44px,3.2vw,56px)', margin: '0', color: '#12151C'}}>The operating system<br />for <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creator deals.</span></h2>
             <p style={{fontFamily: 'var(--font-ui)', fontSize: '16px', lineHeight: '1.55', color: '#565C68', margin: '22px 0 0', maxWidth: '44ch'}}>Brands and creators, in one shared space: offers, approvals, deliverables and payments, start to finish.</p>
-            <button type="button" style={{marginTop: '28px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '12px 24px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}}>Book demo</button>
+            <button type="button" onClick={() => setDemoOpen(true)} style={{marginTop: '28px', background: '#12151C', color: '#fff', border: 'none', borderRadius: '999px', padding: '12px 24px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}}>Book demo</button>
           </div>
         </section>
 
@@ -657,9 +657,9 @@ export default function LandingPageClient() {
                 <div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', letterSpacing: '.14em', color: '#12151C'}}>TWO SIDES</div>
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.05', fontSize: 'clamp(28px,3.8vw,48px)', margin: '16px 0 0', color: '#12151C'}}>Where brands and creators <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>meet.</span></h2>
                 <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: '#12151C', maxWidth: '560px', margin: '16px auto 0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
-                <div style={{marginTop: '26px', display: 'inline-flex'}}>
+                <button type="button" onClick={() => setDemoOpen(true)} style={{marginTop: '26px', display: 'inline-flex', background: 'none', border: 'none', padding: 0, cursor: 'pointer'}}>
                   <span style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#FFFFFF', border: '1px solid #12151C', color: '#12151C', borderRadius: '999px', padding: '13px 26px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px'}}>Book demo</span>
-                </div>
+                </button>
               </div>
             </div>
           </div>

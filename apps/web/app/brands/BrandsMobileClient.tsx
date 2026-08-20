@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 /**
  * For Brands, mobile layout — ported from the "GUAPD For Brands - Mobile"
@@ -18,7 +18,36 @@ import { useEffect } from 'react'
  * Every heading is h2 or lower — the desktop layout owns the page's single h1,
  * and both are in the DOM.
  */
+/* Ported from BrandsPageClient. The mobile layout has the #dealGhost element
+   but never rendered anything into it and carried no effect at all — the
+   converter's ghost substitution reached the desktop file and not this one, so
+   the deal builder sat as an empty box. */
+const GHOST_LINES = [
+  '1 Reel with a fashion brand, budget \u20B945K',
+  '3 Stories with a fintech brand, live in 7 days',
+  '1 YouTube Short, budget \u20B980K, live in 14 days',
+]
+
 export default function BrandsMobileClient() {
+  const [ghost, setGhost] = useState('')
+  const [typed, setTyped] = useState(false)
+
+  /** Ghost placeholder cycles until the visitor types something of their own. */
+  useEffect(() => {
+    if (typed) { setGhost(''); return }
+    let line = 0, char = 0, dir: 1 | -1 = 1
+    const tick = () => {
+      const text = GHOST_LINES[line]
+      char += dir
+      setGhost(text.slice(0, char))
+      if (char >= text.length) { dir = -1; return void (timer = setTimeout(tick, 1600)) }
+      if (char <= 0) { dir = 1; line = (line + 1) % GHOST_LINES.length }
+      timer = setTimeout(tick, dir === 1 ? 45 : 22)
+    }
+    let timer = setTimeout(tick, 600)
+    return () => clearTimeout(timer)
+  }, [typed])
+
   useEffect(() => {
     // Scroll progress, matching the landing and creators pages.
     const bar = document.getElementById('brandProgress')
@@ -88,7 +117,7 @@ export default function BrandsMobileClient() {
           <div style={{position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid rgba(255,255,255,.18)', borderRadius: '14px', background: 'rgba(255,255,255,.06)', padding: '8px 8px 8px 14px', marginTop: '36px'}}>
             <div style={{flex: '1', position: 'relative', display: 'flex', alignItems: 'center', minHeight: '26px'}}>
               <textarea id="dealInput" rows={1} style={{width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.5', color: '#fff', position: 'relative', zIndex: '2', overflow: 'hidden', whiteSpace: 'nowrap'}}></textarea>
-              <div id="dealGhost" aria-hidden="true" style={{position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.5', color: '#C7C9BE', pointerEvents: 'none', zIndex: '1', whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%', opacity: '1'}}></div>
+              <div id="dealGhost" aria-hidden="true" style={{position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-ui)', fontSize: '13.5px', lineHeight: '1.5', color: '#C7C9BE', pointerEvents: 'none', zIndex: '1', whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%', opacity: '1'}}>{ghost}</div>
             </div>
             <button type="button" tabIndex={-1} aria-hidden="true" style={{background: 'var(--neon)', color: 'var(--ink)', border: 'none', borderRadius: '999px', padding: '9px 16px', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap'}}>Create</button>
           </div>

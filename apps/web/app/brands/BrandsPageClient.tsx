@@ -552,6 +552,11 @@ export default function BrandsPageClient() {
 
   
       </>)}
+
+      {/* Both "Book demo" buttons call openDemo, but the modal itself was never
+          rendered — imported, state declared, and nothing on screen. Clicking
+          set demoOpen and no element read it. */}
+      <BookDemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </div>
   )
 }

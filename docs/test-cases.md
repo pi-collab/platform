@@ -1123,6 +1123,19 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] It filters `is_vetted = true` EXPLICITLY. RLS was enforcing that and the service role bypasses RLS — without the filter, every brand would see unvetted creators
 - [ ] No user-scoped query anywhere selects `phone`, `contact_email` or `rate_card` from `creators`. Check per QUERY, not per file: a file can import the admin client for one query and use the session client for another, which is exactly how this one was missed
 
+### 30. Every "Book demo" opens the modal
+
+- [ ] Landing desktop: all three (banner hero, animated hero, closing section) open it. The reduced-motion copy of the closing section counts — it was a `<span>` in a `<div>`, not interactive at all
+- [ ] Brands desktop: both open it. `BookDemoModal` was imported, `demoOpen` declared and both buttons wired to `openDemo` — but the modal was NEVER RENDERED, so the click set state nothing read
+- [ ] Landing mobile: the closing CTA and the header Get access modal both work
+- [ ] CHECKING METHOD: audit by the tag IMMEDIATELY wrapping the text and by whether the modal is rendered. Looking backwards for "the nearest `<button`" gives false passes — it finds an unrelated earlier tag, which is how the brands one was missed twice
+
+### 31. Deal builder ghost text
+
+- [ ] `/brands` desktop: the input cycles placeholder briefs, typing forward then deleting
+- [ ] `/brands` mobile: same. The element existed but rendered no `{ghost}` and the file had no effect at all — the converter's ghost substitution reached the desktop file only
+- [ ] Typing in the box stops the cycling and clears the ghost
+
 ---
 
 | When | What to run |
