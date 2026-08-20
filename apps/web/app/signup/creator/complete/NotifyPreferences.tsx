@@ -148,7 +148,21 @@ export default function NotifyPreferences({
         <input
           type="checkbox"
           checked={waOn}
-          onChange={(e) => { setWaOn(e.target.checked); touch() }}
+          onChange={(e) => {
+            // Prefill with the signup number when switching this on, so the
+            // common case needs no typing. Only when the field is empty, so it
+            // never overwrites a number they typed or one they saved earlier —
+            // and the link below still puts it back if they clear it. Ticking
+            // the box is the choice being recorded; the number is a default
+            // they can replace, which is why prefilling it is not the same as
+            // pre-ticking a checkbox.
+            if (e.target.checked && !wa && signupPhone) {
+              setDial('+91')
+              setWa(signupPhone)
+            }
+            setWaOn(e.target.checked)
+            touch()
+          }}
         />
         <span className="notifybox__label">WhatsApp</span>
       </label>

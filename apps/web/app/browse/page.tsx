@@ -26,11 +26,21 @@ export interface BrowseCreator {
 export default async function BrowsePage() {
   const brand = await verifyBrand()
 
-  // Uses the anon-key client — RLS creators_read policy enforces is_vetted=true
-  const supabase = createClient()
-  const { data: creators, error } = await supabase
+  // Service role, and the is_vetted filter is now WRITTEN OUT rather than left
+  // to RLS. rate_card is no longer readable by the anon key — migration 0470
+  // withholds it, along with phone and contact_email, because creators_read
+  // hands every authenticated user the whole row and RLS cannot restrict
+  // columns. This page is server-rendered behind verifyBrand(), so the service
+  // role is the right client for it.
+  //
+  // The .eq('is_vetted', true) is load bearing: RLS was enforcing it, and the
+  // service role bypasses RLS. Without it this page would list unvetted
+  // creators to every brand.
+  const admin = createAdminClient()
+  const { data: creators, error } = await admin
     .from('creators')
     .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, rate_card')
+    .eq('is_vetted', true)
     .order('full_name', { ascending: true })
 
   if (error) {
@@ -41,8 +51,7 @@ export default async function BrowsePage() {
     )
   }
 
-  // Fetch which creators have published storefronts (RLS blocks brand reads, use admin)
-  const admin = createAdminClient()
+  // Fetch which creators have published storefronts (RLS blocks brand reads)
   const { data: storefronts } = await admin
     .from('creator_storefronts')
     .select('creator_id, slug')

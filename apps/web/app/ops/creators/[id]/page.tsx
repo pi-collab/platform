@@ -12,11 +12,28 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   const admin = createAdminClient()
   const { data: creator, error } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, created_at, updated_at')
+    .select('id, user_id, full_name, phone, contact_email, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, created_at, updated_at')
     .eq('id', params.id)
     .maybeSingle()
 
   if (error || !creator) notFound()
+
+  // How to reach this creator. The channels they choose at signup live in
+  // users.preferences, which nothing in ops was reading — so answering "how do
+  // we contact them?" meant querying the database by hand.
+  const { data: contactRow } = creator.user_id
+    ? await admin.from('users').select('email, preferences').eq('id', creator.user_id).maybeSingle()
+    : { data: null }
+  const prefs = (contactRow?.preferences ?? {}) as Record<string, unknown>
+  const contact = {
+    // contact_email is the address they asked to be notified on, which is not
+    // necessarily the one they signed in with.
+    notifyEmail: (creator as { contact_email?: string | null }).contact_email ?? null,
+    loginEmail: contactRow?.email ?? null,
+    whatsapp: typeof prefs.whatsapp_phone === 'string' ? prefs.whatsapp_phone : null,
+    wantsEmail: prefs.notify_email === true,
+    wantsWhatsapp: prefs.notify_whatsapp === true,
+  }
 
   const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }] = await Promise.all([
     admin
@@ -83,6 +100,31 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         >
           Edit
         </Link>
+
+      {/* Contact channels. Ops has to answer "how do we reach this person?"
+          without opening the database — which is the whole point of asking them
+          at signup. Shows what they chose and what they gave. */}
+      <div style={{ margin: '0 0 1.25rem', padding: '0.85rem 1rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        <p style={{ margin: '0 0 0.5rem', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>
+          How to reach them
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 1.5rem', fontSize: '0.8125rem' }}>
+          <span data-ph-mask>Phone (signup): <strong>{creator.phone || '\u2014'}</strong></span>
+          <span data-ph-mask>
+            WhatsApp: <strong>{contact.whatsapp || '\u2014'}</strong>
+            {contact.whatsapp && !contact.wantsWhatsapp && <span style={{ color: '#92400e' }}> (opted out)</span>}
+          </span>
+          <span data-ph-mask>
+            Email: <strong>{contact.notifyEmail || contact.loginEmail || '\u2014'}</strong>
+            {(contact.notifyEmail || contact.loginEmail) && !contact.wantsEmail && <span style={{ color: '#92400e' }}> (opted out)</span>}
+          </span>
+        </div>
+        {!contact.wantsEmail && !contact.wantsWhatsapp && (
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#92400e' }}>
+            No notification channel opted into — platform notifications will not reach them.
+          </p>
+        )}
+      </div>
       </div>
 
       {(appeals ?? []).length > 0 && (

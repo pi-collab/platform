@@ -1102,6 +1102,27 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] `brand_members` has no INSERT policy, so no client can create a membership directly; both inserts are server-side with the service role
 - [ ] REGRESSION TRAP: `REVOKE UPDATE (col)` is a NO-OP while a table-level UPDATE grant exists. Migration 0471 did exactly that, reported success, and changed nothing. Always revoke at table level then grant columns back, and verify with `has_column_privilege` rather than trusting the migration ran
 
+### 27. Contact channels in ops
+
+- [ ] `/ops/creators/[id]` shows a "How to reach them" card: signup phone, WhatsApp number, and notification email
+- [ ] A channel the creator opted OUT of is labelled "(opted out)" rather than hidden — the number is still there, it just should not be used for platform notifications
+- [ ] A creator who opted into nothing shows the warning line
+- [ ] The email shown is `creators.contact_email` (the address they asked to be notified on), falling back to `users.email` (the one they signed in with) — these differ for a creator who signed in with Google
+- [ ] Values come from `users.preferences` (`notify_email`, `notify_whatsapp`, `whatsapp_phone`), which nothing in ops read before
+
+### 28. WhatsApp number prefill at signup
+
+- [ ] Ticking the WhatsApp toggle prefills the number field with the signup phone and sets the dial code to +91
+- [ ] It does NOT overwrite a number already typed, or one restored from a previous save
+- [ ] "Same as the number I signed up with" still works after clearing the field
+- [ ] Prefilling the number is not the same as pre-ticking the box: the tick is the recorded choice, the number is a replaceable default
+
+### 29. REGRESSION — column grants vs the browse page
+
+- [ ] `/browse` lists creators for a brand and still shows rate cards. It selects `rate_card`, which migration 0470 withheld from the anon key, so it now uses the service role
+- [ ] It filters `is_vetted = true` EXPLICITLY. RLS was enforcing that and the service role bypasses RLS — without the filter, every brand would see unvetted creators
+- [ ] No user-scoped query anywhere selects `phone`, `contact_email` or `rate_card` from `creators`. Check per QUERY, not per file: a file can import the admin client for one query and use the session client for another, which is exactly how this one was missed
+
 ---
 
 | When | What to run |
