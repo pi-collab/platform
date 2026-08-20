@@ -86,7 +86,16 @@ export function isPlausibleEmail(email: string | null | undefined): email is str
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 }
 
+/** One file to attach. `content` is base64, which is what Resend expects. */
+export interface EmailAttachment {
+  filename: string
+  content: string
+  contentType?: string
+}
+
 export interface SendDealEmailParams {
+  /** Optional files to attach. Used by the careers application form. */
+  attachments?: EmailAttachment[]
   /** Recipient addresses. Invalid ones should be filtered before calling. */
   to: string[]
   subject: string
@@ -123,7 +132,7 @@ export interface SendDealEmailParams {
  * Never rejects.
  */
 export async function sendDealEmail(params: SendDealEmailParams): Promise<EmailResult> {
-  const { to, subject, html, text, idempotencyKey, replyTo, dealId } = params
+  const { to, subject, html, text, idempotencyKey, replyTo, dealId, attachments } = params
 
   try {
     const config = readConfig()
@@ -166,6 +175,17 @@ export async function sendDealEmail(params: SendDealEmailParams): Promise<EmailR
     }
     const replyAddress = replyTo || config.replyTo
     if (replyAddress) body.reply_to = replyAddress
+
+    // Resend takes base64 in `content`. Only set the key when there is
+    // something to send: an empty array is a valid payload that costs a field
+    // for nothing, and some providers treat it as a malformed request.
+    if (attachments?.length) {
+      body.attachments = attachments.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        ...(a.contentType ? { content_type: a.contentType } : {}),
+      }))
+    }
 
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',
@@ -235,6 +255,8 @@ export async function sendAccountEmail(params: {
   html: string
   text: string
   idempotencyKey?: string
+  attachments?: EmailAttachment[]
+  replyTo?: string
 }): Promise<EmailResult> {
   return sendDealEmail(params)
 }

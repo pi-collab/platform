@@ -375,6 +375,7 @@ export const footer = {
     {
       heading: 'Company',
       links: [
+        { label: 'Careers', href: '/careers' },
         { label: 'Contact', href: '#contact' },
       ],
     },
