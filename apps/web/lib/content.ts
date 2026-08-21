@@ -362,6 +362,7 @@ export const footer = {
     { label: 'Instagram', href: 'https://www.instagram.com/guapd.it/', icon: 'instagram' as const },
     { label: 'X', href: 'https://x.com/guapd_it', icon: 'x' as const },
     { label: 'YouTube', href: 'https://www.youtube.com/@Guapd', icon: 'youtube' as const },
+    { label: 'LinkedIn', href: 'https://www.linkedin.com/company/guapd', icon: 'linkedin' as const },
   ],
 
   columns: [
