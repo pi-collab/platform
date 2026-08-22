@@ -55,6 +55,24 @@ ALTER TABLE creator_products
   ADD CONSTRAINT creator_products_on_request_chk
   CHECK (price_mode <> 'on_request' OR price_paise = 0);
 
+-- ── Backfill: rows that already meant "on request" ──────────────────────────
+--
+-- display_price = false predates price_mode and meant exactly what on_request
+-- means. Those rows keep a real price_paise, and the read policy on this table
+-- lets ANY authenticated user select active products of a vetted creator — so
+-- a figure the creator chose not to publish is sitting there readable. The
+-- constraint above stops new rows doing that; this stops the old ones.
+--
+-- The price is discarded, not preserved. That is the point: the creator asked
+-- for it not to be shown, and "hidden" has to mean absent. Ops can re-enter a
+-- figure by switching the package to a fixed price.
+UPDATE creator_products
+   SET price_mode      = 'on_request',
+       price_paise     = 0,
+       price_max_paise = NULL
+ WHERE display_price = false
+   AND price_mode = 'exact';
+
 COMMENT ON COLUMN creator_products.price_mode IS
   'How the rate is advertised: exact | from | range | on_request. Display only — a deal always carries one agreed number.';
 COMMENT ON COLUMN creator_products.price_max_paise IS
