@@ -1,12 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
+import { createAdminClient } from '@/lib/supabase/admin'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import CreatorPaymentsEmpty from './CreatorPaymentsEmpty'
 import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
 export default async function CreatorPaymentsPage() {
-  await verifyCreator()
+  const ctx = await verifyCreator()
   const supabase = createClient()
 
   const { data: invoices, error } = await supabase
@@ -87,6 +90,26 @@ export default async function CreatorPaymentsPage() {
       paidMonthsAgo: monthsDiff,
     }
   })
+
+  // No invoices at all. PaymentsClient renders totals, tabs and a table — all
+  // chrome for rows that do not exist.
+  if (all.length === 0) {
+    // Service role: upi_id is withheld from the client roles as PII, so the
+    // session client cannot read it back.
+    const admin = createAdminClient()
+    const { data: creatorRow } = await admin
+      .from('creators')
+      .select('upi_id')
+      .eq('id', ctx.creatorId)
+      .maybeSingle()
+
+    return (
+      <main style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorPageHeader title="Payments" backHref="/creator/dashboard" />
+        <CreatorPaymentsEmpty upiId={creatorRow?.upi_id ?? null} />
+      </main>
+    )
+  }
 
   return (
     <main style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>

@@ -1205,6 +1205,18 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] DELIBERATE OMISSION: the export also draws a search field and seven filter chips, all reading zero. They are not built. Search and filters are controls for a list that does not exist — the export disables its own search input for that reason, and seven chips saying 0 is decoration pretending to be a feature. Restore them with the populated design, where they do something
 - [ ] A creator WITH deals still gets the full table, unchanged
 
+### 40. Creator payments — empty state and UPI ID
+
+- [ ] A creator with no invoices sees: "Payments", a tinted LAST PAYOUT card reading ₹0, "Nothing's landed yet", a "Browse brand deals" button, and the payout row
+- [ ] The payout card shows a GRADIENT, not flat white. It needs both --sec and --sec-2; if either is missing the whole declaration is invalid and CSS drops it silently — there is no fallback colour
+- [ ] With no UPI saved the row reads "No payout method yet" with an "Add UPI ID" button; with one saved it reads "UPI · <id> · not verified yet" with "Change"
+- [ ] It NEVER says "verified". Verifying a UPI ID means a penny-drop through a payment aggregator, which v1 stays out of — the word would be a lie in the one place a creator most needs the truth about their money
+- [ ] Valid: `utkarsh@upi`, `palak.jain@okhdfcbank`, `9876543210@ybl`. Rejected: `not-a-upi`, `@upi`, `user@`, `user@123`, `user name@upi`
+- [ ] Saved lowercased — UPI handles are case-insensitive, and two casings of one address look like two accounts in ops
+- [ ] `creators.upi_id` is withheld from anon/authenticated like phone (migration 0476). Both read and write go through the service role
+- [ ] The audit event records THAT a UPI was saved, never the value — events is readable in more places than the column is
+- [ ] The input is 16px, so Safari does not zoom the page on focus
+
 ---
 
 | When | What to run |
