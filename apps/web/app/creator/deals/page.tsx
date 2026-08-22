@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
+import CreatorDealsEmpty from './CreatorDealsEmpty'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 
 export const metadata: Metadata = { title: 'My Deals · Guapd Creator' }
 
@@ -39,6 +41,18 @@ export default async function CreatorDealsPage() {
     const brand = Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name ?? null
     return { ...d, brand }
   })
+
+  // No deals at all. CreatorDealsTable renders a toolbar, column headers and
+  // filters — chrome for a list that does not exist — so the empty state
+  // replaces the screen rather than sitting inside it.
+  if (all.length === 0) {
+    return (
+      <main style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorPageHeader title="My deals" backHref="/creator/dashboard" />
+        <CreatorDealsEmpty />
+      </main>
+    )
+  }
 
   return (
     <main style={wrapper}>

@@ -29,6 +29,9 @@
 
   --card: #ffffff;
   --lime-400: #e8ff66;
+  /* The ink used ON lime. Near-black with a green cast, so a neon button
+     does not pair a warm fill with a cold text colour. */
+  --lime-950: #161b08;
 
   background: #f5f7fa;
   color: var(--ink);

@@ -1196,6 +1196,15 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] The tab bar renders on this screen too, and no tab is marked current (notifications is not a tab)
 - [ ] CreatorEmptyState takes its copy as props. "You're all caught up" is right here and wrong for deals — an empty state that says nothing specific is a shrug
 
+### 39. Creator deals — empty state
+
+- [ ] A creator with no deals sees: back arrow, "My deals", the three-up counters all reading 0, a briefcase tile, "No deals yet", and a "Set up your shopfront" CTA going to /creator/storefront
+- [ ] It REPLACES the screen. CreatorDealsTable renders a toolbar, headers and filters — chrome for a list that does not exist
+- [ ] The CTA is lime with near-black ink (--lime-400 on --lime-950), not black-on-lime from the marketing palette
+- [ ] The counters are muted grey, not full contrast. A zero drawn in black reads as a real figure worth attention
+- [ ] DELIBERATE OMISSION: the export also draws a search field and seven filter chips, all reading zero. They are not built. Search and filters are controls for a list that does not exist — the export disables its own search input for that reason, and seven chips saying 0 is decoration pretending to be a feature. Restore them with the populated design, where they do something
+- [ ] A creator WITH deals still gets the full table, unchanged
+
 ---
 
 | When | What to run |
