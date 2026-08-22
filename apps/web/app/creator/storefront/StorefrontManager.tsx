@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
+import AvatarUpload from '@/components/AvatarUpload'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 
 interface Product {
@@ -736,7 +737,14 @@ export default function StorefrontManager({
               </Section>
 
               {/* ── About you ─────────────────────────────── */}
-              <Section title="About you" subtitle="Name, bio, and what you create" icon={IconUser} defaultOpen>
+              <Section title="About you" subtitle="Photo, name, bio, and what you create" icon={IconUser} defaultOpen>
+                {/* The photo is the largest thing on the published shopfront —
+                    a 4/5 card beside the name — so it belongs in the editor
+                    that builds it, not only on a settings screen two taps away.
+                    Uploading refreshes the route, so the preview updates. */}
+                <Field label="Profile photo" hint="Shown at the top of your shopfront. Brands see this first.">
+                  <AvatarUpload currentUrl={creator?.profile_photo_url ?? null} name={edit.displayName || creator?.full_name || ''} />
+                </Field>
                 <Field label="Display name">
                   <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} style={dinput} />
                 </Field>

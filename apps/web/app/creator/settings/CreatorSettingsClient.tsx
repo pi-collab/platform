@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import AvatarUpload from '@/components/AvatarUpload'
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -22,6 +23,8 @@ interface Props {
   creatorPrimaryPlatform: string
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
+  /** Current profile photo, so the uploader can show it and offer Remove. */
+  creatorPhotoUrl: string | null
   userEmail: string
   userPhone: string
   userLanguage: string
@@ -61,6 +64,7 @@ export default function CreatorSettingsClient({
   creatorLocation: initialLocation,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
+  creatorPhotoUrl,
   creatorSocials: initialSocials,
   userEmail: initialEmail,
   userPhone: initialPhone,
@@ -251,19 +255,11 @@ export default function CreatorSettingsClient({
                   </Link>
                 </div>
 
-                {/* Avatar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22, paddingBottom: 22, borderBottom: '1px solid var(--border-hairline)' }}>
-                  <span style={{ width: 72, height: 72, borderRadius: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 var(--card)' }}>{initials}</span>
-                  <div>
-                    <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-                      <span className="pill" style={pillBtn}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" /></svg>
-                        Upload photo
-                      </span>
-                      <span className="pill" style={{ ...pillBtn, color: 'var(--ink-soft)' }}>Remove</span>
-                    </div>
-                    <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 8 }}>JPG or PNG, at least 400x400px.</div>
-                  </div>
+                {/* Avatar. These were two inert <span>s — a creator could tap
+                    "Upload photo" and "Remove" forever and nothing happened.
+                    The real uploader existed but was rendered nowhere. */}
+                <div style={{ marginTop: 22, paddingBottom: 22, borderBottom: '1px solid var(--border-hairline)' }}>
+                  <AvatarUpload currentUrl={creatorPhotoUrl} name={name} />
                 </div>
 
                 {/* Profile fields */}

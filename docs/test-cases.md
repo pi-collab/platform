@@ -1318,6 +1318,18 @@ All three render the same component, so check one and the others follow — but 
 - [ ] An absent or unrecognised `from` falls back to the dashboard rather than erroring
 - [ ] This keeps CreatorPageHeader's rule that `backHref` is stated by the caller and never guessed — the guessing just moved to the link, where the answer is actually known
 
+### 53. Profile photo upload actually works
+
+Before this, `AvatarUpload` was wired to real upload/remove actions but rendered NOWHERE, and the settings screen drew two inert `<span>`s labelled "Upload photo" and "Remove". There was no working way to set a photo anywhere in the app.
+
+- [ ] Settings → Edit profile: "Upload photo" is a real `<button>` with a hidden file input, not a span
+- [ ] Shopfront editor → About you: the same control, placed first. The photo is the largest element on the published shopfront, so it belongs in the editor that builds it
+- [ ] Uploading refreshes the route, so the shopfront preview shows the new photo without a manual reload
+- [ ] Rejects anything that is not JPEG/PNG/WebP/GIF, and anything over 5 MB, with the reason shown
+- [ ] Once a photo exists the button reads "Change photo" and a "Remove" appears beside it
+- [ ] Storage path is `avatars/{creatorId}/` and is re-checked against that prefix after being built
+- [ ] The DB write goes through the SESSION client, so it depends on the `creators_update_own` RLS policy and on table-level UPDATE grants surviving. Migration 0472 revoked table-level UPDATE on `public.users` — confirm it never gets extended to `creators` without granting `profile_photo_url` back, or uploads will store the file and silently fail to save the URL
+
 ---
 
 | When | What to run |

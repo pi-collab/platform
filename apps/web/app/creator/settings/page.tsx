@@ -41,6 +41,7 @@ export default async function CreatorSettingsPage() {
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? user?.email ?? ''}
       creatorSocials={socials}
+      creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
       userEmail={user?.email ?? ''}
       userPhone={user?.phone ?? ''}
       userLanguage={prefs.language ?? 'English'}
