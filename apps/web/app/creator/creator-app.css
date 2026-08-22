@@ -48,7 +48,12 @@
   font-family: var(--font-ui);
   /* The tab bar is fixed, so every screen reserves its height plus the home
      indicator. Without this the last row of content sits under the bar. */
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  /* Clears the fixed tab bar AND the cookie banner. The banner is ~150px on a
+     phone and sits above the bar, so reserving only the bar's height leaves the
+     last control on the page unreachable — which is exactly what happened to
+     the Add UPI ID button. The banner is dismissed once, so this is generous
+     for a session and correct for the first one. */
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
   min-height: 100vh;
 }
 

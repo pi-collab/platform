@@ -1207,6 +1207,8 @@ Only three paths can make someone a brand member. All three are now guarded:
 
 ### 40. Creator payments — empty state and UPI ID
 
+- [ ] TOTAL EARNED leads the screen, above LAST PAYOUT — it is the figure a creator opens this page to see
+- [ ] Every control is REACHABLE. The page reserves room for the tab bar AND the cookie banner (~210px); reserving only the bar leaves the last control on the page — the Add UPI ID button — under the banner and un-tappable
 - [ ] A creator with no invoices sees: "Payments", a tinted LAST PAYOUT card reading ₹0, "Nothing's landed yet", a "Browse brand deals" button, and the payout row
 - [ ] The payout card shows a GRADIENT, not flat white. It needs both --sec and --sec-2; if either is missing the whole declaration is invalid and CSS drops it silently — there is no fallback colour
 - [ ] With no UPI saved the row reads "No payout method yet" with an "Add UPI ID" button; with one saved it reads "UPI · <id> · not verified yet" with "Change"

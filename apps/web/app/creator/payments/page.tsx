@@ -106,7 +106,7 @@ export default async function CreatorPaymentsPage() {
     return (
       <main style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="Payments" backHref="/creator/dashboard" />
-        <CreatorPaymentsEmpty upiId={creatorRow?.upi_id ?? null} />
+        <CreatorPaymentsEmpty upiId={creatorRow?.upi_id ?? null} totalEarnedPaise={totalEarnedPaise} />
       </main>
     )
   }

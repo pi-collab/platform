@@ -11,9 +11,38 @@ import UpiRow from './UpiRow'
  * setting a UPI ID, because a creator with no payout method cannot be paid and
  * this is the screen where they will look for it.
  */
-export default function CreatorPaymentsEmpty({ upiId }: { upiId: string | null }) {
+export default function CreatorPaymentsEmpty({
+  upiId,
+  totalEarnedPaise = 0,
+}: {
+  upiId: string | null
+  totalEarnedPaise?: number
+}) {
   return (
     <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Total earned, first. It is the figure a creator opens this screen to
+          see — lifetime, not last payout — so it leads and the most recent
+          payout sits under it as detail. */}
+      <div className="sr msurface" style={{ padding: '22px 20px' }}>
+        <div className="t-meta">TOTAL EARNED</div>
+        <div
+          className="tnum"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            letterSpacing: '-0.045em',
+            fontSize: 38,
+            marginTop: 8,
+            color: 'var(--ink)',
+          }}
+        >
+          &#8377;{(totalEarnedPaise / 100).toLocaleString('en-IN')}
+        </div>
+        <div className="t-meta" style={{ marginTop: 8, color: 'var(--wg-400)' }}>
+          {totalEarnedPaise > 0 ? 'ACROSS ALL DEALS' : 'NO EARNINGS YET'}
+        </div>
+      </div>
+
       {/* Last payout. Tinted rather than white, so the number reads as a
           headline figure rather than one row among several. */}
       <div
