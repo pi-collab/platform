@@ -83,7 +83,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   if (draftCreatorIds.length > 0) {
     const { data: products } = await supabase
       .from('creator_products')
-      .select('id, creator_id, platform, handle, product_type, description, price_paise, display_price, is_active')
+      .select('id, creator_id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active')
       .in('creator_id', draftCreatorIds)
       .eq('is_active', true)
     for (const p of products ?? []) {

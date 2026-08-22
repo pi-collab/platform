@@ -95,3 +95,15 @@ export function normalizePriceMode(p: PricedProduct): PriceMode {
 export function offerPrefillPaise(p: PricedProduct): number | null {
   return normalizePriceMode(p) === 'on_request' ? null : p.price_paise
 }
+
+/**
+ * Is this a single, settled figure the brand simply accepts?
+ *
+ * Only 'exact' is. A minimum or a range is a starting point the brand adjusts,
+ * and on-request has no number at all — both need an editable field. The offer
+ * builders previously keyed off display_price, which is true for a range, so
+ * they presented a floor as though it were the price.
+ */
+export function isFixedPrice(p: PricedProduct): boolean {
+  return normalizePriceMode(p) === 'exact'
+}

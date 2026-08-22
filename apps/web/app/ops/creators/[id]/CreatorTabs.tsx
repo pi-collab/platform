@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
+import {
+  formatProductPrice, normalizePriceMode,
+  PRICE_MODES, PRICE_MODE_LABELS, type PriceMode,
+} from '@/lib/product-price'
 
 interface SocialAccount {
   platform: string
@@ -20,6 +24,8 @@ interface Product {
   product_type: string
   description: string | null
   price_paise: number
+  price_mode: string | null
+  price_max_paise: number | null
   display_price: boolean
   is_active: boolean
   included_revisions: number
@@ -276,10 +282,12 @@ function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => vo
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
           <span style={{ fontSize: '0.8125rem', fontWeight: 700 }}>{p.product_type}</span>
           <span style={{ fontSize: '0.65rem', fontWeight: 600, padding: '0.1rem 0.375rem', borderRadius: 9999, background: '#f3f4f6', color: '#6b7280', textTransform: 'capitalize' }}>{p.platform}</span>
-          {!p.display_price && <span style={{ fontSize: '0.6rem', color: '#888' }}>Price hidden</span>}
+          {normalizePriceMode(p) !== 'exact' && (
+            <span style={{ fontSize: '0.6rem', color: '#888' }}>{PRICE_MODE_LABELS[normalizePriceMode(p)]}</span>
+          )}
         </div>
         <p style={{ fontSize: '0.75rem', color: '#888', margin: 0 }}>
-          {p.handle?.startsWith('@') ? p.handle : `@${p.handle}`} &middot; ₹{(p.price_paise / 100).toLocaleString('en-IN')}
+          {p.handle?.startsWith('@') ? p.handle : `@${p.handle}`} &middot; {formatProductPrice(p) ?? 'On request'}
           {p.description && <> &middot; {p.description}</>}
           {' '}&middot; {p.included_revisions} rev incl
           {p.price_per_extra_revision_paise > 0 && <>, ₹{(p.price_per_extra_revision_paise / 100).toLocaleString('en-IN')}/extra</>}
@@ -315,7 +323,13 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
   const availableTypes = PRODUCT_TYPES_BY_PLATFORM[selectedPlatform] ?? PRODUCT_TYPES
   const [description, setDescription] = useState(existing?.description ?? '')
   const [priceRupees, setPriceRupees] = useState(existing ? String(existing.price_paise / 100) : '')
-  const [displayPrice, setDisplayPrice] = useState(existing?.display_price ?? true)
+  // Mode replaces the old "Show price publicly" checkbox: on_request IS that
+  // checkbox unticked, and keeping both would give one fact two controls that
+  // could disagree.
+  const [priceMode, setPriceMode] = useState<PriceMode>(existing ? normalizePriceMode(existing) : 'exact')
+  const [priceMaxRupees, setPriceMaxRupees] = useState(
+    existing?.price_max_paise ? String(existing.price_max_paise / 100) : '',
+  )
   const [isActive, setIsActive] = useState(existing?.is_active ?? true)
   const [includedRevisions, setIncludedRevisions] = useState(String(existing?.included_revisions ?? 1))
   const [extraRevisionRupees, setExtraRevisionRupees] = useState(existing ? String(existing.price_per_extra_revision_paise / 100) : '0')
@@ -325,11 +339,23 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
     setError(null)
     setLoading(true)
 
-    const paise = Math.round(parseFloat(priceRupees) * 100)
+    // On request stores nothing: 0477 rejects a hidden figure, because read
+    // access to this table is wider than the shopfront.
+    const paise = priceMode === 'on_request' ? 0 : Math.round(parseFloat(priceRupees) * 100)
     if (isNaN(paise) || paise < 0) {
       setError('Price must be a non-negative number')
       setLoading(false)
       return
+    }
+
+    let maxPaise: number | null = null
+    if (priceMode === 'range') {
+      maxPaise = Math.round(parseFloat(priceMaxRupees) * 100)
+      if (isNaN(maxPaise) || maxPaise <= paise) {
+        setError('The top of the range must be more than the bottom')
+        setLoading(false)
+        return
+      }
     }
 
     const parsedIncluded = parseInt(includedRevisions, 10)
@@ -353,7 +379,8 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         product_type: productType,
         description: description || undefined,
         price_paise: paise,
-        display_price: displayPrice,
+        price_mode: priceMode,
+        price_max_paise: priceMode === 'range' ? maxPaise : null,
         is_active: isActive,
         included_revisions: parsedIncluded,
         price_per_extra_revision_paise: extraPaise,
@@ -370,7 +397,8 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
         product_type: productType,
         description: description || undefined,
         price_paise: paise,
-        display_price: displayPrice,
+        price_mode: priceMode,
+        price_max_paise: priceMode === 'range' ? maxPaise : null,
         included_revisions: parsedIncluded,
         price_per_extra_revision_paise: extraPaise,
       })
@@ -432,9 +460,25 @@ function ProductForm({ creatorId, accounts, existing, onDone }: {
 
       <div style={{ display: 'flex', gap: '1.5rem' }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
-          <input type="checkbox" checked={displayPrice} onChange={(e) => setDisplayPrice(e.target.checked)} />
-          Show price publicly
+          <select
+            style={{ ...formInputStyle, width: 190 }}
+            value={priceMode}
+            onChange={(e) => setPriceMode(e.target.value as PriceMode)}
+          >
+            {PRICE_MODES.map((m) => <option key={m} value={m}>{PRICE_MODE_LABELS[m]}</option>)}
+          </select>
         </label>
+        {priceMode === 'range' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem' }}>
+            To (&#8377;)
+            <input
+              style={{ ...formInputStyle, width: 120 }}
+              type="number" min="0" step="1"
+              value={priceMaxRupees}
+              onChange={(e) => setPriceMaxRupees(e.target.value)}
+            />
+          </label>
+        )}
         {existing && (
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
             <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />

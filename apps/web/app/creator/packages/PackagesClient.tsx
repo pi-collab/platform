@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { PRODUCT_TYPES_BY_PLATFORM, PRODUCT_TYPES, type ProductType } from '@/lib/product-types'
 import {
@@ -175,6 +176,11 @@ function PackageForm({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // document.body does not exist during the server render, so the portal waits
+  // for the client rather than throwing on the way in.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   function pickChannel(key: string) {
     setChannelKey(key)
     // The deliverable list is per platform, so a type from the old channel may
@@ -205,7 +211,14 @@ function PackageForm({
     onClose()
   }
 
-  return (
+  // Portalled to <body>. The creator layout renders pages inside
+  // <main style={{ position: 'relative', zIndex: 1 }}>, and the tab bar is a
+  // SIBLING of that main at z-index 10000. A stacking context caps everything
+  // inside it, so the sheet could ask for any z-index it liked and still be
+  // painted under the tab bar — which is exactly what buried Save.
+  if (!mounted) return null
+
+  return createPortal(
     <div className="pk-sheet-scrim" role="dialog" aria-modal="true" aria-label={existing ? 'Edit package' : 'Add a package'}>
       <form className="pk-sheet" onSubmit={submit}>
         <div className="pk-sheet-head">
@@ -315,7 +328,8 @@ function PackageForm({
           <button type="button" className="pk-btn pk-btn-ghost" onClick={onClose}>Cancel</button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

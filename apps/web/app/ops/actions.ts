@@ -496,16 +496,41 @@ interface AddProductInput {
   product_type: string
   description?: string
   price_paise: number
+  /** exact | from | range | on_request. See lib/product-price.ts. */
+  price_mode?: string
+  /** Belongs to 'range' and only to it — enforced by a CHECK in 0477. */
+  price_max_paise?: number | null
   display_price?: boolean
   included_revisions?: number
   price_per_extra_revision_paise?: number
+}
+
+/**
+ * Reconcile the three price columns before writing.
+ *
+ * They cannot be set independently. 0477 enforces that a maximum belongs to a
+ * range and only to a range, and that an on-request package stores no figure —
+ * so an ops edit that changed a price without minding the mode would either be
+ * rejected by the CHECK or leave a stale maximum behind. display_price is
+ * derived for the same reason: older consumers read it, and the two must never
+ * disagree.
+ */
+function priceModeFields(mode: string | undefined, maxPaise: number | null | undefined, legacyDisplay: boolean | undefined) {
+  // No mode supplied means a caller predating them. Fall back to what
+  // display_price used to mean rather than silently promoting it to 'exact'.
+  const resolved = mode ?? (legacyDisplay === false ? 'on_request' : 'exact')
+  return {
+    price_mode: resolved,
+    price_max_paise: resolved === 'range' ? (maxPaise ?? null) : null,
+    display_price: resolved !== 'on_request',
+  }
 }
 
 export async function addProduct(input: AddProductInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { creator_id, platform, handle, product_type, description, price_paise, display_price, included_revisions, price_per_extra_revision_paise } = input
+  const { creator_id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, included_revisions, price_per_extra_revision_paise } = input
   if (!platform.trim()) return { error: 'Platform is required' }
   if (!handle.trim()) return { error: 'Handle is required' }
   if (!product_type.trim()) return { error: 'Product type is required' }
@@ -519,7 +544,7 @@ export async function addProduct(input: AddProductInput) {
     product_type,
     description: description?.trim() || null,
     price_paise,
-    display_price: display_price ?? true,
+    ...priceModeFields(price_mode, price_max_paise, display_price),
     included_revisions: included_revisions ?? 1,
     price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
   }).select('id').single()
@@ -544,6 +569,10 @@ interface EditProductInput {
   product_type: string
   description?: string
   price_paise: number
+  /** exact | from | range | on_request. See lib/product-price.ts. */
+  price_mode?: string
+  /** Belongs to 'range' and only to it — enforced by a CHECK in 0477. */
+  price_max_paise?: number | null
   display_price?: boolean
   is_active?: boolean
   included_revisions?: number
@@ -554,7 +583,7 @@ export async function editProduct(input: EditProductInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { id, creator_id, product_type, description, price_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise } = input
+  const { id, creator_id, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise } = input
   if (!product_type.trim()) return { error: 'Product type is required' }
   if (!Number.isInteger(price_paise) || price_paise < 0) return { error: 'Price must be a non-negative integer (paise)' }
 
@@ -565,7 +594,7 @@ export async function editProduct(input: EditProductInput) {
       product_type,
       description: description?.trim() || null,
       price_paise,
-      display_price: display_price ?? true,
+      ...priceModeFields(price_mode, price_max_paise, display_price),
       is_active: is_active ?? true,
       included_revisions: included_revisions ?? 1,
       price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,

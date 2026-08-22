@@ -1375,6 +1375,23 @@ Packages were enterable ONCE, at signup, and after that only by ops. This is the
 - [ ] Remove sets is_active = false. The table denies client DELETE by policy, and past deals reference what was offered at the time
 - [ ] Save and remove are pinned to ctx.creatorId, so a guessed id belonging to another creator matches no row
 
+### 56. Price modes reach the brand side and ops (not just the shopfront)
+
+A price mode is useless if only the shopfront honours it. Every surface that reads `creator_products` must fetch `price_mode` and `price_max_paise` — a query that omits them makes `normalizePriceMode` fall back to `exact`, and a range renders as a fixed price with NO error anywhere.
+
+- [ ] Every `creator_products` select carries both columns: creator storefront, packages, deals/new, ops creator page, campaigns, browse, and the public /c/<slug> action. Re-check this whenever a new consumer appears
+- [ ] **Brand offer builder** (`/deals/new`): a "from" or "range" package gives an EDITABLE price field prefilled with the creator's floor. It previously keyed off `display_price`, which is true for a range, so it presented a floor as a settled price the brand could not adjust
+- [ ] Only `exact` is treated as fixed. `on_request` still requires the brand to type a figure, and the deal cannot be sent without one
+- [ ] Same on the campaign placement editor
+- [ ] The line total and the running total use the same rule as the field — no surface should show a total built from a number the brand cannot see
+
+**Ops**
+- [ ] The product form has a price-mode dropdown, and a "To (₹)" field appears only for a range
+- [ ] The old "Show price publicly" checkbox is GONE. `on_request` is that checkbox unticked; keeping both gave one fact two controls that could disagree
+- [ ] Ops writes go through `priceModeFields()`, which derives `display_price` and nulls `price_max_paise` outside a range. Without it, an ops price edit on a creator's range could be REJECTED by the CHECK constraint (new price above the stale maximum) or leave a maximum behind
+- [ ] A caller supplying no mode falls back to what `display_price` meant, not to `exact`
+- [ ] The ops list shows the mode label and the formatted price, so ops sees what the brand sees
+
 ---
 
 | When | What to run |

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { updateCampaignDraft } from './draft-actions'
 import type { DraftPlacement } from './draft-actions'
 import { calculateFee } from '@/lib/fee'
@@ -48,7 +49,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
         const existing = sel[product.id]
         sel[product.id] = {
           qty: (existing?.qty ?? 0) + 1,
-          customPricePaise: !product.display_price ? p.price_paise : null,
+          customPricePaise: !isFixedPrice(product) ? (offerPrefillPaise(product) ?? p.price_paise) : null,
         }
       }
     }
@@ -106,9 +107,9 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
       count += sel.qty
-      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       total += unitPaise * sel.qty
-      if (!p.display_price && (!sel.customPricePaise || sel.customPricePaise <= 0)) {
+      if (!isFixedPrice(p) && (!sel.customPricePaise || sel.customPricePaise <= 0)) {
         missingPrice = true
       }
     }
@@ -141,7 +142,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
-      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       const rt = reelTypes[p.id]
       const br = itemBoostingRights[p.id]
       const bd = itemBoostingDuration[p.id]
@@ -200,8 +201,8 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: '0.8125rem', fontWeight: 600, margin: 0 }}>{p.product_type}</p>
                           {p.description && <p style={{ fontSize: '0.7rem', color: '#888', margin: '0.1rem 0 0' }}>{p.description}</p>}
-                          <p style={{ fontSize: '0.7rem', fontWeight: 600, margin: '0.1rem 0 0', color: p.display_price ? '#111' : '#888', fontStyle: p.display_price ? 'normal' : 'italic' }}>
-                            {p.display_price ? formatRupees(p.price_paise) : 'Price on request'}
+                          <p style={{ fontSize: '0.7rem', fontWeight: 600, margin: '0.1rem 0 0', color: formatProductPrice(p) ? '#111' : '#888', fontStyle: p.display_price ? 'normal' : 'italic' }}>
+                            {formatProductPrice(p) ?? 'Price on request'}
                           </p>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem', flexShrink: 0 }}>
@@ -286,7 +287,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                             </div>
                           )}
                           {/* Custom price for price-on-request */}
-                          {!p.display_price && qty > 0 && (
+                          {!isFixedPrice(p) && qty > 0 && (
                             <input
                               type="number" min="0" step="1" placeholder="Price (₹)"
                               value={sel?.customPricePaise != null ? String(sel.customPricePaise / 100) : ''}

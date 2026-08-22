@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { createDeal } from '../actions'
 import { uploadBriefAttachment, removeBriefAttachment } from './upload-actions'
 import PointsInput from './PointsInput'
@@ -96,7 +97,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       const [label, platform, handle] = key.split('::')
       const product = products.find((p) => p.product_type === label && p.platform === platform && p.handle === handle)
       if (product) {
-        sel[product.id] = { qty: count, customPricePaise: !product.display_price ? price_paise : null }
+        sel[product.id] = { qty: count, customPricePaise: !isFixedPrice(product) ? (offerPrefillPaise(product) ?? price_paise) : null }
       } else {
         dropped.push(`${label} (${platform} ${handle.startsWith('@') ? handle : `@${handle}`})`)
       }
@@ -222,10 +223,10 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
       count += sel.qty
-      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       total += unitPaise * sel.qty
       const qtyPrefix = sel.qty > 1 ? `${sel.qty}\u00D7 ` : ''
-      const priceNote = !p.display_price && sel.customPricePaise != null ? ` @ ${formatRupees(sel.customPricePaise)}` : ''
+      const priceNote = !isFixedPrice(p) && sel.customPricePaise != null ? ` @ ${formatRupees(sel.customPricePaise)}` : ''
       const displayHandle = p.handle.startsWith('@') ? p.handle : `@${p.handle}`
       lines.push(`${qtyPrefix}${p.product_type}${priceNote} (${p.platform} ${displayHandle})`)
     }
@@ -234,7 +235,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     for (const p of products) {
       const s = selections[p.id]
       if (!s || s.qty <= 0) continue
-      if (!p.display_price && (!s.customPricePaise || s.customPricePaise <= 0)) { missingPrice = true; break }
+      if (!isFixedPrice(p) && (!s.customPricePaise || s.customPricePaise <= 0)) { missingPrice = true; break }
     }
 
     return { totalPaise: total, selectedCount: count, deliverablesSummary: lines.join(' + '), hasMissingPrice: missingPrice }
@@ -309,7 +310,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
-      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       const rt = reelTypes[p.id]
       const br = itemBoostingRights[p.id]
       const bd = itemBoostingDuration[p.id]
@@ -379,7 +380,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
-      const unitPaise = p.display_price ? p.price_paise : (sel.customPricePaise ?? 0)
+      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       lines.push({ label: `${sel.qty} \u00D7 ${p.product_type}`, amount: unitPaise * sel.qty })
     }
     return lines
@@ -520,7 +521,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                         const sel = selections[p.id]
                         const qty = sel?.qty ?? 0
                         const selected = qty > 0
-                        const unitPaise = p.display_price ? p.price_paise : (sel?.customPricePaise ?? 0)
+                        const unitPaise = isFixedPrice(p) ? p.price_paise : (sel?.customPricePaise ?? 0)
 
                         return (
                           <div key={p.id} className="scp0" style={{
@@ -550,7 +551,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                                   <span style={{ display: 'block', fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.01em' }}>{p.product_type}</span>
                                   <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 4 }}>
                                     {p.description ? `${p.description} \u00B7 ` : ''}
-                                    {p.display_price ? `${formatRupees(p.price_paise)} each` : 'Price on request'}
+                                    {isFixedPrice(p) ? `${formatRupees(p.price_paise)} each` : 'Price on request'}
                                   </span>
                                 </span>
                               </button>
@@ -576,7 +577,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                                   letterSpacing: '-0.02em', lineHeight: 1,
                                   color: selected ? 'var(--ink)' : 'var(--ink-soft)',
                                 }}>
-                                  {p.display_price
+                                  {isFixedPrice(p)
                                     ? formatRupees(unitPaise * (qty || 1))
                                     : (selected && sel?.customPricePaise ? formatRupees(sel.customPricePaise * qty) : '\u2014')
                                   }
@@ -621,7 +622,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                                 />
 
                                 {/* Custom price for on-request products */}
-                                {!p.display_price && (
+                                {!isFixedPrice(p) && (
                                   <input
                                     type="number" min="0" step="1"
                                     placeholder="Your price (₹)"

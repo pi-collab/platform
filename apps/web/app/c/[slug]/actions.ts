@@ -117,7 +117,7 @@ export async function getRichStorefront(slug: string): Promise<RichStorefrontDat
       .single(),
     admin
       .from('creator_products')
-      .select('id, platform, handle, product_type, description, price_paise, is_active')
+      .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, is_active')
       .eq('creator_id', sf.creator_id)
       .eq('is_active', true),
   ])
