@@ -991,7 +991,7 @@ export default function StorefrontManager({
     <div style={{ position: 'relative' }}>
       {isNew && !welcomeDismissed ? (
         /* ── Welcome CTA for new creators ────────────────── */
-        <div style={{
+        <div className="sf-welcome-sheet" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
           background: 'linear-gradient(to top, rgba(255,255,255,1) 60%, rgba(255,255,255,0))',
           padding: '80px 24px 40px', display: 'flex', justifyContent: 'center',
@@ -1054,7 +1054,7 @@ export default function StorefrontManager({
         </div>
       ) : (
         /* ── Returning creator bar ───────────────────────── */
-        <div style={{
+        <div className="sf-status-bar" style={{
           position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 200,
           display: 'flex', alignItems: 'center', gap: 10,
           background: 'var(--ink)', borderRadius: 999, padding: '8px 10px 8px 20px',

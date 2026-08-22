@@ -14,9 +14,15 @@ import Link from 'next/link'
 export default function CreatorDashboardEmpty({
   firstName,
   handleLine,
+  hasSocials = false,
+  hasShopfront = false,
 }: {
   firstName: string
   handleLine: string
+  /** A social account with a handle exists. Marks the first step done. */
+  hasSocials?: boolean
+  /** A creator_storefronts row exists. Marks the second step done. */
+  hasShopfront?: boolean
 }) {
   return (
 <div className="creator-app__inner">
@@ -28,7 +34,7 @@ export default function CreatorDashboardEmpty({
             <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '6px', whiteSpace: 'nowrap'}}>{handleLine}</div>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexShrink: '0'}}>
-            <Link href="/creator/storefront" aria-label="Shopfront" style={{display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 11px', borderRadius: '999px', border: '1.3px solid var(--line)', background: 'var(--card)', flexShrink: '0'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', fontWeight: '600', color: 'var(--ink)'}}>Shopfront</span></Link>
+            <Link href="/creator/storefront" aria-label="Shopfront" style={{display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 11px', borderRadius: '999px', border: '1.3px solid var(--neon-deep)', background: 'var(--neon)', flexShrink: '0'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', fontWeight: '700', color: 'var(--lime-950)'}}>Shopfront</span></Link>
             <Link href="/creator/notifications" aria-label="Notifications" style={{position: 'relative', width: '34px', height: '34px', flexShrink: '0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 6px 14px -10px rgba(40,45,25,.3)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></Link>
           </div>
         </div>
@@ -37,6 +43,43 @@ export default function CreatorDashboardEmpty({
       <div style={{padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: '36px'}}>
 
         
+        
+
+        <div className="sr">
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)'}}>Get started<div className="secline"></div></h2>
+          <div className="mcard" style={{marginTop: '16px', padding: '6px 18px'}}>
+            <Link href="/creator/settings" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0'}}>
+              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+              <div style={{flex: '1', minWidth: '0'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Connect your socials</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>So brands can see your reach</div>
+              </div>
+              <StepPill done={hasSocials} />
+            </Link>
+            <Link href="/creator/storefront" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
+              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path></svg></span>
+              <div style={{flex: '1', minWidth: '0'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set up your shopfront</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Showcase your rates and packages</div>
+              </div>
+              <StepPill done={hasShopfront} />
+            </Link>
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
+              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'rgba(24,28,36,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
+              <div style={{flex: '1', minWidth: '0'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Receive your first brief</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Brands send briefs straight to you</div>
+              </div>
+              <span style={{flexShrink: '0', fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '600', color: 'var(--wg-500)'}}>Up next</span>
+            </div>
+          </div>
+        </div>
+
+        
+        
+
+        
+
         <div className="sr mcard" style={{padding: '22px'}}>
           <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid var(--hair)'}}>
             <span className="t-meta" style={{color: 'var(--meta)'}}>Overview</span>
@@ -69,38 +112,6 @@ export default function CreatorDashboardEmpty({
           </div>
         </div>
 
-        
-        <div className="sr">
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)'}}>Get started<div className="secline"></div></h2>
-          <div className="mcard" style={{marginTop: '16px', padding: '6px 18px'}}>
-            <Link href="/creator/settings" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Connect your socials</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>So brands can see your reach</div>
-              </div>
-              <span style={{flexShrink: '0', width: '64px', textAlign: 'center', borderRadius: '999px', padding: '8px 0', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '11.5px', color: '#fff', background: 'var(--ink)'}}>Set up</span>
-            </Link>
-            <Link href="/creator/storefront" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set up your shopfront</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Showcase your rates and packages</div>
-              </div>
-              <span style={{flexShrink: '0', width: '64px', textAlign: 'center', borderRadius: '999px', padding: '8px 0', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '11.5px', color: '#fff', background: 'var(--ink)'}}>Set up</span>
-            </Link>
-            <div style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'rgba(24,28,36,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Receive your first brief</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Brands send briefs straight to you</div>
-              </div>
-              <span style={{flexShrink: '0', fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '600', color: 'var(--wg-500)'}}>Up next</span>
-            </div>
-          </div>
-        </div>
-
-        
         <div className="sr">
           <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)'}}>Deals in motion<div className="secline"></div></h2>
@@ -135,5 +146,45 @@ export default function CreatorDashboardEmpty({
 
       </div>
     </div>
+  )
+}
+
+/**
+ * A checklist step's status pill.
+ *
+ * "Set up" in guap green while there is work to do; a done state once there
+ * isn't. Green because this is the action we want taken — the checklist is the
+ * first thing on the screen, and an ink-coloured button there reads as one more
+ * row rather than the thing to press.
+ */
+function StepPill({ done }: { done: boolean }) {
+  if (done) {
+    return (
+      <span
+        style={{
+          flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
+          borderRadius: 999, padding: '8px 12px',
+          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 11.5,
+          color: '#166534', background: 'rgba(22,101,52,.08)',
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        Done
+      </span>
+    )
+  }
+  return (
+    <span
+      style={{
+        flexShrink: 0, width: 64, textAlign: 'center', borderRadius: 999,
+        padding: '8px 0', fontFamily: 'var(--font-ui)', fontWeight: 700,
+        fontSize: 11.5, color: 'var(--lime-950)', background: 'var(--neon)',
+      }}
+    >
+      Set up
+    </span>
   )
 }

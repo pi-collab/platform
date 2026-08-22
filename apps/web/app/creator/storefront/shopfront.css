@@ -34,3 +34,28 @@
     border-radius: 20px !important;
   }
 }
+
+/* ── Clearing the creator tab bar ────────────────────────────────────────────
+   Two elements on this page are fixed to the bottom of the viewport: the
+   welcome sheet for a new creator, and the draft/published status bar for a
+   returning one. The creator tab bar is also fixed there, at z-index 10000 —
+   so both sat behind it, and their buttons could not be tapped.
+
+   Raising z-index alone would not help: the bar would then cover the tabs
+   instead. They are lifted ABOVE the bar's height instead, so both are usable.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .sf-welcome-sheet {
+    /* The sheet's own padding already lifts its card off the bottom edge; this
+       adds the tab bar's height to it. */
+    padding-bottom: calc(40px + 76px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .sf-status-bar {
+    bottom: calc(24px + 76px + env(safe-area-inset-bottom)) !important;
+    /* Below the tab bar in stacking order, since it now sits above it in space
+       and no longer needs to compete. */
+    z-index: 39 !important;
+  }
+}

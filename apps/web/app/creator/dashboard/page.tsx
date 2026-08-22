@@ -59,7 +59,7 @@ export default async function CreatorDashboardPage({
       .maybeSingle(),
     supabase
       .from('creators')
-      .select('handle')
+      .select('handle, social_accounts')
       .eq('id', creatorId)
       .maybeSingle(),
   ])
@@ -158,7 +158,17 @@ export default async function CreatorDashboardPage({
     const handle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
     const handleLine = handle ? `@${handle}` : 'Finish your profile to get discovered'
     return (
-      <CreatorDashboardEmpty firstName={firstName} handleLine={handleLine} />
+      <CreatorDashboardEmpty
+        firstName={firstName}
+        handleLine={handleLine}
+        // Done when a social account carries a handle — the row exists from
+        // signup, so its mere presence would mark the step complete before the
+        // creator had done anything.
+        hasSocials={Array.isArray(creatorRow?.social_accounts)
+          && (creatorRow!.social_accounts as { handle?: string }[])
+              .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
+        hasShopfront={Boolean(storefront)}
+      />
     )
   }
 

@@ -1259,6 +1259,14 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] "Not started" says so plainly, since that is the first thing worth nudging
 - [ ] The column count on the list still matches (8 headers / 8 cells) — adding a column and forgetting its cell shifts every row from that point on, which happened once already
 
+### 46. Dashboard checklist and fixed-element clearance
+
+- [ ] Get started is the FIRST section, above Overview — it is what a creator with no deals should act on
+- [ ] Both "Set up" pills are guap green, as is the Shopfront pill in the header. Ink-coloured there read as one more row rather than the thing to press
+- [ ] "Connect your socials" flips to a green Done tick once a social account carries a HANDLE. The row exists from signup, so its mere presence would mark the step complete before the creator did anything
+- [ ] "Set up your shopfront" flips to Done once a creator_storefronts row exists
+- [ ] SHOPFRONT PAGE: the welcome sheet and the draft/published status bar both clear the creator tab bar. Both were fixed to bottom:0 and bottom:24 behind a tab bar fixed at bottom:0 with z-index 10000, so their buttons could not be tapped. Raising z-index alone would only hide the tabs instead — they are lifted above the bar's height
+
 ---
 
 | When | What to run |
