@@ -55,6 +55,15 @@ export interface RateCardItem {
   name: string
   desc: string
   pricePaise: number
+  /**
+   * The rate as written — "₹60,000", "From ₹60,000", "₹60,000–₹90,000". Null
+   * means the creator quotes on request and no figure should be shown.
+   */
+  priceLabel?: string | null
+  /** False for on-request items: there is no number to add to a total. */
+  countsToward?: boolean
+  /** True for "from" and "range": pricePaise is a floor, not the price. */
+  approximate?: boolean
   platform: string
   handle: string
 }
@@ -194,7 +203,21 @@ export default function ShopfrontPreview({
   const setItemQty = (key: string, delta: number) => {
     setQty(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }))
   }
-  const rateTotal = data.rateCardItems.reduce((s, item) => s + (qty[item.key] || 0) * item.pricePaise, 0)
+  // On-request items are excluded rather than counted as zero: a total that
+  // silently omits a priced line is a quote a brand would hold us to.
+  const rateTotal = data.rateCardItems.reduce(
+    (s, item) => item.countsToward === false ? s : s + (qty[item.key] || 0) * item.pricePaise,
+    0,
+  )
+  // "From" the moment any selected line is a minimum or a range — the total is
+  // then a floor, and printing it as an exact figure would be a quote we cannot
+  // honour.
+  const rateTotalIsFloor = data.rateCardItems.some(
+    (item) => (qty[item.key] || 0) > 0 && item.approximate === true,
+  )
+  const rateHasOnRequest = data.rateCardItems.some(
+    (item) => (qty[item.key] || 0) > 0 && item.countsToward === false,
+  )
   const rateCount = Object.values(qty).reduce((s, n) => s + n, 0)
 
   // Platform tab state
@@ -447,7 +470,9 @@ export default function ShopfrontPreview({
 
                     {/* Price */}
                     <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
-                      {formatINR(item.pricePaise)}
+                      {item.priceLabel === null
+                        ? <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink-faint)' }}>On request</span>
+                        : (item.priceLabel ?? formatINR(item.pricePaise))}
                     </div>
 
                     {/* Stepper */}
@@ -497,6 +522,25 @@ export default function ShopfrontPreview({
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, fontSize: 17, color: 'var(--ink)', marginTop: 5 }}>
                     {rateCount === 0 ? 'None yet' : `${rateCount} deliverable${rateCount !== 1 ? 's' : ''} selected`}
                   </div>
+                  {rateCount > 0 && (
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>
+                      {/* Stated as a floor whenever a selected line is a minimum
+                          or a range, and flagged when one carries no price at
+                          all. A total that reads exact when it is not is a quote
+                          a brand would hold the creator to. */}
+                      {rateTotal > 0 && (
+                        <>
+                          {rateTotalIsFloor ? 'From ' : ''}
+                          <strong style={{ color: 'var(--ink)' }}>{formatINR(rateTotal)}</strong>
+                        </>
+                      )}
+                      {rateHasOnRequest && (
+                        <span style={{ color: 'var(--ink-faint)' }}>
+                          {rateTotal > 0 ? ' + items priced on request' : 'Priced on request'}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {onDealClick ? (
                   <button onClick={() => onDealClick(qty)} style={{

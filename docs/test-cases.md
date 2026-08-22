@@ -1341,6 +1341,40 @@ Supabase flagged a high bounce rate on production. Source: `admin.updateUserById
 - [ ] `isPlausibleEmail` REJECTS `@auth.guapd.internal`. It matches a plain email regex, so without naming it explicitly any code path passing a synthetic address to Resend would send and bounce
 - [ ] Watch the bounce rate in the Supabase dashboard after deploying. Existing bounces are historical and will age out; what matters is that the rate stops climbing
 
+### 55. Creator packages — self-serve rate card
+
+Packages were enterable ONCE, at signup, and after that only by ops. This is the creator-facing editor.
+
+**Placement — three doors, one screen**
+- [ ] Profile menu → Packages
+- [ ] Dashboard "Get started" → "Set your packages", ABOVE the shopfront step. Packages are a prerequisite for receiving deals; a shopfront is not, so the order reflects which one blocks money
+- [ ] Shopfront editor → Rate card section links out. It does NOT duplicate the editor — one table, one owner
+- [ ] Back arrow honours `?from=` (profile / shopfront / dashboard)
+- [ ] The step flips to Done when at least one ACTIVE package exists
+
+**Per channel**
+- [ ] Packages group under each connected channel; a creator with Instagram and YouTube has two rate cards, because the table is keyed by platform + handle
+- [ ] The deliverable list is filtered per platform. Switching channel resets a deliverable the new platform does not offer (Sponsored Reel → YouTube Integration)
+- [ ] The server validates the channel against the creator's OWN social_accounts. There is no FK (social_accounts is JSONB), so nothing at the DB level stops a package being filed under someone else's handle
+- [ ] No channels at all → a screen that sends them to add one, not an unusable form
+
+**Price modes**
+- [ ] Fixed → "₹60,000" · Starting from → "From ₹60,000" · Range → "₹60,000–₹90,000" (en dash) · On request → "On request", no figure
+- [ ] Live preview shows the exact line a brand will read
+- [ ] Range with top ≤ bottom is refused, and previews as "—" rather than a backwards span
+- [ ] On request stores price_paise = 0 — DB-enforced. Read access is wider than the shopfront (any authenticated user can select active products of a vetted creator), so hidden must mean absent, not merely unrendered
+- [ ] price_max_paise is non-null for range and NULL for everything else, DB-enforced. Otherwise switching a range back to fixed leaves a stale maximum behind
+- [ ] display_price is DERIVED from the mode, never set independently — legacy consumers read it and must agree
+
+**The running total on the shopfront**
+- [ ] On-request items are EXCLUDED from the total, not counted as zero. A total that silently omits a priced line is a quote a brand would hold the creator to
+- [ ] Selecting any "from" or "range" item prefixes the total with "From"
+- [ ] Selecting an on-request item appends "+ items priced on request"
+
+**Removal**
+- [ ] Remove sets is_active = false. The table denies client DELETE by policy, and past deals reference what was offered at the time
+- [ ] Save and remove are pinned to ctx.creatorId, so a guessed id belonging to another creator matches no row
+
 ---
 
 | When | What to run |

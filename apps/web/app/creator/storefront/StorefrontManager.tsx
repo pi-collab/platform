@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
@@ -130,11 +131,16 @@ function buildShopfrontData(
   const rateCardItems = products.map(p => ({
     key: p.id, name: p.product_type, desc: p.description || '',
     pricePaise: p.price_paise, platform: p.platform, handle: p.handle,
+        // Mode travels with the number so the shopfront can print "From ₹60,000"
+        // and keep an on-request line out of the running total.
+        priceLabel: formatProductPrice(p),
+        countsToward: normalizePriceMode(p) !== 'on_request',
+        approximate: normalizePriceMode(p) === 'from' || normalizePriceMode(p) === 'range',
   }))
   if (rateCardItems.length === 0) {
     rateCardItems.push(
-      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle },
-      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle },
+      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 6000000 }), countsToward: true, approximate: false },
+      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
     )
   }
   const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string; follower_count?: number }>
@@ -734,6 +740,34 @@ export default function StorefrontManager({
                     Changing your URL will make <strong>guapd.com/c/{publishedSlug}</strong> stop working. Update your bio and anywhere you&apos;ve shared the old link before saving.
                   </p>
                 )}
+              </Section>
+
+              {/* ── Rate card ─────────────────────────────── */}
+              <Section title="Rate card" subtitle="What you offer and what it costs" icon={IconUser}>
+                {/* Packages are edited on their own screen because they are not
+                    shopfront content — they pre-fill offers and gate the
+                    dashboard checklist, and a creator can take deals without
+                    ever building a shopfront. Duplicating the editor here would
+                    give one table two owners. */}
+                <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
+                  {products.length === 0
+                    ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
+                    : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
+                </p>
+                <a
+                  href="/creator/packages?from=shopfront"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    minHeight: 40, padding: '0 16px', borderRadius: 999,
+                    background: products.length === 0 ? 'var(--neon)' : '#fff',
+                    border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
+                    color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
+                    fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {products.length === 0 ? 'Set your packages' : 'Manage packages'}
+                </a>
               </Section>
 
               {/* ── About you ─────────────────────────────── */}

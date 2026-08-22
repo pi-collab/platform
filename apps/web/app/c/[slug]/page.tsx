@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { notFound } from 'next/navigation'
 import { getPublicStorefront, getRichStorefront } from './actions'
 import PublicStorefront from './PublicStorefront'
@@ -108,11 +109,16 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const rateCardItems = activeProducts.map(p => ({
     key: p.id, name: p.product_type, desc: p.description || '',
     pricePaise: p.price_paise, platform: p.platform, handle: p.handle,
+        // Mode travels with the number so the shopfront can print "From ₹60,000"
+        // and keep an on-request line out of the running total.
+        priceLabel: formatProductPrice(p),
+        countsToward: normalizePriceMode(p) !== 'on_request',
+        approximate: normalizePriceMode(p) === 'from' || normalizePriceMode(p) === 'range',
   }))
   if (rateCardItems.length === 0) {
     rateCardItems.push(
-      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle },
-      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle },
+      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 6000000 }), countsToward: true, approximate: false },
+      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
     )
   }
 

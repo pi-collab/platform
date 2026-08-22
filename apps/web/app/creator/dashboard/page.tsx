@@ -41,7 +41,7 @@ export default async function CreatorDashboardPage({
   const periodFromISO = periodFrom.toISOString()
   const periodToISO = periodTo.toISOString()
 
-  const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }] = await Promise.all([
+  const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
@@ -62,6 +62,12 @@ export default async function CreatorDashboardPage({
       .select('handle, social_accounts')
       .eq('id', creatorId)
       .maybeSingle(),
+    // head + count: the checklist needs "any?", not the rows themselves.
+    supabase
+      .from('creator_products')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', creatorId)
+      .eq('is_active', true),
   ])
 
   const allDeals = deals ?? []
@@ -167,6 +173,7 @@ export default async function CreatorDashboardPage({
         hasSocials={Array.isArray(creatorRow?.social_accounts)
           && (creatorRow!.social_accounts as { handle?: string }[])
               .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
+        hasPackages={(packageCount ?? 0) > 0}
         hasShopfront={Boolean(storefront)}
       />
     )

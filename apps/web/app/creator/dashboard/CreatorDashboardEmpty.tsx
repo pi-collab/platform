@@ -15,13 +15,18 @@ export default function CreatorDashboardEmpty({
   firstName,
   handleLine,
   hasSocials = false,
+  hasPackages = false,
   hasShopfront = false,
 }: {
   firstName: string
   handleLine: string
   /** A social account with a handle exists. Marks the first step done. */
   hasSocials?: boolean
-  /** A creator_storefronts row exists. Marks the second step done. */
+  /** At least one active package. A prerequisite for receiving deals — a brand
+      cannot build an offer against a creator with no priced deliverables — so
+      it sits above the shopfront, which is optional by comparison. */
+  hasPackages?: boolean
+  /** A creator_storefronts row exists. */
   hasShopfront?: boolean
 }) {
   return (
@@ -56,11 +61,19 @@ export default function CreatorDashboardEmpty({
               </div>
               <StepPill done={hasSocials} />
             </Link>
+            <Link href="/creator/packages?from=dashboard" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
+              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"></path><circle cx="7" cy="7" r="1.4"></circle></svg></span>
+              <div style={{flex: '1', minWidth: '0'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set your packages</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>What you offer and what it costs</div>
+              </div>
+              <StepPill done={hasPackages} />
+            </Link>
             <Link href="/creator/storefront" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
               <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path></svg></span>
               <div style={{flex: '1', minWidth: '0'}}>
                 <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set up your shopfront</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Showcase your rates and packages</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Give brands a page to buy from</div>
               </div>
               <StepPill done={hasShopfront} />
             </Link>

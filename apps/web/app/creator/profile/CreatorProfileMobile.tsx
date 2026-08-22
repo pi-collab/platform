@@ -137,6 +137,8 @@ export default function CreatorProfileMobile({
         <MenuDivider />
         <MenuRow href="/creator/notifications?from=profile" label="Notifications" icon={<BellIcon />} />
         <MenuDivider />
+        <MenuRow href="/creator/packages?from=profile" label="Packages" icon={<TagIcon />} />
+        <MenuDivider />
         <MenuRow href="/creator/payments?from=profile" label="Payments" icon={<CardIcon />} />
         <MenuDivider />
         {/* Opens the Account tab rather than the page default. Edit profile
@@ -300,6 +302,16 @@ function CardIcon() {
          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect x="2" y="5" width="20" height="14" rx="2" />
       <line x1="2" y1="10" x2="22" y2="10" />
+    </svg>
+  )
+}
+
+function TagIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" />
+      <circle cx="7" cy="7" r="1.4" />
     </svg>
   )
 }
