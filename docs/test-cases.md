@@ -1392,6 +1392,16 @@ A price mode is useless if only the shopfront honours it. Every surface that rea
 - [ ] A caller supplying no mode falls back to what `display_price` meant, not to `exact`
 - [ ] The ops list shows the mode label and the formatted price, so ops sees what the brand sees
 
+### 57. Package handles are not stored consistently — normalise before comparing
+
+Found by querying staging rather than by reading code: 23 of 25 `creator_products` rows store the handle WITH its leading "@", while `creators.social_accounts` stores it stripped. Comparing them raw matched 0 of 25, so every existing package was invisible on the packages screen while sitting perfectly happily in the table.
+
+- [ ] Grouping strips "@" and lowercases BOTH sides before comparing, and compares platform case-insensitively too
+- [ ] A package whose handle carries "@" groups under the matching channel
+- [ ] Editing such a package preselects ITS OWN channel. Building the select key from the stored handle produces a key no `<option>` carries, and the dropdown silently falls back to the first channel — which would re-file the package on save
+- [ ] Packages matching NO connected channel appear under "Not on a connected channel" with a Remove button. They still render on the shopfront, so hiding them here would leave a creator unable to see or delete something brands can see
+- [ ] Seeded data is not a substitute for production shapes: a harness with tidy handles passes while every real row fails
+
 ---
 
 | When | What to run |

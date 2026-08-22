@@ -13,6 +13,18 @@ import './packages.css'
 
 export interface Channel { platform: string; handle: string }
 
+/**
+ * Handles are not stored consistently.
+ *
+ * 23 of 25 rows on staging keep the leading "@" that a creator typed, while
+ * social_accounts is written stripped. Comparing them raw matched NOTHING —
+ * every package would have been invisible on this screen while sitting happily
+ * in the table. Both sides go through here before they are compared.
+ */
+function sameHandle(a: string, b: string) {
+  return a.trim().replace(/^@/, '').toLowerCase() === b.trim().replace(/^@/, '').toLowerCase()
+}
+
 export interface PackageRow {
   id: string
   platform: string
@@ -43,6 +55,9 @@ export default function PackagesClient({
   packages: PackageRow[]
 }) {
   const [editing, setEditing] = useState<PackageRow | 'new' | null>(null)
+  const orphans = packages.filter(
+    (p) => !channels.some((ch) => p.platform.trim().toLowerCase() === ch.platform && sameHandle(p.handle, ch.handle)),
+  )
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -84,7 +99,7 @@ export default function PackagesClient({
 
       {channels.map((ch) => {
         const rows = packages.filter(
-          (p) => p.platform === ch.platform && p.handle.toLowerCase() === ch.handle.toLowerCase(),
+          (p) => p.platform.trim().toLowerCase() === ch.platform && sameHandle(p.handle, ch.handle),
         )
         return (
           <section key={`${ch.platform}/${ch.handle}`} className="pk-channel">
@@ -130,6 +145,45 @@ export default function PackagesClient({
         )
       })}
 
+      {/* A package whose channel is no longer connected — the creator removed
+          the handle, or it was filed under a different one by ops. It still
+          shows on the shopfront, so hiding it here would leave something a
+          creator cannot see or remove. */}
+      {orphans.length > 0 && (
+        <section className="pk-channel">
+          <div className="pk-channel-head">
+            <span className="pk-channel-handle">Not on a connected channel</span>
+            <span className="pk-channel-count">{orphans.length}</span>
+          </div>
+          <div className="pk-card">
+            {orphans.map((row, i) => (
+              <div key={row.id} className="pk-row" style={{ borderTop: i === 0 ? 'none' : undefined }}>
+                <div className="pk-row-main">
+                  <div className="pk-row-type">{row.product_type}</div>
+                  <div className="pk-row-desc">
+                    {row.platform} &middot; @{row.handle.replace(/^@/, '')}
+                    {row.description ? ` — ${row.description}` : ''}
+                  </div>
+                </div>
+                <div className="pk-row-price">
+                  {formatProductPrice(row) ?? <span className="pk-onreq">On request</span>}
+                </div>
+                <div className="pk-row-actions">
+                  <button
+                    type="button"
+                    className="pk-mini pk-mini-danger"
+                    disabled={busyId === row.id}
+                    onClick={() => remove(row)}
+                  >
+                    {busyId === row.id ? '…' : 'Remove'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <button type="button" className="pk-btn pk-btn-primary pk-add" onClick={() => setEditing('new')}>
         + Add a package
       </button>
@@ -156,9 +210,16 @@ function PackageForm({
   existing: PackageRow | null
   onClose: () => void
 }) {
-  const [channelKey, setChannelKey] = useState(
-    existing ? `${existing.platform}/${existing.handle}` : `${channels[0].platform}/${channels[0].handle}`,
-  )
+  const [channelKey, setChannelKey] = useState(() => {
+    // Matched against the creator's own channels rather than trusted as stored:
+    // a row holding "@handle" would otherwise build a key no <option> carries,
+    // and the select would silently show the first channel instead.
+    const own = existing && channels.find(
+      (c) => c.platform === existing.platform.trim().toLowerCase() && sameHandle(c.handle, existing.handle),
+    )
+    const c = own ?? channels[0]
+    return `${c.platform}/${c.handle}`
+  })
   const [platform, handle] = splitKey(channelKey)
 
   const typesForPlatform = PRODUCT_TYPES_BY_PLATFORM[platform] ?? PRODUCT_TYPES
