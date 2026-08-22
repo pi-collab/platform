@@ -27,7 +27,16 @@ import re
 import subprocess
 import sys
 
-EXPECTED_REF = 'nxdxxkdlzjyxxgtppopb'   # guapd-prod-mumbai
+# Projects this script may run against, by name. Naming one is REQUIRED: the
+# point of the guard is that you cannot delete from a database you did not
+# choose, and defaulting to any of them would defeat it.
+#
+# Sydney (yltclrnjurgzyaylzcli) is deliberately absent. It is the retired
+# production project, kept only so its data can be read.
+KNOWN_PROJECTS = {
+    'prod': 'nxdxxkdlzjyxxgtppopb',      # guapd-prod-mumbai
+    'staging': 'dswlplxyizvljzaihmjw',   # guapd-staging
+}
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 REF_FILE = os.path.join(REPO, 'supabase', '.temp', 'project-ref')
 
@@ -223,15 +232,23 @@ def main():
     ap.add_argument('--phone', action='append', default=[], help='repeatable')
     ap.add_argument('--email', action='append', default=[], help='repeatable')
     ap.add_argument('--confirm', action='store_true', help='actually delete (default: dry run)')
+    ap.add_argument('--project', choices=sorted(KNOWN_PROJECTS), default='prod',
+                    help='which database to run against (default: prod)')
     args = ap.parse_args()
 
     if not args.phone and not args.email:
         ap.error("name at least one --phone or --email. There is no wildcard mode.")
 
+    expected = KNOWN_PROJECTS[args.project]
     ref = linked_ref()
     print(f"  linked project : {ref}")
-    if ref != EXPECTED_REF:
-        print(f"  REFUSED: expected {EXPECTED_REF} (guapd-prod-mumbai).")
+    print(f"  target         : {args.project} ({expected})")
+    # The CLI link and the named target must agree. Trusting either alone is how
+    # you delete from the wrong database: the link is ambient state that changes
+    # without this script knowing, and the flag is just what someone typed.
+    if ref != expected:
+        print(f"  REFUSED: the CLI is linked to {ref}, but --project {args.project} means {expected}.")
+        print(f"           Relink, or pass the --project that matches.")
         sys.exit(9)
     print(f"  targets        : {', '.join(args.phone + args.email)}")
     print(f"  mode           : {'DELETE' if args.confirm else 'dry run (nothing will change)'}\n")

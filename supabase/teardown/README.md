@@ -12,15 +12,23 @@ database.
 ## Running it
 
 ```bash
-# 1. Confirm the link. The scripts refuse to run against anything else.
-cat supabase/.temp/project-ref        # must read nxdxxkdlzjyxxgtppopb
+# 1. Confirm the link. The script refuses if it disagrees with --project.
+cat supabase/.temp/project-ref
 
 # 2. Dry run — reports what WOULD be deleted, changes nothing.
-python3 supabase/teardown/teardown.py --phone +919876543210
+python3 supabase/teardown/teardown.py --project staging --phone +919876543210
 
 # 3. Delete for real, once the dry run looks right.
-python3 supabase/teardown/teardown.py --phone +919876543210 --confirm
+python3 supabase/teardown/teardown.py --project staging --phone +919876543210 --confirm
 ```
+
+`--project` takes `prod` or `staging`, and defaults to `prod`. Naming it is not
+optional in spirit: the CLI link is ambient state that changes without this
+script knowing, and the flag is only what someone typed. Requiring BOTH to
+agree means a stale link cannot silently point a deletion at production.
+
+Sydney (`yltclrnjurgzyaylzcli`) is deliberately not a valid target. It is the
+retired production project, kept so its data can be read and nothing else.
 
 Several accounts at once:
 
