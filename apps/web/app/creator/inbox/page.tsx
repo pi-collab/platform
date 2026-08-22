@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
@@ -48,6 +50,27 @@ export default async function CreatorInboxPage() {
     body: m.body,
     created_at: m.created_at,
   }))
+
+  // No conversations. CreatorInboxView renders a thread list and a message
+  // pane — two empty columns — so the empty state replaces the screen, and
+  // carries the header the other creator screens have.
+  if (threads.length === 0) {
+    return (
+      <main style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorPageHeader title="Inbox" backHref="/creator/dashboard" />
+        <CreatorEmptyState
+          icon={
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9AA08C"
+                 strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          }
+          title="No messages yet"
+          body="When a brand starts a conversation about a deal, it appears here."
+        />
+      </main>
+    )
+  }
 
   return <CreatorInboxView threads={threads} allMessages={allMessages} />
 }

@@ -120,7 +120,7 @@ export default function PrivacyPolicyPage() {
           plan, billing history and invoices.
         </p>
         <p style={pStyle}>
-          <strong>Anonymous visitors to a creator&rsquo;s storefront:</strong> if you
+          <strong>Anonymous visitors to a creator&rsquo;s shopfront:</strong> if you
           begin an offer and choose to sign up, the details you entered are carried
           into your new account. We do not store anything you type before you create
           an account.

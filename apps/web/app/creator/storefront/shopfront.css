@@ -1,0 +1,36 @@
+/* ── Shopfront editor, small screens ─────────────────────────────────────────
+   The editor is drawn for desktop: a content column beside a 340px live
+   preview, with two- and three-column field grids inside it. On a 390px phone
+   that leaves roughly 50px for the editor itself, so fields overflow their
+   labels and the preview is unusable.
+
+   Everything collapses to one column below 900px. The preview moves BELOW the
+   fields rather than being hidden: a creator editing a shopfront needs to see
+   what they are changing, and on a phone that means scrolling to it rather
+   than losing it.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .sf-editor-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Two- and three-up field rows. At this width a three-column row gives each
+     field about 100px, which is narrower than the labels above them. */
+  .sf-grid-2,
+  .sf-grid-3 {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* The welcome panel's own padding, which is generous for a 520px card and
+     cramped once that card is the full width of a phone. */
+  .sf-welcome-card {
+    padding: 26px 20px 22px !important;
+    border-radius: 20px !important;
+  }
+}

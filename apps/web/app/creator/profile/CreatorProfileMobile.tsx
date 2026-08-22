@@ -104,7 +104,7 @@ export default function CreatorProfileMobile({
       {!hasStorefront && (
         <Link href="/creator/storefront" className="sr msurface" style={rowStyle}>
           <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>
-            Set up your storefront
+            Set up your shopfront
           </span>
           <Chevron />
         </Link>

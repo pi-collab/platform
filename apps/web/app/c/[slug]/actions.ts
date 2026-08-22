@@ -188,7 +188,7 @@ export async function createDealFromStorefront(input: PitchInput) {
     .eq('is_published', true)
     .maybeSingle()
 
-  if (!storefront) return { error: 'Creator storefront not found.' }
+  if (!storefront) return { error: 'Creator shopfront not found.' }
 
   // Verify creator is vetted
   const { data: creator } = await admin

@@ -135,7 +135,7 @@ export async function notifyCreatorApproved(creatorId: string): Promise<void> {
       heading: `You're approved, ${name}`,
       body: [
         `Your profile has been reviewed and you're now live on ${BRAND_NAME}.`,
-        'Brands can find you and send offers. Set up your storefront so they see your rates and your best work.',
+        'Brands can find you and send offers. Set up your shopfront so they see your rates and your best work.',
       ],
       ctaUrl: `${siteBase()}/creator/dashboard`,
       ctaLabel: 'Go to your dashboard',

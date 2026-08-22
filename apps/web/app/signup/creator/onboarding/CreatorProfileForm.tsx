@@ -212,7 +212,7 @@ export default function CreatorProfileForm() {
       <button type="submit" disabled={loading || !canSubmit} className="onboard-cta cta">
         {loading ? 'Setting up…' : 'Complete setup'}
       </button>
-      <p className="onboard-foot">You can set up your storefront and add more details later.</p>
+      <p className="onboard-foot">You can set up your shopfront and add more details later.</p>
     </form>
   )
 }

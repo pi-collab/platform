@@ -380,7 +380,7 @@ export default function StorefrontPage({ data }: { data: StorefrontData }) {
               fontFamily: 'var(--font-ui, Inter, sans-serif)',
             }}
           >
-            Create your storefront
+            Create your shopfront
           </a>
         </div>
 

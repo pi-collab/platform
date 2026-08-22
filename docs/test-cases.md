@@ -1236,6 +1236,20 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] 14px between the page title and the first card, on every screen using CreatorPageHeader (deals, payments, profile, notifications). Measure it — at 0px the card touches the heading and reads as a rendering fault rather than a tight layout
 - [ ] REGRESSION SOURCE: the export declares `padding-bottom: 14px` in the SAME rule as `position: sticky`. Removing sticky (correct — it pins to the viewport on a real page) silently removes the spacing with it
 
+### 43. Shopfront wording, dismissible welcome, and mobile editing
+
+- [ ] User-visible copy says "shopfront", not "storefront". Routes (/creator/storefront), table names (creator_storefronts), event types and component names deliberately keep the old word — renaming those is a refactor with a migration attached and no user benefit
+- [ ] KNOWN: the privacy policy still has a "Storefronts" section heading. It is a legal document, so the wording is yours to change, not mine
+- [ ] The welcome panel is DISMISSIBLE via "Okay, let me look around first". Before this it covered the sample shopfront it was describing, with no way past it except starting to edit
+- [ ] Dismissing reveals the sample, and the bar that replaces it still offers the edit action — the way in is never lost
+- [ ] Mobile editing works: below 900px the editor's content/preview split collapses to one column, and below 560px the two- and three-up field grids do too. At 390px a three-column row gives each field ~100px, narrower than its own label
+- [ ] The live preview moves BELOW the fields on a phone rather than being hidden — someone editing a shopfront needs to see what they are changing
+
+### 44. Creator inbox — empty state
+
+- [ ] A creator with no message threads sees the header ("Inbox", back to dashboard) and the empty state, not two blank columns of CreatorInboxView chrome
+- [ ] All five tabs now show a header on their empty state. The dashboard is the exception by design — it has its own greeting header rather than the back-arrow one
+
 ---
 
 | When | What to run |

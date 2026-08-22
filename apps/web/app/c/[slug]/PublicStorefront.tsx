@@ -53,7 +53,7 @@ export default function PublicStorefront({ data, slug, creatorId, creatorName }:
               fontFamily: 'var(--font-ui)',
             }}
           >
-            Create your storefront
+            Create your shopfront
           </a>
         </div>
         <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--ink-faint)', fontSize: 13 }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
@@ -442,7 +443,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               </div>
             </Field>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="Brand">
                 <input type="text" value={item.brand || ''} onChange={e => u({ brand: e.target.value })}
                   placeholder="Brand name" style={dinput} />
@@ -459,7 +460,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               background: '#F4F6F2', border: `1px solid ${BHL}`,
             }}>
               <div style={{ ...metaLabel, marginBottom: 12 }}>Performance</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
                   <div style={{ ...metaLabel, marginBottom: 5, fontSize: 9 }}>Views</div>
                   <input type="text" value={item.views || ''} onChange={e => u({ views: e.target.value })}
@@ -536,7 +537,7 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
               <input type="text" value={collab.name} onChange={e => u({ name: e.target.value })}
                 placeholder="e.g. Groww, boAt, Mamaearth" style={dinput} />
             </Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr', gap: 10 }}>
+            <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr', gap: 10 }}>
               <Field label="What you delivered" style={{ marginBottom: 0 }}>
                 <input type="text" value={collab.type || ''} onChange={e => u({ type: e.target.value })}
                   placeholder="Reel + Stories" style={dinputSmall} />
@@ -568,6 +569,10 @@ export default function StorefrontManager({
   const router = useRouter()
   const isNew = storefront === null
   const [mode, setMode] = useState<'preview' | 'edit'>('preview')
+  // The welcome panel covers the sample shopfront it is describing, so it must
+  // be dismissible. Dismissing reveals the sample; the bar that takes its place
+  // keeps the edit action one tap away, so the way in is never lost.
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   const [sections, setSections] = useState<ShopfrontSection[]>(DEFAULT_SECTIONS)
   const [edit, setEdit] = useState<EditState>(() => initEditState(creator, storefront))
   const [nicheInput, setNicheInput] = useState('')
@@ -694,7 +699,7 @@ export default function StorefrontManager({
           </div>
 
           {/* ── Two-column layout ─────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }}>
+          <div className="sf-editor-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }}>
 
             {/* ═══ Left column ════════════════════════════ */}
             <div>
@@ -877,7 +882,7 @@ export default function StorefrontManager({
               {/* ── Audience ────────────────────────────────── */}
               <Section title="Audience" subtitle="Who follows you" icon={IconUsers}>
                 <Field label="Age breakdown">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                     {edit.ageBreakdown.map((age, i) => (
                       <div key={i} style={{
                         borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
@@ -984,14 +989,14 @@ export default function StorefrontManager({
 
   return (
     <div style={{ position: 'relative' }}>
-      {isNew ? (
+      {isNew && !welcomeDismissed ? (
         /* ── Welcome CTA for new creators ────────────────── */
         <div style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
           background: 'linear-gradient(to top, rgba(255,255,255,1) 60%, rgba(255,255,255,0))',
           padding: '80px 24px 40px', display: 'flex', justifyContent: 'center',
         }}>
-          <div style={{
+          <div className="sf-welcome-card" style={{
             maxWidth: 520, width: '100%', textAlign: 'center',
             background: '#FFFFFF', borderRadius: 24, padding: '36px 32px 32px',
             boxShadow: '0 4px 12px rgba(22,23,15,.06), 0 20px 48px rgba(22,23,15,.1)',
@@ -1026,6 +1031,21 @@ export default function StorefrontManager({
             }}>
               Make it yours
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </button>
+            {/* The panel covers the very thing it is describing. This lets a
+                creator look before deciding, and the bar that replaces it keeps
+                the edit action one tap away. */}
+            <button
+              type="button"
+              onClick={() => setWelcomeDismissed(true)}
+              style={{
+                display: 'block', margin: '14px auto 0', padding: '10px 20px',
+                border: 'none', background: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 600,
+                color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3,
+              }}
+            >
+              Okay, let me look around first
             </button>
             <p style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', margin: '14px 0 0', lineHeight: 1.5 }}>
               What you see below is a sample. Replace the numbers with yours.

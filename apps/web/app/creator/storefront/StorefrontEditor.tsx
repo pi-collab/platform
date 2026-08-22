@@ -202,12 +202,12 @@ export default function StorefrontEditor({ initial, creatorName }: Props) {
       {/* ── SLUG PICKER (prominent, first) ──────────────────── */}
       <div style={{ ...sectionStyle, borderColor: slugLocked ? '#86efac' : undefined }}>
         <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginBottom: 4, color: 'var(--ink)' }}>
-          Your Storefront URL
+          Your Shopfront URL
         </h3>
         <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 16, lineHeight: 1.5 }}>
           {slugLocked
             ? 'Your URL is live. It can\u2019t be changed after publishing.'
-            : 'Choose your URL carefully \u2014 you\u2019ll put this link in your bio. It can\u2019t be changed once your storefront is live.'}
+            : 'Choose your URL carefully \u2014 you\u2019ll put this link in your bio. It can\u2019t be changed once your shopfront is live.'}
         </p>
 
         <div style={{
@@ -415,10 +415,10 @@ export default function StorefrontEditor({ initial, creatorName }: Props) {
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
           <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} style={{ width: 18, height: 18 }} />
-          <span style={{ fontSize: 15, fontWeight: 600 }}>Publish storefront</span>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>Publish shopfront</span>
         </label>
         <p style={{ fontSize: 13, color: 'var(--ink-faint)', marginTop: 6 }}>
-          {isPublished ? `Live at guapd.com/c/${slug || '...'}` : 'Your storefront is currently hidden.'}
+          {isPublished ? `Live at guapd.com/c/${slug || '...'}` : 'Your shopfront is currently hidden.'}
         </p>
       </div>
 
