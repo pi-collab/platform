@@ -1164,6 +1164,14 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] Sent ONCE per brand (guarded by an `ops.brand_signup_notified` event), and only AFTER the brand_members row exists, so a signup that failed halfway is never announced as complete
 - [ ] A failed send never fails signup
 
+### 36. Domain health in the brand signup notice
+
+- [ ] The signup email carries an "About <domain>" block when the website has no working HTTPS, sits on registrar parking nameservers, has no MX record, or does not resolve
+- [ ] A healthy domain adds NOTHING — no empty section, no "all clear" line
+- [ ] It is a SIGNAL, NOT A GATE. Every one of these has an innocent explanation: a real company mid-setup has no TLS yet, a small brand can sit on parked nameservers for a week. Blocking on them would reject genuine signups
+- [ ] Signup NEVER fails or hangs because of it: every lookup is capped at 4s and every failure degrades to "unknown"
+- [ ] Verified against real production signups — zero2host.com and sclout.com (both deleted as fake) flag on HTTPS and parking; ergonstyle.com and gigmatic.ai (both genuine) stay silent
+
 ---
 
 | When | What to run |

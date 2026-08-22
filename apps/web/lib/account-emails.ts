@@ -1,5 +1,6 @@
 import 'server-only'
 import { followerRangeOf } from '@/lib/follower-range'
+import { checkDomainHealth } from '@/lib/domain-health'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendAccountEmail, isEmailConfigured } from '@/lib/email'
 import { renderAccountEmail } from '@/lib/email-template'
@@ -403,6 +404,15 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
     // disagree it is worth a second look — but plenty of legitimate brands sign
     // up from an agency address or a founder's own domain, so this must never
     // block a signup. It goes in the mail so the judgement stays with a person.
+    // Cheap DNS/TLS facts about the website, so whoever reviews this sees what
+    // a manual check would have shown. Awaited because the notice is worth a
+    // few seconds — but every lookup inside is capped and failure-tolerant, so
+    // this cannot hang the send.
+    const health = await checkDomainHealth(brand.website)
+    const healthNote = health?.notes.length
+      ? `\n\nAbout ${health.host}:\n` + health.notes.map((n) => `  - ${n}`).join('\n')
+      : ''
+
     let domainNote = ''
     try {
       const emailDomain = (brand.contact_email || '').split('@')[1]?.toLowerCase()
@@ -422,7 +432,7 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
       `Location: ${brand.location || 'not given'}`,
       `Contact: ${brand.contact_name || 'not given'} (${brand.contact_email || 'no email'})`,
       `Phone: ${brand.contact_phone || 'not given'}`,
-    ].join('\n') + domainNote
+    ].join('\n') + domainNote + healthNote
 
     const { html, text } = renderAccountEmail({
       heading: `${name} just signed up`,
