@@ -1231,6 +1231,11 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] TURNAROUND shows an em dash, not "0 days" — it needs completed deals to average, and a zero would claim a speed nobody measured
 - [ ] The avatar border is DASHED — it says "no photo yet" rather than presenting an initial as a finished avatar
 
+### 42. Creator screen header spacing
+
+- [ ] 14px between the page title and the first card, on every screen using CreatorPageHeader (deals, payments, profile, notifications). Measure it — at 0px the card touches the heading and reads as a rendering fault rather than a tight layout
+- [ ] REGRESSION SOURCE: the export declares `padding-bottom: 14px` in the SAME rule as `position: sticky`. Removing sticky (correct — it pins to the viewport on a real page) silently removes the spacing with it
+
 ---
 
 | When | What to run |

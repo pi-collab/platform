@@ -21,8 +21,11 @@ export default function CreatorPageHeader({
   /** Optional control on the right, e.g. "Mark all read". */
   action?: React.ReactNode
 }) {
+  // 14px below the title, per the export. That spacing lived in the same
+  // declaration as the sticky positioning, so removing sticky took it too and
+  // the first card ended up flush against the heading.
   return (
-    <div style={{ padding: '20px 16px 0', background: '#F5F7FA' }}>
+    <div style={{ padding: '20px 16px 14px', background: '#F5F7FA' }}>
       <div
         style={{
           display: 'flex',
