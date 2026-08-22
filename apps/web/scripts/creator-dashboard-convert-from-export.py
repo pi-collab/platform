@@ -51,8 +51,17 @@ step('device frame stripped', 1, doc.count('<x-import'))
 
 # ── 2. Drop the export's own <style> blocks ─────────────────────────────────
 # 50KB of design-system tokens, most of it for screens this file does not
-# render. The variables it actually uses are declared in creator-dashboard.css
-# instead, so nothing here depends on a stylesheet we cannot see.
+# render.
+#
+# BUT the markup keeps its classNames, and dropping the stylesheet wholesale
+# takes their definitions with it. The screen still renders — which is the
+# trap: every card came out a flat white rectangle with no radius and no
+# shadow, and it looked like a design choice rather than missing CSS.
+#
+# The six classes this markup uses (mcard, secline, tnum, t-meta, sr, tab) are
+# transcribed into app/creator/creator-app.css. If a future export introduces
+# another class, it must be added there too — check with:
+#   grep -oE 'className="[^"]+"' <the generated component>
 before = doc.count('<style')
 doc = re.sub(r'<style[^>]*>.*?</style>', '', doc, flags=re.S)
 step('export stylesheets removed', before, doc.count('<style'))

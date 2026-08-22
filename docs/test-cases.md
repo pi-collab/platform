@@ -1182,6 +1182,9 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] The tab bar sits ABOVE the cookie banner (z-index 10000 vs 9999). Both are fixed to the bottom edge, and navigation a creator cannot reach until they answer a consent prompt is worse than a prompt sitting slightly higher
 - [ ] Only ONE navigation shows at a time: below 768px the sidebar's mobile top bar is hidden and the tab bar shows; at 768px and above the reverse
 - [ ] Notifications and Storefront are reachable from the dashboard header (bell + Shopfront pill) — they are the two links the drawer used to carry that the five tabs do not
+- [ ] Cards have depth: 20px radius and a TWO-layer shadow (1px contact + wide soft). A flat white rectangle means the .mcard class lost its definition
+- [ ] The lime `secline` rule appears under each section heading — it is the only place the brand colour appears on this screen
+- [ ] REGRESSION TRAP: the converter drops the export's 50KB stylesheet but the markup keeps its classNames. The page still renders, which is what makes it dangerous — it just renders flat. Any class the markup uses must exist in creator-app.css; check with `grep -oE 'className="[^"]+"'` on the generated component
 - [ ] The greeting header scrolls away. It is sticky in the export because that lives in a fixed-height phone frame; on a real page the same rule pins it to the viewport and it reprints over the content
 
 ---

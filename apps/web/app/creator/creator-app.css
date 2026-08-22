@@ -39,6 +39,61 @@
   min-height: 100vh;
 }
 
+/* ── Surfaces ─────────────────────────────────────────────────────────────
+   Transcribed from the export's stylesheet. I dropped that file wholesale —
+   50KB of tokens for screens this app does not have — and took the six classes
+   its markup actually uses down with it. The result rendered every card as a
+   flat white rectangle, which is what "why is the design flat" was pointing at.
+   These are those classes, and nothing else. */
+
+/* The card surface. Two shadows, not one: a 1px contact shadow that separates
+   the card from the wash, and a wide soft one that gives it height. Collapsing
+   them into a single blur is what makes a card look printed on rather than
+   resting above. */
+.creator-app .mcard {
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(24, 28, 36, .04),
+    0 10px 18px -12px rgba(24, 28, 36, .16);
+}
+
+/* The short lime rule under a section heading. Small, and the only place the
+   brand colour appears on this screen — which is why losing it flattened the
+   hierarchy as much as losing the shadows did. */
+.creator-app .secline {
+  width: 32px;
+  height: 1px;
+  background: #c9eb3c;
+  margin-top: 10px;
+}
+
+/* Tabular figures, so a column of amounts aligns on the decimal and does not
+   jitter as values change. */
+.creator-app .tnum {
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.creator-app .t-meta {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 9.5px;
+  line-height: 1.4;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--meta);
+}
+
+/* Scroll reveal. The export animates these in; here they are simply visible.
+   An empty state whose content fades in on a slow connection reads as a page
+   still loading, which is the opposite of what a first-run screen should say.
+   Kept as a class so the populated dashboard can animate them later if wanted. */
+.creator-app .sr {
+  opacity: 1;
+  transform: none;
+}
+
 /* ── Tab bar ──────────────────────────────────────────────────────────────
    Fixed to the viewport, not the scroll container: on iOS a bar inside a
    scrolling element drifts during momentum scrolling. */
