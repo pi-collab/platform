@@ -1250,6 +1250,15 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] A creator with no message threads sees the header ("Inbox", back to dashboard) and the empty state, not two blank columns of CreatorInboxView chrome
 - [ ] All five tabs now show a header on their empty state. The dashboard is the exception by design — it has its own greeting header rather than the back-arrow one
 
+### 45. Shopfronts in ops
+
+- [ ] `/ops/creators` has a Shopfront column: a link to `/c/<slug>` when published, "Draft" when not, "—" when there is none
+- [ ] A DRAFT is named but NOT linked — the public URL 404s until it is published, and a link that 404s looks checkable and is not
+- [ ] `/ops/creators/[id]` shows a Shopfront panel: status, URL, last updated, and a filled/empty checklist for Photo, Headline, Bio, Categories, Work samples and Rates
+- [ ] The checklist is the point. Each empty item is a specific thing to coach — "no photo, no work samples" beats "improve your profile". Verified against staging: both live shopfronts are missing exactly those two
+- [ ] "Not started" says so plainly, since that is the first thing worth nudging
+- [ ] The column count on the list still matches (8 headers / 8 cells) — adding a column and forgetting its cell shifts every row from that point on, which happened once already
+
 ---
 
 | When | What to run |

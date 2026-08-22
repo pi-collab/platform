@@ -25,6 +25,15 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   const { data: contactRow } = creator.user_id
     ? await admin.from('users').select('email, preferences').eq('id', creator.user_id).maybeSingle()
     : { data: null }
+  // The shopfront, so ops can see what a brand would see and guide the creator
+  // on what is missing. Read rather than rendered: this is a checklist, not a
+  // preview — the live page is one click away and is the real thing.
+  const { data: shopfront } = await admin
+    .from('creator_storefronts')
+    .select('slug, display_name, headline, bio, portrait_path, categories, content_items, show_rates, show_past_collabs, is_published, updated_at')
+    .eq('creator_id', params.id)
+    .maybeSingle()
+
   const prefs = (contactRow?.preferences ?? {}) as Record<string, unknown>
   const contact = {
     // contact_email is the address they asked to be notified on, which is not
@@ -137,6 +146,54 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         )}
       </div>
 
+      {/* Shopfront. What a brand sees when deciding whether to work with this
+          creator — and therefore what to coach them on. */}
+      <div style={{ margin: '0 0 1.25rem', padding: '0.85rem 1rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+          <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>
+            Shopfront
+          </p>
+          {shopfront?.is_published && (
+            <a href={`/c/${shopfront.slug}`} target="_blank" rel="noopener noreferrer"
+               style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+              View live &rarr;
+            </a>
+          )}
+        </div>
+
+        {!shopfront ? (
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280' }}>
+            Not started. Nothing for a brand to look at yet — this is usually the
+            first thing worth nudging.
+          </p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 1.5rem', fontSize: '0.8125rem', marginBottom: '0.5rem' }}>
+              <span>
+                Status:{' '}
+                <strong style={{ color: shopfront.is_published ? '#166534' : '#92400e' }}>
+                  {shopfront.is_published ? 'Published' : 'Draft'}
+                </strong>
+              </span>
+              <span>URL: <strong>/c/{shopfront.slug}</strong></span>
+              <span>Updated: {new Date(shopfront.updated_at).toLocaleDateString()}</span>
+            </div>
+
+            {/* What is filled in. Each of these is a thing a brand looks for, so
+                an empty one is a specific piece of advice rather than a vague
+                "improve your profile". */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 1rem', fontSize: '0.8125rem' }}>
+              <Filled label="Photo" ok={Boolean(shopfront.portrait_path)} />
+              <Filled label="Headline" ok={Boolean(shopfront.headline?.trim())} />
+              <Filled label="Bio" ok={Boolean(shopfront.bio?.trim())} />
+              <Filled label="Categories" ok={(shopfront.categories as unknown[] | null)?.length ? true : false} />
+              <Filled label="Work samples" ok={(shopfront.content_items as unknown[] | null)?.length ? true : false} />
+              <Filled label="Rates shown" ok={shopfront.show_rates === true} />
+            </div>
+          </>
+        )}
+      </div>
+
       {(appeals ?? []).length > 0 && (
         <div style={appealBox}>
           <div style={appealHead}>
@@ -199,4 +256,14 @@ const appealHint: React.CSSProperties = {
   margin: '0.5rem 0 0',
   fontSize: '0.75rem',
   color: '#A8756F',
+}
+
+/** A filled/empty marker. Green tick or grey dash — nothing in between, because
+ *  "partially filled" is not a thing a brand experiences. */
+function Filled({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <span style={{ color: ok ? '#166534' : '#9ca3af' }}>
+      {ok ? '✓' : '—'} {label}
+    </span>
+  )
 }

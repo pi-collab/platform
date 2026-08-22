@@ -45,6 +45,19 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
 
   const { data: creators, error, count } = await listQuery.range(from, to)
 
+  // Shopfronts for the creators on THIS page only. The list query is already
+  // paginated and filtered, so a second lookup keyed to the ids we actually
+  // have is cheaper than widening it into a join.
+  const pageIds = (creators ?? []).map((c) => c.id)
+  const { data: shopfronts } = pageIds.length
+    ? await admin
+        .from('creator_storefronts')
+        .select('creator_id, slug, is_published')
+        .in('creator_id', pageIds)
+    : { data: [] as { creator_id: string; slug: string; is_published: boolean }[] }
+
+  const shopfrontByCreator = new Map((shopfronts ?? []).map((sf) => [sf.creator_id, sf]))
+
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
   const all = creators ?? []
@@ -130,6 +143,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                 <th style={thStyle}>Handle</th>
                 <th style={thStyle}>Niches</th>
                 <th style={thStyle}>Audience</th>
+              <th style={thStyle}>Shopfront</th>
                 <th style={thStyle}>Phone</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Created</th>
@@ -168,6 +182,24 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                     </td>
                     <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
                     <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '—'}</td>
+                    <td style={tdStyle}>
+                      {/* Links to the live page, so a shopfront can be looked at
+                          without leaving the queue. A draft is named but not
+                          linked — the public URL 404s until it is published. */}
+                      {(() => {
+                        const sf = shopfrontByCreator.get(c.id)
+                        if (!sf) return <span style={{ color: '#bbb' }}>—</span>
+                        if (!sf.is_published) {
+                          return <span style={{ color: '#92400e', fontSize: '0.75rem', fontWeight: 600 }}>Draft</span>
+                        }
+                        return (
+                          <a href={`/c/${sf.slug}`} target="_blank" rel="noopener noreferrer"
+                             style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                            /c/{sf.slug}
+                          </a>
+                        )
+                      })()}
+                    </td>
                     <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
                     <td style={tdStyle}>
                       {c.is_vetted ? (
