@@ -19,7 +19,7 @@ export default async function CreatorProfilePage() {
       admin.from('creators').select('handle').eq('id', ctx.creatorId).maybeSingle(),
       supabase.from('deals').select('id, status').eq('status', 'complete'),
       supabase.from('invoices').select('creator_receives_paise, paid_at').not('paid_at', 'is', null),
-      supabase.from('creator_storefronts').select('id').maybeSingle(),
+      supabase.from('creator_storefronts').select('id, slug, is_published').maybeSingle(),
     ])
 
   const yearStart = new Date(new Date().getFullYear(), 0, 1)
@@ -36,6 +36,9 @@ export default async function CreatorProfilePage() {
         dealsDone={(deals ?? []).length}
         paidThisYearPaise={paidThisYearPaise}
         hasStorefront={Boolean(storefront)}
+        // Only a PUBLISHED slug is passed. An unpublished one 404s, and handing
+        // a creator a link to copy that does not work is worse than none.
+        shopfrontSlug={storefront?.is_published ? storefront.slug : null}
       />
     </main>
   )

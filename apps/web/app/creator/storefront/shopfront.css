@@ -24,6 +24,24 @@
   .sf-grid-3 {
     grid-template-columns: minmax(0, 1fr) !important;
   }
+
+  /* NOT collapsed. These are compact pairs — a band label and a percentage —
+     and stacking them turns three rows into six for no gain in legibility. */
+  .sf-grid-pairs {
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* Nothing inside the welcome sheet may exceed the viewport. Measured at 468px
+     wide in a 390px window — the card is width:100% of a padded parent, so the
+     overflow comes from a child's intrinsic width rather than the card itself.
+     Capping here fixes it wherever it originates. */
+  .sf-welcome-sheet,
+  .sf-welcome-sheet * {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 @media (max-width: 480px) {
@@ -57,5 +75,32 @@
     /* Below the tab bar in stacking order, since it now sits above it in space
        and no longer needs to compete. */
     z-index: 39 !important;
+  }
+}
+
+/* ── Touch targets and text size ─────────────────────────────────────────────
+   Every editable field on this screen has to be at least 16px, or Safari zooms
+   the page when it is focused — and a zoomed page scrolls the field out from
+   under the thumb mid-edit, which is the worst moment for it to happen. */
+@media (max-width: 767.98px) {
+  .sf-editor-shell input[type='text'],
+  .sf-editor-shell input[type='url'],
+  .sf-editor-shell input[type='number'],
+  .sf-editor-shell input[type='email'],
+  .sf-editor-shell textarea,
+  .sf-editor-shell select {
+    font-size: 16px !important;
+  }
+
+  /* The range slider gets a taller hit area: 6px is a fine line to look at and
+     an unreliable thing to drag with a thumb. */
+  .sf-editor-shell input[type='range'] {
+    height: 22px !important;
+  }
+
+  /* Section CTAs go full width rather than sitting at their content width,
+     which on a phone leaves a small target floating in a wide row. */
+  .sf-editor-shell button {
+    min-height: 44px;
   }
 }

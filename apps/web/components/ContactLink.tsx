@@ -12,12 +12,12 @@ import ContactModal from '@/components/ContactModal'
  * configured, and it records nothing our side; the form writes an events row
  * before it emails, so a query survives Resend being down.
  */
-export default function ContactLink({ className }: { className?: string }) {
+export default function ContactLink({ className, label = 'Contact' }: { className?: string; label?: string }) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <button type="button" className={className} onClick={() => setOpen(true)}>
-        Contact
+        {label}
       </button>
       <ContactModal open={open} onClose={() => setOpen(false)} />
     </>

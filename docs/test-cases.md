@@ -1267,6 +1267,24 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] "Set up your shopfront" flips to Done once a creator_storefronts row exists
 - [ ] SHOPFRONT PAGE: the welcome sheet and the draft/published status bar both clear the creator tab bar. Both were fixed to bottom:0 and bottom:24 behind a tab bar fixed at bottom:0 with z-index 10000, so their buttons could not be tapped. Raising z-index alone would only hide the tabs instead — they are lifted above the bar's height
 
+### 47. Profile menu destinations and the shopfront link
+
+- [ ] Every row goes somewhere real: Edit profile → /creator/settings, Notifications → /creator/notifications, Payments → /creator/payments, Settings → /creator/settings, Help & support → the CONTACT DIALOG (not a settings page that answers nothing), Sign out → signs out
+- [ ] Payments is in the menu — a creator looking for their saved UPI details looks here first
+- [ ] With NO shopfront: a guap-green "Set up your shopfront" row
+- [ ] With one PUBLISHED: "YOUR SHOPFRONT /c/<slug>" plus a green Copy button and an arrow that opens it in a new tab
+- [ ] Copy puts the full URL on the clipboard and the button confirms "Copied" for ~2s. The URL is built from the browser origin, so a link copied on staging points at staging
+- [ ] An UNPUBLISHED shopfront passes no slug — its public URL 404s, and handing someone a link to copy that does not work is worse than none. The row offers "Finish it" instead
+- [ ] Clipboard access can be refused (plain http, or permission). The fallback is to stay un-copied rather than claim success
+
+### 48. Shopfront editor on a phone
+
+- [ ] Age breakdown stays TWO-up. Those are compact pairs — a band and a percentage — and stacking turns three rows into six for no gain
+- [ ] The top age band carries the brand tint, not a flat grey
+- [ ] Every text field is ≥16px, or Safari zooms on focus and scrolls the field out from under the thumb mid-edit
+- [ ] The gender slider has a 22px hit area — 6px is fine to look at and unreliable to drag
+- [ ] Nothing inside the welcome sheet exceeds the viewport (measured 468px wide in a 390px window before the cap)
+
 ---
 
 | When | What to run |

@@ -231,3 +231,18 @@
     border-right: 1px solid #e5e8ee;
   }
 }
+
+/* ContactLink renders a bare <button>. Inside the profile menu it has to read
+   as one of the rows around it, not as a control dropped between them. */
+.creator-app .creator-help-row {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  color: var(--ink);
+}

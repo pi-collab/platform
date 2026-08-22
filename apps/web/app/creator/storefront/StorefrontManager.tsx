@@ -882,18 +882,20 @@ export default function StorefrontManager({
               {/* ── Audience ────────────────────────────────── */}
               <Section title="Audience" subtitle="Who follows you" icon={IconUsers}>
                 <Field label="Age breakdown">
-                  <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                     {edit.ageBreakdown.map((age, i) => (
                       <div key={i} style={{
                         borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
-                        background: age.pct === Math.max(...edit.ageBreakdown.map(a => a.pct)) ? '#F4F6F2' : '#FFFFFF',
+                        background: age.pct === Math.max(...edit.ageBreakdown.map(a => a.pct))
+                              ? 'color-mix(in oklab, var(--neon) 22%, #fff)'
+                              : '#FFFFFF',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       }}>
                         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', fontWeight: 500 }}>{age.label}</div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                           <input type="number" value={age.pct} min={0} max={100}
                             onChange={e => { const u = [...edit.ageBreakdown]; u[i] = { ...age, pct: parseInt(e.target.value) || 0 }; set('ageBreakdown', u) }}
-                            style={{ width: 34, border: 'none', background: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', textAlign: 'right', outline: 'none' }} />
+                            style={{ width: 40, border: 'none', background: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', textAlign: 'right', outline: 'none' }} />
                           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: 'var(--ink-faint)' }}>%</span>
                         </div>
                       </div>

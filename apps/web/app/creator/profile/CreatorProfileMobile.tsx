@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import SignOutButton from '@/components/SignOutButton'
+import ContactLink from '@/components/ContactLink'
+import ShopfrontLinkRow from './ShopfrontLinkRow'
 
 /**
  * Creator profile — mobile.
@@ -19,12 +21,15 @@ export default function CreatorProfileMobile({
   dealsDone,
   paidThisYearPaise,
   hasStorefront,
+  shopfrontSlug,
 }: {
   fullName: string
   handle: string | null
   dealsDone: number
   paidThisYearPaise: number
   hasStorefront: boolean
+  /** Slug of the published shopfront, when there is one. */
+  shopfrontSlug?: string | null
 }) {
   const initial = fullName.trim().charAt(0).toUpperCase() || '·'
   // The export prints "First Last" with the surname in serif italic. Split on
@@ -99,15 +104,18 @@ export default function CreatorProfileMobile({
         </div>
       </div>
 
-      {/* Storefront. Only when there isn't one — a prompt to do something
-          already done is noise. */}
-      {!hasStorefront && (
-        <Link href="/creator/storefront" className="sr msurface" style={rowStyle}>
-          <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>
+      {/* Shopfront. A prompt while there isn't one, the link itself once there
+          is — sharing that link is the whole point of having built it, so it
+          belongs here rather than one screen deeper. */}
+      {!hasStorefront ? (
+        <Link href="/creator/storefront" className="sr msurface" style={{ ...rowStyle, background: 'var(--neon)' }}>
+          <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: 'var(--lime-950)' }}>
             Set up your shopfront
           </span>
-          <Chevron />
+          <Chevron color="var(--lime-950)" />
         </Link>
+      ) : (
+        <ShopfrontLinkRow slug={shopfrontSlug ?? null} />
       )}
 
       {/* Stats */}
@@ -129,9 +137,13 @@ export default function CreatorProfileMobile({
         <MenuDivider />
         <MenuRow href="/creator/notifications" label="Notifications" icon={<BellIcon />} />
         <MenuDivider />
+        <MenuRow href="/creator/payments" label="Payments" icon={<CardIcon />} />
+        <MenuDivider />
         <MenuRow href="/creator/settings" label="Settings" icon={<GearIcon />} />
         <MenuDivider />
-        <MenuRow href="/creator/settings" label="Help & support" icon={<HelpIcon />} />
+        {/* Help opens the contact form the marketing site already uses, rather
+            than a settings page that answers nothing. */}
+        <HelpRow />
       </div>
 
       {/* Sign out, on its own. Separated from the menu because it ends the
@@ -202,9 +214,9 @@ function Stat({ label, value, muted }: { label: string; value: string; muted?: b
   )
 }
 
-function Chevron() {
+function Chevron({ color = 'var(--ink-faint)' }: { color?: string }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)"
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color}
          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
          style={{ flexShrink: 0 }} aria-hidden="true">
       <path d="m9 6 6 6-6 6" />
@@ -249,6 +261,42 @@ function HelpIcon() {
       <circle cx="12" cy="12" r="10" />
       <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
       <path d="M12 17h.01" />
+    </svg>
+  )
+}
+
+/**
+ * Help & support.
+ *
+ * ContactLink is a button that opens the same contact dialog the footer uses,
+ * so a creator gets a real form rather than a settings page that answers
+ * nothing. Wrapped to look like the rows above it.
+ */
+function HelpRow() {
+  return (
+    <div style={{ ...rowStyle, gap: 12 }}>
+      <span
+        aria-hidden="true"
+        style={{
+          width: 30, height: 30, borderRadius: 9, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--sec-2)', color: 'var(--sec-ink)',
+        }}
+      >
+        <HelpIcon />
+      </span>
+      <ContactLink className="creator-help-row" label="Help &amp; support" />
+      <Chevron />
+    </div>
+  )
+}
+
+function CardIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
     </svg>
   )
 }
