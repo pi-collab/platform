@@ -1187,6 +1187,15 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] REGRESSION TRAP: the converter drops the export's 50KB stylesheet but the markup keeps its classNames. The page still renders, which is what makes it dangerous — it just renders flat. Any class the markup uses must exist in creator-app.css; check with `grep -oE 'className="[^"]+"'` on the generated component
 - [ ] The greeting header scrolls away. It is sticky in the export because that lives in a fixed-height phone frame; on a real page the same rule pins it to the viewport and it reprints over the content
 
+### 38. Creator notifications — empty state
+
+- [ ] A creator with no notifications sees the designed empty screen: back arrow, "Notifications", a tiled bell, "You're all caught up", and the explanation line
+- [ ] It REPLACES the screen rather than sitting inside the feed. NotificationFeed draws its own header and toolbar, so an empty list would otherwise render chrome over blank space
+- [ ] The back arrow goes to /creator/dashboard — notifications is reached from the dashboard bell, not the tab bar, so the five tabs give no way back
+- [ ] A creator WITH notifications still gets the full feed, unchanged
+- [ ] The tab bar renders on this screen too, and no tab is marked current (notifications is not a tab)
+- [ ] CreatorEmptyState takes its copy as props. "You're all caught up" is right here and wrong for deals — an empty state that says nothing specific is a shrug
+
 ---
 
 | When | What to run |

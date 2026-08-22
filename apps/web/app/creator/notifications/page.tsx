@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import NotificationFeed from '@/components/NotificationFeed'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import CreatorEmptyState, { BellIcon } from '@/components/creator/CreatorEmptyState'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Notifications · Guapd Creator' }
@@ -37,6 +39,22 @@ export default async function CreatorNotificationsPage() {
         }
       }
     }
+  }
+
+  // Nothing to show. The feed renders its own header and chrome, so an empty
+  // list would still draw a toolbar over blank space — the designed empty state
+  // replaces the whole screen rather than sitting inside it.
+  if (all.length === 0) {
+    return (
+      <main style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorPageHeader title="Notifications" backHref="/creator/dashboard" />
+        <CreatorEmptyState
+          icon={<BellIcon />}
+          title="You&rsquo;re all caught up"
+          body="No new notifications. Updates about offers, deals and payments will show up here."
+        />
+      </main>
+    )
   }
 
   return (
