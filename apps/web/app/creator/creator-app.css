@@ -124,6 +124,21 @@
   transform: none;
 }
 
+/* Sign out. A destructive-ish action, so it reads as its own control rather
+   than a fifth menu row — full width, centred, and the only red on the screen. */
+.creator-app .creator-signout {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #b4262a;
+  background: var(--card);
+}
+
 /* ── Tab bar ──────────────────────────────────────────────────────────────
    Fixed to the viewport, not the scroll container: on iOS a bar inside a
    scrolling element drifts during momentum scrolling. */

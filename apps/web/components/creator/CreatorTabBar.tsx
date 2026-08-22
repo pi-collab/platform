@@ -98,9 +98,9 @@ export default function CreatorTabBar({ initial }: { initial?: string | null }) 
           yet — an empty circle reads as broken, and a stray letter reads as
           someone else's account. */}
       <Link
-        href="/creator/settings"
+        href="/creator/profile"
         className="creator-tab"
-        aria-current={isCurrent('/creator/settings') ? 'page' : undefined}
+        aria-current={isCurrent('/creator/profile') ? 'page' : undefined}
       >
         <span
           aria-hidden="true"

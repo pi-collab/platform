@@ -1219,6 +1219,18 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] The audit event records THAT a UPI was saved, never the value — events is readable in more places than the column is
 - [ ] The input is 16px, so Safari does not zoom the page on focus
 
+### 41. Creator profile (mobile)
+
+- [ ] The Profile tab goes to /creator/profile and shows: identity card with initial and name, storefront prompt, DEALS DONE / PAID THIS YEAR / TURNAROUND, then the menu
+- [ ] SIGN OUT IS PRESENT. The export has no sign out at all, and the tab bar replaced the drawer that used to carry it — without this there is no way to sign out on a phone
+- [ ] Notifications is in the menu too, for the same reason
+- [ ] Sign out is separated from the menu rows and is the only red on the screen — it ends the session rather than navigating, and grouping it with four links is how it gets tapped by accident
+- [ ] It is REACHABLE at the bottom of the page, clear of the tab bar and cookie banner
+- [ ] The storefront prompt only appears when there ISN'T one
+- [ ] NO follower count. The export prints "@handle · 0 followers"; nothing counts followers, and showing 0 to someone with an audience is worse than showing nothing
+- [ ] TURNAROUND shows an em dash, not "0 days" — it needs completed deals to average, and a zero would claim a speed nobody measured
+- [ ] The avatar border is DASHED — it says "no photo yet" rather than presenting an initial as a finished avatar
+
 ---
 
 | When | What to run |
