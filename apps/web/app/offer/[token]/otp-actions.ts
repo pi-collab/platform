@@ -129,8 +129,15 @@ export async function verifyOfferOTP(token: string, inputCode: string): Promise<
     const synthetic = existing?.endsWith('@auth.guapd.internal')
     loginEmail = existing && !synthetic ? existing : syntheticEmail
 
-    const payload: { password: string; email?: string } = { password }
-    if (!existing || synthetic) payload.email = syntheticEmail
+    // Same rule as the creator login: an `email` in an admin update is an
+    // email-change request, and GoTrue mails a confirmation link to it. Writing
+    // the synthetic address back on every sign-in bounced every time, because
+    // auth.guapd.internal has no MX record. email_confirm suppresses the send.
+    const payload: { password: string; email?: string; email_confirm?: boolean } = { password }
+    if (!existing || (synthetic && existing !== syntheticEmail)) {
+      payload.email = syntheticEmail
+      payload.email_confirm = true
+    }
 
     const { error } = await admin.auth.admin.updateUserById(authId, payload)
     if (error) {

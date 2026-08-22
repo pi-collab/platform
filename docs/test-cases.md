@@ -1330,6 +1330,17 @@ Before this, `AvatarUpload` was wired to real upload/remove actions but rendered
 - [ ] Storage path is `avatars/{creatorId}/` and is re-checked against that prefix after being built
 - [ ] The DB write goes through the SESSION client, so it depends on the `creators_update_own` RLS policy and on table-level UPDATE grants surviving. Migration 0472 revoked table-level UPDATE on `public.users` — confirm it never gets extended to `creators` without granting `profile_photo_url` back, or uploads will store the file and silently fail to save the URL
 
+### 54. Phone-OTP sign-in must not send email (prod bounce incident)
+
+Supabase flagged a high bounce rate on production. Source: `admin.updateUserById(id, { password, email: syntheticEmail })` in the creator login and offer-OTP paths. GoTrue treats ANY `email` in an admin update as an email-change request and mails a confirmation link to it — here `creator_<phone>@auth.guapd.internal`, a domain with no MX record. Every creator login produced a hard bounce, and with "Secure email change" on it produces two (old address and new).
+
+- [ ] Creator logs in by phone OTP: NO email is sent. The address is already correct, so `email` is not written at all
+- [ ] When the address genuinely must be written (no email on the row, or a stale synthetic from an old number), `email_confirm: true` accompanies it so GoTrue marks it confirmed instead of mailing a link
+- [ ] Same on the offer-link OTP path — it had the identical bug
+- [ ] Signup is NOT a source and never was: both `createUser` calls pass `email_confirm: true`, which pre-confirms and suppresses
+- [ ] `isPlausibleEmail` REJECTS `@auth.guapd.internal`. It matches a plain email regex, so without naming it explicitly any code path passing a synthetic address to Resend would send and bounce
+- [ ] Watch the bounce rate in the Supabase dashboard after deploying. Existing bounces are historical and will age out; what matters is that the rate stops climbing
+
 ---
 
 | When | What to run |

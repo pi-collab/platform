@@ -163,10 +163,20 @@ export async function verifyAndSignIn(
   const hasSyntheticEmail = existingEmail?.endsWith('@auth.guapd.internal')
   const loginEmail = (existingEmail && !hasSyntheticEmail) ? existingEmail : syntheticEmail
 
-  const updatePayload: { password: string; email?: string } = { password }
-  // Only set email if user doesn't have one, or already has a synthetic one
-  if (!existingEmail || hasSyntheticEmail) {
+  const updatePayload: { password: string; email?: string; email_confirm?: boolean } = { password }
+  // Only set email if the user has none, or has a DIFFERENT synthetic one.
+  //
+  // Writing the same address back is not free: GoTrue treats any `email` in an
+  // admin update as an email-change request and mails a confirmation link to
+  // it. That address is creator_<phone>@auth.guapd.internal, a domain with no
+  // MX record, so every one of those hard-bounces — on every login. That is
+  // the high bounce rate Supabase flagged on production.
+  //
+  // email_confirm marks the new address already-confirmed, which is what
+  // suppresses the send on the rare occasion we do have to write it.
+  if (!existingEmail || (hasSyntheticEmail && existingEmail !== syntheticEmail)) {
     updatePayload.email = syntheticEmail
+    updatePayload.email_confirm = true
   }
 
   const { error: updateErr } = await admin.auth.admin.updateUserById(profile.auth_id, updatePayload)

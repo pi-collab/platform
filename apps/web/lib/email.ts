@@ -81,9 +81,21 @@ export function maskEmail(email: string): string {
 }
 
 /** Cheap sanity check — Resend rejects malformed addresses for the whole call. */
+/**
+ * Addresses we mint ourselves for phone-only accounts, which can never receive
+ * mail. auth.guapd.internal has no MX record, so anything sent there is a hard
+ * bounce — and enough of those get a sending domain throttled or blocked.
+ *
+ * The shape passes a plain regex check, which is exactly why it needs naming
+ * here rather than being left to one.
+ */
+const UNDELIVERABLE_DOMAINS = ['@auth.guapd.internal']
+
 export function isPlausibleEmail(email: string | null | undefined): email is string {
   if (!email) return false
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const e = email.trim().toLowerCase()
+  if (UNDELIVERABLE_DOMAINS.some((d) => e.endsWith(d))) return false
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
 }
 
 /** One file to attach. `content` is base64, which is what Resend expects. */
