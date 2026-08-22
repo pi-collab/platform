@@ -8,7 +8,20 @@ import PaymentsClient from './PaymentsClient'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
-export default async function CreatorPaymentsPage() {
+/**
+ * Where the back arrow goes.
+ *
+ * These screens have two doors — the profile menu and the dashboard — so a
+ * fixed href sends half the visitors somewhere they have never been. The
+ * caller states its own return in `?from=`, which keeps CreatorPageHeader's
+ * rule that a back arrow never guesses.
+ */
+function backFrom(from: string | undefined) {
+  return from === 'profile' ? '/creator/profile' : '/creator/dashboard'
+}
+
+export default async function CreatorPaymentsPage({ searchParams }: { searchParams?: { from?: string } }) {
+  const backHref = backFrom(searchParams?.from)
   const ctx = await verifyCreator()
   const supabase = createClient()
 
@@ -105,7 +118,7 @@ export default async function CreatorPaymentsPage() {
 
     return (
       <main style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorPageHeader title="Payments" backHref="/creator/dashboard" />
+        <CreatorPageHeader title="Payments" backHref={backHref} />
         <CreatorPaymentsEmpty upiId={creatorRow?.upi_id ?? null} totalEarnedPaise={totalEarnedPaise} />
       </main>
     )

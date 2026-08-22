@@ -4,6 +4,7 @@ import { useState, useTransition, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -174,11 +175,25 @@ export default function CreatorSettingsClient({
   const initials = getInitials(name || '?')
 
   return (
-    <div style={{ padding: 'clamp(20px,2.6vw,34px) clamp(22px,4vw,56px) clamp(64px,6vw,110px)' }}>
+    <div className="set-page" style={{ padding: 'clamp(20px,2.6vw,34px) clamp(22px,4vw,56px) clamp(64px,6vw,110px)' }}>
+
+      {/* On a phone this is one screen, not a tabbed page: the side nav is
+          hidden and the section comes from ?tab=, so "Edit profile" and
+          "Settings" are two destinations rather than one page with a strip of
+          tabs on top of the tab bar. Back goes to the profile tab it was
+          opened from — the desktop breadcrumb's /creator/dashboard would drop
+          a creator somewhere they never were. */}
+      <div className="set-mobile-head">
+        <CreatorPageHeader
+          title={section === 'account' ? 'Settings' : 'Edit profile'}
+          backHref="/creator/profile"
+        />
+      </div>
+
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
         {/* Page header */}
-        <div style={{ marginBottom: 22 }}>
+        <div className="set-desktop-head" style={{ marginBottom: 22 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
             <Link href="/creator/dashboard" style={{ color: 'var(--ink-faint)' }}>Account</Link>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
@@ -415,6 +430,19 @@ export default function CreatorSettingsClient({
         @media (max-width: 900px) {
           .set-grid { grid-template-columns: 1fr !important; }
           .set-side { position: static !important; flex-direction: row !important; overflow-x: auto; }
+        }
+        .set-mobile-head { display: none; }
+        @media (max-width: 767.98px) {
+          /* Full-bleed header, so it matches deals/payments/notifications
+             rather than sitting inset inside the page padding. */
+          .set-page { padding: 0 16px 24px !important; }
+          .set-mobile-head { display: block; margin: 0 -16px 6px; }
+          .set-desktop-head { display: none !important; }
+          .set-side { display: none !important; }
+          /* 16px, or Safari zooms on focus and pans to keep the caret visible —
+             which reads to a creator as the screen sliding sideways the moment
+             the keyboard opens. */
+          .set-page input, .set-page select, .set-page textarea { font-size: 16px !important; }
         }
         @media (max-width: 560px) { .form-2 { grid-template-columns: 1fr !important; } }
       `}</style>

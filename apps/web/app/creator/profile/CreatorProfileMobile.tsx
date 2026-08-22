@@ -133,11 +133,11 @@ export default function CreatorProfileMobile({
 
       {/* Menu */}
       <div className="sr msurface" style={{ padding: 0, overflow: 'hidden' }}>
-        <MenuRow href="/creator/settings" label="Edit profile" icon={<EditIcon />} />
+        <MenuRow href="/creator/settings?tab=profile" label="Edit profile" icon={<EditIcon />} />
         <MenuDivider />
-        <MenuRow href="/creator/notifications" label="Notifications" icon={<BellIcon />} />
+        <MenuRow href="/creator/notifications?from=profile" label="Notifications" icon={<BellIcon />} />
         <MenuDivider />
-        <MenuRow href="/creator/payments" label="Payments" icon={<CardIcon />} />
+        <MenuRow href="/creator/payments?from=profile" label="Payments" icon={<CardIcon />} />
         <MenuDivider />
         {/* Opens the Account tab rather than the page default. Edit profile
             already lands on Profile, so pointing both rows at the same tab made

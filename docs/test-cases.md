@@ -1303,6 +1303,21 @@ All three render the same component, so check one and the others follow — but 
 - [ ] Hero has ONE full-width primary button; "View rates" is a quiet link beneath it. Two 180px pills stacked left-aligned neither filled the row nor centred in it
 - [ ] Horizontal scrollers (`.sf-exprow`) are exempt — they overflow on purpose. Measure page overflow and clipped text, not raw bounding boxes, or every card in a carousel reads as a bug
 
+### 51. Settings is a single-section screen on a phone
+
+- [ ] "Edit profile" opens ONLY the Profile section, titled "Edit profile"; "Settings" opens ONLY the Account section, titled "Settings". Neither shows the tab strip — two menu rows leading to one tabbed page is why they felt identical
+- [ ] Back goes to /creator/profile, the tab it was opened from. It used to go to /creator/dashboard, dropping a creator somewhere they were never navigating from
+- [ ] The header is full-bleed and matches deals / payments / notifications, not inset inside the page padding
+- [ ] Desktop is UNCHANGED at ≥768px: side nav visible, breadcrumb header visible, mobile header absent. Check this explicitly — the section content is shared, so a mobile rule that leaks up strips the desktop page of its navigation
+- [ ] Every field is ≥16px. There were 11 under it on the Profile tab, which is the "screen slides sideways when the keyboard opens" report
+
+### 52. Back arrows follow the door you came in by
+
+- [ ] Notifications and Payments each have two entry points — the profile menu and the dashboard — so their back arrow reads `?from=profile` rather than assuming
+- [ ] From the profile menu: back returns to /creator/profile. From the dashboard (or the Payments tab): back returns to /creator/dashboard
+- [ ] An absent or unrecognised `from` falls back to the dashboard rather than erroring
+- [ ] This keeps CreatorPageHeader's rule that `backHref` is stated by the caller and never guessed — the guessing just moved to the link, where the answer is actually known
+
 ---
 
 | When | What to run |

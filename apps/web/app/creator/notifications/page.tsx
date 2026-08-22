@@ -7,7 +7,20 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Notifications · Guapd Creator' }
 
-export default async function CreatorNotificationsPage() {
+/**
+ * Where the back arrow goes.
+ *
+ * These screens have two doors — the profile menu and the dashboard — so a
+ * fixed href sends half the visitors somewhere they have never been. The
+ * caller states its own return in `?from=`, which keeps CreatorPageHeader's
+ * rule that a back arrow never guesses.
+ */
+function backFrom(from: string | undefined) {
+  return from === 'profile' ? '/creator/profile' : '/creator/dashboard'
+}
+
+export default async function CreatorNotificationsPage({ searchParams }: { searchParams?: { from?: string } }) {
+  const backHref = backFrom(searchParams?.from)
   await verifyCreator()
   const supabase = createClient()
 
@@ -47,7 +60,7 @@ export default async function CreatorNotificationsPage() {
   if (all.length === 0) {
     return (
       <main style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorPageHeader title="Notifications" backHref="/creator/dashboard" />
+        <CreatorPageHeader title="Notifications" backHref={backHref} />
         <CreatorEmptyState
           icon={<BellIcon />}
           title="You&rsquo;re all caught up"
