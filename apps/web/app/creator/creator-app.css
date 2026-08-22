@@ -1,0 +1,133 @@
+/* ── Creator app shell ───────────────────────────────────────────────────────
+   Tokens and layout for the mobile creator surfaces.
+
+   The export ships ~50KB of design-system CSS covering every screen in the
+   system. Almost none of it applies here, and importing it wholesale would put
+   a second, competing set of tokens next to the one globals.css already
+   defines. So this declares only what the dashboard markup actually references
+   — and only the five variables our design system does NOT already have.
+
+   Already ours, deliberately not redeclared: --ink, --sec-2, --font-ui,
+   --font-display, --font-serif. They resolve to the same values, so the export
+   and the app agree without a bridge.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.creator-app {
+  /* Warm greys for secondary and tertiary text. Distinct from --ink-soft /
+     --ink-faint, which are the marketing site's cooler pair — mixing the two
+     families is what makes a screen look assembled from parts. */
+  --wg-500: #565C68;
+  --wg-400: #878D99;
+  --meta: #565C68;
+
+  /* Two hairline weights. --line separates structure, --hair separates content
+     inside a card; the export uses both and collapsing them flattens the
+     hierarchy it is drawing. Green-tinted rather than neutral grey, which is
+     what keeps the surface warm against the neon. */
+  --line: rgba(60, 80, 30, .10);
+  --hair: rgba(60, 80, 30, .08);
+
+  --card: #ffffff;
+  --lime-400: #e8ff66;
+
+  background: #f5f7fa;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  /* The tab bar is fixed, so every screen reserves its height plus the home
+     indicator. Without this the last row of content sits under the bar. */
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+}
+
+/* ── Tab bar ──────────────────────────────────────────────────────────────
+   Fixed to the viewport, not the scroll container: on iOS a bar inside a
+   scrolling element drifts during momentum scrolling. */
+.creator-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* Above the cookie banner (9999). Both are fixed to the bottom edge, and a
+     navigation bar a creator cannot reach until they answer a consent prompt
+     is worse than a consent prompt that sits slightly higher. The banner is
+     dismissed once; the tab bar is every session. */
+  z-index: 10000;
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border-top: 1px solid #e5e8ee;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -8px 24px -16px rgba(40, 45, 25, .18);
+}
+
+.creator-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  /* 48px minimum: below that a thumb misses as often as it hits. */
+  min-height: 48px;
+  padding: 10px 4px 6px;
+  color: #878d99;
+  text-decoration: none;
+  transition: color .16s ease;
+}
+
+.creator-tab__label {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* The active tab is marked twice — colour AND a neon underline. Colour alone
+   fails for anyone who cannot separate these two greys. */
+.creator-tab[aria-current='page'] {
+  color: var(--ink);
+}
+
+.creator-tab__marker {
+  display: block;
+  width: 18px;
+  height: 3px;
+  margin: 3px auto 0;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.creator-tab[aria-current='page'] .creator-tab__marker {
+  background: var(--lime-400);
+}
+
+/* ── Desktop ──────────────────────────────────────────────────────────────
+   The design is drawn for a 390px phone. On a wide screen the content is
+   centred at phone width rather than stretched: these layouts assume a single
+   column, and a 1400px-wide stat row reads as broken. The tab bar stays, since
+   it is the only navigation these screens have. */
+/* Below 768px the sidebar renders a top bar with a hamburger drawer. That
+   breakpoint is the sidebar's own, so both rules agree by construction: the
+   tab bar owns phones, the sidebar owns desktop, and neither overlaps. */
+@media (max-width: 767.98px) {
+  .creator-main .creator-topbar-mobile { display: none !important; }
+}
+
+@media (min-width: 768px) {
+  .creator-tabbar { display: none; }
+}
+
+@media (min-width: 720px) {
+  .creator-app__inner {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .creator-tabbar {
+    max-width: 480px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    border-left: 1px solid #e5e8ee;
+    border-right: 1px solid #e5e8ee;
+  }
+}

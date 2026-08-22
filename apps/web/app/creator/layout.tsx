@@ -6,6 +6,8 @@ import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { currentPath } from '@/lib/creator-auth'
 import { creatorLoginUrl } from '@/lib/safe-next'
 import CreatorRejected from '@/components/CreatorRejected'
+import CreatorTabBar from '@/components/creator/CreatorTabBar'
+import './creator-app.css'
 
 export default async function CreatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -118,9 +120,14 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     <>
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profile?.id && <AnalyticsIdentify userId={profile.id} role="creator" />}
-      <div className="creator-main">
+      <div className="creator-main creator-app">
         <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
+        {/* Phones get the tab bar; the sidebar's own media query hides its
+            mobile top bar at the same breakpoint, so a creator never sees two
+            navigations at once. Desktop keeps the sidebar and never renders
+            this. */}
+        <CreatorTabBar initial={creatorName} />
       </div>
     </>
   )

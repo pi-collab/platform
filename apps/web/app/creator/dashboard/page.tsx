@@ -6,6 +6,7 @@ import { DateFilter } from '@/app/dashboard/DashboardControls'
 import { periodToDateRange } from '@/app/dashboard/period-utils'
 import type { Period } from '@/app/dashboard/period-utils'
 import type { Metadata } from 'next'
+import CreatorDashboardEmpty from './CreatorDashboardEmpty'
 import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
 
@@ -40,7 +41,7 @@ export default async function CreatorDashboardPage({
   const periodFromISO = periodFrom.toISOString()
   const periodToISO = periodTo.toISOString()
 
-  const [{ data: deals }, { data: invoices }, { data: storefront }] = await Promise.all([
+  const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
@@ -55,6 +56,11 @@ export default async function CreatorDashboardPage({
     supabase
       .from('creator_storefronts')
       .select('slug, is_published')
+      .maybeSingle(),
+    supabase
+      .from('creators')
+      .select('handle')
+      .eq('id', creatorId)
       .maybeSingle(),
   ])
 
@@ -132,6 +138,29 @@ export default async function CreatorDashboardPage({
 
   // ── First name for greeting
   const firstName = creatorName.split(' ')[0]
+
+  // ── Nothing to show yet
+  //
+  // Counted WITHOUT the period filter. `deals` above is bounded by the selected
+  // range, so a creator whose only deal was last year would otherwise be told
+  // they have never had one — and be shown a first-run screen they have already
+  // finished. The empty state is about the account, not the period.
+  const { count: dealsEverCount } = await supabase
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .neq('status', 'cancelled')
+    .neq('status', 'declined')
+
+  if ((dealsEverCount ?? 0) === 0) {
+    // The handle line is drawn as "@handle · N followers" in the export. Only
+    // what we actually know is shown: an invented follower count on a creator's
+    // own dashboard is a number they will immediately know is wrong.
+    const handle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
+    const handleLine = handle ? `@${handle}` : 'Finish your profile to get discovered'
+    return (
+      <CreatorDashboardEmpty firstName={firstName} handleLine={handleLine} />
+    )
+  }
 
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0

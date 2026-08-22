@@ -1172,6 +1172,18 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] Signup NEVER fails or hangs because of it: every lookup is capped at 4s and every failure degrades to "unknown"
 - [ ] Verified against real production signups — zero2host.com and sclout.com (both deleted as fake) flag on HTTPS and parking; ergonstyle.com and gigmatic.ai (both genuine) stay silent
 
+### 37. Creator dashboard — empty state and tab bar
+
+- [ ] A creator with NO deals ever sees the empty dashboard: "Hey, <name>", the Overview grid reading zero with per-stat copy ("No deals yet", "Nothing pending", "None in progress", "Not yet"), Get started, Up next, Performance, Your reach
+- [ ] The zero-deal check is NOT period-filtered. A creator whose only deal was last year must see the real dashboard, not a first-run screen they already finished
+- [ ] The handle line shows `@handle`, or a prompt to finish the profile when there is none. It never invents a follower count
+- [ ] Bottom tab bar on phones: Dashboard, Deals, Inbox, Payments, Profile. The current tab is marked by BOTH colour and the neon underline — colour alone fails anyone who cannot separate the two greys
+- [ ] The tab stays current on child routes (`/creator/deals/<id>` still highlights Deals)
+- [ ] The tab bar sits ABOVE the cookie banner (z-index 10000 vs 9999). Both are fixed to the bottom edge, and navigation a creator cannot reach until they answer a consent prompt is worse than a prompt sitting slightly higher
+- [ ] Only ONE navigation shows at a time: below 768px the sidebar's mobile top bar is hidden and the tab bar shows; at 768px and above the reverse
+- [ ] Notifications and Storefront are reachable from the dashboard header (bell + Shopfront pill) — they are the two links the drawer used to carry that the five tabs do not
+- [ ] The greeting header scrolls away. It is sticky in the export because that lives in a fixed-height phone frame; on a real page the same rule pins it to the viewport and it reprints over the content
+
 ---
 
 | When | What to run |
