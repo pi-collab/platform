@@ -44,7 +44,6 @@ const PLATFORM_OPTIONS = ['Instagram', 'YouTube', 'X', 'LinkedIn', 'TikTok']
 const SECTIONS: { id: string; label: string; icon: string }[] = [
   { id: 'profile', label: 'Profile', icon: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { id: 'account', label: 'Account', icon: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z' },
-  { id: 'payments', label: 'Payments', icon: 'M2 5h20v14H2zM2 10h20' },
 ]
 
 function getInitials(name: string) {
@@ -353,38 +352,6 @@ export default function CreatorSettingsClient({
               </div>
             )}
 
-            {/* ── PAYMENTS ── */}
-            {section === 'payments' && (
-              <div className="reveal panel" style={panelStyle}>
-                <h2 style={h2Style}>Payments</h2>
-                <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>How you get paid, plus tax and invoice details.</p>
-
-                <div style={{ marginTop: 20, padding: 16, borderRadius: 14, border: '1px solid var(--border-hairline)', background: 'rgba(247,250,253,.8)' }}>
-                  <div style={eyebrowStyle}>Payout method</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginTop: 12 }}>
-                    <span style={{ ...iconBox, width: 44, height: 44, borderRadius: 12 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>UPI</div>
-                      <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 2 }}>Primary payout account</div>
-                    </div>
-                    <span className="pill" style={smallPill}>Edit</span>
-                  </div>
-                </div>
-
-                <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-                  <FieldSelect label="Payout schedule" value="Every 15 days" options={['Every 15 days', 'Monthly', 'On approval']} onChange={markDirty} />
-                  <FieldInput label="GST / tax ID" value="" onChange={markDirty} placeholder="27AABCU9603R1ZX" />
-                  <div style={{ gridColumn: '1/-1' }}>
-                    <FieldInput label="Bank account details" value="" onChange={markDirty} placeholder="IFSC, Account number" />
-                  </div>
-                  <div style={{ gridColumn: '1/-1' }}>
-                    <FieldSelect label="Invoice preferences" value="Email a PDF on every payment" options={['Email a PDF on every payment', 'Monthly summary only', 'No emails']} onChange={markDirty} />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

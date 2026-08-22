@@ -1,0 +1,91 @@
+/* ── Shopfront preview, small screens ────────────────────────────────────────
+   Imported by ShopfrontPreview itself rather than by a page, because the same
+   component is the editor preview, the public /c/[slug] page and /browse/[id].
+   Rules that lived only in the editor's stylesheet fixed one of the three.
+
+   Desktop is deliberately untouched — every rule here is inside a query.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  /* The audience block was a fixed `1.55fr 1fr` split with no collapse. Two
+     columns on a 390px phone give the right one about 130px, and its contents
+     do not fit: a grid item's default `min-width: auto` lets the donut and the
+     location rows push the track wider than its share, so the card ran off the
+     right edge with the percentages cut off. */
+  .sf-aud-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Stats were a wrapping flex row with a 26px gap, so three items broke into
+     a 2 + 1 line whose second row sat under nothing. A three-up grid keeps
+     them on one line, and the rule dividers do the work the gap was failing to
+     do. */
+  .sf-hero-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    margin-top: 22px !important;
+  }
+
+  .sf-hero-stats > div {
+    text-align: center;
+    padding: 0 8px;
+    border-left: 1px solid var(--hairline);
+  }
+
+  .sf-hero-stats > div:first-child {
+    border-left: none;
+  }
+
+  /* 26px across a third of a 390px screen renders "6.4%" fine and "340K"
+     tight; 22 leaves room for the wider values without a second line. */
+  .sf-hero-stats > div > div:first-child {
+    font-size: 22px !important;
+  }
+
+  /* Two 180px pills stacked left-aligned read as a mistake rather than a
+     choice — they neither fill the row nor centre in it. One full-width
+     primary carries the action; rates become a quiet link under it, still
+     reachable but no longer competing with the offer button. */
+  .sf-hero-ctas {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-top: 24px !important;
+  }
+
+  .sf-hero-cta {
+    width: 100% !important;
+  }
+
+  .sf-hero-cta-alt {
+    width: 100% !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 6px 0 !important;
+    color: var(--ink-soft) !important;
+    text-decoration: underline !important;
+    text-underline-offset: 3px;
+  }
+
+  /* Tags sit between the bio and the stats. At 8px they read as one clump with
+     the sentence above; 10px separates the two without adding a rule. */
+  .sf-hero-tags {
+    gap: 7px !important;
+    margin-top: 14px !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  /* "Add what you need at <name>'s set rates. The total updates as you go."
+     is held on one line by design on desktop. On a phone that one line is
+     441px wide, which widened its parent and dragged the "Build your deal"
+     heading off the right edge with it — the heading looked broken, but the
+     paragraph was the cause. */
+  .sf-nowrap-desktop {
+    white-space: normal !important;
+  }
+}

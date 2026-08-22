@@ -2,6 +2,11 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
 
+// Imported here, not by a page: this component is the editor preview, the
+// public /c/[slug] page and /browse/[id]. Rules kept in the editor's own
+// stylesheet only ever reached one of the three.
+import './shopfront-preview.css'
+
 /* ── Types ────────────────────────────────────────────────────── */
 
 export interface ShopfrontSection {
@@ -313,7 +318,7 @@ export default function ShopfrontPreview({
                   <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: '16px 0 0' }}>{data.bio}</p>
 
                   {/* Niche pills */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                  <div className="sf-hero-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
                     {data.niches.map(n => (
                       <span key={n} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 13px',
@@ -324,7 +329,7 @@ export default function ShopfrontPreview({
                   </div>
 
                   {/* Quick stats */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
+                  <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.totalFollowers}</div>
                       <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Total followers</div>
@@ -340,17 +345,17 @@ export default function ShopfrontPreview({
                   </div>
 
                   {/* CTAs */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
+                  <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
                     {onDealClick ? (
-                      <button onClick={() => onDealClick({})} className="g-btn-primary" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
+                      <button onClick={() => onDealClick({})} className="g-btn-primary sf-hero-cta" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
                         Create an offer
                       </button>
                     ) : (
-                      <a href={dealUrl || '#pitch'} className="g-btn-primary" style={{ textDecoration: 'none', width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
+                      <a href={dealUrl || '#pitch'} className="g-btn-primary sf-hero-cta" style={{ textDecoration: 'none', width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
                         Create an offer
                       </a>
                     )}
-                    <a href={dealUrl ? '#packages' : '#packages'} style={{
+                    <a href={dealUrl ? '#packages' : '#packages'} className="sf-hero-cta-alt" style={{
                       fontWeight: 700, fontSize: 14, color: 'var(--ink)', textDecoration: 'none',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                       width: 180, padding: '14px 22px', border: '1px solid var(--hairline)',
@@ -400,7 +405,7 @@ export default function ShopfrontPreview({
               <div>
                 <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Rate card</span>
                 <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Build your deal</h2>
-                <p className="t-body" style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap', margin: '0 0 clamp(16px,2vw,22px)' }}>
+                <p className="t-body sf-nowrap-desktop" style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap', margin: '0 0 clamp(16px,2vw,22px)' }}>
                   Add what you need at {firstName}&apos;s set rates. The total updates as you go.
                 </p>
               </div>
@@ -665,7 +670,7 @@ export default function ShopfrontPreview({
             {/* Age + Gender + Location */}
             {(data.audience.ageBreakdown || data.audience.gender || data.audience.topLocations) && (
               <div style={{ marginTop: 'clamp(8px,1vw,14px)', paddingTop: 'clamp(14px,1.6vw,20px)', borderTop: '1px solid rgba(255,255,255,.5)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 'clamp(14px,1.8vw,20px)', alignItems: 'stretch' }}>
+                <div className="sf-aud-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.55fr) minmax(0,1fr)', gap: 'clamp(14px,1.8vw,20px)', alignItems: 'stretch' }}>
                   {/* Age breakdown */}
                   {data.audience.ageBreakdown && (
                     <div style={{
@@ -714,7 +719,7 @@ export default function ShopfrontPreview({
                   )}
 
                   {/* Right column: Gender + Locations */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)', minWidth: 0 }}>
                     {/* Gender donut */}
                     {data.audience.gender && (
                       <div style={{
@@ -727,7 +732,7 @@ export default function ShopfrontPreview({
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 'auto', paddingTop: 16 }}>
                           <div className="aud-donut" style={{
-                            position: 'relative', width: 112, height: 112, flexShrink: 0, borderRadius: '50%',
+                            position: 'relative', width: 'clamp(84px,22vw,112px)', height: 'clamp(84px,22vw,112px)', flexShrink: 0, borderRadius: '50%',
                             background: `conic-gradient(var(--neon-deep) 0 ${data.audience.gender.women}%,var(--sec-mid-2) ${data.audience.gender.women}% 100%)`,
                             boxShadow: '0 12px 26px -14px rgba(40,45,25,.35)',
                           } as React.CSSProperties}>

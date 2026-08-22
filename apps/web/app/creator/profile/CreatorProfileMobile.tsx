@@ -139,7 +139,10 @@ export default function CreatorProfileMobile({
         <MenuDivider />
         <MenuRow href="/creator/payments" label="Payments" icon={<CardIcon />} />
         <MenuDivider />
-        <MenuRow href="/creator/settings" label="Settings" icon={<GearIcon />} />
+        {/* Opens the Account tab rather than the page default. Edit profile
+            already lands on Profile, so pointing both rows at the same tab made
+            one of them do nothing visible. */}
+        <MenuRow href="/creator/settings?tab=account" label="Settings" icon={<GearIcon />} />
         <MenuDivider />
         {/* Help opens the contact form the marketing site already uses, rather
             than a settings page that answers nothing. */}

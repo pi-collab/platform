@@ -1285,6 +1285,24 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] The gender slider has a 22px hit area — 6px is fine to look at and unreliable to drag
 - [ ] Nothing inside the welcome sheet exceeds the viewport (measured 468px wide in a 390px window before the cap)
 
+### 49. Creator settings has two tabs, not three
+
+- [ ] Tabs are Profile and Account only. The Payments tab is GONE — it was a mockup: hardcoded literals for payout schedule and invoice preferences, empty GST and bank fields, and a `handleSave` that never read any of them. It marked the form dirty and showed a Save bar that saved nothing, so a creator could type their bank details and lose them
+- [ ] Real payments live at /creator/payments (UPI ID), reachable from the profile menu
+- [ ] A stale `?tab=payments` deep link falls back to Profile rather than erroring
+- [ ] Profile menu: "Edit profile" opens the Profile tab, "Settings" opens the Account tab. Both pointed at the page default before, so one of them appeared to do nothing
+
+### 50. Shopfront on a phone (public /c/<slug>, /browse/<id>, and the editor preview)
+
+All three render the same component, so check one and the others follow — but the responsive CSS must be imported by the COMPONENT, not a page, or only the editor gets it.
+
+- [ ] Audience block stacks: Age breakdown, then Gender, then Top locations, each full width. It was a fixed `1.55fr 1fr` split with no collapse — the right column got ~130px and its contents ran off-screen with the percentages cut off
+- [ ] Grid columns are `minmax(0,...)`, not bare `fr`. A grid item's default `min-width: auto` lets a wide child (the donut, the location rows) push its track past its share even when the fraction is right
+- [ ] No heading or paragraph crosses the right edge. Check "Build your deal" specifically: its subtitle is `white-space: nowrap` by design on desktop, which forced the block to 441px on a 390px screen and dragged the heading out with it
+- [ ] Hero stats are one row of three with dividers, not a wrapped 2+1
+- [ ] Hero has ONE full-width primary button; "View rates" is a quiet link beneath it. Two 180px pills stacked left-aligned neither filled the row nor centred in it
+- [ ] Horizontal scrollers (`.sf-exprow`) are exempt — they overflow on purpose. Measure page overflow and clipped text, not raw bounding boxes, or every card in a carousel reads as a bug
+
 ---
 
 | When | What to run |
