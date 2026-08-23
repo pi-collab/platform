@@ -1445,6 +1445,23 @@ The live path is `/c/<slug>` → `PublicStorefront` → "Create an offer" → `/
 - [ ] The brand marquee overflows ON PURPOSE and is clipped by its container — measure page overflow, not raw bounding boxes, or every tile reads as a bug
 - [ ] Quantity steppers are 30px. Below the 44px guideline but paired (− and +) inside a 42px control; acceptable, and worth revisiting if anyone reports mis-taps
 
+### 60. The shopfront is sized by its CONTAINER, not the viewport
+
+The editor renders `ShopfrontPreview` inside a 340px pane on a desktop screen (`sf-editor-shell` is `minmax(0,1fr) 340px`). A viewport media query is blind to that, so the phone layout never applied there and the rate card looked broken while the browser was, as far as CSS knew, 1280px wide.
+
+- [ ] `.sf-root` has `container-type: inline-size` and every responsive rule exists TWICE — once as `@media`, once as `@container shopfront`. The media queries stay as the fallback for browsers without container query support, where the public page still needs to be right
+- [ ] Test by squeezing the container, not the window: at a 1280px viewport, force `.sf-root { width: 340px }` and the phone layout must engage
+- [ ] Any new responsive rule in `shopfront-preview.css` needs both forms, or it will work on a phone and fail in the editor preview
+
+**Rate card rows use FLEX below the breakpoint, not grid**
+- [ ] A grid track is charged against every row, so a fixed 110px stepper column plus the icon plus gaps starved the name — it measured 0px at 340px even after the first fix
+- [ ] Flex with wrapping asks it the right way round: icon and name take the first line, the stepper wraps beneath and pushes right, and the name grows into whatever the row actually has
+- [ ] Check the NAME WIDTH at 340px and 390px, not just that nothing overflows. A starved column overflows nothing — it simply disappears
+
+**Stat cards pair up**
+- [ ] The four stat cards are two per row on a phone. `minmax(min(100%,220px),1fr)` needs 460px for two columns, so every phone got one card per row — four near-empty cards down a whole screen
+- [ ] This matches the patterns already in use: hero stats three-up with dividers, age bands two-up, profile stat strip three-up. Reach for an existing pattern before inventing a layout
+
 ---
 
 | When | What to run |

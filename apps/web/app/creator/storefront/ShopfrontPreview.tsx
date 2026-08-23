@@ -273,7 +273,7 @@ export default function ShopfrontPreview({
 
   return (
     <SectionCtx.Provider value={sectionCtx}>
-    <div style={{ fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', minHeight: '100vh', background: '#F7F7F4' }}>
+    <div className="sf-root" style={{ fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', minHeight: '100vh', background: '#F7F7F4' }}>
       {/* Noise overlay */}
       <div aria-hidden="true" style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 90, opacity: 0.03, mixBlendMode: 'multiply',
@@ -422,7 +422,7 @@ export default function ShopfrontPreview({
       {/* ═══ 2. STATS STRIP ════════════════════════════════════ */}
       <SectionWrapper sectionKey="stats">
         <section style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
-          <div style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
+          <div className="sf-stats-strip" style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
             {[
               { value: data.monthlyReach, label: 'Monthly reach' },
               { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '~4h', label: 'Replies in' },

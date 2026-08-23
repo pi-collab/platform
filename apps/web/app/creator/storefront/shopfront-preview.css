@@ -1,3 +1,22 @@
+/* ── Container context ───────────────────────────────────────────────────────
+   The rules below are written twice: once against the viewport, once against
+   this element's own width.
+
+   The editor renders this component inside a 340px preview pane on a 1280px
+   screen (`sf-editor-shell` is `minmax(0,1fr) 340px`). A viewport media query
+   cannot see that, so the phone layout never applied there and the rate card's
+   name column was squeezed to nothing while the browser was, as far as CSS
+   knew, very wide.
+
+   The media queries stay for browsers without container query support, where
+   the public page — the one real brands use — still gets the right layout.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sf-root {
+  container-type: inline-size;
+  container-name: shopfront;
+}
+
 /* ── Shopfront preview, small screens ────────────────────────────────────────
    Imported by ShopfrontPreview itself rather than by a page, because the same
    component is the editor preview, the public /c/[slug] page and /browse/[id].
@@ -128,4 +147,180 @@
   .sf-rate-stepper {
     grid-column: 3 !important;
   }
+}
+
+
+/* ── The same rules, keyed to the container instead of the viewport ────── */
+
+@container shopfront (max-width: 767.98px) {
+  /* The audience block was a fixed `1.55fr 1fr` split with no collapse. Two
+     columns on a 390px phone give the right one about 130px, and its contents
+     do not fit: a grid item's default `min-width: auto` lets the donut and the
+     location rows push the track wider than its share, so the card ran off the
+     right edge with the percentages cut off. */
+  .sf-aud-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@container shopfront (max-width: 560px) {
+  /* Stats were a wrapping flex row with a 26px gap, so three items broke into
+     a 2 + 1 line whose second row sat under nothing. A three-up grid keeps
+     them on one line, and the rule dividers do the work the gap was failing to
+     do. */
+  .sf-hero-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    margin-top: 22px !important;
+  }
+
+  .sf-hero-stats > div {
+    text-align: center;
+    padding: 0 8px;
+    border-left: 1px solid var(--hairline);
+  }
+
+  .sf-hero-stats > div:first-child {
+    border-left: none;
+  }
+
+  /* 26px across a third of a 390px screen renders "6.4%" fine and "340K"
+     tight; 22 leaves room for the wider values without a second line. */
+  .sf-hero-stats > div > div:first-child {
+    font-size: 22px !important;
+  }
+
+  /* Two 180px pills stacked left-aligned read as a mistake rather than a
+     choice — they neither fill the row nor centre in it. One full-width
+     primary carries the action; rates become a quiet link under it, still
+     reachable but no longer competing with the offer button. */
+  .sf-hero-ctas {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-top: 24px !important;
+  }
+
+  .sf-hero-cta {
+    width: 100% !important;
+  }
+
+  .sf-hero-cta-alt {
+    width: 100% !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 6px 0 !important;
+    color: var(--ink-soft) !important;
+    text-decoration: underline !important;
+    text-underline-offset: 3px;
+  }
+
+  /* Tags sit between the bio and the stats. At 8px they read as one clump with
+     the sentence above; 10px separates the two without adding a rule. */
+  .sf-hero-tags {
+    gap: 7px !important;
+    margin-top: 14px !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  /* "Add what you need at <name>'s set rates. The total updates as you go."
+     is held on one line by design on desktop. On a phone that one line is
+     441px wide, which widened its parent and dragged the "Build your deal"
+     heading off the right edge with it — the heading looked broken, but the
+     paragraph was the cause. */
+  .sf-nowrap-desktop {
+    white-space: normal !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  /* Rate card rows.
+     The desktop grid is `48px minmax(0,1fr) 110px auto`. At 390px the fixed
+     tracks plus three 20px gaps exceed the row, so the 1fr resolved to ZERO —
+     the package name and its description had no width at all. The price and
+     stepper looked fine, which is why it read as a spacing problem rather than
+     a collapsed column.
+
+     Two rows instead: identity on the first, price and stepper on the second,
+     where the stepper has room to be a real tap target. */
+  .sf-rate-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto !important;
+    gap: 10px 12px !important;
+    padding: 16px 0 !important;
+  }
+
+  /* Icon shrinks; 48px is a lot of a 390px row to spend on decoration. */
+  .sf-rate-row > span:first-child {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Name and description take the whole width beside the icon. */
+  .sf-rate-name {
+    grid-column: 2 / -1;
+  }
+
+  /* Second row: price left, stepper right, under the name rather than
+     competing with it for the same line. */
+  .sf-rate-price {
+    grid-column: 2 !important;
+    text-align: left !important;
+    align-self: center;
+  }
+
+  .sf-rate-stepper {
+    grid-column: 3 !important;
+  }
+}
+
+/* ── Stat cards, two per row ──────────────────────────────────────────────────
+   `minmax(min(100%,220px),1fr)` needs 460px for two columns, so on any phone it
+   fell to one — four cards, each holding a short number and a two-word label,
+   stacked down a whole screen. The rest of the app already pairs figures like
+   this: the hero stats sit three-up with dividers, the age bands stay two-up,
+   the profile stat strip is three-up. This matches them.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .sf-stats-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  .sf-stats-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+}
+
+/* ── Rate card rows: flex, not grid, once the row is narrow ───────────────────
+   The grid version still starved the name at 340px — the editor's preview pane.
+   A fixed stepper track (110px) plus the icon plus gaps is charged against
+   EVERY row of the grid, including the one holding only the name, so the name
+   kept whatever was left, which was nothing.
+
+   Flex with wrapping asks the question the right way round: icon and name take
+   the first line, price and stepper wrap onto the second, and the name grows
+   into whatever the row actually has. No track competes with it.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .sf-rate-row { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px 12px !important; }
+  .sf-rate-row > span:first-child { flex: 0 0 40px; width: 40px !important; height: 40px !important; }
+  .sf-rate-name { flex: 1 1 140px; min-width: 0; }
+  .sf-rate-price { flex: 1 1 auto; text-align: left !important; }
+  .sf-rate-stepper { flex: 0 0 auto; margin-left: auto; justify-self: auto !important; }
+}
+
+@container shopfront (max-width: 767.98px) {
+  .sf-rate-row { display: flex !important; flex-wrap: wrap; align-items: center; gap: 8px 12px !important; }
+  .sf-rate-row > span:first-child { flex: 0 0 40px; width: 40px !important; height: 40px !important; }
+  .sf-rate-name { flex: 1 1 140px; min-width: 0; }
+  .sf-rate-price { flex: 1 1 auto; text-align: left !important; }
+  .sf-rate-stepper { flex: 0 0 auto; margin-left: auto; justify-self: auto !important; }
 }
