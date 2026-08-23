@@ -89,3 +89,43 @@
     white-space: normal !important;
   }
 }
+
+@media (max-width: 767.98px) {
+  /* Rate card rows.
+     The desktop grid is `48px minmax(0,1fr) 110px auto`. At 390px the fixed
+     tracks plus three 20px gaps exceed the row, so the 1fr resolved to ZERO —
+     the package name and its description had no width at all. The price and
+     stepper looked fine, which is why it read as a spacing problem rather than
+     a collapsed column.
+
+     Two rows instead: identity on the first, price and stepper on the second,
+     where the stepper has room to be a real tap target. */
+  .sf-rate-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto !important;
+    gap: 10px 12px !important;
+    padding: 16px 0 !important;
+  }
+
+  /* Icon shrinks; 48px is a lot of a 390px row to spend on decoration. */
+  .sf-rate-row > span:first-child {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Name and description take the whole width beside the icon. */
+  .sf-rate-name {
+    grid-column: 2 / -1;
+  }
+
+  /* Second row: price left, stepper right, under the name rather than
+     competing with it for the same line. */
+  .sf-rate-price {
+    grid-column: 2 !important;
+    text-align: left !important;
+    align-self: center;
+  }
+
+  .sf-rate-stepper {
+    grid-column: 3 !important;
+  }
+}

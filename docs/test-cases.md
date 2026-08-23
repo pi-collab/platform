@@ -1427,6 +1427,24 @@ The live path is `/c/<slug>` → `PublicStorefront` → "Create an offer" → `/
 - `app/c/[slug]/StorefrontPage.tsx`, `app/c/[slug]/PitchPanel.tsx` and `createDealFromStorefront` in `app/c/[slug]/actions.ts` are referenced by NOTHING. The page renders `PublicStorefront`
 - They implement a plausible-looking pitch flow with sessionStorage draft-saving, so reading them gives a confident and wrong picture of what happens. Verify against `page.tsx` before working on either
 
+### 59. Public shopfront on a phone
+
+**The rate card — the one that was actually broken**
+- [ ] Package NAME and DESCRIPTION are visible. The desktop grid is `48px minmax(0,1fr) 110px auto`; at 390px the fixed tracks plus three 20px gaps exceeded the row, so the 1fr resolved to **0px** and the name had no width at all. Verify by reading `gridTemplateColumns` — it must not contain `0px`
+- [ ] It reads as two rows on a phone: icon + name/description, then price + stepper beneath
+- [ ] Desktop is unchanged — four columns, name ~690px at 1280px, price still right-aligned
+- [ ] This is the failure mode to watch for generally: a collapsed `1fr` looks like a spacing problem, not a broken column, because everything ELSE still lines up
+
+**Handles**
+- [ ] No "@@" anywhere. 17 of 21 handles in `social_accounts` are stored WITH a leading "@" (and 23 of 25 in `creator_products`), so anything that prepends one must strip first
+- [ ] Platform links resolve: `instagram.com/<handle>` and `youtube.com/@<handle>` — NOT `youtube.com/@@<handle>`, which is a dead link
+- [ ] All of it goes through `lib/handle.ts` (`atHandle`, `profileUrl`). Five other files still carry their own `startsWith('@')` variant — deals, DealForm, ops — worth folding in next time one is touched
+
+**The rest of the page**
+- [ ] Zero horizontal page overflow across all 8 screens at 390px, and no heading, paragraph or button crossing the right edge outside a deliberate scroller
+- [ ] The brand marquee overflows ON PURPOSE and is clipped by its container — measure page overflow, not raw bounding boxes, or every tile reads as a bug
+- [ ] Quantity steppers are 30px. Below the 44px guideline but paired (− and +) inside a 42px control; acceptable, and worth revisiting if anyone reports mis-taps
+
 ---
 
 | When | What to run |

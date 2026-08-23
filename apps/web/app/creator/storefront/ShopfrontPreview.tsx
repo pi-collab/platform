@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, createContext
 // public /c/[slug] page and /browse/[id]. Rules kept in the editor's own
 // stylesheet only ever reached one of the three.
 import './shopfront-preview.css'
+import { atHandle, profileUrl } from '@/lib/handle'
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -317,7 +318,7 @@ export default function ShopfrontPreview({
                     {data.platforms.map(p => (
                       <a
                         key={p.platform}
-                        href={p.platform === 'instagram' ? `https://instagram.com/${p.handle.replace(/^@/, '')}` : `https://youtube.com/@${p.handle.replace(/^@/, '')}`}
+                        href={profileUrl(p.platform, p.handle) ?? '#'}
                         target="_blank" rel="noopener noreferrer"
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -333,7 +334,7 @@ export default function ShopfrontPreview({
                         ) : (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg>
                         )}
-                        @{p.handle.replace(/^@/, '')}
+                        {atHandle(p.handle)}
                       </a>
                     ))}
                     {data.slug && (
@@ -469,7 +470,7 @@ export default function ShopfrontPreview({
               {data.rateCardItems.map((item, i) => {
                 const q = qty[item.key] || 0
                 return (
-                  <div key={item.key} style={{
+                  <div key={item.key} className="sf-rate-row" style={{
                     display: 'grid', gridTemplateColumns: '48px minmax(0,1fr) 110px auto',
                     alignItems: 'center', gap: 20, padding: '20px 0',
                     borderTop: i === 0 ? 'none' : '1px solid var(--hairline)',
@@ -486,20 +487,20 @@ export default function ShopfrontPreview({
                     </span>
 
                     {/* Name + desc */}
-                    <div style={{ minWidth: 0 }}>
+                    <div className="sf-rate-name" style={{ minWidth: 0 }}>
                       <div className="t-subhead">{item.name}</div>
                       <div className="t-body" style={{ color: 'var(--ink-soft)', marginTop: 4 }}>{item.desc}</div>
                     </div>
 
                     {/* Price */}
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
+                    <div className="sf-rate-price" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 16, textAlign: 'right', color: 'var(--ink)' }}>
                       {item.priceLabel === null
                         ? <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink-faint)' }}>On request</span>
                         : (item.priceLabel ?? formatINR(item.pricePaise))}
                     </div>
 
                     {/* Stepper */}
-                    <div style={{
+                    <div className="sf-rate-stepper" style={{
                       justifySelf: 'end', display: 'inline-flex', alignItems: 'center', gap: 0,
                       background: 'var(--frost-1)', border: '1px solid var(--hairline)',
                       borderRadius: 999, padding: 5,
@@ -665,11 +666,11 @@ export default function ShopfrontPreview({
                       </span>
                       <div>
                         <div className="t-subhead" style={{ fontSize: 18 }}>{p.platform === 'instagram' ? 'Instagram' : 'YouTube'}</div>
-                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 1 }}>@{p.handle}</div>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 1 }}>{atHandle(p.handle)}</div>
                       </div>
                     </div>
                     <a
-                      href={p.platform === 'instagram' ? `https://instagram.com/${p.handle}` : `https://youtube.com/@${p.handle}`}
+                      href={profileUrl(p.platform, p.handle) ?? '#'}
                       target="_blank"
                       rel="noopener"
                       style={{
