@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { safeNext } from '@/lib/safe-next'
 import Link from 'next/link'
 import AuthShell, { AuthNavRight } from '@/components/AuthShell'
 import Toast from '@/components/Toast'
@@ -21,12 +22,18 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string; view?: string; reset?: string }
+  searchParams: { error?: string; view?: string; reset?: string; next?: string }
 }) {
+  // Where to land after signing in. A brand arriving from a creator's shopfront
+  // was writing a pitch; dropping them on the dashboard loses the pitch AND
+  // gives no clue why. /login/creator has always honoured this; the brand side
+  // never did.
+  const next = safeNext(searchParams.next, '/dashboard')
+  const nextQuery = next === '/dashboard' ? '' : `?next=${encodeURIComponent(next)}`
   // Signup used to be a view toggled inside this page. It has its own route
   // now, so anything still pointing here goes there instead of finding a view
   // that no longer exists.
-  if (searchParams.view === 'signup') redirect('/signup/brand')
+  if (searchParams.view === 'signup') redirect(`/signup/brand${nextQuery}`)
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,7 +61,7 @@ export default async function LoginPage({
         .eq('user_id', profile.id)
         .maybeSingle()
 
-      if (membership) redirect('/dashboard')
+      if (membership) redirect(next)
     }
 
     // Signed in but no brand yet — the design's "You're in." screen, pointing
@@ -100,7 +107,7 @@ export default async function LoginPage({
 
         {/* 'reset' is the only linkable view. The post-submit states are not
             reachable by URL, or they would claim an email nobody sent. */}
-        <BrandLoginForm initialView={searchParams.view === 'reset' ? 'reset' : 'login'} />
+        <BrandLoginForm initialView={searchParams.view === 'reset' ? 'reset' : 'login'} next={next} />
 
         {/* The reset happened on the previous page and revoked the session, so
             the confirmation has to travel here. Strips ?reset= once shown, or a

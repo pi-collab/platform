@@ -1,4 +1,5 @@
 import { redirect }     from 'next/navigation'
+import { safeNext } from '@/lib/safe-next'
 import SignOutButton    from '@/components/SignOutButton'
 import { createClient } from '@/lib/supabase/server'
 import OnboardingForm   from './OnboardingForm'
@@ -13,10 +14,15 @@ export const metadata = { title: 'Your brand · Guapd', robots: { index: false, 
  * with a neon hairline, floating pill nav, serif headline over it, and a white
  * card carrying the form.
  */
-export default async function OnboardingPage() {
+export default async function OnboardingPage(
+  { searchParams }: { searchParams?: { next?: string } },
+) {
+  // Onboarding is the last hop before a brand gets back to whatever sent them
+  // here — a creator's shopfront, with a pitch half-written.
+  const next = safeNext(searchParams?.next, '/dashboard')
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login/brand')
+  if (!user) redirect(next === '/dashboard' ? '/login/brand' : `/login/brand?next=${encodeURIComponent(next)}`)
 
   // If already onboarded, skip back to dashboard
   const { data: profile } = await supabase
@@ -25,7 +31,7 @@ export default async function OnboardingPage() {
   if (profile) {
     const { data: membership } = await supabase
       .from('brand_members').select('id').eq('user_id', profile.id).maybeSingle()
-    if (membership) redirect('/dashboard')
+    if (membership) redirect(next)
   }
 
   return (
@@ -55,7 +61,7 @@ export default async function OnboardingPage() {
 
       <div className="onboard-body">
         <div className="onboard-card onboard-card--bare">
-          <OnboardingForm />
+          <OnboardingForm  next={next} />
         </div>
       </div>
     </main>

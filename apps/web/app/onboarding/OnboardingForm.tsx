@@ -40,7 +40,7 @@ function Field({
   )
 }
 
-export default function OnboardingForm() {
+export default function OnboardingForm({ next = '/dashboard' }: { next?: string }) {
   const router = useRouter()
   const [state, action] = useFormState<OnboardingState, FormData>(submitOnboarding, null)
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS)
@@ -53,7 +53,7 @@ export default function OnboardingForm() {
   useEffect(() => {
     if (!done) return
     if (countdown <= 0) {
-      router.push('/dashboard')
+      router.push(next)
       router.refresh()
       return
     }
@@ -148,7 +148,7 @@ export default function OnboardingForm() {
             </p>
             <button
               type="button"
-              onClick={() => { router.push('/dashboard'); router.refresh() }}
+              onClick={() => { router.push(next); router.refresh() }}
               className="onboard-celebrate__cta cta"
             >
               Go to dashboard now

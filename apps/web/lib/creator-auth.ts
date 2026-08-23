@@ -1,19 +1,12 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { headers } from 'next/headers'
 import { creatorLoginUrl } from '@/lib/safe-next'
 
-/**
- * The path currently being rendered, from the `x-pathname` request header set
- * by middleware. Server components have no other way to read it.
- *
- * Returns null in contexts where the header is absent (e.g. a server action),
- * which callers should treat as "no specific destination".
- */
-export function currentPath(): string | null {
-  return headers().get('x-pathname')
-}
+// Imported for use here, and re-exported so existing importers (the creator
+// layout) keep working unchanged.
+import { currentPath } from '@/lib/current-path'
+export { currentPath }
 
 interface CreatorContext {
   userId: string

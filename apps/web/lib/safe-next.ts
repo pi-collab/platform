@@ -38,3 +38,17 @@ export function creatorLoginUrl(next?: string | null): string {
   const target = safeNext(next, '')
   return target ? `/login/creator?next=${encodeURIComponent(target)}` : '/login/creator'
 }
+
+/**
+ * Build the brand login URL, preserving where the brand was headed.
+ *
+ * The brand side had no equivalent of this, so `verifyBrand()` redirected to a
+ * bare /login/brand and threw the destination away. A brand clicking "Create an
+ * offer" on a creator's shopfront arrives at
+ * /deals/new?creator=<id>&items=<packages> — losing that query means losing
+ * both the creator and the packages they picked.
+ */
+export function brandLoginUrl(next?: string | null): string {
+  const target = safeNext(next, '')
+  return target ? `/login/brand?next=${encodeURIComponent(target)}` : '/login/brand'
+}

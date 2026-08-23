@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { safeNext } from '@/lib/safe-next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AuthShell, { AuthNavRight } from '@/components/AuthShell'
@@ -22,8 +23,12 @@ export const metadata = {
 export default async function BrandSignupPage({
   searchParams,
 }: {
-  searchParams: { error?: string }
+  searchParams: { error?: string; next?: string }
 }) {
+  // A brand arriving from a creator's shopfront is mid-pitch. Onboarding is a
+  // detour on the way back there, not the destination.
+  const next = safeNext(searchParams.next, '/dashboard')
+  const nextQuery = next === '/dashboard' ? '' : `?next=${encodeURIComponent(next)}`
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -35,9 +40,9 @@ export default async function BrandSignupPage({
     if (profile) {
       const { data: membership } = await supabase
         .from('brand_members').select('brand_id').eq('user_id', profile.id).maybeSingle()
-      if (membership) redirect('/dashboard')
+      if (membership) redirect(next)
     }
-    redirect('/onboarding')
+    redirect(`/onboarding${nextQuery}`)
   }
 
   return (
@@ -49,7 +54,7 @@ export default async function BrandSignupPage({
             confirmation state is showing, and a server component can't react
             to that. Same split that had /login titled "Brand login" over a
             signup form. */}
-        <BrandSignupForm oauthError={searchParams.error} />
+        <BrandSignupForm oauthError={searchParams.error} next={next} />
       </div>
     </AuthShell>
   )

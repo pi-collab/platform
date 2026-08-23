@@ -1,4 +1,6 @@
 import 'server-only'
+import { brandLoginUrl } from '@/lib/safe-next'
+import { currentPath } from '@/lib/current-path'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -25,10 +27,25 @@ interface BrandContext {
  *      returned so surfaces can label held work.
  *   4. Approved → return context
  */
+/**
+ * Onboarding, remembering where they were going.
+ *
+ * A brand part-way through signup who clicks "Create an offer" on a shopfront
+ * still has a destination worth keeping — otherwise finishing onboarding drops
+ * them on the dashboard and the creator they were about to pitch is gone.
+ */
+function onboardingWithNext(): string {
+  const path = currentPath()
+  const target = path && path.startsWith('/') && !path.startsWith('//') ? path : null
+  return target ? `/onboarding?next=${encodeURIComponent(target)}` : '/onboarding'
+}
+
 export async function verifyBrand(): Promise<BrandContext> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login/brand')
+  // Carries where they were going. This is what makes the shopfront → offer
+  // path survive a login: /deals/new?creator=…&items=… comes back intact.
+  if (!user) redirect(brandLoginUrl(currentPath()))
 
   const { data: profile } = await supabase
     .from('users')
@@ -36,7 +53,7 @@ export async function verifyBrand(): Promise<BrandContext> {
     .eq('auth_id', user.id)
     .maybeSingle()
 
-  if (!profile) redirect('/onboarding')
+  if (!profile) redirect(onboardingWithNext())
 
   const { data: membership } = await supabase
     .from('brand_members')
@@ -51,11 +68,11 @@ export async function verifyBrand(): Promise<BrandContext> {
       const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
       if (allowed.has(user.email.toLowerCase())) redirect('/ops')
     }
-    redirect('/onboarding')
+    redirect(onboardingWithNext())
   }
 
   const brand = (membership as any)?.brands
-  if (!brand) redirect('/onboarding')
+  if (!brand) redirect(onboardingWithNext())
 
   return {
     userId: user.id,

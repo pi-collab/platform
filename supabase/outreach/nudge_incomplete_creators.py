@@ -71,18 +71,38 @@ def sql(query):
     return json.loads(m.group(1)) if m else []
 
 
-def recipients():
-    """Incomplete creators who have not already been nudged."""
-    return sql(f"""
-        select c.id, c.phone
-        from creators c
-        where coalesce(nullif(trim(c.full_name), ''), null) is null
-          and c.phone is not null
+def recipients(include_nudged=False):
+    """Incomplete creators.
+
+    "Incomplete" is no full_name. Measured on production, that set is identical
+    to "no handle" and to "no handle in social_accounts" — 154 people by every
+    definition, and nobody has given a name without a handle. Onboarding
+    captures both in one step, so there is one cohort here, not three.
+
+    By default anyone already nudged is excluded: one message per creator, ever.
+    include_nudged lifts that, which means a SECOND message to someone who
+    ignored the first. That is a deliberate choice each time, not a default —
+    re-messaging non-responders is what degrades a sender's quality rating, and
+    this number also carries our OTPs.
+    """
+    # Without include_nudged: never message anyone twice.
+    # With it: still never message anyone twice IN THE SAME CAMPAIGN. A test
+    # batch of five is normally sent an hour before the rest, and lifting the
+    # guard wholesale would put those five back in the list and send them a
+    # duplicate the same afternoon. Re-nudging someone from days ago is the
+    # intent; re-nudging someone from this morning is an accident.
+    guard = f"""
           and not exists (
             select 1 from events e
             where e.event_type = '{EVENT_TYPE}'
               and e.detail->>'creator_id' = c.id::text
-          )
+              {"and e.created_at > now() - interval '24 hours'" if include_nudged else ""}
+          )"""
+    return sql(f"""
+        select c.id, c.phone
+        from creators c
+        where coalesce(nullif(trim(c.full_name), ''), null) is null
+          and c.phone is not null{guard}
         order by c.created_at
     """)
 
@@ -139,6 +159,9 @@ def main():
     ap.add_argument('--link', default='signup/creator/onboarding',
                     help='URL suffix for the template button (default: the onboarding step)')
     ap.add_argument('--limit', type=int, default=0, help='send to at most N (0 = all)')
+    ap.add_argument('--include-nudged', action='store_true',
+                    help='ALSO message creators who were already nudged (a second message to '
+                         'someone who ignored the first). Off by default on purpose.')
     ap.add_argument('--confirm', action='store_true', help='actually send (default: dry run)')
     args = ap.parse_args()
 
@@ -148,7 +171,7 @@ def main():
         print(f"  REFUSED: expected {EXPECTED_REF} (guapd-prod-mumbai).")
         sys.exit(9)
 
-    people = recipients()
+    people = recipients(include_nudged=args.include_nudged)
     if args.limit:
         people = people[:args.limit]
 

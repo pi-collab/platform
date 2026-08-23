@@ -19,7 +19,10 @@ import { trackEvent } from '@/lib/analytics'
  * toggle replaces it, which is why the eye control is functional rather than
  * decorative.
  */
-export default function BrandSignupForm({ oauthError }: { oauthError?: string }) {
+export default function BrandSignupForm({
+  oauthError,
+  next = '/dashboard',
+}: { oauthError?: string; next?: string }) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,7 +57,11 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: next === '/dashboard'
+          ? `${window.location.origin}/auth/callback`
+          : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
     setTimeout(() => setGoogleLoading(false), 5000)
   }
@@ -90,7 +97,7 @@ export default function BrandSignupForm({ oauthError }: { oauthError?: string })
     // Credentials that already work: a returning user, not a signup. Stay in
     // the loading state — the page navigates away and unmounts this form.
     if (res.status === 'signed_in') {
-      router.push('/onboarding')
+      router.push(next === '/dashboard' ? '/onboarding' : `/onboarding?next=${encodeURIComponent(next)}`)
       router.refresh()
       return
     }

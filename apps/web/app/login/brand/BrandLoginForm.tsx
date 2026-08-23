@@ -21,7 +21,11 @@ type View = 'login' | 'reset' | 'reset-sent'
  * Password reset is not in the export, but "Forgot password?" is, so it needs
  * somewhere to land. It reuses this panel rather than a separate page.
  */
-export default function BrandLoginForm({ initialView = 'login' }: { initialView?: View }) {
+export default function BrandLoginForm({
+  initialView = 'login',
+  /** Validated server-side by the page; a plain path by the time it arrives. */
+  next = '/dashboard',
+}: { initialView?: View; next?: string }) {
   const router = useRouter()
   const [view, setView] = useState<View>(initialView)
   const [email, setEmail] = useState('')
@@ -54,7 +58,11 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: next === '/dashboard'
+          ? `${window.location.origin}/auth/callback`
+          : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
     setTimeout(() => setGoogleLoading(false), 5000)
   }
@@ -81,7 +89,7 @@ export default function BrandLoginForm({ initialView = 'login' }: { initialView?
     }
 
     // Stays loading — the page navigates away and unmounts this form.
-    router.push('/dashboard')
+    router.push(next)
     router.refresh()
   }
 

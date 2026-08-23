@@ -1402,6 +1402,23 @@ Found by querying staging rather than by reading code: 23 of 25 `creator_product
 - [ ] Packages matching NO connected channel appear under "Not on a connected channel" with a Remove button. They still render on the shopfront, so hiding them here would leave a creator unable to see or delete something brands can see
 - [ ] Seeded data is not a substitute for production shapes: a harness with tidy handles passes while every real row fails
 
+### 58. Shopfront → offer survives login (brand acquisition path)
+
+The live path is `/c/<slug>` → `PublicStorefront` → "Create an offer" → `/deals/new?creator=<id>&items=<pkg:qty,...>` → `verifyBrand()`. NOT the PitchPanel flow — see the dead-code note below.
+
+- [ ] Logged-out brand clicking "Create an offer" lands on `/login/brand?next=…` with the FULL query preserved — both `creator` and `items`. Losing the query loses which creator and which packages they picked
+- [ ] After signing in with a password, they land on that destination, not `/dashboard`
+- [ ] Same via Google: the destination rides in `redirectTo=/auth/callback?next=…`, which the callback already validates
+- [ ] A brand with no account: `?view=signup` forwards `next` to `/signup/brand`, which forwards it to `/onboarding`, which lands on it at the end. This is the NEW brand — exactly who a shared shopfront link is meant to convert
+- [ ] A signed-in brand mid-onboarding keeps the destination too — all three `redirect('/onboarding')` calls in `verifyBrand` carry it
+- [ ] An already-signed-in brand hitting `/login/brand?next=…` is forwarded, not dumped on the dashboard
+- [ ] Open-redirect refused: `?next=https://evil.com`, `//evil.com`, `/\evil.com` all fall back to `/dashboard`. The value may appear in Next's internal RSC routing tree — that is the raw URL being echoed, not a link. Check `href`/`action` attributes, not raw page text
+- [ ] `x-pathname` (set in middleware) carries pathname AND search — that is what makes the query survive. Anything that trims it to the path silently breaks this
+
+**Dead code, deliberately left in place — do not mistake it for the live path**
+- `app/c/[slug]/StorefrontPage.tsx`, `app/c/[slug]/PitchPanel.tsx` and `createDealFromStorefront` in `app/c/[slug]/actions.ts` are referenced by NOTHING. The page renders `PublicStorefront`
+- They implement a plausible-looking pitch flow with sessionStorage draft-saving, so reading them gives a confident and wrong picture of what happens. Verify against `page.tsx` before working on either
+
 ---
 
 | When | What to run |
