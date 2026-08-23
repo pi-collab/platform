@@ -203,6 +203,29 @@ export default function ShopfrontPreview({
   const setItemQty = (key: string, delta: number) => {
     setQty(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }))
   }
+  /**
+   * Send the brand to the rate card rather than into the deal builder.
+   *
+   * Both top-level CTAs called onDealClick({}) — an empty selection — so a brand
+   * arrived at /deals/new with nothing chosen and had to rebuild the order they
+   * had just been looking at. The packages are the point of the page; the CTA's
+   * job is to get them there.
+   *
+   * "Proceed to create deal", at the foot of the rate card, is what moves on,
+   * and it already carries the selection.
+   */
+  const goToPackages = useCallback(() => {
+    const el = typeof document !== 'undefined' ? document.getElementById('packages') : null
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    // A shopfront with no rate card has nothing to select, so scrolling would
+    // strand them. Straight through in that case.
+    onDealClick?.({})
+  }, [onDealClick])
+
+
   // On-request items are excluded rather than counted as zero: a total that
   // silently omits a priced line is a quote a brand would hold us to.
   const rateTotal = data.rateCardItems.reduce(
@@ -370,7 +393,7 @@ export default function ShopfrontPreview({
                   {/* CTAs */}
                   <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
                     {onDealClick ? (
-                      <button onClick={() => onDealClick({})} className="g-btn-primary sf-hero-cta" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
+                      <button onClick={goToPackages} className="g-btn-primary sf-hero-cta" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
                         Create an offer
                       </button>
                     ) : (
@@ -1011,7 +1034,7 @@ export default function ShopfrontPreview({
                   Select deliverables from the rate card above, then create a structured offer. {firstName} will review and respond.
                 </p>
                 {onDealClick ? (
-                  <button onClick={() => onDealClick({})} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
+                  <button onClick={goToPackages} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                     Start a deal with {firstName}
                   </button>

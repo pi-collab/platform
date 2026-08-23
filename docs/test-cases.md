@@ -1402,6 +1402,14 @@ Found by querying staging rather than by reading code: 23 of 25 `creator_product
 - [ ] Packages matching NO connected channel appear under "Not on a connected channel" with a Remove button. They still render on the shopfront, so hiding them here would leave a creator unable to see or delete something brands can see
 - [ ] Seeded data is not a substitute for production shapes: a harness with tidy handles passes while every real row fails
 
+### 58a. Shopfront CTAs land in the rate card, not past it
+
+- [ ] "Create an offer" (hero) and "Start a deal with <name>" (footer) SCROLL to the Build your deal section. They do not navigate
+- [ ] Both previously called `onDealClick({})` — an empty selection — so a brand reached /deals/new with nothing chosen and had to rebuild the order they had just been reading
+- [ ] "Proceed to create deal", at the foot of the rate card, is the button that moves on, and it carries the selection
+- [ ] A shopfront with NO rate card falls through to the deal builder instead of scrolling, or the CTA would do nothing at all
+- [ ] Works at 390px and 1280px — the section lands flush at the top of the viewport in both
+
 ### 58. Shopfront → offer survives login (brand acquisition path)
 
 The live path is `/c/<slug>` → `PublicStorefront` → "Create an offer" → `/deals/new?creator=<id>&items=<pkg:qty,...>` → `verifyBrand()`. NOT the PitchPanel flow — see the dead-code note below.
