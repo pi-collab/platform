@@ -160,8 +160,6 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     brandCollabs,
     rateCardItems,
     sections,
-    bookingOpen: stats.booking_open ?? true,
-    spotsLeft: stats.spots_left ?? 2,
   }
 
   return <PublicStorefront data={shopfrontData} slug={storefront.slug} creatorId={creator.id} creatorName={storefront.display_name || creator.full_name} />

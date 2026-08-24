@@ -195,8 +195,6 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       brandCollabs,
       rateCardItems,
       sections,
-      bookingOpen: stats.booking_open ?? true,
-      spotsLeft: stats.spots_left ?? 2,
     }
 
     return (

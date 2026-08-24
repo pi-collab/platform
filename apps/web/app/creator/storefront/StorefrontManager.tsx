@@ -56,8 +56,6 @@ interface EditState {
   topLocations: { city: string; pct: number }[]
   contentItems: ContentItem[]
   brandCollabs: BrandCollab[]
-  bookingOpen: boolean
-  spotsLeft: number
 }
 
 function initEditState(creator: Creator | null, storefront: StorefrontRow | null): EditState {
@@ -95,8 +93,6 @@ function initEditState(creator: Creator | null, storefront: StorefrontRow | null
       { title: 'Get ready with me', type: 'Reel', brand: 'Brand', date: 'May 2026', views: '900K', engagement: '7.2%', saves: '22K' },
     ],
     brandCollabs: storedCollabs || workedWith.map(b => ({ name: b, type: 'Reel + Stories', views: '1.2M', engagement: '6.8%' })),
-    bookingOpen: (stats.booking_open as boolean) ?? true,
-    spotsLeft: (stats.spots_left as number) ?? 2,
   }
 }
 
@@ -188,7 +184,7 @@ function buildShopfrontData(
       topLocations: edit.topLocations,
     },
     contentItems: edit.contentItems, brandCollabs: edit.brandCollabs,
-    rateCardItems, sections, bookingOpen: edit.bookingOpen, spotsLeft: edit.spotsLeft,
+    rateCardItems, sections,
     // The creator is looking at their own shopfront; the offer buttons are for
     // brands on the public page.
     hideDealCta: true,
@@ -645,7 +641,6 @@ export default function StorefrontManager({
       engagement_rate: storefront?.stats?.engagement_rate,
       monthly_reach: edit.monthlyReach, repeat_brands: edit.repeatBrands,
       avg_deal_value: edit.avgDealValue, reply_time: edit.replyTime,
-      booking_open: edit.bookingOpen, spots_left: edit.spotsLeft,
       audience: { age_breakdown: edit.ageBreakdown, gender_women: edit.genderWomen, top_locations: edit.topLocations },
       content_items: edit.contentItems, brand_collabs: edit.brandCollabs,
     }
@@ -820,6 +815,9 @@ export default function StorefrontManager({
                 <Field label="Bio" hint="One or two lines telling brands what you bring to the table.">
                   <textarea value={edit.bio} onChange={e => set('bio', e.target.value)} placeholder="Everyday money, style and slow travel for a young Indian audience that actually buys." maxLength={500} rows={3} style={dtextarea} />
                 </Field>
+                <Field label="Reply time" hint="How fast you typically come back to a brand. Brands read this as a signal of how you work.">
+                  <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} style={dinput} />
+                </Field>
                 <Field label="Your niches" hint={edit.niches.length < 5 ? 'Type and press Enter or click Add. Up to 5.' : undefined}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: edit.niches.length > 0 ? 12 : 0 }}>
                     {edit.niches.map(n => (
@@ -920,41 +918,6 @@ export default function StorefrontManager({
                   Your rate card pulls from your products. <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
                 </div>
               </Section>
-
-              {/* ── Booking status ──────────────────────────── */}
-              <div style={{
-                borderRadius: 20, background: '#FFFFFF', padding: '18px 24px', marginBottom: 16,
-                boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 6px 12px rgba(22,23,15,.03)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: edit.bookingOpen ? 14 : 0 }}>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5, color: 'var(--ink)' }}>Booking status</div>
-                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-soft)', marginTop: 2 }}>
-                      {edit.bookingOpen ? 'You\'re open for work' : 'Currently closed'}
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => set('bookingOpen', !edit.bookingOpen)} style={{
-                    width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', position: 'relative',
-                    background: edit.bookingOpen ? 'var(--lime-400)' : '#D3DBE6', transition: 'background .2s',
-                  }}>
-                    <span style={{
-                      position: 'absolute', top: 3, width: 20, height: 20, borderRadius: '50%',
-                      background: '#FFFFFF', boxShadow: '0 1px 4px rgba(0,0,0,.15)',
-                      left: edit.bookingOpen ? 25 : 3, transition: 'left .2s',
-                    }} />
-                  </button>
-                </div>
-                {edit.bookingOpen && (
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-                    <Field label="Reply time" style={{ flex: 1, marginBottom: 0 }}>
-                      <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} style={dinputSmall} />
-                    </Field>
-                    <Field label="Spots left" style={{ width: 80, marginBottom: 0 }}>
-                      <input type="number" value={edit.spotsLeft} onChange={e => set('spotsLeft', Math.max(0, parseInt(e.target.value) || 0))} min={0} max={20} style={{ ...dinputSmall, textAlign: 'center' }} />
-                    </Field>
-                  </div>
-                )}
-              </div>
 
               {/* ── Audience ────────────────────────────────── */}
               <Section title="Audience" subtitle="Who follows you" icon={IconUsers}>

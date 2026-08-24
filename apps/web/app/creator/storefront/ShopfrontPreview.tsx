@@ -107,8 +107,6 @@ export interface ShopfrontData {
   // Sections
   sections: ShopfrontSection[]
   // Availability
-  bookingOpen: boolean
-  spotsLeft: number
 }
 
 // ── Helpers ─────────────────────────────────────────────────
