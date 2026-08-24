@@ -222,7 +222,14 @@ function PackageForm({
   })
   const [platform, handle] = splitKey(channelKey)
 
-  const typesForPlatform = PRODUCT_TYPES_BY_PLATFORM[platform] ?? PRODUCT_TYPES
+  const offered = PRODUCT_TYPES_BY_PLATFORM[platform] ?? PRODUCT_TYPES
+  // A package created before the deliverable list changed holds a type that is
+  // no longer offered. Without it in the options the select falls to the first
+  // entry, and saving would silently retype someone's package — so it is kept
+  // as a choice for as long as it is the current one.
+  const typesForPlatform = existing && !offered.includes(existing.product_type as ProductType)
+    ? [existing.product_type as ProductType, ...offered]
+    : offered
   const [productType, setProductType] = useState<string>(
     existing?.product_type ?? typesForPlatform[0],
   )

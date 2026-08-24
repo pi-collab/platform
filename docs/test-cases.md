@@ -1677,6 +1677,19 @@ Applies to BOTH the mobile and desktop dashboards.
 - [ ] Verify all four combinations: desktop and mobile, part-done and all-done. Both must agree
 - [ ] The desktop heading counts the steps in words ("Five steps to your first deal"), so adding another means editing that copy too
 
+### 72. Deliverable lists per platform
+
+- [ ] Instagram offers: Collab Reel · Reel · Static/Carousel · Story · Other / Custom
+- [ ] YouTube offers: Shorts · Long form · Integration · Other / Custom
+- [ ] Ops reads the SAME source (`PRODUCT_TYPES_BY_PLATFORM`), so its product form offers the same lists — check both after any change
+- [ ] Switching channel mid-form resets a deliverable the new platform does not offer
+
+**Retired names must keep working**
+- [ ] The old names (Sponsored Reel, YouTube Integration, Carousel Post…) remain in `PRODUCT_TYPES`. `savePackage` validates against that list, so removing them makes EDITING a pre-existing package fail on a value its creator never chose
+- [ ] Opening a package whose type is retired keeps that type SELECTED and listed first. Without it in the options the select falls to the first entry, and saving silently retypes someone's package — a data change nobody asked for and nobody would notice
+- [ ] Retired names are only offered on the package that already uses one; new packages never see them
+- [ ] "Other / Custom" keeps its spacing. Writing "Other/Custom" would create a second bucket that splits the aggregate
+
 ---
 
 | When | What to run |
