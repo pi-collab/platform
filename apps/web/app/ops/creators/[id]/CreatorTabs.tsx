@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { QUESTIONS, labelFor } from '@/lib/creator-onboarding-labels'
 import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
@@ -70,10 +71,10 @@ interface PairRate {
   brands: { id: string; name: string; platform_fee_percent: number } | null
 }
 
-const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Fee Rates', 'Portfolio & Brands'] as const
+const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Fee Rates', 'Portfolio & Brands', 'Questionnaire'] as const
 type Tab = typeof TABS[number]
 
-export default function CreatorTabs({ creator, products, deals, pairRates }: { creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
+export default function CreatorTabs({ onboarding, creator, products, deals, pairRates }: { onboarding: OnboardingResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -147,6 +148,7 @@ export default function CreatorTabs({ creator, products, deals, pairRates }: { c
       </div>
 
       {/* Tab content */}
+      {tab === 'Questionnaire' && <Questionnaire response={onboarding} />}
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
       {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
@@ -851,4 +853,62 @@ const formInputStyle: React.CSSProperties = {
   borderRadius: 4,
   fontSize: '0.875rem',
   outline: 'none',
+}
+
+/* ── Questionnaire ─────────────────────────────────────────────────────────── */
+
+interface OnboardingResponse {
+  biggest_pain: string
+  pain_other: string | null
+  deal_handling: string
+  monthly_deals: string
+  anything_else: string | null
+  created_at: string
+}
+
+/**
+ * What this creator said on the way in.
+ *
+ * Codes are mapped through the same definitions the form and the aggregate use,
+ * so a copy edit changes all three together rather than leaving this one
+ * printing `slow_payments` at somebody.
+ */
+function Questionnaire({ response }: { response: OnboardingResponse | null }) {
+  if (!response) {
+    return (
+      <p style={{ fontSize: '0.8125rem', color: '#888', lineHeight: 1.6 }}>
+        No response. Either they were approved before the questions existed, or they have not
+        reached their dashboard since being approved.
+      </p>
+    )
+  }
+
+  const rows: [string, string | null][] = [
+    [QUESTIONS[0].prompt, labelFor('biggest_pain', response.biggest_pain)],
+    ['In their words', response.pain_other],
+    [QUESTIONS[1].prompt, labelFor('deal_handling', response.deal_handling)],
+    [QUESTIONS[2].prompt, labelFor('monthly_deals', response.monthly_deals)],
+    ['Anything else', response.anything_else],
+  ]
+
+  return (
+    <div>
+      <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem' }}>
+        Answered {new Date(response.created_at).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        {rows.filter(([, v]) => v).map(([label, value]) => (
+          <div key={label}>
+            <div style={{
+              fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.06em', color: '#888', marginBottom: 3,
+            }}>{label}</div>
+            <div style={{ fontSize: '0.875rem', color: '#111', lineHeight: 1.5 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }

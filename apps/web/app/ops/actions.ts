@@ -1,6 +1,7 @@
 'use server'
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
+import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected } from '@/lib/account-emails'
@@ -138,6 +139,15 @@ export async function vetCreator(creatorId: string) {
   if (!before?.is_vetted) {
     await notifyCreatorApproved(creatorId)
     await notifyCreatorStatusChanged(creatorId, 'approved')
+
+    // Marks the post-approval questions as due for this creator. Gating on this
+    // event rather than on "has no answers yet" is what keeps the existing
+    // approved roster out of it — they have no such event, so they go straight
+    // to their dashboard instead of meeting a form mid-task.
+    await admin.from('events').insert({
+      event_type: QUESTIONS_DUE_EVENT,
+      detail: { creator_id: creatorId },
+    })
   }
 
   revalidatePath('/ops/creators')

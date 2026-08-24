@@ -1,0 +1,141 @@
+/* ── Post-approval questions ──────────────────────────────────────────────────
+   The page shell, heading and CTA are the onboarding ones from globals.css, so
+   this reads as the last step of signup rather than a form bolted on after it.
+   Only the option list is new — nothing existing selects one of several
+   choices, and a bare radio group would be the one default-looking thing in the
+   whole flow.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.wq-intro {
+  margin: 0 0 30px;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-soft, #565C68);
+}
+
+.wq-group { margin-bottom: 30px; }
+
+.wq-prompt {
+  display: block;
+  margin: 0 0 12px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink, #12151C);
+}
+
+.wq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* A button, not a styled <label>, so the hit area and the visual are the same
+   rectangle and there is nothing to mis-tap around the edges. */
+.wq-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--ink, #12151C);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.wq-option:hover { border-color: rgba(24, 28, 36, .22); }
+
+.wq-option[aria-pressed='true'] {
+  border-color: var(--neon-deep, #C9EB3C);
+  background: color-mix(in oklab, var(--neon, #E8FF66) 16%, #fff);
+  font-weight: 600;
+}
+
+/* The mark carries the selected state as shape as well as colour, so it does
+   not rely on the tint alone. */
+.wq-mark {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(24, 28, 36, .22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.wq-option[aria-pressed='true'] .wq-mark {
+  border-color: var(--neon-deep, #C9EB3C);
+  background: var(--neon, #E8FF66);
+}
+
+.wq-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  font-family: var(--font-ui);
+  /* 16px: below this Safari zooms on focus and pans the field out from under
+     the thumb mid-sentence. */
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink, #12151C);
+  resize: vertical;
+}
+
+.wq-textarea:focus {
+  outline: none;
+  border-color: var(--neon-deep, #C9EB3C);
+  box-shadow: 0 0 0 3px rgba(218, 254, 12, .18);
+}
+
+.wq-error {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(180, 38, 42, .06);
+  color: #B4262A;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+/* Disabled until all three are answered — the reason sits under the button, so
+   a greyed-out CTA is never a mystery. */
+.wq-cta:disabled { opacity: .45; cursor: not-allowed; }
+
+.wq-hint {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--ink-faint, #878D99);
+  text-align: center;
+}
+
+@media (max-width: 767.98px) {
+  /* The desktop card is a floating panel; on a phone it should feel like the
+     screen itself, matching the rest of the creator app. */
+  .wq-card {
+    padding: 26px 18px 30px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 1px 2px rgba(24, 28, 36, .04), 0 10px 18px -12px rgba(24, 28, 36, .16) !important;
+  }
+
+  .wq-intro { font-size: 13.5px; margin-bottom: 24px; }
+  .wq-group { margin-bottom: 26px; }
+  .wq-prompt { font-size: 14.5px; }
+  .wq-option { font-size: 14px; min-height: 50px; }
+}

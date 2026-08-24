@@ -108,6 +108,7 @@ ALTER TABLE events                ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_onboarding_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
@@ -456,6 +457,33 @@ CREATE POLICY creator_products_deny_delete
   ON creator_products FOR DELETE
   USING (false);
 
+
+-- ── creator_onboarding_responses ────────────────────────────────────
+-- The one-time post-approval questionnaire.
+-- SELECT/INSERT: a creator's own row only. Ops reads via the service role.
+-- No UPDATE, no DELETE: the answers are a point-in-time snapshot, and a
+-- roster that can rewrite its own answers is not a dataset worth having.
+
+DROP POLICY IF EXISTS creator_onboarding_select_own  ON creator_onboarding_responses;
+DROP POLICY IF EXISTS creator_onboarding_insert_own  ON creator_onboarding_responses;
+DROP POLICY IF EXISTS creator_onboarding_deny_update ON creator_onboarding_responses;
+DROP POLICY IF EXISTS creator_onboarding_deny_delete ON creator_onboarding_responses;
+
+CREATE POLICY creator_onboarding_select_own
+  ON creator_onboarding_responses FOR SELECT
+  USING (creator_id = my_creator_id());
+
+CREATE POLICY creator_onboarding_insert_own
+  ON creator_onboarding_responses FOR INSERT
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY creator_onboarding_deny_update
+  ON creator_onboarding_responses FOR UPDATE
+  USING (false);
+
+CREATE POLICY creator_onboarding_deny_delete
+  ON creator_onboarding_responses FOR DELETE
+  USING (false);
 
 -- ── phone_verifications ─────────────────────────────────────────────
 -- Contains phone numbers + OTP codes. NO client access at all.

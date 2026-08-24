@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { shouldAskOnboarding } from '@/lib/creator-onboarding'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -33,6 +34,10 @@ export default async function CreatorDashboardPage({
   // Checked here rather than in the layout: post-approval login lands on this
   // page, so it catches everyone without adding a query to every creator route.
   if (await shouldShowCreatorApproved(creatorId)) redirect('/signup/creator/approved')
+
+  // Backstop for the CTA. Someone who closes the tab on the questions would
+  // otherwise never see them again, and all three are required.
+  if (await shouldAskOnboarding(creatorId)) redirect('/creator/welcome')
   const supabase = createClient()
 
   // Date range filtering

@@ -1485,6 +1485,35 @@ Before this, approving a creator sent an email — which skips silently when the
 **Audit**
 - [ ] Every attempt writes an event: `creator.status_whatsapp_sent` / `_failed` / `_skipped`, with the reason and a MASKED number — the events table is readable in more places than the phone column
 
+### 62. Post-approval questionnaire (creator) + ops insights
+
+**The gate — only NEW approvals**
+- [ ] `vetCreator` writes a `creator.onboarding_questions_due` event on approval. The questionnaire shows only when that event exists AND no response row does
+- [ ] Creators approved BEFORE this shipped have no such event, so they go straight to the dashboard. Gating on "no answers yet" instead would ambush the whole existing roster mid-task and produce noisier answers than they are worth
+- [ ] "Go to dashboard" on the approval screen goes to `/creator/welcome`, not the dashboard
+- [ ] `/creator/dashboard` ALSO redirects to `/creator/welcome` when due-and-unanswered. Without this backstop, closing the tab means never seeing it again — and all three questions are required
+- [ ] `/creator/welcome` redirects straight to the dashboard once answered, so a bookmark or the back button cannot re-show it
+
+**The form**
+- [ ] "Continue to dashboard" is DISABLED until all three are answered, with the reason stated underneath — a greyed-out button with no explanation is a dead end
+- [ ] The free-text box appears under Q1 only when "Something else" is chosen, and is stored only when that answer is selected
+- [ ] "Anything else" is always visible and always optional
+- [ ] Textareas are 16px, or Safari zooms on focus mid-sentence
+- [ ] Uses the signup shell (`onboard-shell`, `onboard-card`, `onboard-cta`) so it reads as the last step of joining, not a form bolted on after it. NO tab bar — this is not a screen inside the product
+
+**The data**
+- [ ] Answers are stored as CODES, never display strings. This is what keeps the aggregate comparable across copy edits
+- [ ] `CHECK` constraints reject an unknown code (verified: 23514), and `UNIQUE (creator_id)` rejects a second row (verified: 23505)
+- [ ] A unique violation on submit is treated as SUCCESS — it means they already answered in another tab, which is the desired end state; failing would lock someone out of their own dashboard
+- [ ] RLS: SELECT/INSERT own row only; UPDATE and DELETE denied. A roster that can rewrite its own answers is not a dataset worth drawing conclusions from
+
+**Ops**
+- [ ] `/ops/insights` shows the distribution per question with bars and percentages, plus the free-text responses attributed by name
+- [ ] Every code maps to a label — watch for `UNMAPPED` in the output, which means the form and the aggregate have drifted
+- [ ] A creator's own answers appear on their ops detail page under a "Questionnaire" tab
+- [ ] Labels come from `lib/creator-onboarding-labels.ts` (client-safe) which the server-only gate re-exports — ops renders in a client component, so a single `server-only` module would not have worked
+- [ ] Logged out, `/ops/insights` renders the ops sign-in card and leaks NOTHING but the page title. Verify with a creator name, not just an HTTP status
+
 ---
 
 | When | What to run |

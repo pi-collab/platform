@@ -52,6 +52,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           <Link href="/ops/brands" style={{ color: '#555', textDecoration: 'none' }}>Brands</Link>
           <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>
           <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>
+          <Link href="/ops/insights" style={{ color: '#555', textDecoration: 'none' }}>Insights</Link>
           <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

@@ -45,7 +45,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     wantsWhatsapp: prefs.notify_whatsapp === true,
   }
 
-  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }] = await Promise.all([
+  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
@@ -70,6 +70,13 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
       .eq('event_type', 'creator.appeal_submitted')
       .contains('detail', { creator_id: params.id })
       .order('created_at', { ascending: false }),
+    // What they told us on the way in. Service role, like the rest of this page;
+    // RLS scopes creators to their own row, and ops is gated by email allowlist.
+    admin
+      .from('creator_onboarding_responses')
+      .select('biggest_pain, pain_other, deal_handling, monthly_deals, anything_else, created_at')
+      .eq('creator_id', params.id)
+      .maybeSingle(),
   ])
 
   return (
@@ -214,7 +221,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <CreatorTabs creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
+      <CreatorTabs onboarding={onboarding as never} creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
     </div>
   )
 }
