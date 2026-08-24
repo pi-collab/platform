@@ -1463,6 +1463,28 @@ The editor renders `ShopfrontPreview` inside a 340px pane on a desktop screen (`
 - [ ] The four stat cards are two per row on a phone. `minmax(min(100%,220px),1fr)` needs 460px for two columns, so every phone got one card per row — four near-empty cards down a whole screen
 - [ ] This matches the patterns already in use: hero stats three-up with dividers, age bands two-up, profile stat strip three-up. Reach for an existing pattern before inventing a layout
 
+### 61. Creator status changes reach the creator (WhatsApp + email)
+
+Before this, approving a creator sent an email — which skips silently when there is no address — and nothing else. Most creators sign up by phone. On staging, email alone reached **1 of 16** creators; WhatsApp reaches **16 of 16**.
+
+- [ ] Approving in ops sends BOTH `notifyCreatorApproved` (email) and the `status_update` WhatsApp template
+- [ ] Rejecting sends both too. The template says an update EXISTS rather than announcing the outcome — kinder than a rejection over WhatsApp, and reusable for the growth tier without a new approval queue
+- [ ] Only fires on a real transition (`!before.is_vetted` / `!before.is_rejected`), so re-clicking approve does not re-notify
+- [ ] A failed send NEVER fails the ops action — the decision is already recorded, and a creator who hears nothing is recoverable where a half-applied approval is not
+
+**Which number**
+- [ ] `users.preferences.whatsapp_phone` (nominated on the under-review screen) WINS over `creators.phone`, which is the login identity and often not where they read WhatsApp
+- [ ] `notify_whatsapp === false` is honoured. ABSENT means opted in — every creator predates the setting, and treating absent as "no" would silence the whole roster
+- [ ] A stub creator with no `users` row still gets the message; for them WhatsApp is the only channel
+- [ ] These rules used to live inside `notifyDealParty`, which is exactly why account-level messages reached nobody. They are in `lib/creator-whatsapp.ts` now — put any new rule there, not back in the deal path
+
+**The link**
+- [ ] Button value is the URL SUFFIX `creator/dashboard`, never a full URL — the base is baked into the approved template, and a full URL yields `https://guapd.com/https://guapd.com/…`
+- [ ] That one URL serves every status: rejected → rejection screen, pending → under-review page, approved → dashboard, logged out → login and back again. Verify all four before changing it
+
+**Audit**
+- [ ] Every attempt writes an event: `creator.status_whatsapp_sent` / `_failed` / `_skipped`, with the reason and a MASKED number — the events table is readable in more places than the phone column
+
 ---
 
 | When | What to run |

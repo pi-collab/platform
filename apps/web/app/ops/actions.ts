@@ -1,6 +1,7 @@
 'use server'
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
+import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected } from '@/lib/account-emails'
 import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
@@ -132,7 +133,12 @@ export async function vetCreator(creatorId: string) {
 
   // Only on a real transition. Re-vetting an already-vetted creator is an ops
   // no-op and must not email them a second time about the same decision.
-  if (!before?.is_vetted) await notifyCreatorApproved(creatorId)
+  // Email AND WhatsApp. Email reaches only creators who gave an address, and
+  // most signed up by phone — so on its own it notified almost nobody.
+  if (!before?.is_vetted) {
+    await notifyCreatorApproved(creatorId)
+    await notifyCreatorStatusChanged(creatorId, 'approved')
+  }
 
   revalidatePath('/ops/creators')
   return { success: true }
@@ -166,7 +172,13 @@ export async function rejectCreator(creatorId: string) {
 
   // Only on a real transition, so re-rejecting does not send the same bad news
   // twice. This is the one email nobody wants to receive by accident.
-  if (!before?.is_rejected) await notifyCreatorRejected(creatorId)
+  if (!before?.is_rejected) {
+    await notifyCreatorRejected(creatorId)
+    // Sent for a rejection too. The template says an update exists rather than
+    // announcing the outcome, and silence after applying is worse than a
+    // message that asks someone to look.
+    await notifyCreatorStatusChanged(creatorId, 'rejected')
+  }
 
   // Clear any past acknowledgement of the approved screen. Without this a
   // creator who was approved, saw it, was later rejected, and is then approved
