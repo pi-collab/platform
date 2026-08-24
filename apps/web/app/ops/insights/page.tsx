@@ -71,11 +71,19 @@ export default async function OpsInsightsPage() {
               // Said out loud, because a column of percentages adding to 180
               // otherwise reads as a bug in this page.
               note={q.multi ? 'Multi-select — a creator can pick several, so these add to more than 100%.' : undefined}
-              rows={tally(responses, q.key as QuestionKey).map(([code, n]) => ({
-                label: labelFor(q.key as QuestionKey, code),
-                count: n,
-                pct: Math.round((n / total) * 100),
-              }))}
+              // EVERY option, including ones nobody picked. A distribution that
+              // silently omits the unchosen reads as "not offered" rather than
+              // "offered and refused" — and which options fall flat is half of
+              // what the question was asked to find out.
+              rows={(() => {
+                const counts = Object.fromEntries(tally(responses, q.key as QuestionKey))
+                return q.options
+                  .map(o => {
+                    const c = counts[o.code] ?? 0
+                    return { label: o.label, count: c, pct: total ? Math.round((c / total) * 100) : 0 }
+                  })
+                  .sort((a, b) => b.count - a.count)
+              })()}
             />
           ))}
 
@@ -139,15 +147,20 @@ function Distribution({ title, note, rows }: {
         {rows.map(r => (
           <div key={r.label} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 56px', gap: '0.75rem', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.8125rem', color: '#111', marginBottom: 4 }}>{r.label}</div>
+              <div style={{ fontSize: '0.8125rem', color: r.count === 0 ? '#999' : '#111', marginBottom: 4 }}>{r.label}</div>
               {/* A bar as well as a number: a column of percentages hides the
                   shape of the answer, which is the thing worth seeing. */}
               <div style={{ height: 8, borderRadius: 20, background: '#EFEFEA', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${r.pct}%`, background: '#C9EB3C', borderRadius: 20 }} />
               </div>
             </div>
-            <div style={{ fontSize: '0.8125rem', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>
-              {r.pct}% <span style={{ color: '#888', fontWeight: 500 }}>({r.count})</span>
+            {/* Zero rows are greyed rather than hidden — the fact that nobody
+                picked an option is a result, not an absence. */}
+            <div style={{
+              fontSize: '0.8125rem', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap',
+              color: r.count === 0 ? '#bbb' : '#111',
+            }}>
+              {r.pct}% <span style={{ color: '#aaa', fontWeight: 500 }}>({r.count})</span>
             </div>
           </div>
         ))}

@@ -1626,6 +1626,9 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] After ANY column rename, grep the whole tree for the old name. Two of three call sites were updated by the type checker complaining; the third was a string inside `.select()`, which no compiler checks
 - [ ] Per-creator view joins the labels with a separator rather than printing one
 - [ ] The aggregate counts RESPONDENTS per option, so the percentages sum to over 100% — and the section says so, or the page reads as broken arithmetic
+- [ ] EVERY option is listed, including ones with zero picks. Omitting the unchosen reads as "not offered" rather than "offered and refused", and which options fall flat is half of what the question was asked to find out
+- [ ] Zero rows are greyed, not hidden. Nobody picking an option is a result
+- [ ] A creator who picks three options appears in three bars
 
 ### 69. Questionnaire modal sizing
 
