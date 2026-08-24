@@ -1649,6 +1649,18 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] Mobile is deliberately NOT pinned. The card is top-anchored and the CTA is fixed to the viewport, so nothing moves as it shrinks — forcing a height there would only add empty space
 - [ ] The question uses the dashboard's h2 exactly: `var(--font-display)`, weight 600, `clamp(23px, 2.2vw, 26px)`, `-0.02em`. The modal sits over that screen, so a different weight reads as a different product
 
+### 70. Desktop dashboard checklist matches mobile's steps
+
+- [ ] Desktop lists FOUR steps: Connect your socials, Set your packages, Set up your shopfront, Receive your first brief. Packages was missing — mobile has had it since the packages feature shipped
+- [ ] The heading counts them ("Four steps to your first deal"), so adding a step means updating the copy the export drew
+- [ ] Pills read **Done** for completed steps, **Set up** for the rest. The export drew every row as "Set up" regardless, which tells a creator to do something they have already done
+- [ ] MOBILE IS UNCHANGED. Its checklist and design are not touched by any of this
+
+**The font bug this surfaced**
+- [ ] Headings render in the `next/font` face, not system-ui. Check the computed `font-family` resolves to a hashed `__Schibsted_Grotesk_*` name
+- [ ] The export's scoped CSS must NOT declare `--font-display` / `--font-ui` / `--font-serif`. It names the families literally ("Schibsted Grotesk"), which only resolves via its own `@font-face` blocks — and those are dropped on import because next/font already serves them. Declared, they override the app's tokens with a name nothing loads, and every heading silently falls back to system-ui
+- [ ] The converter strips those tokens, so a re-import cannot reintroduce it
+
 ---
 
 | When | What to run |

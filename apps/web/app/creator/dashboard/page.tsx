@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
@@ -42,6 +43,7 @@ export default async function CreatorDashboardPage({
   // thing between approval and the product, and the product should be visible
   // behind them.
   const askOnboarding = await shouldAskOnboarding(creatorId)
+
 
   const supabase = createClient()
 
@@ -206,7 +208,13 @@ export default async function CreatorDashboardPage({
         populated dashboard rendering with nothing in it. */}
     {showMobileEmpty && (
       <div className="creator-empty-desktop">
-        <CreatorDashboardEmptyDesktop />
+        <CreatorDashboardEmptyDesktop
+          hasSocials={Array.isArray(creatorRow?.social_accounts)
+            && (creatorRow!.social_accounts as { handle?: string }[])
+                .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
+          hasPackages={(packageCount ?? 0) > 0}
+          hasShopfront={Boolean(storefront)}
+        />
       </div>
     )}
     <div

@@ -116,13 +116,9 @@
    Schibsted Grotesk (display/UI), Instrument Serif italic (editorial accent), JetBrains Mono (data/labels).
    Max 4 sizes per screen · left-aligned headlines · sentence case · 16px min body. */
 .cdash-desk {
-  /* ---- Families ---- */
-  --font-display: 'Schibsted Grotesk', system-ui, sans-serif;   /* headlines, hero, brand */
-  --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;        /* body, UI, dense data */
-  --font-serif: 'Instrument Serif', serif;          /* italic editorial accent word */
+  /* ---- Families ---- */   /* headlines, hero, brand */        /* body, UI, dense data */          /* italic editorial accent word */
   --font-num: 'Sora', system-ui, sans-serif;        /* all numeric figures — prices, stats, counts */
   --font-mono: 'JetBrains Mono', ui-monospace, monospace; /* labels, metadata, numbers */
-  --font-body: var(--font-ui);
 
   /* ---- Weights ---- */
   --weight-thin: 400;      /* Schibsted Grotesk has no thin weight */
@@ -394,13 +390,9 @@
    Schibsted Grotesk (display/UI), Instrument Serif italic (editorial accent), JetBrains Mono (data/labels).
    Max 4 sizes per screen · left-aligned headlines · sentence case · 16px min body. */
 .cdash-desk {
-  /* ---- Families ---- */
-  --font-display: 'Schibsted Grotesk', system-ui, sans-serif;   /* headlines, hero, brand */
-  --font-ui: 'Schibsted Grotesk', system-ui, sans-serif;        /* body, UI, dense data */
-  --font-serif: 'Instrument Serif', serif;          /* italic editorial accent word */
+  /* ---- Families ---- */   /* headlines, hero, brand */        /* body, UI, dense data */          /* italic editorial accent word */
   --font-num: 'Sora', system-ui, sans-serif;        /* all numeric figures — prices, stats, counts */
   --font-mono: 'JetBrains Mono', ui-monospace, monospace; /* labels, metadata, numbers */
-  --font-body: var(--font-ui);
 
   /* ---- Weights ---- */
   --weight-thin: 400;      /* Schibsted Grotesk has no thin weight */
@@ -636,9 +628,7 @@
   --amber:#B67C15; --amber-soft:#F3E6C6; --red:#C25640;
   --line:rgba(60,80,30,.10); --hair:rgba(60,80,30,.08);
   --lilac:#EEE9FA; --bone:#EDF0F5;
-  --sh-2:0 0 0 1px rgba(26,27,22,.08),0 20px 48px -30px rgba(40,45,25,.20);
-  --font-display:'Schibsted Grotesk',system-ui,sans-serif; --font-ui:'Schibsted Grotesk',system-ui,sans-serif; --font-body:'Schibsted Grotesk',system-ui,sans-serif; --font-label:'Schibsted Grotesk',system-ui,sans-serif; --font-eyebrow:'Schibsted Grotesk',system-ui,sans-serif; --font-mono:'Schibsted Grotesk',system-ui,sans-serif;
-  --font-serif:'Instrument Serif',Georgia,serif; --meta:#565C68;
+  --sh-2:0 0 0 1px rgba(26,27,22,.08),0 20px 48px -30px rgba(40,45,25,.20); --font-label:'Schibsted Grotesk',system-ui,sans-serif; --font-eyebrow:'Schibsted Grotesk',system-ui,sans-serif; --font-mono:'Schibsted Grotesk',system-ui,sans-serif; --meta:#565C68;
   --sec:#F4F8FC; --sec-2:#F7F4FB; --sec-mid:#E4ECF3; --sec-mid-2:#E8E2F0; --sec-ink:#79809C;
 
   /* ==== Bridge — base DS variable names mapped onto the canonical values ==== */

@@ -17,7 +17,38 @@ import './dashboard-desktop.css'
  * Schibsted Grotesk and Instrument Serif, and shipping them again would refetch
  * the same faces from a second source.
  */
-export default function CreatorDashboardEmptyDesktop() {
+export default function CreatorDashboardEmptyDesktop({
+  hasSocials = false,
+  hasPackages = false,
+  hasShopfront = false,
+}: {
+  hasSocials?: boolean
+  hasPackages?: boolean
+  hasShopfront?: boolean
+}) {
+  // The export draws every row with a "Set up" pill. A checklist that says
+  // "Set up" against something already done is worse than no checklist, so the
+  // pill reflects state — same shape, same place.
+  const Pill = ({ done }: { done: boolean }) => done ? (
+    <span className="pillbtn" style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+      minWidth: '110px', borderRadius: 'var(--radius-pill)', padding: '10px 18px',
+      fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '12.5px',
+      color: '#166534', background: 'rgba(22,101,52,.08)', border: '1px solid transparent',
+    }}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+      Done
+    </span>
+  ) : (
+    <span className="pillbtn" style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      minWidth: '110px', borderRadius: 'var(--radius-pill)', padding: '10px 18px',
+      fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '12.5px',
+      color: '#fff', background: 'var(--ink)', border: '1px solid transparent',
+    }}>Set up</span>
+  )
+
   return (
     <div className="cdash-desk">
       <div style={{minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: 'var(--font-ui)', color: 'var(--ink)', background: '#F5F7FA'}}>
@@ -71,20 +102,26 @@ export default function CreatorDashboardEmptyDesktop() {
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px'}}>
                 <div>
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: '#fff', background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '4px 12px'}}>Get started</span>
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Three steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div></h2>
+                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Four steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div></h2>
                 </div>
               </div>
               <div>
                 <a href="/creator/settings?tab=profile" className="drow" style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', textDecoration: 'none'}}>
                   <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg></span>
                   <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Connect your socials</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>Get analytics on your reach and engagement so brands can see your value</div></div>
-                  <span className="pillbtn" style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '110px', borderRadius: 'var(--radius-pill)', padding: '10px 18px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '12.5px', color: '#fff', background: 'var(--ink)', border: '1px solid transparent'}}>Set up</span>
+                  <Pill done={hasSocials} />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                </a>
+                <a href="/creator/packages?from=dashboard" className="drow" style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', textDecoration: 'none'}}>
+                  <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1.4" /></svg></span>
+                  <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Set your packages</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>What you offer and what it costs, so brands can send you a real brief</div></div>
+                  <Pill done={hasPackages} />
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </a>
                 <a href="/creator/storefront" className="drow" style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', borderTop: '1px solid var(--hair)', textDecoration: 'none'}}>
                   <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12" /><path d="M9 21v-6h6v6" /></svg></span>
                   <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Set up your shopfront</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>Showcase your rates and packages so brands can book you</div></div>
-                  <span className="pillbtn" style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '110px', borderRadius: 'var(--radius-pill)', padding: '10px 18px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '12.5px', color: '#fff', background: 'var(--ink)', border: '1px solid transparent'}}>Set up</span>
+                  <Pill done={hasShopfront} />
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </a>
                 <div style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', borderTop: '1px solid var(--hair)'}}>

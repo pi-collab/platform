@@ -64,6 +64,16 @@ n = len(re.findall(r'(?m)^\s*body\s*\{', css))
 css = re.sub(r'(?m)^\s*body\s*\{[^}]*\}', '', css)
 step('bare body reset dropped', n, 0)
 
+# Font tokens are dropped, not scoped. The export declares them by family NAME
+# ("Schibsted Grotesk"), which only resolves if its @font-face blocks come too —
+# and those are dropped above because next/font already serves the same faces.
+# Kept, they override the app's tokens with a name nothing loads, and every
+# heading silently falls back to system-ui. Removing them lets the app's own
+# definitions cascade in.
+n = len(re.findall(r'--font-(?:display|ui|serif|body|heading)\s*:', css))
+css = re.sub(r'\s*--font-(?:display|ui|serif|body|heading)\s*:[^;]+;', '', css)
+step('font tokens removed (app :root provides them)', n, 0)
+
 n = len(re.findall(r':root\s*\{', css))
 css = css.replace(':root', SCOPE)
 step(f'":root" rewritten to {SCOPE}', n, 0)
