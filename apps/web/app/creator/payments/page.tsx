@@ -106,26 +106,33 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
 
   // No invoices at all. PaymentsClient renders totals, tabs and a table — all
   // chrome for rows that do not exist.
-  if (all.length === 0) {
-    // Service role: upi_id is withheld from the client roles as PII, so the
-    // session client cannot read it back.
+  // Both render when there are no invoices; the width decides which is visible.
+  // Returning the mobile design early fired at every width, so a creator on a
+  // desktop never reached the payments screen.
+  const isEmpty = all.length === 0
+
+  // Service role: upi_id is withheld from the client roles as PII, so the
+  // session client cannot read it back. Only needed for the empty screen.
+  let emptyUpiId: string | null = null
+  if (isEmpty) {
     const admin = createAdminClient()
     const { data: creatorRow } = await admin
       .from('creators')
       .select('upi_id')
       .eq('id', ctx.creatorId)
       .maybeSingle()
-
-    return (
-      <main style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorPageHeader title="Payments" backHref={backHref} />
-        <CreatorPaymentsEmpty upiId={creatorRow?.upi_id ?? null} totalEarnedPaise={totalEarnedPaise} />
-      </main>
-    )
+    emptyUpiId = (creatorRow as { upi_id?: string | null } | null)?.upi_id ?? null
   }
 
   return (
-    <main style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
+    <>
+    {isEmpty && (
+      <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorPageHeader title="Payments" backHref={backHref} />
+        <CreatorPaymentsEmpty upiId={emptyUpiId} totalEarnedPaise={totalEarnedPaise} />
+      </main>
+    )}
+    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
       <PaymentsClient
         totalEarnedPaise={totalEarnedPaise}
         pendingAmountPaise={pendingAmountPaise}
@@ -134,6 +141,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         history={history}
       />
     </main>
+    </>
   )
 }
 

@@ -1544,6 +1544,17 @@ Before this, approving a creator sent an email — which skips silently when the
 - [ ] Only `CreatorDashboardEmpty` uses `.creator-app__inner`, so the width change reaches nothing else. Re-check that before reusing the class
 - [ ] The general lesson: a screen ported from a mobile export is not responsive because it fits a phone. Open every one at 1280px before calling it done
 
+### 64. Empty states are MOBILE designs — desktop keeps its own screens
+
+The five creator empty states were transcribed from files named `... Empty - Mobile.html`. They were then returned EARLY from the route, and that early return fires at every width — so a creator on a desktop with no deals got the phone card instead of the deals screen, and the desktop design was never reached. Nothing was deleted; the desktop path was simply skipped.
+
+- [ ] Desktop (≥768px) with an empty list shows the ORIGINAL screen — `CreatorDealsTable`, `NotificationFeed`, `PaymentsClient`, the real dashboard — rendering empty
+- [ ] Mobile (<768px) shows the transcribed empty design, unchanged
+- [ ] Exactly ONE of the two is visible at any width. Verify at 1440px and 390px
+- [ ] A populated list is unaffected at every width — the gate only applies when the list is empty
+- [ ] `/creator/profile` is NOT affected: it is a new route with no desktop predecessor and is not linked from the desktop sidebar
+- [ ] The lesson: an early return is a routing decision, not a layout one. A design that exists only for one width must be gated by width, not returned from the route
+
 ---
 
 | When | What to run |

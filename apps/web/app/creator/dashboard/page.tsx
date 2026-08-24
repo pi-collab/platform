@@ -166,17 +166,23 @@ export default async function CreatorDashboardPage({
     .neq('status', 'cancelled')
     .neq('status', 'declined')
 
-  if ((dealsEverCount ?? 0) === 0) {
-    // The handle line is drawn as "@handle · N followers" in the export. Only
-    // what we actually know is shown: an invented follower count on a creator's
-    // own dashboard is a number they will immediately know is wrong.
-    const handle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
-    const handleLine = handle ? `@${handle}` : 'Finish your profile to get discovered'
-    return (
-      <>
+  // Mobile only, like the other empty screens. It is a transcription of a
+  // mobile export; on a desktop the real dashboard should render, empty.
+  const showMobileEmpty = (dealsEverCount ?? 0) === 0
+  // The handle line is drawn as "@handle · N followers" in the export. Only
+  // what we actually know is shown: an invented follower count on a creator's
+  // own dashboard is a number they will immediately know is wrong.
+  const emptyHandle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
+  const emptyHandleLine = emptyHandle ? `@${emptyHandle}` : 'Finish your profile to get discovered'
+
+  // Rendered alongside the real dashboard rather than instead of it. This is a
+  // transcription of a MOBILE export; returning it early fired at every width,
+  // so a creator on a desktop with no deals never saw the desktop dashboard.
+  const mobileEmpty = showMobileEmpty ? (
+    <div className="creator-empty-mobile">
       <CreatorDashboardEmpty
         firstName={firstName}
-        handleLine={handleLine}
+        handleLine={emptyHandleLine}
         // Done when a social account carries a handle — the row exists from
         // signup, so its mere presence would mark the step complete before the
         // creator had done anything.
@@ -186,22 +192,19 @@ export default async function CreatorDashboardPage({
         hasPackages={(packageCount ?? 0) > 0}
         hasShopfront={Boolean(storefront)}
       />
-      {/* Over whichever dashboard state they land on. Rendered here rather
-          than in the layout so it appears only where it is due, and portals to
-          <body> so the tab bar cannot paint over it. */}
-      {askOnboarding && (
-        <WelcomeQuestions questions={QUESTIONS.map(q => ({ ...q, options: [...q.options] }))} />
-      )}
-      </>
-    )
-  }
+    </div>
+  ) : null
 
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
 
   return (
     <>
-    <div style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+    {mobileEmpty}
+    <div
+      className={showMobileEmpty ? 'creator-empty-desktop' : undefined}
+      style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}
+    >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <RealtimeDashboardListener />
 

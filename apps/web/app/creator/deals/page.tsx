@@ -45,21 +45,25 @@ export default async function CreatorDealsPage() {
   // No deals at all. CreatorDealsTable renders a toolbar, column headers and
   // filters — chrome for a list that does not exist — so the empty state
   // replaces the screen rather than sitting inside it.
-  if (all.length === 0) {
-    return (
-      <main style={{ position: 'relative', zIndex: 1 }}>
+  // Both render when there are no deals; the width decides which is visible.
+  // Returning the mobile design early fired at every width, so a creator on a
+  // desktop with no deals never reached the deals screen.
+  const isEmpty = all.length === 0
+
+  return (
+    <>
+    {isEmpty && (
+      <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="My deals" backHref="/creator/dashboard" />
         <CreatorDealsEmpty />
       </main>
-    )
-  }
-
-  return (
-    <main style={wrapper}>
+    )}
+    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={wrapper}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <CreatorDealsTable deals={all} />
       </div>
     </main>
+    </>
   )
 }
 

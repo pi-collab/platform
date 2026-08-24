@@ -57,9 +57,15 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
   // Nothing to show. The feed renders its own header and chrome, so an empty
   // list would still draw a toolbar over blank space — the designed empty state
   // replaces the whole screen rather than sitting inside it.
-  if (all.length === 0) {
-    return (
-      <main style={{ position: 'relative', zIndex: 1 }}>
+  // Both render when there is nothing to show; the width decides which is
+  // visible. Returning the mobile design early fired at every width, so a
+  // creator on a desktop never saw the desktop screen at all.
+  const isEmpty = all.length === 0
+
+  return (
+    <>
+    {isEmpty && (
+      <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="Notifications" backHref={backHref} />
         <CreatorEmptyState
           icon={<BellIcon />}
@@ -67,11 +73,8 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
           body="No new notifications. Updates about offers, deals and payments will show up here."
         />
       </main>
-    )
-  }
-
-  return (
-    <main style={wrapper}>
+    )}
+    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={wrapper}>
       <NotificationFeed
         notifications={all}
         dealLinkPrefix="/creator/deals"
@@ -80,6 +83,7 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
         variant="creator"
       />
     </main>
+    </>
   )
 }
 
