@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
+import { saveFollowerCounts } from './actions'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
@@ -591,6 +592,18 @@ export default function StorefrontManager({
   // than stored, so it cannot drift from the numbers above it. Floored at zero:
   // the inputs are clamped now, but a shopfront saved before that clamp existed
   // can still hold bands that overflow 100.
+  // Follower counts, keyed per channel. Held apart from `edit` because they
+  // belong to creators.social_accounts, not the storefront row — a different
+  // table with a different save.
+  const [followers, setFollowers] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      ((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string; follower_count?: number }>)
+        .filter(a => a?.handle)
+        .map(a => [`${a.platform}|${a.handle}`, String(a.follower_count ?? 0)]),
+    ),
+  )
+  const [savingFollowers, setSavingFollowers] = useState(false)
+
   const ageRemainder = Math.max(
     0,
     100 - (edit.ageBreakdown ?? []).slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0),
@@ -699,22 +712,31 @@ export default function StorefrontManager({
             borderRadius: 20, background: '#FFFFFF', padding: 28, marginBottom: 30,
             boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 6px 12px rgba(22,23,15,.03)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-              <div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(26px,3vw,34px)', lineHeight: 1.05, letterSpacing: '-0.025em', color: 'var(--ink)', margin: 0 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(24px,2.6vw,30px)', lineHeight: 1.15, letterSpacing: '-0.02em', margin: 0, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
                   Build your{' '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.12em' }}>storefront</span>
                 </h1>
-                <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '8px 0 0' }}>
-                  This is how brands discover and evaluate you. Fill it in, preview it, publish when ready.
-                </p>
+
+                {/* Icon only. The word sat beside a title that had to wrap to
+                    make room for it; an eye needs no label and gives the
+                    heading its line back. */}
+                <button
+                  onClick={() => setMode('preview')}
+                  aria-label="Preview shopfront"
+                  title="Preview"
+                  style={{ ...secondBtn, flexShrink: 0, width: 40, height: 40, padding: 0, gap: 0, justifyContent: 'center' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+                </button>
               </div>
-              <button onClick={() => setMode('preview')} style={{
-                ...secondBtn, flexShrink: 0,
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-                Preview
-              </button>
+
+              {/* Full width, under the title row. It was sharing the line with
+                  the preview button and wrapping at half the available space. */}
+              <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '10px 0 0' }}>
+                This is how brands discover and evaluate you. Fill it in, preview it, publish when ready.
+              </p>
             </div>
           </div>
 
@@ -936,6 +958,65 @@ export default function StorefrontManager({
 
               {/* ── Audience ────────────────────────────────── */}
               <Section title="Audience" subtitle="Who follows you" icon={IconUsers}>
+                <Field label="Followers" hint="Per channel. Brands see the total at the top of your shopfront.">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
+                      .filter(a => a?.handle)
+                      .map(a => {
+                        const k = `${a.platform}|${a.handle}`
+                        return (
+                          <div key={k} style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
+                          }}>
+                            <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {a.platform} &middot; @{String(a.handle).replace(/^@/, '')}
+                            </span>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              aria-label={`Followers on ${a.platform}`}
+                              value={followers[k] ?? '0'}
+                              onChange={e => {
+                                // Digits only, and stored as a STRING so a leading zero can
+                                // be typed over rather than sticking — the same bug the age
+                                // bands had.
+                                const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
+                                setFollowers(f => ({ ...f, [k]: digits }))
+                              }}
+                              style={{ width: 110, textAlign: 'right', border: 'none', background: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}
+                            />
+                          </div>
+                        )
+                      })}
+                    {((creator?.social_accounts ?? []) as unknown[]).length === 0 && (
+                      <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
+                        Add a channel on your profile first.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      disabled={savingFollowers}
+                      onClick={async () => {
+                        setSavingFollowers(true)
+                        const res = await saveFollowerCounts(
+                          Object.entries(followers).map(([k, v]) => {
+                            const [platform, handle] = k.split('|')
+                            return { platform, handle, followers: parseInt(v || '0', 10) }
+                          }),
+                        )
+                        setSavingFollowers(false)
+                        setSaveMsg(res.ok
+                          ? { type: 'ok', text: 'Follower counts saved.' }
+                          : { type: 'err', text: res.message })
+                      }}
+                      style={{ ...secondBtn, alignSelf: 'flex-start' }}
+                    >
+                      {savingFollowers ? 'Saving…' : 'Save followers'}
+                    </button>
+                  </div>
+                </Field>
+
                 <Field label="Age breakdown">
                   <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                     {edit.ageBreakdown.map((age, i) => (

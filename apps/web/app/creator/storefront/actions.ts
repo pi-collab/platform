@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
 
@@ -299,4 +300,60 @@ export async function checkSlugAvailable(slug: string): Promise<{ available: boo
   }
 
   return { available: true }
+}
+
+/**
+ * Follower counts, per connected channel.
+ *
+ * They live in creators.social_accounts — a JSONB array the editor has always
+ * READ (the audience section renders them) and never let anyone write. So a
+ * creator could see "0 followers" on their own shopfront with no way to correct
+ * it short of asking ops.
+ *
+ * Merged into the existing entries rather than replacing the array: handles and
+ * platforms are owned by the profile screen, and rewriting the whole array here
+ * would let a stale editor tab undo a handle changed elsewhere.
+ */
+export async function saveFollowerCounts(
+  counts: { platform: string; handle: string; followers: number }[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const ctx = await verifyCreator()
+  const admin = createAdminClient()
+
+  const { data: creator } = await admin
+    .from('creators')
+    .select('social_accounts')
+    .eq('id', ctx.creatorId)
+    .maybeSingle()
+
+  const existing = (creator?.social_accounts ?? []) as Array<Record<string, unknown>>
+  if (existing.length === 0) return { ok: false, message: 'Add a channel first.' }
+
+  const key = (p: unknown, h: unknown) =>
+    `${String(p ?? '').trim().toLowerCase()}|${String(h ?? '').trim().replace(/^@/, '').toLowerCase()}`
+
+  const wanted = new Map(counts.map(c => [key(c.platform, c.handle), c.followers]))
+
+  const merged = existing.map(a => {
+    const n = wanted.get(key(a.platform, a.handle))
+    if (n == null) return a
+    // A follower count is a whole, non-negative number. The cap is a typo guard:
+    // no Indian creator has 10 billion followers, and a slipped digit published
+    // on a shopfront is worse than a rejected save.
+    if (!Number.isFinite(n) || n < 0 || n > 10_000_000_000) return a
+    return { ...a, follower_count: Math.round(n) }
+  })
+
+  const { error } = await admin
+    .from('creators')
+    .update({ social_accounts: merged })
+    .eq('id', ctx.creatorId)
+
+  if (error) {
+    console.error(`[storefront] follower save failed creator=${ctx.creatorId}: ${error.message}`)
+    return { ok: false, message: 'Could not save that. Please try again.' }
+  }
+
+  revalidatePath('/creator/storefront')
+  return { ok: true }
 }
