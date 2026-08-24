@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 const LENGTH = 6
 
@@ -31,6 +31,42 @@ export default function OtpInput({
   autoFocus?: boolean
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([])
+
+  // Android: read the code straight from the SMS.
+  //
+  // iOS needs nothing here — autocomplete="one-time-code" plus the spreading in
+  // handleChange is the whole mechanism, and Safari matches the message by
+  // heuristic. Android has no such heuristic: WebOTP only fires when the SMS
+  // ENDS with a line of the form "@<host> #<code>".
+  //
+  // Our SMS cannot say that yet. The DLT-approved template is fixed
+  // character-for-character — "{#num#} is your Guapd verification code. Do not
+  // share it with anyone." — and changing it means a new DLT approval. So this
+  // sits dormant until that lands, and works the day it does without a deploy.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!('OTPCredential' in window)) return
+
+    const ac = new AbortController()
+    navigator.credentials
+      .get({ otp: { transport: ['sms'] }, signal: ac.signal } as CredentialRequestOptions)
+      .then((cred) => {
+        const code = (cred as { code?: string } | null)?.code
+        if (!code) return
+        const digits = code.replace(/\D/g, '').slice(0, LENGTH)
+        if (!digits) return
+        onChange(digits)
+        if (digits.length === LENGTH) onComplete?.(digits)
+      })
+      // Aborted on unmount, declined by the user, or simply never delivered.
+      // None of those is a problem worth surfacing — the code can be typed.
+      .catch(() => {})
+
+    return () => ac.abort()
+    // Deliberately once per mount: re-requesting on every keystroke would
+    // cancel the outstanding request and re-prompt.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function set(next: string) {
     const clean = next.replace(/\D/g, '').slice(0, LENGTH)
@@ -107,7 +143,10 @@ export default function OtpInput({
             inputMode="numeric"
             // Only the first cell claims the SMS code, or the browser offers
             // to autofill the whole code into every box.
-            autoComplete="one-time-code"
+            // First box only. Declared on all six, some browsers put the whole
+            // code in each one and others refuse to fill at all; the spreading
+            // in handleChange takes it from there.
+            autoComplete={i === 0 ? 'one-time-code' : 'off'}
             maxLength={1}
             disabled={disabled}
             autoFocus={autoFocus && i === 0}

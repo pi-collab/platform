@@ -1589,6 +1589,24 @@ The login page used to answer an unknown number with "No account yet" and a link
 - [ ] This REMOVES account enumeration from the login page: the reply to a known and an unknown number is now identical. It used to confirm which numbers had accounts to anyone who asked
 - [ ] It also means an unknown number typed into LOGIN now spends an OTP. The rate limiting in signup's `sendOTP` is what bounds that — confirm it still applies before widening this pattern anywhere else
 
+### 67. OTP autofill on a phone
+
+- [ ] `autocomplete="one-time-code"` sits on the FIRST box only, `off` on the other five. Declared on all six, some browsers put the whole code in every box and others decline to fill at all
+- [ ] A six-digit value arriving in ONE box spreads across all six. iOS delivers the entire code to whichever box is focused, and taking the last character turns "123456" into "6" — which reads as the keyboard suggestion doing nothing
+- [ ] `inputMode="numeric"` on every box, so the numeric keypad opens
+
+**iOS — works today.** Safari matches the message by heuristic; no SMS format is required. Our text ("482913 is your Guapd verification code…") fits it.
+
+**Android — cannot work yet, and it is not a code problem.** WebOTP only fires when the SMS ENDS with `@<host> #<code>`. Our DLT-approved template is fixed character-for-character:
+
+    {#num#} is your Guapd verification code. Do not share it with anyone.
+
+Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a deploy.
+
+- [ ] The WebOTP listener is wired and dormant: it aborts on unmount, swallows a decline, and starts working the day the template changes — with no code change
+- [ ] It must NOT re-request on every keystroke. Re-running the effect cancels the outstanding request and re-prompts
+- [ ] Codes delivered over WhatsApp will never autofill on either platform. Both mechanisms read SMS
+
 ---
 
 | When | What to run |
