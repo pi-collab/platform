@@ -1630,6 +1630,14 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] Question is 27px on desktop / 20px on mobile, down from 31/22. It should lead the card, not fill it
 - [ ] Backdrop blur is 10px. Enough to push the dashboard back without hiding that it is a dashboard
 
+**The card must not move between questions**
+- [ ] On desktop, height and position are IDENTICAL across all four steps. Measure them; do not eyeball it. Unpinned they went 564 → 432 → 362 → 327, and since the card is vertically centred it slid down the screen with each step, moving the options out from under the cursor
+- [ ] `min-height` must clear the TALLEST step, which is Q1 — five options plus the multi-select hint. Set below that, the tallest step still sets its own height and the card keeps moving
+- [ ] It is a MIN, not a fixed height: if copy outgrows it the card expands rather than clipping the answers
+- [ ] The final step's textarea FILLS the reserved height, or a fixed card leaves a screen of empty white under one short field
+- [ ] Mobile is deliberately NOT pinned. The card is top-anchored and the CTA is fixed to the viewport, so nothing moves as it shrinks — forcing a height there would only add empty space
+- [ ] The question uses the dashboard's h2 exactly: `var(--font-display)`, weight 600, `clamp(23px, 2.2vw, 26px)`, `-0.02em`. The modal sits over that screen, so a different weight reads as a different product
+
 ---
 
 | When | What to run |
