@@ -1423,9 +1423,10 @@ The live path is `/c/<slug>` → `PublicStorefront` → "Create an offer" → `/
 - [ ] Open-redirect refused: `?next=https://evil.com`, `//evil.com`, `/\evil.com` all fall back to `/dashboard`. The value may appear in Next's internal RSC routing tree — that is the raw URL being echoed, not a link. Check `href`/`action` attributes, not raw page text
 - [ ] `x-pathname` (set in middleware) carries pathname AND search — that is what makes the query survive. Anything that trims it to the path silently breaks this
 
-**Dead code, deliberately left in place — do not mistake it for the live path**
-- `app/c/[slug]/StorefrontPage.tsx`, `app/c/[slug]/PitchPanel.tsx` and `createDealFromStorefront` in `app/c/[slug]/actions.ts` are referenced by NOTHING. The page renders `PublicStorefront`
-- They implement a plausible-looking pitch flow with sessionStorage draft-saving, so reading them gives a confident and wrong picture of what happens. Verify against `page.tsx` before working on either
+**Dead code — now removed**
+- `app/c/[slug]/StorefrontPage.tsx`, `PitchPanel.tsx` and `createDealFromStorefront` were referenced by nothing and have been deleted. `page.tsx` renders `PublicStorefront`, which is the only path
+- They implemented a plausible pitch flow with sessionStorage draft-saving, and reading them gave a confident, wrong picture of what happens — enough to send a fix to the wrong file
+- `app/c/[slug]/actions.ts` now exports only the two read functions the page uses
 
 ### 59. Public shopfront on a phone
 
