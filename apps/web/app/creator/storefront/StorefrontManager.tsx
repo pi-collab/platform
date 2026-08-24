@@ -1226,10 +1226,10 @@ export default function StorefrontManager({
             ) : (
               <button
                 onClick={async () => {
-                  // On the last step publishing IS finishing, so a success drops
-                  // straight to the published page rather than back into a form
-                  // whose whole point was reaching this.
-                  if (await handleSave(true) && wizard) setMode('preview')
+                  // Publishing IS finishing. Staying in the editor afterwards
+                  // leaves someone looking at the form whose whole point was
+                  // reaching the published page.
+                  if (await handleSave(true)) setMode('preview')
                 }}
                 disabled={saving || !slug || slug.length < 3 || slugStatus === 'taken'}
                 style={{
@@ -1328,31 +1328,23 @@ export default function StorefrontManager({
           <span style={{ ...metaLabel, color: 'rgba(255,255,255,.5)', marginBottom: 0 }}>
             {isPublished ? 'PUBLISHED' : 'DRAFT'}
           </span>
-          <button onClick={() => setMode('edit')} style={{
-            ...secondBtn, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff',
-          }}>
+            {/* Ghost while Publish sits beside it; once published it is the only
+                action on the bar, and the only action should not look secondary. */}
+            <button onClick={() => setMode('edit')} style={isPublished ? {
+              ...primaryBtn, background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
+              boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+            } : {
+              ...secondBtn, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff',
+            }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
             Edit
           </button>
           {/* This said "Publish" and called setMode('edit') — it published
-              nothing, and it said it beside a PUBLISHED pill. Now it either
-              publishes, or, once there is nothing left to publish, opens the
-              page a brand would actually see. */}
-          {isPublished ? (
-            <a
-              href={`/c/${slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                ...primaryBtn, background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
-                textDecoration: 'none',
-                boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-              }}
-            >
-              View live
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M21 14v7H3V3h7" /></svg>
-            </a>
-          ) : (
+              nothing, and it said it beside a pill already reading PUBLISHED.
+              A published shopfront has nothing left to publish, so the button
+              is simply gone and Edit is the way back in. It reappears only for
+              a draft, where it now really does publish. */}
+          {!isPublished && (
             <button
               onClick={() => { handleSave(true) }}
               disabled={saving || !slug || slug.length < 3}
