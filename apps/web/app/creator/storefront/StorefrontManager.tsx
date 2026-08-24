@@ -639,9 +639,16 @@ export default function StorefrontManager({
      state that should gate it. A creator who abandons halfway resumes where the
      cards still are.
      ─────────────────────────────────────────────────────────────────────── */
+  // router.refresh() is a server round-trip, so storefront.is_published stays
+  // false for a beat after a successful publish. Every "are we published"
+  // question in this component would answer wrong during that beat — the status
+  // pill, the wizard gate, the welcome sheet — so the answer is held locally
+  // the moment the server confirms it.
+  const [justPublished, setJustPublished] = useState(false)
+  const isPublished = (storefront?.is_published ?? false) || justPublished
   const [showAll, setShowAll] = useState(false)
   const [step, setStep] = useState(0)
-  const wizard = !storefront?.is_published && !showAll
+  const wizard = !isPublished && !showAll
   const lastStep = WIZARD_STEPS.length - 1
   // Step 1 is the only mandatory one: everything else on the page hangs off a
   // URL, and there is nothing to publish without one.
@@ -686,6 +693,7 @@ export default function StorefrontManager({
     setSaving(false)
     if ('error' in result) { setSaveMsg({ type: 'err', text: result.error ?? 'Error saving.' }); return false }
     setSaveMsg({ type: 'ok', text: publish ? 'Published!' : 'Saved!' })
+    if (publish) setJustPublished(true)
     router.refresh()
     return true
   }
@@ -1168,16 +1176,31 @@ export default function StorefrontManager({
             background: '#FFFFFF', border: `1px solid ${BHL}`,
             boxShadow: '0 1px 2px rgba(22,23,15,.04), 0 10px 22px rgba(22,23,15,.06), 0 40px 72px rgba(22,23,15,.07)',
           }}>
-            <span style={{ ...metaLabel, marginRight: 'auto', marginBottom: 0 }}>
-              {storefront?.is_published ? 'PUBLISHED' : 'DRAFT'}{saving ? ' \u00B7 SAVING...' : ''}
-            </span>
+            {/* The wizard already says where you are, in words, at the top of
+                the page. A DRAFT pill down here is the same fact twice, and it
+                crowds a bar that has three controls on a phone. */}
+            {!wizard && (
+              <span style={{ ...metaLabel, marginRight: 'auto', marginBottom: 0 }}>
+                {isPublished ? 'PUBLISHED' : 'DRAFT'}{saving ? ' \u00B7 SAVING...' : ''}
+              </span>
+            )}
 
-            {/* Back only exists once there is somewhere to go back to. */}
+            {/* Back only exists once there is somewhere to go back to. Icon
+                only: it is the one control here nobody needs a word for. */}
             {wizard && step > 0 && (
-              <button onClick={() => setStep(step - 1)} disabled={saving} style={{ ...secondBtn, opacity: saving ? 0.5 : 1 }}>
-                Back
+              <button
+                onClick={() => setStep(step - 1)}
+                disabled={saving}
+                aria-label="Back a step"
+                title="Back"
+                style={{ ...secondBtn, marginRight: 'auto', width: 44, height: 44, padding: 0, gap: 0, justifyContent: 'center', opacity: saving ? 0.5 : 1 }}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
               </button>
             )}
+
+            {/* Step 1 has no Back, so nothing is pushing the buttons right. */}
+            {wizard && step === 0 && <span style={{ marginRight: 'auto' }} />}
 
             {/* Saving a draft mid-wizard is what makes leaving safe. */}
             <button onClick={() => handleSave(false)} disabled={saving || !slug || slug.length < 3}
@@ -1231,7 +1254,7 @@ export default function StorefrontManager({
 
   return (
     <div style={{ position: 'relative' }}>
-      {isNew && !welcomeDismissed ? (
+      {isNew && !welcomeDismissed && !justPublished ? (
         /* ── Welcome CTA for new creators ────────────────── */
         <div className="sf-welcome-sheet" style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
@@ -1303,7 +1326,7 @@ export default function StorefrontManager({
           boxShadow: '0 16px 40px -12px rgba(0,0,0,.4)',
         }}>
           <span style={{ ...metaLabel, color: 'rgba(255,255,255,.5)', marginBottom: 0 }}>
-            {storefront?.is_published ? 'PUBLISHED' : 'DRAFT'}
+            {isPublished ? 'PUBLISHED' : 'DRAFT'}
           </span>
           <button onClick={() => setMode('edit')} style={{
             ...secondBtn, background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff',
@@ -1311,12 +1334,38 @@ export default function StorefrontManager({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
             Edit
           </button>
-          <button onClick={() => setMode('edit')} style={{
-            ...primaryBtn, background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
-            boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-          }}>
-            Publish
-          </button>
+          {/* This said "Publish" and called setMode('edit') — it published
+              nothing, and it said it beside a PUBLISHED pill. Now it either
+              publishes, or, once there is nothing left to publish, opens the
+              page a brand would actually see. */}
+          {isPublished ? (
+            <a
+              href={`/c/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                ...primaryBtn, background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
+                textDecoration: 'none',
+                boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+              }}
+            >
+              View live
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M21 14v7H3V3h7" /></svg>
+            </a>
+          ) : (
+            <button
+              onClick={() => { handleSave(true) }}
+              disabled={saving || !slug || slug.length < 3}
+              style={{
+                ...primaryBtn, background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
+                boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                opacity: (saving || !slug || slug.length < 3) ? 0.4 : 1,
+                cursor: (saving || !slug || slug.length < 3) ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {saving ? 'Publishing\u2026' : 'Publish'}
+            </button>
+          )}
         </div>
       )}
       <ShopfrontPreview data={shopfrontData} editing={false} />
