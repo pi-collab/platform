@@ -9,30 +9,47 @@ interface Option { code: string; label: string }
 interface Question { key: string; prompt: string; options: Option[] }
 
 /**
- * The three questions, asked once, between approval and the dashboard.
+ * The three questions, one screen at a time.
+ *
+ * A single scroll holding all three read like a form to fill in. One question
+ * at a time, set large, reads like being asked something — which is what it is,
+ * and it is the difference between an answer and a dismissal.
  *
  * Definitions arrive as a prop rather than being imported: the source is
- * `lib/creator-onboarding.ts`, which is server-only because it also reads the
- * gate. Passing them down keeps one list feeding both this form and the ops
- * aggregate that reads the answers back.
+ * server-only because it also holds the gate, and ops maps the same codes back
+ * to labels from the client-safe half.
  */
 export default function WelcomeQuestions({ questions }: { questions: Question[] }) {
   const router = useRouter()
+  // Steps 0..n-1 are questions; the last step is the optional note.
+  const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [painOther, setPainOther] = useState('')
   const [anythingElse, setAnythingElse] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const answeredAll = questions.every(q => answers[q.key])
-  const showPainOther = answers.biggest_pain === 'other'
+  const lastStep = questions.length
+  const onNote = step === lastStep
+  const q = onNote ? null : questions[step]
+  const chosen = q ? answers[q.key] : null
+  const needsMore = q?.key === 'biggest_pain' && chosen === 'other'
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    if (busy || !answeredAll) return
+  function choose(key: string, code: string) {
+    setAnswers(a => ({ ...a, [key]: code }))
+    setError('')
+    // Deliberately does NOT advance. Auto-advancing on select means a mis-tap
+    // moves the screen before it can be corrected, and the follow-up box on
+    // "Something else" would be gone before it could be typed in.
+  }
+
+  // The note at the end is optional, so it is always ready to submit.
+  const canContinue = onNote || Boolean(chosen)
+
+  async function submit() {
+    if (busy) return
     setBusy(true)
     setError('')
-
     const res = await saveOnboardingAnswers({
       biggest_pain: answers.biggest_pain,
       deal_handling: answers.deal_handling,
@@ -40,93 +57,122 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
       pain_other: painOther,
       anything_else: anythingElse,
     })
-
-    if (!res.ok) {
-      setBusy(false)
-      setError(res.message)
-      return
-    }
-
-    // Stays busy — the page navigates away and unmounts this form.
+    if (!res.ok) { setBusy(false); setError(res.message); return }
+    // Stays busy — the page navigates away and unmounts this.
     router.push('/creator/dashboard')
     router.refresh()
   }
 
   return (
-    <form className="onboard-card wq-card" onSubmit={submit}>
-      <p className="wq-intro">
-        You&rsquo;re in! 🎉 A few quick questions so we can make Guapd work better for you.
-      </p>
-
-      {questions.map(q => (
-        <div className="wq-group" key={q.key}>
-          <span className="wq-prompt" id={`q-${q.key}`}>{q.prompt}</span>
-
-          <div className="wq-options" role="group" aria-labelledby={`q-${q.key}`}>
-            {q.options.map(o => {
-              const on = answers[q.key] === o.code
-              return (
-                <button
-                  key={o.code}
-                  type="button"
-                  className="wq-option"
-                  aria-pressed={on}
-                  onClick={() => { setAnswers(a => ({ ...a, [q.key]: o.code })); setError('') }}
-                >
-                  <span className="wq-mark" aria-hidden="true">
-                    {on && (
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--lime-950, #161B08)"
-                           strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    )}
-                  </span>
-                  {o.label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Only under the question it belongs to, and only once "Something
-              else" is chosen — an always-visible box invites an answer to a
-              question nobody asked. */}
-          {q.key === 'biggest_pain' && showPainOther && (
-            <textarea
-              className="wq-textarea"
-              value={painOther}
-              onChange={e => setPainOther(e.target.value)}
-              placeholder="Tell us a little more (optional)"
-              maxLength={500}
-              rows={2}
-              aria-label="Tell us more about your biggest pain"
-            />
-          )}
+    <div className="wq-stage">
+      {/* Progress. A count alone is a number; the bar is what tells someone how
+          much of their time this is about to take. */}
+      <div className="wq-progress">
+        <div className="wq-progress__bar">
+          <div
+            className="wq-progress__fill"
+            style={{ width: `${((step + 1) / (lastStep + 1)) * 100}%` }}
+          />
         </div>
-      ))}
-
-      <div className="wq-group">
-        <span className="wq-prompt">
-          Anything else you&rsquo;d like us to know? <span className="onboard-label__optional">optional</span>
+        <span className="wq-progress__label">
+          {onNote ? 'Last one' : `Question ${step + 1} of ${questions.length}`}
         </span>
-        <textarea
-          className="wq-textarea"
-          value={anythingElse}
-          onChange={e => setAnythingElse(e.target.value)}
-          placeholder="Anything at all — we read these."
-          maxLength={500}
-          rows={2}
-        />
       </div>
 
-      {error && <p role="alert" className="wq-error">{error}</p>}
+      {/* key on the step so each question animates in as its own screen rather
+          than the text swapping in place. */}
+      <div className="wq-panel" key={step}>
+        {q ? (
+          <>
+            <h2 className="wq-ask">{q.prompt}</h2>
 
-      <button type="submit" className="onboard-cta wq-cta" disabled={!answeredAll || busy}>
-        {busy ? 'Saving…' : 'Continue to dashboard'}
-      </button>
+            <div className="wq-options" role="group" aria-label={q.prompt}>
+              {q.options.map(o => {
+                const on = chosen === o.code
+                return (
+                  <button
+                    key={o.code}
+                    type="button"
+                    className="wq-option"
+                    aria-pressed={on}
+                    onClick={() => choose(q.key, o.code)}
+                  >
+                    <span className="wq-mark" aria-hidden="true">
+                      {on && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--lime-950, #161B08)"
+                             strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="wq-option__label">{o.label}</span>
+                  </button>
+                )
+              })}
+            </div>
 
-      {!answeredAll && (
-        <p className="wq-hint">Answer the three questions above to continue.</p>
-      )}
-    </form>
+            {needsMore && (
+              <div className="wq-follow">
+                <label className="wq-follow__label" htmlFor="pain-other">
+                  What is it? <span className="wq-optional">optional</span>
+                </label>
+                <textarea
+                  id="pain-other"
+                  className="wq-textarea"
+                  value={painOther}
+                  onChange={e => setPainOther(e.target.value)}
+                  placeholder="Tell us a little more"
+                  maxLength={500}
+                  rows={3}
+                  autoFocus
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <h2 className="wq-ask">
+              Anything else you&rsquo;d like us to know?
+            </h2>
+            <p className="wq-ask__sub">Optional — but we read every one of these.</p>
+            <textarea
+              className="wq-textarea"
+              value={anythingElse}
+              onChange={e => setAnythingElse(e.target.value)}
+              placeholder="Anything at all"
+              maxLength={500}
+              rows={4}
+              autoFocus
+            />
+          </>
+        )}
+
+        {error && <p role="alert" className="wq-error">{error}</p>}
+      </div>
+
+      {/* Pinned to the bottom of a phone screen, inline on desktop. There is no
+          tab bar on this route — it sits outside the creator app shell — so the
+          bar has the bottom of the viewport to itself. */}
+      <div className="wq-actions">
+        {step > 0 && (
+          <button type="button" className="wq-back" onClick={() => { setStep(s => s - 1); setError('') }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="wq-next"
+          disabled={!canContinue || busy}
+          onClick={() => (onNote ? submit() : setStep(s => s + 1))}
+        >
+          {busy ? 'Saving…' : onNote ? 'Start Guapping' : 'Continue'}
+        </button>
+      </div>
+    </div>
   )
 }

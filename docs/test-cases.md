@@ -1494,12 +1494,22 @@ Before this, approving a creator sent an email — which skips silently when the
 - [ ] `/creator/dashboard` ALSO redirects to `/creator/welcome` when due-and-unanswered. Without this backstop, closing the tab means never seeing it again — and all three questions are required
 - [ ] `/creator/welcome` redirects straight to the dashboard once answered, so a bookmark or the back button cannot re-show it
 
-**The form**
-- [ ] "Continue to dashboard" is DISABLED until all three are answered, with the reason stated underneath — a greyed-out button with no explanation is a dead end
+**The form — ONE question per screen**
+- [ ] Four screens: Q1, Q2, Q3, then the optional note. A single scroll holding all three reads as a form to fill in; one large question at a time reads as being asked something
+- [ ] The question is set in the display face at 31px desktop / 22px mobile — it is the only large thing on screen
+- [ ] There is NO second heading above it. A page title competes with the question, which is the thing that should carry the screen
+- [ ] Selecting an option does NOT auto-advance. A mis-tap would move the screen before it could be corrected, and the follow-up box on "Something else" would vanish before it could be typed in
+- [ ] The CTA is disabled until an option is chosen, and enables on selection
+- [ ] CTA reads "Continue" on Q1–Q3 and "Start Guapping" on the last screen
+- [ ] On mobile the action bar is FIXED to the bottom of the viewport, with the stage padded so the last option is never trapped under it. There is no tab bar on this route — it sits outside the creator app shell
+- [ ] Back appears from Q2 onward and preserves previous answers
 - [ ] The free-text box appears under Q1 only when "Something else" is chosen, and is stored only when that answer is selected
-- [ ] "Anything else" is always visible and always optional
 - [ ] Textareas are 16px, or Safari zooms on focus mid-sentence
-- [ ] Uses the signup shell (`onboard-shell`, `onboard-card`, `onboard-cta`) so it reads as the last step of joining, not a form bolted on after it. NO tab bar — this is not a screen inside the product
+
+### 62a. Under-review card must not clip its own panel
+
+- [ ] The notify-preferences panel has a bottom margin matching its top and sides. It was 0, which put the last row flush against the card's bottom edge — and since `.onboard-card--flush` sets `overflow: hidden` for the rounded corners, the WhatsApp row was sliced by the corner radius
+- [ ] Measure the gap between the panel's bottom and the card's bottom. Flush (0–1px) is the bug; it looks like tight spacing rather than clipping, which is why it survived
 
 **The data**
 - [ ] Answers are stored as CODES, never display strings. This is what keeps the aggregate comparable across copy edits

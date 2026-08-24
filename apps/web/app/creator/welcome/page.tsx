@@ -34,10 +34,6 @@ export default async function CreatorWelcomePage() {
         </nav>
       </div>
 
-      <div className="onboard-head">
-        <h1 className="onboard-head__title">Welcome aboard.</h1>
-      </div>
-
       <div className="onboard-body">
         {/* Options and labels come from one definition, shared with the ops
             aggregate that reads these answers back. */}

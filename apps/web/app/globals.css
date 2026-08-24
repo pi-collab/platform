@@ -1766,7 +1766,11 @@ button.signup-form__recover-link {
 
 /* ── Notification preferences ── */
 .notifybox {
-  margin: clamp(36px, 4vw, 48px) clamp(36px, 4vw, 48px) 0;
+  /* Bottom margin matches the others. It was 0, which put the last row flush
+     against the card's bottom edge — and since the card clips (overflow:hidden
+     for the rounded corners), the WhatsApp row was sliced by the corner radius
+     rather than sitting inside the card. */
+  margin: clamp(36px, 4vw, 48px);
   background: var(--sec-2);
   border-radius: 18px;
   overflow: hidden;

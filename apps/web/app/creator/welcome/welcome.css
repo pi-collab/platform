@@ -1,72 +1,135 @@
 /* ── Post-approval questions ──────────────────────────────────────────────────
-   The page shell, heading and CTA are the onboarding ones from globals.css, so
-   this reads as the last step of signup rather than a form bolted on after it.
-   Only the option list is new — nothing existing selects one of several
-   choices, and a bare radio group would be the one default-looking thing in the
-   whole flow.
+   One question per screen, set large. The page shell and typography are the
+   onboarding ones from globals.css, so this reads as the last step of signup
+   rather than a form bolted on after it.
    ────────────────────────────────────────────────────────────────────────── */
 
-.wq-intro {
-  margin: 0 0 30px;
+.wq-stage {
+  width: 100%;
+  max-width: 620px;
+}
+
+/* ── Progress ───────────────────────────────────────────────────────────── */
+
+.wq-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.wq-progress__bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 20px;
+  background: rgba(24, 28, 36, .10);
+  overflow: hidden;
+}
+
+.wq-progress__fill {
+  height: 100%;
+  border-radius: 20px;
+  background: var(--neon-deep, #C9EB3C);
+  transition: width .32s cubic-bezier(.4, 0, .2, 1);
+}
+
+.wq-progress__label {
+  flex-shrink: 0;
   font-family: var(--font-ui);
-  font-size: 14.5px;
-  line-height: 1.6;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #878D99);
+}
+
+/* ── The card ───────────────────────────────────────────────────────────── */
+
+.wq-panel {
+  background: #fff;
+  border: 1px solid rgba(24, 28, 36, .08);
+  border-radius: 24px;
+  box-shadow: 0 40px 90px -36px rgba(24, 28, 36, .3);
+  padding: clamp(28px, 3.4vw, 44px);
+  animation: wq-in .34s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes wq-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wq-panel { animation: none; }
+  .wq-progress__fill { transition: none; }
+}
+
+/* ── The question ───────────────────────────────────────────────────────── */
+
+/* Display face, large. One question set at this size reads as being asked
+   something; three at body size read as a form. */
+.wq-ask {
+  margin: 0 0 22px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(23px, 2.6vw, 31px);
+  line-height: 1.24;
+  letter-spacing: -0.022em;
+  color: var(--ink, #12151C);
+}
+
+.wq-ask__sub {
+  margin: -14px 0 20px;
+  font-family: var(--font-ui);
+  font-size: 14px;
   color: var(--ink-soft, #565C68);
 }
 
-.wq-group { margin-bottom: 30px; }
-
-.wq-prompt {
-  display: block;
-  margin: 0 0 12px;
-  font-family: var(--font-ui);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--ink, #12151C);
-}
+/* ── Options ────────────────────────────────────────────────────────────── */
 
 .wq-options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
-/* A button, not a styled <label>, so the hit area and the visual are the same
-   rectangle and there is nothing to mis-tap around the edges. */
 .wq-option {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  min-height: 52px;
-  padding: 12px 16px;
-  border-radius: 14px;
+  min-height: 60px;
+  padding: 14px 18px;
+  border-radius: 16px;
   border: 1.5px solid rgba(24, 28, 36, .10);
   background: #fff;
   font-family: var(--font-ui);
-  font-size: 14.5px;
-  line-height: 1.45;
+  font-size: 15.5px;
+  line-height: 1.4;
   color: var(--ink, #12151C);
   text-align: left;
   cursor: pointer;
-  transition: border-color .15s ease, background .15s ease;
+  transition: border-color .15s ease, background .15s ease, transform .12s ease;
 }
 
-.wq-option:hover { border-color: rgba(24, 28, 36, .22); }
+.wq-option:hover {
+  border-color: rgba(24, 28, 36, .24);
+  transform: translateY(-1px);
+}
 
 .wq-option[aria-pressed='true'] {
   border-color: var(--neon-deep, #C9EB3C);
-  background: color-mix(in oklab, var(--neon, #E8FF66) 16%, #fff);
+  background: color-mix(in oklab, var(--neon, #E8FF66) 18%, #fff);
   font-weight: 600;
 }
 
-/* The mark carries the selected state as shape as well as colour, so it does
-   not rely on the tint alone. */
+.wq-option__label { flex: 1; min-width: 0; }
+
+/* Shape as well as colour, so the selected state does not rest on the tint. */
 .wq-mark {
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 1.5px solid rgba(24, 28, 36, .22);
   display: flex;
@@ -80,19 +143,36 @@
   background: var(--neon, #E8FF66);
 }
 
+/* ── Follow-up and free text ────────────────────────────────────────────── */
+
+.wq-follow { margin-top: 18px; }
+
+.wq-follow__label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink, #12151C);
+}
+
+.wq-optional {
+  font-weight: 500;
+  color: var(--ink-faint, #878D99);
+}
+
 .wq-textarea {
   width: 100%;
   box-sizing: border-box;
-  margin-top: 10px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
   border: 1.5px solid rgba(24, 28, 36, .10);
   background: #fff;
   font-family: var(--font-ui);
   /* 16px: below this Safari zooms on focus and pans the field out from under
      the thumb mid-sentence. */
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ink, #12151C);
   resize: vertical;
 }
@@ -103,9 +183,54 @@
   box-shadow: 0 0 0 3px rgba(218, 254, 12, .18);
 }
 
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.wq-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.wq-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(24, 28, 36, .12);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.wq-back:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
+
+/* Brand green, like every other primary action in the product. */
+.wq-next {
+  flex: 1;
+  min-height: 52px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: none;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 12px 26px -12px rgba(180, 210, 60, .9);
+}
+
+.wq-next:disabled { opacity: .55; cursor: default; box-shadow: none; }
+
 .wq-error {
-  margin: 16px 0 0;
-  padding: 10px 14px;
+  margin: 18px 0 0;
+  padding: 11px 14px;
   border-radius: 12px;
   background: rgba(180, 38, 42, .06);
   color: #B4262A;
@@ -113,29 +238,46 @@
   font-size: 13px;
 }
 
-/* Disabled until all three are answered — the reason sits under the button, so
-   a greyed-out CTA is never a mystery. */
-.wq-cta:disabled { opacity: .45; cursor: not-allowed; }
-
-.wq-hint {
-  margin: 12px 0 0;
-  font-family: var(--font-ui);
-  font-size: 12.5px;
-  color: var(--ink-faint, #878D99);
-  text-align: center;
-}
+/* ── Phone ──────────────────────────────────────────────────────────────── */
 
 @media (max-width: 767.98px) {
-  /* The desktop card is a floating panel; on a phone it should feel like the
-     screen itself, matching the rest of the creator app. */
-  .wq-card {
-    padding: 26px 18px 30px !important;
-    border-radius: 20px !important;
-    box-shadow: 0 1px 2px rgba(24, 28, 36, .04), 0 10px 18px -12px rgba(24, 28, 36, .16) !important;
+  .wq-panel {
+    padding: 24px 18px 26px;
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(24, 28, 36, .04), 0 10px 18px -12px rgba(24, 28, 36, .16);
   }
 
-  .wq-intro { font-size: 13.5px; margin-bottom: 24px; }
-  .wq-group { margin-bottom: 26px; }
-  .wq-prompt { font-size: 14.5px; }
-  .wq-option { font-size: 14px; min-height: 50px; }
+  .wq-ask { font-size: 22px; margin-bottom: 18px; }
+  .wq-option { font-size: 15px; min-height: 58px; padding: 13px 15px; }
+  /* No lift on touch — there is no hover, and the transform only ever fires
+     mid-tap where it reads as the row twitching. */
+  .wq-option:hover { transform: none; }
+  .wq-actions { margin-top: 22px; }
+}
+
+/* ── Sticky action bar on a phone ─────────────────────────────────────────────
+   The route sits outside the creator app shell, so there is no tab bar here and
+   the bottom of the viewport belongs to this. Pinning the CTA means the answer
+   and the way forward are visible at once, with no scroll between choosing and
+   continuing.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .wq-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    margin: 0;
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: rgba(247, 247, 245, .94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(24, 28, 36, .08);
+  }
+
+  /* Room for the bar, so the last option is never trapped underneath it. */
+  .wq-stage { padding-bottom: 92px; }
 }
