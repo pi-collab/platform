@@ -194,12 +194,17 @@ function buildShopfrontData(
 
 /* ── Design tokens (matching rest of app) ─────────────────── */
 
-/* The wizard's order, and the order the sections are written in below. The two
-   have to agree — a step index that does not match the card it reveals shows a
-   blank screen, which is the failure mode with no error attached. */
+/* The wizard's order. It deliberately no longer matches the order the sections
+   are written in below: Audience sits in the sidebar column, and moving its
+   markup up to reorder the wizard would drag it out of that column in the
+   normal editor too. So each card carries an explicit step number instead.
+
+   The numbers and this list have to agree — a step nobody is gated on shows a
+   blank screen, which is the failure mode with no error attached. Grep
+   `step !==` to see all seven. */
 const WIZARD_STEPS = [
-  'Storefront link', 'About you', 'Rate card', 'Content showcase',
-  'Past collaborations', 'Highlights', 'Audience',
+  'Storefront link', 'About you', 'Audience', 'Rate card',
+  'Content showcase', 'Past collaborations', 'Highlights',
 ] as const
 
 const BHL = 'var(--border-hairline, #EAEAE3)' // border-hairline used throughout
@@ -900,7 +905,7 @@ export default function StorefrontManager({
               </div>
 
               {/* ── Rate card ─────────────────────────────── */}
-              <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
+              <div style={{ display: wizard && step !== 3 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Rate card" subtitle="What you offer and what it costs" icon={IconUser}>
                   {/* Packages are edited on their own screen because they are not
                       shopfront content — they pre-fill offers and gate the
@@ -930,7 +935,7 @@ export default function StorefrontManager({
               </div>
 
               {/* ── Content showcase ───────────────────────── */}
-              <div style={{ display: wizard && step !== 3 ? 'none' : undefined }}>
+              <div style={{ display: wizard && step !== 4 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Content showcase" subtitle="Your best work. Brands expand each piece to see the stats" icon={IconFilm}>
                   <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                     Add your top-performing content. Tap a piece to fill in details and paste the reel or video link.
@@ -958,7 +963,7 @@ export default function StorefrontManager({
               </div>
 
               {/* ── Past collabs ───────────────────────────── */}
-              <div style={{ display: wizard && step !== 4 ? 'none' : undefined }}>
+              <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
                   <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                     Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.
@@ -985,7 +990,7 @@ export default function StorefrontManager({
             {/* ═══ Right column (sidebar) ═════════════════ */}
             <div style={{ position: wizard ? 'static' : 'sticky', top: 24 }}>
               {/* ── Highlights ──────────────────────────────── */}
-              <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
+              <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
                   <Field label="Monthly reach">
                     <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
@@ -1006,7 +1011,7 @@ export default function StorefrontManager({
               </div>
 
               {/* ── Audience ────────────────────────────────── */}
-              <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
+              <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
                   <Field label="Followers" hint="Per channel. Brands see the total at the top of your shopfront.">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
