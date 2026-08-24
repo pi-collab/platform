@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { PRODUCT_TYPES_BY_PLATFORM, PRODUCT_TYPES, type ProductType } from '@/lib/product-types'
 import {
-  PRICE_MODES, PRICE_MODE_LABELS, PRICE_MODE_HINTS,
+  OFFERED_PRICE_MODES, PRICE_MODE_LABELS, PRICE_MODE_HINTS,
   formatProductPrice, normalizePriceMode, type PriceMode,
 } from '@/lib/product-price'
 import { savePackage, deletePackage } from './actions'
@@ -234,7 +234,15 @@ function PackageForm({
     existing?.product_type ?? typesForPlatform[0],
   )
   const [description, setDescription] = useState(existing?.description ?? '')
-  const [mode, setMode] = useState<PriceMode>(existing ? normalizePriceMode(existing) : 'exact')
+  const [mode, setMode] = useState<PriceMode>(existing ? normalizePriceMode(existing) : 'from')
+
+  // 'exact' and 'range' are no longer offered. A package priced under them keeps
+  // its mode as a choice for as long as it holds it — otherwise the buttons
+  // show nothing selected, and saving would silently reprice it.
+  const modeChoices: readonly PriceMode[] =
+    existing && !OFFERED_PRICE_MODES.includes(mode as 'from' | 'on_request')
+      ? [mode, ...OFFERED_PRICE_MODES]
+      : OFFERED_PRICE_MODES
   const [price, setPrice] = useState(
     existing && existing.price_paise > 0 ? String(Math.round(existing.price_paise / 100)) : '',
   )
@@ -335,7 +343,7 @@ function PackageForm({
           <div className="pk-field">
             <span className="pk-label">How to show the price</span>
             <div className="pk-modes">
-              {PRICE_MODES.map((m) => (
+              {modeChoices.map((m) => (
                 <button
                   key={m}
                   type="button"

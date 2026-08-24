@@ -10,8 +10,26 @@
  * 0477. Nothing here should be fed into arithmetic.
  */
 
+/**
+ * Every mode the DATABASE accepts.
+ *
+ * 'exact' and 'range' are no longer offered, but they are still stored against
+ * packages priced before the choice narrowed — and validation runs against this
+ * list, so removing them would make editing one of those fail on a value its
+ * creator never picked.
+ */
 export const PRICE_MODES = ['exact', 'from', 'range', 'on_request'] as const
 export type PriceMode = (typeof PRICE_MODES)[number]
+
+/**
+ * What a creator is actually offered.
+ *
+ * Two, because a minimum already answers what a fixed price answers — "from
+ * ₹60,000" on a package that never varies is simply true — and a range asks
+ * someone to name a ceiling they have no reason to commit to. The upper end is
+ * the negotiation.
+ */
+export const OFFERED_PRICE_MODES = ['from', 'on_request'] as const
 
 export const PRICE_MODE_LABELS: Record<PriceMode, string> = {
   exact: 'Fixed price',
@@ -22,7 +40,9 @@ export const PRICE_MODE_LABELS: Record<PriceMode, string> = {
 
 export const PRICE_MODE_HINTS: Record<PriceMode, string> = {
   exact: 'One rate, shown as it is.',
-  from: 'A minimum. Brands see “From ₹60,000”.',
+  // The second sentence is the part creators ask about: a minimum is not only
+  // what brands see, it is what we hold offers to.
+  from: 'A minimum. Brands see “From ₹60,000” — and you won’t be shown deals below it.',
   range: 'A low and a high end, for work that varies.',
   on_request: 'No figure shown. Brands ask.',
 }

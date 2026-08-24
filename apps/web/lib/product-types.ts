@@ -1,7 +1,6 @@
 /** Single source of truth for creator product types. Import this everywhere. */
 export const PRODUCT_TYPES = [
   // ── Instagram ──
-  'Collab Reel',
   'Reel',
   'Static/Carousel',
   'Story',
@@ -37,13 +36,16 @@ export const PRODUCT_TYPES = [
   'Community Post',
   'Instagram Reel',
   'Instagram Story Set',
+  // Offered briefly, then withdrawn before anyone used it. Kept only so a
+  // package created in that window would still validate.
+  'Collab Reel',
 ] as const
 
 export type ProductType = (typeof PRODUCT_TYPES)[number]
 
 /** Product types available per social platform. */
 export const PRODUCT_TYPES_BY_PLATFORM: Record<string, readonly ProductType[]> = {
-  instagram: ['Collab Reel', 'Reel', 'Static/Carousel', 'Story', 'Other / Custom'],
+  instagram: ['Reel', 'Static/Carousel', 'Story', 'Other / Custom'],
   youtube: ['Shorts', 'Long form', 'Integration', 'Other / Custom'],
   twitter: ['X/Twitter Post', 'X/Twitter Thread', 'Other / Custom'],
   linkedin: ['LinkedIn Post', 'Other / Custom'],

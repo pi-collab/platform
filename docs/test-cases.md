@@ -1358,8 +1358,16 @@ Packages were enterable ONCE, at signup, and after that only by ops. This is the
 - [ ] The server validates the channel against the creator's OWN social_accounts. There is no FK (social_accounts is JSONB), so nothing at the DB level stops a package being filed under someone else's handle
 - [ ] No channels at all → a screen that sends them to add one, not an unusable form
 
-**Price modes**
-- [ ] Fixed → "₹60,000" · Starting from → "From ₹60,000" · Range → "₹60,000–₹90,000" (en dash) · On request → "On request", no figure
+**Price modes — TWO are offered**
+- [ ] The form offers only **Starting from** and **Price on request**, with Starting from preselected. A minimum already answers what a fixed price answers, and a range asks a creator to commit to a ceiling that is really the negotiation
+- [ ] The hint under Starting from carries the disclaimer: brands see "From ₹60,000" AND the creator will not be shown deals below it
+- [ ] `exact` and `range` remain in `PRICE_MODES` for validation. Packages priced before the narrowing still hold them, and dropping them makes editing one fail on a value its creator never picked
+- [ ] Editing such a package keeps its mode SELECTED and offered. Otherwise no button is pressed and saving silently reprices it
+- [ ] Display is unchanged for legacy rows: Fixed → "₹60,000" · Starting from → "From ₹60,000" · Range → "₹60,000–₹90,000" (en dash) · On request → "On request", no figure
+
+**Selects must look like selects**
+- [ ] Every `select` in the packages screen shows a chevron. `.pk-input` sets `appearance: none` to control its border and radius, which also removes the native arrow — leaving a dropdown indistinguishable from a text field
+- [ ] It is a background SVG with `padding-right` to match, so a long option never runs under the arrow and there is no wrapper element to mis-click
 - [ ] Live preview shows the exact line a brand will read
 - [ ] Range with top ≤ bottom is refused, and previews as "—" rather than a backwards span
 - [ ] On request stores price_paise = 0 — DB-enforced. Read access is wider than the shopfront (any authenticated user can select active products of a vetted creator), so hidden must mean absent, not merely unrendered
@@ -1679,7 +1687,7 @@ Applies to BOTH the mobile and desktop dashboards.
 
 ### 72. Deliverable lists per platform
 
-- [ ] Instagram offers: Collab Reel · Reel · Static/Carousel · Story · Other / Custom
+- [ ] Instagram offers: Reel · Static/Carousel · Story · Other / Custom
 - [ ] YouTube offers: Shorts · Long form · Integration · Other / Custom
 - [ ] Ops reads the SAME source (`PRODUCT_TYPES_BY_PLATFORM`), so its product form offers the same lists — check both after any change
 - [ ] Switching channel mid-form resets a deliverable the new platform does not offer

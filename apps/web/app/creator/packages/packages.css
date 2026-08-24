@@ -298,6 +298,20 @@
   -webkit-appearance: none;
 }
 
+/* A chevron on anything that opens a list.
+   .pk-input sets appearance:none to control the border and radius, which also
+   removes the native arrow — leaving a select that looks exactly like a text
+   field and gives no sign it can be opened. Drawn as a background SVG so it
+   needs no wrapper element and cannot be clicked past. */
+select.pk-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2312151C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  /* Room for the arrow, so a long option never runs underneath it. */
+  padding-right: 38px;
+  cursor: pointer;
+}
+
 .pk-input:focus {
   outline: none;
   border-color: var(--neon-deep, #C9EB3C);
@@ -312,8 +326,10 @@
 
 .pk-modes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
+  /* Two choices, so they sit side by side at any width — a four-up grid left
+     them as narrow slivers once the list shortened. */
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
 }
 
 .pk-mode {
