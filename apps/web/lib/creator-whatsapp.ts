@@ -95,7 +95,7 @@ export async function notifyCreatorStatusChanged(
   status: 'approved' | 'rejected' | 'pending',
 ): Promise<void> {
   try {
-    const { phone, name, skipReason } = await creatorWhatsAppContact(creatorId)
+    const { phone, skipReason } = await creatorWhatsAppContact(creatorId)
 
     if (!phone) {
       await record('creator.status_whatsapp_skipped', {
@@ -107,10 +107,16 @@ export async function notifyCreatorStatusChanged(
     const res = await sendWhatsAppTemplate({
       template: STATUS_TEMPLATE,
       toPhone: phone,
-      // One variable: their first name. If the approved template takes more,
-      // MSG91 rejects the send rather than delivering something wrong, so a
-      // mismatch is loud.
-      bodyVars: [name],
+      // EMPTY on purpose. The approved status_update template has no body
+      // variables — its text is fixed. Sending one produced
+      //   "number of localizable_params (1) does not match the expected
+      //    number of params (0)"
+      // and the send was rejected, which is the failure mode worth having:
+      // loud, and never a message with a stray placeholder in it.
+      //
+      // If the template is later revised to greet by name, add `name` back here
+      // in the same order the template declares its variables.
+      bodyVars: [],
       buttonValue: STATUS_LINK,
     })
 
