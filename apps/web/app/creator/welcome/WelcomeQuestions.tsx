@@ -91,23 +91,22 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   return createPortal(
     <div className="wq-scrim" role="dialog" aria-modal="true" aria-label="A few quick questions">
     <div className="wq-stage">
-      {/* Progress. A count alone is a number; the bar is what tells someone how
-          much of their time this is about to take. */}
-      <div className="wq-progress">
-        <div className="wq-progress__bar">
-          <div
-            className="wq-progress__fill"
-            style={{ width: `${((step + 1) / (lastStep + 1)) * 100}%` }}
-          />
-        </div>
-        <span className="wq-progress__label">
-          {onNote ? 'Last one' : `Question ${step + 1} of ${questions.length}`}
-        </span>
-      </div>
-
       {/* key on the step so each question animates in as its own screen rather
           than the text swapping in place. */}
       <div className="wq-panel" key={step}>
+        {/* Progress. A count alone is a number; the bar is what tells someone how
+            much of their time this is about to take. */}
+        <div className="wq-progress">
+          <div className="wq-progress__bar">
+            <div
+              className="wq-progress__fill"
+              style={{ width: `${((step + 1) / (lastStep + 1)) * 100}%` }}
+            />
+          </div>
+          <span className="wq-progress__label">
+              {onNote ? 'Last one' : `Question ${step + 1} of ${questions.length}`}
+          </span>
+        </div>
         {q ? (
           <>
             <h2 className="wq-ask">{q.prompt}</h2>

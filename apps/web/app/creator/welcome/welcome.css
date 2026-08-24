@@ -15,7 +15,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .wq-progress__bar {
@@ -210,20 +210,20 @@
 
 .wq-back:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
 
-/* Brand green, like every other primary action in the product. */
+/* Black, like .onboard-cta — this is the signup flow's primary action, not the
+   product's. Green is what the app uses once someone is inside it. */
 .wq-next {
   flex: 1;
   min-height: 52px;
   padding: 0 24px;
   border-radius: 999px;
   border: none;
-  background: var(--neon, #E8FF66);
-  color: var(--lime-950, #161B08);
+  background: var(--ink, #12151C);
+  color: #fff;
   font-family: var(--font-ui);
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
-  box-shadow: 0 12px 26px -12px rgba(180, 210, 60, .9);
 }
 
 .wq-next:disabled { opacity: .55; cursor: default; box-shadow: none; }
@@ -298,9 +298,12 @@
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
-  background: rgba(18, 21, 28, .38);
-  backdrop-filter: blur(7px) saturate(1.08);
-  -webkit-backdrop-filter: blur(7px) saturate(1.08);
+  /* Light enough that what is behind still reads as the dashboard. At .38 with
+     a 7px blur it collapsed into flat grey, which is not "visible behind" — it
+     is just a dark screen. */
+  background: rgba(18, 21, 28, .18);
+  backdrop-filter: blur(3px) saturate(1.02);
+  -webkit-backdrop-filter: blur(3px) saturate(1.02);
 }
 
 /* No close control, no Escape, no click-through on the scrim: all three answers
@@ -321,12 +324,37 @@ body.wq-modal-open .creator-tabbar {
     padding: 0;
     align-items: stretch;
     /* The panel scrolls; the pinned CTA below it does not. */
-    background: rgba(18, 21, 28, .30);
+    background: rgba(18, 21, 28, .16);
   }
 
   .wq-stage {
     max-width: none;
     padding: 16px 16px 100px;
     overflow-y: auto;
+  }
+}
+
+/* ── One object, not three ────────────────────────────────────────────────────
+   The progress bar and the CTA used to float on the scrim either side of the
+   card, which read as three loose pieces over a grey wash rather than one thing
+   being asked. On desktop the actions are the foot of the same card; on a phone
+   they stay pinned to the viewport, where the card scrolls behind them.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .wq-panel {
+    border-radius: 24px 24px 0 0;
+    border-bottom: none;
+    padding-bottom: 20px;
+  }
+
+  .wq-actions {
+    margin-top: 0;
+    padding: 4px clamp(28px, 3.4vw, 44px) clamp(26px, 3vw, 36px);
+    background: #fff;
+    border: 1px solid rgba(24, 28, 36, .08);
+    border-top: none;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 40px 90px -36px rgba(24, 28, 36, .3);
   }
 }
