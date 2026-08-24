@@ -54,16 +54,9 @@
   border-radius: 24px;
   box-shadow: 0 40px 90px -36px rgba(24, 28, 36, .3);
   padding: clamp(28px, 3.4vw, 44px);
-  animation: wq-in .34s cubic-bezier(.4, 0, .2, 1);
-}
-
-@keyframes wq-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wq-panel { animation: none; }
   .wq-progress__fill { transition: none; }
 }
 

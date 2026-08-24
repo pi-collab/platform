@@ -1630,6 +1630,11 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] Question is 27px on desktop / 20px on mobile, down from 31/22. It should lead the card, not fill it
 - [ ] Backdrop blur is 10px. Enough to push the dashboard back without hiding that it is a dashboard
 
+**The card must not flash between questions**
+- [ ] The `.wq-panel` element is REUSED across steps — no `key={step}`. Keying it remounts the whole card on every answer: React tears the panel down, builds a new one, and any entrance animation replays, which reads as a flash
+- [ ] Verify by tagging the node (`dataset`) and checking it survives the step, plus a MutationObserver counting `.wq-panel` removals. Both must show zero churn — watching it is not a test
+- [ ] There is no entrance animation on the panel. The progress bar's width transition carries the sense of movement
+
 **The card must not move between questions**
 - [ ] On desktop, height and position are IDENTICAL across all four steps. Measure them; do not eyeball it. Unpinned they went 564 → 432 → 362 → 327, and since the card is vertically centred it slid down the screen with each step, moving the options out from under the cursor
 - [ ] `min-height` must clear the TALLEST step, which is Q1 — five options plus the multi-select hint. Set below that, the tallest step still sets its own height and the card keeps moving

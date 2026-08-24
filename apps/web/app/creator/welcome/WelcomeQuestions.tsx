@@ -101,9 +101,11 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   return createPortal(
     <div className="wq-scrim" role="dialog" aria-modal="true" aria-label="A few quick questions">
     <div className="wq-stage">
-      {/* key on the step so each question animates in as its own screen rather
-          than the text swapping in place. */}
-      <div className="wq-panel" key={step}>
+      {/* NO key on the step. Keying it here remounts the whole card on every
+          answer — React tears down the panel and builds a new one, the entrance
+          animation replays, and the result reads as a flash between questions.
+          The card is one continuous object; only its contents change. */}
+      <div className="wq-panel">
         {/* Progress. A count alone is a number; the bar is what tells someone how
             much of their time this is about to take. */}
         <div className="wq-progress">
