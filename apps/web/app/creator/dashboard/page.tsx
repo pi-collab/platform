@@ -44,6 +44,16 @@ export default async function CreatorDashboardPage({
   // behind them.
   const askOnboarding = await shouldAskOnboarding(creatorId)
 
+  // Whether a payout method exists. upi_id is withheld from the client roles as
+  // PII, so this reads through the admin client — and only the boolean leaves
+  // here, never the value.
+  const { data: payoutRow } = await createAdminClient()
+    .from('creators')
+    .select('upi_id')
+    .eq('id', creatorId)
+    .maybeSingle()
+  const hasPayout = Boolean((payoutRow as { upi_id?: string | null } | null)?.upi_id)
+
 
   const supabase = createClient()
 
@@ -194,6 +204,7 @@ export default async function CreatorDashboardPage({
               .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
         hasPackages={(packageCount ?? 0) > 0}
         hasShopfront={Boolean(storefront)}
+        hasPayout={hasPayout}
       />
     </div>
   ) : null
@@ -214,6 +225,7 @@ export default async function CreatorDashboardPage({
                 .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
           hasPackages={(packageCount ?? 0) > 0}
           hasShopfront={Boolean(storefront)}
+          hasPayout={hasPayout}
         />
       </div>
     )}

@@ -21,11 +21,20 @@ export default function CreatorDashboardEmptyDesktop({
   hasSocials = false,
   hasPackages = false,
   hasShopfront = false,
+  hasPayout = false,
 }: {
   hasSocials?: boolean
   hasPackages?: boolean
   hasShopfront?: boolean
+  hasPayout?: boolean
 }) {
+  // The four a creator controls. "Receive your first brief" is what happens
+  // when these are done, not a task — counting it would pin the bar at 80% for
+  // reasons outside their hands.
+  const steps = [hasSocials, hasPackages, hasShopfront, hasPayout]
+  const doneCount = steps.filter(Boolean).length
+  const pct = Math.round((doneCount / steps.length) * 100)
+  const allDone = doneCount === steps.length
   // The export draws every row with a "Set up" pill. A checklist that says
   // "Set up" against something already done is worse than no checklist, so the
   // pill reflects state — same shape, same place.
@@ -98,11 +107,14 @@ export default function CreatorDashboardEmptyDesktop({
             </section>
 
 
-            <section className="sr" style={{position: 'relative', marginTop: 'clamp(28px,3.2vw,42px)', borderRadius: '20px', background: 'var(--card)', boxShadow: '0 24px 54px -34px rgba(24,28,36,.28)', padding: 'clamp(24px,3vw,38px)'}}>
+            {/* Hidden once every step is done — a checklist with nothing left on it
+          is a row of ticks taking the top of the screen. */}
+      {!allDone && (
+        <section className="sr" style={{position: 'relative', marginTop: 'clamp(28px,3.2vw,42px)', borderRadius: '20px', background: 'var(--card)', boxShadow: '0 24px 54px -34px rgba(24,28,36,.28)', padding: 'clamp(24px,3vw,38px)'}}>
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px'}}>
                 <div>
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: '#fff', background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '4px 12px'}}>Get started</span>
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Four steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div></h2>
+                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Five steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', fontWeight: '700', color: 'var(--wg-500)', marginLeft: '12px'}}>{pct}% complete</span></h2>
                 </div>
               </div>
               <div>
@@ -124,6 +136,12 @@ export default function CreatorDashboardEmptyDesktop({
                   <Pill done={hasShopfront} />
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </a>
+                <a href="/creator/payments?from=dashboard" className="drow" style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', textDecoration: 'none'}}>
+                  <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg></span>
+                  <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Add a payment method</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>So we can pay you when a deal completes</div></div>
+                  <Pill done={hasPayout} />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                </a>
                 <div style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', borderTop: '1px solid var(--hair)'}}>
                   <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(24,28,36,.05)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg></span>
                   <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Receive your first brief</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>Brands browse and send briefs straight to you</div></div>
@@ -132,6 +150,7 @@ export default function CreatorDashboardEmptyDesktop({
                 </div>
               </div>
             </section>
+      )}
 
 
             <section className="sr" style={{marginTop: 'clamp(52px,6vw,80px)', borderRadius: '20px', background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px,3vw,32px)'}}>

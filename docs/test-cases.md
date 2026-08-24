@@ -1661,6 +1661,19 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] The export's scoped CSS must NOT declare `--font-display` / `--font-ui` / `--font-serif`. It names the families literally ("Schibsted Grotesk"), which only resolves via its own `@font-face` blocks — and those are dropped on import because next/font already serves them. Declared, they override the app's tokens with a name nothing loads, and every heading silently falls back to system-ui
 - [ ] The converter strips those tokens, so a re-import cannot reintroduce it
 
+### 71. Get started: payment method step, progress, and hiding when done
+
+Applies to BOTH the mobile and desktop dashboards.
+
+- [ ] Five steps: Connect your socials, Set your packages, Set up your shopfront, **Add a payment method**, Receive your first brief
+- [ ] "Add a payment method" links to `/creator/payments?from=dashboard` and is Done when `creators.upi_id` is set
+- [ ] `upi_id` is read through the ADMIN client — it is withheld from client roles as PII — and only the boolean leaves the page, never the value
+- [ ] The heading shows "N% complete"
+- [ ] The percentage counts FOUR steps, not five. "Receive your first brief" is what happens when the others are done, not a task — counting it would pin a finished creator at 80% for reasons outside their control
+- [ ] At 4/4 the whole Get started section DISAPPEARS on both. A checklist with nothing left on it is a row of ticks taking the top of the screen
+- [ ] Verify all four combinations: desktop and mobile, part-done and all-done. Both must agree
+- [ ] The desktop heading counts the steps in words ("Five steps to your first deal"), so adding another means editing that copy too
+
 ---
 
 | When | What to run |

@@ -17,6 +17,7 @@ export default function CreatorDashboardEmpty({
   hasSocials = false,
   hasPackages = false,
   hasShopfront = false,
+  hasPayout = false,
 }: {
   firstName: string
   handleLine: string
@@ -28,7 +29,17 @@ export default function CreatorDashboardEmpty({
   hasPackages?: boolean
   /** A creator_storefronts row exists. */
   hasShopfront?: boolean
+  /** A UPI ID is saved. Only the fact crosses the boundary, never the value. */
+  hasPayout?: boolean
 }) {
+  // The four things a creator controls. "Receive your first brief" is not on
+  // this list: it is what happens WHEN these are done, not a task, and counting
+  // it would leave the bar stuck at 80% for reasons outside their hands.
+  const steps = [hasSocials, hasPackages, hasShopfront, hasPayout]
+  const doneCount = steps.filter(Boolean).length
+  const pct = Math.round((doneCount / steps.length) * 100)
+  const allDone = doneCount === steps.length
+
   return (
 <div className="creator-app__inner">
 
@@ -50,8 +61,11 @@ export default function CreatorDashboardEmpty({
         
         
 
+        {/* Hidden once every step is done. A checklist with nothing left on it
+            is just a row of ticks taking the top of the screen. */}
+        {!allDone && (
         <div className="sr">
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)'}}>Get started<div className="secline"></div></h2>
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px'}}><span>Get started<div className="secline"></div></span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '700', color: 'var(--wg-500)'}}>{pct}% complete</span></h2>
           <div className="mcard" style={{marginTop: '16px', padding: '6px 18px'}}>
             <Link href="/creator/settings" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0'}}>
               <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
@@ -77,6 +91,14 @@ export default function CreatorDashboardEmpty({
               </div>
               <StepPill done={hasShopfront} />
             </Link>
+            <Link href="/creator/payments?from=dashboard" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
+              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg></span>
+              <div style={{flex: '1', minWidth: '0'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Add a payment method</div>
+                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>So we can pay you when a deal completes</div>
+              </div>
+              <StepPill done={hasPayout} />
+            </Link>
             <div style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
               <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'rgba(24,28,36,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
               <div style={{flex: '1', minWidth: '0'}}>
@@ -87,6 +109,7 @@ export default function CreatorDashboardEmpty({
             </div>
           </div>
         </div>
+        )}
 
         
         
