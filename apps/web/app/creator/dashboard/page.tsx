@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
@@ -201,8 +202,15 @@ export default async function CreatorDashboardPage({
   return (
     <>
     {mobileEmpty}
+    {/* Desktop has its own drawn empty state, so it gets that rather than the
+        populated dashboard rendering with nothing in it. */}
+    {showMobileEmpty && (
+      <div className="creator-empty-desktop">
+        <CreatorDashboardEmptyDesktop />
+      </div>
+    )}
     <div
-      className={showMobileEmpty ? 'creator-empty-desktop' : undefined}
+      className={showMobileEmpty ? 'creator-hide-always' : undefined}
       style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}
     >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>

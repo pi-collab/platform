@@ -263,3 +263,8 @@
   .creator-empty-mobile { display: block; }
   .creator-empty-desktop { display: none; }
 }
+
+/* The populated dashboard, when there is nothing to populate it with. Both
+   widths have their own drawn empty state, so this one is not shown at all —
+   it stays mounted only because its data fetch is what decides the rest. */
+.creator-hide-always { display: none; }

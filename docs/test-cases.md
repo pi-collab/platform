@@ -1555,6 +1555,25 @@ The five creator empty states were transcribed from files named `... Empty - Mob
 - [ ] `/creator/profile` is NOT affected: it is a new route with no desktop predecessor and is not linked from the desktop sidebar
 - [ ] The lesson: an early return is a routing decision, not a layout one. A design that exists only for one width must be gated by width, not returned from the route
 
+### 65. Desktop creator dashboard empty state
+
+Ported from "Creator Dashboard - Empty State.html". A separate design from the mobile one — not a resized copy — so both components exist and WIDTH decides which renders.
+
+- [ ] At ≥768px an approved creator with no deals gets the desktop design: the four-figure strip, "Three steps to your first deal", Deals in motion, How it's going, Your reach, Brands you've worked with
+- [ ] At <768px the mobile design is unchanged
+- [ ] The populated dashboard is hidden when empty (`creator-hide-always`) — both widths have a drawn empty state, so it has nothing to show
+
+**Scoping — the part that would break the site**
+- [ ] Every selector in `dashboard-desktop.css` starts with `.cdash-desk`. The export ships `body`, `a`, `a:hover` and TEN `:root` blocks holding 286 custom properties; unscoped, those repaint the entire site
+- [ ] Verify by reading `--ink` and `--neon` INSIDE the wrapper and checking `document.body`'s font is untouched. A leak shows up as the marketing site quietly changing colour, nowhere near this file
+- [ ] `@font-face` blocks are dropped — next/font already serves Schibsted Grotesk and Instrument Serif, and 78 more declarations refetch the same faces
+
+**Converter traps**
+- [ ] The payload is a JSON string inside `<script type="__bundler/template">`. Reading the file as HTML finds almost nothing
+- [ ] Collapse `<rect ...></rect>` pairs BEFORE self-closing void elements. A blanket pass produces `<rect ... /></rect>`, and the JSX error lands far from the cause
+- [ ] `sc-camel-view-box` must be restored BEFORE the SVG attribute pass, or that pass rewrites the tail and this stops matching — silently
+- [ ] Check the UNMAPPED LINKS report every run. Two design links pointed at marketing pages and one checklist row was `href="#"`
+
 ---
 
 | When | What to run |
