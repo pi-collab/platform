@@ -188,6 +188,9 @@ function buildShopfrontData(
     },
     contentItems: edit.contentItems, brandCollabs: edit.brandCollabs,
     rateCardItems, sections, bookingOpen: edit.bookingOpen, spotsLeft: edit.spotsLeft,
+    // The creator is looking at their own shopfront; the offer buttons are for
+    // brands on the public page.
+    hideDealCta: true,
     slug: currentSlug || storefront?.slug,
   }
 }
@@ -582,6 +585,16 @@ export default function StorefrontManager({
   const [welcomeDismissed, setWelcomeDismissed] = useState(false)
   const [sections, setSections] = useState<ShopfrontSection[]>(DEFAULT_SECTIONS)
   const [edit, setEdit] = useState<EditState>(() => initEditState(creator, storefront))
+
+
+  // What the first three age bands leave for the last. Derived per render rather
+  // than stored, so it cannot drift from the numbers above it. Floored at zero:
+  // the inputs are clamped now, but a shopfront saved before that clamp existed
+  // can still hold bands that overflow 100.
+  const ageRemainder = Math.max(
+    0,
+    100 - (edit.ageBreakdown ?? []).slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0),
+  )
   const [nicheInput, setNicheInput] = useState('')
   const [newContentIdx, setNewContentIdx] = useState<number | null>(null)
   const [newCollabIdx, setNewCollabIdx] = useState<number | null>(null)
@@ -872,7 +885,7 @@ export default function StorefrontManager({
                 <Field label="Monthly reach">
                   <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
                 </Field>
-                <Field label="Repeat brands">
+                <Field label="Deals per month">
                   <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="68%" style={dinput} />
                 </Field>
                 <Field label="Avg deal value">
@@ -935,8 +948,35 @@ export default function StorefrontManager({
                       }}>
                         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', fontWeight: 500 }}>{age.label}</div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-                          <input type="number" value={age.pct} min={0} max={100}
-                            onChange={e => { const u = [...edit.ageBreakdown]; u[i] = { ...age, pct: parseInt(e.target.value) || 0 }; set('ageBreakdown', u) }}
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            /* The LAST band is derived, not typed. Four numbers that must total
+                               100 is arithmetic homework, and the fourth is the one nobody can
+                               get wrong if we do it for them. */
+                            readOnly={i === edit.ageBreakdown.length - 1}
+                            /* A STRING, not a number. As type="number" holding a numeric value
+                               this showed "045": typing into a field containing 0 produces the
+                               string "045", parseInt gives 45, and React sees its value prop
+                               still 45 — so it never rewrites the DOM and the zero stays. */
+                            value={i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
+                            onChange={e => {
+                              if (i === edit.ageBreakdown.length - 1) return
+                              const digits = e.target.value.replace(/\D/g, '').slice(0, 3)
+                              const typed = digits === '' ? 0 : parseInt(digits, 10)
+                              /* Bounded by what the other typed bands already take, so the four
+                                 can never add up to more than 100. */
+                              const others = edit.ageBreakdown
+                                .slice(0, -1)
+                                .reduce((sum, a, k) => (k === i ? sum : sum + (a.pct || 0)), 0)
+                              const u = [...edit.ageBreakdown]
+                              u[i] = { ...age, pct: Math.max(0, Math.min(typed, 100 - others)) }
+                              u[u.length - 1] = {
+                                ...u[u.length - 1],
+                                pct: Math.max(0, 100 - u.slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0)),
+                              }
+                              set('ageBreakdown', u)
+                            }}
                             style={{ width: 40, border: 'none', background: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: 'var(--ink)', textAlign: 'right', outline: 'none' }} />
                           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 12, color: 'var(--ink-faint)' }}>%</span>
                         </div>

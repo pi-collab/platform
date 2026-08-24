@@ -1701,6 +1701,22 @@ Applies to BOTH the mobile and desktop dashboards.
 - [ ] Retired names are only offered on the package that already uses one; new packages never see them
 - [ ] "Other / Custom" keeps its spacing. Writing "Other/Custom" would create a second bucket that splits the aggregate
 
+### 73. Shopfront editor: age bands, labels, and the creator's own preview
+
+**Age breakdown**
+- [ ] The LAST band (45+) is READ-ONLY and derived: 100 minus the three above it. Four numbers that must total 100 is arithmetic homework
+- [ ] The four can never total more than 100 — each input is clamped by what the others already take
+- [ ] Typing 45 into a field showing 0 gives "45", not "045". The old field was `type="number"` with a numeric value: typing produces the string "045", parseInt gives 45, React sees its value prop unchanged at 45 and never rewrites the DOM, so the stray zero stays on screen. It is a controlled STRING now
+- [ ] Non-digits are stripped and input is capped at 3 characters
+- [ ] The derived band is floored at zero — a shopfront saved before the clamp existed can hold bands that overflow 100
+
+**Labels**
+- [ ] "Repeat brands" reads "Deals per month" in BOTH the editor field and the published highlight
+
+**The creator's own preview**
+- [ ] "Create an offer" and "Start a deal with…" do NOT appear in the editor preview. They are a brand's actions; on the creator's own screen they invite someone to make an offer to themselves
+- [ ] They DO still appear on the public `/c/<slug>` page — verify there after any change here, since both surfaces render the same component
+
 ---
 
 | When | What to run |

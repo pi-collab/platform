@@ -95,6 +95,15 @@ export interface ShopfrontData {
   brandCollabs: BrandCollab[]
   // Rate card
   rateCardItems: RateCardItem[]
+  /**
+   * Hide the offer CTAs.
+   *
+   * Set when a creator is looking at their OWN shopfront in the editor. "Create
+   * an offer" is a brand's action; on the creator's own screen it is a button
+   * that either does nothing useful or invites them to make an offer to
+   * themselves. It belongs on the public page only.
+   */
+  hideDealCta?: boolean
   // Sections
   sections: ShopfrontSection[]
   // Availability
@@ -393,7 +402,7 @@ export default function ShopfrontPreview({
 
                   {/* CTAs */}
                   <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
-                    {onDealClick ? (
+                    {data.hideDealCta ? null : onDealClick ? (
                       <button onClick={goToPackages} className="g-btn-primary sf-hero-cta" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
                         Create an offer
                       </button>
@@ -426,7 +435,7 @@ export default function ShopfrontPreview({
             {[
               { value: data.monthlyReach, label: 'Monthly reach' },
               { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '~4h', label: 'Replies in' },
-              { value: data.repeatBrands, label: 'Repeat brands' },
+              { value: data.repeatBrands, label: 'Deals per month' },
               { value: data.avgDealValue, label: 'Avg deal value' },
             ].map((stat, i) => (
               <div key={i} style={{
@@ -566,7 +575,7 @@ export default function ShopfrontPreview({
                     </div>
                   )}
                 </div>
-                {onDealClick ? (
+                {data.hideDealCta ? null : onDealClick ? (
                   <button onClick={() => onDealClick(qty)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
@@ -1034,7 +1043,7 @@ export default function ShopfrontPreview({
                 <p className="t-body" style={{ color: 'var(--ink-soft)' }}>
                   Select deliverables from the rate card above, then create a structured offer. {firstName} will review and respond.
                 </p>
-                {onDealClick ? (
+                {data.hideDealCta ? null : onDealClick ? (
                   <button onClick={goToPackages} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                     Start a deal with {firstName}
