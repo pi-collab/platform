@@ -1494,6 +1494,15 @@ Before this, approving a creator sent an email — which skips silently when the
 - [ ] `/creator/dashboard` ALSO redirects to `/creator/welcome` when due-and-unanswered. Without this backstop, closing the tab means never seeing it again — and all three questions are required
 - [ ] `/creator/welcome` redirects straight to the dashboard once answered, so a bookmark or the back button cannot re-show it
 
+**A MODAL over the dashboard, not its own route**
+- [ ] It renders on `/creator/dashboard`, over whichever state that page is in (empty or populated). There is no `/creator/welcome` route — a page under `/creator` inherits the app nav, so the questions arrived under a header full of destinations the creator could not use yet
+- [ ] The dashboard is VISIBLE behind it, blurred (`backdrop-filter: blur(7px)`). What they were promised should be behind what is being asked
+- [ ] NON-DISMISSABLE: no close control, Escape does nothing, clicking the scrim does nothing. Verify all three — all answers are required, and a dismissable required form is one people dismiss
+- [ ] Body scroll is locked while it is up, and released on unmount
+- [ ] The creator TAB BAR is hidden while it is open (`body.wq-modal-open .creator-tabbar`). Left visible under a blur it is legible enough to invite taps that go nowhere
+- [ ] Portalled to `<body>`. The creator layout renders pages in a `z-index: 1` stacking context whose SIBLING is the tab bar at `z-index: 10000` — rendered in place, the modal would be painted under the very navigation it needs to cover. Hit-test the CTA, do not just measure it
+- [ ] On mobile the CTA is visible without scrolling, pinned above the safe area
+
 **The form — ONE question per screen**
 - [ ] Four screens: Q1, Q2, Q3, then the optional note. A single scroll holding all three reads as a form to fill in; one large question at a time reads as being asked something
 - [ ] The question is set in the display face at 31px desktop / 22px mobile — it is the only large thing on screen

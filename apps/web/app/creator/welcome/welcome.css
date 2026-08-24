@@ -281,3 +281,52 @@
   /* Room for the bar, so the last option is never trapped underneath it. */
   .wq-stage { padding-bottom: 92px; }
 }
+
+/* ── The modal ────────────────────────────────────────────────────────────────
+   Over the dashboard, not instead of it. The blur keeps what they were promised
+   visible behind what is being asked, which is the difference between a welcome
+   and a toll gate.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.wq-scrim {
+  position: fixed;
+  inset: 0;
+  /* Above the tab bar (10000) and the cookie bar (9999). */
+  z-index: 10100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgba(18, 21, 28, .38);
+  backdrop-filter: blur(7px) saturate(1.08);
+  -webkit-backdrop-filter: blur(7px) saturate(1.08);
+}
+
+/* No close control, no Escape, no click-through on the scrim: all three answers
+   are required, and a dismissable required form is one people dismiss. */
+
+body.wq-modal-open {
+  overflow: hidden;
+}
+
+/* The tab bar would otherwise sit under a blur, legible enough to invite taps
+   that go nowhere. */
+body.wq-modal-open .creator-tabbar {
+  display: none !important;
+}
+
+@media (max-width: 767.98px) {
+  .wq-scrim {
+    padding: 0;
+    align-items: stretch;
+    /* The panel scrolls; the pinned CTA below it does not. */
+    background: rgba(18, 21, 28, .30);
+  }
+
+  .wq-stage {
+    max-width: none;
+    padding: 16px 16px 100px;
+    overflow-y: auto;
+  }
+}

@@ -15,10 +15,7 @@ export default function GoToDashboard() {
     // Awaited, not fire-and-forget: navigating first can outrun the write and
     // leave the screen to reappear on the very next page load.
     await acknowledgeCreatorApproval()
-    // The questions sit between here and the dashboard. /creator/welcome sends
-    // anyone who has already answered — or who predates the questions — onward
-    // without showing anything.
-    router.push('/creator/welcome')
+    router.push('/creator/dashboard')
     router.refresh()
   }
 

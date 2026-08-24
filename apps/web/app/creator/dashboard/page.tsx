@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
+import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
 import { verifyCreator } from '@/lib/creator-auth'
 import Link from 'next/link'
@@ -35,9 +37,11 @@ export default async function CreatorDashboardPage({
   // page, so it catches everyone without adding a query to every creator route.
   if (await shouldShowCreatorApproved(creatorId)) redirect('/signup/creator/approved')
 
-  // Backstop for the CTA. Someone who closes the tab on the questions would
-  // otherwise never see them again, and all three are required.
-  if (await shouldAskOnboarding(creatorId)) redirect('/creator/welcome')
+  // Over the dashboard rather than in place of it: the questions are the last
+  // thing between approval and the product, and the product should be visible
+  // behind them.
+  const askOnboarding = await shouldAskOnboarding(creatorId)
+
   const supabase = createClient()
 
   // Date range filtering
@@ -169,6 +173,7 @@ export default async function CreatorDashboardPage({
     const handle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
     const handleLine = handle ? `@${handle}` : 'Finish your profile to get discovered'
     return (
+      <>
       <CreatorDashboardEmpty
         firstName={firstName}
         handleLine={handleLine}
@@ -181,6 +186,13 @@ export default async function CreatorDashboardPage({
         hasPackages={(packageCount ?? 0) > 0}
         hasShopfront={Boolean(storefront)}
       />
+      {/* Over whichever dashboard state they land on. Rendered here rather
+          than in the layout so it appears only where it is due, and portals to
+          <body> so the tab bar cannot paint over it. */}
+      {askOnboarding && (
+        <WelcomeQuestions questions={QUESTIONS.map(q => ({ ...q, options: [...q.options] }))} />
+      )}
+      </>
     )
   }
 
@@ -188,6 +200,7 @@ export default async function CreatorDashboardPage({
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
 
   return (
+    <>
     <div style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
         <RealtimeDashboardListener />
@@ -493,6 +506,13 @@ export default async function CreatorDashboardPage({
         </footer>
       </div>
     </div>
+      {/* Over whichever dashboard state they land on. Rendered here rather
+          than in the layout so it appears only where it is due, and portals to
+          <body> so the tab bar cannot paint over it. */}
+      {askOnboarding && (
+        <WelcomeQuestions questions={QUESTIONS.map(q => ({ ...q, options: [...q.options] }))} />
+      )}
+    </>
   )
 }
 

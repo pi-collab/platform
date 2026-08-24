@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { saveOnboardingAnswers } from './actions'
 import './welcome.css'
 
@@ -9,11 +10,21 @@ interface Option { code: string; label: string }
 interface Question { key: string; prompt: string; options: Option[] }
 
 /**
- * The three questions, one screen at a time.
+ * The three questions, one screen at a time, over the dashboard.
  *
- * A single scroll holding all three read like a form to fill in. One question
- * at a time, set large, reads like being asked something — which is what it is,
- * and it is the difference between an answer and a dismissal.
+ * A modal rather than its own route: a separate page under /creator inherits
+ * the app nav, so the questions arrived under a header full of destinations
+ * they could not use yet. Over the dashboard, the thing they were promised is
+ * visible behind the thing being asked.
+ *
+ * Non-dismissable by construction — there is no close control, Escape does
+ * nothing, and the scrim ignores clicks. All three answers are required, and a
+ * dismissable required form is just a form people dismiss.
+ *
+ * Portalled to <body>: the creator layout renders pages inside a z-index:1
+ * stacking context whose SIBLING is the tab bar at z-index 10000, so anything
+ * rendered in place would be painted underneath the very navigation this needs
+ * to cover.
  *
  * Definitions arrive as a prop rather than being imported: the source is
  * server-only because it also holds the gate, and ops maps the same codes back
@@ -34,6 +45,18 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   const q = onNote ? null : questions[step]
   const chosen = q ? answers[q.key] : null
   const needsMore = q?.key === 'biggest_pain' && chosen === 'other'
+
+  // document.body does not exist during the server render.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  // Freezes the page behind and hides the tab bar for as long as this is up.
+  // Both are undone on unmount, so navigating away cannot leave the app without
+  // its navigation.
+  useEffect(() => {
+    document.body.classList.add('wq-modal-open')
+    return () => document.body.classList.remove('wq-modal-open')
+  }, [])
 
   function choose(key: string, code: string) {
     setAnswers(a => ({ ...a, [key]: code }))
@@ -63,7 +86,10 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
     router.refresh()
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
+    <div className="wq-scrim" role="dialog" aria-modal="true" aria-label="A few quick questions">
     <div className="wq-stage">
       {/* Progress. A count alone is a number; the bar is what tells someone how
           much of their time this is about to take. */}
@@ -174,5 +200,7 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
         </button>
       </div>
     </div>
+    </div>,
+    document.body,
   )
 }
