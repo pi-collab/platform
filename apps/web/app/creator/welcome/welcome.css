@@ -6,7 +6,10 @@
 
 .wq-stage {
   width: 100%;
-  max-width: 620px;
+  /* Wider than the 620px it started at. The longest option — "Managing deals
+     across WhatsApp / DMs / email is chaotic" — was wrapping to two lines,
+     which made a list of five read as a list of eight. */
+  max-width: 760px;
 }
 
 /* ── Progress ───────────────────────────────────────────────────────────── */
@@ -72,7 +75,9 @@
   margin: 0 0 22px;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: clamp(23px, 2.6vw, 31px);
+  /* Down from 31px. The question should lead the card, not fill it — at the
+     old size a two-line question took as much room as the answers. */
+  font-size: clamp(21px, 2.1vw, 27px);
   line-height: 1.24;
   letter-spacing: -0.022em;
   color: var(--ink, #12151C);
@@ -247,7 +252,7 @@
     box-shadow: 0 1px 2px rgba(24, 28, 36, .04), 0 10px 18px -12px rgba(24, 28, 36, .16);
   }
 
-  .wq-ask { font-size: 22px; margin-bottom: 18px; }
+  .wq-ask { font-size: 20px; margin-bottom: 18px; }
   .wq-option { font-size: 15px; min-height: 58px; padding: 13px 15px; }
   /* No lift on touch — there is no hover, and the transform only ever fires
      mid-tap where it reads as the row twitching. */
@@ -301,9 +306,9 @@
   /* Light enough that what is behind still reads as the dashboard. At .38 with
      a 7px blur it collapsed into flat grey, which is not "visible behind" — it
      is just a dark screen. */
-  background: rgba(18, 21, 28, .18);
-  backdrop-filter: blur(3px) saturate(1.02);
-  -webkit-backdrop-filter: blur(3px) saturate(1.02);
+  background: rgba(18, 21, 28, .22);
+  backdrop-filter: blur(10px) saturate(1.06);
+  -webkit-backdrop-filter: blur(10px) saturate(1.06);
 }
 
 /* No close control, no Escape, no click-through on the scrim: all three answers
@@ -324,7 +329,7 @@ body.wq-modal-open .creator-tabbar {
     padding: 0;
     align-items: stretch;
     /* The panel scrolls; the pinned CTA below it does not. */
-    background: rgba(18, 21, 28, .16);
+    background: rgba(18, 21, 28, .20);
   }
 
   .wq-stage {
@@ -358,3 +363,6 @@ body.wq-modal-open .creator-tabbar {
     box-shadow: 0 40px 90px -36px rgba(24, 28, 36, .3);
   }
 }
+
+/* Multi-select: a square mark, because a circle promises exactly one. */
+.wq-mark--multi { border-radius: 7px; }

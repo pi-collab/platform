@@ -1607,6 +1607,29 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] It must NOT re-request on every keystroke. Re-running the effect cancels the outstanding request and re-prompts
 - [ ] Codes delivered over WhatsApp will never autofill on either platform. Both mechanisms read SMS
 
+### 68. Q1 is multi-select
+
+- [ ] Q1 takes SEVERAL answers and says so ("Pick as many as apply"). Its marks are SQUARE — a circle promises exactly one
+- [ ] Tapping a chosen option removes it. Without a toggle there is no way to correct a mis-tap
+- [ ] The CTA enables on one or more, and Q2/Q3 stay single-select
+- [ ] Stored as `text[]` in `biggest_pains` — RENAMED from `biggest_pain`, because a singular name on an array reads as one value to everyone who meets it later
+- [ ] The DB rejects an unknown code inside the array (23514) and rejects an EMPTY array
+- [ ] Duplicates are removed before saving, so a double-tap cannot push a valid answer past the length bound
+
+**The empty-array trap, worth knowing generally**
+- [ ] `array_length(col, 1) BETWEEN 1 AND 5` ACCEPTS `'{}'` — array_length returns NULL for an empty array, NULL BETWEEN is NULL, and a CHECK only fails on FALSE. The bound let through exactly the case it existed to catch
+- [ ] `coalesce(array_length(col, 1), 0)` is the fix. Test a constraint by trying to violate it; reading it is how this survived being written twice
+
+**Ops**
+- [ ] Per-creator view joins the labels with a separator rather than printing one
+- [ ] The aggregate counts RESPONDENTS per option, so the percentages sum to over 100% — and the section says so, or the page reads as broken arithmetic
+
+### 69. Questionnaire modal sizing
+
+- [ ] Card is 760px wide, up from 620px. The longest option — "Managing deals across WhatsApp / DMs / email is chaotic" — wrapped to two lines, which made five options read as eight
+- [ ] Question is 27px on desktop / 20px on mobile, down from 31/22. It should lead the card, not fill it
+- [ ] Backdrop blur is 10px. Enough to push the dashboard back without hiding that it is a dashboard
+
 ---
 
 | When | What to run |

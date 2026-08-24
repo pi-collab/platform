@@ -15,8 +15,12 @@
 
 export const QUESTIONS = [
   {
-    key: 'biggest_pain' as const,
+    key: 'biggest_pains' as const,
+    // Multi-select: these are not exclusive. Late payment and chaotic channels
+    // are the same person's week, and one pick throws that shape away.
+    multi: true,
     prompt: 'What’s your biggest pain with brand deals right now?',
+    hint: 'Pick as many as apply.',
     options: [
       { code: 'few_deals',        label: 'Not getting enough brand deals' },
       { code: 'slow_payments',    label: 'Payments are slow or unreliable' },

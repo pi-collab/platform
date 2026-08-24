@@ -6,7 +6,7 @@ export const metadata = { title: 'Creator insights · Ops' }
 
 interface ResponseRow {
   creator_id: string
-  biggest_pain: string
+  biggest_pains: string[]
   pain_other: string | null
   deal_handling: string
   monthly_deals: string
@@ -28,7 +28,7 @@ export default async function OpsInsightsPage() {
   const [{ data: rows }, { count: approvedCount }] = await Promise.all([
     admin
       .from('creator_onboarding_responses')
-      .select('creator_id, biggest_pain, pain_other, deal_handling, monthly_deals, anything_else, created_at')
+      .select('creator_id, biggest_pains, pain_other, deal_handling, monthly_deals, anything_else, created_at')
       .order('created_at', { ascending: false }),
     admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true),
   ])
@@ -68,6 +68,9 @@ export default async function OpsInsightsPage() {
             <Distribution
               key={q.key}
               title={q.prompt}
+              // Said out loud, because a column of percentages adding to 180
+              // otherwise reads as a bug in this page.
+              note={q.multi ? 'Multi-select — a creator can pick several, so these add to more than 100%.' : undefined}
               rows={tally(responses, q.key as QuestionKey).map(([code, n]) => ({
                 label: labelFor(q.key as QuestionKey, code),
                 count: n,
@@ -104,20 +107,34 @@ export default async function OpsInsightsPage() {
   )
 }
 
-/** Counts per code, largest first — the ordering the question is asked to answer. */
+/**
+ * Counts per code, largest first — the ordering the question is asked to answer.
+ *
+ * Handles both shapes: one question stores a set, the rest store a single code.
+ * A multi-select tally counts RESPONDENTS per option, so its percentages sum to
+ * more than 100 — which is correct, and labelled as such where it is shown.
+ */
 function tally(rows: ResponseRow[], key: QuestionKey): [string, number][] {
   const counts: Record<string, number> = {}
   for (const r of rows) {
-    const code = String((r as unknown as Record<string, unknown>)[key] ?? '')
-    if (code) counts[code] = (counts[code] ?? 0) + 1
+    const raw = (r as unknown as Record<string, unknown>)[key]
+    const codes = Array.isArray(raw) ? raw.map(String) : [String(raw ?? '')]
+    for (const code of codes) {
+      if (code) counts[code] = (counts[code] ?? 0) + 1
+    }
   }
   return Object.entries(counts).sort((a, b) => b[1] - a[1])
 }
 
-function Distribution({ title, rows }: { title: string; rows: { label: string; count: number; pct: number }[] }) {
+function Distribution({ title, note, rows }: {
+  title: string
+  note?: string
+  rows: { label: string; count: number; pct: number }[]
+}) {
   return (
     <section style={{ marginBottom: '1.75rem' }}>
-      <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '0 0 0.75rem' }}>{title}</h2>
+      <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '0 0 0.25rem' }}>{title}</h2>
+      {note && <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 0.75rem' }}>{note}</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {rows.map(r => (
           <div key={r.label} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 56px', gap: '0.75rem', alignItems: 'center' }}>

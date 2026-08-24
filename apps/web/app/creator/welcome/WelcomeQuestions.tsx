@@ -7,7 +7,7 @@ import { saveOnboardingAnswers } from './actions'
 import './welcome.css'
 
 interface Option { code: string; label: string }
-interface Question { key: string; prompt: string; options: Option[] }
+interface Question { key: string; prompt: string; options: Option[]; multi?: boolean; hint?: string }
 
 /**
  * The three questions, one screen at a time, over the dashboard.
@@ -35,6 +35,10 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   // Steps 0..n-1 are questions; the last step is the optional note.
   const [step, setStep] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  // Kept apart from `answers` rather than stringified into it: one question is a
+  // set and the others are not, and pretending otherwise means parsing it back
+  // out at every use.
+  const [pains, setPains] = useState<string[]>([])
   const [painOther, setPainOther] = useState('')
   const [anythingElse, setAnythingElse] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,7 +48,7 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   const onNote = step === lastStep
   const q = onNote ? null : questions[step]
   const chosen = q ? answers[q.key] : null
-  const needsMore = q?.key === 'biggest_pain' && chosen === 'other'
+  const needsMore = q?.key === 'biggest_pains' && pains.includes('other')
 
   // document.body does not exist during the server render.
   const [mounted, setMounted] = useState(false)
@@ -58,8 +62,14 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
     return () => document.body.classList.remove('wq-modal-open')
   }, [])
 
-  function choose(key: string, code: string) {
-    setAnswers(a => ({ ...a, [key]: code }))
+  function choose(key: string, code: string, multi = false) {
+    if (multi) {
+      // Toggle. Tapping a chosen option again removes it, which is the only
+      // way to correct a mis-tap without a Clear control.
+      setPains(p => p.includes(code) ? p.filter(c => c !== code) : [...p, code])
+    } else {
+      setAnswers(a => ({ ...a, [key]: code }))
+    }
     setError('')
     // Deliberately does NOT advance. Auto-advancing on select means a mis-tap
     // moves the screen before it can be corrected, and the follow-up box on
@@ -67,14 +77,14 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
   }
 
   // The note at the end is optional, so it is always ready to submit.
-  const canContinue = onNote || Boolean(chosen)
+  const canContinue = onNote || (q?.multi ? pains.length > 0 : Boolean(chosen))
 
   async function submit() {
     if (busy) return
     setBusy(true)
     setError('')
     const res = await saveOnboardingAnswers({
-      biggest_pain: answers.biggest_pain,
+      biggest_pains: pains,
       deal_handling: answers.deal_handling,
       monthly_deals: answers.monthly_deals,
       pain_other: painOther,
@@ -110,19 +120,20 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
         {q ? (
           <>
             <h2 className="wq-ask">{q.prompt}</h2>
+            {q.hint && <p className="wq-ask__sub">{q.hint}</p>}
 
             <div className="wq-options" role="group" aria-label={q.prompt}>
               {q.options.map(o => {
-                const on = chosen === o.code
+                const on = q.multi ? pains.includes(o.code) : chosen === o.code
                 return (
                   <button
                     key={o.code}
                     type="button"
                     className="wq-option"
                     aria-pressed={on}
-                    onClick={() => choose(q.key, o.code)}
+                    onClick={() => choose(q.key, o.code, q.multi)}
                   >
-                    <span className="wq-mark" aria-hidden="true">
+                    <span className={q.multi ? 'wq-mark wq-mark--multi' : 'wq-mark'} aria-hidden="true">
                       {on && (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--lime-950, #161B08)"
                              strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">

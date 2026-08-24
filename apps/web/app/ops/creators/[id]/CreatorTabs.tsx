@@ -858,7 +858,7 @@ const formInputStyle: React.CSSProperties = {
 /* ── Questionnaire ─────────────────────────────────────────────────────────── */
 
 interface OnboardingResponse {
-  biggest_pain: string
+  biggest_pains: string[]
   pain_other: string | null
   deal_handling: string
   monthly_deals: string
@@ -884,7 +884,8 @@ function Questionnaire({ response }: { response: OnboardingResponse | null }) {
   }
 
   const rows: [string, string | null][] = [
-    [QUESTIONS[0].prompt, labelFor('biggest_pain', response.biggest_pain)],
+    // Multi-select, so several labels joined rather than one.
+    [QUESTIONS[0].prompt, (response.biggest_pains ?? []).map(c => labelFor('biggest_pains', c)).join(' · ')],
     ['In their words', response.pain_other],
     [QUESTIONS[1].prompt, labelFor('deal_handling', response.deal_handling)],
     [QUESTIONS[2].prompt, labelFor('monthly_deals', response.monthly_deals)],
