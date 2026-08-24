@@ -1668,7 +1668,10 @@ Applies to BOTH the mobile and desktop dashboards.
 - [ ] Five steps: Connect your socials, Set your packages, Set up your shopfront, **Add a payment method**, Receive your first brief
 - [ ] "Add a payment method" links to `/creator/payments?from=dashboard` and is Done when `creators.upi_id` is set
 - [ ] `upi_id` is read through the ADMIN client — it is withheld from client roles as PII — and only the boolean leaves the page, never the value
-- [ ] The heading shows "N% complete"
+- [ ] The heading shows "N% complete", with a FULL-WIDTH progress bar beneath it
+- [ ] The bar spans the same width as the step rows it measures. On desktop the heading sits in a 320px flex column, so a bar placed under it inherits that and stops a third of the way across — it belongs above the steps, not under the heading
+- [ ] Fill width matches the stated percentage, and `role="progressbar"` carries `aria-valuenow`
+- [ ] The width transitions rather than jumping, so completing a step is visible
 - [ ] The percentage counts FOUR steps, not five. "Receive your first brief" is what happens when the others are done, not a task — counting it would pin a finished creator at 80% for reasons outside their control
 - [ ] At 4/4 the whole Get started section DISAPPEARS on both. A checklist with nothing left on it is a row of ticks taking the top of the screen
 - [ ] Verify all four combinations: desktop and mobile, part-done and all-done. Both must agree

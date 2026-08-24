@@ -114,10 +114,15 @@ export default function CreatorDashboardEmptyDesktop({
               <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '20px'}}>
                 <div>
                   <span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: '#fff', background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '4px 12px'}}>Get started</span>
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Five steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', fontWeight: '700', color: 'var(--wg-500)', marginLeft: '12px'}}>{pct}% complete</span></h2>
-                </div>
+                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: 'clamp(23px,2.2vw,26px)', margin: '14px 0 0'}}>Five steps to your first deal<div aria-hidden="true" style={{width: '40px', height: '1px', background: '#C9EB3C', marginTop: '16px'}}></div><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', fontWeight: '700', color: 'var(--wg-500)', marginLeft: '12px'}}>{pct}% complete</span></h2>                </div>
               </div>
               <div>
+                {/* Full width, directly above the steps it measures. It was under the
+                    heading, which sits in a 320px flex column — so the bar
+                    inherited that and stopped a third of the way across. */}
+                <div style={{marginBottom: '18px', height: '6px', borderRadius: '20px', background: 'rgba(24,28,36,.08)', overflow: 'hidden'}} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Setup progress">
+                  <div style={{height: '100%', width: `${pct}%`, borderRadius: '20px', background: 'var(--lime-400)', transition: 'width .35s cubic-bezier(.4,0,.2,1)'}} />
+                </div>
                 <a href="/creator/settings?tab=profile" className="drow" style={{display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: '16px', padding: '18px 12px', borderRadius: '12px', textDecoration: 'none'}}>
                   <span style={{width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg></span>
                   <div style={{minWidth: '0'}}><div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14.5px', color: 'var(--ink)'}}>Connect your socials</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--wg-500)', marginTop: '3px'}}>Get analytics on your reach and engagement so brands can see your value</div></div>

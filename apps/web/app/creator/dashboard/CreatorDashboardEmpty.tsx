@@ -66,6 +66,12 @@ export default function CreatorDashboardEmpty({
         {!allDone && (
         <div className="sr">
           <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px'}}><span>Get started<div className="secline"></div></span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '700', color: 'var(--wg-500)'}}>{pct}% complete</span></h2>
+          {/* Full width under the heading. The count says how many; the bar is
+              what shows how close — a number alone makes someone do the
+              arithmetic against a list they have to re-read. */}
+          <div style={{marginTop: '12px', height: '6px', borderRadius: '20px', background: 'rgba(24,28,36,.08)', overflow: 'hidden'}} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Setup progress">
+            <div style={{height: '100%', width: `${pct}%`, borderRadius: '20px', background: 'var(--neon-deep)', transition: 'width .35s cubic-bezier(.4,0,.2,1)'}} />
+          </div>
           <div className="mcard" style={{marginTop: '16px', padding: '6px 18px'}}>
             <Link href="/creator/settings" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0'}}>
               <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
