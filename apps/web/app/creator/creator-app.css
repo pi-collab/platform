@@ -268,3 +268,10 @@
    widths have their own drawn empty state, so this one is not shown at all —
    it stays mounted only because its data fetch is what decides the rest. */
 .creator-hide-always { display: none; }
+
+/* The shopfront row on the profile carries three controls — copy, edit, open —
+   beside a slug that can be long. Below 380px the copy label is the first thing
+   that has to give; its icon and aria-label still say what it does. */
+@media (max-width: 379.98px) {
+  .creator-app .sfl-copy-label { display: none; }
+}

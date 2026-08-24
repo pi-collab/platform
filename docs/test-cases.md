@@ -1274,6 +1274,9 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] With NO shopfront: a guap-green "Set up your shopfront" row
 - [ ] With one PUBLISHED: "YOUR SHOPFRONT /c/<slug>" plus a green Copy button and an arrow that opens it in a new tab
 - [ ] Copy puts the full URL on the clipboard and the button confirms "Copied" for ~2s. The URL is built from the browser origin, so a link copied on staging points at staging
+- [ ] There are THREE controls: copy, EDIT (pencil → /creator/storefront), open. Edit was missing, so the only route back to the editor was via the dashboard or the shopfront tab
+- [ ] All three fit beside the slug at 390px. Below 380px the copy LABEL hides and its icon carries it — three controls plus a long slug will not fit otherwise
+- [ ] Each control has an aria-label, since two of the three are icon-only on a narrow screen
 - [ ] An UNPUBLISHED shopfront passes no slug — its public URL 404s, and handing someone a link to copy that does not work is worse than none. The row offers "Finish it" instead
 - [ ] Clipboard access can be refused (plain http, or permission). The fallback is to stay un-copied rather than claim success
 

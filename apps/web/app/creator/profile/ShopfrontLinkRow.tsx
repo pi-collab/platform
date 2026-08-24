@@ -93,8 +93,35 @@ export default function ShopfrontLinkRow({ slug }: { slug: string | null }) {
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
               )}
-              {copied ? 'Copied' : 'Copy'}
+              {/* Label hidden on the narrowest screens: three controls and a
+                  slug do not fit a 390px row with words on all of them. The
+                  icon and aria-label carry it. */}
+              <span className="sfl-copy-label">{copied ? 'Copied' : 'Copy'}</span>
             </button>
+
+            {/* Editing was missing entirely: the row offered copy and open, and
+                the only way back to the editor was the dashboard or the shopfront
+                tab. A pencil beside the two it already had costs one control and
+                closes that. */}
+            <Link
+              href="/creator/storefront"
+              aria-label="Edit shopfront"
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                border: '1px solid var(--line)',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)"
+                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              </svg>
+            </Link>
 
             <Link
               href={`/c/${slug}`}
