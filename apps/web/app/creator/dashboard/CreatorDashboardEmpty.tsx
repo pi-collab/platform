@@ -32,7 +32,7 @@ export default function CreatorDashboardEmpty({
   return (
 <div className="creator-app__inner">
 
-      <div style={{padding: '20px 18px 0', background: '#F5F7FA', paddingBottom: '18px'}}>
+      <div className="cdash-head" style={{padding: '20px 18px 0', background: '#F5F7FA', paddingBottom: '18px'}}>
         <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px'}}>
           <div style={{minWidth: '0'}}>
             <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '30px', margin: '0', color: 'var(--ink)', whiteSpace: 'nowrap'}}>Hey, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>{firstName}</span></h1>
@@ -45,7 +45,7 @@ export default function CreatorDashboardEmpty({
         </div>
       </div>
 
-      <div style={{padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: '36px'}}>
+      <div className="cdash-sections" style={{padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: '36px'}}>
 
         
         

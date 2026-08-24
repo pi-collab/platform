@@ -1533,6 +1533,17 @@ Before this, approving a creator sent an email — which skips silently when the
 - [ ] Labels come from `lib/creator-onboarding-labels.ts` (client-safe) which the server-only gate re-exports — ops renders in a client component, so a single `server-only` module would not have worked
 - [ ] Logged out, `/ops/insights` renders the ops sign-in card and leaks NOTHING but the page title. Verify with a creator name, not just an HTTP status
 
+### 63. The creator dashboard is not a phone column on a desktop
+
+`CreatorDashboardEmpty` was transcribed from a mobile export, and `.creator-app__inner` capped it at **480px from 720px upward** — so on a 1280px monitor a creator got a phone-width strip floating mid-page. It went unnoticed until a modal sat over it and there was nothing recognisable behind.
+
+- [ ] At ≥768px the dashboard is 1080px wide and its sections lay out TWO-UP
+- [ ] Cards size to their own content (`align-items: start`), rather than stretching to match the tallest in the row — that stretch is what makes a two-up grid look padded out
+- [ ] Between 720px and 767.98px the 480px column REMAINS. The tab bar is still visible there and is itself capped at 480; widening the content but not the bar would leave them disagreeing
+- [ ] Below 720px nothing changes — the column is right at that width
+- [ ] Only `CreatorDashboardEmpty` uses `.creator-app__inner`, so the width change reaches nothing else. Re-check that before reusing the class
+- [ ] The general lesson: a screen ported from a mobile export is not responsive because it fits a phone. Open every one at 1280px before calling it done
+
 ---
 
 | When | What to run |

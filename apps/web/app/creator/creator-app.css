@@ -246,3 +246,41 @@
   font-size: 14.5px;
   color: var(--ink);
 }
+
+/* ── The creator dashboard on a real screen ───────────────────────────────────
+   This screen was transcribed from a mobile export, and .creator-app__inner
+   caps it at 480px from 720px upward — so on a 1280px monitor a creator got a
+   phone-width column floating in the middle of the page. It went unnoticed
+   until a modal sat over it and there was nothing recognisable behind.
+
+   The column stays for narrow windows, where it is right. Past 768px the
+   sections lay out two-up, which is what the space is for.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .creator-app .creator-app__inner {
+    max-width: 1080px;
+    padding: 0 clamp(20px, 3vw, 40px);
+  }
+
+  .creator-app .cdash-head {
+    padding: 30px 4px 26px !important;
+    background: transparent !important;
+  }
+
+  .creator-app .cdash-sections {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px !important;
+    padding: 4px 4px 0 !important;
+    /* Cards size to their own content rather than stretching to match the
+       tallest in the row, which is what makes a two-up grid look padded. */
+    align-items: start;
+  }
+}
+
+/* Between the tab-bar breakpoint and true desktop the column is still the right
+   answer — there is not room for two of anything. */
+@media (min-width: 720px) and (max-width: 767.98px) {
+  .creator-app .creator-app__inner { max-width: 480px; }
+}
