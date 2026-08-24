@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { verifyAndMatch as verifySignup } from '@/app/signup/creator/actions'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import OtpInput from '@/components/OtpInput'
@@ -38,6 +39,9 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [notFoundKind, setNotFoundKind] = useState<'none' | 'unclaimed'>('none')
+  // Whether the code on screen is a login code or a signup one. The screen is
+  // identical either way; only what happens on submit differs.
+  const [isSignup, setIsSignup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resendIn, setResendIn] = useState(0)
 
@@ -60,11 +64,25 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
     setLoading(false)
 
     if (res.status === 'error') { setError(res.message); return }
+
+    // No account, and a signup code is already on its way. Straight to the same
+    // code screen rather than a dead end that asks for the number again.
+    if (res.status === 'new_signup') {
+      setIsSignup(true)
+      setResendIn(RESEND_SECONDS)
+      if (!isResend) { setCode(''); setScreen('verify') }
+      return
+    }
+
+    // 'unclaimed' keeps its own screen: the account EXISTS, added by ops, and
+    // the wording that explains that is worth more than skipping a tap.
     if (res.status === 'not_found' || res.status === 'unclaimed') {
       setNotFoundKind(res.status === 'unclaimed' ? 'unclaimed' : 'none')
       setScreen('notfound')
       return
     }
+
+    setIsSignup(false)
 
     setResendIn(RESEND_SECONDS)
     if (!isResend) { setCode(''); setScreen('verify') }
@@ -75,8 +93,20 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
     setError('')
     setLoading(true)
 
-    const res = await verifyAndSignIn(digits, submitted, next)
+    // Same code screen, two destinations: an existing account signs in, a new
+    // number continues into signup and lands in onboarding.
+    const res = isSignup
+      ? await verifySignup(digits, submitted)
+      : await verifyAndSignIn(digits, submitted, next)
     if (res.status === 'error') {
+      setLoading(false)
+      setError(res.message)
+      return
+    }
+    // Signup only: more than one ops-created stub matches this number, so it
+    // needs a person to resolve. Shown as the message it carries rather than
+    // pushed into a route that does not exist for them.
+    if (res.status === 'multi_stub') {
       setLoading(false)
       setError(res.message)
       return

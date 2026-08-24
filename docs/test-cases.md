@@ -1574,6 +1574,21 @@ Ported from "Creator Dashboard - Empty State.html". A separate design from the m
 - [ ] `sc-camel-view-box` must be restored BEFORE the SVG attribute pass, or that pass rewrites the tail and this stops matching — silently
 - [ ] Check the UNMAPPED LINKS report every run. Two design links pointed at marketing pages and one checklist row was `href="#"`
 
+### 66. Login with an unknown number continues into signup
+
+The login page used to answer an unknown number with "No account yet" and a link to `/signup/creator` — where the first thing asked for was the number just typed.
+
+- [ ] Entering a number with NO account sends a SIGNUP code and goes straight to the same code screen. No dead end, no retyping
+- [ ] Entering the code creates the account and lands in onboarding, exactly as signing up directly would
+- [ ] An existing account is unchanged: login code, sign in, honour `?next=`
+- [ ] `unclaimed` KEEPS its own screen. That account exists — ops created it — and the wording explaining that is worth more than saving a tap
+- [ ] `multi_stub` (several ops stubs match the number) surfaces its message rather than pushing to a route that does not exist for them
+- [ ] The signup path is reused, not duplicated — one place mints, stores and rate-limits a code. Check that when changing either flow
+
+**Security note, in both directions**
+- [ ] This REMOVES account enumeration from the login page: the reply to a known and an unknown number is now identical. It used to confirm which numbers had accounts to anyone who asked
+- [ ] It also means an unknown number typed into LOGIN now spends an OTP. The rate limiting in signup's `sendOTP` is what bounds that — confirm it still applies before widening this pattern anywhere else
+
 ---
 
 | When | What to run |

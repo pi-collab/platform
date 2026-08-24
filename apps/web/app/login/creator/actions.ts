@@ -1,6 +1,7 @@
 'use server'
 
 import crypto from 'crypto'
+import { sendOTP as sendSignupOTP } from '@/app/signup/creator/actions'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
@@ -14,6 +15,11 @@ type SignInResult =
 export type LoginSendResult =
   | { status: 'sent' }
   /** No creator at all for this number. */
+  // The number has no account, and a signup code has just been sent to it.
+  // Carrying on rather than stopping: the old "No account yet" screen linked to
+  // /signup/creator, where the first thing asked for was the number they had
+  // already typed.
+  | { status: 'new_signup' }
   | { status: 'not_found' }
   /** An ops-created profile nobody has claimed yet; claiming happens at signup. */
   | { status: 'unclaimed' }
@@ -46,7 +52,17 @@ export async function sendLoginOTP(rawPhone: string): Promise<LoginSendResult> {
     .eq('phone', phone)
 
   const matched = creators ?? []
-  if (matched.length === 0) return { status: 'not_found' }
+  if (matched.length === 0) {
+    // Send a SIGNUP code and let the caller continue into signup. Reusing that
+    // action rather than duplicating it keeps one place that knows how to mint,
+    // store and rate-limit a code.
+    //
+    // It also stops the login page answering "does this number have an account?"
+    // for anyone who asks — the reply is now identical either way.
+    const sent = await sendSignupOTP(rawPhone)
+    if (sent.status === 'error') return { status: 'error', message: sent.message }
+    return { status: 'new_signup' }
+  }
   // A stub has a profile but no login; claiming it is a signup flow, not a
   // sign-in, so sending a code here would lead nowhere.
   if (!matched.some((c) => c.user_id)) return { status: 'unclaimed' }
