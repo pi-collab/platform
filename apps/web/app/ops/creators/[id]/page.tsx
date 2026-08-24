@@ -45,7 +45,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     wantsWhatsapp: prefs.notify_whatsapp === true,
   }
 
-  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding }] = await Promise.all([
+  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding, error: onboardingErr }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
@@ -74,10 +74,17 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     // RLS scopes creators to their own row, and ops is gated by email allowlist.
     admin
       .from('creator_onboarding_responses')
-      .select('biggest_pain, pain_other, deal_handling, monthly_deals, anything_else, created_at')
+      .select('biggest_pains, pain_other, deal_handling, monthly_deals, anything_else, created_at')
       .eq('creator_id', params.id)
       .maybeSingle(),
   ])
+
+  // Surfaced rather than swallowed. This query silently returned null for a day
+  // after biggest_pain was renamed to biggest_pains, and the tab rendered "No
+  // response" — which is indistinguishable from a creator who has not answered.
+  if (onboardingErr) {
+    console.error(`[ops] onboarding response query failed for ${params.id}: ${onboardingErr.message}`)
+  }
 
   return (
     <div>

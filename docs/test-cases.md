@@ -1621,6 +1621,9 @@ Changing it means a NEW DLT approval, which is an Indian regulatory queue, not a
 - [ ] `coalesce(array_length(col, 1), 0)` is the fix. Test a constraint by trying to violate it; reading it is how this survived being written twice
 
 **Ops**
+- [ ] BOTH ops queries select `biggest_pains`. The rename in 0479 left the per-creator query on `biggest_pain`; it errored, returned null, and the tab rendered "No response" — which looks exactly like a creator who has not answered
+- [ ] That query logs its error instead of swallowing it. A failed read and an unanswered questionnaire must not look the same
+- [ ] After ANY column rename, grep the whole tree for the old name. Two of three call sites were updated by the type checker complaining; the third was a string inside `.select()`, which no compiler checks
 - [ ] Per-creator view joins the labels with a separator rather than printing one
 - [ ] The aggregate counts RESPONDENTS per option, so the percentages sum to over 100% — and the section says so, or the page reads as broken arithmetic
 
