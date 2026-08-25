@@ -4,9 +4,10 @@ import { useState, useCallback, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
-import { saveFollowerCounts, uploadContentMedia } from './actions'
+import { saveFollowerCounts, createContentUploadUrl } from './actions'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 
 interface Product {
@@ -382,12 +383,32 @@ function ContentMediaUpload({ item, onChange }: {
 
   async function pick(file: File) {
     setErr(null); setBusy(true)
-    const fd = new FormData()
-    fd.append('file', file)
-    const res = await uploadContentMedia(fd)
-    setBusy(false)
-    if ('error' in res) { setErr(res.error); return }
-    onChange({ thumbnailUrl: res.url, mediaKind: res.kind })
+    try {
+      // Ask the server to sign a path, then PUT straight to storage. The file
+      // never touches our server: a server action buffers its entire body in
+      // memory, which is why next.config caps them at 6 MB — a 50 MB clip would
+      // simply be refused there, silently enough to look like "video is broken".
+      const signed = await createContentUploadUrl({
+        contentType: file.type,
+        size: file.size,
+        ext: file.name.split('.').pop(),
+      })
+      if ('error' in signed) { setErr(signed.error); return }
+
+      const supabase = createBrowserClient()
+      const { error } = await supabase.storage
+        .from('storefronts')
+        .uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type })
+
+      if (error) { setErr(error.message || 'Upload failed. Please try again.'); return }
+
+      onChange({
+        thumbnailUrl: signed.publicUrl,
+        mediaKind: file.type.startsWith('video/') ? 'video' : 'image',
+      })
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -434,7 +455,7 @@ function ContentMediaUpload({ item, onChange }: {
             </button>
           )}
           <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
-            Images up to 5 MB, video up to 45 MB.
+            Images up to 5 MB, video up to 50 MB.
           </span>
         </div>
       </div>

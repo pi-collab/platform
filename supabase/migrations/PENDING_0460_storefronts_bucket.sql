@@ -41,7 +41,15 @@ VALUES (
   'storefronts',
   'storefronts',
   true,
-  5242880,  -- 5 MB
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  52428800,  -- 50 MB
+  ARRAY[
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'video/mp4', 'video/quicktime', 'video/webm'
+  ]
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Widened from image-only/5 MB by 0481, when the content showcase gained clip
+-- covers. Kept in step here so a bucket built FROM SCRATCH by this file lands
+-- on the same values rather than re-creating the limitation 0481 removes —
+-- ON CONFLICT DO NOTHING means this file never corrects an existing bucket.

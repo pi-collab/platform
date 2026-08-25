@@ -1722,8 +1722,13 @@ Applies to BOTH the mobile and desktop dashboards.
 **Editing (desktop and phone — same control)**
 - [ ] Upload an image on a showcase item; it appears on the card in the preview
 - [ ] Upload an MP4; the card shows the clip, not a placeholder gradient
+- [ ] Upload a video BIGGER than 6 MB. This is the case that was broken: the
+      file must not pass through a server action, whose body cap is 6 MB
 - [ ] Try a 60 MB video — rejected with the size named, not "upload failed"
 - [ ] Try a .pdf — rejected by type
+- [ ] Bucket check after any environment rebuild: `storefronts` must allow
+      video/mp4, video/quicktime, video/webm at 50 MB. It shipped image-only at
+      5 MB, so no application limit could make a clip work (migration 0481)
 - [ ] Reorder two items AFTER uploading covers to both; each keeps its own cover.
       (Paths are UUIDs, not positions, precisely so this holds)
 - [ ] "Remove" clears the cover and the card falls back to the gradient

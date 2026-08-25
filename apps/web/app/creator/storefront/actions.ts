@@ -364,55 +364,61 @@ export async function saveFollowerCounts(
    from a URL without their APIs, so a card with only a link has nothing to
    show. This uploads the still or the clip itself.
 
+   The FILE DOES NOT PASS THROUGH THIS SERVER. We hand the browser a signed
+   upload URL and it PUTs straight to storage. A server action buffers its whole
+   body in memory before the handler runs, which is why next.config caps them at
+   6 MB — routing a 50 MB clip through one would either be refused at that cap
+   or hold 50 MB of server memory per concurrent upload. Signing costs one round
+   trip and moves the bytes off our critical path entirely.
+
    Same bucket as avatars ('storefronts'), which is public — correct here,
-   because these images end up on a public shopfront that brands open without
-   logging in.
+   because these end up on a shopfront that brands open without logging in.
+   Migration 0481 widened it to accept video; before that it was image-only at
+   5 MB, so no application-side limit could have made a clip work.
    ────────────────────────────────────────────────────────────────────────── */
 
 const CONTENT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const CONTENT_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm'])
 
-const MAX_CONTENT_IMAGE = 5 * 1024 * 1024   // 5 MB
-// Supabase's free tier refuses anything over 50 MB at the storage layer, and it
-// does so with a generic error. Stopping short of it here means the creator
-// gets a sentence they can act on instead of "upload failed".
-const MAX_CONTENT_VIDEO = 45 * 1024 * 1024  // 45 MB
+const MAX_CONTENT_IMAGE = 5 * 1024 * 1024    // 5 MB
+// The bucket allows 50 MB and Supabase's free plan refuses more than that at the
+// platform level regardless. Raising this alone would only move the failure.
+const MAX_CONTENT_VIDEO = 50 * 1024 * 1024   // 50 MB
 
-export async function uploadContentMedia(
-  formData: FormData,
-): Promise<{ url: string; kind: 'image' | 'video' } | { error: string }> {
+export async function createContentUploadUrl(
+  input: { contentType: string; size: number; ext?: string },
+): Promise<{ path: string; token: string; publicUrl: string } | { error: string }> {
   const { creatorId } = await verifyCreator()
 
-  const file = formData.get('file') as File | null
-  if (!file) return { error: 'No file provided.' }
-
-  const isImage = CONTENT_IMAGE_TYPES.has(file.type)
-  const isVideo = CONTENT_VIDEO_TYPES.has(file.type)
+  const isImage = CONTENT_IMAGE_TYPES.has(input.contentType)
+  const isVideo = CONTENT_VIDEO_TYPES.has(input.contentType)
   if (!isImage && !isVideo) {
     return { error: 'Use a JPEG, PNG, WebP or GIF image, or an MP4, MOV or WebM video.' }
   }
 
   const limit = isVideo ? MAX_CONTENT_VIDEO : MAX_CONTENT_IMAGE
-  if (file.size > limit) {
-    return { error: `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${limit / 1024 / 1024} MB.` }
+  if (!Number.isFinite(input.size) || input.size <= 0) return { error: 'That file looks empty.' }
+  if (input.size > limit) {
+    return { error: `That file is ${(input.size / 1024 / 1024).toFixed(1)} MB. The limit is ${limit / 1024 / 1024} MB.` }
   }
 
   // A fresh name per upload rather than one keyed to the item's position:
   // positions change when a creator reorders their showcase, and an upsert onto
   // a reused path would silently repoint an item that was never touched.
-  const ext = (file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '')
-  const storagePath = `content/${creatorId}/${crypto.randomUUID()}.${ext || (isVideo ? 'mp4' : 'jpg')}`
+  const rawExt = (input.ext ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5)
+  const ext = rawExt || (isVideo ? 'mp4' : 'jpg')
+  const storagePath = `content/${creatorId}/${crypto.randomUUID()}.${ext}`
 
   const admin = createAdminClient()
-  const { error: uploadErr } = await admin.storage
+  const { data, error } = await admin.storage
     .from('storefronts')
-    .upload(storagePath, file, { upsert: false, contentType: file.type })
+    .createSignedUploadUrl(storagePath)
 
-  if (uploadErr) {
-    console.error('[content-media] Upload failed:', uploadErr.message)
-    return { error: 'Upload failed. Please try again.' }
+  if (error || !data) {
+    console.error('[content-media] Signing failed:', error?.message)
+    return { error: 'Could not start the upload. Please try again.' }
   }
 
-  const { data } = admin.storage.from('storefronts').getPublicUrl(storagePath)
-  return { url: data.publicUrl, kind: isVideo ? 'video' : 'image' }
+  const { data: pub } = admin.storage.from('storefronts').getPublicUrl(storagePath)
+  return { path: data.path, token: data.token, publicUrl: pub.publicUrl }
 }
