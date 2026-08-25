@@ -139,20 +139,36 @@ function useReveal(root: React.RefObject<HTMLElement>) {
     const el = root.current
     if (!el) return
     const targets = Array.from(el.querySelectorAll('.sr'))
-    // No observer, or reduced motion: leave everything visible. A reveal that
-    // cannot fire must not be what hides the page.
+    if (!targets.length) return
+
     if (typeof IntersectionObserver === 'undefined' ||
         window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    targets.forEach(t => t.classList.add('sr-pre'))
+    /* .sr-pre is applied BY THE OBSERVER, never up front.
+     *
+     * Applying it to everything on mount and observing afterwards has two
+     * failure modes, and both were live here. If the component is display:none
+     * when this runs — which it is on a desktop viewport, where CSS hides this
+     * rendering — the observer never fires, and every section stays at
+     * opacity 0 for good. And for anything already on screen, sr-pre and sr-in
+     * land in the same frame, so the browser has no painted start state to
+     * transition FROM and the animation simply does not happen.
+     *
+     * Letting the first callback decide fixes both: nothing is hidden that is
+     * not actively being watched, and an element already in view is marked
+     * done rather than being animated from a state nobody saw. */
     const io = new IntersectionObserver(entries => {
       entries.forEach(e => {
-        if (!e.isIntersecting) return
-        e.target.classList.remove('sr-pre')
-        e.target.classList.add('sr-in')
-        io.unobserve(e.target)
+        if (e.isIntersecting) {
+          e.target.classList.remove('sr-pre')
+          e.target.classList.add('sr-in')
+          io.unobserve(e.target)
+        } else if (!e.target.classList.contains('sr-in')) {
+          e.target.classList.add('sr-pre')
+        }
       })
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
+
     targets.forEach(t => io.observe(t))
     return () => io.disconnect()
   }, [root])
@@ -443,7 +459,7 @@ export default function ShopfrontMobile({
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '16px 0 0', color: 'var(--ink)'}}>{`${firstName}’s`} <span className="opit">reach</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
 
                 <div className="mcard" style={{marginTop: '22px', padding: '26px 22px'}}>
-                  <div style={{display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '999px', background: 'var(--sec-mid)'}}>
+                  <div className="tabrow">
                     <button onClick={setIG} style={igTabStyle}>Instagram</button>
                     <button onClick={setYT} style={ytTabStyle}>YouTube</button>
                   </div>

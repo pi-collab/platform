@@ -1009,113 +1009,6 @@ export default function StorefrontManager({
                 </Section>
               </div>
 
-              {/* ── Rate card ─────────────────────────────── */}
-              <div style={{ display: wizard && step !== 3 ? 'none' : undefined }}>
-                <Section forceOpen={wizard} title="Rate card" subtitle="What you offer and what it costs" icon={IconUser}>
-                  {/* Packages are edited on their own screen because they are not
-                      shopfront content — they pre-fill offers and gate the
-                      dashboard checklist, and a creator can take deals without
-                      ever building a shopfront. Duplicating the editor here would
-                      give one table two owners. */}
-                  <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
-                    {products.length === 0
-                      ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
-                      : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
-                  </p>
-                  <a
-                    href="/creator/packages?from=shopfront"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 7,
-                      minHeight: 40, padding: '0 16px', borderRadius: 999,
-                      background: products.length === 0 ? 'var(--neon)' : '#fff',
-                      border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
-                      color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
-                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    {products.length === 0 ? 'Set your packages' : 'Manage packages'}
-                  </a>
-                </Section>
-              </div>
-
-              {/* ── Content showcase ───────────────────────── */}
-              <div style={{ display: wizard && step !== 4 ? 'none' : undefined }}>
-                <Section forceOpen={wizard} title="Content showcase" subtitle="Your best work. Brands expand each piece to see the stats" icon={IconFilm}>
-                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                    Add your top-performing content. Tap a piece to fill in details and paste the reel or video link.
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {edit.contentItems.map((item, i) => (
-                      <ContentCard
-                        key={i} item={item} index={i} total={edit.contentItems.length}
-                        isNew={newContentIdx === i}
-                        onUpdate={updated => { updateContentItem(i, updated); if (newContentIdx === i) setNewContentIdx(null) }}
-                        onRemove={() => { set('contentItems', edit.contentItems.filter((_, j) => j !== i)); setNewContentIdx(null) }}
-                        onMove={dir => moveContentItem(i, dir)}
-                      />
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
-                  </div>
-                  {edit.contentItems.length >= 8 && (
-                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces. Remove one to add another.</div>
-                  )}
-                </Section>
-              </div>
-
-              {/* ── Past collabs ───────────────────────────── */}
-              <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
-                <Section forceOpen={wizard} title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
-                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
-                    Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.
-                  </p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {edit.brandCollabs.map((collab, i) => (
-                      <CollabCard
-                        key={i} collab={collab} index={i}
-                        isNew={newCollabIdx === i}
-                        onUpdate={updated => { updateCollab(i, updated); if (newCollabIdx === i) setNewCollabIdx(null) }}
-                        onRemove={() => { set('brandCollabs', edit.brandCollabs.filter((_, j) => j !== i)); setNewCollabIdx(null) }}
-                      />
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 14 }}>
-                    <AddButton label="Add brand" onClick={addCollab} disabled={edit.brandCollabs.length >= 12} />
-                  </div>
-                </Section>
-              </div>
-            </div>
-
-            {/* ═══ Right column (sidebar) ═════════════════ */}
-            <div style={{ position: wizard ? 'static' : 'sticky', top: 24 }}>
-              {/* ── Highlights ──────────────────────────────── */}
-              <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
-                <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
-                  <Field label="Monthly reach">
-                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
-                  </Field>
-                  <Field label="Deals per month">
-                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="68%" style={dinput} />
-                  </Field>
-                  <Field label="Avg deal value">
-                    <input type="text" value={edit.avgDealValue} onChange={e => set('avgDealValue', e.target.value)} placeholder="₹78K" style={dinput} />
-                  </Field>
-                  <div style={{
-                    padding: '10px 14px', borderRadius: 12, background: '#F4F6F2', border: `1px solid ${BHL}`,
-                    fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5,
-                  }}>
-                    Your rate card pulls from your products. <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
-                  </div>
-                </Section>
-              </div>
-
-              {/* ── Audience ────────────────────────────────── */}
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
                   <Field label="Followers" hint="Per channel. Brands see the total at the top of your shopfront.">
@@ -1265,6 +1158,114 @@ export default function StorefrontManager({
                   </Field>
                 </Section>
               </div>
+
+              {/* ── Rate card ─────────────────────────────── */}
+              <div style={{ display: wizard && step !== 3 ? 'none' : undefined }}>
+                <Section forceOpen={wizard} title="Rate card" subtitle="What you offer and what it costs" icon={IconUser}>
+                  {/* Packages are edited on their own screen because they are not
+                      shopfront content — they pre-fill offers and gate the
+                      dashboard checklist, and a creator can take deals without
+                      ever building a shopfront. Duplicating the editor here would
+                      give one table two owners. */}
+                  <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
+                    {products.length === 0
+                      ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
+                      : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
+                  </p>
+                  <a
+                    href="/creator/packages?from=shopfront"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 7,
+                      minHeight: 40, padding: '0 16px', borderRadius: 999,
+                      background: products.length === 0 ? 'var(--neon)' : '#fff',
+                      border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
+                      color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
+                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {products.length === 0 ? 'Set your packages' : 'Manage packages'}
+                  </a>
+                </Section>
+              </div>
+
+              {/* ── Content showcase ───────────────────────── */}
+              <div style={{ display: wizard && step !== 4 ? 'none' : undefined }}>
+                <Section forceOpen={wizard} title="Content showcase" subtitle="Your best work. Brands expand each piece to see the stats" icon={IconFilm}>
+                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                    Add your top-performing content. Tap a piece to fill in details and paste the reel or video link.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {edit.contentItems.map((item, i) => (
+                      <ContentCard
+                        key={i} item={item} index={i} total={edit.contentItems.length}
+                        isNew={newContentIdx === i}
+                        onUpdate={updated => { updateContentItem(i, updated); if (newContentIdx === i) setNewContentIdx(null) }}
+                        onRemove={() => { set('contentItems', edit.contentItems.filter((_, j) => j !== i)); setNewContentIdx(null) }}
+                        onMove={dir => moveContentItem(i, dir)}
+                      />
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
+                  </div>
+                  {edit.contentItems.length >= 8 && (
+                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces. Remove one to add another.</div>
+                  )}
+                </Section>
+              </div>
+
+              {/* ── Past collabs ───────────────────────────── */}
+              <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
+                <Section forceOpen={wizard} title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
+                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
+                    Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {edit.brandCollabs.map((collab, i) => (
+                      <CollabCard
+                        key={i} collab={collab} index={i}
+                        isNew={newCollabIdx === i}
+                        onUpdate={updated => { updateCollab(i, updated); if (newCollabIdx === i) setNewCollabIdx(null) }}
+                        onRemove={() => { set('brandCollabs', edit.brandCollabs.filter((_, j) => j !== i)); setNewCollabIdx(null) }}
+                      />
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 14 }}>
+                    <AddButton label="Add brand" onClick={addCollab} disabled={edit.brandCollabs.length >= 12} />
+                  </div>
+                </Section>
+              </div>
+            </div>
+
+            {/* ═══ Right column (sidebar) ═════════════════ */}
+            <div style={{ position: wizard ? 'static' : 'sticky', top: 24 }}>
+              {/* ── Highlights ──────────────────────────────── */}
+              <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
+                <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
+                  <Field label="Monthly reach">
+                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
+                  </Field>
+                  <Field label="Deals per month">
+                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="68%" style={dinput} />
+                  </Field>
+                  <Field label="Avg deal value">
+                    <input type="text" value={edit.avgDealValue} onChange={e => set('avgDealValue', e.target.value)} placeholder="₹78K" style={dinput} />
+                  </Field>
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 12, background: '#F4F6F2', border: `1px solid ${BHL}`,
+                    fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.5,
+                  }}>
+                    Your rate card pulls from your products. <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
+                  </div>
+                </Section>
+              </div>
+
+              {/* ── Audience ────────────────────────────────── */}
             </div>
 
           </div>
