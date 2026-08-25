@@ -461,9 +461,37 @@ export default function DealForm({ creator, products, addonRates = [], platformF
       if (!sel || sel.qty <= 0) continue
       const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
       lines.push({ label: `${sel.qty} \u00D7 ${p.product_type}`, amount: unitPaise * sel.qty })
+
+      /* Add-ons get their own lines. Folded into the deliverable they would move
+         the total by an amount with nothing to explain it — the summary is where
+         a brand checks the number they are about to agree to. */
+      if (overrideActive) continue
+      const rates = ratesFor(p)
+      if (!rates) continue
+      const charges = resolveAddons({
+        pricePaise: unitPaise,
+        rates,
+        wantsCollab: reelTypes[p.id] === 'collab',
+        boostingDays: itemBoostingRights[p.id] === true ? (boostDays[p.id] ?? null) : null,
+      })
+      if (charges.collabChargePaise != null) {
+        const rate = charges.collabRateType === 'percent'
+          ? ` (${formatBasisPoints(charges.collabRateValue ?? 0)})`
+          : ''
+        lines.push({
+          label: `${sel.qty} \u00D7 ${p.product_type} \u00B7 Collab${rate}`,
+          amount: charges.collabChargePaise * sel.qty,
+        })
+      }
+      if (charges.boostingChargePaise != null) {
+        lines.push({
+          label: `${sel.qty} \u00D7 ${p.product_type} \u00B7 Boosting (${charges.boostingDays} days)`,
+          amount: charges.boostingChargePaise * sel.qty,
+        })
+      }
     }
     return lines
-  }, [products, selections])
+  }, [products, selections, reelTypes, itemBoostingRights, boostDays, ratesFor, overrideActive])
 
   const feeInfo = useMemo(() => {
     if (platformFeePercent > 0 && finalPaise > 0) return calculateFee(finalPaise, platformFeePercent, feeMode)
@@ -630,7 +658,18 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                   <span style={{ display: 'block', fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.01em' }}>{p.product_type}</span>
                                   <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 4 }}>
                                     {p.description ? `${p.description} \u00B7 ` : ''}
-                                    {isFixedPrice(p) ? `${formatRupees(p.price_paise)} each` : 'Price on request'}
+                                    {(() => {
+                                      /* Every mode that is not `exact` was being
+                                         labelled "Price on request" — so a package
+                                         priced "from Rs.25,000" told the brand the
+                                         creator had named no price at all, while the
+                                         row beneath it counted Rs.0.
+                                         formatProductPrice already renders each mode
+                                         and returns null ONLY for on_request. */
+                                      const label = formatProductPrice(p)
+                                      if (label == null) return 'Price on request'
+                                      return isFixedPrice(p) ? `${label} each` : label
+                                    })()}
                                   </span>
                                 </span>
                               </button>
