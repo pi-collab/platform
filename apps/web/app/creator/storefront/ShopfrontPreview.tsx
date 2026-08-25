@@ -31,6 +31,72 @@ export interface AudienceData {
   topLocations?: { city: string; pct: number }[]
 }
 
+/* ── The cover on a showcase card ────────────────────────────────────────────
+   A creator can upload a still or a clip. Instagram and YouTube will not serve
+   a thumbnail from a URL without their APIs, so before this a card carrying a
+   link had nothing to show but a gradient.
+
+   A clip plays in place. The card itself is a link, so the play control has to
+   swallow the click — otherwise the first tap on play navigates away from the
+   page instead of starting the video. It also unmutes on that first press:
+   autoplay is only permitted while muted, and a creator showing work to a brand
+   means the sound.
+   ────────────────────────────────────────────────────────────────────────── */
+function ContentMedia({ item }: { item: ContentItem }) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+
+  if (!item.thumbnailUrl) return null
+
+  if (item.mediaKind !== 'video') {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={item.thumbnailUrl} alt="" className="sf-vid-media" />
+  }
+
+  return (
+    <>
+      <video
+        ref={ref}
+        src={item.thumbnailUrl}
+        className="sf-vid-media"
+        playsInline
+        loop
+        muted
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+      />
+      <button
+        type="button"
+        className="sf-vplay"
+        aria-label={playing ? 'Pause' : 'Play'}
+        onClick={e => {
+          // Both, and in this order: preventDefault stops the anchor, and
+          // stopPropagation keeps the editor's own card handlers out of it.
+          e.preventDefault()
+          e.stopPropagation()
+          const v = ref.current
+          if (!v) return
+          if (v.paused) {
+            // Set as a property, not a JSX attribute — React does not reliably
+            // reflect `muted` to the DOM node.
+            v.muted = false
+            void v.play()
+          } else {
+            v.pause()
+          }
+        }}
+      >
+        {playing ? (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+        ) : (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+        )}
+      </button>
+    </>
+  )
+}
+
 export interface ContentItem {
   title: string
   type: string // Reel, Story, YouTube Short, etc.
@@ -39,8 +105,9 @@ export interface ContentItem {
   views?: string
   engagement?: string
   saves?: string
-  thumbnailUrl?: string
-  embedUrl?: string // Instagram/YouTube embed link for preview
+  thumbnailUrl?: string   // uploaded still or clip, shown ON the card
+  mediaKind?: 'image' | 'video' // how to render thumbnailUrl
+  embedUrl?: string       // where the card GOES when a brand taps it
 }
 
 export interface BrandCollab {
@@ -889,9 +956,19 @@ export default function ShopfrontPreview({
               <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>A look at {firstName}&apos;s content</h2>
 
               <div className="sf-exprow">
-                {data.contentItems.slice(0, 5).map((item, i) => (
-                  <div key={i} className="sf-exp">
+                {data.contentItems.slice(0, 5).map((item, i) => {
+                  // A card opens its link only on the published page. Inside
+                  // the editor a tap must not navigate a creator off the very
+                  // thing they are editing.
+                  const href = !editing && item.embedUrl ? item.embedUrl : undefined
+                  const Card = (href ? 'a' : 'div') as React.ElementType
+                  const cardProps = href
+                    ? { href, target: '_blank', rel: 'noopener noreferrer', style: { textDecoration: 'none', color: 'inherit' } }
+                    : {}
+                  return (
+                    <Card key={i} className="sf-exp" {...cardProps}>
                     <div className="sf-vid">
+                      <ContentMedia item={item} />
                       <span style={{
                         position: 'absolute', left: 11, top: 11, zIndex: 3,
                         fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 9.5,
@@ -899,9 +976,13 @@ export default function ShopfrontPreview({
                         background: 'rgba(255,255,255,.92)', color: 'var(--ink)',
                         borderRadius: 999, padding: '3px 9px',
                       }}>{item.type}</span>
-                      <span className="sf-play">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg>
-                      </span>
+                      {/* Decorative, hover-only. A video gets a real control
+                          from ContentMedia instead, so the two never stack. */}
+                      {!(item.thumbnailUrl && item.mediaKind === 'video') && (
+                        <span className="sf-play">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg>
+                        </span>
+                      )}
                       <div className="sf-vlab">{item.title}</div>
                     </div>
                     <div className="sf-side">
@@ -932,8 +1013,9 @@ export default function ShopfrontPreview({
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  </Card>
+                  )
+                })}
               </div>
             </div>
           </section>

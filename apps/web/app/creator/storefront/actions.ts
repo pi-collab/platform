@@ -357,3 +357,62 @@ export async function saveFollowerCounts(
   revalidatePath('/creator/storefront')
   return { ok: true }
 }
+
+/* ── Content showcase media ──────────────────────────────────────────────────
+   A creator can already paste a link to a reel. That link is the destination,
+   not the picture: Instagram and YouTube will not let us render a thumbnail
+   from a URL without their APIs, so a card with only a link has nothing to
+   show. This uploads the still or the clip itself.
+
+   Same bucket as avatars ('storefronts'), which is public — correct here,
+   because these images end up on a public shopfront that brands open without
+   logging in.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const CONTENT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+const CONTENT_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm'])
+
+const MAX_CONTENT_IMAGE = 5 * 1024 * 1024   // 5 MB
+// Supabase's free tier refuses anything over 50 MB at the storage layer, and it
+// does so with a generic error. Stopping short of it here means the creator
+// gets a sentence they can act on instead of "upload failed".
+const MAX_CONTENT_VIDEO = 45 * 1024 * 1024  // 45 MB
+
+export async function uploadContentMedia(
+  formData: FormData,
+): Promise<{ url: string; kind: 'image' | 'video' } | { error: string }> {
+  const { creatorId } = await verifyCreator()
+
+  const file = formData.get('file') as File | null
+  if (!file) return { error: 'No file provided.' }
+
+  const isImage = CONTENT_IMAGE_TYPES.has(file.type)
+  const isVideo = CONTENT_VIDEO_TYPES.has(file.type)
+  if (!isImage && !isVideo) {
+    return { error: 'Use a JPEG, PNG, WebP or GIF image, or an MP4, MOV or WebM video.' }
+  }
+
+  const limit = isVideo ? MAX_CONTENT_VIDEO : MAX_CONTENT_IMAGE
+  if (file.size > limit) {
+    return { error: `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is ${limit / 1024 / 1024} MB.` }
+  }
+
+  // A fresh name per upload rather than one keyed to the item's position:
+  // positions change when a creator reorders their showcase, and an upsert onto
+  // a reused path would silently repoint an item that was never touched.
+  const ext = (file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '')
+  const storagePath = `content/${creatorId}/${crypto.randomUUID()}.${ext || (isVideo ? 'mp4' : 'jpg')}`
+
+  const admin = createAdminClient()
+  const { error: uploadErr } = await admin.storage
+    .from('storefronts')
+    .upload(storagePath, file, { upsert: false, contentType: file.type })
+
+  if (uploadErr) {
+    console.error('[content-media] Upload failed:', uploadErr.message)
+    return { error: 'Upload failed. Please try again.' }
+  }
+
+  const { data } = admin.storage.from('storefronts').getPublicUrl(storagePath)
+  return { url: data.publicUrl, kind: isVideo ? 'video' : 'image' }
+}

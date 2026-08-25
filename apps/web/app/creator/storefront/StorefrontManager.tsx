@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
-import { saveFollowerCounts } from './actions'
+import { saveFollowerCounts, uploadContentMedia } from './actions'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
@@ -367,6 +367,82 @@ function ContentTypeChip({ value, onChange }: { value: string; onChange: (v: str
 
 /* ── Content card ─────────────────────────────────────────── */
 
+/* ── Cover upload for one showcase item ─────────────────────────────────────
+   One component for both breakpoints. The desktop showcase and the phone one
+   are two layouts of the same data, so a second uploader for phones would be a
+   second thing to keep in step for no gain.
+   ───────────────────────────────────────────────────────────────────── */
+function ContentMediaUpload({ item, onChange }: {
+  item: ContentItem
+  onChange: (patch: Partial<ContentItem>) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function pick(file: File) {
+    setErr(null); setBusy(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await uploadContentMedia(fd)
+    setBusy(false)
+    if ('error' in res) { setErr(res.error); return }
+    onChange({ thumbnailUrl: res.url, mediaKind: res.kind })
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 62, height: 84, borderRadius: 10, flexShrink: 0, overflow: 'hidden',
+          border: `1px solid ${BHL}`, background: '#F4F6F2',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {item.thumbnailUrl ? (
+            item.mediaKind === 'video' ? (
+              /* muted + playsInline so the preview never grabs audio, and never
+                 goes fullscreen on iOS the moment it is touched. */
+              <video src={item.thumbnailUrl} muted playsInline preload="metadata"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={item.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            )
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+            </svg>
+          )}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7, alignItems: 'flex-start' }}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+            style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = '' }}
+          />
+          <button type="button" disabled={busy} onClick={() => inputRef.current?.click()}
+            style={{ ...secondBtn, height: 38, opacity: busy ? 0.5 : 1 }}>
+            {busy ? 'Uploading\u2026' : item.thumbnailUrl ? 'Replace' : 'Upload photo or video'}
+          </button>
+          {item.thumbnailUrl && (
+            <button type="button" onClick={() => onChange({ thumbnailUrl: undefined, mediaKind: undefined })}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', textDecoration: 'underline' }}>
+              Remove
+            </button>
+          )}
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
+            Images up to 5 MB, video up to 45 MB.
+          </span>
+        </div>
+      </div>
+      {err && <p style={{ margin: '8px 0 0', fontSize: 12.5, fontWeight: 600, color: 'var(--danger, #D2545A)' }}>{err}</p>}
+    </div>
+  )
+}
+
 function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: {
   item: ContentItem; index: number; total: number; isNew?: boolean
   onUpdate: (updated: ContentItem) => void
@@ -468,6 +544,9 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               </div>
             </Field>
 
+              <Field label="Cover" hint="A still or a short clip. The link above is where the card goes; this is what it looks like — Instagram and YouTube will not hand us a thumbnail from a URL.">
+                <ContentMediaUpload item={item} onChange={patch => u(patch)} />
+              </Field>
             <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="Brand">
                 <input type="text" value={item.brand || ''} onChange={e => u({ brand: e.target.value })}

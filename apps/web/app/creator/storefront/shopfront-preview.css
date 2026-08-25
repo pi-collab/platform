@@ -426,3 +426,207 @@
     padding: 30px 26px !important;
   }
 }
+
+/* ── Showcase cover media ──────────────────────────────────────────────────── */
+
+/* Sits under the badge, the label and the play control, all of which are
+   absolutely positioned with a z-index above it. */
+.sf-vid-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+/* The shimmer sweep exists to make an empty gradient look alive. Over a real
+   photo it just looks like a smear. */
+.sf-exp:has(.sf-vid-media) .sf-vid::after { display: none; }
+
+.sf-vplay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(22, 27, 8, .55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sf-vplay:hover { background: rgba(22, 27, 8, .72); }
+
+/* ── Showcase cards on a phone, from the mobile design export ────────────────
+   The desktop card is a hover accordion: a tall media panel with a stats panel
+   that slides out from behind it. On a touch screen there is no hover, so the
+   stats panel never opened and views and engagement were simply unreachable —
+   the numbers a brand is looking for were rendered and invisible.
+
+   The export answers it by stacking: media on top at 9/13, the numbers in a
+   body beneath, both always visible. Desktop markup is untouched; this is the
+   same DOM laid out differently.
+
+   Export values: row gap 16, bleeding to the screen edge with margin 22px -20px
+   0 and padding 2px 20px 6px; card flex 0 0 62%; media aspect-ratio 9/13; body
+   padding 16px 16px 18px; name 13.5px; stats row gap 16px at 12px.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .sf-root .sf-exprow {
+    height: auto !important;
+    gap: 16px !important;
+    margin: 22px -20px 0 !important;
+    padding: 2px 20px 6px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sf-root .sf-exp,
+  .sf-root .sf-exprow:hover .sf-exp,
+  .sf-root .sf-exprow .sf-exp:hover {
+    flex: 0 0 62% !important;
+    flex-direction: column;
+    scroll-snap-align: start;
+    height: auto;
+  }
+
+  .sf-root .sf-vid,
+  .sf-root .sf-exp:hover .sf-vid {
+    flex: none !important;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 9 / 13;
+  }
+
+  /* The title is in the body below, where it can wrap. The gradient caption
+     over the image was the same words, clipped to one line. */
+  .sf-root .sf-vlab { display: none; }
+
+  /* Always open — this is the whole point of the stacked layout. */
+  .sf-root .sf-side,
+  .sf-root .sf-exp:hover .sf-side {
+    flex: none !important;
+    width: 100% !important;
+    opacity: 1 !important;
+    border-left: none;
+    border-top: 1px solid var(--hairline);
+    overflow: visible;
+  }
+
+  .sf-root .sf-side-in {
+    width: 100%;
+    height: auto;
+    padding: 16px 16px 18px;
+  }
+
+  /* Stats go from a stacked list with rules to one inline row. */
+  .sf-root .sf-side-in > div:last-child {
+    margin-top: 12px !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 16px !important;
+  }
+
+  /* row-reverse because the markup is label-then-value and the design reads
+     value-then-label. Reversing here beats forking the markup, which would put
+     the desktop card at risk for a phone-only change. */
+  .sf-root .sf-srow {
+    border-top: none;
+    padding-top: 0;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .sf-root .sf-srow > span { font-size: 12px !important; letter-spacing: 0 !important; text-transform: none !important; }
+  .sf-root .sf-srow > b { font-size: 12px !important; }
+}
+
+/* ── The same phone card layout, keyed to the container ─────────────────────
+   Same reason as every other pair in this file: a narrow render of this
+   component inside a wide viewport is invisible to @media.
+   ────────────────────────────────────────────────────────────────────── */
+
+@container shopfront (max-width: 767.98px) {
+  .sf-root .sf-exprow {
+    height: auto !important;
+    gap: 16px !important;
+    margin: 22px -20px 0 !important;
+    padding: 2px 20px 6px !important;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sf-root .sf-exp,
+  .sf-root .sf-exprow:hover .sf-exp,
+  .sf-root .sf-exprow .sf-exp:hover {
+    flex: 0 0 62% !important;
+    flex-direction: column;
+    scroll-snap-align: start;
+    height: auto;
+  }
+
+  .sf-root .sf-vid,
+  .sf-root .sf-exp:hover .sf-vid {
+    flex: none !important;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 9 / 13;
+  }
+
+  /* The title is in the body below, where it can wrap. The gradient caption
+     over the image was the same words, clipped to one line. */
+  .sf-root .sf-vlab { display: none; }
+
+  /* Always open — this is the whole point of the stacked layout. */
+  .sf-root .sf-side,
+  .sf-root .sf-exp:hover .sf-side {
+    flex: none !important;
+    width: 100% !important;
+    opacity: 1 !important;
+    border-left: none;
+    border-top: 1px solid var(--hairline);
+    overflow: visible;
+  }
+
+  .sf-root .sf-side-in {
+    width: 100%;
+    height: auto;
+    padding: 16px 16px 18px;
+  }
+
+  /* Stats go from a stacked list with rules to one inline row. */
+  .sf-root .sf-side-in > div:last-child {
+    margin-top: 12px !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 16px !important;
+  }
+
+  /* row-reverse because the markup is label-then-value and the design reads
+     value-then-label. Reversing here beats forking the markup, which would put
+     the desktop card at risk for a phone-only change. */
+  .sf-root .sf-srow {
+    border-top: none;
+    padding-top: 0;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .sf-root .sf-srow > span { font-size: 12px !important; letter-spacing: 0 !important; text-transform: none !important; }
+  .sf-root .sf-srow > b { font-size: 12px !important; }
+}
