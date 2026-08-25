@@ -437,24 +437,6 @@ export default function ShopfrontPreview({
                         {atHandle(p.handle)}
                       </a>
                     ))}
-                    {data.slug && (
-                      <button type="button" onClick={copyLink} style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        padding: '5px 12px', borderRadius: 999,
-                        background: linkCopied ? 'color-mix(in oklab, var(--neon) 14%, var(--card))' : 'var(--card)',
-                        border: `1px solid ${linkCopied ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
-                        fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
-                        color: linkCopied ? 'var(--ink)' : 'var(--ink-faint)',
-                        cursor: 'pointer', transition: 'all .2s',
-                      }}>
-                        {linkCopied ? (
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                        ) : (
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
-                        )}
-                        {linkCopied ? 'Copied!' : `guapd.com/c/${data.slug}`}
-                      </button>
-                    )}
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0 5px 4px', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: 0 }} />
                       Replies in {data.replyTime}

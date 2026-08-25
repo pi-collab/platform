@@ -1839,6 +1839,22 @@ at or above it, ShopfrontPreview's own markup. Both are in the DOM; CSS chooses.
 - [ ] The marketing site, dashboard and ops screens are unchanged. The export
       shipped 10 :root blocks and 32 custom properties; all are scoped to .sfm
 
+### Package names carry their platform
+
+New packages are named "Instagram Reel", "YouTube Shorts" and so on. The bare
+names are RETIRED, not deleted — savePackage validates against the same list, so
+removing them would fail an edit on a value the creator never chose.
+
+- [ ] Create a package on Instagram: the type list offers Instagram Reel /
+      Instagram Static/Carousel / Instagram Story / Other
+- [ ] YouTube offers YouTube Shorts / YouTube Long form / YouTube Integration
+- [ ] Open a package created BEFORE this change (type "Reel"). It still loads,
+      still shows "Reel", and still SAVES — this is the case the retired list
+      exists for
+- [ ] The phone rate card shows each name once, not "Instagram Instagram Reel"
+      (it prefixes legacy names at display time and skips those already prefixed)
+- [ ] Brand side and ops show the same names as the creator set
+
 ---
 
 | When | What to run |
