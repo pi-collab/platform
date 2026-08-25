@@ -812,3 +812,207 @@
     box-shadow: none !important;
   }
 }
+
+@media (max-width: 767.98px) {
+  /* ── Every remaining block, sized to the standalone mobile export ──────────
+     One pass over stat band, rate card, audience, past collaborations and the
+     pitch panel. Sizes, headings and type only — no block is restructured, so
+     the marquee stays a marquee and the desktop DOM is untouched.
+
+     The recurring correction is WEIGHT. This page sets its figures at 800 with
+     -0.03em tracking, which reads as a billboard on a 390px screen; the design
+     sets every one of them at 500 with -0.02em. Nothing here is a redesign so
+     much as taking the shouting out.
+     ──────────────────────────────────────────────────────────────────── */
+
+  /* ── Stat band ────────────────────────────────────────────────────────── */
+
+  /* 34px at weight 800 in a 2-up grid left roughly nine characters per cell,
+     so "₹78,000" and "Monthly reach" were each fighting the cell edge. */
+  .sf-root .sf-stats-strip > div {
+    padding: 17px 18px !important;
+    border-radius: 18px;
+  }
+
+  .sf-root .sf-stats-strip > div > div:first-child {
+    font-size: 24px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .sf-root .sf-stats-strip .t-meta {
+    letter-spacing: .08em !important;
+  }
+
+  /* ── Rate card ────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-rate-row { padding: 18px 2px !important; }
+
+  .sf-root .sf-rate-name > div:first-child {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+
+  .sf-root .sf-rate-name > div:last-child {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  .sf-root .sf-rate-price {
+    font-size: 16px !important;
+    letter-spacing: -0.015em !important;
+  }
+
+  /* The stepper is a tap target as well as a number, so it keeps its size —
+     only the glyphs come down to the design's 15px. */
+  .sf-root .sf-rate-stepper button { font-size: 15px !important; }
+
+  /* ── Audience ─────────────────────────────────────────────────────────── */
+
+  /* clamp(36px,4vw,52px) bottoms out at 36 on a phone, at weight 800. The
+     design puts the follower count at 25px/500 with the label beside it, so
+     the number reads as a fact rather than a headline. */
+  .sf-root .sf-aud-stat > span:first-child {
+    font-size: 25px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1 !important;
+  }
+
+  .sf-root .sf-aud-stat > span:last-child { font-size: 13px !important; }
+
+  .sf-root .sf-aud-grid .t-meta { letter-spacing: .08em !important; }
+
+  /* ── Past collaborations ──────────────────────────────────────────────── */
+
+  .sf-root .sf-btile-name { font-size: 15px !important; font-weight: 600 !important; }
+
+  /* 214px of placeholder for a logo is most of a phone screen. */
+  .sf-root .sf-btile > div:first-child { height: 130px !important; }
+
+  .sf-root .sf-btile > div:first-child > span { font-size: 20px !important; }
+
+  /* ── Pitch panel ──────────────────────────────────────────────────────── */
+
+  /* 30px squares at 9px radius against 13px text; the design uses 22px at 6px,
+     which stops the ticks outweighing the sentences they sit beside. */
+  .sf-root .sf-pitch-point { gap: 10px !important; }
+
+  .sf-root .sf-pitch-point > span:first-child {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 6px !important;
+  }
+
+  .sf-root .sf-pitch-point > span:first-child > svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .sf-root .sf-pitch-point > span:last-child {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  /* ── Every remaining block, sized to the standalone mobile export ──────────
+     One pass over stat band, rate card, audience, past collaborations and the
+     pitch panel. Sizes, headings and type only — no block is restructured, so
+     the marquee stays a marquee and the desktop DOM is untouched.
+
+     The recurring correction is WEIGHT. This page sets its figures at 800 with
+     -0.03em tracking, which reads as a billboard on a 390px screen; the design
+     sets every one of them at 500 with -0.02em. Nothing here is a redesign so
+     much as taking the shouting out.
+     ──────────────────────────────────────────────────────────────────── */
+
+  /* ── Stat band ────────────────────────────────────────────────────────── */
+
+  /* 34px at weight 800 in a 2-up grid left roughly nine characters per cell,
+     so "₹78,000" and "Monthly reach" were each fighting the cell edge. */
+  .sf-root .sf-stats-strip > div {
+    padding: 17px 18px !important;
+    border-radius: 18px;
+  }
+
+  .sf-root .sf-stats-strip > div > div:first-child {
+    font-size: 24px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .sf-root .sf-stats-strip .t-meta {
+    letter-spacing: .08em !important;
+  }
+
+  /* ── Rate card ────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-rate-row { padding: 18px 2px !important; }
+
+  .sf-root .sf-rate-name > div:first-child {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+  }
+
+  .sf-root .sf-rate-name > div:last-child {
+    font-size: 11.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  .sf-root .sf-rate-price {
+    font-size: 16px !important;
+    letter-spacing: -0.015em !important;
+  }
+
+  /* The stepper is a tap target as well as a number, so it keeps its size —
+     only the glyphs come down to the design's 15px. */
+  .sf-root .sf-rate-stepper button { font-size: 15px !important; }
+
+  /* ── Audience ─────────────────────────────────────────────────────────── */
+
+  /* clamp(36px,4vw,52px) bottoms out at 36 on a phone, at weight 800. The
+     design puts the follower count at 25px/500 with the label beside it, so
+     the number reads as a fact rather than a headline. */
+  .sf-root .sf-aud-stat > span:first-child {
+    font-size: 25px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1 !important;
+  }
+
+  .sf-root .sf-aud-stat > span:last-child { font-size: 13px !important; }
+
+  .sf-root .sf-aud-grid .t-meta { letter-spacing: .08em !important; }
+
+  /* ── Past collaborations ──────────────────────────────────────────────── */
+
+  .sf-root .sf-btile-name { font-size: 15px !important; font-weight: 600 !important; }
+
+  /* 214px of placeholder for a logo is most of a phone screen. */
+  .sf-root .sf-btile > div:first-child { height: 130px !important; }
+
+  .sf-root .sf-btile > div:first-child > span { font-size: 20px !important; }
+
+  /* ── Pitch panel ──────────────────────────────────────────────────────── */
+
+  /* 30px squares at 9px radius against 13px text; the design uses 22px at 6px,
+     which stops the ticks outweighing the sentences they sit beside. */
+  .sf-root .sf-pitch-point { gap: 10px !important; }
+
+  .sf-root .sf-pitch-point > span:first-child {
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 6px !important;
+  }
+
+  .sf-root .sf-pitch-point > span:first-child > svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .sf-root .sf-pitch-point > span:last-child {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+}

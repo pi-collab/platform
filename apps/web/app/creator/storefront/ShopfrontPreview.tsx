@@ -762,7 +762,7 @@ export default function ShopfrontPreview({
                   </div>
 
                   {/* Follower stats */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
+                  <div className="sf-aud-stat" style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
                     <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(36px,4vw,52px)', letterSpacing: '-0.04em', lineHeight: 0.85, color: 'var(--ink)' }}>
                       {(p.followers / 1000).toFixed(0)}K
                     </span>
@@ -1062,7 +1062,7 @@ export default function ShopfrontPreview({
                     </div>
                     <div style={{ marginTop: 'auto', paddingTop: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                        <span className="t-subhead" style={{ fontSize: 17 }}>{brand.name}</span>
+                        <span className="t-subhead sf-btile-name" style={{ fontSize: 17 }}>{brand.name}</span>
                         {brand.type && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>{brand.type}</span>}
                       </div>
                       <div style={{ marginTop: 9, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -1098,7 +1098,7 @@ export default function ShopfrontPreview({
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 26 }}>
                   {['Transparent, itemised pricing', 'Written terms before anyone commits', `Replies in ${data.replyTime}`].map((point, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div key={i} className="sf-pitch-point" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         width: 30, height: 30, borderRadius: 9, background: 'var(--neon)', flexShrink: 0,
