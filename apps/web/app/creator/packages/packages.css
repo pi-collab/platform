@@ -530,3 +530,16 @@ select.pk-input {
   font-weight: 600;
   color: var(--lime-700, #4d7c0f);
 }
+
+/* ── Add a package ───────────────────────────────────────────────────────────
+   Black, not neon. This is the plain "make another one" action; the neon is
+   reserved for the button that commits a package, and having both compete made
+   the page read as two equally-important choices.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.pk-btn.pk-add {
+  background: var(--ink, #12151C);
+  color: #fff;
+}
+
+.pk-btn.pk-add:disabled { opacity: .6; }

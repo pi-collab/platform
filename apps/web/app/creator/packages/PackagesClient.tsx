@@ -63,8 +63,11 @@ function AddonRatesEditor({ platform, handle, initial }: {
   initial?: AddonRateRow
 }) {
   const [open, setOpen] = useState(false)
+  /* Fixed is the default for a channel with nothing set yet — it is what most
+     creators mean by a collab rate, and opening on "Not offered" made the
+     common case a two-step. An existing rate always wins over the default. */
   const [mode, setMode] = useState<'none' | 'percent' | 'fixed'>(
-    initial?.collab_rate_type ?? 'none',
+    initial?.collab_rate_type ?? 'fixed',
   )
   const [collab, setCollab] = useState(() => {
     if (initial?.collab_rate_value == null) return ''
@@ -82,16 +85,20 @@ function AddonRatesEditor({ platform, handle, initial }: {
 
   async function save() {
     setBusy(true); setMsg(null)
+    /* An empty box means "not offered", not an error.
+       Now that a mode is pre-selected, a creator who only wants to set a
+       boosting rate would otherwise be blocked by a collab field they never
+       touched. Typing something invalid is still worth saying out loud. */
+    const blank = collab.trim() === ''
     let value: number | null = null
-    if (mode !== 'none') {
-      if (mode === 'percent') {
-        value = percentToBasisPoints(collab)
-        if (value == null) { setBusy(false); setMsg({ ok: false, text: 'Enter a percentage between 0 and 100.' }); return }
-      } else {
-        const rupees = Number.parseInt(collab.replace(/[^0-9]/g, ''), 10)
-        if (!Number.isFinite(rupees)) { setBusy(false); setMsg({ ok: false, text: 'Enter a collab amount.' }); return }
-        value = rupees * 100
-      }
+    let effectiveMode: 'fixed' | 'percent' | null = mode === 'none' || blank ? null : mode
+    if (effectiveMode === 'percent') {
+      value = percentToBasisPoints(collab)
+      if (value == null) { setBusy(false); setMsg({ ok: false, text: 'Enter a percentage between 0 and 100.' }); return }
+    } else if (effectiveMode === 'fixed') {
+      const rupees = Number.parseInt(collab.replace(/[^0-9]/g, ''), 10)
+      if (!Number.isFinite(rupees)) { setBusy(false); setMsg({ ok: false, text: 'Enter a collab amount.' }); return }
+      value = rupees * 100
     }
     const boostRupees = boost.trim() ? Number.parseInt(boost.replace(/[^0-9]/g, ''), 10) : null
     if (boost.trim() && !Number.isFinite(boostRupees as number)) {
@@ -101,8 +108,8 @@ function AddonRatesEditor({ platform, handle, initial }: {
     const res = await saveAddonRates({
       platform,
       handle,
-      collabRateType: mode === 'none' ? null : mode,
-      collabRateValue: mode === 'none' ? null : value,
+      collabRateType: effectiveMode,
+      collabRateValue: effectiveMode == null ? null : value,
       boostingThirtyDayPaise: boostRupees == null ? null : boostRupees * 100,
     })
     setBusy(false)
