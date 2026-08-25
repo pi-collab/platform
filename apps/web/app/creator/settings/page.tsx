@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
+import { displayEmail } from '@/lib/synthetic-email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorSettingsClient from './CreatorSettingsClient'
 
@@ -39,10 +40,10 @@ export default async function CreatorSettingsPage() {
       creatorNiche={(creator as Record<string, unknown>)?.niche as string ?? ''}
       creatorLocation={(creator as Record<string, unknown>)?.location as string ?? ''}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
-      creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? user?.email ?? ''}
+      creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}
       creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
-      userEmail={user?.email ?? ''}
+      userEmail={displayEmail(user?.email) ?? ''}
       userPhone={user?.phone ?? ''}
       userLanguage={prefs.language ?? 'English'}
       userTimezone={prefs.timezone ?? 'IST (GMT+5:30)'}

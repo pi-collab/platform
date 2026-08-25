@@ -1,3 +1,4 @@
+import { displayEmail } from '@/lib/synthetic-email'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
@@ -48,7 +49,10 @@ export default async function CreatorSignupCompletePage({
   // Already vetted — a claimed stub. Nothing to wait for.
   if (creator?.is_vetted) redirect('/creator/dashboard')
 
-  const knownEmail = creator?.contact_email ?? profile?.email ?? null
+  // profile.email can be the minted phone-signup address, which is not an
+  // inbox anyone reads — offering to notify them there is a promise we
+  // cannot keep.
+  const knownEmail = creator?.contact_email ?? displayEmail(profile?.email) ?? null
   // Stored as +91XXXXXXXXXX; the field takes the ten subscriber digits.
   const signupPhone = creator?.phone?.replace(/^\+91/, '') ?? null
 

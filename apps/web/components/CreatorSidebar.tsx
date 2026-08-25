@@ -1,5 +1,7 @@
 'use client'
 
+import { displayEmail } from '@/lib/synthetic-email'
+
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
@@ -310,7 +312,7 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)', marginTop: 2 }}>
                         <span style={{ padding: '1px 7px', borderRadius: 999, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)', color: 'var(--sec-ink)', letterSpacing: '.03em', textTransform: 'uppercase' as const, fontSize: 9.5 }}>Creator</span>
                       </div>
-                      {userEmail && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} data-ph-mask>{userEmail}</div>}
+                      {displayEmail(userEmail) && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} data-ph-mask>{displayEmail(userEmail)}</div>}
                     </div>
                   </div>
                   <div style={{ height: 1, background: 'var(--border-hairline)', margin: '2px 6px 6px' }} />

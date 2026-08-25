@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { SYNTHETIC_EMAIL_DOMAINS } from './synthetic-email'
+
 /**
  * Resend transactional email channel.
  *
@@ -87,9 +89,11 @@ export function maskEmail(email: string): string {
  * bounce — and enough of those get a sending domain throttled or blocked.
  *
  * The shape passes a plain regex check, which is exactly why it needs naming
- * here rather than being left to one.
+ * rather than being left to one. The list lives in lib/synthetic-email, which
+ * is client-safe: the same addresses must also never be DISPLAYED, and a
+ * server-only module cannot be imported by the components doing the rendering.
  */
-const UNDELIVERABLE_DOMAINS = ['@auth.guapd.internal']
+const UNDELIVERABLE_DOMAINS = SYNTHETIC_EMAIL_DOMAINS
 
 export function isPlausibleEmail(email: string | null | undefined): email is string {
   if (!email) return false

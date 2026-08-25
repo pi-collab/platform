@@ -1717,6 +1717,48 @@ Applies to BOTH the mobile and desktop dashboards.
 - [ ] "Create an offer" and "Start a deal with…" do NOT appear in the editor preview. They are a brand's actions; on the creator's own screen they invite someone to make an offer to themselves
 - [ ] They DO still appear on the public `/c/<slug>` page — verify there after any change here, since both surfaces render the same component
 
+### Content showcase — cover, video, and the link out
+
+**Editing (desktop and phone — same control)**
+- [ ] Upload an image on a showcase item; it appears on the card in the preview
+- [ ] Upload an MP4; the card shows the clip, not a placeholder gradient
+- [ ] Try a 60 MB video — rejected with the size named, not "upload failed"
+- [ ] Try a .pdf — rejected by type
+- [ ] Reorder two items AFTER uploading covers to both; each keeps its own cover.
+      (Paths are UUIDs, not positions, precisely so this holds)
+- [ ] "Remove" clears the cover and the card falls back to the gradient
+
+**Published `/c/<slug>`**
+- [ ] Tapping a card with a link opens it in a new tab
+- [ ] Tapping a card with NO link does nothing, and does not look tappable
+- [ ] On a video card, the play control starts the clip and does NOT navigate —
+      this is the regression to watch: the card is an anchor, so play must call
+      both preventDefault and stopPropagation
+- [ ] Video is muted on load and unmutes on the first press of play
+
+**In the editor's own preview**
+- [ ] Tapping a card does NOT navigate away from the editor
+
+**Phone layout (<=768px, and in any narrow render of the component)**
+- [ ] Views and engagement are VISIBLE without hovering. The desktop card hides
+      them behind a hover accordion, which on touch meant they never appeared
+- [ ] Cards scroll horizontally and snap; media is 9/13
+
+### Minted phone-signup addresses are never shown
+
+A phone-only creator has `creator_<phone>@auth.guapd.internal` in GoTrue. It is
+a routing artefact, not their address.
+
+- [ ] Sign in as a phone-only creator. The desktop profile dropdown shows the
+      name and NO email line
+- [ ] `/creator/settings` — the Email field is EMPTY, not pre-filled with the
+      minted address (it is editable; a pre-fill would have saved it back as
+      though the creator had entered it)
+- [ ] The signup notify screen does not offer to email them at that address
+- [ ] A Google-signed-in creator DOES still see their real address in both places
+- [ ] Nothing is ever sent to `@auth.guapd.internal` (lib/email.ts and
+      lib/synthetic-email.ts share one list — check both if the domain changes)
+
 ---
 
 | When | What to run |
