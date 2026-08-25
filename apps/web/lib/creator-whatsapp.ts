@@ -15,16 +15,27 @@ import { sendWhatsAppTemplate, maskPhone } from '@/lib/whatsapp'
 const STATUS_TEMPLATE = 'status_update'
 
 /**
- * The button carries a URL SUFFIX only — the base is baked into the approved
- * template, and sending a full URL yields https://guapd.com/https://guapd.com/…
+ * NOT SENT. The approved status_update template's URL button is STATIC — the
+ * whole address is baked into it — so it takes no parameter, and supplying one
+ * is rejected outright:
+ *
+ *   buttons: Button at index 0 of type Url does not require parameters
+ *
+ * This is the second time this template rejected a send for an argument it
+ * never declared; the first was bodyVars, for the same underlying reason. The
+ * rule for status_update is simply: no variables, of any kind.
+ *
+ * Kept as a constant because it documents where that button actually points,
+ * and because a dynamic-suffix button is what we would need the day the
+ * template is revised to link at a specific deal.
  *
  * /creator/dashboard serves every status on its own: the creator layout sends a
  * rejected creator to the rejection screen, a pending one to the under-review
  * page, and an approved one to the dashboard. Logged out, the login page
- * carries them back here afterwards. One link, honestly described as "check
- * your status", whatever the decision was.
+ * carries them back here afterwards.
  */
 const STATUS_LINK = 'creator/dashboard'
+void STATUS_LINK
 
 export interface CreatorContact {
   phone: string | null
@@ -117,7 +128,9 @@ export async function notifyCreatorStatusChanged(
       // If the template is later revised to greet by name, add `name` back here
       // in the same order the template declares its variables.
       bodyVars: [],
-      buttonValue: STATUS_LINK,
+      // No buttonValue either. See STATUS_LINK above: the template's URL button
+      // is static, and MSG91 rejects the whole send for supplying a parameter
+      // it does not declare.
     })
 
     await record(res.ok ? 'creator.status_whatsapp_sent' : 'creator.status_whatsapp_failed', {
