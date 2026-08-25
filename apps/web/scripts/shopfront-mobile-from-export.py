@@ -86,24 +86,62 @@ def scope_selector(sel: str) -> str:
     return ', '.join(out)
 
 
-lines, out, depth, in_kf = css.split('\n'), [], 0, False
-for line in lines:
-    if re.match(r'\s*@keyframes', line):
-        in_kf = True
-    sel = re.match(r'^([^@{}/][^{}]*?)\s*\{\s*$', line)
-    out.append(line if (in_kf or not sel)
-               else line.replace(sel.group(1), scope_selector(sel.group(1)), 1))
-    depth += line.count('{') - line.count('}')
-    if in_kf and depth == 0:
-        in_kf = False
-css = '\n'.join(out)
-css = re.sub(r'(?m)^(\s+)(a(?::hover)?)\s*\{', rf'\1{SCOPE} \2 {{', css)
+# ── Scope every rule ────────────────────────────────────────────────────────
+# Line-based scoping does not survive a MINIFIED sheet. This export writes
+# `.sr{opacity:1;...}` — selector and body on one line — so a regex anchored on
+# a selector that ENDS its line matched almost nothing and left the whole
+# stylesheet global, redefining .t-meta and friends for the entire site.
+#
+# Walk the braces instead. Anything sitting where a selector can sit gets
+# scoped; at-rule preludes and keyframe stops do not.
+def scope_all(text: str) -> str:
+    out, buf, depth = [], [], 0
+    at_stack = []
+    for ch in text:
+        if ch == '{':
+            sel = ''.join(buf).strip()
+            buf = []
+            if sel.startswith('@'):
+                at_stack.append(sel.split()[0])
+                out.append(sel + '{')
+            elif at_stack and at_stack[-1] in ('@keyframes', '@-webkit-keyframes', '@property'):
+                # 0%, from, to — offsets, not selectors.
+                out.append(sel + '{')
+                at_stack.append('_kf_child')
+            else:
+                out.append(scope_selector(sel) + '{')
+                at_stack.append('_rule')
+            depth += 1
+        elif ch == '}':
+            out.append(''.join(buf) + '}')
+            buf = []
+            depth -= 1
+            if at_stack:
+                at_stack.pop()
+        else:
+            buf.append(ch)
+    out.append(''.join(buf))
+    return ''.join(out)
 
-unscoped = [s.strip() for s in re.findall(r'(?m)^\s*([a-z][^{@\n]{0,60}?)\s*\{', css)]
-if unscoped:
-    print('  WARNING — selectors that would leak site-wide:')
-    for u in sorted(set(unscoped)):
+
+css = scope_all(css)
+
+# A check that CANNOT quietly pass. The previous one looked for selectors
+# starting [a-zA-Z] — element selectors — so it never inspected a class and
+# reported zero while the sheet was almost entirely unscoped.
+leaks = []
+for m in re.finditer(r'(?:^|\})\s*([^{}@]+?)\s*\{', css):
+    for part in m.group(1).split(','):
+        part = part.strip()
+        if not part or part.startswith(SCOPE) or re.match(r'^(?:\d|from\b|to\b)', part):
+            continue
+        leaks.append(part)
+if leaks:
+    print(f'  WARNING — {len(leaks)} selector(s) would leak site-wide:')
+    for u in sorted(set(leaks))[:12]:
         print(f'    {u}')
+else:
+    print(f'  scoping verified: every rule sits under {SCOPE}')
 
 # ── Markup ──────────────────────────────────────────────────────────────────
 body = re.search(r'<body[^>]*>(.*?)</body>', doc, re.S)
@@ -145,6 +183,14 @@ step('svg + html attributes to JSX', n, sum(doc.count(k + '=') for k in SVG_ATTR
 
 
 def style_to_jsx(match):
+    raw = match.group(1).strip()
+    # style="{{ igTabStyle }}" — the WHOLE value is a binding, so there is no
+    # `prop: value` to split and the loop below produced style={{}}: an element
+    # with every style silently dropped. That is how the platform toggle
+    # rendered as two default browser buttons.
+    whole = re.fullmatch(r'\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}', raw)
+    if whole:
+        return 'style={' + whole.group(1) + '}'
     pairs = []
     for d in match.group(1).split(';'):
         if ':' not in d:

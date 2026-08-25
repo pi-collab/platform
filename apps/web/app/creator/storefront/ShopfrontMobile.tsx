@@ -151,6 +151,24 @@ export default function ShopfrontMobile({
   const igProfileUrl = profileUrl('instagram', data.platforms.find(p => p.platform === 'instagram')?.handle ?? '') ?? '#'
   const ytProfileUrl = profileUrl('youtube', data.platforms.find(p => p.platform === 'youtube')?.handle ?? '') ?? '#'
 
+  /* ── Everything the export hardcoded ──────────────────────────────────────
+     The converter only replaced {{ bindings }}. Every other value in the design
+     was {`${firstName}’s`} — his name, handle, niches, follower counts, age bands,
+     cities. On a public shopfront that is not a cosmetic bug: /c/chan rendered
+     a different creator's identity. */
+  const firstName = data.creatorName.split(' ')[0] ?? data.creatorName
+  const lastName = data.creatorName.split(' ').slice(1).join(' ')
+
+  const ig = data.platforms.find(p => p.platform === 'instagram')
+  const yt = data.platforms.find(p => p.platform === 'youtube')
+  const compact = (n: number) =>
+    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}K` : String(n)
+
+  const age = data.audience.ageBreakdown ?? []
+  const cities = data.audience.topLocations ?? []
+  const womenPct = data.audience.gender?.women ?? 0
+  const menPct = data.audience.gender?.men ?? Math.max(0, 100 - womenPct)
+
   const shareLabel = linkCopied ? 'Copied' : 'Share'
   const copyShopfrontLink = copyLink
 
@@ -179,20 +197,20 @@ export default function ShopfrontMobile({
               <div className="sf-comet"></div>
               <div className="mcard" style={{padding: '30px 26px', textAlign: 'center'}}>
                 <Slot url={data.profilePhotoUrl ?? undefined} alt={data.creatorName} style={{width: '100%', height: '220px', display: 'block', margin: '0 auto'}} />
-                <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.01em', fontSize: '27px', lineHeight: '1.2', margin: '22px 0 0', color: 'var(--ink)'}}>Utkarsh <span className="opit">Vichare</span></h1>
-                <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '8px', letterSpacing: '.02em'}}>@uvichar_</div>
+                <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.01em', fontSize: '27px', lineHeight: '1.2', margin: '22px 0 0', color: 'var(--ink)'}}>{firstName} <span className="opit">{lastName}</span></h1>
+                <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '8px', letterSpacing: '.02em'}}>{data.handle}</div>
                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px', justifyContent: 'center'}}>
-                  <span className="opill" style={{fontSize: '11px', color: 'var(--ink)', background: 'var(--sec)', padding: '6px 14px'}}>Lifestyle</span>
-                  <span className="opill" style={{fontSize: '11px', color: 'var(--ink)', background: 'var(--sec)', padding: '6px 14px'}}>Personal finance</span>
-                  <span className="opill" style={{fontSize: '11px', color: 'var(--ink)', background: 'var(--sec)', padding: '6px 14px'}}>Travel</span>
+                  {data.niches.map(n => (
+                                      <span key={n} className="opill" style={{fontSize: '11px', color: 'var(--ink)', background: 'var(--sec)', padding: '6px 14px'}}>{n}</span>
+                  ))}
                 </div>
-                <p style={{fontSize: '13px', lineHeight: '1.55', color: 'var(--ink)', margin: '18px auto 0', maxWidth: '280px'}}>Finance and lifestyle creator sharing honest product breakdowns and everyday money tips.</p>
+                <p style={{fontSize: '13px', lineHeight: '1.55', color: 'var(--ink)', margin: '18px auto 0', maxWidth: '280px'}}>{data.bio}</p>
                 <div style={{display: 'flex', alignItems: 'center', marginTop: '24px'}}>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>500K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Followers</div></div>
+                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Followers</div></div>
                   <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>6.8%</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Engagement</div></div>
+                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.engagementRate}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Engagement</div></div>
                   <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>310K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Avg views</div></div>
+                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Avg views</div></div>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px'}}>
                   <a href="#pitch" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50px', borderRadius: '999px', background: 'var(--neon)', color: '#12151C', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em'}}>Create an offer</a>
@@ -204,17 +222,17 @@ export default function ShopfrontMobile({
               {/* STAT BAND */}
               <div className="sr mcard" style={{padding: '6px 24px'}}>
                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr'}}>
-                  <div style={{padding: '17px 0'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Monthly reach</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>2.8M</div></div>
-                  <div style={{padding: '17px 0 17px 20px', borderLeft: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Repeat brands</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>68%</div></div>
-                  <div style={{padding: '17px 0', borderTop: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Replies in</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>~4h</div></div>
-                  <div style={{padding: '17px 0 17px 20px', borderTop: '1px solid var(--hair)', borderLeft: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Avg deal value</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>₹78,000</div></div>
+                  <div style={{padding: '17px 0'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Monthly reach</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>{data.monthlyReach}</div></div>
+                  <div style={{padding: '17px 0 17px 20px', borderLeft: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Deals per month</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>{data.repeatBrands}</div></div>
+                  <div style={{padding: '17px 0', borderTop: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Replies in</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>{data.replyTime}</div></div>
+                  <div style={{padding: '17px 0 17px 20px', borderTop: '1px solid var(--hair)', borderLeft: '1px solid var(--hair)'}}><div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Avg deal value</div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '24px', marginTop: '8px', color: 'var(--ink)'}}>{data.avgDealValue}</div></div>
                 </div>
               </div>
 
               {/* RATE CARD */}
               <div className="sr" id="packages">
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.015em', fontSize: '26px', lineHeight: '1.2', margin: '0', color: 'var(--ink)'}}>Build a <span className="opit">deal</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
-                <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>Add what you need at Utkarsh's set rates — the total updates as you go.</p>
+                <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates — the total updates as you go.`}</p>
                 <div style={{marginTop: '22px', background: '#fff', borderRadius: '22px', padding: '6px 20px', boxShadow: '0 10px 24px -18px rgba(40,45,25,.2)'}}>
                   {rateItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
                     <div style={{padding: '22px 2px', borderTop: '1px solid var(--hair)', background: item.rowBg}}>
@@ -256,7 +274,7 @@ export default function ShopfrontMobile({
                   <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', padding: '22px 2px', borderTop: '1px solid var(--hair)'}}>
                     <div>
                       <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Selected</div>
-                      <div style={{}}>{rateTotalLabel}</div>
+                      <div style={rateTotalStyle}>{rateTotalLabel}</div>
                     </div>
                     <a href="#" onClick={goToCreateOffer} style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '12px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
                   </div>
@@ -266,21 +284,21 @@ export default function ShopfrontMobile({
               {/* AUDIENCE */}
               <div className="sr">
                 <span className="t-meta" style={{color: '#878D99', letterSpacing: '.1em'}}>AUDIENCE</span>
-                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '16px 0 0', color: 'var(--ink)'}}>Utkarsh's <span className="opit">reach</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
+                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '16px 0 0', color: 'var(--ink)'}}>{`${firstName}’s`} <span className="opit">reach</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
 
                 <div className="mcard" style={{marginTop: '22px', padding: '26px 22px'}}>
                   <div style={{display: 'inline-flex', gap: '4px', padding: '4px', borderRadius: '999px', background: 'var(--sec-mid)'}}>
-                    <button onClick={setIG} style={{}}>Instagram</button>
-                    <button onClick={setYT} style={{}}>YouTube</button>
+                    <button onClick={setIG} style={igTabStyle}>Instagram</button>
+                    <button onClick={setYT} style={ytTabStyle}>YouTube</button>
                   </div>
 
                   <div style={{display: igShow ? 'block' : 'none'}}>
                     <div style={{display: 'flex', gap: '44px', marginTop: '24px', flexWrap: 'wrap'}}>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>500K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Followers</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>6.8%</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Engagement</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>310K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Followers</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.engagementRate}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Engagement</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
                     </div>
-                    <a href={igProfileUrl} target="_blank" rel="noopener" style={{display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '20px', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', border: '1.3px solid var(--line)', borderRadius: '999px', padding: '9px 15px'}}>View Instagram<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg></a>
+                    <a href={igProfileUrl} target="_blank" rel="noopener" style={{display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '20px', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', border: '1.3px solid var(--line)', borderRadius: '999px', padding: '9px 15px'}}>{`View ${ig ? "Instagram" : ""}`}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg></a>
                     <div style={{marginTop: '26px', paddingTop: '22px', borderTop: '1px solid var(--hair)'}}>
                       <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}><span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Monthly reach</span><span style={{fontSize: '10.5px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '3px 9px'}}>▲ 104% 6-mo</span></div>
                       <svg viewBox="0 0 1000 220" style={{width: '100%', height: 'auto', display: 'block', marginTop: '18px'}}><polygon points="40,185 224,147 408,165 592,117 776,81 960,40 960,185 40,185" fill="rgba(24,28,36,.05)" /><line x1="40" y1="185" x2="960" y2="185" stroke="var(--hair)" strokeWidth="1.5" /><polyline points="40,185 224,147 408,165 592,117 776,81 960,40" fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><circle cx="40" cy="185" r="3.5" fill="var(--ink)" /><circle cx="224" cy="147" r="3.5" fill="var(--ink)" /><circle cx="408" cy="165" r="3.5" fill="var(--ink)" /><circle cx="592" cy="117" r="3.5" fill="var(--ink)" /><circle cx="776" cy="81" r="3.5" fill="var(--ink)" /><circle cx="960" cy="40" r="4" fill="#E8FF66" /></svg>
@@ -288,9 +306,9 @@ export default function ShopfrontMobile({
                   </div>
                   <div style={{display: ytShow ? 'block' : 'none'}}>
                     <div style={{display: 'flex', gap: '44px', marginTop: '24px', flexWrap: 'wrap'}}>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>182K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Subscribers</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>8.1%</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Engagement</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>210K</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt ? compact(yt.followers) : ""}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Subscribers</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt ? yt.engagement + "%" : ""}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Engagement</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt ? compact(yt.avgViews) : ""}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
                     </div>
                     <a href={ytProfileUrl} target="_blank" rel="noopener" style={{display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '20px', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', border: '1.3px solid var(--line)', borderRadius: '999px', padding: '9px 15px'}}>View YouTube<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg></a>
                     <div style={{marginTop: '26px', paddingTop: '22px', borderTop: '1px solid var(--hair)'}}>
@@ -306,36 +324,36 @@ export default function ShopfrontMobile({
                     <span style={{fontSize: '12px', color: 'var(--wg-500)'}}>25–34 is the core</span>
                   </div>
                   <div style={{display: 'flex', alignItems: 'flex-end', gap: '16px', marginTop: '22px'}}>
-                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>32%</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '32%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>18–24</div></div>
-                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>41%</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '41%', background: '#E8FF66'}}></div></div><div style={{fontSize: '11px', color: 'var(--ink)', fontWeight: '600', marginTop: '6px'}}>25–34</div></div>
-                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>18%</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '18%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>35–44</div></div>
-                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>9%</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '9%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>45+</div></div>
+                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>{age[0] ? age[0].pct + "%" : "—"}</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '32%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>{age[0]?.label ?? ""}</div></div>
+                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>{age[1] ? age[1].pct + "%" : "—"}</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '41%', background: '#E8FF66'}}></div></div><div style={{fontSize: '11px', color: 'var(--ink)', fontWeight: '600', marginTop: '6px'}}>{age[1]?.label ?? ""}</div></div>
+                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>{age[2] ? age[2].pct + "%" : "—"}</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '18%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>{age[2]?.label ?? ""}</div></div>
+                    <div style={{flex: '1', textAlign: 'center'}}><div style={{fontWeight: '700', fontSize: '13px', color: 'var(--ink)', marginBottom: '6px'}}>{age[3] ? age[3].pct + "%" : "—"}</div><div style={{height: '52px', borderRadius: '6px', background: 'var(--sec)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden'}}><div style={{width: '100%', height: '9%', background: 'var(--sec-mid)'}}></div></div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px'}}>{age[3]?.label ?? ""}</div></div>
                   </div>
                 </div>
 
                 <div className="mcard" style={{marginTop: '16px', padding: '24px 22px', display: 'flex', alignItems: 'center', gap: '24px'}}>
-                  <div style={{position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: 'conic-gradient(#E8FF66 0 61%,#E8E2F0 61% 100%)'}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>61%</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
+                  <div style={{position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: 'conic-gradient(#E8FF66 0 61%,#E8E2F0 61% 100%)'}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{womenPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px', flex: '1'}}>
                     <span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Gender</span>
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--ink)'}}>Women</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>61%</span></div>
-                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--wg-500)'}}>Men</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--wg-500)'}}>39%</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--ink)'}}>Women</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>{womenPct + "%"}</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--wg-500)'}}>Men</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--wg-500)'}}>{menPct + "%"}</span></div>
                   </div>
                 </div>
 
                 <div className="mcard" style={{marginTop: '16px', padding: '24px 22px'}}>
                   <span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Top cities</span>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '17px', marginTop: '18px'}}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--ink)'}}>Mumbai</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '88%', borderRadius: '8px', background: '#E8FF66'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>22%</span></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>Delhi</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '68%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>17%</span></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>Bengaluru</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '56%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>14%</span></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>Pune</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '44%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>11%</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--ink)'}}>{cities[0]?.city ?? ""}</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '88%', borderRadius: '8px', background: '#E8FF66'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{cities[0] ? cities[0].pct + "%" : ""}</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[1]?.city ?? ""}</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '68%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[1] ? cities[1].pct + "%" : ""}</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[2]?.city ?? ""}</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '56%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[2] ? cities[2].pct + "%" : ""}</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}><span style={{width: '78px', flexShrink: '0', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[3]?.city ?? ""}</span><div style={{flex: '1', height: '8px', borderRadius: '8px', background: 'var(--sec)', overflow: 'hidden'}}><div style={{height: '100%', width: '44%', borderRadius: '8px', background: 'var(--sec-mid)'}}></div></div><span style={{width: '32px', textAlign: 'right', fontWeight: '700', fontSize: '13px', color: 'var(--wg-500)'}}>{cities[3] ? cities[3].pct + "%" : ""}</span></div>
                   </div>
                 </div>
               </div>
 
               {/* CONTENT SHOWCASE */}
               <div className="sr">
-                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>A look at Utkarsh's <span className="opit">content</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
+                <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>{`A look at ${firstName}’s`} <span className="opit">content</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {contentItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
                     <div className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
@@ -353,9 +371,9 @@ export default function ShopfrontMobile({
               {/* PAST COLLABORATIONS */}
               <div className="sr">
                 <div>
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>Brands Utkarsh <span className="opit">delivered for</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
+                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>{`Brands ${firstName}`} <span className="opit">delivered for</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
                 </div>
-                <div className="t-meta" style={{color: 'var(--meta)', marginTop: '16px', letterSpacing: '.06em'}}>8 brands booked on guapd</div>
+                <div className="t-meta" style={{color: 'var(--meta)', marginTop: '16px', letterSpacing: '.06em'}}>{`${data.brandCollabs.length} brand${data.brandCollabs.length === 1 ? "" : "s"} booked on Guapd`}</div>
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {brandItems.map((brand, brandIdx) => (<React.Fragment key={brandIdx}>
                     <div className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 68%', padding: '18px'}}>
@@ -370,13 +388,13 @@ export default function ShopfrontMobile({
               {/* PITCH / OFFER */}
               <div className="sr" id="pitch">
                 <div style={{borderRadius: '24px', background: 'var(--ink)', color: '#fff', padding: '34px 26px'}}>
-                  <span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '700', letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--neon)', color: 'var(--ink)', borderRadius: '999px', padding: '5px 13px'}}>Work with Utkarsh</span>
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '24px', lineHeight: '1.25', margin: '20px 0 0', color: '#fff'}}>Make Utkarsh an <span className="opit" style={{color: 'var(--neon)'}}>offer</span></h2>
-                  <p style={{fontSize: '13.5px', lineHeight: '1.7', color: '#B8BAB0', margin: '16px 0 0'}}>Pick deliverables at Utkarsh's set rates and he gets a structured offer, not a DM. He reviews, then accepts, counters, or declines.</p>
+                  <span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '700', letterSpacing: '.1em', textTransform: 'uppercase', background: 'var(--neon)', color: 'var(--ink)', borderRadius: '999px', padding: '5px 13px'}}>{`Work with ${firstName}`}</span>
+                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '24px', lineHeight: '1.25', margin: '20px 0 0', color: '#fff'}}>{`Make ${firstName} an`} <span className="opit" style={{color: 'var(--neon)'}}>offer</span></h2>
+                  <p style={{fontSize: '13.5px', lineHeight: '1.7', color: '#B8BAB0', margin: '16px 0 0'}}>{`Pick deliverables at ${firstName}’s set rates`} and he gets a structured offer, not a DM. He reviews, then accepts, counters, or declines.</p>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '28px'}}>
                     <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>Transparent, itemised pricing</span></div>
                     <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>Written terms before anyone commits</span></div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>Replies in ~4h</span></div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>{`Replies in ${data.replyTime}`}</span></div>
                   </div>
                   <a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '52px', borderRadius: '999px', background: 'var(--neon)', color: 'var(--ink)', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em', marginTop: '28px'}}>Create an offer</a>
                 </div>

@@ -156,8 +156,27 @@ function h1(text: string): string {
   return `              <h1 style="margin:0 0 12px 0;font-size:22px;line-height:1.3;font-weight:700;letter-spacing:-0.02em;color:${COLORS.ink};">${esc(text)}</h1>`
 }
 
-function para(text: string): string {
-  return `              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.65;color:${COLORS.muted};">${esc(text)}</p>`
+/**
+ * A body line, optionally set bold.
+ *
+ * Structural rather than a marker inside the string ("**like this**") because
+ * these lines carry text people typed. A marker convention would let an
+ * applicant bold their own answer by writing two asterisks, and worse, would
+ * mean the escaping had to let SOME markup through.
+ */
+export type EmailLine = string | { text: string; strong?: boolean }
+
+/** The words alone, for the plain-text part and the preheader. */
+function lineText(line: EmailLine): string {
+  return typeof line === 'string' ? line : line.text
+}
+
+function para(line: EmailLine): string {
+  const text = typeof line === 'string' ? line : line.text
+  const strong = typeof line === 'string' ? false : line.strong === true
+  const weight = strong ? 'font-weight:700;' : ''
+  const color = strong ? COLORS.ink : COLORS.muted
+  return `              <p style="margin:0 0 ${strong ? '6px' : '16px'} 0;font-size:15px;line-height:1.65;${weight}color:${color};">${esc(text)}</p>`
 }
 
 // ── Deal notifications ──────────────────────────────────────────────────────
@@ -215,7 +234,7 @@ export function renderDealEmail(content: DealEmailContent): { html: string; text
 export interface AccountEmailContent {
   heading: string
   /** One or more paragraphs. Each renders separately; keep them short. */
-  body: string[]
+  body: EmailLine[]
   ctaUrl?: string
   ctaLabel?: string
   footerNote?: string
@@ -227,13 +246,13 @@ export function renderAccountEmail(content: AccountEmailContent): { html: string
 
   const html = shell({
     heading,
-    preheader: body[0] ?? '',
+    preheader: lineText(body[0] ?? ''),
     inner: [h1(heading), ...body.map(para), ctaUrl ? button(ctaUrl, ctaLabel) : ''].filter(Boolean).join('\n'),
     footer: `${esc(note)}<br>${esc(siteHost())}`,
   })
 
   const text = [
-    heading, '', ...body,
+    heading, '', ...body.map(lineText),
     ...(ctaUrl ? ['', `${ctaLabel}: ${ctaUrl}`] : []),
     '', note,
   ].join('\n')

@@ -108,10 +108,13 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
       `Email: ${email}`,
       phone ? `Phone: ${phone}` : 'Phone: not given',
       note ? `\nTheir note:\n${note}` : '\nNo note included.',
-      // Each answer under the question that produced it. Prompts are included
-      // rather than ids because the person reading this needs the question, and
-      // the role's questions can change after an application is sent.
-      ...answers.flatMap(a => [`\n${a.prompt}`, a.answer]),
+      // Each answer under the question that produced it, with the question
+      // BOLD — a screening email is read by skimming for the answers, and an
+      // unbroken column of same-weight paragraphs hides where each one starts.
+      //
+      // Prompts, not ids: the person reading needs the question, and a role's
+      // questions can change after an application is sent.
+      ...answers.flatMap(a => [{ text: a.prompt, strong: true }, a.answer]),
       '\nTheir CV is attached.',
     ],
     footerNote: `Sent to the careers address for ${BRAND_NAME}.`,
