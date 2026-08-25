@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CreatorSidebar from '@/components/CreatorSidebar'
-import SignOutButton from '@/components/SignOutButton'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { currentPath } from '@/lib/creator-auth'
 import { creatorLoginUrl } from '@/lib/safe-next'
