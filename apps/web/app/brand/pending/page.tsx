@@ -21,7 +21,7 @@ export default async function BrandPendingPage() {
         <p style={{ fontSize: '0.9375rem', color: '#888', lineHeight: 1.6, margin: 0 }}>
           We&apos;re reviewing your brand profile. This usually takes 24-48 hours. You&apos;ll be able to access the platform once approved.
         </p>
-        <SignOutButton />
+        <SignOutButton redirectTo="/login/brand" />
       </div>
     </main>
   )

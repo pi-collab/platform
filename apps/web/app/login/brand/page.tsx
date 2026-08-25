@@ -86,7 +86,7 @@ export default async function LoginPage({
               Set up my brand
             </Link>
             <div className="signup-form__alt">
-              <SignOutButton className="signup-form__alt-link lnk" label="Sign out" />
+              <SignOutButton redirectTo="/login/brand" className="signup-form__alt-link lnk" label="Sign out" />
             </div>
           </div>
         </div>

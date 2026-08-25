@@ -5,11 +5,20 @@ import { useRouter } from 'next/navigation'
 import { resetAnalytics } from '@/lib/analytics'
 
 export default function SignOutButton({
-  redirectTo = '/login/brand',
+  redirectTo,
   className,
   label = 'Sign out',
 }: {
-  redirectTo?: string
+  /**
+   * Where to land after signing out. REQUIRED, deliberately.
+   *
+   * This defaulted to '/login/brand', and the creator profile did not override
+   * it — so a creator who signed out was handed the brand sign-in page. A
+   * default that is right for one audience and wrong for another fails
+   * silently, and only in the flow nobody re-tests. Every caller now says
+   * where its own people belong.
+   */
+  redirectTo: string
   /** When given, replaces the default inline styling entirely so the button can
    *  adopt a page's own design (e.g. the onboarding nav pill). */
   className?: string

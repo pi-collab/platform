@@ -57,7 +57,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '0.75rem', color: '#888' }}>{opsUser.email}</span>
-          <SignOutButton />
+          <SignOutButton redirectTo="/login/brand" />
         </div>
       </header>
       {children}

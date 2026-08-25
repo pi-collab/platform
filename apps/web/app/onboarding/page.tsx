@@ -48,7 +48,7 @@ export default async function OnboardingPage(
               rather than literally, the useful escape at this point is leaving a
               wrong account — someone who signed up under the wrong address is
               otherwise stuck on a form they don't want to fill in. */}
-          <SignOutButton className="onboard-nav__cta" label="Sign out" />
+          <SignOutButton redirectTo="/login/brand" className="onboard-nav__cta" label="Sign out" />
         </nav>
       </div>
 

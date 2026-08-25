@@ -154,7 +154,7 @@ export default function CreatorProfileMobile({
       {/* Sign out, on its own. Separated from the menu because it ends the
           session rather than navigating, and grouping it with four links is how
           it gets tapped by accident. */}
-      <SignOutButton className="sr msurface creator-signout" label="Sign out" />
+      <SignOutButton redirectTo="/login/creator" className="sr msurface creator-signout" label="Sign out" />
     </div>
   )
 }
