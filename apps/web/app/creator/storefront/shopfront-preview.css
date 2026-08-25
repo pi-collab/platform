@@ -1016,3 +1016,149 @@
     line-height: 1.5 !important;
   }
 }
+
+@media (max-width: 767.98px) {
+  /* ── Past collaborations, exactly as the export draws it ───────────────────
+     Desktop is an auto-scrolling marquee of 280x320 tiles. The design makes
+     this a hand-scrolled carousel of cards: 68% wide, an 110px logo panel, and
+     the numbers under the name. Same DOM, different layout — the marquee is
+     untouched above this breakpoint.
+
+     THE DUPLICATE SET HAS TO GO. The track renders every brand twice so the
+     loop can wrap without a seam; stop the animation and turn it into a scroll
+     container and you have simply listed each brand twice. Hence
+     .sf-btile--dup, and aria-hidden on the same copies, which also stops a
+     screen reader announcing all of them twice on every screen size.
+     ──────────────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-btile--dup { display: none !important; }
+
+  .sf-root .sf-brandmarquee {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    padding: 0 !important;
+    /* The edge fade belongs to a loop that never ends. A list you scroll to the
+       end of should show its last card whole. */
+    -webkit-mask: none !important;
+    mask: none !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sf-root .sf-brandtrack {
+    animation: none !important;
+    width: auto !important;
+    gap: 16px !important;
+    /* Bleeds to the screen edge and back, matching the content showcase. */
+    margin: 22px -20px 0 !important;
+    padding: 2px 20px 6px !important;
+    align-items: stretch !important;
+  }
+
+  .sf-root .sf-btile {
+    flex: 0 0 68% !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 18px !important;
+    border-radius: 18px;
+    scroll-snap-align: start;
+  }
+
+  /* The logo panel: a flat tint at 110px, not a 214px gradient card. */
+  .sf-root .sf-btile > div:first-child {
+    height: 110px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: #F1F4FA !important;
+  }
+
+  .sf-root .sf-btile > div:first-child > span {
+    font-size: 20px !important;
+    color: #79809C !important;
+  }
+
+  /* margin-top:auto pushed this to the bottom of a fixed-height tile. The card
+     is content-height now, so it sits straight under the logo. */
+  .sf-root .sf-btile > div:last-child {
+    margin-top: 0 !important;
+    padding-top: 14px !important;
+  }
+
+  .sf-root .sf-btile > div:last-child > div:last-child {
+    margin-top: 8px !important;
+    font-size: 12px !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  /* ── Past collaborations, exactly as the export draws it ───────────────────
+     Desktop is an auto-scrolling marquee of 280x320 tiles. The design makes
+     this a hand-scrolled carousel of cards: 68% wide, an 110px logo panel, and
+     the numbers under the name. Same DOM, different layout — the marquee is
+     untouched above this breakpoint.
+
+     THE DUPLICATE SET HAS TO GO. The track renders every brand twice so the
+     loop can wrap without a seam; stop the animation and turn it into a scroll
+     container and you have simply listed each brand twice. Hence
+     .sf-btile--dup, and aria-hidden on the same copies, which also stops a
+     screen reader announcing all of them twice on every screen size.
+     ──────────────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-btile--dup { display: none !important; }
+
+  .sf-root .sf-brandmarquee {
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    padding: 0 !important;
+    /* The edge fade belongs to a loop that never ends. A list you scroll to the
+       end of should show its last card whole. */
+    -webkit-mask: none !important;
+    mask: none !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sf-root .sf-brandtrack {
+    animation: none !important;
+    width: auto !important;
+    gap: 16px !important;
+    /* Bleeds to the screen edge and back, matching the content showcase. */
+    margin: 22px -20px 0 !important;
+    padding: 2px 20px 6px !important;
+    align-items: stretch !important;
+  }
+
+  .sf-root .sf-btile {
+    flex: 0 0 68% !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 18px !important;
+    border-radius: 18px;
+    scroll-snap-align: start;
+  }
+
+  /* The logo panel: a flat tint at 110px, not a 214px gradient card. */
+  .sf-root .sf-btile > div:first-child {
+    height: 110px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    background: #F1F4FA !important;
+  }
+
+  .sf-root .sf-btile > div:first-child > span {
+    font-size: 20px !important;
+    color: #79809C !important;
+  }
+
+  /* margin-top:auto pushed this to the bottom of a fixed-height tile. The card
+     is content-height now, so it sits straight under the logo. */
+  .sf-root .sf-btile > div:last-child {
+    margin-top: 0 !important;
+    padding-top: 14px !important;
+  }
+
+  .sf-root .sf-btile > div:last-child > div:last-child {
+    margin-top: 8px !important;
+    font-size: 12px !important;
+  }
+}

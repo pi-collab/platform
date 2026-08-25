@@ -1793,6 +1793,20 @@ a routing artefact, not their address.
 - [ ] `job_roles.application_questions` defaults to `[]` for existing roles, so a
       role written before this feature still opens and saves
 
+### Shopfront on a phone — past collaborations carousel
+
+The desktop marquee renders every brand TWICE so its loop wraps without a seam.
+On a phone the same DOM becomes a hand-scrolled carousel, where a second copy is
+simply the list repeated.
+
+- [ ] Each brand appears EXACTLY ONCE on a phone. Scroll to the end and count
+- [ ] Desktop still auto-scrolls, still seamless, still pauses on hover
+- [ ] A screen reader announces each brand once, on BOTH sizes (the duplicates
+      carry aria-hidden)
+- [ ] The last card can be scrolled fully into view — no edge fade clipping it
+- [ ] Cards snap, are ~68% of the screen wide, and the logo panel is 110px
+- [ ] With ONE collaboration: desktop marquee still works, phone shows one card
+
 ---
 
 | When | What to run |

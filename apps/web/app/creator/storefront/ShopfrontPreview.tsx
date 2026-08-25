@@ -1044,7 +1044,16 @@ export default function ShopfrontPreview({
               <div className="sf-brandtrack" style={{ display: 'flex', alignItems: 'center', gap: 40, width: 'max-content', padding: '0 20px' }}>
                 {/* Double the items for seamless loop */}
                 {[...data.brandCollabs, ...data.brandCollabs].map((brand, i) => (
-                  <div key={i} className="sf-btile" style={{
+                  <div
+                    key={i}
+                    // The second copy exists only so the marquee can loop
+                    // seamlessly. It was also being read out by screen readers,
+                    // announcing every brand twice, and on a phone — where this
+                    // becomes a scrollable list rather than a loop — it would
+                    // show every brand twice on screen as well.
+                    className={`sf-btile${i >= data.brandCollabs.length ? ' sf-btile--dup' : ''}`}
+                    aria-hidden={i >= data.brandCollabs.length}
+                    style={{
                     flexShrink: 0, width: 280, height: 320, borderRadius: 24,
                     position: 'relative', overflow: 'hidden',
                     border: '1px solid var(--hairline)', background: 'var(--card)',
