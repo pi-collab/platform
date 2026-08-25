@@ -2,6 +2,7 @@
 
 import React from 'react'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
+import { ContentMedia } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
 import './shopfront-mobile.css'
 
@@ -183,6 +184,10 @@ export default function ShopfrontMobile({
     views: c.views ?? '',
     engagement: c.engagement ?? '',
     slot: c.thumbnailUrl ?? '',
+    // The card renders this through the same control the desktop card uses, so
+    // a clip gets a play button rather than being fed to <img>, which is what
+    // produced a broken-image icon on video items.
+    raw: c,
     // The export draws these cards as plain divs, so a tap went nowhere. The
     // desktop card has been a link since the showcase work; this restores that
     // on a phone, where tapping a reel is the obvious thing to do.
@@ -318,7 +323,7 @@ export default function ShopfrontMobile({
                   <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Avg views</div></div>
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px'}}>
-                  <a href="#pitch" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50px', borderRadius: '999px', background: 'var(--neon)', color: '#12151C', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em'}}>Create an offer</a>
+                  {data.hideDealCta ? null : (<a href="#packages" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50px', borderRadius: '999px', background: 'var(--neon)', color: '#12151C', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em'}}>Create an offer</a>)}
                   <button onClick={copyShopfrontLink} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', height: '50px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', color: 'var(--ink)', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.6" y1="10.6" x2="15.4" y2="6.4" /><line x1="8.6" y1="13.4" x2="15.4" y2="17.6" /></svg>{shareLabel}</button>
                 </div>
               </div>
@@ -335,7 +340,7 @@ export default function ShopfrontMobile({
               </div>
 
               {/* RATE CARD */}
-              <div className="sr" id="packages">
+              <div id="packages" className="sr">
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.015em', fontSize: '26px', lineHeight: '1.2', margin: '0', color: 'var(--ink)'}}>Build a <span className="opit">deal</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
                 <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates — the total updates as you go.`}</p>
                 <div style={{marginTop: '22px', background: '#fff', borderRadius: '22px', padding: '6px 20px', boxShadow: '0 10px 24px -18px rgba(40,45,25,.2)'}}>
@@ -381,7 +386,7 @@ export default function ShopfrontMobile({
                       <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Selected</div>
                       <div style={rateTotalStyle}>{rateTotalLabel}</div>
                     </div>
-                    <a href="#" onClick={goToCreateOffer} style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '12px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>
+                    {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '12px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
                   </div>
                 </div>
               </div>
@@ -462,7 +467,9 @@ export default function ShopfrontMobile({
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {contentItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
                     <a href={item.url || undefined} target={item.url ? "_blank" : undefined} rel="noopener noreferrer" className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
-                      <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}><Slot url={item.slot} alt={item.name} style={{width: '100%', height: '100%', display: 'block'}} /><span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span></div>
+                      <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}>{item.raw.mediaKind === 'video'
+                          ? <ContentMedia item={item.raw} />
+                          : <Slot url={item.slot} alt={item.name} style={{ width: '100%', height: '100%', display: 'block' }} />}<span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span></div>
                       <div style={{padding: '16px 16px 18px'}}>
                         <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>{item.name}</div>
                         <div className="t-meta" style={{color: 'var(--meta)', marginTop: '5px', letterSpacing: '.06em'}}>{item.brand}</div>
@@ -501,7 +508,7 @@ export default function ShopfrontMobile({
                     <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>Written terms before anyone commits</span></div>
                     <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '6px', background: 'var(--neon)', flexShrink: '0'}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span style={{fontSize: '13px', color: '#fff'}}>{`Replies in ${data.replyTime}`}</span></div>
                   </div>
-                  <a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '52px', borderRadius: '999px', background: 'var(--neon)', color: 'var(--ink)', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em', marginTop: '28px'}}>Create an offer</a>
+                  {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '52px', borderRadius: '999px', background: 'var(--neon)', color: 'var(--ink)', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em', marginTop: '28px'}}>Create an offer</a>)}
                 </div>
               </div>
 

@@ -564,35 +564,32 @@
 .on-dark{ --ink:#EDEDE7; --meta:#9EA096; --ink-soft:#C6C8BE; --ink-faint:#9EA096; color:#EDEDE7; }.sfm /* ===== Component classes ===== */
 .g-card{ background:var(--card); border-radius:20px; box-shadow:var(--sh-2); padding:clamp(22px,2.4vw,28px); }.sfm .g-btn-primary{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:var(--font-ui); font-weight:600; font-size:13px; color:var(--lime-950); background:var(--lime-400); border:1px solid transparent; border-radius:999px; padding:12px 20px; box-shadow:0 14px 26px -12px rgba(180,215,50,.7); cursor:pointer; transition:transform .12s ease,box-shadow .18s ease,filter .18s ease; }.sfm .g-btn-primary:hover{ transform:translateY(-1px); filter:brightness(1.04); box-shadow:0 18px 32px -12px rgba(180,215,50,.95); }.sfm .g-btn-primary:active{ transform:scale(.97); }.sfm .g-btn-secondary{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:var(--font-ui); font-weight:600; font-size:13px; color:var(--ink); background:#fff; border:1px solid var(--hairline); border-radius:999px; padding:12px 18px; cursor:pointer; transition:background .18s ease,transform .12s ease; }.sfm .g-btn-secondary:hover{ background:var(--paper-2); transform:translateY(-1px); }.sfm .g-btn-secondary:active{ transform:scale(.97); }.sfm .g-avatar{ display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; flex-shrink:0; background:var(--sec-2); color:var(--sec-ink); font-family:var(--font-ui); font-weight:700; font-size:15px; }.sfm .g-pill-neutral{ display:inline-flex; align-items:center; gap:6px; font-family:var(--font-ui); font-weight:600; font-size:11px; color:var(--ink); background:var(--sec-2); border:1px solid var(--sec-mid-2); border-radius:999px; padding:4px 11px; }.sfm .g-progress-track{ height:5px; border-radius:999px; overflow:hidden; background:linear-gradient(90deg,var(--sec),var(--sec-2)); }.sfm .g-progress-fill{ height:100%; border-radius:999px; background:var(--lime-400); }.sfm .g-section-rule{ width:40px; height:1px; background:linear-gradient(90deg,var(--sec-mid),var(--sec-mid-2)); margin-top:12px; }.sfm a{text-decoration:none;color:inherit;}.sfm [data-om-starter="ios-frame"]{width:390px !important;height:844px !important;}.sfm .opit{font-family:var(--font-serif);font-style:italic;font-weight:400;}.sfm .opill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-ui);font-weight:600;border-radius:999px;}.sfm .tnum{font-feature-settings:"tnum" 1;font-variant-numeric:tabular-nums;font-family:var(--font-num);}.sfm .mcard{border-radius:20px;background:var(--card);box-shadow:0 1px 2px rgba(24,28,36,.04),0 10px 18px -12px rgba(24,28,36,.16);}.sfm .secline{width:32px;height:1px;background:#C9EB3C;margin-top:10px;}.sfm .snap-track{scrollbar-width:none;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;}.sfm .snap-track::-webkit-scrollbar{display:none;}.sfm .tab{transition:color .12s ease;}.sfm .sr{opacity:1;transform:none;transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1);}.sfm .sr.sr-pre{opacity:0;transform:translateY(24px);}.sfm .sr.sr-in{opacity:1;transform:none;}@property --sfang{syntax:'<angle>';inherits:false;initial-value:0deg;}@keyframes sfOrbit{to{offset-distance:100%;}}.sfm .sf-hero-border{position:relative;border-radius:20px;}.sfm .sf-hero-border::before{content:"";position:absolute;inset:0;border-radius:20px;padding:2px;background:linear-gradient(rgba(232,255,102,.6),rgba(232,255,102,.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;pointer-events:none;z-index:2;}.sfm .sf-comet{position:absolute;top:0;left:0;width:34px;height:3px;border-radius:3px;background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,.35) 30%, rgba(255,255,255,.7) 64%, rgba(255,255,255,.96) 100%);offset-path:border-box;offset-distance:0%;offset-rotate:auto;offset-anchor:100% 50%;animation:sfOrbit 5.5s linear infinite;pointer-events:none;z-index:4;filter:drop-shadow(0 0 2px rgba(255,255,255,.7)) drop-shadow(0 0 5px rgba(232,255,102,.4));}.sfm .sf-comet::after{content:"";position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--card);box-shadow:0 0 7px 3px rgba(255,255,255,.95),0 0 12px 5px rgba(232,255,102,.4);}@media (prefers-reduced-motion:reduce){.sfm .sf-comet{display:none !important;}}@media (prefers-reduced-motion:reduce){.sfm .sr.sr-pre{opacity:1 !important;transform:none !important;}}
 
-/* ── The edge bleed, tied to the page gutter ─────────────────────────────────
-   The export writes each scrolling row as `margin: 22px -20px 0` with
-   `padding: 2px 20px 6px`. That pair only lines up with the heading above it
-   while the parent's gutter is EXACTLY 20px — the value is hardcoded twice and
-   agrees with nothing. Wherever this component is rendered in a container with
-   a different gutter, the cards and the heading above them sit at different
-   left edges, which is what the design looks like when it is nearly right.
+/* ── Scrolling rows sit in the gutter, and do not bleed ──────────────────────
+   The export writes each row as `margin: 22px -20px 0` with
+   `padding: 2px 20px 6px`: out to the screen edge, then back in by the same
+   amount, so the first card lands level with the heading. It depends on the
+   parent's gutter being EXACTLY 20px, stated twice, agreeing with nothing.
 
-   One token, used by the column and by every row that bleeds out of it, so the
-   two cannot disagree.
+   In practice the first card kept landing left of its heading, reported three
+   times. I could not reproduce it from the source — the arithmetic cancels —
+   so rather than guess at the maths a fourth time, the mechanism goes: no
+   negative margin, no compensating padding, and the row is simply laid out
+   inside the column's gutter like every other element in it. Alignment is then
+   not a calculation that can be wrong.
+
+   The cost is the edge bleed: the last card now ends at the gutter instead of
+   running under the screen edge. That is a visible departure from the design,
+   and a deliberate one — a row that lines up matters more than a row that
+   bleeds.
    ────────────────────────────────────────────────────────────────────────── */
 
-.sfm {
-  --sfm-gutter: 20px;
-}
-
-/* The page column the export gives 8px 20px 0. */
-.sfm > div:first-child {
-  padding-left: var(--sfm-gutter) !important;
-  padding-right: var(--sfm-gutter) !important;
-}
-
-/* Every horizontal scroller: out to the edge, then back in by the same gutter,
-   so the first card starts level with the heading. */
 .sfm .snap-track {
-  margin-left: calc(var(--sfm-gutter) * -1) !important;
-  margin-right: calc(var(--sfm-gutter) * -1) !important;
-  padding-left: var(--sfm-gutter) !important;
-  padding-right: var(--sfm-gutter) !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  /* Kept so the last card is not flush against the gutter edge mid-scroll. */
+  scroll-padding-left: 0;
 }
 
 /* ── A cover that fails to load ──────────────────────────────────────────────

@@ -237,7 +237,12 @@ const metaLabel: React.CSSProperties = {
 }
 
 const removeBtn: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: '50%',
+  // Explicit box and no padding: a bare <button> carries browser padding, and
+  // with the × set as TEXT its shape followed whatever font resolved — which is
+  // how a round button came to look like a vertical oval. The glyph is an SVG
+  // now, so nothing about the font can reach it.
+  width: 28, height: 28, minWidth: 28, minHeight: 28, padding: 0, lineHeight: 1,
+  boxSizing: 'border-box', borderRadius: '50%',
   border: `1px solid ${BHL}`, background: '#FFFFFF',
   color: 'var(--ink-faint)', cursor: 'pointer',
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -520,7 +525,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.5" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
             </button>
           )}
-          <button type="button" onClick={onRemove} style={removeBtn}>&times;</button>
+          <button type="button" onClick={onRemove} style={removeBtn}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
         </div>
 
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.5" strokeLinecap="round"
@@ -646,7 +651,7 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
           {collab.type && <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 1 }}>{collab.type}{collab.views ? ` \u00B7 ${collab.views} views` : ''}</div>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-          <button type="button" onClick={onRemove} style={removeBtn}>&times;</button>
+          <button type="button" onClick={onRemove} style={removeBtn}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.5" strokeLinecap="round"
           style={{ transition: 'transform .25s ease', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', flexShrink: 0 }}>
@@ -1136,7 +1141,7 @@ export default function StorefrontManager({
                                   // Digits only, and stored as a STRING so a leading zero can
                                   // be typed over rather than sticking — the same bug the age
                                   // bands had.
-                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11)
+                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11).replace(/^0+(?=\d)/, '')
                                   setFollowers(f => ({ ...f, [k]: digits }))
                                 }}
                                 style={{ width: 110, textAlign: 'right', border: 'none', background: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}
@@ -1198,7 +1203,7 @@ export default function StorefrontManager({
                               value={i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
                               onChange={e => {
                                 if (i === edit.ageBreakdown.length - 1) return
-                                const digits = e.target.value.replace(/\D/g, '').slice(0, 3)
+                                const digits = e.target.value.replace(/\D/g, '').slice(0, 3).replace(/^0+(?=\d)/, '')
                                 const typed = digits === '' ? 0 : parseInt(digits, 10)
                                 /* Bounded by what the other typed bands already take, so the four
                                    can never add up to more than 100. */
@@ -1243,12 +1248,12 @@ export default function StorefrontManager({
                             const u = [...edit.topLocations]; u[i] = { ...loc, city: e.target.value }; set('topLocations', u)
                           }} placeholder="City" style={{ ...dinputSmall, flex: 1 }} />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <input type="number" value={loc.pct} min={0} max={100} onChange={e => {
+                            <input type="text" inputMode="numeric" value={loc.pct === 0 ? '' : String(loc.pct)} placeholder="0" onChange={e => {
                               const u = [...edit.topLocations]; u[i] = { ...loc, pct: parseInt(e.target.value) || 0 }; set('topLocations', u)
                             }} style={{ ...dinputSmall, width: 50, textAlign: 'center' }} />
                             <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>%</span>
                           </div>
-                          <button onClick={() => set('topLocations', edit.topLocations.filter((_, j) => j !== i))} style={removeBtn}>&times;</button>
+                          <button onClick={() => set('topLocations', edit.topLocations.filter((_, j) => j !== i))} style={removeBtn}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
                         </div>
                       ))}
                     </div>

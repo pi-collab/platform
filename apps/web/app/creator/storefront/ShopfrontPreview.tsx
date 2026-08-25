@@ -43,7 +43,7 @@ export interface AudienceData {
    autoplay is only permitted while muted, and a creator showing work to a brand
    means the sound.
    ────────────────────────────────────────────────────────────────────────── */
-function ContentMedia({ item }: { item: ContentItem }) {
+export function ContentMedia({ item }: { item: ContentItem }) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
 
