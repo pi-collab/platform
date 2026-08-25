@@ -58,7 +58,14 @@ export function ContentMedia({ item }: { item: ContentItem }) {
     <>
       <video
         ref={ref}
-        src={item.thumbnailUrl}
+        /* #t=0.1 asks for a frame a tenth of a second in.
+         *
+         * A <video> with no poster paints NOTHING until it plays — Safari and
+         * Chrome both show an empty box — so a clip in the showcase rendered as
+         * a blank tile with a play button floating on it. A media fragment makes
+         * the browser seek there while preloading metadata, which gives a real
+         * first frame to use as the thumbnail without shipping a second file. */
+        src={/#t=/.test(item.thumbnailUrl ?? '') ? item.thumbnailUrl : `${item.thumbnailUrl}#t=0.1`}
         className="sf-vid-media"
         playsInline
         loop

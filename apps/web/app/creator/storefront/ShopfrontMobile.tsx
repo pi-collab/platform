@@ -151,9 +151,13 @@ export default function ShopfrontMobile({
       qty: n,
       // priceLabel is null exactly when the creator quotes on request, which
       // is also what drives isPriceOnRequest below — one source, not two.
-      priceDisplay: item.priceLabel ?? '',
+      //
+      // The word "From" is stripped here because the design's row renders its
+      // OWN "From" label beside the figure, and priceLabel is written as
+      // "From ₹60,000" — leaving both gave "From From ₹60,000".
+      priceDisplay: (item.priceLabel ?? '').replace(/^\s*from\s+/i, ''),
       // The design shrinks a long figure rather than letting it wrap.
-      priceFontSize: (item.priceLabel ?? '').length > 9 ? '15px' : '17px',
+      priceFontSize: (item.priceLabel ?? '').length > 12 ? '15px' : '17px',
       rowBg: n > 0 ? 'color-mix(in oklab, var(--neon) 9%, transparent)' : 'transparent',
       isReel: platform === 'instagram' && type.includes('reel'),
       isStory: platform === 'instagram' && type.includes('story'),
