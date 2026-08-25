@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
@@ -756,9 +756,30 @@ export default function StorefrontManager({
   // the moment the server confirms it.
   const [justPublished, setJustPublished] = useState(false)
   const isPublished = (storefront?.is_published ?? false) || justPublished
+  /* Everyone gets the guided edit, not just first-timers.
+   *
+   * This was gated on !isPublished, so a creator who already had a shopfront
+   * never saw the step-by-step editor at all — the new experience shipped only
+   * to people who had not used the old one.
+   *
+   * The opt-out is REMEMBERED. Forcing someone through seven cards every time
+   * they come back to fix one line is the trap "Show all sections" exists to
+   * avoid, and it is not much of an escape if it resets on the next visit. */
   const [showAll, setShowAll] = useState(false)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('sf-editor-show-all') === '1') setShowAll(true)
+    } catch {
+      // Private mode, or storage disabled. The wizard is a fine default.
+    }
+  }, [])
+  const dismissWizard = useCallback(() => {
+    setShowAll(true)
+    try { localStorage.setItem('sf-editor-show-all', '1') } catch { /* not worth failing over */ }
+  }, [])
+
   const [step, setStep] = useState(0)
-  const wizard = !isPublished && !showAll
+  const wizard = !showAll
   const lastStep = WIZARD_STEPS.length - 1
   // Step 1 is the only mandatory one: everything else on the page hangs off a
   // URL, and there is nothing to publish without one.
@@ -899,7 +920,7 @@ export default function StorefrontManager({
                     The way out is quiet, but it is there. */}
                 <button
                   type="button"
-                  onClick={() => setShowAll(true)}
+                  onClick={dismissWizard}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)', textDecoration: 'underline' }}
                 >
                   Show all sections

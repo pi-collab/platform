@@ -502,15 +502,35 @@ export default function ShopfrontPreview({
                         Create an offer
                       </a>
                     )}
-                    <a href={dealUrl ? '#packages' : '#packages'} className="sf-hero-cta-alt" style={{
-                      fontWeight: 700, fontSize: 14, color: 'var(--ink)', textDecoration: 'none',
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                      width: 180, padding: '14px 22px', border: '1px solid var(--hairline)',
-                      borderRadius: 999, background: 'var(--card)',
-                      boxShadow: '0 12px 26px -12px rgba(40,45,25,.45),inset 0 1px 0 rgba(255,255,255,.9)',
-                    }}>
-                      View rates
-                    </a>
+                    {/* Share, beside View rates.
+                        The link already lives in the handles row above, but that
+                        is a row of destinations — this is an action, and it
+                        belongs where the other actions are. */}
+                    <button
+                      type="button"
+                      onClick={copyLink}
+                      className="sf-hero-cta-alt"
+                      aria-label={linkCopied ? 'Link copied' : 'Copy shopfront link'}
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        fontWeight: 700, fontSize: 14,
+                        color: linkCopied ? 'var(--ink)' : 'var(--ink)',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                        width: 180, padding: '14px 22px',
+                        border: `1px solid ${linkCopied ? 'var(--neon-deep)' : 'var(--hairline)'}`,
+                        borderRadius: 999,
+                        background: linkCopied ? 'color-mix(in oklab, var(--neon) 14%, var(--card))' : 'var(--card)',
+                        boxShadow: '0 12px 26px -12px rgba(40,45,25,.45),inset 0 1px 0 rgba(255,255,255,.9)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {linkCopied ? (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700, #4d7c0f)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                      ) : (
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 6-4-4-4 4" /><path d="M12 2v13" /></svg>
+                      )}
+                      {linkCopied ? 'Link copied' : 'Share'}
+                    </button>
                   </div>
                 </div>
               </div>
