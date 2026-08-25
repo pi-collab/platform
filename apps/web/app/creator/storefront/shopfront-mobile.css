@@ -663,3 +663,20 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 .sfm h2 { font-weight: 600 !important; }
+
+/* ── Cards in a row are one height, and so are their bodies ──────────────────
+   The media box is a fixed 9/13, but the body below it is content-height: a
+   card whose item has no brand, or no engagement figure, came up short next to
+   its neighbours. The row is already flex, so the cards themselves stretch —
+   this makes the BODY take the slack, which is what actually lines the text up.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sfm .snap-track { align-items: stretch; }
+
+.sfm .mcard {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The media keeps its ratio; the body grows. */
+.sfm .mcard > :last-child { flex: 1; }

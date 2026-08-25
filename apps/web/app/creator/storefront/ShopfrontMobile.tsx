@@ -77,8 +77,34 @@ interface RateVM {
  * span and the card looks like it failed to load. `url` empty falls back to the
  * tinted block the design uses before an image exists.
  */
-function Slot({ url, alt, style }: { url?: string; alt: string; style: React.CSSProperties }) {
-  if (!url) return <span aria-hidden="true" style={{ background: '#F1F4FA', ...style }} />
+function Slot({ url, alt, style, initial }: {
+  url?: string
+  alt: string
+  style: React.CSSProperties
+  /** Shown when there is no image — a brand's first letter beats an empty box. */
+  initial?: string
+}) {
+  if (!url) {
+    return (
+      <span
+        aria-hidden="true"
+        style={{
+          background: '#F1F4FA',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'var(--font-display)',
+          fontWeight: 700,
+          fontSize: 30,
+          letterSpacing: '-0.02em',
+          color: '#79809C',
+          ...style,
+        }}
+      >
+        {initial ?? ''}
+      </span>
+    )
+  }
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -493,7 +519,7 @@ export default function ShopfrontMobile({
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {brandItems.map((brand, brandIdx) => (<React.Fragment key={brandIdx}>
                     <div className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 68%', padding: '18px'}}>
-                      <Slot url={brand.slot} alt={brand.name} style={{width: '100%', height: '110px', display: 'block', background: '#F1F4FA', borderRadius: '12px', color: '#79809C'}} />
+                      <Slot url={brand.slot} alt={brand.name} initial={brand.name.trim().charAt(0).toUpperCase()} style={{width: '100%', height: '110px', display: 'block', background: '#F1F4FA', borderRadius: '12px', color: '#79809C'}} />
                       <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px', marginTop: '16px'}}><span style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>{brand.name}</span><span className="t-meta" style={{color: 'var(--meta)'}}>{brand.content}</span></div>
                       <div style={{fontSize: '12px', color: 'var(--wg-500)', marginTop: '8px'}}><b className="tnum" style={{color: 'var(--ink)'}}>{brand.views}</b> views · <b className="tnum" style={{color: 'var(--ink)'}}>{brand.engagement}</b> eng.</div>
                     </div>
