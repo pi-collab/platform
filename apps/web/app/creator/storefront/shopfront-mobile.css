@@ -605,3 +605,64 @@
 .sfm .mcard img {
   background: #F1F4FA;
 }
+
+/* ── The design's page header ────────────────────────────────────────────── */
+
+.sfm .sfm-appbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* The export pads 58px at the top for a phone's status bar. In a browser that
+     is a hole, so the inset comes from the viewport itself and is 0 on a device
+     that has no notch. */
+  padding: calc(10px + env(safe-area-inset-top)) 18px 12px;
+  background: #F5F7FA;
+}
+
+.sfm .sfm-appbar__back {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.sfm .sfm-appbar__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.sfm .sfm-appbar__action {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(22, 23, 15, .10);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ── Section headings ────────────────────────────────────────────────────────
+   The export sets "Build a deal" at 600 and every other h2 at 500, which reads
+   as two levels of heading on a page that has one. All 600.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sfm h2 { font-weight: 600 !important; }

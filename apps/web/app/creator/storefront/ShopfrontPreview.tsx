@@ -252,6 +252,7 @@ export default function ShopfrontPreview({
   onSectionsChange,
   dealUrl,
   onDealClick,
+  showMobileHeader = false,
 }: {
   data: ShopfrontData
   editing?: boolean
@@ -260,6 +261,13 @@ export default function ShopfrontPreview({
   dealUrl?: string
   /** When set, CTA buttons call this with selected rate card quantities instead of navigating */
   onDealClick?: (selectedQty: Record<string, number>) => void
+  /**
+   * Show the phone header (back / "Shopfront" / copy link).
+   *
+   * Passed only by the creator's own storefront screen. The public page has no
+   * app to go back to, and /browse is inside the brand shell which has its own.
+   */
+  showMobileHeader?: boolean
 }) {
   const sections = data.sections?.length ? data.sections : DEFAULT_SECTIONS
   const isEnabled = (key: string) => sections.find(s => s.key === key)?.enabled !== false
@@ -1172,6 +1180,7 @@ export default function ShopfrontPreview({
           copyLink={copyLink}
           onDealClick={onDealClick}
           editing={editing}
+          showHeader={showMobileHeader}
         />
       </div>
     </div>

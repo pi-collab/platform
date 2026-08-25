@@ -1465,7 +1465,7 @@ export default function StorefrontManager({
           )}
         </div>
       )}
-      <ShopfrontPreview data={shopfrontData} editing={false} />
+      <ShopfrontPreview data={shopfrontData} editing={false} showMobileHeader />
     </div>
   )
 }

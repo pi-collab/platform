@@ -62,7 +62,17 @@ export async function uploadAvatar(formData: FormData) {
     .from(BUCKET)
     .getPublicUrl(storagePath)
 
-  const publicUrl = urlData.publicUrl
+  /* A version stamp, or a replacement never appears.
+   *
+   * The path is avatars/<creatorId>/avatar.<ext> and the upload upserts, so
+   * swapping a photo for another of the same type writes the SAME public URL.
+   * The bytes change; the URL does not — and the browser and the CDN both go on
+   * serving the first image. The upload succeeded every time, which is why this
+   * read as "change photo is not working" rather than as an upload failure.
+   *
+   * Supabase Storage ignores unknown query parameters, so this only changes what
+   * caches key on. */
+  const publicUrl = `${urlData.publicUrl}?v=${Date.now()}`
 
   // Update creators.profile_photo_url
   const { error: updateErr } = await supabase

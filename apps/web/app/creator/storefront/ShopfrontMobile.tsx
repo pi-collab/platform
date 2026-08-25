@@ -34,6 +34,14 @@ export interface ShopfrontMobileProps {
   copyLink: () => void
   onDealClick?: (selectedQty: Record<string, number>) => void
   editing?: boolean
+  /**
+   * The design's sticky page header: back, title, notifications.
+   *
+   * OPT-IN, and off by default. On the public /c/<slug> page there is no app to
+   * go back to and no notifications to open, and a second header inside a page
+   * that already has one is what put two headers on the questions screen.
+   */
+  showHeader?: boolean
 }
 
 interface RateVM {
@@ -84,9 +92,41 @@ function Slot({ url, alt, style }: { url?: string; alt: string; style: React.CSS
   )
 }
 
+/**
+ * Reveal on scroll.
+ *
+ * The export ships .sr / .sr-pre / .sr-in and the transition between them, but
+ * nothing that ADDS those classes — so every section rendered final-state and
+ * the page had none of the movement the desktop one has. This is the same
+ * mechanism ShopfrontPreview uses, applied to the generated markup.
+ */
+function useReveal(root: React.RefObject<HTMLElement>) {
+  React.useEffect(() => {
+    const el = root.current
+    if (!el) return
+    const targets = Array.from(el.querySelectorAll('.sr'))
+    // No observer, or reduced motion: leave everything visible. A reveal that
+    // cannot fire must not be what hides the page.
+    if (typeof IntersectionObserver === 'undefined' ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    targets.forEach(t => t.classList.add('sr-pre'))
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return
+        e.target.classList.remove('sr-pre')
+        e.target.classList.add('sr-in')
+        io.unobserve(e.target)
+      })
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
+    targets.forEach(t => io.observe(t))
+    return () => io.disconnect()
+  }, [root])
+}
+
 export default function ShopfrontMobile({
   data, qty, setQty, activePlatform, setActivePlatform,
-  linkCopied, copyLink, onDealClick, editing,
+  linkCopied, copyLink, onDealClick, editing, showHeader = false,
 }: ShopfrontMobileProps) {
   /* ── View model ───────────────────────────────────────────────────────────
      The generated markup reads plain fields. Everything derived is computed
@@ -99,8 +139,13 @@ export default function ShopfrontMobile({
     // No `type` on RateCardItem — the deliverable is carried in the name
     // ("Reel", "Shorts", "Integration"), so the icon is chosen from that.
     const type = item.name.toLowerCase()
+    const platformLabel = platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : ''
     return {
-      name: item.name,
+      // "Reel" alone is ambiguous once a creator sells on both channels, and
+      // the rate card no longer groups by platform on a phone.
+      name: platformLabel && !item.name.toLowerCase().startsWith(platform)
+        ? `${platformLabel} ${item.name}`
+        : item.name,
       desc: item.desc ?? '',
       qty: n,
       // priceLabel is null exactly when the creator quotes on request, which
@@ -138,6 +183,10 @@ export default function ShopfrontMobile({
     views: c.views ?? '',
     engagement: c.engagement ?? '',
     slot: c.thumbnailUrl ?? '',
+    // The export draws these cards as plain divs, so a tap went nowhere. The
+    // desktop card has been a link since the showcase work; this restores that
+    // on a phone, where tapping a reel is the obvious thing to do.
+    url: !editing ? (c.embedUrl ?? '') : '',
   }))
 
   const brandItems = data.brandCollabs.map((b: BrandCollab) => ({
@@ -150,8 +199,23 @@ export default function ShopfrontMobile({
 
   const igShow = activePlatform === 'instagram'
   const ytShow = activePlatform === 'youtube'
-  const tabOn: React.CSSProperties = { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 3px rgba(22,23,15,.10)' }
-  const tabOff: React.CSSProperties = { background: 'transparent', color: 'var(--ink-soft)' }
+  /* The export's tab buttons carry NO class — every one of their styles lived
+     in this bound object, so reproducing only the background and colour left
+     two default browser buttons sitting in the track. */
+  const tabBase: React.CSSProperties = {
+    border: 'none',
+    borderRadius: 999,
+    padding: '7px 16px',
+    fontFamily: 'var(--font-ui)',
+    fontSize: 12.5,
+    fontWeight: 600,
+    lineHeight: 1,
+    cursor: 'pointer',
+    transition: 'background .15s ease, color .15s ease',
+    WebkitAppearance: 'none',
+  }
+  const tabOn: React.CSSProperties = { ...tabBase, background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 3px rgba(22,23,15,.10)' }
+  const tabOff: React.CSSProperties = { ...tabBase, background: 'transparent', color: 'var(--ink-soft)' }
   const igTabStyle = igShow ? tabOn : tabOff
   const ytTabStyle = ytShow ? tabOn : tabOff
   const setIG = () => setActivePlatform('instagram')
@@ -192,14 +256,45 @@ export default function ShopfrontMobile({
   }
   const rateCtaOpacity = selectedCount === 0 ? 0.45 : 1
   const rateCtaPointer = selectedCount === 0 ? 'none' : 'auto'
-  const rateTotalStyle: React.CSSProperties = { fontWeight: 500, letterSpacing: '-0.02em', fontSize: 24, color: 'var(--ink)' }
+  /* The design sets a MONEY TOTAL at 24px here. Ours is a count of items, and
+     "Nothing selected yet" at 24px reads as the loudest thing on the card while
+     saying the least. */
+  const rateTotalStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-ui)',
+    fontWeight: 600,
+    fontSize: 15,
+    lineHeight: 1.4,
+    marginTop: 3,
+    color: selectedCount === 0 ? 'var(--ink-soft)' : 'var(--ink)',
+  }
 
   // Referenced by the generated markup; named here so an unused-binding is a
   // compile error rather than a blank card.
   void rateTotalStyle; void rateCtaOpacity; void rateCtaPointer; void shareLabel
 
+  const rootRef = React.useRef<HTMLDivElement>(null)
+  useReveal(rootRef)
+
   return (
-    <div className="sfm">
+    <div className="sfm" ref={rootRef}>
+      {showHeader && (
+        <div className="sfm-appbar">
+          <button type="button" onClick={() => history.back()} aria-label="Back" className="sfm-appbar__back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          {/* The design puts the wordmark here. On this page the wordmark says
+              nothing the surrounding app has not already said, so it names the
+              page instead. */}
+          <span className="sfm-appbar__title">Shopfront</span>
+          <button type="button" onClick={copyLink} aria-label={linkCopied ? 'Link copied' : 'Copy shopfront link'} className="sfm-appbar__action">
+            {linkCopied ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700, #4d7c0f)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 6-4-4-4 4" /><path d="M12 2v13" /></svg>
+            )}
+          </button>
+        </div>
+      )}
       <div style={{padding: '8px 20px 0', display: 'flex', flexDirection: 'column', gap: '48px'}}>
 
               {/* IDENTITY */}
@@ -366,14 +461,14 @@ export default function ShopfrontMobile({
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>{`A look at ${firstName}’s`} <span className="opit">content</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {contentItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
-                    <div className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
+                    <a href={item.url || undefined} target={item.url ? "_blank" : undefined} rel="noopener noreferrer" className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
                       <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}><Slot url={item.slot} alt={item.name} style={{width: '100%', height: '100%', display: 'block'}} /><span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span></div>
                       <div style={{padding: '16px 16px 18px'}}>
                         <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>{item.name}</div>
                         <div className="t-meta" style={{color: 'var(--meta)', marginTop: '5px', letterSpacing: '.06em'}}>{item.brand}</div>
                         <div style={{display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px', color: 'var(--wg-500)'}}><span><b className="tnum" style={{color: 'var(--ink)'}}>{item.views}</b> views</span><span><b className="tnum" style={{color: 'var(--ink)'}}>{item.engagement}</b> eng.</span></div>
                       </div>
-                    </div>
+                    </a>
                   </React.Fragment>))}
                 </div>
               </div>
