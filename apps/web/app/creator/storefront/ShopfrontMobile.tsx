@@ -91,15 +91,21 @@ function Slot({ url, alt, style, initial }: {
         aria-hidden="true"
         style={{
           background: '#F1F4FA',
+          ...style,
+          /* AFTER the spread, deliberately. The caller passes display:'block'
+             for the image case, and spread last it silently overrode the
+             centring — which is why the letter sat in the corner. Everything
+             below is the placeholder's own business, so it wins. */
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: 'var(--font-display)',
-          fontWeight: 700,
-          fontSize: 30,
+          fontWeight: 600,
+          /* Big and quiet: a stand-in for a logo, not a headline. */
+          fontSize: 40,
+          lineHeight: 1,
           letterSpacing: '-0.02em',
-          color: '#79809C',
-          ...style,
+          color: 'rgba(121,128,156,.45)',
         }}
       >
         {initial ?? ''}
@@ -482,7 +488,7 @@ export default function ShopfrontMobile({
                 </div>
 
                 <div className="mcard" style={{marginTop: '16px', padding: '24px 22px', display: 'flex', alignItems: 'center', gap: '24px'}}>
-                  <div data-anim="donut" style={{position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: `conic-gradient(#E8FF66 0 ${womenPct}%,#E8E2F0 ${womenPct}% 100%)`}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{womenPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
+                  <div data-anim="donut" style={{['--donut-target' as string]: `${womenPct}%`, position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: undefined}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{womenPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px', flex: '1'}}>
                     <span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Gender</span>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--ink)'}}>Women</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>{womenPct + "%"}</span></div>

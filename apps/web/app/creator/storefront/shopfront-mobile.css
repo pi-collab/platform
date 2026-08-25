@@ -670,14 +670,34 @@
 .sfm .sr-in [data-anim='bar']:nth-of-type(3) { transition-delay: .20s; }
 .sfm .sr-in [data-anim='bar']:nth-of-type(4) { transition-delay: .28s; }
 
-/* The donut sweeps in by unwinding a rotation rather than animating the
-   conic-gradient itself, which browsers cannot interpolate. */
-.sfm [data-anim='donut'] {
-  transition: transform .9s cubic-bezier(.16, 1, .3, 1), opacity .5s ease;
+/* The donut fills to its value.
+ *
+ * NOT a rotation, which is what this was. Rotating the ring rotates the label
+ * centred inside it — "61% WOMEN" spun with the chart, and sat permanently
+ * sideways anywhere .sr-in never arrived.
+ *
+ * @property makes the sweep angle a real animatable value, so the wedge grows
+ * from nothing to its share the way a pie chart should, and nothing about the
+ * element's box or its children moves. */
+@property --donut-end {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
 }
 
-.sfm .sr-pre [data-anim='donut'] { transform: rotate(-120deg) scale(.86); opacity: 0; }
-.sfm .sr-in [data-anim='donut'] { transform: rotate(0) scale(1); opacity: 1; }
+.sfm [data-anim='donut'] {
+  background: conic-gradient(#E8FF66 0 var(--donut-end), #E8E2F0 var(--donut-end) 100%);
+  transition: --donut-end 1s cubic-bezier(.16, 1, .3, 1);
+}
+
+.sfm .sr-pre [data-anim='donut'] { --donut-end: 0%; }
+.sfm .sr-in [data-anim='donut'] { --donut-end: var(--donut-target, 0%); }
+
+/* Browsers without @property cannot interpolate the angle, so they get the
+   final chart immediately rather than an empty ring. */
+@supports not (background: conic-gradient(red 0 var(--x), blue var(--x) 100%)) {
+  .sfm [data-anim='donut'] { --donut-end: var(--donut-target, 0%); }
+}
 
 /* The reach chart draws itself in. */
 .sfm .sr-pre svg[viewBox='0 0 1000 220'] { opacity: 0; transform: translateY(10px); }
@@ -690,10 +710,14 @@
 /* Anyone who has asked for less movement gets the numbers, still and complete. */
 @media (prefers-reduced-motion: reduce) {
   .sfm [data-anim='bar'],
-  .sfm [data-anim='donut'],
   .sfm svg[viewBox='0 0 1000 220'] {
     transition: none !important;
     transform: none !important;
     opacity: 1 !important;
+  }
+
+  .sfm [data-anim='donut'] {
+    transition: none !important;
+    --donut-end: var(--donut-target, 0%) !important;
   }
 }
