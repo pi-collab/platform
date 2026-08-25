@@ -23,7 +23,7 @@ export default async function CreatorPackagesPage(
   const ctx = await verifyCreator()
   const admin = createAdminClient()
 
-  const [{ data: creator }, { data: products }] = await Promise.all([
+  const [{ data: creator }, { data: products }, { data: addonRates }] = await Promise.all([
     admin.from('creators').select('social_accounts').eq('id', ctx.creatorId).maybeSingle(),
     admin
       .from('creator_products')
@@ -31,6 +31,10 @@ export default async function CreatorPackagesPage(
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true)
       .order('created_at', { ascending: true }),
+    admin
+      .from('creator_addon_rates')
+      .select('platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
+      .eq('creator_id', ctx.creatorId),
   ])
 
   const channels = ((creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>)
@@ -43,6 +47,7 @@ export default async function CreatorPackagesPage(
       <PackagesClient
         channels={channels}
         packages={(products ?? []) as never}
+        addonRates={(addonRates ?? []) as never}
       />
     </main>
   )

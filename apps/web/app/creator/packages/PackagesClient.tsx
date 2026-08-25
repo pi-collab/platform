@@ -8,7 +8,8 @@ import {
   OFFERED_PRICE_MODES, PRICE_MODE_LABELS, PRICE_MODE_HINTS,
   formatProductPrice, normalizePriceMode, type PriceMode,
 } from '@/lib/product-price'
-import { savePackage, deletePackage } from './actions'
+import { savePackage, deletePackage, saveAddonRates } from './actions'
+import { percentToBasisPoints } from '@/lib/addons'
 import './packages.css'
 
 export interface Channel { platform: string; handle: string }
@@ -47,11 +48,166 @@ export interface PackageRow {
  * to one platform + handle, so a creator with Instagram and YouTube genuinely
  * has two rate cards, not one list with a column.
  */
+/* ── Collab and Boosting, per channel ─────────────────────────────────────────
+   Optional extras a brand can add to any deliverable on THIS channel. Kept
+   beside the packages rather than on a settings screen, because they are part
+   of what the channel costs.
+
+   Percent is typed as a person writes it ("10", "10.5") and converted to basis
+   points before it leaves the browser — the column and every calculation are
+   integers, and the conversion has exactly one home.
+   ────────────────────────────────────────────────────────────────────────── */
+function AddonRatesEditor({ platform, handle, initial }: {
+  platform: string
+  handle: string
+  initial?: AddonRateRow
+}) {
+  const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<'none' | 'percent' | 'fixed'>(
+    initial?.collab_rate_type ?? 'none',
+  )
+  const [collab, setCollab] = useState(() => {
+    if (initial?.collab_rate_value == null) return ''
+    return initial.collab_rate_type === 'percent'
+      ? String(initial.collab_rate_value / 100)
+      : String(Math.round(initial.collab_rate_value / 100))
+  })
+  const [boost, setBoost] = useState(
+    initial?.boosting_30day_paise != null ? String(Math.round(initial.boosting_30day_paise / 100)) : '',
+  )
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  const configured = (initial?.collab_rate_type != null) || (initial?.boosting_30day_paise != null)
+
+  async function save() {
+    setBusy(true); setMsg(null)
+    let value: number | null = null
+    if (mode !== 'none') {
+      if (mode === 'percent') {
+        value = percentToBasisPoints(collab)
+        if (value == null) { setBusy(false); setMsg({ ok: false, text: 'Enter a percentage between 0 and 100.' }); return }
+      } else {
+        const rupees = Number.parseInt(collab.replace(/[^0-9]/g, ''), 10)
+        if (!Number.isFinite(rupees)) { setBusy(false); setMsg({ ok: false, text: 'Enter a collab amount.' }); return }
+        value = rupees * 100
+      }
+    }
+    const boostRupees = boost.trim() ? Number.parseInt(boost.replace(/[^0-9]/g, ''), 10) : null
+    if (boost.trim() && !Number.isFinite(boostRupees as number)) {
+      setBusy(false); setMsg({ ok: false, text: 'Enter a boosting rate.' }); return
+    }
+
+    const res = await saveAddonRates({
+      platform,
+      handle,
+      collabRateType: mode === 'none' ? null : mode,
+      collabRateValue: mode === 'none' ? null : value,
+      boostingThirtyDayPaise: boostRupees == null ? null : boostRupees * 100,
+    })
+    setBusy(false)
+    setMsg(res.ok ? { ok: true, text: 'Saved.' } : { ok: false, text: res.message })
+  }
+
+  // What a brand will actually be charged per day, shown so the creator is
+  // never surprised by it. Display only — the charge is (rate x days / 30).
+  const perDay = boost.trim() && Number.isFinite(Number(boost))
+    ? Math.round((Number(boost) * 100) / 30)
+    : null
+
+  return (
+    <div className="pk-addons">
+      <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="pk-addons-title">Collab &amp; boosting</span>
+        <span className="pk-addons-state">{configured ? 'Set' : 'Not set'}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+          strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="pk-addons-body">
+          <p className="pk-addons-note">
+            Optional extras a brand can add to any deliverable on this channel. Leave blank and the option
+            simply is not offered.
+          </p>
+
+          <div className="pk-field">
+            <label className="pk-label">Collab rate</label>
+            <div className="pk-addons-modes">
+              {([['none', 'Not offered'], ['percent', 'Percentage'], ['fixed', 'Fixed amount']] as const).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  className={`pk-chip${mode === m ? ' pk-chip-on' : ''}`}
+                  onClick={() => setMode(m)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {mode !== 'none' && (
+              <div className="pk-addons-input">
+                <span className="pk-addons-prefix">{mode === 'percent' ? '%' : '\u20B9'}</span>
+                <input
+                  inputMode="decimal"
+                  value={collab}
+                  onChange={e => setCollab(e.target.value.replace(/[^0-9.]/g, ''))}
+                  placeholder={mode === 'percent' ? '10' : '5,000'}
+                />
+              </div>
+            )}
+            {mode === 'percent' && (
+              <span className="pk-hint">Charged on each deliverable&apos;s own price — 10% is &#8377;6,000 on a &#8377;60,000 Reel.</span>
+            )}
+          </div>
+
+          <div className="pk-field">
+            <label className="pk-label">Boosting &mdash; 30 day rate</label>
+            <div className="pk-addons-input">
+              <span className="pk-addons-prefix">&#8377;</span>
+              <input
+                inputMode="numeric"
+                value={boost}
+                onChange={e => setBoost(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="10,000"
+              />
+            </div>
+            <span className="pk-hint">
+              {perDay != null && perDay > 0
+                ? `About \u20B9${(perDay / 100).toFixed(2)} a day. A brand picks the number of days and is charged for exactly those.`
+                : 'Your rate for 30 days. A brand picks the number of days and is charged pro rata.'}
+            </span>
+          </div>
+
+          {msg && <p className={msg.ok ? 'pk-saved' : 'pk-error'}>{msg.text}</p>}
+
+          <button type="button" className="pk-btn pk-btn-primary" disabled={busy} onClick={save}>
+            {busy ? 'Saving\u2026' : 'Save rates'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export interface AddonRateRow {
+  platform: string
+  handle: string
+  collab_rate_type: 'fixed' | 'percent' | null
+  collab_rate_value: number | null
+  boosting_30day_paise: number | null
+}
+
 export default function PackagesClient({
   channels,
+  addonRates = [],
   packages,
 }: {
   channels: Channel[]
+  addonRates?: AddonRateRow[]
   packages: PackageRow[]
 }) {
   const [editing, setEditing] = useState<PackageRow | 'new' | null>(null)
@@ -141,6 +297,14 @@ export default function PackagesClient({
                 </div>
               ))}
             </div>
+
+            <AddonRatesEditor
+              platform={ch.platform}
+              handle={ch.handle}
+              initial={addonRates.find(
+                r => r.platform?.trim().toLowerCase() === ch.platform && sameHandle(r.handle, ch.handle),
+              )}
+            />
           </section>
         )
       })}

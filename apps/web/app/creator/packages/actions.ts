@@ -164,3 +164,97 @@ function revalidateEverywhere() {
   revalidatePath('/creator/storefront')
   revalidatePath('/creator/dashboard')
 }
+
+/* ── Add-on rates, per channel ────────────────────────────────────────────────
+   Collab and Boosting are priced per (platform, handle), not per creator: a
+   collab on Instagram is not a collab on YouTube, and boosting a Reel is not
+   boosting a long-form video.
+
+   Percent arrives as BASIS POINTS from the client and is validated as an
+   integer here. The client does the "10.5" -> 1050 conversion because that is a
+   display concern; this action refuses anything that is not already an integer,
+   so a float cannot reach the column even if a caller is written by hand.
+   ────────────────────────────────────────────────────────────────────────── */
+
+export interface SaveAddonRatesInput {
+  platform: string
+  handle: string
+  /** null clears the collab rate — the channel stops offering one. */
+  collabRateType: 'fixed' | 'percent' | null
+  /** Paise when fixed, basis points when percent. */
+  collabRateValue: number | null
+  /** The 30-DAY rate in paise. null clears it. */
+  boostingThirtyDayPaise: number | null
+}
+
+export async function saveAddonRates(input: SaveAddonRatesInput): Promise<PackageResult> {
+  const ctx = await verifyCreator()
+
+  const platform = String(input.platform ?? '').trim().toLowerCase()
+  const handle = String(input.handle ?? '').trim()
+  if (!platform || !handle) return { ok: false, message: 'Pick a channel first.' }
+
+  // Half-set is rejected rather than silently completed: a type with no value
+  // is a control the brand would see and the calculator could not act on.
+  const hasType = input.collabRateType != null
+  const hasValue = input.collabRateValue != null
+  if (hasType !== hasValue) {
+    return { ok: false, message: 'Set both the collab type and its amount, or neither.' }
+  }
+
+  if (hasValue) {
+    const v = input.collabRateValue as number
+    if (!Number.isInteger(v) || v < 0) {
+      return { ok: false, message: 'That collab rate is not a whole amount.' }
+    }
+    // 10000 basis points is 100%. Above that is a typo, not a rate.
+    if (input.collabRateType === 'percent' && v > 10_000) {
+      return { ok: false, message: 'A collab rate cannot be more than 100%.' }
+    }
+    if (input.collabRateType === 'fixed' && v > 100_000_000_00) {
+      return { ok: false, message: 'That collab rate looks too large.' }
+    }
+  }
+
+  const boost = input.boostingThirtyDayPaise
+  if (boost != null) {
+    if (!Number.isInteger(boost) || boost < 0) {
+      return { ok: false, message: 'That boosting rate is not a whole amount.' }
+    }
+    if (boost > 100_000_000_00) return { ok: false, message: 'That boosting rate looks too large.' }
+  }
+
+  const admin = createAdminClient()
+
+  // The channel has to be one the creator actually owns, or a rate could be
+  // attached to a handle they do not have.
+  const { data: creator } = await admin
+    .from('creators').select('social_accounts').eq('id', ctx.creatorId).maybeSingle()
+  const owns = ((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
+    .some(a => String(a?.platform ?? '').toLowerCase() === platform
+      && String(a?.handle ?? '').replace(/^@/, '').toLowerCase() === handle.replace(/^@/, '').toLowerCase())
+  if (!owns) return { ok: false, message: 'That channel is not on your profile.' }
+
+  const row = {
+    creator_id: ctx.creatorId,
+    platform,
+    handle,
+    collab_rate_type: input.collabRateType,
+    collab_rate_value: input.collabRateValue,
+    boosting_30day_paise: boost,
+    updated_at: new Date().toISOString(),
+  }
+
+  const { error } = await admin
+    .from('creator_addon_rates')
+    .upsert(row, { onConflict: 'creator_id,platform,handle' })
+
+  if (error) {
+    console.error('[addon-rates] save failed:', error.message)
+    return { ok: false, message: 'Could not save those rates. Please try again.' }
+  }
+
+  revalidatePath('/creator/packages')
+  revalidatePath('/creator/storefront')
+  return { ok: true }
+}

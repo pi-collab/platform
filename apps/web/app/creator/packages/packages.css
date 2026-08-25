@@ -414,3 +414,119 @@ select.pk-input {
 
   .pk-add { width: auto; align-self: flex-start; }
 }
+
+/* ── Collab & boosting, per channel ──────────────────────────────────────────
+   Sits under each channel's package card as a quieter companion: same card
+   shell and the same tokens, but collapsed and outlined rather than filled, so
+   it reads as an optional extra rather than a second list of packages.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.pk-addons {
+  margin-top: 8px;
+  border: 1px solid var(--line, rgba(60, 80, 30, .14));
+  border-radius: 16px;
+  background: var(--card, #fff);
+  overflow: hidden;
+}
+
+.pk-addons-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ink, #12151C);
+  text-align: left;
+}
+
+.pk-addons-title {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pk-addons-state {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-faint, #878D99);
+}
+
+.pk-addons-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 16px 18px;
+  border-top: 1px solid var(--line, rgba(60, 80, 30, .10));
+}
+
+.pk-addons-note {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-soft, #565C68);
+}
+
+.pk-addons-modes { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.pk-chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(60, 80, 30, .14));
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.pk-chip-on {
+  background: var(--neon, #E8FF66);
+  border-color: var(--neon-deep, #C9EB3C);
+  color: var(--lime-950, #161B08);
+}
+
+.pk-addons-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line, rgba(60, 80, 30, .14));
+  background: #fff;
+}
+
+.pk-addons-prefix {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-faint, #878D99);
+}
+
+.pk-addons-input input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  /* 16px so Safari does not zoom the page when this is focused. */
+  font-size: 16px;
+  color: var(--ink, #12151C);
+}
+
+.pk-saved {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lime-700, #4d7c0f);
+}
