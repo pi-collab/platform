@@ -324,3 +324,105 @@
   .sf-rate-price { flex: 1 1 auto; text-align: left !important; }
   .sf-rate-stepper { flex: 0 0 auto; margin-left: auto; justify-self: auto !important; }
 }
+
+/* ── Phone typography and container rhythm, from the mobile design export ────
+   Source: "Creator Shopfront Mobile" export, read from its
+   <script type="__bundler/template"> payload — the file's own markup carries
+   almost none of the design.
+
+   Scoped under .sf-root on purpose. .t-display and .t-title are global classes
+   the marketing site uses too; an unscoped mobile override here would resize
+   headings on pages this design says nothing about.
+
+   The export's values, verbatim:
+     h1 name           27px / 500 / -0.01em  / 1.2   / margin 22px 0 0
+     h2 section        22px / 500 / -0.015em / 1.25
+     h2 "Build a deal" 26px / 600 / -0.015em / 1.2
+     h2 offer (on ink) 24px / 500 / -0.015em / 1.25
+   Against ours, which resolved to 40px/700 and 26px/700 at this width — the
+   clamps bottom out well above what the design asks for.
+
+   Containers: the export lays the page out as a flex column with gap:48px
+   inside padding:8px 20px 0. Our horizontal 20px already matches (the
+   clamp(20px,5vw,72px) floor). The 48px is expressed here as 24px top and
+   bottom per section, which is the same rhythm between adjacent cards, and
+   leaves the marquee section's deliberate 0 horizontal padding alone.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .sf-root .t-display {
+    font-size: 27px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
+    margin: 22px 0 0 !important;
+  }
+
+  .sf-root .t-title {
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.015em !important;
+    line-height: 1.25 !important;
+  }
+
+  /* The one heading the design sets larger and heavier: it opens the section a
+     brand actually transacts in. */
+  .sf-root .sf-h-deal {
+    font-size: 26px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Reversed out of the ink panel. !important because the element carries an
+     inline line-height of 1.03, which no ordinary rule can beat. */
+  .sf-root .sf-h-offer {
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+  }
+
+  .sf-root .sf-sec {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+
+  .sf-root .sf-hero-card {
+    padding: 30px 26px !important;
+  }
+}
+
+@container shopfront (max-width: 767.98px) {
+  .sf-root .t-display {
+    font-size: 27px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.2 !important;
+    margin: 22px 0 0 !important;
+  }
+
+  .sf-root .t-title {
+    font-size: 22px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.015em !important;
+    line-height: 1.25 !important;
+  }
+
+  .sf-root .sf-h-deal {
+    font-size: 26px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+  }
+
+  .sf-root .sf-h-offer {
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+  }
+
+  .sf-root .sf-sec {
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+  }
+
+  .sf-root .sf-hero-card {
+    padding: 30px 26px !important;
+  }
+}

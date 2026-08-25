@@ -289,10 +289,10 @@ export default function ShopfrontPreview({
 
       {/* ═══ 1. HERO ═══════════════════════════════════════════ */}
       <SectionWrapper sectionKey="hero">
-        <section style={{ padding: 'clamp(28px,3.6vw,60px) clamp(20px,5vw,72px) clamp(20px,2.4vw,36px)' }}>
+        <section className="sf-sec" style={{ padding: 'clamp(28px,3.6vw,60px) clamp(20px,5vw,72px) clamp(20px,2.4vw,36px)' }}>
           <div className="sf-hero-border" style={{ maxWidth: 1080, margin: '0 auto' }}>
             <div className="sf-comet" />
-            <div style={{ borderRadius: 32, background: 'var(--card)', boxShadow: '0 34px 80px -44px rgba(40,45,25,.4)', padding: 'clamp(24px,3.4vw,48px)' }}>
+            <div className="sf-hero-card" style={{ borderRadius: 32, background: 'var(--card)', boxShadow: '0 34px 80px -44px rgba(40,45,25,.4)', padding: 'clamp(24px,3.4vw,48px)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(28px,3.8vw,56px)', alignItems: 'center' }}>
                 {/* Photo card */}
                 <div style={{ position: 'relative' }}>
@@ -428,7 +428,7 @@ export default function ShopfrontPreview({
 
       {/* ═══ 2. STATS STRIP ════════════════════════════════════ */}
       <SectionWrapper sectionKey="stats">
-        <section style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
+        <section className="sf-sec" style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
           <div className="sf-stats-strip" style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
             {[
               { value: data.monthlyReach, label: 'Monthly reach' },
@@ -453,12 +453,12 @@ export default function ShopfrontPreview({
 
       {/* ═══ 3. RATE CARD ══════════════════════════════════════ */}
       <SectionWrapper sectionKey="ratecard">
-        <section id="packages" style={{ padding: 'clamp(28px,3.4vw,44px) clamp(20px,5vw,72px) clamp(32px,3.6vw,48px)' }}>
+        <section id="packages" className="sf-sec" style={{ padding: 'clamp(28px,3.4vw,44px) clamp(20px,5vw,72px) clamp(32px,3.6vw,48px)' }}>
           <div style={{ maxWidth: 1080, margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
               <div>
                 <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Rate card</span>
-                <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Build your deal</h2>
+                <h2 className="t-title sf-h-deal" style={{ margin: '10px 0 6px' }}>Build your deal</h2>
                 <p className="t-body sf-nowrap-desktop" style={{ color: 'var(--ink-soft)', whiteSpace: 'nowrap', margin: '0 0 clamp(16px,2vw,22px)' }}>
                   Add what you need at {firstName}&apos;s set rates. The total updates as you go.
                 </p>
@@ -610,7 +610,7 @@ export default function ShopfrontPreview({
 
       {/* ═══ 4. AUDIENCE ═══════════════════════════════════════ */}
       <SectionWrapper sectionKey="audience">
-        <section style={{ padding: 'clamp(18px,2.2vw,28px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+        <section className="sf-sec" style={{ padding: 'clamp(18px,2.2vw,28px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
           <div ref={audRef} style={{
             maxWidth: 1080, margin: '0 auto', position: 'relative', overflow: 'hidden',
             borderRadius: 28, border: '1.5px solid rgba(255,255,255,.9)',
@@ -883,7 +883,7 @@ export default function ShopfrontPreview({
       {/* ═══ 5. CONTENT SHOWCASE ═══════════════════════════════ */}
       {data.contentItems.length > 0 && (
         <SectionWrapper sectionKey="content">
-          <section style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
             <div style={{ maxWidth: 1080, margin: '0 auto' }}>
               <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Recent work</span>
               <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>A look at {firstName}&apos;s content</h2>
@@ -943,7 +943,7 @@ export default function ShopfrontPreview({
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
       {data.brandCollabs.length > 0 && (
         <SectionWrapper sectionKey="collabs">
-          <section style={{ padding: 'clamp(30px,3.8vw,56px) 0 clamp(16px,2vw,28px)' }}>
+          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) 0 clamp(16px,2vw,28px)' }}>
             <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 clamp(20px,5vw,72px)' }}>
               <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Past collaborations</span>
               <div style={{ margin: '10px 0 clamp(10px,1.3vw,16px)' }}>
@@ -999,7 +999,7 @@ export default function ShopfrontPreview({
 
       {/* ═══ 7. PITCH / CTA SECTION ════════════════════════════ */}
       <SectionWrapper sectionKey="pitch">
-        <section style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(40px,4.5vw,68px)' }}>
+        <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(40px,4.5vw,68px)' }}>
           <div style={{
             maxWidth: 1080, margin: '0 auto', borderRadius: 28, overflow: 'hidden',
             background: 'radial-gradient(680px 460px at 12% 6%, var(--sec-2) 0%, transparent 60%),radial-gradient(620px 440px at 92% 94%, var(--sec) 0%, transparent 62%),linear-gradient(150deg,var(--sec-2) 0%,var(--sec) 100%)',
@@ -1010,7 +1010,7 @@ export default function ShopfrontPreview({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(30px,3.8vw,56px)', alignItems: 'center' }}>
               <div>
                 <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Work with {firstName}</span>
-                <h2 className="t-title" style={{ lineHeight: 1.03, margin: '14px 0 0' }}>Make {firstName} an <span className="t-accent">offer</span></h2>
+                <h2 className="t-title sf-h-offer" style={{ lineHeight: 1.03, margin: '14px 0 0' }}>Make {firstName} an <span className="t-accent">offer</span></h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 420, margin: '18px 0 0' }}>
                   Pick deliverables at {firstName}&apos;s set rates and {firstName} gets a structured offer, not a DM. They review, then accept, counter, or decline. Nothing is locked until you both agree.
                 </p>
