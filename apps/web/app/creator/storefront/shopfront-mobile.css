@@ -754,32 +754,26 @@
   transition: background .15s ease, color .15s ease;
 }
 
-/* ── Gender: the ring centred, the numbers beneath it ────────────────────────
-   The export lays this out as a ROW — ring on the left, labels filling the rest
-   — and that is what shipped. The design has the ring centred with the figures
-   stacked under it, full width, which reads as one block rather than a chart
-   with a caption bolted to its side.
+/* ── Gender: ring left, figures right ───────────────────────────────────────
+   The export's row, kept. The card briefly centred the ring with the numbers
+   stacked under it; this is back to ring-left / labels-right.
 
-   Deliberately different from the export, on instruction.
+   The rule is still here, rather than relying on the inline style alone,
+   because that is what failed before: the card carries display:flex inline but
+   NOT flex-direction, so an unrelated `.mcard` rule elsewhere in this sheet was
+   able to turn it into a column without touching anything the card itself
+   declared. Stating the direction here closes that door.
    ────────────────────────────────────────────────────────────────────────── */
 
 .sfm .sfm-gender {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 18px;
+  gap: 24px;
 }
 
-/* The rows take the full width of the card so their values still sit hard
-   right, under a ring that is centred above them. */
+/* The label column takes the space the ring does not. */
 .sfm .sfm-gender > :last-child {
-  width: 100%;
-  gap: 10px;
-}
-
-/* The section label belongs over the numbers it introduces, not floating in a
-   centred column of its own. */
-.sfm .sfm-gender > :last-child > .t-meta {
-  display: block;
-  text-align: left;
+  flex: 1;
+  min-width: 0;
 }

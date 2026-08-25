@@ -503,7 +503,7 @@ export default function ShopfrontMobile({
                   </div>
                 </div>
 
-                <div className="mcard sfm-gender" style={{marginTop: '16px', padding: '24px 22px'}}>
+                <div className="mcard sfm-gender" style={{marginTop: '16px', padding: '24px 22px', display: 'flex', alignItems: 'center', gap: '24px'}}>
                   <div data-anim="donut" style={{['--donut-target' as string]: `${womenPct}%`, position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: undefined}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{womenPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px', flex: '1'}}>
                     <span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Gender</span>
