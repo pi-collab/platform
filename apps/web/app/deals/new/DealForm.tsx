@@ -724,26 +724,22 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                 )}
 
                                 {/* Boosting rights */}
-                                <OptionPill
-                                  label="Boosting rights"
-                                  value={itemBoostingRights[p.id] === true
-                                  ? (boostDays[p.id] ? `${boostDays[p.id]} days` : 'Yes')
-                                  : itemBoostingRights[p.id] === false ? 'Not included' : ''}
-                                  options={['7 days', '30 days', '90 days', 'Not included']}
-                                  onChange={(v) => {
-                                    if (v === 'Not included') {
+                                <BoostingPill
+                                  days={boostDays[p.id] ?? null}
+                                  included={itemBoostingRights[p.id] ?? null}
+                                  onChange={(next) => {
+                                    if (next == null) {
                                       setItemBoostingRights((prev) => ({ ...prev, [p.id]: false }))
+                                      setBoostDays((prev) => ({ ...prev, [p.id]: 0 }))
                                       setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))
-                                    } else {
-                                      setItemBoostingRights((prev) => ({ ...prev, [p.id]: true }))
-                                      // Days for PRICING, months for the rights column this pill has
-                                      // always written. Seven days and thirty both stored '1' month, which
-                                      // cannot price a week of boosting.
-                                      const days = v === '7 days' ? 7 : v === '30 days' ? 30 : v === '90 days' ? 90 : 0
-                                      setBoostDays((prev) => ({ ...prev, [p.id]: days }))
-                                      const months = v === '7 days' ? '1' : v === '30 days' ? '1' : v === '90 days' ? '3' : ''
-                                      setItemBoostingDuration((prev) => ({ ...prev, [p.id]: months }))
+                                      return
                                     }
+                                    setItemBoostingRights((prev) => ({ ...prev, [p.id]: true }))
+                                    setBoostDays((prev) => ({ ...prev, [p.id]: next }))
+                                    /* Months are still written for the rights column that has always held
+                                       them. Rounded UP, because half a month of granted rights is still a
+                                       month of rights — and days are what the money is calculated from. */
+                                    setItemBoostingDuration((prev) => ({ ...prev, [p.id]: next > 0 ? String(Math.max(1, Math.ceil(next / 30))) : '' }))
                                   }}
                                 />
 
@@ -1195,6 +1191,80 @@ function DatePill({ value, onChange }: { value: string; onChange: (v: string) =>
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Boosting duration, in days.
+ *
+ * Presets cover what brands ask for; Custom turns the number into a field, so
+ * "11 days" does not require a new preset. Capped at 999 — three digits is the
+ * widest sensible campaign, and an uncapped box invites someone to type a year
+ * into something that is multiplied by a daily rate.
+ */
+function BoostingPill({ days, included, onChange }: {
+  days: number | null
+  included: boolean | null
+  onChange: (days: number | null) => void
+}) {
+  const PRESETS = [7, 30, 90]
+  const [custom, setCustom] = useState(false)
+  const isCustom = custom || (included === true && days != null && days > 0 && !PRESETS.includes(days))
+
+  const label = included === false
+    ? 'Not included'
+    : included === true && days ? `${days} days` : ''
+
+  if (isCustom) {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, height: 27,
+        padding: '0 10px', borderRadius: 999, background: 'var(--sec, #F1F4FA)',
+        fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 600,
+      }}>
+        <span style={{ color: 'var(--ink-soft)' }}>Boosting rights</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          autoFocus
+          aria-label="Boosting days"
+          value={days ? String(days) : ''}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 3)
+            onChange(digits ? Number.parseInt(digits, 10) : null)
+          }}
+          style={{
+            width: 34, height: 19, padding: '0 5px', borderRadius: 6,
+            border: '1px solid var(--line, rgba(60,80,30,.16))', background: '#fff',
+            fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
+            color: 'var(--ink)', textAlign: 'center',
+          }}
+        />
+        <span style={{ color: 'var(--ink-soft)' }}>days</span>
+        <button
+          type="button"
+          onClick={() => { setCustom(false); onChange(null) }}
+          aria-label="Back to preset durations"
+          style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', color: 'var(--ink-faint)', display: 'inline-flex' }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </span>
+    )
+  }
+
+  return (
+    <OptionPill
+      label="Boosting rights"
+      value={label}
+      options={['7 days', '30 days', '90 days', 'Custom', 'Not included']}
+      onChange={(v) => {
+        if (v === 'Custom') { setCustom(true); onChange(null); return }
+        if (v === 'Not included') { onChange(null); return }
+        const n = Number.parseInt(v, 10)
+        onChange(Number.isFinite(n) ? n : null)
+      }}
+    />
   )
 }
 
