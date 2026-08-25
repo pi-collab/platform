@@ -36,7 +36,9 @@ export default function OtpInput({
   //
   // iOS needs nothing here — autocomplete="one-time-code" plus the spreading in
   // handleChange is the whole mechanism, and Safari matches the message by
-  // heuristic. Android has no such heuristic: WebOTP only fires when the SMS
+  // heuristic. It also needs the first cell to have NO maxLength: the browser
+  // truncates the autofilled value before React sees it, so the code arrived as
+  // a single digit and the spreading never ran. Android has no such heuristic: WebOTP only fires when the SMS
   // ENDS with a line of the form "@<host> #<code>".
   //
   // Our SMS cannot say that yet. The DLT-approved template is fixed
@@ -147,7 +149,19 @@ export default function OtpInput({
             // code in each one and others refuse to fill at all; the spreading
             // in handleChange takes it from there.
             autoComplete={i === 0 ? 'one-time-code' : 'off'}
-            maxLength={1}
+            /* No maxLength on the FIRST cell.
+             *
+             * iOS delivers the whole SMS code to the focused box, and the
+             * browser truncates it to maxLength BEFORE React sees the event —
+             * so the six-digit value arrived as one character and the
+             * spread-across-cells branch below never ran. That is why tapping
+             * the keyboard suggestion filled a single digit.
+             *
+             * The other five keep it: they are only ever typed into, and the
+             * cap is what stops a stray second character sitting in a cell.
+             * Cell zero's handler already treats more than one digit as an
+             * autofill and distributes it. */
+            maxLength={i === 0 ? undefined : 1}
             disabled={disabled}
             autoFocus={autoFocus && i === 0}
             aria-label={`Digit ${i + 1} of ${LENGTH}`}
