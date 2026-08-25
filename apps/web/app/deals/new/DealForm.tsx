@@ -695,10 +695,17 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                   letterSpacing: '-0.02em', lineHeight: 1,
                                   color: selected ? 'var(--ink)' : 'var(--ink-soft)',
                                 }}>
-                                  {isFixedPrice(p)
-                                    ? formatRupees(unitPaise * (qty || 1))
-                                    : (selected && sel?.customPricePaise ? formatRupees(sel.customPricePaise * qty) : '\u2014')
-                                  }
+                                  {(() => {
+                                    if (isFixedPrice(p)) return formatRupees(unitPaise * (qty || 1))
+                                    /* Once selected, whatever the brand typed. Before that, the
+                                       creator's own figure — a "from Rs.25,000" package has a
+                                       price, and a dash said it had none. Only on_request truly
+                                       has no number, and offerPrefillPaise returns null for
+                                       exactly that. */
+                                    if (selected && sel?.customPricePaise) return formatRupees(sel.customPricePaise * qty)
+                                    const seed = offerPrefillPaise(p)
+                                    return seed != null ? formatRupees(seed * (qty || 1)) : '\u2014'
+                                  })()}
                                 </div>
                               </div>
                             </div>
@@ -780,10 +787,30 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                 <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(line.amount)}</b>
               </div>
             ))}
-            {feeInfo && (
+            {/* ── Platform fee ─────────────────────────────────────────────
+                Shown as a COST only when the brand actually bears it.
+
+                This rendered whenever a fee percent existed, regardless of
+                fee_mode. On 'deducted' the creator bears it, the brand's total
+                excludes it, and the brand was still shown a "Platform fee"
+                line — so the column did not add up and it read as a charge to
+                them. On 'deducted' the fee is now a quiet note about what the
+                creator nets, which is true and useful without pretending to be
+                part of what the brand pays. */}
+            {feeInfo && feeMode === 'on_top' && (
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
                 <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({platformFeePercent}%)</span>
                 <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
+              </div>
+            )}
+            {feeInfo && feeMode === 'deducted' && (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
+                  {creator.full_name?.split(' ')[0] ?? 'The creator'} receives after our {platformFeePercent}% fee
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                  {formatRupees(feeInfo.creator_receives_paise)}
+                </span>
               </div>
             )}
           </div>
