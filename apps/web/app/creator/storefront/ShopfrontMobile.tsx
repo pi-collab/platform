@@ -4,6 +4,7 @@ import React from 'react'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
 import { ContentMedia } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import './shopfront-mobile.css'
 
 /* ── The shopfront as the mobile design draws it ──────────────────────────────
@@ -312,23 +313,32 @@ export default function ShopfrontMobile({
 
   return (
     <div className="sfm" ref={rootRef}>
+      {/* The SAME header every other non-tab creator screen uses, rather than
+          the one I built from the export. My version was a second thing to keep
+          in step: it would have drifted from /creator/deals and /creator/payments
+          the first time any of them changed. */}
       {showHeader && (
-        <div className="sfm-appbar">
-          <button type="button" onClick={() => history.back()} aria-label="Back" className="sfm-appbar__back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-          </button>
-          {/* The design puts the wordmark here. On this page the wordmark says
-              nothing the surrounding app has not already said, so it names the
-              page instead. */}
-          <span className="sfm-appbar__title">Shopfront</span>
-          <button type="button" onClick={copyLink} aria-label={linkCopied ? 'Link copied' : 'Copy shopfront link'} className="sfm-appbar__action">
-            {linkCopied ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700, #4d7c0f)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 6-4-4-4 4" /><path d="M12 2v13" /></svg>
-            )}
-          </button>
-        </div>
+        <CreatorPageHeader
+          title="Shopfront"
+          /* Explicit, because this header requires it — a back arrow that
+             guesses is a back arrow that eventually guesses wrong. The shopfront
+             is reached from the profile tab, so that is where back goes. */
+          backHref="/creator/profile"
+          action={
+            <button
+              type="button"
+              onClick={copyLink}
+              aria-label={linkCopied ? 'Link copied' : 'Copy shopfront link'}
+              className="sfm-appbar__action"
+            >
+              {linkCopied ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lime-700, #4d7c0f)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><path d="m16 6-4-4-4 4" /><path d="M12 2v13" /></svg>
+              )}
+            </button>
+          }
+        />
       )}
       <div style={{padding: '8px 20px 0', display: 'flex', flexDirection: 'column', gap: '48px'}}>
 

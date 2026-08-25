@@ -603,44 +603,7 @@
   background: #F1F4FA;
 }
 
-/* ── The design's page header ────────────────────────────────────────────── */
-
-.sfm .sfm-appbar {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  /* The export pads 58px at the top for a phone's status bar. In a browser that
-     is a hole, so the inset comes from the viewport itself and is 0 on a device
-     that has no notch. */
-  padding: calc(10px + env(safe-area-inset-top)) 18px 12px;
-  background: #F5F7FA;
-}
-
-.sfm .sfm-appbar__back {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.sfm .sfm-appbar__title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 15px;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-}
+/* ── The copy-link action in the shared page header ───────────────────────── */
 
 .sfm .sfm-appbar__action {
   width: 34px;
