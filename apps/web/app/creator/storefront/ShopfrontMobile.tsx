@@ -70,8 +70,18 @@ interface RateVM {
  */
 function Slot({ url, alt, style }: { url?: string; alt: string; style: React.CSSProperties }) {
   if (!url) return <span aria-hidden="true" style={{ background: '#F1F4FA', ...style }} />
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt={alt} style={{ objectFit: 'cover', ...style }} />
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      /* Empty on purpose. The card's title is the next line, so this image adds
+         nothing for a screen reader — and a broken image renders its alt text,
+         which put the title over the badge and an empty frame. */
+      alt=""
+      title={alt}
+      style={{ objectFit: 'cover', background: '#F1F4FA', ...style }}
+    />
+  )
 }
 
 export default function ShopfrontMobile({
@@ -196,7 +206,7 @@ export default function ShopfrontMobile({
               <div className="sr sf-hero-border">
               <div className="sf-comet"></div>
               <div className="mcard" style={{padding: '30px 26px', textAlign: 'center'}}>
-                <Slot url={data.profilePhotoUrl ?? undefined} alt={data.creatorName} style={{width: '100%', height: '220px', display: 'block', margin: '0 auto'}} />
+                <Slot url={data.profilePhotoUrl ?? undefined} alt={data.creatorName} style={{width: '100%', aspectRatio: '4/5', display: 'block', margin: '0 auto'}} />
                 <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.01em', fontSize: '27px', lineHeight: '1.2', margin: '22px 0 0', color: 'var(--ink)'}}>{firstName} <span className="opit">{lastName}</span></h1>
                 <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '8px', letterSpacing: '.02em'}}>{data.handle}</div>
                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px', justifyContent: 'center'}}>
