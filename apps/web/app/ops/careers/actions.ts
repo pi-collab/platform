@@ -7,6 +7,11 @@ import { logOpsEvent } from '@/lib/ops-audit'
 
 export type RoleResult = { error?: string; id?: string }
 
+interface Question { id: string; prompt: string; required: boolean }
+
+const MAX_QUESTIONS = 10
+const MAX_PROMPT = 200
+
 /** Textarea → string[]: one entry per non-empty line. */
 function lines(value: FormDataEntryValue | null): string[] {
   return String(value ?? '')
@@ -23,6 +28,50 @@ function toSlug(raw: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
+}
+
+/**
+ * Parse the questions the form serialised into a hidden field.
+ *
+ * Validated here rather than trusting what arrived: a server action is directly
+ * callable, so the repeater's own limits are convenience, not a boundary. The
+ * database CHECK only asserts "is an array" — element shape is this function's
+ * job, and this is the only writer.
+ *
+ * Blank prompts are DROPPED rather than rejected. Clicking "Add a question" and
+ * then saving without typing is an ordinary thing to do, and failing the whole
+ * role for it would lose the edits alongside it.
+ */
+function questionsFrom(value: FormDataEntryValue | null): { questions: Question[]; error?: string } {
+  if (value == null) return { questions: [] }
+  let raw: unknown
+  try {
+    raw = JSON.parse(String(value))
+  } catch {
+    return { questions: [], error: 'Could not read the questions on this role.' }
+  }
+  if (!Array.isArray(raw)) return { questions: [], error: 'Could not read the questions on this role.' }
+  if (raw.length > MAX_QUESTIONS) {
+    return { questions: [], error: `A role can ask at most ${MAX_QUESTIONS} questions.` }
+  }
+
+  const seen = new Set<string>()
+  const questions: Question[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const q = entry as Record<string, unknown>
+    const prompt = typeof q.prompt === 'string' ? q.prompt.trim() : ''
+    if (!prompt) continue
+    if (prompt.length > MAX_PROMPT) {
+      return { questions: [], error: `Keep each question under ${MAX_PROMPT} characters.` }
+    }
+    // A duplicate id would make two questions share one answer field on the
+    // form, so the second would silently overwrite the first.
+    const id = typeof q.id === 'string' && q.id && !seen.has(q.id) ? q.id : crypto.randomUUID()
+    seen.add(id)
+    questions.push({ id, prompt, required: q.required === true })
+  }
+  return { questions }
 }
 
 function readForm(formData: FormData) {
@@ -49,7 +98,9 @@ export async function createRole(formData: FormData): Promise<RoleResult> {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const row = readForm(formData)
+  const parsed = questionsFrom(formData.get('application_questions'))
+  if (parsed.error) return { error: parsed.error }
+  const row = { ...readForm(formData), application_questions: parsed.questions }
   if (!row.title) return { error: 'Title is required.' }
   if (!row.slug) return { error: 'Could not build a URL from that title — set a slug.' }
 
@@ -76,7 +127,9 @@ export async function updateRole(id: string, formData: FormData): Promise<RoleRe
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const row = readForm(formData)
+  const parsed = questionsFrom(formData.get('application_questions'))
+  if (parsed.error) return { error: parsed.error }
+  const row = { ...readForm(formData), application_questions: parsed.questions }
   if (!row.title) return { error: 'Title is required.' }
   if (!row.slug) return { error: 'Could not build a URL from that title — set a slug.' }
 

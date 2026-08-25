@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import type { Role } from '@/lib/careers'
+import type { Role, ApplicationQuestion } from '@/lib/careers'
 import { createRole, updateRole } from './actions'
 
 /**
@@ -17,11 +17,18 @@ export default function RoleForm({ role }: { role?: Role }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  // Questions are the one repeater on this form — an ordered list with a
+  // per-item toggle cannot be a textarea. Held in state and serialised into the
+  // FormData on submit, so the surrounding form stays a plain post and both
+  // actions keep a single input shape.
+  const [questions, setQuestions] = useState<ApplicationQuestion[]>(role?.questions ?? [])
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (busy) return
     setBusy(true); setError('')
     const data = new FormData(e.currentTarget)
+    data.set('application_questions', JSON.stringify(questions))
     const res = role ? await updateRole(role.id, data) : await createRole(data)
     setBusy(false)
     if (res.error) { setError(res.error); return }
@@ -60,6 +67,68 @@ export default function RoleForm({ role }: { role?: Role }) {
       <Field label="What we are looking for" hint="One bullet per line.">
         <textarea name="requirements" rows={5} defaultValue={role?.requirements.join('\n')} style={{ ...input, resize: 'vertical' }} />
       </Field>
+
+      <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>Application questions</div>
+        <div style={{ fontSize: 12, color: '#888', marginTop: -4 }}>
+          Asked on this role&apos;s application form, in this order, each answered in a text box.
+          Every applicant already gives their name, email and CV — these are on top of that.
+        </div>
+
+        {questions.length === 0 && (
+          <p style={{ margin: '4px 0', fontSize: 13, color: '#888' }}>None yet. The form asks for the basics only.</p>
+        )}
+
+        {questions.map((q, i) => (
+          <div key={q.id} style={{
+            display: 'grid', gap: 8, padding: '10px 12px',
+            border: '1px solid #e4e4e7', borderRadius: 8, background: '#fafafa',
+          }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: '#888', width: 16 }}>{i + 1}</span>
+              <input
+                value={q.prompt}
+                maxLength={200}
+                placeholder="e.g. Link to something you have built"
+                onChange={e => setQuestions(qs => qs.map((x, j) => j === i ? { ...x, prompt: e.target.value } : x))}
+                style={{ ...input, flex: 1 }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', paddingLeft: 24 }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12.5, fontWeight: 500, color: '#111' }}>
+                <input
+                  type="checkbox"
+                  checked={q.required}
+                  onChange={e => setQuestions(qs => qs.map((x, j) => j === i ? { ...x, required: e.target.checked } : x))}
+                />
+                Required
+              </label>
+              {i > 0 && (
+                <button type="button" onClick={() => setQuestions(qs => {
+                  const n = [...qs]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; return n
+                })} style={tinyBtn}>Move up</button>
+              )}
+              <button type="button" onClick={() => setQuestions(qs => qs.filter((_, j) => j !== i))}
+                style={{ ...tinyBtn, color: '#991b1b' }}>Remove</button>
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          disabled={questions.length >= 10}
+          onClick={() => setQuestions(qs => [...qs, {
+            // A stable id, minted here and kept for the life of the question, so
+            // an answer stays tied to it after a reorder or a reworded prompt.
+            id: crypto.randomUUID(),
+            prompt: '',
+            required: false,
+          }])}
+          style={{ ...ghost, justifySelf: 'start', opacity: questions.length >= 10 ? 0.5 : 1 }}
+        >
+          {questions.length >= 10 ? 'Ten questions is the limit' : 'Add a question'}
+        </button>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14 }}>
         <Field label="Sort order" hint="Lower sorts first.">
@@ -104,6 +173,10 @@ const primary: React.CSSProperties = {
 const ghost: React.CSSProperties = {
   padding: '9px 18px', borderRadius: 6, border: '1px solid #d4d4d8',
   background: '#fff', color: '#111', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+}
+const tinyBtn: React.CSSProperties = {
+  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+  fontSize: 12.5, fontWeight: 600, color: '#111', textDecoration: 'underline',
 }
 const errorBox: React.CSSProperties = {
   margin: 0, padding: '9px 12px', borderRadius: 6, fontSize: 13,

@@ -53,7 +53,7 @@ export default async function RolePage({ params }: { params: { slug: string } })
         )}
 
         <h2 style={{ ...h2Style, marginTop: 48 }}>Apply</h2>
-        <ApplyForm slug={role.slug} title={role.title} />
+        <ApplyForm slug={role.slug} title={role.title} questions={role.questions} />
       </main>
       <Footer />
     </>

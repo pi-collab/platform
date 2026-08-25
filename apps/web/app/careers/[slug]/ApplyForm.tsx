@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { submitApplication } from '@/app/careers/actions'
+import type { ApplicationQuestion } from '@/lib/careers'
 
 /**
  * The application form.
@@ -11,7 +12,9 @@ import { submitApplication } from '@/app/careers/actions'
  * so the file never round-trips through JSON and the validation that matters
  * runs on the server.
  */
-export default function ApplyForm({ slug, title }: { slug: string; title: string }) {
+export default function ApplyForm({ slug, title, questions = [] }: {
+  slug: string; title: string; questions?: ApplicationQuestion[]
+}) {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +74,23 @@ export default function ApplyForm({ slug, title }: { slug: string; title: string
         <textarea name="note" rows={5} maxLength={4000} style={{ ...inputStyle, resize: 'vertical' }}
           placeholder="A link to something you have built, or why this role." />
       </label>
+
+      {/* The role's own questions, in the order ops set them. Field names are
+          q_<id> rather than q_<index> so an answer stays tied to its question
+          even if the set is reordered between the page loading and the submit. */}
+      {questions.map(q => (
+        <label key={q.id} style={labelStyle}>
+          {q.prompt}
+          {!q.required && <span style={optionalStyle}> (optional)</span>}
+          <textarea
+            name={`q_${q.id}`}
+            required={q.required}
+            rows={4}
+            maxLength={2000}
+            style={{ ...inputStyle, resize: 'vertical' }}
+          />
+        </label>
+      ))}
 
       <label style={labelStyle}>
         CV

@@ -1764,6 +1764,35 @@ a routing artefact, not their address.
 - [ ] Nothing is ever sent to `@auth.guapd.internal` (lib/email.ts and
       lib/synthetic-email.ts share one list — check both if the domain changes)
 
+### Careers — per-role application questions
+
+**Ops (`/ops/careers/<id>`)**
+- [ ] Add a question, mark it Required, save, reopen — it is still there and still required
+- [ ] Add several, "Move up" reorders them, and the application form matches that order
+- [ ] Remove a question; applications already received still show its answer in the
+      email that was sent (answers are recorded with the PROMPT, not the id, precisely
+      so a deleted question does not orphan an answer)
+- [ ] Click "Add a question", leave it blank, save — the blank is dropped, the role
+      still saves, and the other edits are NOT lost
+- [ ] Ten questions is the cap; the button disables
+
+**Applicant (`/careers/<slug>`)**
+- [ ] Questions appear in ops order, each with a text box
+- [ ] Optional ones are labelled "(optional)"; required ones block submit when empty
+- [ ] A role with NO questions looks exactly as it did before
+
+**Security — the browser is not the boundary**
+- [ ] Call submitApplication directly with the required question's field omitted.
+      It must be REJECTED. Questions are re-read from the database inside the
+      action; a posted list would let a caller decide what was required
+- [ ] Post 3000 characters into an answer — rejected at 2000
+- [ ] Post `application_questions` as a non-array to updateRole — rejected by the
+      action, and by the DB CHECK behind it
+
+**Data**
+- [ ] `job_roles.application_questions` defaults to `[]` for existing roles, so a
+      role written before this feature still opens and saves
+
 ---
 
 | When | What to run |

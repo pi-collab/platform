@@ -46,6 +46,21 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
   if (phone.length > 32) return { status: 'error', message: 'That phone number is too long.' }
   if (note.length > 4000) return { status: 'error', message: 'Please keep the note under 4000 characters.' }
 
+  // The role's questions come from the DB, never from the submitted form. A
+  // server action is directly callable, so a posted list of questions would let
+  // anyone decide which ones were required — including none of them.
+  const answers: { prompt: string; answer: string }[] = []
+  for (const q of role.questions) {
+    const raw = String(formData.get(`q_${q.id}`) ?? '').trim()
+    if (q.required && !raw) {
+      return { status: 'error', message: `Please answer: ${q.prompt}` }
+    }
+    if (raw.length > 2000) {
+      return { status: 'error', message: `Please keep "${q.prompt}" under 2000 characters.` }
+    }
+    if (raw) answers.push({ prompt: q.prompt, answer: raw })
+  }
+
   if (!(resume instanceof File) || resume.size === 0) {
     return { status: 'error', message: 'Attach your CV.' }
   }
@@ -77,6 +92,10 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
       phone: phone || null,
       resume_filename: resume.name,
       resume_bytes: resume.size,
+      // Recorded so an application survives a failed send. Answers are the
+      // applicant's words about themselves, which is the same class of data as
+      // the note already stored here.
+      answers,
     },
   })
 
@@ -89,6 +108,10 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
       `Email: ${email}`,
       phone ? `Phone: ${phone}` : 'Phone: not given',
       note ? `\nTheir note:\n${note}` : '\nNo note included.',
+      // Each answer under the question that produced it. Prompts are included
+      // rather than ids because the person reading this needs the question, and
+      // the role's questions can change after an application is sent.
+      ...answers.flatMap(a => [`\n${a.prompt}`, a.answer]),
       '\nTheir CV is attached.',
     ],
     footerNote: `Sent to the careers address for ${BRAND_NAME}.`,
