@@ -630,3 +630,185 @@
   .sf-root .sf-srow > span { font-size: 12px !important; letter-spacing: 0 !important; text-transform: none !important; }
   .sf-root .sf-srow > b { font-size: 12px !important; }
 }
+
+@media (max-width: 767.98px) {
+  /* ── The identity block on a phone, from the standalone mobile export ──────
+     The design centres the whole hero: portrait, name, handles, niches, bio,
+     the stat band, and a CTA ROW rather than the stacked column we had.
+
+     The portrait is DELIBERATELY LEFT AT OUR SIZE. The export draws it
+     full-width at a fixed 220px height; ours is a 4/5 card, and keeping ours
+     was the explicit instruction. Everything around it moves; it does not.
+
+     Desktop is untouched — this is the two-column grid collapsed to one and
+     re-centred, not a different DOM.
+     ──────────────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-hero-card { text-align: center; }
+
+  /* The export opens on the portrait. There is no "Creator shopfront" eyebrow
+     above it — on a page whose purpose is obvious from the photo and the name,
+     it labelled something already said. */
+  .sf-root .sf-hero-eyebrow { display: none; }
+
+  /* The name is a flex row (it carries the verified tick), so centring the
+     text is not enough — the row itself has to centre. */
+  .sf-root .sf-hero-card h1.t-display { justify-content: center; }
+
+  .sf-root .sf-hero-handles { justify-content: center; }
+
+  .sf-root .sf-hero-bio {
+    font-size: 13px;
+    line-height: 1.65;
+    /* auto margins, not text-align alone: the paragraph is capped at 440px and
+       would otherwise sit left of a centred column. */
+    margin: 18px auto 0 !important;
+    max-width: 330px;
+  }
+
+  .sf-root .sf-hero-tags { justify-content: center; }
+
+  /* Niche pills: 11px on a tinted ground, tighter than the 13px bordered chips
+     the desktop hero uses. */
+  .sf-root .sf-hero-tags > * {
+    font-size: 11px !important;
+    padding: 6px 14px !important;
+  }
+
+  /* Stat band — 20px, not the 22px this had. The export sets the numbers below
+     the name rather than competing with it. */
+  .sf-root .sf-hero-stats > div > div:first-child {
+    font-size: 20px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .sf-root .sf-hero-stats > div > div:last-child {
+    letter-spacing: .06em;
+  }
+
+  /* Calls to action. These were stacked, with the secondary reduced to an
+     underlined text link. The export puts them side by side: a filled primary
+     that takes the room, and a bordered pill beside it. Both 50px, both fully
+     rounded. */
+  .sf-root .sf-hero-ctas {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 12px !important;
+    margin-top: 24px !important;
+  }
+
+  .sf-root .sf-hero-cta {
+    flex: 1 1 auto;
+    width: auto !important;
+    height: 50px;
+    border-radius: 999px !important;
+  }
+
+  /* Undoes the link treatment this had at this width. */
+  .sf-root .sf-hero-cta-alt {
+    flex: 0 0 auto;
+    width: auto !important;
+    height: 50px;
+    padding: 0 20px !important;
+    border: 1.3px solid var(--frost-edge) !important;
+    background: #fff !important;
+    border-radius: 999px !important;
+    color: var(--ink) !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Same, keyed to the container — a narrow render inside a wide viewport is
+   invisible to @media, as everywhere else in this file. */
+@container shopfront (max-width: 767.98px) {
+  /* ── The identity block on a phone, from the standalone mobile export ──────
+     The design centres the whole hero: portrait, name, handles, niches, bio,
+     the stat band, and a CTA ROW rather than the stacked column we had.
+
+     The portrait is DELIBERATELY LEFT AT OUR SIZE. The export draws it
+     full-width at a fixed 220px height; ours is a 4/5 card, and keeping ours
+     was the explicit instruction. Everything around it moves; it does not.
+
+     Desktop is untouched — this is the two-column grid collapsed to one and
+     re-centred, not a different DOM.
+     ──────────────────────────────────────────────────────────────────── */
+
+  .sf-root .sf-hero-card { text-align: center; }
+
+  /* The export opens on the portrait. There is no "Creator shopfront" eyebrow
+     above it — on a page whose purpose is obvious from the photo and the name,
+     it labelled something already said. */
+  .sf-root .sf-hero-eyebrow { display: none; }
+
+  /* The name is a flex row (it carries the verified tick), so centring the
+     text is not enough — the row itself has to centre. */
+  .sf-root .sf-hero-card h1.t-display { justify-content: center; }
+
+  .sf-root .sf-hero-handles { justify-content: center; }
+
+  .sf-root .sf-hero-bio {
+    font-size: 13px;
+    line-height: 1.65;
+    /* auto margins, not text-align alone: the paragraph is capped at 440px and
+       would otherwise sit left of a centred column. */
+    margin: 18px auto 0 !important;
+    max-width: 330px;
+  }
+
+  .sf-root .sf-hero-tags { justify-content: center; }
+
+  /* Niche pills: 11px on a tinted ground, tighter than the 13px bordered chips
+     the desktop hero uses. */
+  .sf-root .sf-hero-tags > * {
+    font-size: 11px !important;
+    padding: 6px 14px !important;
+  }
+
+  /* Stat band — 20px, not the 22px this had. The export sets the numbers below
+     the name rather than competing with it. */
+  .sf-root .sf-hero-stats > div > div:first-child {
+    font-size: 20px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  .sf-root .sf-hero-stats > div > div:last-child {
+    letter-spacing: .06em;
+  }
+
+  /* Calls to action. These were stacked, with the secondary reduced to an
+     underlined text link. The export puts them side by side: a filled primary
+     that takes the room, and a bordered pill beside it. Both 50px, both fully
+     rounded. */
+  .sf-root .sf-hero-ctas {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center;
+    gap: 12px !important;
+    margin-top: 24px !important;
+  }
+
+  .sf-root .sf-hero-cta {
+    flex: 1 1 auto;
+    width: auto !important;
+    height: 50px;
+    border-radius: 999px !important;
+  }
+
+  /* Undoes the link treatment this had at this width. */
+  .sf-root .sf-hero-cta-alt {
+    flex: 0 0 auto;
+    width: auto !important;
+    height: 50px;
+    padding: 0 20px !important;
+    border: 1.3px solid var(--frost-edge) !important;
+    background: #fff !important;
+    border-radius: 999px !important;
+    color: var(--ink) !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+  }
+}

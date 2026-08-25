@@ -378,7 +378,7 @@ export default function ShopfrontPreview({
 
                 {/* Info */}
                 <div>
-                  <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Creator shopfront</span>
+                  <span className="t-meta sf-hero-eyebrow" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Creator shopfront</span>
                   <h1 className="t-display" style={{ margin: '14px 0 0', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                     {firstName}
                     {data.isVerified && (
@@ -388,7 +388,7 @@ export default function ShopfrontPreview({
                     )}
                   </h1>
                   {/* Social handles + storefront link — single row */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                  <div className="sf-hero-handles" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
                     {data.platforms.map(p => (
                       <a
                         key={p.platform}
@@ -436,7 +436,7 @@ export default function ShopfrontPreview({
                   </div>
 
                   {/* Bio */}
-                  <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: '16px 0 0' }}>{data.bio}</p>
+                  <p className="t-body sf-hero-bio" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: '16px 0 0' }}>{data.bio}</p>
 
                   {/* Niche pills */}
                   <div className="sf-hero-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
