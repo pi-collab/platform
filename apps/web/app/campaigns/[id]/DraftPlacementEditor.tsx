@@ -99,6 +99,11 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
   }, [products])
 
   // Compute totals
+  /* This editor prices base deliverables only — it does not offer collab or
+     boosting. The comment matters more than the code: the total below is a
+     BASE total, and the moment an add-on control is added here it has to be
+     included, or a campaign will quote one figure and its deals charge another.
+     draft-actions.ts already sums the add-on columns for exactly that reason. */
   const { totalPaise, selectedCount, hasMissingPrice } = useMemo(() => {
     let total = 0
     let count = 0

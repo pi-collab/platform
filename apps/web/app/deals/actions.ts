@@ -6,9 +6,50 @@ import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
 import { calculateFee } from '@/lib/fee'
+import { collabCharge, boostingCharge } from '@/lib/addons'
 import { formatAmountForMessage } from '@/lib/money'
 import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
 import { ensurePairOrigin } from '@/lib/attribution'
+
+/**
+ * Recompute each add-on from the rate that came with it, and store the result.
+ *
+ * The client already did this arithmetic; doing it again is not redundancy for
+ * its own sake. A server action is directly callable, so `collab_charge_paise`
+ * arriving in the request is a number someone sent us, and this is a payments
+ * path. Recomputing from (price, rate) means a tampered amount is simply
+ * replaced by the correct one rather than trusted.
+ *
+ * It also guarantees the invariant the whole feature rests on: the stored line
+ * amounts are what lib/addons produces, so the deal total — which is the sum of
+ * those lines — cannot disagree with the invoice that re-reads them.
+ */
+function addonColumnsFor(item: DeliverableItem): Record<string, number | string | null> {
+  const price = item.price_paise ?? 0
+  const out: Record<string, number | string | null> = {}
+
+  if (item.collab_rate_type && item.collab_rate_value != null) {
+    out.collab_charge_paise = collabCharge(price, {
+      collabRateType: item.collab_rate_type,
+      collabRateValue: item.collab_rate_value,
+      boostingThirtyDayPaise: null,
+    })
+    out.collab_rate_type = item.collab_rate_type
+    out.collab_rate_value = item.collab_rate_value
+  }
+
+  if (item.boosting_days != null && item.boosting_days > 0 && item.boosting_30day_paise != null) {
+    out.boosting_charge_paise = boostingCharge(item.boosting_days, {
+      collabRateType: null,
+      collabRateValue: null,
+      boostingThirtyDayPaise: item.boosting_30day_paise,
+    })
+    out.boosting_days = item.boosting_days
+    out.boosting_30day_paise = item.boosting_30day_paise
+  }
+
+  return out
+}
 
 interface DeliverableItem {
   label: string
@@ -18,6 +59,15 @@ interface DeliverableItem {
   reel_type?: 'collab' | 'non_collab'
   boosting_rights?: boolean
   boosting_duration_months?: number
+  /* Priced add-ons, resolved and rounded by lib/addons on the client and
+     RE-VERIFIED here. A server action is directly callable, so an amount that
+     arrives with the request is a claim, not a fact. */
+  collab_charge_paise?: number
+  collab_rate_type?: 'fixed' | 'percent' | null
+  collab_rate_value?: number | null
+  boosting_days?: number
+  boosting_charge_paise?: number
+  boosting_30day_paise?: number
 }
 
 interface CreateDealInput {
@@ -145,6 +195,7 @@ export async function createDeal(input: CreateDealInput) {
       reel_type: item.reel_type ?? null,
       boosting_rights: item.boosting_rights ?? null,
       boosting_duration_months: item.boosting_rights && item.boosting_duration_months ? item.boosting_duration_months : null,
+      ...addonColumnsFor(item),
     }))
     const { error: itemsErr } = await supabase
       .from('deal_deliverable_items')

@@ -115,6 +115,14 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     .maybeSingle()
 
   const effectiveFeePercent = pairRate?.fee_pct ?? brandRow?.platform_fee_percent ?? 0
+  // Per-channel collab / boosting rates, so the offer builder can price the
+  // add-ons before a deal exists. Read through the admin client like the rest
+  // of this page; the RLS policy would allow it anyway for a vetted creator.
+  const { data: addonRates } = await admin
+    .from('creator_addon_rates')
+    .select('platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
+    .eq('creator_id', creator.id)
+
   const activeProducts = (products ?? []).filter((p) => p.is_active)
   const firstName = creator.full_name.split(' ')[0]
 
@@ -233,6 +241,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           prefill={prefill}
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
           storefrontSelections={storefrontSelections}
+          addonRates={(addonRates ?? []) as never}
         />
       </div>
     </main>

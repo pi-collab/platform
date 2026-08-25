@@ -3006,3 +3006,35 @@ button.signup-form__cross-link {
     font-size: 16px;
   }
 }
+
+/* ── Priced add-ons on a deliverable row ─────────────────────────────────────
+   Collab and Boosting sit inline with the quantity and date pills on the offer
+   builder's deliverable rows, so they read as part of pricing that line rather
+   than a separate step. Off by default and outlined; neon once applied, which
+   is the same on/off language the rest of the builder uses.
+   ────────────────────────────────────────────────────────────────────────── */
+.ddi-addon{display:inline-flex;align-items:center;gap:6px;height:27px;padding:0 10px;border-radius:8px;border:1px solid var(--line,rgba(60,80,30,.16));background:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:600;color:var(--ink-soft,#565C68);cursor:pointer;white-space:nowrap;}
+.ddi-addon[data-on="true"]{background:var(--neon,#E8FF66);border-color:var(--neon-deep,#C9EB3C);color:var(--lime-950,#161B08);}
+.ddi-addon-amt{font-family:var(--font-display);font-weight:800;letter-spacing:-.01em;}
+/* Narrow, because it holds at most three digits and a wider box invites a year. */
+.ddi-addon-days{width:44px;height:19px;padding:0 6px;border-radius:6px;border:1px solid var(--line,rgba(60,80,30,.16));background:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:600;color:var(--ink,#12151C);}
+
+/* ── Itemised deal money ─────────────────────────────────────────────────────
+   One component renders this to both parties, so these tokens are shared by the
+   brand and creator deal screens.
+   ────────────────────────────────────────────────────────────────────────── */
+.dbd{display:flex;flex-direction:column;}
+.dbd-item{padding:10px 0;border-bottom:1px solid var(--hairline,rgba(24,28,36,.08));}
+.dbd-item:last-of-type{border-bottom:none;}
+.dbd-row{display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:3px 0;}
+.dbd-label{display:flex;flex-direction:column;gap:2px;font-family:var(--font-ui);font-size:13.5px;color:var(--ink,#12151C);min-width:0;}
+.dbd-amt{font-family:var(--font-display);font-weight:700;font-size:13.5px;letter-spacing:-.01em;color:var(--ink,#12151C);white-space:nowrap;}
+.dbd-channel,.dbd-note{font-size:11.5px;font-weight:500;color:var(--ink-faint,#878D99);}
+/* Extras are indented and quieter — they belong to the line above them. */
+.dbd-row-extra{padding-left:14px;}
+.dbd-row-extra .dbd-label,.dbd-row-extra .dbd-amt{color:var(--ink-soft,#565C68);font-weight:600;}
+.dbd-row-sub{padding-left:14px;border-top:1px dashed var(--hairline,rgba(24,28,36,.10));margin-top:4px;padding-top:7px;}
+.dbd-row-total{margin-top:10px;padding-top:12px;border-top:1.5px solid var(--ink,#12151C);}
+.dbd-row-total .dbd-label{font-weight:700;}
+.dbd-row-total .dbd-amt{font-size:17px;font-weight:800;}
+.dbd-note-block{margin:10px 0 0;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--ink-faint,#878D99);}

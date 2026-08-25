@@ -45,12 +45,18 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     wantsWhatsapp: prefs.notify_whatsapp === true,
   }
 
-  const [{ data: products }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding, error: onboardingErr }] = await Promise.all([
+  const [{ data: products }, { data: addonRates }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding, error: onboardingErr }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
       .eq('creator_id', params.id)
       .order('created_at', { ascending: false }),
+    // Per-channel collab / boosting rates, so ops can see and seed what a
+    // creator charges on top of a deliverable.
+    admin
+      .from('creator_addon_rates')
+      .select('platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
+      .eq('creator_id', params.id),
     admin
       .from('deals')
       .select('id, title, status, price_paise, created_at, brands(name)')

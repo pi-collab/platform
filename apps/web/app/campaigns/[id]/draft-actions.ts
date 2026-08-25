@@ -12,6 +12,15 @@ export interface DraftPlacement {
   platform: string
   handle: string
   price_paise: number
+  /* Priced add-ons, carried so a draft that becomes a deal keeps them. Absent
+     on every placement written before 0484 and on any the editor does not set,
+     which is why every read below coalesces to 0. */
+  collab_charge_paise?: number | null
+  collab_rate_type?: 'fixed' | 'percent' | null
+  collab_rate_value?: number | null
+  boosting_days?: number | null
+  boosting_charge_paise?: number | null
+  boosting_30day_paise?: number | null
   product_id?: string
   reel_type?: 'collab' | 'non_collab'
   boosting_rights?: boolean
@@ -104,7 +113,13 @@ export async function updateCampaignDraft(
   const supabase = createClient()
 
   // Compute totals from placements
-  const totalPricePaise = placements.reduce((s, p) => s + (p.price_paise ?? 0), 0)
+  /* The SAME definition of a total the deal side uses: a line's price plus the
+     add-ons stored on it, summed. Dropping the add-ons here would let a campaign
+     draft quote one number and the deal it becomes charge another. */
+  const totalPricePaise = placements.reduce(
+    (s, p) => s + (p.price_paise ?? 0) + (p.collab_charge_paise ?? 0) + (p.boosting_charge_paise ?? 0),
+    0,
+  )
 
   // Refresh fee from brand's CURRENT settings (not stale draft snapshot)
   const { data: brandRow } = await supabase

@@ -1855,6 +1855,56 @@ removing them would fail an edit on a value the creator never chose.
       (it prefixes legacy names at display time and skips those already prefixed)
 - [ ] Brand side and ops show the same names as the creator set
 
+### Collab & boosting add-ons — MONEY, test adversarially
+
+**Creator rates (`/creator/packages`, per channel)**
+- [ ] Set collab as a % on Instagram and a FIXED amount on YouTube. Both persist
+      independently — rates are per channel, not per creator
+- [ ] Enter 10.5% — stored as 1050 basis points, redisplays as 10.5
+- [ ] Try 101% — rejected by the action AND by the DB CHECK
+- [ ] Set a type with no amount — rejected (half-set rates cannot be priced)
+- [ ] Clear a rate; the brand-side control for that channel disappears entirely
+
+**Offer builder (brand)**
+- [ ] Collab/Boosting appear ONLY for channels where the creator set that rate
+- [ ] 10% collab on a ₹40,000 Short shows ₹4,000; on a ₹60,000 Reel, ₹6,000 —
+      the percentage is of THAT deliverable's price
+- [ ] Both on one deliverable: they stack
+- [ ] Quantity 2 with collab = two collab charges
+- [ ] Type a manual price override: collab/boosting controls DISAPPEAR, and the
+      saved items carry no add-on columns even if toggles were set beforehand
+- [ ] The header total matches the sum of the deliverable lines exactly
+
+**Rounding (the reason this feature is risky)**
+- [ ] Boosting ₹10,000/30 days for 17 days = ₹5,666.67, NOT 17 × ₹333 (₹5,661).
+      Per-day is displayed only; the charge rounds once
+- [ ] A deal's stored total equals the sum of its stored line amounts, to the
+      paise. Never recomputed from the rate — on a three-line worked example the
+      two approaches differ by ₹16.67
+- [ ] Every stored amount is an integer; no column ever holds a fraction
+
+**Tamper check (server is the boundary)**
+- [ ] Call createDeal directly with `collab_charge_paise` set to 1 while sending
+      a real rate. The STORED value must be the recomputed amount, not the 1
+
+**Invoice / breakdown**
+- [ ] Brand and creator see the same figures (one shared component)
+- [ ] Boosting shows "N days · ₹X/day"; collab shows "10% of ₹60,000"
+- [ ] Lines add to the deliverable total; deliverable totals add to the deal total
+- [ ] Platform fee is calculated on the FULL total, add-ons included
+
+**Compatibility**
+- [ ] A deal created before this change shows no add-on lines and its total is
+      unchanged
+- [ ] A campaign draft's total includes add-on columns when placements carry
+      them (draft-actions), so a draft cannot quote less than the deal charges
+
+**RLS**
+- [ ] A brand can READ a vetted creator's addon rates (needed to price an offer)
+- [ ] A brand CANNOT write them
+- [ ] Rates for a non-vetted creator are not readable by other users
+- [ ] Rates do NOT appear on the public `/c/<slug>` payload
+
 ---
 
 | When | What to run |

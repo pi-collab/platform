@@ -1,12 +1,16 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { createDeal } from '../actions'
 import { uploadBriefAttachment, removeBriefAttachment } from './upload-actions'
 import PointsInput from './PointsInput'
 import { useRouter } from 'next/navigation'
 import { calculateFee } from '@/lib/fee'
+import {
+  type AddonRates, EMPTY_ADDONS, resolveAddons, deliverableTotal, offersCollab, offersBoosting,
+  collabCharge, boostingCharge, boostingPerDayPaise, formatBasisPoints,
+} from '@/lib/addons'
 import type { DealPrefill } from './page'
 import { trackEvent, priceBucket } from '@/lib/analytics'
 
@@ -73,7 +77,15 @@ function PlatformIcon({ platform }: { platform: string }) {
   return null
 }
 
-export default function DealForm({ creator, products, platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
+interface AddonRateRow {
+  platform: string
+  handle: string
+  collab_rate_type: 'fixed' | 'percent' | null
+  collab_rate_value: number | null
+  boosting_30day_paise: number | null
+}
+
+export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -179,6 +191,26 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     }
     return br
   })
+  /* Collab and boosting as PRICED add-ons, per product.
+     Distinct from reelTypes/itemBoostingRights above, which are the rights
+     flags this deal already recorded and which carry no money. */
+  const [wantsCollab, setWantsCollab] = useState<Record<string, boolean>>({})
+  const [boostDays, setBoostDays] = useState<Record<string, string>>({})
+
+  /** The creator's rates for the channel a product sits on, or null. */
+  const ratesFor = useCallback((p: { platform: string; handle: string }): AddonRates | null => {
+    const row = addonRates.find(
+      r => String(r.platform ?? '').trim().toLowerCase() === String(p.platform ?? '').trim().toLowerCase()
+        && String(r.handle ?? '').replace(/^@/, '').toLowerCase() === String(p.handle ?? '').replace(/^@/, '').toLowerCase(),
+    )
+    if (!row) return null
+    return {
+      collabRateType: row.collab_rate_type,
+      collabRateValue: row.collab_rate_value,
+      boostingThirtyDayPaise: row.boosting_30day_paise,
+    }
+  }, [addonRates])
+
   const [itemBoostingDuration, setItemBoostingDuration] = useState<Record<string, string>>(() => {
     const bd: Record<string, string> = {}
     if (prefill?.items) {
@@ -239,7 +271,7 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     }
 
     return { totalPaise: total, selectedCount: count, deliverablesSummary: lines.join(' + '), hasMissingPrice: missingPrice }
-  }, [products, selections])
+  }, [products, selections, wantsCollab, boostDays, ratesFor])
 
   const { defaultIncluded, defaultExtraPaise } = useMemo(() => {
     const selectedProducts = products.filter((p) => { const s = selections[p.id]; return s && s.qty > 0 })
@@ -258,7 +290,11 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
     }
   }, [defaultIncluded, defaultExtraPaise, selectedCount])
 
-  const finalPaise = priceOverride.trim() ? Math.round(parseFloat(priceOverride) * 100) : totalPaise
+  /* A manual override replaces the WHOLE price, add-ons included. Declared here
+     so the per-deliverable controls can hide themselves, and honoured again
+     where the payload is built. */
+  const overrideActive = priceOverride.trim().length > 0
+  const finalPaise = overrideActive ? Math.round(parseFloat(priceOverride) * 100) : totalPaise
 
   function setQty(productId: string, qty: number) {
     setSelections((prev) => ({ ...prev, [productId]: { qty, customPricePaise: prev[productId]?.customPricePaise ?? null } }))
@@ -314,12 +350,33 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
       const rt = reelTypes[p.id]
       const br = itemBoostingRights[p.id]
       const bd = itemBoostingDuration[p.id]
+      /* An override IS the whole price of that deliverable, so nothing stacks on
+         top. The controls hide themselves in that case; this makes sure nothing
+         is written even if state lingers from before the override was typed. */
+      const charges = overrideActive
+        ? EMPTY_ADDONS
+        : resolveAddons({
+            pricePaise: unitPaise,
+            rates: ratesFor(p),
+            wantsCollab: !!wantsCollab[p.id],
+            boostingDays: Number.parseInt(boostDays[p.id] ?? '', 10) || null,
+          })
       for (let i = 0; i < sel.qty; i++) {
         items.push({
           label: p.product_type, platform: p.platform, handle: p.handle, price_paise: unitPaise,
           ...(rt ? { reel_type: rt } : {}),
           ...(br != null ? { boosting_rights: br } : {}),
           ...(br && bd ? { boosting_duration_months: parseInt(bd, 10) } : {}),
+          ...(charges.collabChargePaise != null ? {
+            collab_charge_paise: charges.collabChargePaise,
+            collab_rate_type: charges.collabRateType,
+            collab_rate_value: charges.collabRateValue,
+          } : {}),
+          ...(charges.boostingChargePaise != null ? {
+            boosting_days: charges.boostingDays,
+            boosting_charge_paise: charges.boostingChargePaise,
+            boosting_30day_paise: charges.boostingThirtyDayPaise,
+          } : {}),
         })
       }
     }
@@ -632,6 +689,60 @@ export default function DealForm({ creator, products, platformFeePercent = 0, fe
                                     style={{ width: 140, height: 27, fontSize: 11.5, padding: '0 10px', borderRadius: 8 }}
                                   />
                                 )}
+                                {/* ── Priced add-ons ──────────────────────────
+                                   Shown only where the creator has set that
+                                   rate, and not at all under a manual override,
+                                   which is the whole price by definition. */}
+                                {!overrideActive && (() => {
+                                  const rates = ratesFor(p)
+                                  if (!rates) return null
+                                  const unit = isFixedPrice(p) ? p.price_paise : (sel?.customPricePaise ?? 0)
+                                  const days = Number.parseInt(boostDays[p.id] ?? '', 10) || 0
+                                  return (
+                                    <>
+                                      {offersCollab(rates) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => setWantsCollab(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                                          className="ddi-addon"
+                                          data-on={wantsCollab[p.id] ? 'true' : 'false'}
+                                        >
+                                          {/* The rate as the creator set it, plus what it comes to —
+                                              a percentage alone makes a brand do the arithmetic. */}
+                                          {rates.collabRateType === 'percent'
+                                            ? `Collab ${formatBasisPoints(rates.collabRateValue ?? 0)}`
+                                            : 'Collab'}
+                                          {unit > 0 && (
+                                            <span className="ddi-addon-amt">
+                                              +{formatRupees(collabCharge(unit, rates))}
+                                            </span>
+                                          )}
+                                        </button>
+                                      )}
+
+                                      {offersBoosting(rates) && (
+                                        <span className="ddi-addon" data-on={days > 0 ? 'true' : 'false'}>
+                                          Boost
+                                          <input
+                                            type="number" min="0" step="1"
+                                            inputMode="numeric"
+                                            placeholder="days"
+                                            value={boostDays[p.id] ?? ''}
+                                            onChange={e => setBoostDays(prev => ({ ...prev, [p.id]: e.target.value.replace(/[^0-9]/g, '') }))}
+                                            className="ddi-addon-days"
+                                          />
+                                          {days > 0
+                                            ? (
+                                              <span className="ddi-addon-amt">
+                                                {days} \u00D7 {formatRupees(boostingPerDayPaise(rates))} = +{formatRupees(boostingCharge(days, rates))}
+                                              </span>
+                                            )
+                                            : <span className="ddi-addon-amt">{formatRupees(boostingPerDayPaise(rates))}/day</span>}
+                                        </span>
+                                      )}
+                                    </>
+                                  )
+                                })()}
                               </div>
                             )}
                           </div>

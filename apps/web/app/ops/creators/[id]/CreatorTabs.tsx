@@ -74,7 +74,15 @@ interface PairRate {
 const TABS = ['Basic Details', 'Social Accounts', 'Products', 'Deals', 'Fee Rates', 'Portfolio & Brands', 'Questionnaire'] as const
 type Tab = typeof TABS[number]
 
-export default function CreatorTabs({ onboarding, creator, products, deals, pairRates }: { onboarding: OnboardingResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
+export interface AddonRateRow {
+  platform: string
+  handle: string
+  collab_rate_type: 'fixed' | 'percent' | null
+  collab_rate_value: number | null
+  boosting_30day_paise: number | null
+}
+
+export default function CreatorTabs({ onboarding, creator, products, addonRates = [], deals, pairRates }: { addonRates?: AddonRateRow[]; onboarding: OnboardingResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -151,7 +159,7 @@ export default function CreatorTabs({ onboarding, creator, products, deals, pair
       {tab === 'Questionnaire' && <Questionnaire response={onboarding} />}
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
-      {tab === 'Products' && <Products creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
+      {tab === 'Products' && <Products addonRates={addonRates} creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
       {tab === 'Deals' && <DealsTab deals={deals} />}
       {tab === 'Fee Rates' && <FeeRatesTab creatorId={creator.id} pairRates={pairRates} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
@@ -222,17 +230,42 @@ function SocialAccounts({ accounts }: { accounts: SocialAccount[] | null }) {
 
 /* ── Products tab ──────────────────────────────────────────────── */
 
-function Products({ creatorId, accounts, products }: { creatorId: string; accounts: SocialAccount[] | null; products: Product[] }) {
+function Products({ creatorId, accounts, products, addonRates = [] }: { creatorId: string; addonRates?: AddonRateRow[]; accounts: SocialAccount[] | null; products: Product[] }) {
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const activeProducts = products.filter((p) => p.is_active)
+  const channelsWithAddons = addonRates.filter(
+    r => r.collab_rate_type != null || r.boosting_30day_paise != null,
+  )
   const inactiveProducts = products.filter((p) => !p.is_active)
   const hasAccounts = accounts && accounts.length > 0
 
   return (
     <div style={{ maxWidth: 640 }}>
+      {channelsWithAddons.length > 0 && (
+        <div style={{ marginBottom: 14, padding: '10px 12px', border: '1px solid #e4e4e7', borderRadius: 8, background: '#fafafa' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Collab &amp; boosting rates</div>
+          {channelsWithAddons.map(r => (
+            <div key={`${r.platform}/${r.handle}`} style={{ fontSize: 12.5, color: '#444', padding: '2px 0' }}>
+              {r.platform} @{String(r.handle).replace(/^@/, '')} &mdash;{' '}
+              {r.collab_rate_type === 'percent' && r.collab_rate_value != null
+                ? `collab ${r.collab_rate_value / 100}%`
+                : r.collab_rate_type === 'fixed' && r.collab_rate_value != null
+                  ? `collab ₹${(r.collab_rate_value / 100).toLocaleString('en-IN')}`
+                  : 'no collab'}
+              {' · '}
+              {r.boosting_30day_paise != null
+                ? `boosting ₹${(r.boosting_30day_paise / 100).toLocaleString('en-IN')} / 30 days`
+                : 'no boosting'}
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>
+            Set by the creator on their packages screen. Shown here so a deal total can be explained.
+          </div>
+        </div>
+      )}
       {!hasAccounts && (
         <p style={{ ...emptyStyle, marginBottom: '1rem' }}>Add social accounts first before creating products.</p>
       )}

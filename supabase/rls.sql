@@ -769,3 +769,31 @@ GRANT SELECT (
 -- ================================================================
 -- END OF RLS POLICIES
 -- ================================================================
+
+-- ── creator_addon_rates ─────────────────────────────────────────────────────
+-- Per-channel Collab and Boosting rates (migration 0483).
+--
+-- Readable by any signed-in user for a VETTED creator: a brand has to price the
+-- add-ons while building an offer, before any deal exists to scope access by.
+-- These are asking prices, published for the same reason a rate card is.
+-- Writable only by the creator who owns them.
+
+ALTER TABLE creator_addon_rates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS creator_addon_rates_own_all     ON creator_addon_rates;
+DROP POLICY IF EXISTS creator_addon_rates_read_vetted ON creator_addon_rates;
+
+CREATE POLICY creator_addon_rates_own_all
+  ON creator_addon_rates FOR ALL
+  USING (creator_id = my_creator_id())
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY creator_addon_rates_read_vetted
+  ON creator_addon_rates FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM creators c
+      WHERE c.id = creator_addon_rates.creator_id
+        AND c.is_vetted = true
+    )
+  );
