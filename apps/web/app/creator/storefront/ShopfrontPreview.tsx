@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, createContext
 // public /c/[slug] page and /browse/[id]. Rules kept in the editor's own
 // stylesheet only ever reached one of the three.
 import './shopfront-preview.css'
+import ShopfrontMobile from './ShopfrontMobile'
 import { atHandle, profileUrl } from '@/lib/handle'
 
 /* ── Types ────────────────────────────────────────────────────── */
@@ -353,6 +354,16 @@ export default function ShopfrontPreview({
         position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 90, opacity: 0.03, mixBlendMode: 'multiply',
         backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='gn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gn)'/%3E%3C/svg%3E\")",
       }} />
+
+      {/* ── Which rendering ──────────────────────────────────────────────
+         Both are in the DOM; CSS decides which is shown, by width.
+
+         NOT an early return. A return fires at every size, and that is
+         exactly how the desktop empty states got replaced by mobile ones
+         once already — the bug looked like a design change because it was
+         invisible until someone opened a laptop.
+         ──────────────────────────────────────────────────────────── */}
+      <div className="sf-view-desktop">
 
       {/* ═══ 1. HERO ═══════════════════════════════════════════ */}
       <SectionWrapper sectionKey="hero">
@@ -1148,6 +1159,21 @@ export default function ShopfrontPreview({
           </div>
         </section>
       </SectionWrapper>
+      </div>
+
+      <div className="sf-view-mobile">
+        <ShopfrontMobile
+          data={data}
+          qty={qty}
+          setQty={setQty}
+          activePlatform={activePlatform}
+          setActivePlatform={setActivePlatform}
+          linkCopied={linkCopied}
+          copyLink={copyLink}
+          onDealClick={onDealClick}
+          editing={editing}
+        />
+      </div>
     </div>
     </SectionCtx.Provider>
   )

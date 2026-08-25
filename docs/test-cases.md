@@ -1807,6 +1807,38 @@ simply the list repeated.
 - [ ] Cards snap, are ~68% of the screen wide, and the logo panel is 110px
 - [ ] With ONE collaboration: desktop marquee still works, phone shows one card
 
+### Shopfront: two renderings, one page
+
+Below 768px the page renders ShopfrontMobile (generated from the mobile export);
+at or above it, ShopfrontPreview's own markup. Both are in the DOM; CSS chooses.
+
+**The regression this design exists to prevent**
+- [ ] Open /c/<slug> on a DESKTOP browser. The desktop layout must appear —
+      not the mobile one. An early return would have broken this at every width,
+      which is how the desktop empty states were replaced once already
+- [ ] Resize across 768px. The layout swaps with no reload
+- [ ] Hard-reload on a phone. No flash of the desktop layout first (the choice is
+      CSS, so the server sends both and neither is wrong on arrival)
+
+**Mobile rendering works, not just renders**
+- [ ] Rate card +/- changes quantities AND the total label
+- [ ] "Create an offer" carries the CURRENT selection into /deals/new — not an
+      empty one. Select two items, tap it, confirm they are pre-filled
+- [ ] Instagram / YouTube tabs switch the audience block
+- [ ] Share copies the shopfront link and the label confirms it
+- [ ] Instagram and YouTube links open the creator's REAL profiles (the export
+      hardcodes sample handles)
+- [ ] No link navigates to a *.dc.html design file
+
+**In the editor preview**
+- [ ] Tapping "Create an offer" does NOT navigate the creator off the editor
+- [ ] The narrow preview pane shows the MOBILE rendering (container query, since
+      @media sees a wide viewport there)
+
+**Scoping**
+- [ ] The marketing site, dashboard and ops screens are unchanged. The export
+      shipped 10 :root blocks and 32 custom properties; all are scoped to .sfm
+
 ---
 
 | When | What to run |
