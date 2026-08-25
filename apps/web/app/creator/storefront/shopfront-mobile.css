@@ -636,13 +636,20 @@
 
 .sfm .snap-track { align-items: stretch; }
 
-.sfm .mcard {
+/* ONLY the cards in a scrolling row.
+ *
+ * This was written against every .mcard, and .mcard is the card shell used all
+ * over this page — gender, age, cities, the audience panel. Five cards that are
+ * not in a row were turned into column-flex containers with a stretched last
+ * child. The gender card sets display:flex inline but not flex-direction, so
+ * this won and stood the donut on top of its own labels. */
+.sfm .snap-track .mcard {
   display: flex;
   flex-direction: column;
 }
 
 /* The media keeps its ratio; the body grows. */
-.sfm .mcard > :last-child { flex: 1; }
+.sfm .snap-track .mcard > :last-child { flex: 1; }
 
 /* ── Charts count up when they arrive ────────────────────────────────────────
    The reveal observer already adds .sr-pre before a section is seen and swaps
@@ -745,4 +752,34 @@
   -webkit-appearance: none;
   appearance: none;
   transition: background .15s ease, color .15s ease;
+}
+
+/* ── Gender: the ring centred, the numbers beneath it ────────────────────────
+   The export lays this out as a ROW — ring on the left, labels filling the rest
+   — and that is what shipped. The design has the ring centred with the figures
+   stacked under it, full width, which reads as one block rather than a chart
+   with a caption bolted to its side.
+
+   Deliberately different from the export, on instruction.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sfm .sfm-gender {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* The rows take the full width of the card so their values still sit hard
+   right, under a ring that is centred above them. */
+.sfm .sfm-gender > :last-child {
+  width: 100%;
+  gap: 10px;
+}
+
+/* The section label belongs over the numbers it introduces, not floating in a
+   centred column of its own. */
+.sfm .sfm-gender > :last-child > .t-meta {
+  display: block;
+  text-align: left;
 }
