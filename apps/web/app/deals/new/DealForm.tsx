@@ -194,8 +194,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   /* Collab and boosting as PRICED add-ons, per product.
      Distinct from reelTypes/itemBoostingRights above, which are the rights
      flags this deal already recorded and which carry no money. */
-  const [wantsCollab, setWantsCollab] = useState<Record<string, boolean>>({})
-  const [boostDays, setBoostDays] = useState<Record<string, string>>({})
+  /* Boosting in DAYS, set by the same pill that already records the rights.
+     That pill offered "7 days / 30 days / 90 days" and stored MONTHS — seven
+     and thirty both became '1' — which cannot price a week of boosting. Days
+     live here; the months column is still written so nothing reading it breaks. */
+  const [boostDays, setBoostDays] = useState<Record<string, number>>({})
 
   /** The creator's rates for the channel a product sits on, or null. */
   const ratesFor = useCallback((p: { platform: string; handle: string }): AddonRates | null => {
@@ -256,7 +259,16 @@ export default function DealForm({ creator, products, addonRates = [], platformF
       if (!sel || sel.qty <= 0) continue
       count += sel.qty
       const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
-      total += unitPaise * sel.qty
+      /* Add-ons are per DELIVERABLE, so two Reels with collab carry two collab
+         charges. Each unit rounds on its own and is then multiplied, which is
+         exactly what the stored rows will hold — this total is the same
+         arithmetic the invoice performs, not a parallel one. */
+      total += deliverableTotal(unitPaise, resolveAddons({
+        pricePaise: unitPaise,
+        rates: ratesFor(p),
+        wantsCollab: reelTypes[p.id] === 'collab',
+        boostingDays: itemBoostingRights[p.id] === true ? (boostDays[p.id] ?? null) : null,
+      })) * sel.qty
       const qtyPrefix = sel.qty > 1 ? `${sel.qty}\u00D7 ` : ''
       const priceNote = !isFixedPrice(p) && sel.customPricePaise != null ? ` @ ${formatRupees(sel.customPricePaise)}` : ''
       const displayHandle = p.handle.startsWith('@') ? p.handle : `@${p.handle}`
@@ -271,7 +283,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     }
 
     return { totalPaise: total, selectedCount: count, deliverablesSummary: lines.join(' + '), hasMissingPrice: missingPrice }
-  }, [products, selections, wantsCollab, boostDays, ratesFor])
+  }, [products, selections, reelTypes, itemBoostingRights, boostDays, ratesFor])
 
   const { defaultIncluded, defaultExtraPaise } = useMemo(() => {
     const selectedProducts = products.filter((p) => { const s = selections[p.id]; return s && s.qty > 0 })
@@ -297,7 +309,17 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const finalPaise = overrideActive ? Math.round(parseFloat(priceOverride) * 100) : totalPaise
 
   function setQty(productId: string, qty: number) {
-    setSelections((prev) => ({ ...prev, [productId]: { qty, customPricePaise: prev[productId]?.customPricePaise ?? null } }))
+    /* Seed the editable price from the creator's own rate.
+       A "from Rs.40,000" package left this field empty, so the row read
+       Rs.0 until the brand retyped a number the creator had already set. A
+       minimum is a starting point, not an absence — only on_request has no
+       figure, and offerPrefillPaise returns null for exactly that case. */
+    const product = products.find((x) => x.id === productId)
+    const seed = product && !isFixedPrice(product) ? offerPrefillPaise(product) : null
+    setSelections((prev) => ({
+      ...prev,
+      [productId]: { qty, customPricePaise: prev[productId]?.customPricePaise ?? seed },
+    }))
     if (qty === 0) setItemDeliveryDates((prev) => { const next = { ...prev }; delete next[productId]; return next })
   }
 
@@ -358,8 +380,8 @@ export default function DealForm({ creator, products, addonRates = [], platformF
         : resolveAddons({
             pricePaise: unitPaise,
             rates: ratesFor(p),
-            wantsCollab: !!wantsCollab[p.id],
-            boostingDays: Number.parseInt(boostDays[p.id] ?? '', 10) || null,
+            wantsCollab: reelTypes[p.id] === 'collab',
+            boostingDays: itemBoostingRights[p.id] === true ? (boostDays[p.id] ?? null) : null,
           })
       for (let i = 0; i < sel.qty; i++) {
         items.push({
@@ -658,7 +680,9 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                 {/* Boosting rights */}
                                 <OptionPill
                                   label="Boosting rights"
-                                  value={itemBoostingRights[p.id] === true ? (itemBoostingDuration[p.id] ? `${itemBoostingDuration[p.id]} mo` : 'Yes') : itemBoostingRights[p.id] === false ? 'Not included' : ''}
+                                  value={itemBoostingRights[p.id] === true
+                                  ? (boostDays[p.id] ? `${boostDays[p.id]} days` : 'Yes')
+                                  : itemBoostingRights[p.id] === false ? 'Not included' : ''}
                                   options={['7 days', '30 days', '90 days', 'Not included']}
                                   onChange={(v) => {
                                     if (v === 'Not included') {
@@ -666,6 +690,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                       setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))
                                     } else {
                                       setItemBoostingRights((prev) => ({ ...prev, [p.id]: true }))
+                                      // Days for PRICING, months for the rights column this pill has
+                                      // always written. Seven days and thirty both stored '1' month, which
+                                      // cannot price a week of boosting.
+                                      const days = v === '7 days' ? 7 : v === '30 days' ? 30 : v === '90 days' ? 90 : 0
+                                      setBoostDays((prev) => ({ ...prev, [p.id]: days }))
                                       const months = v === '7 days' ? '1' : v === '30 days' ? '1' : v === '90 days' ? '3' : ''
                                       setItemBoostingDuration((prev) => ({ ...prev, [p.id]: months }))
                                     }
@@ -689,60 +718,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                     style={{ width: 140, height: 27, fontSize: 11.5, padding: '0 10px', borderRadius: 8 }}
                                   />
                                 )}
-                                {/* ── Priced add-ons ──────────────────────────
-                                   Shown only where the creator has set that
-                                   rate, and not at all under a manual override,
-                                   which is the whole price by definition. */}
-                                {!overrideActive && (() => {
-                                  const rates = ratesFor(p)
-                                  if (!rates) return null
-                                  const unit = isFixedPrice(p) ? p.price_paise : (sel?.customPricePaise ?? 0)
-                                  const days = Number.parseInt(boostDays[p.id] ?? '', 10) || 0
-                                  return (
-                                    <>
-                                      {offersCollab(rates) && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setWantsCollab(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                                          className="ddi-addon"
-                                          data-on={wantsCollab[p.id] ? 'true' : 'false'}
-                                        >
-                                          {/* The rate as the creator set it, plus what it comes to —
-                                              a percentage alone makes a brand do the arithmetic. */}
-                                          {rates.collabRateType === 'percent'
-                                            ? `Collab ${formatBasisPoints(rates.collabRateValue ?? 0)}`
-                                            : 'Collab'}
-                                          {unit > 0 && (
-                                            <span className="ddi-addon-amt">
-                                              +{formatRupees(collabCharge(unit, rates))}
-                                            </span>
-                                          )}
-                                        </button>
-                                      )}
 
-                                      {offersBoosting(rates) && (
-                                        <span className="ddi-addon" data-on={days > 0 ? 'true' : 'false'}>
-                                          Boost
-                                          <input
-                                            type="number" min="0" step="1"
-                                            inputMode="numeric"
-                                            placeholder="days"
-                                            value={boostDays[p.id] ?? ''}
-                                            onChange={e => setBoostDays(prev => ({ ...prev, [p.id]: e.target.value.replace(/[^0-9]/g, '') }))}
-                                            className="ddi-addon-days"
-                                          />
-                                          {days > 0
-                                            ? (
-                                              <span className="ddi-addon-amt">
-                                                {days} \u00D7 {formatRupees(boostingPerDayPaise(rates))} = +{formatRupees(boostingCharge(days, rates))}
-                                              </span>
-                                            )
-                                            : <span className="ddi-addon-amt">{formatRupees(boostingPerDayPaise(rates))}/day</span>}
-                                        </span>
-                                      )}
-                                    </>
-                                  )
-                                })()}
                               </div>
                             )}
                           </div>
