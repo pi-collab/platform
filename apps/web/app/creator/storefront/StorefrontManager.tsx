@@ -1193,8 +1193,19 @@ export default function StorefrontManager({
                       ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
                       : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
                   </p>
-                  <a
-                    href="/creator/packages?from=shopfront"
+                  {/* Saves the draft BEFORE leaving.
+                      This was a plain link. Packages live on their own screen, so tapping it
+                      mid-edit threw away everything typed since the last save — on the wizard
+                      that can be six cards of work, and nothing warned anyone. Navigation only
+                      happens if the save succeeded; if it did not, the message says so and the
+                      work stays on screen. */}
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={async () => {
+                      const ok = await handleSave(false)
+                      if (ok) router.push('/creator/packages?from=shopfront')
+                    }}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 7,
                       minHeight: 40, padding: '0 16px', borderRadius: 999,
@@ -1205,8 +1216,8 @@ export default function StorefrontManager({
                       textDecoration: 'none',
                     }}
                   >
-                    {products.length === 0 ? 'Set your packages' : 'Manage packages'}
-                  </a>
+                    {saving ? 'Saving\u2026' : products.length === 0 ? 'Set your packages' : 'Manage packages'}
+                  </button>
                 </Section>
               </div>
 

@@ -19,7 +19,9 @@ export default async function GrowthPage() {
   const admin = createAdminClient()
 
   const [{ data: creator }, { data: quiz }] = await Promise.all([
-    admin.from('creators').select('full_name, vetting_status').eq('id', ctx.creatorId).maybeSingle(),
+    admin.from('creators')
+      .select('full_name, vetting_status, phone, handle, social_accounts, profile_photo_url')
+      .eq('id', ctx.creatorId).maybeSingle(),
     // Row presence IS the show-once gate. No separate completion flag to fall
     // out of step with the answers it claims to describe.
     admin.from('creator_growth_quiz_responses').select('id').eq('creator_id', ctx.creatorId).maybeSingle(),
@@ -31,6 +33,14 @@ export default async function GrowthPage() {
     <GrowthHome
       firstName={(creator.full_name ?? '').split(' ')[0] || 'there'}
       quizDone={Boolean(quiz)}
+      profile={{
+        fullName: creator.full_name ?? '',
+        phone: creator.phone ?? null,
+        photoUrl: creator.profile_photo_url ?? null,
+        channels: ((creator.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
+          .filter(a => a?.handle)
+          .map(a => ({ platform: String(a.platform ?? ''), handle: String(a.handle ?? '') })),
+      }}
     />
   )
 }

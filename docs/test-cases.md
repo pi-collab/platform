@@ -1989,6 +1989,13 @@ list. A column added without being granted makes every query naming it fail with
       /signup/creator/onboarding. That is the layout's `!creatorName` branch
       firing because the read failed, not a routing bug
 
+### Shopfront editor: leaving for Packages must not discard work
+
+- [ ] Fill several wizard cards, then tap "Set your packages". Come back: the
+      work is still there. It was a plain link and everything unsaved was lost
+- [ ] If the draft save FAILS (e.g. a taken slug), it does NOT navigate — the
+      error shows and the work stays on screen
+
 ### Guapd Growth — the third vetting outcome
 
 vetting_status (pending | deals_approved | growth | rejected) is the SINGLE
@@ -2025,6 +2032,19 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] A non-growth creator who types /creator/growth is redirected away
 - [ ] WhatsApp: the same neutral status_update; the link routes by status
 - [ ] Email: "You're in Guapd Growth" — positive, not a softened rejection
+
+**The waiting message appears ONLY after the quiz**
+- [ ] Before answering: neither the page nor the email says the tools are
+      unbuilt. Telling someone it is not ready is an invitation to skip the
+      questions that decide what gets built
+- [ ] After answering: the Dashboard tab shows "Coming soon" with what is being
+      built
+- [ ] The Growth EMAIL does not say "coming soon" either
+
+**Tabs**
+- [ ] Two tabs only, Dashboard and Profile — no Deals, Payments or Shopfront,
+      which would bounce back to this page
+- [ ] Profile shows name, phone and channels, read-only
 
 **Quiz**
 - [ ] Three questions, one per screen, all required; last one reveals a text box

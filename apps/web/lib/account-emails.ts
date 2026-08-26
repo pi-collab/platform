@@ -141,7 +141,7 @@ export async function notifyCreatorGrowth(creatorId: string): Promise<void> {
       body: [
         `We have reviewed your profile and brought you into Guapd Growth \u2014 our track for creators building towards their first brand deals.`,
         'It is where we help you grow your following and learn how brand collaborations actually work, so that when the deals come you are ready for them.',
-        'We are building the Growth tools now. In the meantime there are three quick questions on your Growth page \u2014 your answers shape what we build first.',
+        'Start with three quick questions on your Growth page \u2014 they tell us what to build for you first.',
       ],
       ctaUrl: `${siteBase()}/creator/growth`,
       ctaLabel: 'See your Growth page',

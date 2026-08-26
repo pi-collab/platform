@@ -207,3 +207,91 @@
      app shell, unlike the signup questions that replace the screen. */
   .gr-page { padding-bottom: 96px; }
 }
+
+/* ── Two tabs ────────────────────────────────────────────────────────────────
+   Matches CreatorTabBar's shape so Growth reads as the same app, but carries
+   only Dashboard and Profile: a Growth creator has no Deals, Payments or
+   Shopfront, and offering them would be links that bounce straight back here.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.gr-tabs {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  /* Above everything, like the creator tab bar it stands in for. */
+  z-index: 10000;
+  display: flex;
+  background: rgba(255, 255, 255, .96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(24, 28, 36, .08);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.gr-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-faint, #878D99);
+}
+
+.gr-tab[aria-current='page'] { color: var(--ink, #12151C); }
+
+/* Room for the bar on every screen, not only phones — the bar is fixed at all
+   widths because this page has no sidebar to put it in. */
+.gr-page { padding-bottom: 96px; }
+
+/* ── Profile tab ────────────────────────────────────────────────────────── */
+
+.gr-prof { display: flex; align-items: center; gap: 14px; }
+
+.gr-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--sec-mid, #EEF1F6);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink-soft, #565C68);
+}
+
+.gr-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.gr-prof-name { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.015em; color: var(--ink, #12151C); }
+.gr-prof-meta { margin: 3px 0 0; font-family: var(--font-ui); font-size: 13px; color: var(--ink-faint, #878D99); }
+
+.gr-chan { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(24, 28, 36, .08); }
+
+.gr-chan-label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #878D99);
+}
+
+.gr-chan-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.gr-chan-plat { font-family: var(--font-ui); font-size: 13px; text-transform: capitalize; color: var(--ink-soft, #565C68); }
+.gr-chan-handle { font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; color: var(--ink, #12151C); }
+
+.gr-prof-note {
+  margin: 18px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-faint, #878D99);
+}
