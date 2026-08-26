@@ -6,6 +6,7 @@ import DealThread from './DealThread'
 import ItemReview from './ItemReview'
 import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
+import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import ViewFileButton from './ViewFileButton'
@@ -91,7 +92,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at, updated_at, revision_note')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, collab_charge_paise, collab_rate_type, collab_rate_value, boosting_days, boosting_charge_paise, boosting_30day_paise, submitted_at, approved_at, updated_at, revision_note')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -146,6 +147,12 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const nextLabel = hasInvoice && deal.status === 'approved' ? 'Next \u00B7 payment' : (NEXT_LABELS[deal.status] ?? '')
 
   // Fee calculation
+
+  /* Deliverable rows in the shape the shared breakdown reads. Cast because this
+     page's item type is inferred from its select string, which now carries the
+     add-on columns. */
+  const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
+
   const feeInfo = deal.price_paise != null && deal.price_paise > 0
     ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
     : null
@@ -767,6 +774,14 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             {/* Full terms — toggle */}
             <BriefDetailsToggle label="Full terms" defaultOpen={deal.status === 'negotiating'}>
               <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
+                {/* Per-deliverable money, only when there is something to break
+                    down. A deal with no add-ons has one number per line and the
+                    rows below already say it. */}
+                {hasAddons(itemsForBreakdown) && (
+                  <div style={{ marginBottom: 18 }}>
+                    <DealBreakdown items={itemsForBreakdown} totalPaise={deal.price_paise} />
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Deal total</span>
                   <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(deal.price_paise)}</b>

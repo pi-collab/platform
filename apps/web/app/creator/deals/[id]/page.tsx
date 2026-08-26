@@ -8,6 +8,7 @@ import AcceptDecline from './AcceptDecline'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
+import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
 import NegotiationHistory from '@/components/NegotiationHistory'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
@@ -82,7 +83,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
       .order('version', { ascending: false }),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, submitted_at, approved_at, updated_at, revision_note, posted_url, posted_at')
+      .select('id, label, platform, handle, item_status, external_url, storage_path, file_name, version, price_paise, reel_type, boosting_rights, boosting_duration_months, collab_charge_paise, collab_rate_type, collab_rate_value, boosting_days, boosting_charge_paise, boosting_30day_paise, submitted_at, approved_at, updated_at, revision_note, posted_url, posted_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
     supabase
@@ -124,6 +125,10 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
   // Fee calculation
   const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+
+  // Deliverable rows in the shape the shared breakdown reads.
+  const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
+
   const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
   const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
   const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
@@ -403,6 +408,15 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                 ))}
               </div>
 
+              {/* What each deliverable cost, and what was added to it.
+                  The SAME component the brand sees — a creator and a brand reading two
+                  separately-written breakdowns is two chances to disagree about one
+                  number. Hidden when there is nothing to break down. */}
+              {hasAddons(itemsForBreakdown) && (
+                <div style={{ marginBottom: 16 }}>
+                  <DealBreakdown items={itemsForBreakdown} totalPaise={deal.price_paise} />
+                </div>
+              )}
               {/* Fee + total breakdown */}
               {fee && (
                 <>

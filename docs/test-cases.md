@@ -1887,8 +1887,10 @@ removing them would fail an edit on a value the creator never chose.
 - [ ] Call createDeal directly with `collab_charge_paise` set to 1 while sending
       a real rate. The STORED value must be the recomputed amount, not the 1
 
-**Invoice / breakdown**
-- [ ] Brand and creator see the same figures (one shared component)
+**Invoice / breakdown (deal detail pages, both sides)**
+- [ ] Brand and creator see the same figures — literally one component, so a
+      difference means one page's SELECT is missing the add-on columns
+- [ ] A deal with NO add-ons shows no breakdown block at all (hasAddons gate)
 - [ ] Boosting shows "N days · ₹X/day"; collab shows "10% of ₹60,000"
 - [ ] Lines add to the deliverable total; deliverable totals add to the deal total
 - [ ] Platform fee is calculated on the FULL total, add-ons included
