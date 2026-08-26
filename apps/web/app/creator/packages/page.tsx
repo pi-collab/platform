@@ -27,7 +27,7 @@ export default async function CreatorPackagesPage(
     admin.from('creators').select('social_accounts').eq('id', ctx.creatorId).maybeSingle(),
     admin
       .from('creator_products')
-      .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price')
+      .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, revisions_enabled, included_revisions, price_per_extra_revision_paise')
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true)
       .order('created_at', { ascending: true }),

@@ -543,3 +543,36 @@ select.pk-input {
 }
 
 .pk-btn.pk-add:disabled { opacity: .6; }
+
+/* ── Revisions on a package ──────────────────────────────────────────────── */
+
+.pk-rev {
+  border-top: 1px solid var(--line, rgba(60, 80, 30, .10));
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.pk-rev-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+}
+
+.pk-rev-title {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #12151C);
+}
+
+.pk-rev-body {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .pk-rev-body { grid-template-columns: 1fr; }
+}

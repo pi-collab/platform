@@ -1907,6 +1907,26 @@ removing them would fail an edit on a value the creator never chose.
 - [ ] Rates for a non-vetted creator are not readable by other users
 - [ ] Rates do NOT appear on the public `/c/<slug>` payload
 
+### Package revisions (creator-set)
+
+`included_revisions` and `price_per_extra_revision_paise` existed since 0080 but
+were editable from OPS ONLY — a creator was never asked, so every package
+silently offered one free revision.
+
+- [ ] A NEW package opens with revisions OFF; ticking it reveals the two fields
+- [ ] An EXISTING package opens with revisions ON — migration 0485 backfills
+      true, so nothing a creator already published changes behaviour
+- [ ] Save with revisions off, reopen: still off, and both figures are zero
+- [ ] Try to store `revisions_enabled = false` with `included_revisions = 3`
+      directly — the DB CHECK must refuse it
+- [ ] Leading zeros cannot be typed into either field
+
+**Offer builder consequence (no code change — this is why disable zeroes)**
+- [ ] Select only a package with revisions OFF: the deal's revision terms come
+      out 0 free, ₹0 per extra
+- [ ] Select one package with 2 free and one with revisions off: the deal offers
+      min(2, 0) = 0 free — the stricter package wins, which is the safe direction
+
 ---
 
 | When | What to run |

@@ -36,6 +36,9 @@ export interface PackageRow {
   price_mode: string | null
   price_max_paise: number | null
   display_price: boolean | null
+  revisions_enabled?: boolean | null
+  included_revisions?: number | null
+  price_per_extra_revision_paise?: number | null
 }
 
 /**
@@ -438,6 +441,17 @@ function PackageForm({
     if (!types.includes(productType as ProductType)) setProductType(types[0])
   }
 
+  /* Revisions are opt-IN on a new package and reflect what was saved on an
+     existing one. Nothing has ever asked a creator about these, so every
+     package has quietly offered one free revision since 0080. */
+  const [revEnabled, setRevEnabled] = useState<boolean>(existing ? (existing.revisions_enabled ?? true) : false)
+  const [revIncluded, setRevIncluded] = useState<string>(
+    existing?.included_revisions != null ? String(existing.included_revisions) : '1',
+  )
+  const [revExtra, setRevExtra] = useState<string>(
+    existing?.price_per_extra_revision_paise ? String(Math.round(existing.price_per_extra_revision_paise / 100)) : '',
+  )
+
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (busy) return
@@ -452,6 +466,9 @@ function PackageForm({
       priceMode: mode,
       priceRupees: Number(price || 0),
       priceMaxRupees: mode === 'range' ? Number(priceMax || 0) : null,
+      revisionsEnabled: revEnabled,
+      includedRevisions: revEnabled ? Number(revIncluded || 0) : 0,
+      perExtraRevisionRupees: revEnabled ? Number(revExtra || 0) : 0,
     })
     setBusy(false)
     if (!res.ok) { setError(res.message); return }
@@ -565,6 +582,55 @@ function PackageForm({
             </span>
           </div>
 
+          {/* ── Revisions ─────────────────────────────────────────────
+              Off by default on a new package. Nothing has ever asked a
+              creator about this, so every package has quietly included one
+              free revision since the columns were added. */}
+          <div className="pk-rev">
+            <label className="pk-rev-head">
+              <input
+                type="checkbox"
+                checked={revEnabled}
+                onChange={e => setRevEnabled(e.target.checked)}
+              />
+              <span className="pk-rev-title">Offer revisions on this package</span>
+            </label>
+          
+            {revEnabled && (
+              <div className="pk-rev-body">
+                <div className="pk-field">
+                  <label className="pk-label">Included free</label>
+                  <div className="pk-addons-input">
+                    <input
+                      inputMode="numeric"
+                      value={revIncluded}
+                      onChange={e => setRevIncluded(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 2))}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+          
+                <div className="pk-field">
+                  <label className="pk-label">Each extra revision</label>
+                  <div className="pk-addons-input">
+                    <span className="pk-addons-prefix">&#8377;</span>
+                    <input
+                      inputMode="numeric"
+                      value={revExtra}
+                      onChange={e => setRevExtra(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <span className="pk-hint">
+                    {revExtra && Number(revExtra) > 0
+                      ? 'Charged for each revision beyond the free ones.'
+                      : 'Leave blank and extra revisions are free.'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          
           {error && <p role="alert" className="pk-error">{error}</p>}
         </div>
 
