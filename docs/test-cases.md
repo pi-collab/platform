@@ -2010,7 +2010,38 @@ in place.
 - [ ] The shopfront page reads these through the RLS-scoped client, so this is
       also the regression check for the creators column grant (0489)
 
-### Guapd Growth — the third vetting outcome
+#### Creator deals, empty state, desktop
+
+- [ ] A creator with no deals on a DESKTOP sees the drawn empty state, not
+      CreatorDealsTable rendering a toolbar and seven filters around nothing
+- [ ] A creator with no deals on a PHONE still sees CreatorDealsEmpty. Both are
+      rendered and CSS picks; returning one early fires at every width
+- [ ] The two are different drawings, not one scaled. Desktop keeps the search
+      field, sort control and seven chips (inert, as the export ships them);
+      the phone version drops them because seven chips reading 0 crowd out the
+      message on a small screen
+- [ ] Search and sort are genuinely NOT clickable. `disabled=""` from the export
+      is `disabled={""}` in JSX, which is FALSY, so they shipped interactive
+- [ ] Only ONE page background and ONE top bar. The export's outer page div and
+      its empty sticky header are dropped; the creator layout supplies both
+
+**The CSS must stay in its box** (this is where the port nearly went wrong)
+- [ ] Nothing outside /creator/deals changes appearance. The export ships `*`,
+      `body`, bare `a` and ten :root blocks
+- [ ] Every rule is under .cdeals-desk, INCLUDING minified ones. A line-based
+      scoper misses `.g-card{...}` entirely: 41 rules leaked that way
+- [ ] No rule reads `.cdeals-desk .cdeals-desk`. A leading comment left in the
+      prelude gets split on the commas inside it and prefixed, producing a
+      descendant selector that needs the wrapper inside itself and never
+      matches. That silently killed all ten token blocks
+- [ ] The design's custom properties actually RESOLVE, i.e. they are defined by
+      a rule that targets the wrapper. Checking that a definition exists
+      somewhere in the file does not prove this
+- [ ] No @font-face rules ship; next/font already serves these faces
+- [ ] Fonts match the rest of the creator app, i.e. the export's font tokens are
+      dropped so the app's cascade in
+
+## Guapd Growth — the third vetting outcome
 
 vetting_status (pending | deals_approved | growth | rejected) is the SINGLE
 source of truth; is_vetted and is_rejected are derived by trigger.

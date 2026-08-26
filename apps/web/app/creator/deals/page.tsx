@@ -3,6 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
 import CreatorDealsEmpty from './CreatorDealsEmpty'
+import CreatorDealsEmptyDesktop from './CreatorDealsEmptyDesktop'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 
 export const metadata: Metadata = { title: 'My Deals · Guapd Creator' }
@@ -58,11 +59,20 @@ export default async function CreatorDealsPage() {
         <CreatorDealsEmpty />
       </main>
     )}
-    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={wrapper}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <CreatorDealsTable deals={all} />
-      </div>
-    </main>
+    {/* Desktop has its own drawn empty state now. It used to fall through to
+        CreatorDealsTable with an empty array, which renders the toolbar, the
+        column headers and seven filters around nothing at all. */}
+    {isEmpty ? (
+      <main className="creator-empty-desktop" style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorDealsEmptyDesktop />
+      </main>
+    ) : (
+      <main style={wrapper}>
+        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <CreatorDealsTable deals={all} />
+        </div>
+      </main>
+    )}
     </>
   )
 }
