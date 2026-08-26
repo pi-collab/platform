@@ -5,7 +5,7 @@ import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import { saveFollowerCounts, createContentUploadUrl } from './actions'
-import { PackageForm, type PackageRow } from '@/app/creator/packages/PackagesClient'
+import { PackageForm, AddonRatesEditor, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
@@ -698,10 +698,12 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
 /* ── Main Component ───────────────────────────────────────── */
 
 export default function StorefrontManager({
-  storefront, creator, products, creatorName,
+  storefront, creator, products, creatorName, addonRates = [], revisionPolicy,
 }: {
   storefront: StorefrontRow | null; creator: Creator | null
   products: Product[]; creatorName: string
+  addonRates?: AddonRateRow[]
+  revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
 }) {
   const router = useRouter()
   const isNew = storefront === null
@@ -1252,6 +1254,26 @@ export default function StorefrontManager({
                     >
                       {products.length === 0 ? 'Set your packages' : 'Add a package'}
                     </button>
+                  
+                    {/* The rest of the rate card: what a creator charges ON TOP of a
+                        package, and how many revision rounds a deal includes. Here for the
+                        same reason the packages moved — this step should be the WHOLE rate
+                        card, not the part that happens to be packages. Both are the same
+                        components the packages screen uses, so there is one editor for each
+                        and no second version to drift. */}
+                    {pkgChannels.map(ch => (
+                      <AddonRatesEditor
+                        key={`${ch.platform}/${ch.handle}`}
+                        platform={ch.platform}
+                        handle={ch.handle}
+                        initial={addonRates.find(
+                          r => String(r.platform ?? '').trim().toLowerCase() === ch.platform
+                            && String(r.handle ?? '').replace(/^@/, '').toLowerCase() === ch.handle.toLowerCase(),
+                        )}
+                      />
+                    ))}
+                  
+                    <RevisionPolicyEditor initial={revisionPolicy} />
                   </div>
                 </Section>
               </div>

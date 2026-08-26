@@ -60,7 +60,7 @@ export interface PackageRow {
    points before it leaves the browser — the column and every calculation are
    integers, and the conversion has exactly one home.
    ────────────────────────────────────────────────────────────────────────── */
-function AddonRatesEditor({ platform, handle, initial }: {
+export function AddonRatesEditor({ platform, handle, initial }: {
   platform: string
   handle: string
   initial?: AddonRateRow
@@ -233,7 +233,7 @@ function AddonRatesEditor({ platform, handle, initial }: {
    a unit nothing counts, and the offer builder had to reconcile them with a
    min() that quietly reduced a whole deal's allowance to its stingiest line.
    ────────────────────────────────────────────────────────────────────────── */
-function RevisionPolicyEditor({ initial }: {
+export function RevisionPolicyEditor({ initial }: {
   initial?: { enabled: boolean; included: number; perExtraPaise: number }
 }) {
   const [open, setOpen] = useState(false)

@@ -2003,6 +2003,12 @@ in place.
       (savePackage revalidates both paths)
 - [ ] Both screens offer the same channels, price modes and validation — it is
       one component, so a difference means one of them is passing bad props
+- [ ] Collab & boosting and Revisions are editable from the shopfront rate card
+      step too. The step is the WHOLE rate card, not just the packages
+- [ ] Set a collab rate in the shopfront; /creator/packages shows it, and the
+      reverse. Same components, same tables — a divergence is a props bug
+- [ ] The shopfront page reads these through the RLS-scoped client, so this is
+      also the regression check for the creators column grant (0489)
 
 ### Guapd Growth — the third vetting outcome
 
