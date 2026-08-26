@@ -576,3 +576,13 @@ select.pk-input {
 @media (max-width: 520px) {
   .pk-rev-body { grid-template-columns: 1fr; }
 }
+
+/* A second line inside a section header, for a setting whose scope is not
+   obvious from where it sits. */
+.pk-addons-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-faint, #878D99);
+}

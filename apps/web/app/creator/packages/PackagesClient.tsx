@@ -236,7 +236,14 @@ function RevisionPolicyEditor({ initial }: {
   return (
     <div className="pk-addons" style={{ marginTop: 14 }}>
       <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="pk-addons-title">Revisions</span>
+        {/* The subtitle earns the top-level placement. Sitting above the
+            channels with no explanation, this reads as a setting that ought to
+            be per channel like Collab & boosting — and the reason it is not is
+            that a revision is one round of feedback on a whole delivery. */}
+        <span className="pk-addons-title">
+          Revisions
+          <span className="pk-addons-sub">Applies to every deal, across all channels</span>
+        </span>
         <span className="pk-addons-state">
           {!enabled ? 'Unlimited' : `${initial?.included ?? included} free`}
         </span>
