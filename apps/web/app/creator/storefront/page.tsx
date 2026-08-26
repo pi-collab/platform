@@ -20,7 +20,7 @@ export default async function StorefrontPage() {
       .single(),
     supabase
       .from('creator_products')
-      .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, is_active')
+      .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active')
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true),
   ])

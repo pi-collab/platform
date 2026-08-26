@@ -1989,12 +1989,20 @@ list. A column added without being granted makes every query naming it fail with
       /signup/creator/onboarding. That is the layout's `!creatorName` branch
       firing because the read failed, not a routing bug
 
-### Shopfront editor: leaving for Packages must not discard work
+### Packages are editable from the shopfront editor, without leaving it
 
-- [ ] Fill several wizard cards, then tap "Set your packages". Come back: the
-      work is still there. It was a plain link and everything unsaved was lost
-- [ ] If the draft save FAILS (e.g. a taken slug), it does NOT navigate — the
-      error shows and the work stays on screen
+The rate card step used to LINK to /creator/packages, so tapping it mid-edit
+discarded everything typed since the last save. The same PackageForm now opens
+in place.
+
+- [ ] Fill several wizard cards, add a package, close the form: the wizard work
+      is all still there and the new package is listed
+- [ ] Edit an existing package from the shopfront; the change shows on
+      /creator/packages too
+- [ ] Add one on /creator/packages; it appears in the shopfront editor
+      (savePackage revalidates both paths)
+- [ ] Both screens offer the same channels, price modes and validation — it is
+      one component, so a difference means one of them is passing bad props
 
 ### Guapd Growth — the third vetting outcome
 

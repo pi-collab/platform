@@ -514,7 +514,14 @@ export default function PackagesClient({
 
 /* ── The form ─────────────────────────────────────────────────────────────── */
 
-function PackageForm({
+/**
+ * Exported so the SHOPFRONT editor can mount the same form.
+ *
+ * One editor, one savePackage, one creator_products table — which is what makes
+ * "saved here shows up there" true by construction rather than by two screens
+ * agreeing to behave the same way.
+ */
+export function PackageForm({
   channels,
   existing,
   onClose,

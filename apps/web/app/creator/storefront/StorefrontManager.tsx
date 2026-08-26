@@ -5,6 +5,8 @@ import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import { saveFollowerCounts, createContentUploadUrl } from './actions'
+import { PackageForm, type PackageRow } from '@/app/creator/packages/PackagesClient'
+import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
@@ -17,6 +19,11 @@ interface Product {
   product_type: string
   description: string | null
   price_paise: number
+  /* Carried so the shared PackageForm can edit a package from here without a
+     second, narrower idea of what a package is. */
+  price_mode?: string | null
+  price_max_paise?: number | null
+  display_price?: boolean | null
   is_active: boolean
 }
 
@@ -723,6 +730,19 @@ export default function StorefrontManager({
   )
   const [savingFollowers, setSavingFollowers] = useState(false)
 
+  /* Which package the shared form is open on: 'new', a row, or nothing.
+     Same state shape the packages screen uses, because it is the same form. */
+  const [pkgEditing, setPkgEditing] = useState<PackageRow | 'new' | null>(null)
+
+  /* The channels the form offers, from the creator's own accounts — the same
+     source the packages screen reads, normalised the same way. */
+  const pkgChannels = ((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
+    .filter(a => a?.platform?.trim() && a?.handle?.trim())
+    .map(a => ({
+      platform: String(a.platform).trim().toLowerCase(),
+      handle: String(a.handle).trim().replace(/^@/, ''),
+    }))
+
   const ageRemainder = Math.max(
     0,
     100 - (edit.ageBreakdown ?? []).slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0),
@@ -1193,31 +1213,46 @@ export default function StorefrontManager({
                       ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
                       : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
                   </p>
-                  {/* Saves the draft BEFORE leaving.
-                      This was a plain link. Packages live on their own screen, so tapping it
-                      mid-edit threw away everything typed since the last save — on the wizard
-                      that can be six cards of work, and nothing warned anyone. Navigation only
-                      happens if the save succeeded; if it did not, the message says so and the
-                      work stays on screen. */}
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={async () => {
-                      const ok = await handleSave(false)
-                      if (ok) router.push('/creator/packages?from=shopfront')
-                    }}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 7,
-                      minHeight: 40, padding: '0 16px', borderRadius: 999,
-                      background: products.length === 0 ? 'var(--neon)' : '#fff',
-                      border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
-                      color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
-                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    {saving ? 'Saving\u2026' : products.length === 0 ? 'Set your packages' : 'Manage packages'}
-                  </button>
+                  {/* The SAME form the packages screen uses, mounted here.
+                      It was a link to that screen, so tapping it mid-edit threw away
+                      everything typed since the last save. Now nobody leaves: one editor,
+                      one savePackage, one creator_products table — which is what makes
+                      "saved here shows up there" true by construction rather than by two
+                      screens agreeing to behave the same way. */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {products.map(pr => (
+                      <div key={pr.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 14px', borderRadius: 12, border: `1px solid ${BHL}`,
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{pr.product_type}</div>
+                          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 2 }}>
+                            {pr.platform} &middot; @{String(pr.handle).replace(/^@/, '')}
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => setPkgEditing(pr as unknown as PackageRow)} style={{ ...secondBtn, height: 34 }}>
+                          Edit
+                        </button>
+                      </div>
+                    ))}
+                  
+                    <button
+                      type="button"
+                      onClick={() => setPkgEditing('new')}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                        alignSelf: 'flex-start',
+                        minHeight: 40, padding: '0 16px', borderRadius: 999,
+                        background: products.length === 0 ? 'var(--neon)' : '#fff',
+                        border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
+                        color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
+                        fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      {products.length === 0 ? 'Set your packages' : 'Add a package'}
+                    </button>
+                  </div>
                 </Section>
               </div>
 
@@ -1389,6 +1424,16 @@ export default function StorefrontManager({
 
           <div style={{ height: 40 }} />
         </div>
+
+        {/* Mounted once for the whole editor. On close we refresh so the list
+            above and the preview both pick up the change without leaving. */}
+        {pkgEditing && (
+          <PackageForm
+            channels={pkgChannels}
+            existing={pkgEditing === 'new' ? null : pkgEditing}
+            onClose={() => { setPkgEditing(null); router.refresh() }}
+          />
+        )}
       </main>
     )
   }

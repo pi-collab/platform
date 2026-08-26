@@ -160,6 +160,9 @@ export async function deletePackage(id: string): Promise<PackageResult> {
  */
 function revalidateEverywhere() {
   revalidatePath('/creator/packages')
+  // The shopfront editor lists the same packages; without this it keeps
+  // showing the set from before the save.
+  revalidatePath('/creator/storefront')
   revalidatePath('/creator/storefront')
   revalidatePath('/creator/dashboard')
 }
@@ -254,6 +257,9 @@ export async function saveAddonRates(input: SaveAddonRatesInput): Promise<Packag
   }
 
   revalidatePath('/creator/packages')
+  // The shopfront editor lists the same packages; without this it keeps
+  // showing the set from before the save.
+  revalidatePath('/creator/storefront')
   revalidatePath('/creator/storefront')
   return { ok: true }
 }
@@ -300,5 +306,8 @@ export async function saveRevisionPolicy(input: SaveRevisionPolicyInput): Promis
   }
 
   revalidatePath('/creator/packages')
+  // The shopfront editor lists the same packages; without this it keeps
+  // showing the set from before the save.
+  revalidatePath('/creator/storefront')
   return { ok: true }
 }
