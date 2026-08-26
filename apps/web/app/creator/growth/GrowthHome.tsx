@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import SignOutButton from '@/components/SignOutButton'
 import GrowthQuiz from './GrowthQuiz'
+import GrowthTopNav from './GrowthTopNav'
 import './growth.css'
 
 /**
@@ -35,6 +36,11 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
 
   return (
     <main className="gr-page">
+      {/* Rendered at every width and hidden by CSS under 768px. Gating this
+          in JS means reading the viewport, which is wrong during the server
+          render and flickers on the client. */}
+      <GrowthTopNav tab={tab} setTab={setTab} fullName={profile.fullName} photoUrl={profile.photoUrl} />
+
       <div className="gr-shell">
         <span className="gr-badge">Guapd Growth</span>
 

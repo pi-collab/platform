@@ -2061,6 +2061,22 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       as deals being available now. Growth creators are invisible to brands by
       construction, so present tense would be a false claim
 
+**Desktop**
+- [ ] At >=768px the page has a top nav: guapd wordmark left, Dashboard and
+      Profile centred, avatar and Sign out right. Shaped like the creator top
+      nav so Growth reads as the same app
+- [ ] The nav carries ONLY Dashboard, Profile and sign out. No Deals, Payments
+      or Shopfront: every one of them redirects back to this page
+- [ ] The bottom tab bar is HIDDEN on desktop and present on a phone. It was
+      fixed at every width, because this page has no sidebar to host navigation
+- [ ] Only ONE sign out is visible per width: the header's on desktop, the
+      Profile tab's on a phone
+- [ ] Cards, tiers and profile rows are at desktop sizes, not phone sizes. Every
+      one of them was transcribed from a phone export and never scaled up
+- [ ] The top nav is rendered at every width and hidden by CSS, NOT gated in JS.
+      A width read is wrong during the server render and flickers on the client
+- [ ] The quiz modal still covers the top nav (scrim 10100 vs nav 30)
+
 **Type matches the rest of the creator app**
 - [ ] Growth page and BOTH quiz modals render in Schibsted Grotesk, the same as
       the Deals dashboard. Not Sora/Inter

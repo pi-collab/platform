@@ -467,3 +467,138 @@
 body.wq-modal-open .gr-tabs {
   display: none !important;
 }
+
+/* ── Desktop ───────────────────────────────────────────────────────────────
+   This page renders OUTSIDE the creator app shell, so it never received
+   CreatorSidebar and had no desktop chrome at all: the phone layout stretched
+   across a monitor, with the bottom tab bar fixed at every width because there
+   was no sidebar to move the navigation into.
+
+   Below is the missing half. Shapes and proportions follow the creator top nav
+   (components/CreatorSidebar) so Growth reads as the same app on desktop the
+   way it already does on a phone.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.gr-topnav { display: none; }
+
+@media (min-width: 768px) {
+  .gr-topnav {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 14px clamp(14px, 4vw, 28px) 0;
+  }
+
+  .gr-nav {
+    position: relative;
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(14px, 2.4vw, 26px);
+    padding: 9px 12px 9px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--frost-edge, rgba(255,255,255,.85));
+    background: var(--card, #fff);
+    box-shadow: 0 12px 36px -22px rgba(40, 45, 25, .45);
+  }
+
+  .gr-nav__brand { display: inline-flex; align-items: center; gap: 9px; }
+  .gr-nav__word {
+    font-family: var(--font-display);
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink, #12151C);
+  }
+
+  /* Centred on the BAR, not between its neighbours: the left and right groups
+     are different widths, so a flex-centred middle sits visibly off-centre. */
+  .gr-nav__pills {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: clamp(16px, 2.4vw, 30px);
+  }
+
+  .gr-nav__pill {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--ink-soft, #565C68);
+  }
+
+  .gr-nav__pill[aria-current='page'] { color: var(--ink, #12151C); font-weight: 600; }
+
+  .gr-nav__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  .gr-nav__avatar {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--sec-2, #F7F4FB);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--ink, #12151C);
+  }
+  .gr-nav__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .gr-nav__signout {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--frost-edge, rgba(255,255,255,.85));
+    background: var(--card, #fff);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft, #565C68);
+    transition: color .14s ease, border-color .14s ease;
+  }
+  .gr-nav__signout:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
+
+  /* The bottom bar is the PHONE's navigation. On desktop the top nav carries it,
+     and the page no longer has to reserve room at the bottom for a fixed bar. */
+  .gr-tabs { display: none; }
+  .gr-page { padding-bottom: clamp(60px, 6vw, 96px); }
+
+  /* Type. Everything below was transcribed from a phone export and stayed at
+     phone sizes at every width, which is what made the desktop page read as a
+     stretched mobile screen. */
+  .gr-shell { max-width: 760px; }
+
+  .gr-lede { font-size: 16.5px; max-width: 560px; }
+
+  .gr-done-title { font-size: 16px; }
+  .gr-done-body  { font-size: 15px; }
+  .gr-check { width: 38px; height: 38px; }
+
+  .gr-tiers { margin-top: 20px; }
+  .gr-tier { padding: 18px 20px; }
+  .gr-tier__name { font-size: 17px; }
+  .gr-tier__body { font-size: 14.5px; }
+  .gr-tier__pill { font-size: 11px; padding: 5px 11px; }
+
+  .gr-prof-name   { font-size: 19px; }
+  .gr-prof-meta   { font-size: 14px; }
+  .gr-prof-note   { font-size: 14px; }
+  .gr-chan-plat   { font-size: 14px; }
+  .gr-chan-handle { font-size: 14.5px; }
+  .gr-avatar { width: 60px; height: 60px; font-size: 23px; }
+
+  /* The Profile tab's own sign-out is the phone affordance; on desktop it lives
+     in the header, and two sign-out buttons on one screen is one too many. */
+  .gr-signout { display: none; }
+}
