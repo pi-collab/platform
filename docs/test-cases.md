@@ -2010,7 +2010,29 @@ in place.
 - [ ] The shopfront page reads these through the RLS-scoped client, so this is
       also the regression check for the creators column grant (0489)
 
-#### Creator deals, empty state, desktop
+#### Creator inbox, empty state, desktop
+
+- [ ] A creator with no conversations on a DESKTOP sees the drawn empty state:
+      the workspace card, an inert search, four filter chips, ghost rows down
+      the left, and the "No messages yet" panel on the right
+- [ ] On a PHONE the existing CreatorEmptyState renders, UNCHANGED. Same icon,
+      same title, same body. Only its width gating changed
+- [ ] The page no longer EARLY-RETURNS the empty state. It rendered at every
+      width, which is why desktop showed the phone screen. Third time this
+      codebase has had that bug: dashboard, deals, now inbox
+- [ ] The filter chips read All / Unread / Active / Completed, the same four
+      CreatorInboxView shows. The screen must not change vocabulary when the
+      first message arrives
+- [ ] The chips ARE styled. The export writes them as style="{{ f.style }}", a
+      whole-value binding every converter drops, so they arrive with no styling
+- [ ] Search is genuinely not typeable
+- [ ] Ghost rows are decorative only, aria-hidden, and carry no text
+- [ ] No template bindings or sc-for loops survive in the markup
+- [ ] Nothing outside /creator/inbox changes appearance; all CSS is scoped under
+      .cinbox-desk. Same checks as the deals port: no leaks, no self-nesting,
+      no comments inside selectors, tokens reachable from the wrapper
+
+### Creator deals, empty state, desktop
 
 - [ ] A creator with no deals on a DESKTOP sees the drawn empty state, not
       CreatorDealsTable rendering a toolbar and seven filters around nothing

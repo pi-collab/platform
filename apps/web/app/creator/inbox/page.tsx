@@ -3,6 +3,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
+import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
@@ -54,9 +55,15 @@ export default async function CreatorInboxPage() {
   // No conversations. CreatorInboxView renders a thread list and a message
   // pane — two empty columns — so the empty state replaces the screen, and
   // carries the header the other creator screens have.
+  //
+  // BOTH are rendered and the width decides which is visible. Returning one
+  // early fires at EVERY width: that is what left a creator on a desktop
+  // looking at the phone empty state, and it has now cost this codebase the
+  // same bug on the dashboard and the deals list before this one.
   if (threads.length === 0) {
     return (
-      <main style={{ position: 'relative', zIndex: 1 }}>
+      <>
+      <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="Inbox" backHref="/creator/dashboard" />
         <CreatorEmptyState
           icon={
@@ -69,6 +76,12 @@ export default async function CreatorInboxPage() {
           body="When a brand starts a conversation about a deal, it appears here."
         />
       </main>
+      {/* Desktop's own drawing. The phone version above is UNCHANGED, it is only
+          gated by width now instead of rendering at all of them. */}
+      <main className="creator-empty-desktop" style={{ position: 'relative', zIndex: 1 }}>
+        <CreatorInboxEmptyDesktop />
+      </main>
+      </>
     )
   }
 
