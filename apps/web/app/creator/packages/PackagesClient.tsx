@@ -374,8 +374,6 @@ export default function PackagesClient({
 
       {error && <p role="alert" className="pk-error">{error}</p>}
 
-      <RevisionPolicyEditor initial={revisionPolicy} />
-
       {channels.map((ch) => {
         const rows = packages.filter(
           (p) => p.platform.trim().toLowerCase() === ch.platform && sameHandle(p.handle, ch.handle),
@@ -474,6 +472,11 @@ export default function PackagesClient({
       <button type="button" className="pk-btn pk-btn-primary pk-add" onClick={() => setEditing('new')}>
         + Add a package
       </button>
+
+      {/* Below the packages, not above them. This is a setting that applies
+          once; the packages are what the page is for, and putting a rarely
+          touched policy first gave it a priority it has not earned. */}
+      <RevisionPolicyEditor initial={revisionPolicy} />
 
       {editing && (
         <PackageForm
