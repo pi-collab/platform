@@ -102,6 +102,20 @@ export default async function CreatorLayout({ children }: { children: React.Reac
        the rejection branch so a Growth creator never meets the appeal box —
        appealing a decision that was not a rejection only junks the queue. */
     if (vettingStatus === 'growth') {
+      /* The Growth page lives UNDER this layout, so redirecting to it
+         unconditionally sent it straight back here — the page redirected to
+         itself and never rendered. On that path we hand the page through
+         instead.
+
+         Rendered BARE, like the rejection screen: a Growth creator is not in
+         the Deals flow, and a sidebar offering Deals, Payments and Storefront
+         would be three links that bounce them back to this same page. */
+      /* Nullable: the header is set by middleware, and a request that somehow
+         arrives without it must not be treated as "already on the page" — that
+         would render Growth over any creator route. Missing means redirect. */
+      if ((currentPath() ?? '').startsWith('/creator/growth')) {
+        return <>{children}</>
+      }
       redirect('/creator/growth')
     }
 

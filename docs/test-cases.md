@@ -2015,6 +2015,11 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 
 **Creator experience**
 - [ ] A growth creator lands on /creator/growth, not the under-review page
+- [ ] /creator/growth actually RENDERS. It lives under the creator layout, so an
+      unconditional redirect there made the page redirect to itself
+- [ ] It renders WITHOUT the sidebar/tab bar: a Growth creator is not in the
+      Deals flow, and those links would bounce them back to this same page
+- [ ] Any other /creator/* path still redirects them here
 - [ ] THE APPEAL BOX DOES NOT RENDER for them — growth is checked before the
       rejection branch. Appealing a non-rejection would junk the appeal queue
 - [ ] A non-growth creator who types /creator/growth is redirected away
