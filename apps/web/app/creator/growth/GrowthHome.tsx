@@ -25,7 +25,8 @@ export interface GrowthProfile {
   channels: { platform: string; handle: string }[]
 }
 
-export default function GrowthHome({ quizDone, profile }: {
+export default function GrowthHome({ firstName, quizDone, profile }: {
+  firstName: string
   quizDone: boolean
   profile: GrowthProfile
 }) {
@@ -37,19 +38,26 @@ export default function GrowthHome({ quizDone, profile }: {
       <div className="gr-shell">
         <span className="gr-badge">Guapd Growth</span>
 
+        {/* Two headers, because this page is two moments. On arrival it carries
+            the news; once the quiz is answered it is a dashboard, and a dashboard
+            that re-announces the decision every visit reads like a holding pen.
+            The greeting is the Deals dashboard's, deliberately: same app. */}
         <h1 className="gr-title">
-          You&rsquo;ve been approved for Guapd Growth
+          {done
+            ? <>Hey, <span className="gr-name">{firstName}</span></>
+            : <>You&rsquo;ve been approved for Guapd Growth</>}
         </h1>
 
         {/* NOT "coming soon" here. This sits above the quiz, and telling someone
             the thing is not ready is an invitation to skip the questions that
             decide what gets built. The waiting message belongs after they have
             answered, not before. */}
-        <p className="gr-lede">
-          {done
-            ? 'A track for creators building towards brand deals.'
-            : 'A track for creators building towards brand deals. A few quick questions and you\u2019re set.'}
-        </p>
+        {!done && (
+          <p className="gr-lede">
+            Your track for growing your audience, with brand deals on the way. A few quick
+            questions and you&rsquo;re set.
+          </p>
+        )}
 
         {tab === 'profile' ? (
           <div className="gr-card">
@@ -103,10 +111,9 @@ export default function GrowthHome({ quizDone, profile }: {
               <div>
                 <p className="gr-done-title">Coming soon</p>
                 <p className="gr-done-body">
-                  Thanks, that&rsquo;s all we need for now. We&rsquo;re building the Guapd Growth tools:
-                  ways to grow your following, learn how brand collaborations work, and get ready for
-                  brand deals. Your answers shape what we build first, and we&rsquo;ll let you know the
-                  moment there&rsquo;s something here for you.
+                  We&rsquo;re lining up the best brand deals for creators like you, and the tools to
+                  grow your audience alongside them. Your answers shape what we do first, and
+                  we&rsquo;ll let you know the moment it&rsquo;s ready.
                 </p>
               </div>
             </div>
@@ -123,7 +130,8 @@ export default function GrowthHome({ quizDone, profile }: {
                   <span className="gr-tier__pill gr-tier__pill--soon">Coming soon</span>
                 </div>
                 <p className="gr-tier__body">
-                  Where you are now. Tools to grow your following and get ready to work with brands.
+                  Where you are now. Tools to grow your audience, and brand deals suited to where
+                  you are, coming your way soon.
                 </p>
               </div>
 
@@ -136,8 +144,8 @@ export default function GrowthHome({ quizDone, profile }: {
                   <span className="gr-tier__pill gr-tier__pill--locked">Locked</span>
                 </div>
                 <p className="gr-tier__body">
-                  Send and receive brand offers, agree terms and get paid on Guapd. Opens up when
-                  you&rsquo;re approved for Guapd Deals.
+                  The full deal flow: send and receive offers, agree terms and get paid on Guapd.
+                  Opens up for you as you grow.
                 </p>
               </div>
             </div>

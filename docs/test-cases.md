@@ -2048,6 +2048,24 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] Email: "You've been approved for Guapd Growth" — positive, not a softened
       rejection. Page heading and email heading say the same thing
 
+**Copy must not read as a consolation prize**
+- [ ] Guapd Growth is NOT framed as learning-only. A Growth creator is told
+      brand deals are coming to them, not that they are locked out of deals
+- [ ] Page, tiers and email all say deals are on the way. Nothing says "when
+      you're good enough" or implies the track is a waiting room
+- [ ] Guapd Deals tier still reads "Locked", but its body is "Opens up for you
+      as you grow", not "when you're approved"
+- [ ] The wait is stated as a forward promise ("soon", "we're lining up"), never
+      as deals being available now. Growth creators are invisible to brands by
+      construction, so present tense would be a false claim
+
+**Header**
+- [ ] Before the quiz: "You've been approved for Guapd Growth" plus the lede
+- [ ] After the quiz: "Hey, <name>" in the Deals dashboard's serif italic, then
+      the Coming soon card, then the tiers. A dashboard that re-announces the
+      vetting decision on every visit reads like a holding pen
+- [ ] The Coming soon body is three lines, not a paragraph
+
 **The waiting message appears ONLY after the quiz**
 - [ ] Before answering: neither the page nor the email says the tools are
       unbuilt. Telling someone it is not ready is an invitation to skip the

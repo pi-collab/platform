@@ -141,8 +141,8 @@ export async function notifyCreatorGrowth(creatorId: string): Promise<void> {
     const { html, text } = renderAccountEmail({
       heading: `You’ve been approved for Guapd Growth`,
       body: [
-        `We have reviewed your profile and brought you into Guapd Growth, our track for creators building towards brand deals.`,
-        'It is where we help you grow your following and learn how brand collaborations actually work, so that when the deals come you are ready for them.',
+        `We have reviewed your profile and brought you into Guapd Growth, our track for creators on their way up.`,
+        'It is where we help you grow your audience and learn how brand collaborations actually work, and we are lining up the best brand deals for creators like you. We will let you know the moment there is something for you.',
       ],
       ctaUrl: `${siteBase()}/creator/growth`,
       ctaLabel: 'See your Guapd Growth page',

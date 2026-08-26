@@ -35,6 +35,14 @@
   color: var(--ink, #12151C);
 }
 
+/* The greeting's name, in the same serif italic the Deals dashboard uses. Same
+   app, so the same treatment. */
+.gr-name {
+  font-family: var(--font-serif, Georgia, serif);
+  font-style: italic;
+  font-weight: 400;
+}
+
 .gr-lede {
   margin: 12px 0 0;
   font-family: var(--font-ui);
