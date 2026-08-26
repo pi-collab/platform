@@ -4,6 +4,29 @@
    half of what makes it a track rather than a rejection.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* ── Type ──────────────────────────────────────────────────────────────────
+   The creator app's font tokens live on .creator-main, and this page never gets
+   that wrapper: for a Growth creator the creator layout returns the children
+   bare, deliberately, so no sidebar or tab bar offering Deals ever appears. The
+   quiz is portalled to <body> and is outside it for the same reason.
+
+   Outside .creator-main they fall back to :root, which is Sora + Inter, so this
+   page was set in different type from the rest of the creator app and
+   --font-serif did not resolve at all: the greeting's name was rendering in the
+   Georgia fallback rather than Instrument Serif.
+
+   Declared here rather than by wrapping the page in .creator-main, which also
+   carries the sidebar grid and the app background.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.gr-page,
+.gr-scrim {
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui:      var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif:   var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  --font-num:     var(--font-sora), 'Sora', system-ui, sans-serif;
+}
+
 .gr-page {
   position: relative;
   z-index: 1;
@@ -251,7 +274,7 @@
   white-space: nowrap;
 }
 
-.gr-tier__pill--soon   { background: var(--neon, #DAFE0C); color: var(--ink, #12151C); }
+.gr-tier__pill--soon   { background: var(--ink, #12151C); color: #fff; }
 .gr-tier__pill--locked { background: rgba(24, 28, 36, .07); color: var(--ink-faint, #878D99); }
 
 .gr-tier__body {

@@ -79,7 +79,7 @@ export default function GrowthQuiz({ onDone }: { onDone: () => void }) {
   if (!mounted) return null
 
   return createPortal(
-    <div className="wq-scrim" role="dialog" aria-modal="true" aria-label="A few quick questions">
+    <div className="wq-scrim gr-scrim" role="dialog" aria-modal="true" aria-label="A few quick questions">
       <div className="wq-stage">
         {/* NO key on the step. Keying here remounts the card on every answer, so
             the entrance animation replays and it reads as a flash between
