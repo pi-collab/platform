@@ -2079,6 +2079,22 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] Sign out is on the Profile tab and lands on /login/creator — NOT the brand
       sign-in page, which would offer to set up a brand for them
 
+**Quiz is a MODAL over the dashboard, same as the Deals welcome flow**
+- [ ] It renders OVER the Growth page, not in place of it and not on its own
+      route. What they were approved for is visible behind what is being asked
+- [ ] Portalled to <body>. Rendered in place it would paint UNDER the tab bar,
+      which is a sibling at z-index 10000 of a z-index:1 stacking context
+- [ ] The Growth tab bar is hidden while it is up (`body.wq-modal-open
+      .gr-tabs`), and comes back on unmount. welcome.css only hides
+      `.creator-tabbar`, which this page does not use
+- [ ] Non-dismissable: no close control, Escape does nothing, the scrim ignores
+      clicks
+- [ ] The page behind does not scroll while it is open
+- [ ] On finishing, the modal unmounts and the dashboard is revealed WITHOUT a
+      reload
+- [ ] Behind the scrim before answering: badge, heading and lede only. NOT the
+      tiers and NOT "Coming soon"
+
 **Quiz**
 - [ ] FOUR questions, one per screen. Q1 posting frequency, Q2 goal, Q3 niche,
       Q4 "Anything else you'd like us to know?"

@@ -428,3 +428,11 @@
 }
 
 .gr-signout-btn:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
+
+/* The quiz is a modal over this page (GrowthQuiz), reusing the Deals flow's
+   scrim. That stylesheet hides .creator-tabbar; this page carries its own tab
+   bar, which would otherwise sit under the blur, legible enough to invite taps
+   that go nowhere. */
+body.wq-modal-open .gr-tabs {
+  display: none !important;
+}
