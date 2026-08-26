@@ -1973,6 +1973,22 @@ silently offered one free revision.
 - [ ] Select one package with 2 free and one with revisions off: the deal offers
       min(2, 0) = 0 free — the stricter package wins, which is the safe direction
 
+### creators uses a COLUMN-LEVEL SELECT allowlist — read this before adding a column
+
+0470 revoked blanket SELECT on public.creators and granted an explicit column
+list. A column added without being granted makes every query naming it fail with
+"permission denied for table creators" — the WHOLE query, not just that column.
+
+- [ ] After ANY migration adding a column to creators: grant it in the same
+      migration, and add it to the allowlist in rls.sql
+- [ ] Regression check, as a real signed-in creator (not the admin client):
+      `select id, full_name, vetting_status from creators where user_id = <own>`
+      must return the row. Admin-client tests CANNOT catch this — they bypass
+      grants entirely
+- [ ] Symptom to recognise: every creator is redirected to
+      /signup/creator/onboarding. That is the layout's `!creatorName` branch
+      firing because the read failed, not a routing bug
+
 ### Guapd Growth — the third vetting outcome
 
 vetting_status (pending | deals_approved | growth | rejected) is the SINGLE

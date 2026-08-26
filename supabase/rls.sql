@@ -759,10 +759,16 @@ GRANT UPDATE (
 
 REVOKE SELECT ON public.creators FROM anon, authenticated;
 
+-- COLUMN-LEVEL ALLOWLIST. Every column added to creators must be listed here
+-- or a query naming it fails with "permission denied for table creators" — the
+-- whole query, not just that column. vetting_status was added and not granted,
+-- and the creator layout stopped being able to read its own row at all.
 GRANT SELECT (
   id, user_id, full_name, niche, niches, handle, bio, profile_photo_url,
   worked_with, portfolio_links, social_accounts, location, primary_platform,
-  is_vetted, is_rejected, created_at, updated_at
+  is_vetted, is_rejected, vetting_status,
+  revisions_enabled, included_revisions, price_per_extra_revision_paise,
+  created_at, updated_at
 ) ON public.creators TO anon, authenticated;
 
 
