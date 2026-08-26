@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
+import { revisionTerms, overagePaise } from '@/lib/revisions'
 import { parsePaymentTermsDays } from '@/lib/invoice'
 import { notifyDealParty, notifyOtherParty } from '@/lib/notifications'
 
@@ -510,8 +511,13 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
   }
 
   const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
-  const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
-  const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+  /* No agreed terms means no overage, whatever the count. The arithmetic
+     already produced zero here, but stating it keeps the invoice and the
+     screens reading from one definition. */
+  const overage = overagePaise(
+    revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise),
+    deal.revisions_used ?? 0,
+  )
   const dueDays = parsePaymentTermsDays(deal.payment_terms)
 
   const { error: insertErr } = await supabase

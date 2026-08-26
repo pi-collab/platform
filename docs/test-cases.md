@@ -1921,6 +1921,17 @@ silently offered one free revision.
       directly — the DB CHECK must refuse it
 - [ ] Leading zeros cannot be typed into either field
 
+**No revision terms means unlimited and free**
+- [ ] Build a deal from a package with revisions OFF. The deal reads "Unlimited",
+      NOT "0 included" — nothing was agreed, so nothing is being exceeded
+- [ ] Request several revisions on that deal: no over-limit warning, and the
+      invoice overage is ₹0
+- [ ] A package with 0 included AND a per-extra price still reads as chargeable
+      from the first revision — that IS an agreed term and must not be confused
+      with the case above
+- [ ] Brand screen, creator screen and the offer card all use one label helper,
+      so they cannot describe the same deal differently
+
 **Offer builder consequence (no code change — this is why disable zeroes)**
 - [ ] Select only a package with revisions OFF: the deal's revision terms come
       out 0 free, ₹0 per extra

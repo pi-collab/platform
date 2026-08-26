@@ -1,5 +1,7 @@
 'use client'
 
+import { revisionTerms, revisionLabel } from '@/lib/revisions'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import OtpInput from '@/components/OtpInput'
@@ -149,7 +151,7 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
   const rows: [string, string][] = [
     ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '—'],
     ['Timeline', formatDate(deal.timeline_date)],
-    ['Revisions', `${deal.revision_limit} included`],
+    ['Revisions', revisionLabel(revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise))],
     ['Usage rights', deal.usage_rights || 'To be agreed'],
     ['Payment', deal.payment_terms || 'To be agreed'],
   ]

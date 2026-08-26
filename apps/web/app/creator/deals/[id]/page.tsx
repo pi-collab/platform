@@ -8,6 +8,7 @@ import AcceptDecline from './AcceptDecline'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
+import { revisionTerms, revisionLabel } from '@/lib/revisions'
 import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
 import NegotiationHistory from '@/components/NegotiationHistory'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
@@ -130,7 +131,8 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
   const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
-  const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
+  const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
+  const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
   const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
   const creatorReceives = fee ? fee.creator_receives_paise + overage : null
 
@@ -342,7 +344,9 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   {deal.revision_limit != null && (
                     <div>
                       <div style={metaLabel}>Revisions</div>
-                      <div style={dateValue}>{deal.revisions_used ?? 0} / {deal.revision_limit} rounds</div>
+                      <div style={dateValue}>{revTerms.unlimited
+                        ? `${deal.revisions_used ?? 0} \u00B7 unlimited`
+                        : `${deal.revisions_used ?? 0} / ${revTerms.limit}`}</div>
                     </div>
                   )}
                 </div>
@@ -476,7 +480,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                 {deal.usage_rights && <TermRow label="Usage rights" value={deal.usage_rights} />}
                 {deal.usage_rights_end_date && <TermRow label="Usage rights expire" value={formatDate(deal.usage_rights_end_date + 'T00:00:00')} />}
                 {deal.rights_confirmed_at && <TermRow label="Rights confirmed" value={formatDateLong(deal.rights_confirmed_at)} />}
-                {deal.revision_limit != null && <TermRow label="Revisions" value={`${deal.revisions_used ?? 0} / ${deal.revision_limit} rounds`} />}
+                {deal.revision_limit != null && <TermRow label="Revisions" value={revisionLabel(revTerms)} />}
                 {(deal.price_per_extra_revision_paise ?? 0) > 0 && <TermRow label="Per extra revision" value={formatRupees(deal.price_per_extra_revision_paise)} />}
                 {deal.payment_terms && <TermRow label="Payment terms" value={deal.payment_terms} />}
                 {deal.requires_shipment && <TermRow label="Product kit" value="A product kit will be sent to you" />}
