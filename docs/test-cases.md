@@ -2153,6 +2153,20 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] An unknown code is refused by the CHECK
 - [ ] UPDATE and DELETE are denied by RLS
 
+**Ops shows the vetting state, all four of them**
+- [ ] A Growth creator reads "Vetted for growth", NOT "Pending". This is the bug:
+      a Growth creator is is_vetted false AND is_rejected false by construction
+      (0487), so every `is_vetted ? ... : is_rejected ? ... : 'Pending'` fell
+      through to Pending and reported an approved creator as un-reviewed
+- [ ] Same badge on all three ops surfaces: creator list, creator detail,
+      creator edit. All three had their own copy of that ternary
+- [ ] Labels: "Vetted for deals", "Vetted for growth", "Pending", "Rejected"
+- [ ] The list summary counts growth separately. It was inside `pending`, which
+      is the number the vetting queue is worked from
+- [ ] Every query behind a badge SELECTs vetting_status. Without it the fallback
+      cannot tell growth from pending, because the booleans do not encode it
+- [ ] Move a creator Growth -> Deals and back; the badge follows on all three
+
 **Ops can see the answers**
 - [ ] /ops/creators/[id] → Questionnaire tab shows the Growth answers for a
       Growth creator, badged "Guapd Growth", with the date

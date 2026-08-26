@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import VettingBadge from '@/components/ops/VettingBadge'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 
@@ -29,7 +30,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
   const admin = createAdminClient()
   let listQuery = admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, rate_card, created_at', { count: 'exact' })
+    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, vetting_status, rate_card, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
 
   // Unanswered is NULL, which .in() cannot express, so the two cases are
@@ -72,14 +73,18 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         ? (q.in('follower_band', wantsBands) as T)
         : q
 
-  const [vettedRes, rejectedRes] = await Promise.all([
-    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true)),
-    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_rejected', true)),
+  const [vettedRes, rejectedRes, growthRes] = await Promise.all([
+    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'deals_approved')),
+    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'rejected')),
+    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth')),
   ])
   const total = count ?? 0
   const vetted = vettedRes.count ?? 0
   const rejected = rejectedRes.count ?? 0
-  const pending = total - vetted - rejected
+  const growth = growthRes.count ?? 0
+  // Growth counted separately rather than left inside pending: a Growth creator
+  // HAS been reviewed, and pending is the queue ops actually works from.
+  const pending = total - vetted - rejected - growth
 
   return (
     <div>
@@ -87,7 +92,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         <div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Creators</h1>
           <p style={{ color: '#666', fontSize: '0.8125rem', margin: '0.25rem 0 0' }}>
-            {total} total &middot; {vetted} vetted &middot; {pending} pending &middot; {rejected} rejected
+            {total} total &middot; {vetted} for deals &middot; {growth} for growth &middot; {pending} pending &middot; {rejected} rejected
           </p>
         </div>
         <Link
@@ -202,13 +207,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                     </td>
                     <td style={tdStyle} data-ph-mask>{c.phone || '-'}</td>
                     <td style={tdStyle}>
-                      {c.is_vetted ? (
-                        <span style={vettedBadge}>Vetted</span>
-                      ) : c.is_rejected ? (
-                        <span style={rejectedBadge}>Rejected</span>
-                      ) : (
-                        <span style={pendingBadge}>Pending</span>
-                      )}
+                      <VettingBadge row={c} />
                     </td>
                     <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
                   </tr>
@@ -227,6 +226,3 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }
 const thStyle: React.CSSProperties = { textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '2px solid #e5e5e5', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888' }
 const tdStyle: React.CSSProperties = { padding: '0.5rem 0.75rem', borderBottom: '1px solid #f0f0f0' }
-const vettedBadge: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }
-const pendingBadge: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }
-const rejectedBadge: React.CSSProperties = { fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import VettingBadge from '@/components/ops/VettingBadge'
 import { followerRangeOf } from '@/lib/follower-range'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import { verifyOpsAccess } from '@/lib/ops-auth'
@@ -112,13 +113,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{creator.full_name}</h1>
-            {creator.is_vetted ? (
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>Vetted</span>
-            ) : creator.is_rejected ? (
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>Rejected</span>
-            ) : (
-              <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '0.15rem 0.5rem', borderRadius: 9999, background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>Pending</span>
-            )}
+            <VettingBadge row={creator} />
           </div>
           <p style={{ color: '#888', fontSize: '0.75rem', margin: 0 }}>
             Added {new Date(creator.created_at).toLocaleDateString()}
