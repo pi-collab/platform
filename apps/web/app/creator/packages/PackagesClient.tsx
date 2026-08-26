@@ -146,18 +146,41 @@ function AddonRatesEditor({ platform, handle, initial }: {
 
           <div className="pk-field">
             <label className="pk-label">Collab rate</label>
-            <div className="pk-addons-modes">
-              {([['none', 'Not offered'], ['percent', 'Percentage'], ['fixed', 'Fixed amount']] as const).map(([m, label]) => (
+            {/* One segmented control instead of three word-chips that wrapped
+                onto two lines. Icon-only would be a guess, so each carries an
+                aria-label and title, and the caption below says in words which
+                one is selected — the control gets compact, the meaning does
+                not get lost. */}
+            <div className="pk-seg" role="group" aria-label="Collab rate type">
+              {([
+                ['none', 'Not offered', (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" /></svg>
+                )],
+                ['percent', 'Percentage', (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round"><path d="M19 5 5 19" /><circle cx="7.5" cy="7.5" r="2.2" /><circle cx="16.5" cy="16.5" r="2.2" /></svg>
+                )],
+                ['fixed', 'Fixed amount', (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h12M6 9h12M9.5 4c3.5 0 5.5 1.6 5.5 4.4S13 12.8 9.5 12.8H6l7.5 7.2" /></svg>
+                )],
+              ] as const).map(([m, label, icon]) => (
                 <button
                   key={m}
                   type="button"
-                  className={`pk-chip${mode === m ? ' pk-chip-on' : ''}`}
+                  className={`pk-seg-btn${mode === m ? ' pk-seg-on' : ''}`}
                   onClick={() => setMode(m)}
+                  aria-label={label}
+                  aria-pressed={mode === m}
+                  title={label}
                 >
-                  {label}
+                  {icon}
                 </button>
               ))}
             </div>
+            <span className="pk-hint">
+              {mode === 'none' ? 'Not offered on this channel'
+                : mode === 'percent' ? 'Percentage of each deliverable\u2019s price'
+                : 'A fixed amount per deliverable'}
+            </span>
             {mode !== 'none' && (
               <div className="pk-addons-input">
                 <span className="pk-addons-prefix">{mode === 'percent' ? '%' : '\u20B9'}</span>

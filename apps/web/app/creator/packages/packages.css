@@ -586,3 +586,42 @@ select.pk-input {
   font-weight: 500;
   color: var(--ink-faint, #878D99);
 }
+
+/* ── Segmented icon control ──────────────────────────────────────────────────
+   Three word-chips wrapped onto two lines and took more room than the field
+   they describe. Icons in one track, with the selected meaning spelled out
+   underneath so nothing rests on reading a glyph correctly.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.pk-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--sec-mid, #EEF1F6);
+}
+
+.pk-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 34px: a comfortable tap target without the row growing taller than the
+     inputs beside it. */
+  width: 38px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+
+.pk-seg-btn:hover { color: var(--ink, #12151C); }
+
+.pk-seg-on {
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  box-shadow: 0 1px 3px rgba(22, 23, 15, .10);
+}
