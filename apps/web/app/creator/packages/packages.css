@@ -595,6 +595,10 @@ select.pk-input {
 
 .pk-seg {
   display: inline-flex;
+  /* inline-flex is not enough: .pk-field is a flex COLUMN, so its children
+     stretch across the cross axis and the track ran the full width of the
+     sheet. This is what keeps it the width of the three buttons. */
+  align-self: flex-start;
   gap: 4px;
   padding: 4px;
   border-radius: 999px;
