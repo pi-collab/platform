@@ -143,9 +143,13 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
                   </span>
                   <span className="gr-tier__pill gr-tier__pill--locked">Locked</span>
                 </div>
+                {/* NOT "send and receive offers": a creator does not send
+                    offers, brands do. What this tier gives them is running the
+                    deal itself, directly, in one place. */}
                 <p className="gr-tier__body">
-                  The full deal flow: send and receive offers, agree terms and get paid on Guapd.
-                  Opens up for you as you grow.
+                  For creators working with brands regularly. One place to run every deal directly
+                  with the brand, from the offer through to getting paid. Opens up for you as you
+                  grow.
                 </p>
               </div>
             </div>

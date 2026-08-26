@@ -2055,6 +2055,8 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       you're good enough" or implies the track is a waiting room
 - [ ] Guapd Deals tier still reads "Locked", but its body is "Opens up for you
       as you grow", not "when you're approved"
+- [ ] The Deals tier does NOT say a creator can "send" offers. Brands send,
+      creators receive. What the tier offers is running the deal directly
 - [ ] The wait is stated as a forward promise ("soon", "we're lining up"), never
       as deals being available now. Growth creators are invisible to brands by
       construction, so present tense would be a false claim
