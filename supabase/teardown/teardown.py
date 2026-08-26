@@ -31,8 +31,13 @@ import sys
 # point of the guard is that you cannot delete from a database you did not
 # choose, and defaulting to any of them would defeat it.
 #
-# Sydney (yltclrnjurgzyaylzcli) is deliberately absent. It is the retired
-# production project, kept only so its data can be read.
+# An allowlist rather than a blocklist, deliberately: a project this script has
+# never heard of is refused, so a new environment cannot be torn down by
+# accident before anyone has thought about it.
+#
+# (A third project, Sydney, used to be named here as an explicit non-target. It
+# was the retired production database, held only so its data could be read; it
+# was verified empty and deleted on 2026-08-27. Nothing needs to exclude it now.)
 KNOWN_PROJECTS = {
     'prod': 'nxdxxkdlzjyxxgtppopb',      # guapd-prod-mumbai
     'staging': 'dswlplxyizvljzaihmjw',   # guapd-staging

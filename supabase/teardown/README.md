@@ -27,8 +27,14 @@ optional in spirit: the CLI link is ambient state that changes without this
 script knowing, and the flag is only what someone typed. Requiring BOTH to
 agree means a stale link cannot silently point a deletion at production.
 
-Sydney (`yltclrnjurgzyaylzcli`) is deliberately not a valid target. It is the
-retired production project, kept so its data can be read and nothing else.
+`prod` and `staging` are the only valid targets, and the list is an allowlist
+rather than a blocklist: a project this script has never heard of is refused
+outright, so a new environment cannot be torn down before anyone has decided it
+should be.
+
+A third project, Sydney, was listed here as an explicit non-target. It was the
+retired production database, kept only so its data could be read; it was
+verified empty and deleted on 2026-08-27.
 
 Several accounts at once:
 
