@@ -8,6 +8,7 @@ export default function SignOutButton({
   redirectTo,
   className,
   label = 'Sign out',
+  children,
 }: {
   /**
    * Where to land after signing out. REQUIRED, deliberately.
@@ -23,6 +24,13 @@ export default function SignOutButton({
    *  adopt a page's own design (e.g. the onboarding nav pill). */
   className?: string
   label?: string
+  /**
+   * Replaces the label entirely, for menu rows that need an icon beside the
+   * text. Optional, so the existing callers are untouched. The point is that a
+   * caller wanting different CONTENT never has to reimplement the sign-out
+   * BEHAVIOUR, which is where the land-on-brand-login bug came from.
+   */
+  children?: React.ReactNode
 }) {
   const router = useRouter()
 
@@ -42,7 +50,7 @@ export default function SignOutButton({
       className={className}
       style={className ? undefined : styles.btn}
     >
-      {label}
+      {children ?? label}
     </button>
   )
 }

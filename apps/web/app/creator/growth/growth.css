@@ -490,9 +490,12 @@ body.wq-modal-open .gr-tabs {
     padding: 14px clamp(14px, 4vw, 28px) 0;
   }
 
+  /* Same max-width as .gr-shell below, so the bar and the content it sits over
+     share their left and right edges. A 1280px bar above a 760px column read as
+     two unrelated things stacked. */
   .gr-nav {
     position: relative;
-    max-width: 1280px;
+    max-width: 860px;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -505,7 +508,7 @@ body.wq-modal-open .gr-tabs {
     box-shadow: 0 12px 36px -22px rgba(40, 45, 25, .45);
   }
 
-  .gr-nav__brand { display: inline-flex; align-items: center; gap: 9px; }
+  .gr-nav__brand { display: inline-flex; align-items: center; gap: 9px; flex-shrink: 0; }
   .gr-nav__word {
     font-family: var(--font-display);
     font-size: 19px;
@@ -526,6 +529,9 @@ body.wq-modal-open .gr-tabs {
   }
 
   .gr-nav__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     border: none;
     background: none;
     padding: 0;
@@ -539,45 +545,126 @@ body.wq-modal-open .gr-tabs {
 
   .gr-nav__pill[aria-current='page'] { color: var(--ink, #12151C); font-weight: 600; }
 
-  .gr-nav__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .gr-nav__right { position: relative; display: flex; align-items: center; flex-shrink: 0; }
 
-  .gr-nav__avatar {
-    width: 32px; height: 32px;
+  .gr-nav__avatarbtn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 10px 5px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--frost-edge, rgba(255,255,255,.85));
+    background: var(--card, #fff);
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+
+  .gr-nav__avatar, .gr-menu__avatar {
     border-radius: 9px;
     overflow: hidden;
     flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
     background: var(--sec-2, #F7F4FB);
+    border: 1px solid var(--frost-edge, rgba(255,255,255,.85));
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 12.5px;
     color: var(--ink, #12151C);
   }
-  .gr-nav__avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .gr-nav__avatar  { width: 32px; height: 32px; font-size: 12.5px; }
+  .gr-menu__avatar { width: 44px; height: 44px; border-radius: 13px; font-size: 16px; }
+  .gr-nav__avatar img, .gr-menu__avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-  .gr-nav__signout {
-    padding: 7px 14px;
-    border-radius: 999px;
+  .gr-nav__who { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+  .gr-nav__name {
+    font-family: var(--font-ui); font-weight: 600; font-size: 13px; color: var(--ink, #12151C);
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .gr-nav__role {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-faint, #878D99);
+  }
+  .gr-nav__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--neon-deep, #C9EB3C); }
+  .gr-nav__chev { flex-shrink: 0; margin-left: 2px; color: var(--ink-faint, #878D99); }
+
+  /* ── Profile menu ── */
+  .gr-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 268px;
+    z-index: 20;
+    padding: 6px;
+    border-radius: 20px;
     border: 1px solid var(--frost-edge, rgba(255,255,255,.85));
     background: var(--card, #fff);
-    cursor: pointer;
-    font-family: var(--font-ui);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-soft, #565C68);
-    transition: color .14s ease, border-color .14s ease;
+    box-shadow: 0 24px 60px -28px rgba(40, 45, 25, .5);
+    animation: grMenuIn .2s cubic-bezier(.22, 1, .36, 1);
+    transform-origin: top right;
   }
-  .gr-nav__signout:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
+
+  @keyframes grMenuIn {
+    from { opacity: 0; transform: translateY(-8px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .gr-menu__head { display: flex; align-items: center; gap: 12px; padding: 6px 6px 10px; }
+  .gr-menu__who { min-width: 0; }
+  .gr-menu__name {
+    display: block; font-family: var(--font-ui); font-weight: 700; font-size: 14.5px;
+    color: var(--ink, #12151C);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .gr-menu__tag {
+    display: inline-block; margin-top: 3px; padding: 1px 7px; border-radius: 999px;
+    background: var(--sec-2, #F7F4FB); border: 1px solid rgba(24, 28, 36, .08);
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 600;
+    letter-spacing: .03em; text-transform: uppercase; color: var(--sec-ink, #79809C);
+  }
+
+  .gr-menu__rule { height: 1px; background: var(--border-hairline, rgba(120,130,150,.22)); margin: 2px 6px; }
+
+  .gr-menu__item {
+    display: flex; align-items: center; gap: 11px;
+    width: 100%;
+    padding: 9px 8px;
+    border: none;
+    border-radius: 13px;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background .14s ease;
+  }
+  .gr-menu__item:hover { background: #F7F7F4; }
+  .gr-menu__item--danger:hover { background: rgba(210, 84, 90, .08); }
+
+  .gr-menu__icon {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--sec, #F4F8FC);
+    color: var(--ink-soft, #565C68);
+  }
+  .gr-menu__icon--danger { background: rgba(210, 84, 90, .09); color: #D2545A; }
+
+  .gr-menu__label {
+    flex: 1; min-width: 0;
+    font-family: var(--font-ui); font-weight: 600; font-size: 13.5px;
+    color: var(--ink, #12151C);
+  }
+  .gr-menu__item--danger .gr-menu__label { color: #D2545A; }
 
   /* The bottom bar is the PHONE's navigation. On desktop the top nav carries it,
-     and the page no longer has to reserve room at the bottom for a fixed bar. */
+     and the page no longer has to reserve room for a fixed bar. */
   .gr-tabs { display: none; }
-  .gr-page { padding-bottom: clamp(60px, 6vw, 96px); }
+  .gr-page { padding-top: 26px; padding-bottom: clamp(60px, 6vw, 96px); }
 
   /* Type. Everything below was transcribed from a phone export and stayed at
      phone sizes at every width, which is what made the desktop page read as a
      stretched mobile screen. */
-  .gr-shell { max-width: 760px; }
+  .gr-shell { max-width: 860px; }
 
   .gr-lede { font-size: 16.5px; max-width: 560px; }
 
@@ -599,6 +686,8 @@ body.wq-modal-open .gr-tabs {
   .gr-avatar { width: 60px; height: 60px; font-size: 23px; }
 
   /* The Profile tab's own sign-out is the phone affordance; on desktop it lives
-     in the header, and two sign-out buttons on one screen is one too many. */
+     in the header menu, and two sign-outs on one screen is one too many. */
   .gr-signout { display: none; }
 }
+
+@media (prefers-reduced-motion: reduce) { .gr-menu { animation: none; } }

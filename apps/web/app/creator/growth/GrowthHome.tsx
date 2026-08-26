@@ -35,12 +35,17 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
   const [done, setDone] = useState(quizDone)
 
   return (
-    <main className="gr-page">
-      {/* Rendered at every width and hidden by CSS under 768px. Gating this
-          in JS means reading the viewport, which is wrong during the server
-          render and flickers on the client. */}
+    <>
+      {/* OUTSIDE <main>, so the page's own top padding becomes the gap BELOW the
+          bar rather than above it. Inside, the badge landed hard against the
+          bar's underside with nothing between them.
+
+          Rendered at every width and hidden by CSS under 768px: gating it in JS
+          needs a viewport read, which is wrong during the server render and
+          flickers on the client. */}
       <GrowthTopNav tab={tab} setTab={setTab} fullName={profile.fullName} photoUrl={profile.photoUrl} />
 
+    <main className="gr-page">
       <div className="gr-shell">
         <span className="gr-badge">Guapd Growth</span>
 
@@ -197,5 +202,6 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
           which is when the dashboard becomes reachable. */}
       {!done && <GrowthQuiz onDone={() => setDone(true)} />}
     </main>
+    </>
   )
 }
