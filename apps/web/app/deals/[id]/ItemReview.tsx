@@ -1,5 +1,7 @@
 'use client'
 
+import { revisionTerms, isOverLimit } from '@/lib/revisions'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { approveItem, requestItemRevision } from './review-actions'
@@ -45,6 +47,7 @@ export default function ItemReview({
   dealId,
   items,
   revisionsUsed,
+  perExtraRevisionPaise = 0,
   revisionLimit,
   dealStatus,
   pricePerExtraRevisionPaise = 0,
@@ -53,6 +56,8 @@ export default function ItemReview({
   dealId: string
   items: Item[]
   revisionsUsed: number
+  /** Needed to tell "no terms" from "none included, all chargeable". */
+  perExtraRevisionPaise?: number
   revisionLimit: number
   dealStatus: string
   pricePerExtraRevisionPaise?: number
@@ -68,7 +73,13 @@ export default function ItemReview({
   const allApproved = items.every((i) => i.item_status === 'approved')
   const submitted = items.filter((i) => i.item_status === 'submitted').length
   const hasRevision = items.some((i) => i.item_status === 'revision')
-  const isBeyondLimit = dealStatus === 'delivered' && revisionsUsed >= revisionLimit && submitted > 0
+  /* revisionLimit 0 with no per-extra price means NO TERMS WERE AGREED, not a
+     limit of zero — and `revisionsUsed >= 0` is always true, so this warned
+     "Beyond revision limit" on the very first revision of a deal that never had
+     one. isOverLimit knows the difference. */
+  const isBeyondLimit = dealStatus === 'delivered'
+    && isOverLimit(revisionTerms(revisionLimit, perExtraRevisionPaise), revisionsUsed)
+    && submitted > 0
 
   const router = useRouter()
 

@@ -7,6 +7,7 @@ import ItemReview from './ItemReview'
 import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
 import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
+import { revisionTerms, revisionLabel, overagePaise } from '@/lib/revisions'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import ViewFileButton from './ViewFileButton'
@@ -156,8 +157,9 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   const feeInfo = deal.price_paise != null && deal.price_paise > 0
     ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
     : null
-  const extra = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
-  const overage = extra * (deal.price_per_extra_revision_paise ?? 0)
+  const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
+  const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
+  const overage = overagePaise(revTerms, deal.revisions_used ?? 0)
   const brandTotal = feeInfo ? feeInfo.brand_pays_paise + overage : (deal.price_paise ?? 0) + overage
 
   // Brief content
@@ -508,6 +510,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                   }))}
                   revisionsUsed={deal.revisions_used ?? 0}
                   revisionLimit={deal.revision_limit}
+                  perExtraRevisionPaise={deal.price_per_extra_revision_paise ?? 0}
                   dealStatus={deal.status}
                   pricePerExtraRevisionPaise={deal.price_per_extra_revision_paise ?? 0}
                   creatorFirstName={firstName}
@@ -806,7 +809,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 )}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
-                  <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatRupees(deal.price_per_extra_revision_paise)}` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{revisionLabel(revTerms)}{revTerms.perExtraPaise > 0 ? `, then ${formatRupees(revTerms.perExtraPaise)} each` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
                 </div>
                 {deal.payment_terms && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
@@ -935,7 +938,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                 )}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
-                  <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatRupees(deal.price_per_extra_revision_paise)}` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{revisionLabel(revTerms)}{revTerms.perExtraPaise > 0 ? `, then ${formatRupees(revTerms.perExtraPaise)} each` : ''}{deal.revisions_used ? ` · ${deal.revisions_used} used` : ''}</b>
                 </div>
                 {deal.payment_terms && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
