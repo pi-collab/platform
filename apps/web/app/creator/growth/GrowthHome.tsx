@@ -4,6 +4,7 @@ import { useState } from 'react'
 import SignOutButton from '@/components/SignOutButton'
 import GrowthQuiz from './GrowthQuiz'
 import GrowthTopNav from './GrowthTopNav'
+import ContactLink from '@/components/ContactLink'
 import './growth.css'
 
 /**
@@ -100,6 +101,23 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
             <p className="gr-prof-note">
               You&rsquo;ll be able to edit your profile here once Guapd Growth opens up.
             </p>
+
+            {/* Help, on the phone too. The desktop header carries it in the
+                profile menu, which does not exist at this width, so without
+                this a Growth creator on a phone has no way to reach us. */}
+            <ContactLink className="gr-help">
+              <span className="gr-help__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <path d="M12 17h.01" />
+                </svg>
+              </span>
+              <span className="gr-help__label">Help &amp; support</span>
+              <svg className="gr-help__chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </ContactLink>
 
             {/* To /login/creator, not the brand page. The default sent creators
                 to brand sign-in, which then offered to set up a brand for them. */}

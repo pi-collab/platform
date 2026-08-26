@@ -436,6 +436,40 @@
    a holding page reads like an exit sign.
    ────────────────────────────────────────────────────────────────────────── */
 
+/* Help & support, on the Profile tab. Shaped like the rows above it rather than
+   like a button: it is a destination, not an action, and the chevron says so. */
+.gr-help {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.gr-help__icon {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--sec-2, #F7F4FB);
+  color: var(--sec-ink, #79809C);
+}
+
+.gr-help__label {
+  flex: 1; min-width: 0;
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink, #12151C);
+}
+
+.gr-help__chev { flex-shrink: 0; color: var(--ink-faint, #878D99); }
+
 .gr-signout {
   margin-top: 18px;
   padding-top: 16px;
@@ -490,12 +524,14 @@ body.wq-modal-open .gr-tabs {
     padding: 14px clamp(14px, 4vw, 28px) 0;
   }
 
-  /* Same max-width as .gr-shell below, so the bar and the content it sits over
-     share their left and right edges. A 1280px bar above a 760px column read as
-     two unrelated things stacked. */
+  /* 1280px, matching the creator top nav exactly (CreatorSidebar's navBar). It
+     was narrowed to the content column's width to line their edges up, but that
+     made the bar visibly a different object from the one on every other creator
+     screen -- and being the SAME bar matters more than aligning with the column
+     underneath it. Padding and radius already matched; only this did not. */
   .gr-nav {
     position: relative;
-    max-width: 860px;
+    max-width: 1280px;
     margin: 0 auto;
     display: flex;
     align-items: center;

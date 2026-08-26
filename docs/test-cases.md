@@ -2071,6 +2071,15 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       fixed at every width, because this page has no sidebar to host navigation
 - [ ] Only ONE sign out is visible per width: the header's on desktop, the
       Profile tab's on a phone
+- [ ] Header bar is 1280px wide, the SAME as the creator top nav. Padding,
+      radius, gap and shadow already matched; only the width did not
+- [ ] Help & support is reachable at BOTH widths: in the profile menu on
+      desktop, as a row on the Profile tab on a phone
+- [ ] It opens the real contact dialog (ContactLink/ContactModal), the same one
+      the footer opens. NOT a link to /creator/settings, which Deals uses and a
+      Growth creator cannot reach -- that would be a link into a redirect loop
+- [ ] The dialog still writes its events row, i.e. ContactLink was reused rather
+      than the modal being rewired by hand
 - [ ] Cards, tiers and profile rows are at desktop sizes, not phone sizes. Every
       one of them was transcribed from a phone export and never scaled up
 - [ ] The top nav is rendered at every width and hidden by CSS, NOT gated in JS.
