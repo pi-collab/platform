@@ -286,6 +286,17 @@
    ────────────────────────────────────────────────────────────────────────── */
 
 .wq-scrim {
+  /* The creator app's font tokens live on .creator-main, and this is PORTALLED
+     to <body>, outside it. Without these they fall back to :root, which is
+     Sora + Inter rather than Schibsted Grotesk, so this modal was set in
+     different type from the dashboard it sits over -- despite .wq-ask below
+     saying it matches the dashboard's section heading exactly. --font-serif
+     does not exist at :root at all. */
+  --font-display: var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-ui:      var(--font-schibsted), 'Schibsted Grotesk', system-ui, sans-serif;
+  --font-serif:   var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+  --font-num:     var(--font-sora), 'Sora', system-ui, sans-serif;
+
   position: fixed;
   inset: 0;
   /* Above the tab bar (10000) and the cookie bar (9999). */

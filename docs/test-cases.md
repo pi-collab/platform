@@ -2061,6 +2061,15 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       as deals being available now. Growth creators are invisible to brands by
       construction, so present tense would be a false claim
 
+**Type matches the rest of the creator app**
+- [ ] Growth page and BOTH quiz modals render in Schibsted Grotesk, the same as
+      the Deals dashboard. Not Sora/Inter
+- [ ] "Hey, <name>" is in Instrument Serif italic, not the Georgia fallback
+- [ ] Why this breaks: the tokens live on .creator-main. The Growth page is
+      handed through bare by the layout, and every modal is portalled to <body>,
+      so both are outside it and fall back to :root, where --font-serif does not
+      exist at all. Any new surface outside .creator-main needs the same block
+
 **Header**
 - [ ] Before the quiz: "You've been approved for Guapd Growth" plus the lede
 - [ ] After the quiz: "Hey, <name>" in the Deals dashboard's serif italic, then

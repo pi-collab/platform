@@ -109,7 +109,7 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
               <div>
-                <p className="gr-done-title">Coming soon</p>
+                <p className="gr-done-title">Something exciting coming soon</p>
                 <p className="gr-done-body">
                   We&rsquo;re lining up the best brand deals for creators like you, and the tools to
                   grow your audience alongside them. Your answers shape what we do first, and
