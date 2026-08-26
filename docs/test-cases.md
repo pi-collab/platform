@@ -2059,6 +2059,8 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] Two tabs only, Dashboard and Profile — no Deals, Payments or Shopfront,
       which would bounce back to this page
 - [ ] Profile shows name, phone and channels, read-only
+- [ ] Sign out is on the Profile tab and lands on /login/creator — NOT the brand
+      sign-in page, which would offer to set up a brand for them
 
 **Quiz**
 - [ ] Three questions, one per screen, all required; last one reveals a text box

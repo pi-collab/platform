@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SignOutButton from '@/components/SignOutButton'
 import { GROWTH_QUESTIONS } from '@/lib/growth-quiz-labels'
 import { saveGrowthQuiz } from './actions'
 import './growth.css'
@@ -105,6 +106,16 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
             <p className="gr-prof-note">
               You&rsquo;ll be able to edit your profile here once Growth opens up.
             </p>
+
+            {/* To /login/creator, not the brand page. The default sent creators
+                to brand sign-in, which then offered to set up a brand for them. */}
+            <div className="gr-signout">
+              <SignOutButton
+                redirectTo="/login/creator"
+                className="gr-signout-btn"
+                label="Sign out"
+              />
+            </div>
           </div>
         ) : done ? (
           /* The waiting message lives HERE and nowhere else — after the quiz is

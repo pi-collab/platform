@@ -295,3 +295,33 @@
   line-height: 1.55;
   color: var(--ink-faint, #878D99);
 }
+
+/* ── Sign out ────────────────────────────────────────────────────────────────
+   The one action a Growth creator can actually take on this screen, so it is
+   present but quiet: nothing here is urgent, and a loud button at the bottom of
+   a holding page reads like an exit sign.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.gr-signout {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(24, 28, 36, .08);
+}
+
+.gr-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(24, 28, 36, .12);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.gr-signout-btn:hover { color: var(--ink, #12151C); border-color: rgba(24, 28, 36, .24); }
