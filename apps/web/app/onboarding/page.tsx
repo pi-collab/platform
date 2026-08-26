@@ -32,6 +32,17 @@ export default async function OnboardingPage(
     const { data: membership } = await supabase
       .from('brand_members').select('id').eq('user_id', profile.id).maybeSingle()
     if (membership) redirect(next)
+
+    /* Same blind spot as /login/brand: this asked only whether the signed-in
+       user has a brand, so a creator with none was shown "tell us about your
+       brand". Brand onboarding is not a fallback for everyone without a brand. */
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('id')
+      .eq('user_id', profile.id)
+      .maybeSingle()
+
+    if (creator) redirect('/creator/dashboard')
   }
 
   return (

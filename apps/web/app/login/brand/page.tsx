@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { displayEmail } from '@/lib/synthetic-email'
 import { safeNext } from '@/lib/safe-next'
 import Link from 'next/link'
 import AuthShell, { AuthNavRight } from '@/components/AuthShell'
@@ -62,6 +63,22 @@ export default async function LoginPage({
         .maybeSingle()
 
       if (membership) redirect(next)
+
+    /* A CREATOR is signed in.
+
+       This page asked "signed in, and do they have a brand?" and treated
+       everyone else as a brand-to-be. A creator has no brand membership, so a
+       rejected creator who reached this page was congratulated and invited to
+       set up a brand — while their own screen was one redirect away. Sending
+       them to /creator hands them whatever their status says: dashboard, under
+       review, rejected, or Growth. */
+    const { data: creator } = await supabase
+      .from('creators')
+      .select('id')
+      .eq('user_id', profile.id)
+      .maybeSingle()
+
+    if (creator) redirect('/creator/dashboard')
     }
 
     // Signed in but no brand yet — the design's "You're in." screen, pointing
@@ -78,7 +95,7 @@ export default async function LoginPage({
           </div>
           <h2 className="signup-panel__title">You&rsquo;re in.</h2>
           <p className="signup-panel__sub">
-            Signed in as {user.email}. One step left. Tell us about your brand and your
+            Signed in as {displayEmail(user.email) ?? 'your account'}. One step left. Tell us about your brand and your
             dashboard is ready.
           </p>
           <div className="signup-form">
