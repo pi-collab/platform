@@ -1921,6 +1921,17 @@ silently offered one free revision.
       directly — the DB CHECK must refuse it
 - [ ] Leading zeros cannot be typed into either field
 
+**Offer builder revisions control**
+- [ ] The free count is READ from the selected packages and is not editable —
+      a brand choosing "1 included" when the creator gives 2 was choosing away
+      something already theirs
+- [ ] +/- adds extra revisions on top; it cannot go below the free count
+- [ ] With a per-extra price set, adding 2 extra shows "2 × ₹X = ₹Y, charged
+      only if used" — and the DEAL TOTAL does not change. Revisions are billed
+      on the invoice from actual usage; adding them to the price here would
+      charge twice
+- [ ] Selecting packages with no revision terms shows "Unlimited", not "0 free"
+
 **No revision terms means unlimited and free**
 - [ ] Build a deal from a package with revisions OFF. The deal reads "Unlimited",
       NOT "0 included" — nothing was agreed, so nothing is being exceeded

@@ -930,17 +930,56 @@ export default function DealForm({ creator, products, addonRates = [], platformF
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Terms</div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Revisions</div>
-              <select className="dinput" value={`${revisionLimit}::${pricePerExtraRevision}`} onChange={(e) => {
-                const [rl, per] = e.target.value.split('::')
-                setRevisionLimit(rl)
-                setPricePerExtraRevision(per)
-              }} style={{ width: '100%' }}>
-                {[1, 2, 3].map((n) => (
-                  <option key={n} value={`${n}::${pricePerExtraRevision}`}>
-                    {n} included {parseFloat(pricePerExtraRevision) > 0 ? `\u00B7 \u20B9${parseFloat(pricePerExtraRevision).toLocaleString('en-IN')} per extra` : ''}
-                  </option>
-                ))}
-              </select>
+              {/* The creator's free count is a FACT of the packages chosen, not a
+                  dropdown — a brand picking "1 included" when the creator gives 2 was
+                  choosing away something already theirs. Extras are added on top, and
+                  priced so the cost is visible before it is agreed. */}
+              {(() => {
+                const free = defaultIncluded
+                const perExtra = defaultExtraPaise
+                const total = Number.parseInt(revisionLimit, 10) || 0
+                const extra = Math.max(0, total - free)
+                const unlimited = free === 0 && perExtra === 0
+                if (unlimited) {
+                  return (
+                    <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
+                      Unlimited &mdash; {firstName} has not set revision terms on these packages, so revisions are not capped or charged.
+                    </div>
+                  )
+                }
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <span style={{ fontSize: 13, color: 'var(--ink)' }}>
+                        <b style={{ fontWeight: 700 }}>{free}</b> free
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button type="button" className="stepbtn" aria-label="Fewer extra revisions"
+                          onClick={() => setRevisionLimit(String(Math.max(free, total - 1)))}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                        </button>
+                        <span style={{ minWidth: 52, textAlign: 'center', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                          +{extra} extra
+                        </span>
+                        <button type="button" className="stepbtn" aria-label="More extra revisions"
+                          onClick={() => setRevisionLimit(String(Math.min(free + 20, total + 1)))}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', lineHeight: 1.5 }}>
+                      {perExtra > 0
+                        ? extra > 0
+                          /* CHARGED IF USED, not added to the total here. Revisions are
+                             billed on the invoice from what was actually requested, so
+                             pre-adding them to the deal price would charge twice. */
+                          ? `${extra} \u00D7 ${formatRupees(perExtra)} = ${formatRupees(extra * perExtra)}, charged only if used.`
+                          : `${formatRupees(perExtra)} each beyond the free ones, charged only if used.`
+                        : 'Extra revisions are free on these packages.'}
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Usage rights</div>
