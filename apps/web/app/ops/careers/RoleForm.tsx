@@ -72,7 +72,7 @@ export default function RoleForm({ role }: { role?: Role }) {
         <div style={{ fontSize: 13, fontWeight: 600, color: '#111' }}>Application questions</div>
         <div style={{ fontSize: 12, color: '#888', marginTop: -4 }}>
           Asked on this role&apos;s application form, in this order, each answered in a text box.
-          Every applicant already gives their name, email and CV — these are on top of that.
+          Every applicant already gives their name, email and CV. These are on top of that.
         </div>
 
         {questions.length === 0 && (

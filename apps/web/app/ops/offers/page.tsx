@@ -48,9 +48,9 @@ export default async function OpsOffersPage({ searchParams }: { searchParams: { 
             </thead>
             <tbody>
               {deals.map((d) => {
-                const brand = (d.brands as any)?.name ?? '—'
-                const creator = (d.creators as any)?.full_name ?? '—'
-                const price = d.price_paise ? `₹${(d.price_paise / 100).toLocaleString('en-IN')}` : '—'
+                const brand = (d.brands as any)?.name ?? '-'
+                const creator = (d.creators as any)?.full_name ?? '-'
+                const price = d.price_paise ? `₹${(d.price_paise / 100).toLocaleString('en-IN')}` : '-'
                 return (
                   <tr key={d.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                     <td style={td}>

@@ -135,12 +135,12 @@ async function deliver(phone: string, code: string): Promise<OTPResult> {
   // going out and the environment is not production, and never with the full
   // number attached.
   const logCode = () =>
-    console.log(`[OTP] no SMS sent — code for ${maskPhone(phone)}: ${code}`)
+    console.log(`[OTP] no SMS sent, code for ${maskPhone(phone)}: ${code}`)
 
   if (!isSmsConfigured()) {
     if (process.env.VERCEL_ENV === 'production') {
       console.error(
-        '[OTP] SMS is not configured on production — no code can reach anyone. ' +
+        '[OTP] SMS is not configured on production, no code can reach anyone. ' +
         'Set MSG91_SMS_ENABLED/MSG91_SMS_TEMPLATE_ID/MSG91_SMS_VAR_NAME.'
       )
       return { status: 'error', message: 'We could not send the code just now. Please try again shortly.' }
@@ -159,7 +159,7 @@ async function deliver(phone: string, code: string): Promise<OTPResult> {
     // config also break the shortcut that exists to work around it. Let them
     // through to code entry; the failure is in the logs and in `events`.
     if (isStagingEnv()) {
-      console.warn('[OTP] send failed on staging — continuing, bypass codes still accepted')
+      console.warn('[OTP] send failed on staging, continuing, bypass codes still accepted')
       return { status: 'sent' }
     }
     return { status: 'error', message: 'We could not send the code just now. Please try again shortly.' }

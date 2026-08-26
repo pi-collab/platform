@@ -90,7 +90,7 @@ export default function CreatorPaymentsEmpty({
           <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400 }}>yet.</span>
         </h2>
         <p style={{ fontSize: 14, lineHeight: 1.55, color: 'var(--ink-soft)', margin: '10px 0 0' }}>
-          When a deal completes, the payout shows up here — with the fee already broken out.
+          When a deal completes, the payout shows up here, with the fee already broken out.
         </p>
         <Link
           href="/creator/deals"

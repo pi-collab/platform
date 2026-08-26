@@ -133,8 +133,8 @@ export default function TermsOfServicePage() {
         <h2 style={h2Style}>5. The agreed terms of a deal</h2>
         <p style={pStyle}>
           When a brand and a creator accept terms on Guapd, those recorded terms
-          &mdash; deliverables, price, timeline, revision count, usage rights and
-          payment terms &mdash; are the agreement between them. The platform maintains
+          (deliverables, price, timeline, revision count, usage rights and
+          payment terms) are the agreement between them. The platform maintains
           a timestamped record of that agreement and of every subsequent change.
           Neither party may unilaterally alter a recorded agreement.
         </p>
@@ -158,7 +158,7 @@ export default function TermsOfServicePage() {
         <p style={pStyle}>
           Guapd charges a platform fee on each deal. The fee rate applicable to a deal
           is shown on that deal before either party accepts, and is fixed at the time
-          the deal is created &mdash; it does not change afterwards, even if our rates
+          the deal is created. It does not change afterwards, even if our rates
           change later.
         </p>
         <p style={pStyle}>
@@ -205,8 +205,8 @@ export default function TermsOfServicePage() {
             <strong>What happens if your subscription ends.</strong> Deals created
             while your subscription was active continue on the terms recorded on those
             deals, including the fee, and you keep access to those deals and their
-            records. Plan features &mdash; including any deal volume above the free
-            tier &mdash; become unavailable.
+            records. Plan features, including any deal volume above the free
+            tier, become unavailable.
           </li>
           <li style={liStyle}>
             <strong>Failed payment.</strong> If a renewal payment fails we may suspend
@@ -237,8 +237,8 @@ export default function TermsOfServicePage() {
         <h2 style={h2Style}>9. Disputes between users</h2>
         <p style={pStyle}>
           We are not an arbitrator. If a dispute arises, we will make the recorded
-          deal history &mdash; agreed terms, messages, submissions, approvals and
-          timestamps &mdash; available to both parties. Resolution is between them.
+          deal history, agreed terms, messages, submissions, approvals and
+          timestamps, available to both parties. Resolution is between them.
         </p>
 
         {/* 10. Acceptable use */}

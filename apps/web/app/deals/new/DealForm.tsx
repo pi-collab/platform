@@ -709,7 +709,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                                        exactly that. */
                                     if (selected && sel?.customPricePaise) return formatRupees(sel.customPricePaise * qty)
                                     const seed = offerPrefillPaise(p)
-                                    return seed != null ? formatRupees(seed * (qty || 1)) : '\u2014'
+                                    return seed != null ? formatRupees(seed * (qty || 1)) : ', '
                                   })()}
                                 </div>
                               </div>
@@ -948,7 +948,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                 if (unlimited) {
                   return (
                     <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', lineHeight: 1.55 }}>
-                      Unlimited &mdash; {firstName} has not set revision terms on these packages, so revisions are not capped or charged.
+                      Unlimited, {firstName} has not set revision terms on these packages, so revisions are not capped or charged.
                     </div>
                   )
                 }

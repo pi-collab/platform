@@ -128,7 +128,7 @@ export default function CreatorProfileMobile({
         />
         {/* Turnaround needs completed deals to average. An em dash is honest;
             a "0 days" would claim a speed nobody has measured. */}
-        <Stat label="TURNAROUND" value="—" muted />
+        <Stat label="TURNAROUND" value="-" muted />
       </div>
 
       {/* Menu */}

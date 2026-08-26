@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
-import { codesFor } from '@/lib/growth-quiz-labels'
+import { codesFor, type GrowthChoiceKey } from '@/lib/growth-quiz-labels'
 
 export type GrowthQuizResult = { ok: true } | { ok: false; message: string }
 
@@ -19,32 +19,37 @@ export type GrowthQuizResult = { ok: true } | { ok: false; message: string }
  * numbers someone has already reported on.
  */
 export async function saveGrowthQuiz(input: {
-  followerBand: string
+  postingFrequency: string
   growthGoal: string
   niche: string
   nicheOther?: string
+  anythingElse?: string
 }): Promise<GrowthQuizResult> {
   const ctx = await verifyCreator()
 
-  const checks: [string, string][] = [
-    ['follower_band', input.followerBand],
+  const checks: [GrowthChoiceKey, string][] = [
+    ['posting_frequency', input.postingFrequency],
     ['growth_goal', input.growthGoal],
     ['niche', input.niche],
   ]
   for (const [key, value] of checks) {
-    if (!codesFor(key as 'follower_band').includes(value)) {
+    if (!codesFor(key).includes(value)) {
       return { ok: false, message: 'Please answer all three questions.' }
     }
   }
 
   const other = String(input.nicheOther ?? '').trim().slice(0, 120)
+  // Optional and free-form, so it is only length-capped. Nothing reads it as a
+  // code, so there is no option list to validate it against.
+  const note = String(input.anythingElse ?? '').trim().slice(0, 500)
 
   const admin = createAdminClient()
   const { error } = await admin.from('creator_growth_quiz_responses').insert({
     creator_id: ctx.creatorId,
-    follower_band: input.followerBand,
+    posting_frequency: input.postingFrequency,
     growth_goal: input.growthGoal,
     niche: input.niche,
+    anything_else: note || null,
     // Only meaningful alongside the 'other' code; stored null otherwise so the
     // column never holds a stray note against a named niche.
     niche_other: input.niche === 'other' && other ? other : null,

@@ -6,13 +6,30 @@
  *
  * The CODES are what the database stores. Rewording an option is then a copy
  * change; changing a code is a data migration. Keeping that distinction visible
- * is the whole reason this file exists — the same split as
+ * is the whole reason this file exists, the same split as
  * creator-onboarding-labels.
  */
 
+export type GrowthQuestionKey =
+  | 'posting_frequency'
+  | 'growth_goal'
+  | 'niche'
+  | 'anything_else'
+
+/** A question the creator picks an option for. */
+export type GrowthChoiceKey = Exclude<GrowthQuestionKey, 'anything_else'>
+
 export interface GrowthQuestion {
-  key: 'follower_band' | 'growth_goal' | 'niche'
+  key: GrowthQuestionKey
   prompt: string
+  /**
+   * 'text' is a free-text box with no options, and is never required. Only the
+   * closing question uses it, matching the Deals welcome flow.
+   */
+  kind?: 'choice' | 'text'
+  /** Sub-line under the prompt. Used by the free-text question. */
+  sub?: string
+  placeholder?: string
   options: { code: string; label: string }[]
   /** Reveals a free-text box when this code is chosen. */
   otherCode?: string
@@ -21,13 +38,13 @@ export interface GrowthQuestion {
 
 export const GROWTH_QUESTIONS: GrowthQuestion[] = [
   {
-    key: 'follower_band',
-    prompt: 'How big is your following right now?',
+    key: 'posting_frequency',
+    prompt: 'How often do you post right now?',
     options: [
-      { code: 'under_5k', label: 'Under 5K' },
-      { code: '5k_10k', label: '5K – 10K' },
-      { code: '10k_20k', label: '10K – 20K' },
-      { code: '20k_plus', label: '20K+' },
+      { code: 'daily', label: 'Daily' },
+      { code: 'few_times_week', label: 'A few times a week' },
+      { code: 'weekly', label: 'Weekly' },
+      { code: 'rarely', label: 'Rarely, or just starting' },
     ],
   },
   {
@@ -35,7 +52,7 @@ export const GROWTH_QUESTIONS: GrowthQuestion[] = [
     prompt: 'What do you most want from Guapd Growth?',
     options: [
       { code: 'grow_following', label: 'Grow my following' },
-      { code: 'first_deals', label: 'Land my first brand deals' },
+      { code: 'first_deals', label: 'Land brand deals' },
       { code: 'learn_collabs', label: 'Learn how brand collaborations work' },
       { code: 'all', label: 'All of the above' },
     ],
@@ -55,15 +72,26 @@ export const GROWTH_QUESTIONS: GrowthQuestion[] = [
     otherCode: 'other',
     otherPrompt: 'Tell us your niche',
   },
+  {
+    // Deliberately last and optional. The three coded questions are what gets
+    // aggregated; this is where a creator says the thing no option covered, and
+    // it is the answer most likely to change what we build.
+    key: 'anything_else',
+    prompt: "Anything else you'd like us to know?",
+    kind: 'text',
+    sub: 'Optional, but we read every one of these.',
+    placeholder: 'Anything at all',
+    options: [],
+  },
 ]
 
-/** Valid codes for one question — what the server checks against. */
-export function codesFor(key: GrowthQuestion['key']): string[] {
+/** Valid codes for one question, which is what the server checks against. */
+export function codesFor(key: GrowthChoiceKey): string[] {
   return GROWTH_QUESTIONS.find(q => q.key === key)?.options.map(o => o.code) ?? []
 }
 
 /** The words for a stored code, for ops and any later reporting. */
-export function labelFor(key: GrowthQuestion['key'], code: string | null | undefined): string {
-  if (!code) return '—'
+export function labelFor(key: GrowthChoiceKey, code: string | null | undefined): string {
+  if (!code) return '-'
   return GROWTH_QUESTIONS.find(q => q.key === key)?.options.find(o => o.code === code)?.label ?? code
 }

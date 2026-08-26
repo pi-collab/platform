@@ -126,7 +126,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
         )}
         {wantsUnanswered && wantsBands.length > 0 && (
           <span style={{ fontSize: '0.75rem', color: '#92400e' }}>
-            &ldquo;Not answered&rdquo; cannot be combined with bands &mdash; showing unanswered only.
+            &ldquo;Not answered&rdquo; cannot be combined with bands, showing unanswered only.
           </span>
         )}
       </form>
@@ -173,22 +173,22 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                       {(() => {
                         const acct = primaryAccount(c.social_accounts)
                         const label = c.handle || acct.handle
-                        if (!label) return '—'
+                        if (!label) return '-'
                         const url = socialProfileUrl(acct.platform, label)
                         return url
                           ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>@{label}</a>
                           : <>@{label}</>
                       })()}
                     </td>
-                    <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '—'}</td>
-                    <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '—'}</td>
+                    <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '-'}</td>
+                    <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '-'}</td>
                     <td style={tdStyle}>
                       {/* Links to the live page, so a shopfront can be looked at
                           without leaving the queue. A draft is named but not
                           linked — the public URL 404s until it is published. */}
                       {(() => {
                         const sf = shopfrontByCreator.get(c.id)
-                        if (!sf) return <span style={{ color: '#bbb' }}>—</span>
+                        if (!sf) return <span style={{ color: '#bbb' }}>-</span>
                         if (!sf.is_published) {
                           return <span style={{ color: '#92400e', fontSize: '0.75rem', fontWeight: 600 }}>Draft</span>
                         }
@@ -200,7 +200,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                         )
                       })()}
                     </td>
-                    <td style={tdStyle} data-ph-mask>{c.phone || '—'}</td>
+                    <td style={tdStyle} data-ph-mask>{c.phone || '-'}</td>
                     <td style={tdStyle}>
                       {c.is_vetted ? (
                         <span style={vettedBadge}>Vetted</span>

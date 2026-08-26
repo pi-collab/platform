@@ -45,7 +45,7 @@ export async function submitOnboarding(
   if (profile.role === 'creator') {
     return {
       status: 'error' as const,
-      error: 'This account is registered as a creator. Brands need a separate account — sign up with your work email.',
+      error: 'This account is registered as a creator. Brands need a separate account, sign up with your work email.',
     }
   }
 
@@ -61,7 +61,7 @@ export async function submitOnboarding(
   if (email.endsWith('@auth.guapd.internal')) {
     return {
       status: 'error' as const,
-      error: 'This account has no email address. Brands need a work email — sign up with one.',
+      error: 'This account has no email address. Brands need a work email, sign up with one.',
     }
   }
   const emailCheck = validateWorkEmail(email, process.env.OPS_ALLOWED_EMAILS)

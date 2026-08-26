@@ -11,14 +11,14 @@ export const metadata: Metadata = {
   // so including the brand here produced "For brands · Guapd | Guapd".
   title: 'For brands',
   description:
-    'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal — all in one shared space.',
+    'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal, all in one shared space.',
   // Without this every page inherits the site root as its canonical, telling
   // search engines /brands is a duplicate of the homepage.
   alternates: { canonical: '/brands' },
   openGraph: {
     title: 'For brands · Guapd',
     description:
-      'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal — all in one shared space.',
+      'Plan campaigns, collaborate with creators, approve content, automate payments, and track every deal, all in one shared space.',
     url: '/brands',
     // A page-level openGraph REPLACES the layout's rather than merging,
     // so the image has to be repeated here or the card renders bare.

@@ -138,7 +138,7 @@ export default function CreatorTabs({ onboarding, creator, products, addonRates 
         )}
         {creator.vetting_status !== 'growth' && (
           <button onClick={handleGrowth} disabled={actionLoading} style={{ ...actionBtn, background: '#4f46e5', color: '#fff' }}>
-            {actionLoading ? '...' : 'Move to Growth'}
+            {actionLoading ? '...' : 'Move to Guapd Growth'}
           </button>
         )}
         {creator.vetting_status !== 'rejected' && (
@@ -268,7 +268,7 @@ function Products({ creatorId, accounts, products, addonRates = [] }: { creatorI
           <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Collab &amp; boosting rates</div>
           {channelsWithAddons.map(r => (
             <div key={`${r.platform}/${r.handle}`} style={{ fontSize: 12.5, color: '#444', padding: '2px 0' }}>
-              {r.platform} @{String(r.handle).replace(/^@/, '')} &mdash;{' '}
+              {r.platform} @{String(r.handle).replace(/^@/, '')},{' '}
               {r.collab_rate_type === 'percent' && r.collab_rate_value != null
                 ? `collab ${r.collab_rate_value / 100}%`
                 : r.collab_rate_type === 'fixed' && r.collab_rate_value != null
@@ -612,7 +612,7 @@ function DealsTab({ deals }: { deals: Deal[] }) {
       <p style={{ fontSize: '0.8125rem', color: '#666', marginBottom: '0.75rem' }}>{deals.length} deal{deals.length !== 1 ? 's' : ''}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         {deals.map((d) => {
-          const brand = (d.brands as any)?.name ?? '—'
+          const brand = (d.brands as any)?.name ?? '-'
           const sc = DEAL_STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
           return (
             <a
@@ -665,7 +665,7 @@ function FeeRatesTab({ creatorId, pairRates }: { creatorId: string; pairRates: P
       {pairRates.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
           {pairRates.map((pr) => {
-            const brandName = (pr.brands as any)?.name ?? '—'
+            const brandName = (pr.brands as any)?.name ?? '-'
             const standardRate = (pr.brands as any)?.platform_fee_percent ?? 0
 
             if (editingId === pr.id) {
@@ -846,7 +846,7 @@ function DetailField({ label, value }: { label: string; value: string | null | u
   return (
     <div>
       <p style={labelStyle}>{label}</p>
-      <p style={{ fontSize: '0.8125rem', color: value ? '#111' : '#ccc', margin: 0 }}>{value || '—'}</p>
+      <p style={{ fontSize: '0.8125rem', color: value ? '#111' : '#ccc', margin: 0 }}>{value || '-'}</p>
     </div>
   )
 }

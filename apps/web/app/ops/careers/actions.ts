@@ -102,7 +102,7 @@ export async function createRole(formData: FormData): Promise<RoleResult> {
   if (parsed.error) return { error: parsed.error }
   const row = { ...readForm(formData), application_questions: parsed.questions }
   if (!row.title) return { error: 'Title is required.' }
-  if (!row.slug) return { error: 'Could not build a URL from that title — set a slug.' }
+  if (!row.slug) return { error: 'Could not build a URL from that title, set a slug.' }
 
   const admin = createAdminClient()
   const { data, error } = await admin.from('job_roles').insert(row).select('id').single()
@@ -131,7 +131,7 @@ export async function updateRole(id: string, formData: FormData): Promise<RoleRe
   if (parsed.error) return { error: parsed.error }
   const row = { ...readForm(formData), application_questions: parsed.questions }
   if (!row.title) return { error: 'Title is required.' }
-  if (!row.slug) return { error: 'Could not build a URL from that title — set a slug.' }
+  if (!row.slug) return { error: 'Could not build a URL from that title, set a slug.' }
 
   const admin = createAdminClient()
   const { data: before } = await admin

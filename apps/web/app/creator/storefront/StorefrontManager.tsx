@@ -577,7 +577,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               </div>
             </Field>
 
-              <Field label="Cover" hint="A still or a short clip. The link above is where the card goes; this is what it looks like — Instagram and YouTube will not hand us a thumbnail from a URL.">
+              <Field label="Cover" hint="A still or a short clip. The link above is where the card goes; this is what it looks like, Instagram and YouTube will not hand us a thumbnail from a URL.">
                 <ContentMediaUpload item={item} onChange={patch => u(patch)} />
               </Field>
             <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1212,7 +1212,7 @@ export default function StorefrontManager({
                       give one table two owners. */}
                   <p style={{ margin: '0 0 12px', fontSize: 13, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
                     {products.length === 0
-                      ? 'Nothing priced yet. Brands need at least one package to send you an offer — with or without a shopfront.'
+                      ? 'Nothing priced yet. Brands need at least one package to send you an offer, with or without a shopfront.'
                       : `${products.length} package${products.length === 1 ? '' : 's'} across your channels.`}
                   </p>
                   {/* The SAME form the packages screen uses, mounted here.

@@ -358,7 +358,7 @@ export default function CampaignRoster({
 
                 {/* Deal / deliverables */}
                 <div className="t-body" style={{ fontSize: 13.5, color: 'var(--ink-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {deal.deliverables || '—'}
+                  {deal.deliverables || '-'}
                 </div>
 
                 {/* Stage */}

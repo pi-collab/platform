@@ -54,14 +54,14 @@ export async function submitContact(input: ContactInput): Promise<ContactResult>
     })
 
     if (!isEmailConfigured()) {
-      console.warn('[contact] email not configured — query stored, no notification sent')
+      console.warn('[contact] email not configured, query stored, no notification sent')
       return { status: 'ok' }
     }
 
     const rows: [string, string][] = [
       ['Name', name],
       ['Email', email],
-      ['Subject', subject || '—'],
+      ['Subject', subject || '-'],
     ]
 
     // 1. Tell the team. Reply-to is the sender so hitting reply just works.

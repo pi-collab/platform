@@ -84,7 +84,7 @@ export async function sendWelcomeEmail({ userId, to, audience, name }: WelcomeAr
       return
     }
     if (!isEmailConfigured()) {
-      console.warn('[welcome] email not configured — no welcome sent')
+      console.warn('[welcome] email not configured, no welcome sent')
       return
     }
 

@@ -6,7 +6,7 @@ import { listRoles } from '@/lib/careers'
 
 export const metadata: Metadata = {
   title: 'Careers',
-  description: 'Open roles at Guapd — building the operating system for creator deals in India.',
+  description: 'Open roles at Guapd, building the operating system for creator deals in India.',
   alternates: { canonical: '/careers' },
 }
 

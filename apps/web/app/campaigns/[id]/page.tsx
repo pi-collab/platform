@@ -258,7 +258,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             <div style={{ paddingLeft: 24, borderLeft: '1px solid var(--hairline)' }}>
               <div className="t-meta">To allocate</div>
               <div className="t-data" style={{ fontSize: 22, marginTop: 9, color: toAllocatePaise != null && toAllocatePaise < 0 ? '#dc2626' : undefined }}>
-                {toAllocatePaise != null ? (toAllocatePaise < 0 ? `−${formatINR(Math.abs(toAllocatePaise))}` : formatINR(toAllocatePaise)) : '—'}
+                {toAllocatePaise != null ? (toAllocatePaise < 0 ? `−${formatINR(Math.abs(toAllocatePaise))}` : formatINR(toAllocatePaise)) : '-'}
               </div>
             </div>
           </div>

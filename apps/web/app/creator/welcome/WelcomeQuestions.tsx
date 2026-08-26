@@ -172,7 +172,7 @@ export default function WelcomeQuestions({ questions }: { questions: Question[] 
             <h2 className="wq-ask">
               Anything else you&rsquo;d like us to know?
             </h2>
-            <p className="wq-ask__sub">Optional — but we read every one of these.</p>
+            <p className="wq-ask__sub">Optional, but we read every one of these.</p>
             <textarea
               className="wq-textarea"
               value={anythingElse}

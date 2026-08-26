@@ -145,9 +145,9 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     totalFollowers: formatStat(totalFollowers),
     engagementRate: `${stats.engagement_rate || 6.4}%`,
     avgViews: formatStat(stats.avg_views || 340000),
-    monthlyReach: stats.monthly_reach || '—',
-    repeatBrands: stats.repeat_brands || '—',
-    avgDealValue: stats.avg_deal_value || '—',
+    monthlyReach: stats.monthly_reach || '-',
+    repeatBrands: stats.repeat_brands || '-',
+    avgDealValue: stats.avg_deal_value || '-',
     platforms,
     audience: {
       ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,

@@ -842,7 +842,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div>
                                   <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>v{d.version}</span>
-                                  {d.note && <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}> &mdash; {d.note}</span>}
+                                  {d.note && <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>, {d.note}</span>}
                                 </div>
                                 <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{formatDate(d.created_at)}</span>
                               </div>

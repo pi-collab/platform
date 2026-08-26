@@ -193,12 +193,12 @@ export function AddonRatesEditor({ platform, handle, initial }: {
               </div>
             )}
             {mode === 'percent' && (
-              <span className="pk-hint">Charged on each deliverable&apos;s own price — 10% is &#8377;6,000 on a &#8377;60,000 Reel.</span>
+              <span className="pk-hint">Charged on each deliverable&apos;s own price, 10% is &#8377;6,000 on a &#8377;60,000 Reel.</span>
             )}
           </div>
 
           <div className="pk-field">
-            <label className="pk-label">Boosting &mdash; 30 day rate</label>
+            <label className="pk-label">Boosting, 30 day rate</label>
             <div className="pk-addons-input">
               <span className="pk-addons-prefix">&#8377;</span>
               <input
@@ -377,7 +377,7 @@ export default function PackagesClient({
         <div className="pk-card pk-empty">
           <h2 className="pk-empty-title">Add a channel first</h2>
           <p className="pk-empty-body">
-            A package is priced for one channel — a Reel on your Instagram, a video on
+            A package is priced for one channel: a Reel on your Instagram, a video on
             your YouTube. Connect a channel and your rate card opens up.
           </p>
           <Link href="/creator/settings?tab=profile" className="pk-btn pk-btn-primary">
@@ -470,7 +470,7 @@ export default function PackagesClient({
                   <div className="pk-row-type">{row.product_type}</div>
                   <div className="pk-row-desc">
                     {row.platform} &middot; @{row.handle.replace(/^@/, '')}
-                    {row.description ? ` — ${row.description}` : ''}
+                    {row.description ? `, ${row.description}` : ''}
                   </div>
                 </div>
                 <div className="pk-row-price">
@@ -748,12 +748,12 @@ function titleCase(s: string) {
 function previewText(mode: PriceMode, price: string, priceMax: string): string {
   if (mode === 'on_request') return 'On request'
   const n = Number(price)
-  if (!n) return '—'
+  if (!n) return '-'
   const fmt = (v: number) => `₹${v.toLocaleString('en-IN')}`
   if (mode === 'from') return `From ${fmt(n)}`
   if (mode === 'range') {
     const m = Number(priceMax)
-    return m > n ? `${fmt(n)}–${fmt(m)}` : '—'
+    return m > n ? `${fmt(n)}–${fmt(m)}` : '-'
   }
   return fmt(n)
 }

@@ -163,7 +163,7 @@ export default function CreatorDashboardEmptyDesktop({
               <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 'clamp(30px,4vw,44px) 0'}}>
                 <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', borderRadius: '16px', background: '#F5F7FA', border: '1px solid var(--line)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M2 13h20" /></svg></span>
                 <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '16px', marginTop: '16px', color: 'var(--ink)'}}>No deals yet</div>
-                <p style={{margin: '6px 0 0', fontSize: '13.5px', color: 'var(--wg-500)', maxWidth: '360px', lineHeight: '1.5'}}>Deals you agree with brands will show up here — from first offer to final payment.</p>
+                <p style={{margin: '6px 0 0', fontSize: '13.5px', color: 'var(--wg-500)', maxWidth: '360px', lineHeight: '1.5'}}>Deals you agree with brands will show up here, from first offer to final payment.</p>
               </div>
             </section>
 
@@ -189,15 +189,15 @@ export default function CreatorDashboardEmptyDesktop({
                 <div style={{display: 'flex', flexDirection: 'column', gap: '0', marginTop: '22px'}}>
                   <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', padding: '13px 0', borderTop: '1px solid var(--sec)'}}>
                     <span style={{fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--wg-600)'}}>On-time delivery</span>
-                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>—</span>
+                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>-</span>
                   </div>
                   <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', padding: '13px 0', borderTop: '1px solid var(--sec)'}}>
                     <span style={{fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--wg-600)'}}>Avg response</span>
-                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>—</span>
+                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>-</span>
                   </div>
                   <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px', padding: '13px 0', borderTop: '1px solid var(--sec)'}}>
                     <span style={{fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--wg-600)'}}>Completion rate</span>
-                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>—</span>
+                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: '700', color: 'var(--wg-400)', letterSpacing: '-0.02em'}}>-</span>
                   </div>
                 </div>
               </div>
@@ -226,7 +226,7 @@ export default function CreatorDashboardEmptyDesktop({
                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 'clamp(34px,4vw,52px) 0'}}>
                   <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', borderRadius: '16px', background: '#F5F7FA', border: '1px solid var(--line)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V2" /><path d="M9 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2h-1" /><path d="M12 12v6" /><path d="M9 15h6" /></svg></span>
                   <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '16px', marginTop: '16px', color: 'var(--ink)'}}>No brand deals yet</div>
-                  <p style={{margin: '6px 0 0', fontSize: '13.5px', color: 'var(--wg-500)', maxWidth: '380px', lineHeight: '1.55'}}>Set up your shopfront so brands can discover you and send briefs — the brands you work with will collect here.</p>
+                  <p style={{margin: '6px 0 0', fontSize: '13.5px', color: 'var(--wg-500)', maxWidth: '380px', lineHeight: '1.55'}}>Set up your shopfront so brands can discover you and send briefs, the brands you work with will collect here.</p>
                   <a href="/creator/storefront" className="neonbtn" style={{marginTop: '18px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--ink)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: '#fff', boxShadow: '0 8px 16px -8px rgba(24,28,36,.35)'}}>Set up your shopfront<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export default function CreatorDashboardEmptyDesktop({
               <div style={{position: 'relative', zIndex: '2', display: 'grid', gridTemplateColumns: '1.3fr .9fr', gap: 'clamp(24px,3vw,48px)', alignItems: 'center', width: '100%'}}>
                 <div>
                   <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', lineHeight: '1.0', fontSize: 'clamp(38px,4.8vw,44px)', margin: '0', color: 'var(--ink)'}}>Brand–creator deals<br />without the <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400', letterSpacing: '0', fontSize: '1.12em'}}>chaos</span>.</h2>
-                  <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: '400px'}}>One home for offers, contracts, content, and payments — so you can focus on making, not chasing.</p>
+                  <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: '400px'}}>One home for offers, contracts, content, and payments, so you can focus on making, not chasing.</p>
                   <a href="/creator/storefront" className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '26px', padding: '13px 22px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: 'var(--lime-950)', boxShadow: '0 14px 26px -12px rgba(180,215,50,.7)'}}>Share your shopfront<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
                 </div>
                 <div style={{position: 'relative', aspectRatio: '1/1', width: '100%', maxWidth: '280px', justifySelf: 'center'}}></div>

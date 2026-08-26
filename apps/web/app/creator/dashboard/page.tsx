@@ -429,9 +429,9 @@ export default async function CreatorDashboardPage({
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--wg-500)' }}>deals completed</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: 22 }}>
-                <TrackRow label="On-time delivery" value={completedDeals.length > 0 ? '100%' : '—'} />
-                <TrackRow label="Avg response" value={completedDeals.length > 0 ? '~4h' : '—'} />
-                <TrackRow label="Completion rate" value={completedDeals.length > 0 ? '100%' : '—'} />
+                <TrackRow label="On-time delivery" value={completedDeals.length > 0 ? '100%' : '-'} />
+                <TrackRow label="Avg response" value={completedDeals.length > 0 ? '~4h' : '-'} />
+                <TrackRow label="Completion rate" value={completedDeals.length > 0 ? '100%' : '-'} />
               </div>
             </div>
           </section>
@@ -447,9 +447,9 @@ export default async function CreatorDashboardPage({
             </div>
           </div>
           <div className="reachstat" style={{ border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
-            <ReachCell label="Followers" value="—" />
-            <ReachCell label="Engagement" value="—" border />
-            <ReachCell label="Avg views" value="—" border />
+            <ReachCell label="Followers" value="-" />
+            <ReachCell label="Engagement" value="-" border />
+            <ReachCell label="Avg views" value="-" border />
           </div>
         </section>
 

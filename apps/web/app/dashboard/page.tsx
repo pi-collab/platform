@@ -513,21 +513,21 @@ export default async function DashboardPage({
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const }}>
               <div className="t-meta" style={{ color: 'var(--meta)' }}>Total reach</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>—</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
               </div>
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
             </div>
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
               <div className="t-meta" style={{ color: 'var(--meta)' }}>Avg engagement</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>—</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
               </div>
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
             </div>
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
               <div className="t-meta" style={{ color: 'var(--meta)' }}>Return on spend</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>—</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
               </div>
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
             </div>
@@ -588,7 +588,7 @@ export default async function DashboardPage({
             Creator campaigns<br />without the <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.05em' }}>chaos</span>.
           </h2>
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14.5, color: '#5C5E52', lineHeight: 1.6, margin: '18px 0 0', maxWidth: 440, position: 'relative', zIndex: 1 }}>
-            One home for offers, contracts, content and payments &mdash; so you can focus on the work, not the chasing.
+            One home for offers, contracts, content and payments, so you can focus on the work, not the chasing.
           </p>
           <Link href="/campaigns" style={{ ...neonBtnStyle, marginTop: 26, position: 'relative', zIndex: 1 }}>
             Plan your next campaign

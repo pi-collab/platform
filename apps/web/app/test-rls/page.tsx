@@ -48,7 +48,7 @@ export default async function TestRLSPage() {
   // ── 2. users table returns ONLY own row ───────────────────────
   const { data: allUsers } = await supabase.from('users').select('id')
   results.push(check(
-    '2. users table — only own row visible (no other users)',
+    '2. users table, only own row visible (no other users)',
     '1 row max',
     (allUsers?.length ?? 0) <= 1,
     `rows returned: ${allUsers?.length ?? 0}`,
@@ -57,7 +57,7 @@ export default async function TestRLSPage() {
   // ── 3. Own brand visible (if onboarded) ───────────────────────
   const { data: brands } = await supabase.from('brands').select('id, name')
   results.push(check(
-    '3. brands table — 0 or 1 row (own brand only)',
+    '3. brands table, 0 or 1 row (own brand only)',
     '0 or 1 row',
     (brands?.length ?? 0) <= 1,
     `rows: ${JSON.stringify(brands)}`,
@@ -67,7 +67,7 @@ export default async function TestRLSPage() {
   const { data: bm } = await supabase.from('brand_members').select('id, brand_id')
   const brandIds = Array.from(new Set(bm?.map(r => r.brand_id) ?? []))
   results.push(check(
-    '4. brand_members — only rows for own brand',
+    '4. brand_members, only rows for own brand',
     '0 or 1 distinct brand_id',
     brandIds.length <= 1,
     `distinct brand_ids: ${JSON.stringify(brandIds)}`,
@@ -79,7 +79,7 @@ export default async function TestRLSPage() {
   const myBrandId = brands?.[0]?.id ?? null
   const allDealsOwnBrand = dealBrandIds.every(id => id === myBrandId)
   results.push(check(
-    '5. deals — only own brand\'s deals visible',
+    '5. deals, only own brand\'s deals visible',
     'all rows have own brand_id',
     deals?.length === 0 || allDealsOwnBrand,
     `deal brand_ids: ${JSON.stringify(dealBrandIds)}, my brand: ${myBrandId}`,
@@ -90,7 +90,7 @@ export default async function TestRLSPage() {
   const { data: msgs } = await supabase.from('messages').select('id, deal_id')
   const allMsgsOwnDeal = (msgs ?? []).every(m => dealIds.has(m.deal_id))
   results.push(check(
-    '6. messages — only on own deals',
+    '6. messages, only on own deals',
     'all message deal_ids in own deals',
     allMsgsOwnDeal,
     `message deal_ids outside own deals: ${(msgs ?? []).filter(m => !dealIds.has(m.deal_id)).length}`,
@@ -100,7 +100,7 @@ export default async function TestRLSPage() {
   const { data: delivs } = await supabase.from('deliverables').select('id, deal_id')
   const allDelivsOwnDeal = (delivs ?? []).every(d => dealIds.has(d.deal_id))
   results.push(check(
-    '7. deliverables — only on own deals',
+    '7. deliverables, only on own deals',
     'all deliverable deal_ids in own deals',
     allDelivsOwnDeal,
     `outside own deals: ${(delivs ?? []).filter(d => !dealIds.has(d.deal_id)).length}`,
@@ -110,7 +110,7 @@ export default async function TestRLSPage() {
   const { data: pmts } = await supabase.from('payments').select('id, deal_id')
   const allPmtsOwnDeal = (pmts ?? []).every(p => dealIds.has(p.deal_id))
   results.push(check(
-    '8. payments — only on own deals',
+    '8. payments, only on own deals',
     'all payment deal_ids in own deals',
     allPmtsOwnDeal,
     `outside own deals: ${(pmts ?? []).filter(p => !dealIds.has(p.deal_id)).length}`,
@@ -120,7 +120,7 @@ export default async function TestRLSPage() {
   const { data: evts } = await supabase.from('events').select('id, deal_id')
   const allEvtsOwnDeal = (evts ?? []).every(e => dealIds.has(e.deal_id ?? ''))
   results.push(check(
-    '9. events — only on own deals',
+    '9. events, only on own deals',
     'all event deal_ids in own deals',
     allEvtsOwnDeal,
     `outside own deals: ${(evts ?? []).filter(e => !dealIds.has(e.deal_id ?? '')).length}`,
@@ -133,10 +133,10 @@ export default async function TestRLSPage() {
     detail:     {},
   })
   results.push(check(
-    '10. Direct INSERT into events — must be rejected',
+    '10. Direct INSERT into events, must be rejected',
     'RLS error / permission denied',
     evtInsertErr !== null,
-    evtInsertErr?.message ?? 'NO ERROR — FAIL: direct insert succeeded',
+    evtInsertErr?.message ?? 'NO ERROR, FAIL: direct insert succeeded',
   ))
 
   // ── 11. creators — only vetted ones visible ───────────────────
@@ -146,7 +146,7 @@ export default async function TestRLSPage() {
     c => !c.is_vetted && c.user_id !== ownUser?.id
   )
   results.push(check(
-    '11. creators — no unvetted rows visible (unless own profile)',
+    '11. creators, no unvetted rows visible (unless own profile)',
     'no unvetted creators returned',
     !anyUnvetted,
     `unvetted rows (excluding own): ${(creatorsData ?? []).filter(c => !c.is_vetted && c.user_id !== ownUser?.id).length}`,
@@ -161,7 +161,7 @@ export default async function TestRLSPage() {
         RLS Adversarial Tests
       </h1>
       <p style={{ fontSize: '0.8125rem', color: '#9B8E82', marginBottom: '1.5rem' }}>
-        Logged in as: {user.email} — {pass} pass / {fail} fail
+        Logged in as: {user.email} / {pass} pass / {fail} fail
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>

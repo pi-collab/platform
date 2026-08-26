@@ -293,9 +293,9 @@ export default async function DealDetailPage({ params }: { params: { id: string 
             </span>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
               {deal.status === 'negotiating' && `Awaiting ${firstName}'s response`}
-              {deal.status === 'agreed' && 'Terms agreed \u2014 awaiting deliverable'}
-              {deal.status === 'delivered' && 'Deliverable submitted \u2014 your review is needed'}
-              {deal.status === 'revision' && `Revision requested \u2014 ${firstName} is working on changes`}
+              {deal.status === 'agreed' && 'Terms agreed, awaiting deliverable'}
+              {deal.status === 'delivered' && 'Deliverable submitted, your review is needed'}
+              {deal.status === 'revision' && `Revision requested, ${firstName} is working on changes`}
               {deal.status === 'approved' && !invoice && 'Deliverable approved'}
               {deal.status === 'approved' && invoice && (
                 <>Invoice sent {invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}{invoice.due_date && <> &middot; pay by <b style={{ color: 'var(--ink)' }}>{new Date(invoice.due_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b></>}</>

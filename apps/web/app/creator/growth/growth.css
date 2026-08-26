@@ -153,6 +153,109 @@
 
 .gr-input:focus { outline: none; border-color: var(--neon-deep, #C9EB3C); box-shadow: 0 0 0 3px rgba(218, 254, 12, .18); }
 
+/* The closing free-text question. Same field as .gr-input, given room to hold a
+   few sentences and locked to vertical resize so it cannot be dragged wider
+   than the card on desktop. */
+.gr-ask__sub {
+  margin: -12px 0 16px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-faint, #878D99);
+}
+
+.gr-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink, #12151C);
+  resize: vertical;
+  min-height: 104px;
+}
+
+.gr-textarea:focus { outline: none; border-color: var(--neon-deep, #C9EB3C); box-shadow: 0 0 0 3px rgba(218, 254, 12, .18); }
+
+/* ── Tiers ─────────────────────────────────────────────────────────────────
+   Guapd Growth (where they are) above Guapd Deals (what it leads to). Deals is
+   shown dimmed rather than hidden, so the ladder is visible from the bottom
+   rung. */
+
+.gr-tiers { margin-top: 14px; }
+
+.gr-tiers__label {
+  margin: 0 0 9px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #878D99);
+}
+
+.gr-tier {
+  padding: 15px 17px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+}
+
+.gr-tier + .gr-tier { margin-top: 9px; }
+
+.gr-tier--current { border-color: var(--neon-deep, #C9EB3C); box-shadow: 0 0 0 3px rgba(218, 254, 12, .14); }
+.gr-tier--locked  { background: rgba(24, 28, 36, .025); }
+
+.gr-tier__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gr-tier__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15.5px;
+  letter-spacing: -0.015em;
+  color: var(--ink, #12151C);
+}
+
+.gr-tier--locked .gr-tier__name { color: var(--ink-faint, #878D99); }
+.gr-tier__lock { flex: none; }
+
+.gr-tier__pill {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.gr-tier__pill--soon   { background: var(--neon, #DAFE0C); color: var(--ink, #12151C); }
+.gr-tier__pill--locked { background: rgba(24, 28, 36, .07); color: var(--ink-faint, #878D99); }
+
+.gr-tier__body {
+  margin: 7px 0 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft, #5A6172);
+}
+
+.gr-tier--locked .gr-tier__body { color: var(--ink-faint, #878D99); }
+
 .gr-error {
   margin: 16px 0 0;
   padding: 10px 13px;

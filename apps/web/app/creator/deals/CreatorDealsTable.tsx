@@ -504,7 +504,7 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
                 {/* Price */}
                 <div style={{ flexShrink: 0, textAlign: 'right', minWidth: 150, paddingLeft: 'clamp(16px,2vw,26px)', borderLeft: '1px solid var(--border-hairline, #EAEAE3)' }}>
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 24, letterSpacing: '-0.03em', color: 'var(--ink)' }}>
-                    {d.price_paise != null && d.price_paise > 0 ? formatRupees(d.price_paise) : '\u2014'}
+                    {d.price_paise != null && d.price_paise > 0 ? formatRupees(d.price_paise) : ', '}
                   </div>
                 </div>
 

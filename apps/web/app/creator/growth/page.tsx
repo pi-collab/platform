@@ -31,7 +31,6 @@ export default async function GrowthPage() {
 
   return (
     <GrowthHome
-      firstName={(creator.full_name ?? '').split(' ')[0] || 'there'}
       quizDone={Boolean(quiz)}
       profile={{
         fullName: creator.full_name ?? '',

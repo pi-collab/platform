@@ -78,8 +78,8 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                     <td style={tdStyle}>
                       <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link>
                     </td>
-                    <td style={tdStyle} data-ph-mask>{b.contact_email || '—'}</td>
-                    <td style={tdStyle} data-ph-mask>{b.contact_phone || '—'}</td>
+                    <td style={tdStyle} data-ph-mask>{b.contact_email || '-'}</td>
+                    <td style={tdStyle} data-ph-mask>{b.contact_phone || '-'}</td>
                     <td style={tdStyle}>
                       <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
                     </td>
@@ -115,7 +115,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
               {brands.map((b) => (
                 <tr key={b.id}>
                   <td style={tdStyle}><strong>{b.name}</strong></td>
-                  <td style={tdStyle}>{b.category || '—'}</td>
+                  <td style={tdStyle}>{b.category || '-'}</td>
                   <td style={tdStyle}>
                     <span style={statusBadge(b.brand_status)}>{b.brand_status}</span>
                   </td>
@@ -124,13 +124,13 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                       <a href={b.website} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '0.8125rem' }}>
                         {b.website}
                       </a>
-                    ) : '—'}
+                    ) : '-'}
                   </td>
                   <td style={tdStyle}>
-                    {b.contact_name || '—'}
+                    {b.contact_name || '-'}
                     {b.contact_email && <div style={{ fontSize: '0.75rem', color: '#888' }}>{b.contact_email}</div>}
                   </td>
-                  <td style={tdStyle} data-ph-mask>{b.contact_phone || '—'}</td>
+                  <td style={tdStyle} data-ph-mask>{b.contact_phone || '-'}</td>
                   <td style={tdStyle}>{new Date(b.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

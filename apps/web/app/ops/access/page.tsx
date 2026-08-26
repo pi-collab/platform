@@ -54,7 +54,7 @@ export default async function OpsAccessPage() {
           {emails.map((email, i) => (
             <tr key={email}>
               <td style={tdStyle}>{i + 1}</td>
-              <td style={tdStyle}><strong>{nameMap[email.toLowerCase()] ?? '—'}</strong></td>
+              <td style={tdStyle}><strong>{nameMap[email.toLowerCase()] ?? '-'}</strong></td>
               <td style={tdStyle}>{email}</td>
               <td style={tdStyle}>
                 <span style={{

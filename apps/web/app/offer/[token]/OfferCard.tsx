@@ -43,7 +43,7 @@ type ViewState =
   | { step: 'code'; masked: string }
 
 function formatINR(paise: number | null): string {
-  if (paise == null) return '—'
+  if (paise == null) return '-'
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
 }
 
@@ -149,7 +149,7 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
   ].filter(Boolean) as string[]
 
   const rows: [string, string][] = [
-    ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '—'],
+    ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '-'],
     ['Timeline', formatDate(deal.timeline_date)],
     ['Revisions', revisionLabel(revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise))],
     ['Usage rights', deal.usage_rights || 'To be agreed'],

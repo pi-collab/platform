@@ -207,7 +207,7 @@ export default function StorefrontEditor({ initial, creatorName }: Props) {
         <p style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 16, lineHeight: 1.5 }}>
           {slugLocked
             ? 'Your URL is live. It can\u2019t be changed after publishing.'
-            : 'Choose your URL carefully \u2014 you\u2019ll put this link in your bio. It can\u2019t be changed once your shopfront is live.'}
+            : 'Choose your URL carefully, you\u2019ll put this link in your bio. It can\u2019t be changed once your shopfront is live.'}
         </p>
 
         <div style={{

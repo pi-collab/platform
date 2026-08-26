@@ -149,19 +149,19 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
           How to reach them
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 1.5rem', fontSize: '0.8125rem' }}>
-          <span data-ph-mask>Phone (signup): <strong>{creator.phone || '\u2014'}</strong></span>
+          <span data-ph-mask>Phone (signup): <strong>{creator.phone || ', '}</strong></span>
           <span data-ph-mask>
-            WhatsApp: <strong>{contact.whatsapp || '\u2014'}</strong>
+            WhatsApp: <strong>{contact.whatsapp || ', '}</strong>
             {contact.whatsapp && !contact.wantsWhatsapp && <span style={{ color: '#92400e' }}> (opted out)</span>}
           </span>
           <span data-ph-mask>
-            Email: <strong>{contact.notifyEmail || contact.loginEmail || '\u2014'}</strong>
+            Email: <strong>{contact.notifyEmail || contact.loginEmail || ', '}</strong>
             {(contact.notifyEmail || contact.loginEmail) && !contact.wantsEmail && <span style={{ color: '#92400e' }}> (opted out)</span>}
           </span>
         </div>
         {!contact.wantsEmail && !contact.wantsWhatsapp && (
           <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#92400e' }}>
-            No notification channel opted into — platform notifications will not reach them.
+            No notification channel opted into, so platform notifications will not reach them.
           </p>
         )}
       </div>
@@ -183,7 +183,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
 
         {!shopfront ? (
           <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280' }}>
-            Not started. Nothing for a brand to look at yet — this is usually the
+            Not started. Nothing for a brand to look at yet, and this is usually the
             first thing worth nudging.
           </p>
         ) : (
@@ -283,7 +283,7 @@ const appealHint: React.CSSProperties = {
 function Filled({ label, ok }: { label: string; ok: boolean }) {
   return (
     <span style={{ color: ok ? '#166534' : '#9ca3af' }}>
-      {ok ? '✓' : '—'} {label}
+      {ok ? '✓' : '-'} {label}
     </span>
   )
 }

@@ -83,7 +83,7 @@ const DISPLAY = {
 }
 
 function formatDate(d: string | null) {
-  if (!d) return '—'
+  if (!d) return '-'
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
@@ -234,7 +234,7 @@ export default function DealAnalyticsClient(props: DealAnalyticsProps) {
 
         {/* Title */}
         <h1 style={{ ...DISPLAY, fontSize: 'clamp(28px,3.8vw,38px)', lineHeight: 1.08, margin: '18px 0 0' }}>
-          Deal analytics &mdash; {brandName} <span style={{ color: 'var(--neon-deep)' }}>&times; {creatorName}</span>
+          Deal analytics, {brandName} <span style={{ color: 'var(--neon-deep)' }}>&times; {creatorName}</span>
         </h1>
 
         {/* Bottom row */}

@@ -635,7 +635,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5 }}>
-            {(c.worked_with?.length ?? 0) > 0 ? `${c.worked_with.length} brands` : '—'}
+            {(c.worked_with?.length ?? 0) > 0 ? `${c.worked_with.length} brands` : '-'}
           </div>
           <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>Worked with</div>
         </div>
@@ -645,7 +645,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginTop: 14 }}>
         <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)' }}>Starting rate</span>
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em' }}>
-          {low ? `${formatRupees(low)}+` : '—'}
+          {low ? `${formatRupees(low)}+` : '-'}
         </span>
       </div>
 

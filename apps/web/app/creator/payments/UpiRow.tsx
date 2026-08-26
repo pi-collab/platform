@@ -122,7 +122,7 @@ export default function UpiRow({ initialUpiId }: { initialUpiId: string | null }
       )}
 
       <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--wg-400)', lineHeight: 1.5 }}>
-        This is where your payouts are sent. Check it carefully — money sent to a
+        This is where your payouts are sent. Check it carefully: money sent to a
         wrong UPI ID cannot be recovered.
       </p>
 

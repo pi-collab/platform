@@ -59,9 +59,9 @@ export default async function OpsDealsPage({ searchParams }: { searchParams: { p
             </thead>
             <tbody>
               {deals.map((d) => {
-                const brand = (d.brands as any)?.name ?? '—'
-                const creator = (d.creators as any)?.full_name ?? '—'
-                const price = d.price_paise ? `\u20B9${(d.price_paise / 100).toLocaleString('en-IN')}` : '—'
+                const brand = (d.brands as any)?.name ?? '-'
+                const creator = (d.creators as any)?.full_name ?? '-'
+                const price = d.price_paise ? `\u20B9${(d.price_paise / 100).toLocaleString('en-IN')}` : '-'
                 const sc = STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
 
                 return (

@@ -92,7 +92,7 @@ export default function PrivacyPolicyPage() {
           Bawana, Delhi, North West Delhi &ndash; 110039, Delhi, India.
         </p>
         <p style={pStyle}>
-          Grievance Officer / Data protection contact: Palak Jain &mdash;{' '}
+          Grievance Officer / Data protection contact: Palak Jain,{' '}
           <a href="mailto:contact@guapd.com">contact@guapd.com</a>
         </p>
         <p style={pStyle}>
@@ -109,13 +109,13 @@ export default function PrivacyPolicyPage() {
           <strong>Creators:</strong> name, phone number (used for OTP login), email,
           Instagram/YouTube handles and profile links, self-reported audience
           statistics, rate card and pricing, profile photo, content samples uploaded
-          to the platform, PAN (optional &mdash; required only for tax-compliant
+          to the platform, PAN (optional, required only for tax-compliant
           payouts and TDS), deal history, messages sent through the platform, uploaded
           deliverable files.
         </p>
         <p style={pStyle}>
-          <strong>Brands:</strong> name, work email, company name, GSTIN (optional
-          &mdash; required only to issue a GST-compliant invoice), team member names
+          <strong>Brands:</strong> name, work email, company name, GSTIN (optional,
+          required only to issue a GST-compliant invoice), team member names
           and emails, deal history, messages, payment status records, subscription
           plan, billing history and invoices.
         </p>
@@ -151,17 +151,17 @@ export default function PrivacyPolicyPage() {
         <p style={pStyle}>
           We process personal data on the basis of your consent, given when you create
           an account and when you take specific actions (publishing a storefront,
-          sending an offer), and for legitimate uses permitted under the DPDP Act
-          &mdash; including performing our contract with you and complying with legal
+          sending an offer), and for legitimate uses permitted under the DPDP Act,
+          including performing our contract with you and complying with legal
           obligations.
         </p>
 
         {/* Public information */}
         <h2 style={h2Style}>Public information</h2>
         <p style={pStyle}>
-          If a creator publishes a storefront, the information on that page &mdash;
-          name, photo, handle, bio, categories, self-reported statistics, and (if the
-          creator enables it) rates and past brand collaborations &mdash; becomes
+          If a creator publishes a storefront, the information on that page
+          (name, photo, handle, bio, categories, self-reported statistics, and, if the
+          creator enables it, rates and past brand collaborations) becomes
           publicly visible to anyone with the link. Publishing is off by default and
           entirely the creator&rsquo;s choice. A brand&rsquo;s name appears on a
           creator&rsquo;s storefront only if that brand has separately opted in to
@@ -173,29 +173,29 @@ export default function PrivacyPolicyPage() {
         <h2 style={h2Style}>Who we share it with</h2>
         <ul style={ulStyle}>
           <li style={liStyle}>
-            <strong>Supabase</strong> &mdash; database, authentication, file storage.
+            <strong>Supabase</strong>: database, authentication, file storage.
             Data hosted in Mumbai, India.
           </li>
           <li style={liStyle}>
-            <strong>Vercel</strong> &mdash; application hosting and delivery.
+            <strong>Vercel</strong>: application hosting and delivery.
           </li>
           <li style={liStyle}>
-            <strong>Razorpay</strong> &mdash; payment and subscription processing.
+            <strong>Razorpay</strong>: payment and subscription processing.
           </li>
           <li style={liStyle}>
-            <strong>Interakt / WhatsApp Business API (Meta)</strong> &mdash; deal
+            <strong>Interakt / WhatsApp Business API (Meta)</strong>: deal
             notifications sent to your phone number.
           </li>
           <li style={liStyle}>
-            <strong>Meta Platforms</strong> &mdash; if you connect an Instagram
+            <strong>Meta Platforms</strong>: if you connect an Instagram
             account, to retrieve your own account statistics.
           </li>
           <li style={liStyle}>
-            <strong>PostHog</strong> &mdash; product analytics and session replay,
+            <strong>PostHog</strong>: product analytics and session replay,
             hosted in the EU (Frankfurt). Only with your consent (see Cookies).
           </li>
           <li style={liStyle}>
-            <strong>Professional advisers and authorities</strong> &mdash; where
+            <strong>Professional advisers and authorities</strong>: where
             required by law, tax, or legal process.
           </li>
         </ul>
@@ -222,8 +222,8 @@ export default function PrivacyPolicyPage() {
           remove your profile, storefront, contact details and uploaded content.
         </p>
         <p style={pStyle}>
-          <strong>We retain records of completed transactions</strong> &mdash; deal
-          terms, invoices, payment status and the associated audit log &mdash; for as
+          <strong>We retain records of completed transactions</strong>: deal
+          terms, invoices, payment status and the associated audit log, for as
           long as required by tax, accounting and legal obligations, and to resolve
           any dispute between the parties to that deal. This is because a deal is an
           agreement between two people: one party cannot erase the shared record of
@@ -248,7 +248,7 @@ export default function PrivacyPolicyPage() {
         {/* Grievance redressal */}
         <h2 style={h2Style}>Grievance redressal</h2>
         <p style={pStyle}>
-          Grievance Officer: Palak Jain &mdash;{' '}
+          Grievance Officer: Palak Jain,{' '}
           <a href="mailto:contact@guapd.com">contact@guapd.com</a>. If you are not
           satisfied with our response, you may escalate to the Data Protection Board
           of India.
@@ -257,15 +257,15 @@ export default function PrivacyPolicyPage() {
         {/* Cookies and analytics */}
         <h2 style={h2Style}>Cookies and analytics</h2>
         <p style={pStyle}>
-          We use essential cookies to keep you signed in &mdash; these are required
+          We use essential cookies to keep you signed in. These are required
           for the platform to work and cannot be switched off. With your consent we
           also use PostHog for product analytics, to understand how the platform is
           used and improve it. Analytics cookies are not set until you accept them,
           and you can change your choice at any time using the link in our footer.
         </p>
         <p style={pStyle}>
-          If you accept analytics, PostHog also records <strong>session replays</strong>
-          &mdash; a reconstruction of how pages were used, such as clicks and
+          If you accept analytics, PostHog also records <strong>session replays</strong>,
+          a reconstruction of how pages were used, such as clicks and
           navigation. What you type is masked: passwords, one-time codes, email and
           phone fields are never captured, and screens showing personal details are
           hidden from recordings. Replays are stored in the EU and are used only to

@@ -9,12 +9,12 @@ import '../creators-mobile.css'
 export const metadata: Metadata = {
   title: 'For creators',
   description:
-    'Get paid on time, keep every deal in one place, and work with brands directly — no agency in the middle.',
+    'Get paid on time, keep every deal in one place, and work with brands directly, no agency in the middle.',
   alternates: { canonical: '/creators' },
   openGraph: {
     title: 'For creators · Guapd',
     description:
-      'Get paid on time, keep every deal in one place, and work with brands directly — no agency in the middle.',
+      'Get paid on time, keep every deal in one place, and work with brands directly, no agency in the middle.',
     url: '/creators',
     // A page-level openGraph REPLACES the layout's rather than merging,
     // so the image has to be repeated here or the card renders bare.

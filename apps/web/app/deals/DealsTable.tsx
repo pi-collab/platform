@@ -597,7 +597,7 @@ function DealCard({ deal: d }: { deal: Deal }) {
             </div>
           ) : (
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>
-              &mdash;
+              -
             </div>
           )}
         </div>

@@ -2045,7 +2045,8 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       rejection branch. Appealing a non-rejection would junk the appeal queue
 - [ ] A non-growth creator who types /creator/growth is redirected away
 - [ ] WhatsApp: the same neutral status_update; the link routes by status
-- [ ] Email: "You're in Guapd Growth" — positive, not a softened rejection
+- [ ] Email: "You've been approved for Guapd Growth" — positive, not a softened
+      rejection. Page heading and email heading say the same thing
 
 **The waiting message appears ONLY after the quiz**
 - [ ] Before answering: neither the page nor the email says the tools are
@@ -2055,6 +2056,22 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       built
 - [ ] The Growth EMAIL does not say "coming soon" either
 
+**Tiers (Dashboard tab, after the quiz)**
+- [ ] Two tiers listed: Guapd Growth marked "Coming soon", Guapd Deals marked
+      "Locked" with a lock icon
+- [ ] Guapd Deals is SHOWN dimmed, not hidden — the point is that the creator
+      can see the rung above them and what reaches it
+- [ ] Neither tier is a link. Nothing here is clickable yet
+
+**Copy rules that apply everywhere**
+- [ ] Never "Growth" on its own in anything a person reads — always "Guapd
+      Growth". Covers the page, the email, and the ops buttons
+- [ ] Never "first brand deals" — just "brand deals"
+- [ ] No em dashes in any email, WhatsApp message or on-site copy, including
+      `&mdash;` entities. Code comments are out of scope
+- [ ] A lone dash used as a "no value" placeholder (ops tables, empty stats) is
+      a hyphen, NOT a comma — a blanket em-dash sweep turns these into ", "
+
 **Tabs**
 - [ ] Two tabs only, Dashboard and Profile — no Deals, Payments or Shopfront,
       which would bounce back to this page
@@ -2063,12 +2080,27 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       sign-in page, which would offer to set up a brand for them
 
 **Quiz**
-- [ ] Three questions, one per screen, all required; last one reveals a text box
-      for "Other"
+- [ ] FOUR questions, one per screen. Q1 posting frequency, Q2 goal, Q3 niche,
+      Q4 "Anything else you'd like us to know?"
+- [ ] Q1-Q3 are required: Continue stays disabled until an option is chosen
+- [ ] Q4 is OPTIONAL — Finish is enabled with the box empty, and an empty box
+      stores null rather than an empty string
+- [ ] Q3 "Other" still reveals its own text box
+- [ ] Progress reads "1 of 4" through "4 of 4"
 - [ ] Shows ONCE — gated on the response row existing, not a separate flag
 - [ ] Submitting twice (double-tap, stale tab) is not an error
 - [ ] An unknown code is refused by the CHECK
 - [ ] UPDATE and DELETE are denied by RLS
+
+**Migration 0490 (Q1 replaced, Q4 added)**
+- [ ] Applied to staging BEFORE the deploy: the action inserts
+      posting_frequency, so an unmigrated DB fails every submission
+- [ ] Rows answering the OLD Q1 are deleted, not mapped. A follower band cannot
+      become a posting cadence, and deleting re-opens the quiz for them —
+      correct, since they have not answered the question now asked
+- [ ] Re-running the migration deletes nothing (no row has a null frequency)
+- [ ] follower_band is dropped from the QUIZ table only. creators.follower_band
+      (0474) is a different column and the ops band filter still works
 
 **growth -> deals_approved**
 - [ ] Promoting a growth creator sends the normal approval email AND queues the

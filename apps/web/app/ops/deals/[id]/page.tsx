@@ -42,7 +42,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
 
   if (!deal) notFound()
 
-  const brand = (deal.brands as any)?.name ?? '—'
+  const brand = (deal.brands as any)?.name ?? '-'
   const creator = (deal.creators as any) ?? null
   const sc = STATUS_COLORS[deal.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
   const extraRevisions = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
@@ -52,7 +52,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const feePaise = deal.price_paise ? Math.round(deal.price_paise * feePercent / 100) : 0
   const brandPays = deal.price_paise ? (feeMode === 'on_top' ? deal.price_paise + feePaise : deal.price_paise) + overage : 0
   const creatorReceives = deal.price_paise ? (feeMode === 'deducted' ? deal.price_paise - feePaise : deal.price_paise) + overage : 0
-  const price = deal.price_paise ? `\u20B9${(brandPays / 100).toLocaleString('en-IN')}` : '—'
+  const price = deal.price_paise ? `\u20B9${(brandPays / 100).toLocaleString('en-IN')}` : '-'
 
   return (
     <div>
@@ -81,7 +81,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
                 {' · '}
               </>
             )}
-            {brand} &rarr; {creator?.full_name ?? '—'}{creator?.handle ? ` (${creator.handle})` : ''}
+            {brand} &rarr; {creator?.full_name ?? '-'}{creator?.handle ? ` (${creator.handle})` : ''}
           </p>
         </div>
         <p style={{ fontFamily: 'monospace', fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>{price}</p>
@@ -202,7 +202,7 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   return (
     <div>
       <p style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888', margin: '0 0 0.1rem' }}>{label}</p>
-      <p style={{ fontSize: '0.8125rem', color: value ? '#111' : '#ccc', margin: 0 }}>{value || '\u2014'}</p>
+      <p style={{ fontSize: '0.8125rem', color: value ? '#111' : '#ccc', margin: 0 }}>{value || ', '}</p>
     </div>
   )
 }

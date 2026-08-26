@@ -73,7 +73,7 @@ export async function checkDomainHealth(website: string | null | undefined): Pro
   const resolves = addrs.length > 0
 
   const notes: string[] = []
-  if (!resolves) notes.push('The domain does not resolve — no A record.')
+  if (!resolves) notes.push('The domain does not resolve, no A record.')
   if (resolves && !https) notes.push('No working HTTPS. The site is either unfinished or parked.')
   if (parked) notes.push('Nameservers look like a registrar parking page, not real hosting.')
   if (!mx.length) notes.push('No MX record, so the domain is not set up to receive mail.')

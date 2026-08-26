@@ -150,11 +150,11 @@ async function notifyOpsOnce(brandId: string): Promise<void> {
 
   const to = process.env.OPS_NOTIFY_EMAIL
   if (!to) {
-    console.warn('[send-gate] OPS_NOTIFY_EMAIL unset — skipping ops notification')
+    console.warn('[send-gate] OPS_NOTIFY_EMAIL unset, skipping ops notification')
     return
   }
   if (!isEmailConfigured()) {
-    console.warn('[send-gate] email not configured — skipping ops notification')
+    console.warn('[send-gate] email not configured, skipping ops notification')
     return
   }
 

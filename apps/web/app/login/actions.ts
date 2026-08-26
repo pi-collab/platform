@@ -218,7 +218,7 @@ async function brandAccountExists(email: string): Promise<boolean> {
     return false
   }
   if (list.users.length >= 1000) {
-    console.warn('[auth] brandAccountExists hit the 1000-user page cap — needs an indexed lookup')
+    console.warn('[auth] brandAccountExists hit the 1000-user page cap, needs an indexed lookup')
   }
   const target = email.trim().toLowerCase()
   return list.users.some((u: { email?: string }) => u.email?.toLowerCase() === target)

@@ -122,7 +122,7 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
 
   const res = await sendAccountEmail({
     to: [to],
-    subject: `Application: ${role.title} — ${name}`,
+    subject: `Application: ${role.title}, ${name}`,
     html,
     text,
     // Replying to the notification replies to the applicant, which is what

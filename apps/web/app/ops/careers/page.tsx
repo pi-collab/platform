@@ -47,7 +47,7 @@ export default async function OpsCareersPage() {
               {roles.map((r) => (
                 <tr key={r.id}>
                   <td style={td}><strong>{r.title}</strong></td>
-                  <td style={td}>{r.team || '—'}</td>
+                  <td style={td}>{r.team || '-'}</td>
                   <td style={td}>
                     {r.isPublished
                       ? <a href={`/careers/${r.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>/careers/{r.slug}</a>

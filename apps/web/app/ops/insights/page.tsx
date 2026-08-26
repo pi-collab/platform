@@ -42,7 +42,7 @@ export default async function OpsInsightsPage() {
   if (total > 0) {
     const { data: creators } = await admin
       .from('creators').select('id, full_name').in('id', responses.map(r => r.creator_id))
-    for (const c of creators ?? []) names[c.id] = c.full_name ?? '—'
+    for (const c of creators ?? []) names[c.id] = c.full_name ?? '-'
   }
 
   const freeText = responses.filter(r => r.pain_other || r.anything_else)
@@ -59,7 +59,7 @@ export default async function OpsInsightsPage() {
 
       {total === 0 ? (
         <div style={emptyStyle}>
-          No responses yet. The questions only appear for creators approved from now on — the
+          No responses yet. The questions only appear for creators approved from now on. The
           existing roster was deliberately left alone, so this fills up as you approve people.
         </div>
       ) : (
@@ -70,7 +70,7 @@ export default async function OpsInsightsPage() {
               title={q.prompt}
               // Said out loud, because a column of percentages adding to 180
               // otherwise reads as a bug in this page.
-              note={q.multi ? 'Multi-select — a creator can pick several, so these add to more than 100%.' : undefined}
+              note={q.multi ? 'Multi-select, a creator can pick several, so these add to more than 100%.' : undefined}
               // EVERY option, including ones nobody picked. A distribution that
               // silently omits the unchosen reads as "not offered" rather than
               // "offered and refused" — and which options fall flat is half of
@@ -96,7 +96,7 @@ export default async function OpsInsightsPage() {
                 {freeText.map(r => (
                   <div key={r.creator_id} style={quoteStyle}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111' }}>
-                      {names[r.creator_id] ?? '—'}
+                      {names[r.creator_id] ?? '-'}
                     </div>
                     {r.pain_other && (
                       <p style={quoteBody}><span style={quoteTag}>pain</span> {r.pain_other}</p>

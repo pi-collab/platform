@@ -281,7 +281,7 @@ export default function AcceptDecline({
               }}>
                 <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>You would receive</span>
                 <b style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>
-                  {counterTotal > 0 ? formatINR(counterTotal) : '\u2014'}
+                  {counterTotal > 0 ? formatINR(counterTotal) : ', '}
                 </b>
               </div>
             </div>

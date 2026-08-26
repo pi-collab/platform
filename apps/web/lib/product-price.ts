@@ -42,7 +42,7 @@ export const PRICE_MODE_HINTS: Record<PriceMode, string> = {
   exact: 'One rate, shown as it is.',
   // The second sentence is the part creators ask about: a minimum is not only
   // what brands see, it is what we hold offers to.
-  from: 'A minimum. Brands see “From ₹60,000” — and you won’t be shown deals below it.',
+  from: 'A minimum. Brands see “From ₹60,000”, and you won’t be shown deals below it.',
   range: 'A low and a high end, for work that varies.',
   on_request: 'No figure shown. Brands ask.',
 }

@@ -106,8 +106,8 @@ export default function NegotiationHistory({ events, variant, brandName = 'Brand
       {!collapsed && (
         <div style={{ fontSize: 12.5, lineHeight: 1.5, color: 'var(--ink-soft)', marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
           {variant === 'brand'
-            ? `${creatorFirstName}\u2019s latest number is on the table \u2014 the terms below reflect it.`
-            : `The brand\u2019s latest number is on the table \u2014 the terms below reflect it.`}
+            ? `${creatorFirstName}\u2019s latest number is on the table, the terms below reflect it.`
+            : `The brand\u2019s latest number is on the table, the terms below reflect it.`}
         </div>
       )}
     </div>

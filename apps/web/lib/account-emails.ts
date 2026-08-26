@@ -130,26 +130,27 @@ async function creatorEmail(creatorId: string): Promise<{ email: string | null; 
  */
 export async function notifyCreatorGrowth(creatorId: string): Promise<void> {
   try {
-    const { email, name } = await creatorEmail(creatorId)
+    // No name here: the heading is fixed copy, matching the page a creator
+    // lands on, so there is nowhere left to address them by name.
+    const { email } = await creatorEmail(creatorId)
     if (!email) {
       await record('creator.growth_email_skipped', { creator_id: creatorId, reason: 'no_address' })
       return
     }
 
     const { html, text } = renderAccountEmail({
-      heading: `You're in Guapd Growth, ${name}`,
+      heading: `You’ve been approved for Guapd Growth`,
       body: [
-        `We have reviewed your profile and brought you into Guapd Growth \u2014 our track for creators building towards their first brand deals.`,
+        `We have reviewed your profile and brought you into Guapd Growth, our track for creators building towards brand deals.`,
         'It is where we help you grow your following and learn how brand collaborations actually work, so that when the deals come you are ready for them.',
-        'Start with three quick questions on your Growth page \u2014 they tell us what to build for you first.',
       ],
       ctaUrl: `${siteBase()}/creator/growth`,
-      ctaLabel: 'See your Growth page',
+      ctaLabel: 'See your Guapd Growth page',
     })
 
     const res = await sendAccountEmail({
       to: [email],
-      subject: `You're in Guapd Growth`,
+      subject: `You’ve been approved for Guapd Growth`,
       html,
       text,
       idempotencyKey: `creator-growth-${creatorId}`,

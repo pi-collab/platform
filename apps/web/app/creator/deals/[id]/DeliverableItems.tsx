@@ -504,7 +504,7 @@ export default function DeliverableItems({
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
             <span style={{ fontSize: 11.5, lineHeight: 1.45, color: allReady ? 'var(--ink)' : 'var(--ink-soft)' }}>
               {allReady
-                ? 'All items are attached \u2014 submit when you are ready.'
+                ? 'All items are attached, submit when you are ready.'
                 : `${remaining} ${remaining === 1 ? 'item' : 'items'} still ${remaining === 1 ? 'needs' : 'need'} a link or file before you can submit.`}
             </span>
           </div>

@@ -60,7 +60,7 @@ export async function requestDemo(input: DemoRequestInput): Promise<DemoRequestR
     })
 
     if (!isEmailConfigured()) {
-      console.warn('[demo] email not configured — request stored, no notification sent')
+      console.warn('[demo] email not configured, request stored, no notification sent')
       return { status: 'ok' }
     }
 
@@ -68,8 +68,8 @@ export async function requestDemo(input: DemoRequestInput): Promise<DemoRequestR
       ['Name', name],
       ['Work email', email],
       ['Brand', brand],
-      ['Phone', phone || '—'],
-      ['Deals a month', volume || '—'],
+      ['Phone', phone || '-'],
+      ['Deals a month', volume || '-'],
     ]
     if (message) rows.push(['Message', message])
 

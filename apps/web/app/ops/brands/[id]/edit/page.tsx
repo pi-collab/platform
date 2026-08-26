@@ -55,7 +55,7 @@ export default async function EditBrandPage({ params }: { params: { id: string }
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {deals.map((d) => {
-              const creator = (d.creators as any)?.full_name ?? '—'
+              const creator = (d.creators as any)?.full_name ?? '-'
               const sc = STATUS_COLORS[d.status] ?? { bg: '#f3f4f6', color: '#6b7280' }
               return (
                 <Link
