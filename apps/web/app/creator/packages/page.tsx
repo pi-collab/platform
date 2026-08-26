@@ -24,7 +24,9 @@ export default async function CreatorPackagesPage(
   const admin = createAdminClient()
 
   const [{ data: creator }, { data: products }, { data: addonRates }] = await Promise.all([
-    admin.from('creators').select('social_accounts').eq('id', ctx.creatorId).maybeSingle(),
+    admin.from('creators')
+      .select('social_accounts, revisions_enabled, included_revisions, price_per_extra_revision_paise')
+      .eq('id', ctx.creatorId).maybeSingle(),
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, revisions_enabled, included_revisions, price_per_extra_revision_paise')
@@ -48,6 +50,11 @@ export default async function CreatorPackagesPage(
         channels={channels}
         packages={(products ?? []) as never}
         addonRates={(addonRates ?? []) as never}
+        revisionPolicy={{
+          enabled: (creator as Record<string, unknown>)?.revisions_enabled === true,
+          included: Number((creator as Record<string, unknown>)?.included_revisions ?? 0),
+          perExtraPaise: Number((creator as Record<string, unknown>)?.price_per_extra_revision_paise ?? 0),
+        }}
       />
     </main>
   )

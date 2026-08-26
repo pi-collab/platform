@@ -84,7 +84,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
   const [{ data: creator, error }, { data: products }, { data: brandRow }, { data: campaigns }] = await Promise.all([
     supabase
       .from('creators')
-      .select('id, full_name, niches, handle, profile_photo_url, social_accounts')
+      .select('id, full_name, niches, handle, profile_photo_url, social_accounts, revisions_enabled, included_revisions, price_per_extra_revision_paise')
       .eq('id', creatorId)
       .maybeSingle(),
     supabase

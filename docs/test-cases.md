@@ -1907,7 +1907,31 @@ removing them would fail an edit on a value the creator never chose.
 - [ ] Rates for a non-vetted creator are not readable by other users
 - [ ] Rates do NOT appear on the public `/c/<slug>` payload
 
-### Package revisions (creator-set)
+### Revisions are ONE policy per creator (migration 0486)
+
+A revision is a ROUND of feedback: revisions_used increments once per
+delivered -> revision transition, however many deliverables that round touches.
+Terms therefore live on the creator, not the package.
+
+- [ ] `/creator/packages` shows ONE "Revisions" block, above the channels — not
+      one per package
+- [ ] Off means unlimited and free, and the block says so
+- [ ] The offer builder shows that creator's free count regardless of WHICH
+      packages are selected
+- [ ] THE BUG THIS FIXES: select a generous package and a stingy one together.
+      The deal must NOT drop to the stingiest allowance — the old min() across
+      packages could take a three-deliverable deal to zero rounds
+- [ ] Send back three items in one review round: revisions_used goes up by ONE
+
+**Backfill (0486)**
+- [ ] Each creator's policy equals the MAX included and MAX per-extra across
+      their active packages — a migration must never shrink terms a brand was
+      already offered
+- [ ] A creator with no active packages comes out disabled (unlimited)
+- [ ] Deals created before this are untouched: their terms are already
+      snapshotted on the deal row
+
+### Package revisions (superseded by 0486 — kept for the columns' history)
 
 `included_revisions` and `price_per_extra_revision_paise` existed since 0080 but
 were editable from OPS ONLY — a creator was never asked, so every package

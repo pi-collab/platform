@@ -8,7 +8,7 @@ import {
   OFFERED_PRICE_MODES, PRICE_MODE_LABELS, PRICE_MODE_HINTS,
   formatProductPrice, normalizePriceMode, type PriceMode,
 } from '@/lib/product-price'
-import { savePackage, deletePackage, saveAddonRates } from './actions'
+import { savePackage, deletePackage, saveAddonRates, saveRevisionPolicy } from './actions'
 import { percentToBasisPoints } from '@/lib/addons'
 import './packages.css'
 
@@ -203,6 +203,108 @@ function AddonRatesEditor({ platform, handle, initial }: {
   )
 }
 
+/* ── Revisions, once for the whole rate card ──────────────────────────────────
+   A revision is a ROUND of feedback on a delivery, not a property of one
+   deliverable: the counter moves once per delivered -> revision transition
+   however many items that round touches. Per-package terms therefore described
+   a unit nothing counts, and the offer builder had to reconcile them with a
+   min() that quietly reduced a whole deal's allowance to its stingiest line.
+   ────────────────────────────────────────────────────────────────────────── */
+function RevisionPolicyEditor({ initial }: {
+  initial?: { enabled: boolean; included: number; perExtraPaise: number }
+}) {
+  const [open, setOpen] = useState(false)
+  const [enabled, setEnabled] = useState(initial?.enabled ?? false)
+  const [included, setIncluded] = useState(String(initial?.included ?? 1))
+  const [extra, setExtra] = useState(
+    initial?.perExtraPaise ? String(Math.round(initial.perExtraPaise / 100)) : '',
+  )
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function save() {
+    setBusy(true); setMsg(null)
+    const res = await saveRevisionPolicy({
+      enabled,
+      includedRevisions: Number(included || 0),
+      perExtraRupees: Number(extra || 0),
+    })
+    setBusy(false)
+    setMsg(res.ok ? { ok: true, text: 'Saved.' } : { ok: false, text: res.message })
+  }
+
+  return (
+    <div className="pk-addons" style={{ marginTop: 14 }}>
+      <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="pk-addons-title">Revisions</span>
+        <span className="pk-addons-state">
+          {!enabled ? 'Unlimited' : `${initial?.included ?? included} free`}
+        </span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+          strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="pk-addons-body">
+          <p className="pk-addons-note">
+            One round of feedback on a delivery counts as one revision, however many deliverables it covers.
+            This applies to every deal, not to a single package.
+          </p>
+
+          <label className="pk-rev-head">
+            <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+            <span className="pk-rev-title">Cap the number of revisions</span>
+          </label>
+
+          {!enabled && (
+            <p className="pk-hint" style={{ margin: 0 }}>
+              Leave this off and brands get unlimited revisions at no cost.
+            </p>
+          )}
+
+          {enabled && (
+            <div className="pk-rev-body">
+              <div className="pk-field">
+                <label className="pk-label">Included free</label>
+                <div className="pk-addons-input">
+                  <input
+                    inputMode="numeric"
+                    value={included}
+                    onChange={e => setIncluded(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 2))}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <div className="pk-field">
+                <label className="pk-label">Each extra round</label>
+                <div className="pk-addons-input">
+                  <span className="pk-addons-prefix">&#8377;</span>
+                  <input
+                    inputMode="numeric"
+                    value={extra}
+                    onChange={e => setExtra(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''))}
+                    placeholder="0"
+                  />
+                </div>
+                <span className="pk-hint">Charged on the invoice only if a brand goes beyond the free rounds.</span>
+              </div>
+            </div>
+          )}
+
+          {msg && <p className={msg.ok ? 'pk-saved' : 'pk-error'}>{msg.text}</p>}
+
+          <button type="button" className="pk-btn pk-btn-primary" disabled={busy} onClick={save}>
+            {busy ? 'Saving\u2026' : 'Save revisions'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export interface AddonRateRow {
   platform: string
   handle: string
@@ -214,10 +316,12 @@ export interface AddonRateRow {
 export default function PackagesClient({
   channels,
   addonRates = [],
+  revisionPolicy,
   packages,
 }: {
   channels: Channel[]
   addonRates?: AddonRateRow[]
+  revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
   packages: PackageRow[]
 }) {
   const [editing, setEditing] = useState<PackageRow | 'new' | null>(null)
@@ -262,6 +366,8 @@ export default function PackagesClient({
       </p>
 
       {error && <p role="alert" className="pk-error">{error}</p>}
+
+      <RevisionPolicyEditor initial={revisionPolicy} />
 
       {channels.map((ch) => {
         const rows = packages.filter(
@@ -441,17 +547,6 @@ function PackageForm({
     if (!types.includes(productType as ProductType)) setProductType(types[0])
   }
 
-  /* Revisions are opt-IN on a new package and reflect what was saved on an
-     existing one. Nothing has ever asked a creator about these, so every
-     package has quietly offered one free revision since 0080. */
-  const [revEnabled, setRevEnabled] = useState<boolean>(existing ? (existing.revisions_enabled ?? true) : false)
-  const [revIncluded, setRevIncluded] = useState<string>(
-    existing?.included_revisions != null ? String(existing.included_revisions) : '1',
-  )
-  const [revExtra, setRevExtra] = useState<string>(
-    existing?.price_per_extra_revision_paise ? String(Math.round(existing.price_per_extra_revision_paise / 100)) : '',
-  )
-
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (busy) return
@@ -466,9 +561,6 @@ function PackageForm({
       priceMode: mode,
       priceRupees: Number(price || 0),
       priceMaxRupees: mode === 'range' ? Number(priceMax || 0) : null,
-      revisionsEnabled: revEnabled,
-      includedRevisions: revEnabled ? Number(revIncluded || 0) : 0,
-      perExtraRevisionRupees: revEnabled ? Number(revExtra || 0) : 0,
     })
     setBusy(false)
     if (!res.ok) { setError(res.message); return }
@@ -582,54 +674,6 @@ function PackageForm({
             </span>
           </div>
 
-          {/* ── Revisions ─────────────────────────────────────────────
-              Off by default on a new package. Nothing has ever asked a
-              creator about this, so every package has quietly included one
-              free revision since the columns were added. */}
-          <div className="pk-rev">
-            <label className="pk-rev-head">
-              <input
-                type="checkbox"
-                checked={revEnabled}
-                onChange={e => setRevEnabled(e.target.checked)}
-              />
-              <span className="pk-rev-title">Offer revisions on this package</span>
-            </label>
-          
-            {revEnabled && (
-              <div className="pk-rev-body">
-                <div className="pk-field">
-                  <label className="pk-label">Included free</label>
-                  <div className="pk-addons-input">
-                    <input
-                      inputMode="numeric"
-                      value={revIncluded}
-                      onChange={e => setRevIncluded(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 2))}
-                      placeholder="1"
-                    />
-                  </div>
-                </div>
-          
-                <div className="pk-field">
-                  <label className="pk-label">Each extra revision</label>
-                  <div className="pk-addons-input">
-                    <span className="pk-addons-prefix">&#8377;</span>
-                    <input
-                      inputMode="numeric"
-                      value={revExtra}
-                      onChange={e => setRevExtra(e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, ''))}
-                      placeholder="0"
-                    />
-                  </div>
-                  <span className="pk-hint">
-                    {revExtra && Number(revExtra) > 0
-                      ? 'Charged for each revision beyond the free ones.'
-                      : 'Leave blank and extra revisions are free.'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
           
           {error && <p role="alert" className="pk-error">{error}</p>}
         </div>

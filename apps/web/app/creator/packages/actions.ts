@@ -19,11 +19,6 @@ export interface SavePackageInput {
   /** Whole rupees as typed. Converted to paise here, never in the client. */
   priceRupees: number
   priceMaxRupees?: number | null
-  /** Off means this package offers no revisions and both figures are zeroed. */
-  revisionsEnabled?: boolean
-  includedRevisions?: number
-  /** Whole rupees as typed, converted to paise here. */
-  perExtraRevisionRupees?: number
 }
 // A rate card is a shop window, not a ledger — a crore is already implausible
 // for a single deliverable, and the cap is what stops a slipped decimal point
@@ -39,30 +34,6 @@ const MAX_RUPEES = 1_00_00_000
  * stops a package being filed under a handle its owner does not have — which
  * would show on their shopfront under someone else's name.
  */
-/**
- * Revision terms for a package, validated.
- *
- * Zeroed when disabled rather than left as they were: the DB CHECK refuses a
- * per-extra price on a package that offers no revisions, because that is a
- * number nothing can ever read. Undefined input means "leave as-is", which is
- * what an older client sends.
- */
-function revisionColumns(input: SavePackageInput): Record<string, number | boolean> | Record<string, never> {
-  if (input.revisionsEnabled === undefined) return {}
-  if (!input.revisionsEnabled) {
-    return { revisions_enabled: false, included_revisions: 0, price_per_extra_revision_paise: 0 }
-  }
-  // Clamped, not rejected: a creator dragging a number around should not lose
-  // the rest of the form to a validation error over a revision count.
-  const included = Math.max(0, Math.min(20, Math.trunc(input.includedRevisions ?? 0)))
-  const extra = Math.max(0, Math.trunc(input.perExtraRevisionRupees ?? 0)) * 100
-  return {
-    revisions_enabled: true,
-    included_revisions: included,
-    price_per_extra_revision_paise: extra,
-  }
-}
-
 export async function savePackage(input: SavePackageInput): Promise<PackageResult> {
   const ctx = await verifyCreator()
   const admin = createAdminClient()
@@ -139,7 +110,6 @@ export async function savePackage(input: SavePackageInput): Promise<PackageResul
     // consumers read this flag and must keep agreeing with the mode.
     display_price: mode !== 'on_request',
     is_active: true,
-    ...revisionColumns(input),
   }
 
   // Service role, but every write is pinned to ctx.creatorId: on update the
@@ -285,5 +255,50 @@ export async function saveAddonRates(input: SaveAddonRatesInput): Promise<Packag
 
   revalidatePath('/creator/packages')
   revalidatePath('/creator/storefront')
+  return { ok: true }
+}
+
+/* ── Revision policy, per creator ─────────────────────────────────────────────
+   A revision is a ROUND of feedback on a delivery — review-actions increments
+   the counter once per delivered -> revision transition, however many items
+   that round touches. So the terms belong to the creator and the deal, not to
+   an individual package: a Reel with "2 revisions" and a video with "1" in the
+   same deal has no coherent answer.
+   ────────────────────────────────────────────────────────────────────────── */
+
+export interface SaveRevisionPolicyInput {
+  enabled: boolean
+  includedRevisions: number
+  /** Whole rupees as typed. Converted to paise here, never in the client. */
+  perExtraRupees: number
+}
+
+export async function saveRevisionPolicy(input: SaveRevisionPolicyInput): Promise<PackageResult> {
+  const ctx = await verifyCreator()
+
+  // Clamped rather than rejected: nudging a counter should not cost someone the
+  // rest of the form. The DB CHECK is the real boundary.
+  const included = input.enabled ? Math.max(0, Math.min(20, Math.trunc(input.includedRevisions || 0))) : 0
+  const perExtraPaise = input.enabled ? Math.max(0, Math.trunc(input.perExtraRupees || 0)) * 100 : 0
+
+  if (perExtraPaise > 100_000_000_00) {
+    return { ok: false, message: 'That revision price looks too large.' }
+  }
+
+  const { error } = await createAdminClient()
+    .from('creators')
+    .update({
+      revisions_enabled: input.enabled,
+      included_revisions: included,
+      price_per_extra_revision_paise: perExtraPaise,
+    })
+    .eq('id', ctx.creatorId)
+
+  if (error) {
+    console.error('[revision-policy] save failed:', error.message)
+    return { ok: false, message: 'Could not save those terms. Please try again.' }
+  }
+
+  revalidatePath('/creator/packages')
   return { ok: true }
 }

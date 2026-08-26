@@ -42,6 +42,11 @@ interface Creator {
   handle: string | null
   profile_photo_url: string | null
   social_accounts: SocialAccount[] | null
+  /* The creator's revision policy — one per creator, because a revision is a
+     round of feedback on the delivery rather than a property of a deliverable. */
+  revisions_enabled?: boolean | null
+  included_revisions?: number | null
+  price_per_extra_revision_paise?: number | null
 }
 
 const USAGE_PRESETS = [
@@ -285,14 +290,14 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     return { totalPaise: total, selectedCount: count, deliverablesSummary: lines.join(' + '), hasMissingPrice: missingPrice }
   }, [products, selections, reelTypes, itemBoostingRights, boostDays, ratesFor])
 
-  const { defaultIncluded, defaultExtraPaise } = useMemo(() => {
-    const selectedProducts = products.filter((p) => { const s = selections[p.id]; return s && s.qty > 0 })
-    if (selectedProducts.length === 0) return { defaultIncluded: 1, defaultExtraPaise: 0 }
-    return {
-      defaultIncluded: Math.min(...selectedProducts.map((p) => p.included_revisions)),
-      defaultExtraPaise: Math.max(...selectedProducts.map((p) => p.price_per_extra_revision_paise)),
-    }
-  }, [products, selections])
+  /* The creator's ONE revision policy, not an aggregate of package terms.
+     This used to take min(included) across the selected packages, which meant
+     adding one stingy deliverable silently cut the whole deal's allowance —
+     a three-item deal could end up with zero rounds nobody chose. A revision is
+     a ROUND of feedback on the delivery, so there is one number and it belongs
+     to the creator. */
+  const defaultIncluded = creator.revisions_enabled ? (creator.included_revisions ?? 0) : 0
+  const defaultExtraPaise = creator.revisions_enabled ? (creator.price_per_extra_revision_paise ?? 0) : 0
 
   useEffect(() => {
     if (prefillRevisionLock.current) { prefillRevisionLock.current = false; return }
