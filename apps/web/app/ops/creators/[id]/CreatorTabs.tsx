@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { QUESTIONS, labelFor } from '@/lib/creator-onboarding-labels'
+import { GROWTH_QUESTIONS, labelFor as growthLabelFor } from '@/lib/growth-quiz-labels'
 import { approveForDeals, moveToGrowth, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
@@ -83,7 +84,7 @@ export interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function CreatorTabs({ onboarding, creator, products, addonRates = [], deals, pairRates }: { addonRates?: AddonRateRow[]; onboarding: OnboardingResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
+export default function CreatorTabs({ onboarding, growthQuiz, creator, products, addonRates = [], deals, pairRates }: { addonRates?: AddonRateRow[]; onboarding: OnboardingResponse | null; growthQuiz: GrowthQuizResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -175,7 +176,7 @@ export default function CreatorTabs({ onboarding, creator, products, addonRates 
       </div>
 
       {/* Tab content */}
-      {tab === 'Questionnaire' && <Questionnaire response={onboarding} />}
+      {tab === 'Questionnaire' && <Questionnaire response={onboarding} growth={growthQuiz} />}
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
       {tab === 'Products' && <Products addonRates={addonRates} creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
@@ -925,12 +926,30 @@ interface OnboardingResponse {
  * so a copy edit changes all three together rather than leaving this one
  * printing `slow_payments` at somebody.
  */
-function Questionnaire({ response }: { response: OnboardingResponse | null }) {
+interface GrowthQuizResponse {
+  posting_frequency: string
+  growth_goal: string
+  niche: string
+  niche_other: string | null
+  anything_else: string | null
+  created_at: string
+}
+
+function Questionnaire({ response, growth }: {
+  response: OnboardingResponse | null
+  growth: GrowthQuizResponse | null
+}) {
+  // A creator answers the Deals questions OR the Guapd Growth quiz, depending on
+  // the vetting outcome, never both. Whichever exists is the one to show, so a
+  // Growth creator's tab is not permanently "No response".
+  if (growth) return <GrowthAnswers response={growth} />
+
   if (!response) {
     return (
       <p style={{ fontSize: '0.8125rem', color: '#888', lineHeight: 1.6 }}>
         No response. Either they were approved before the questions existed, or they have not
-        reached their dashboard since being approved.
+        reached their dashboard since being approved. A creator in Guapd Growth answers the
+        Growth quiz instead, which appears here once they have.
       </p>
     )
   }
@@ -946,6 +965,52 @@ function Questionnaire({ response }: { response: OnboardingResponse | null }) {
 
   return (
     <div>
+      <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem' }}>
+        Answered {new Date(response.created_at).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })}
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        {rows.filter(([, v]) => v).map(([label, value]) => (
+          <div key={label}>
+            <div style={{
+              fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: '0.06em', color: '#888', marginBottom: 3,
+            }}>{label}</div>
+            <div style={{ fontSize: '0.875rem', color: '#111', lineHeight: 1.5 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The Guapd Growth quiz, for a creator on that track.
+ *
+ * Codes go through the same definitions the quiz and any later aggregate use, so
+ * a copy edit changes all of them together rather than leaving this one printing
+ * `few_times_week` at somebody.
+ */
+function GrowthAnswers({ response }: { response: GrowthQuizResponse }) {
+  const rows: [string, string | null][] = [
+    [GROWTH_QUESTIONS[0].prompt, growthLabelFor('posting_frequency', response.posting_frequency)],
+    [GROWTH_QUESTIONS[1].prompt, growthLabelFor('growth_goal', response.growth_goal)],
+    [GROWTH_QUESTIONS[2].prompt, growthLabelFor('niche', response.niche)],
+    // Only meaningful alongside the 'other' code, and stored null otherwise.
+    ['Their words for the niche', response.niche_other],
+    ['Anything else', response.anything_else],
+  ]
+
+  return (
+    <div>
+      <div style={{
+        display: 'inline-block', marginBottom: '0.75rem', padding: '2px 8px', borderRadius: 999,
+        background: '#EEF2FF', color: '#4338CA', fontSize: '0.6875rem', fontWeight: 700,
+        letterSpacing: '0.04em', textTransform: 'uppercase',
+      }}>
+        Guapd Growth
+      </div>
       <p style={{ fontSize: '0.75rem', color: '#888', margin: '0 0 1rem' }}>
         Answered {new Date(response.created_at).toLocaleDateString('en-IN', {
           day: 'numeric', month: 'short', year: 'numeric',

@@ -2108,6 +2108,24 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] An unknown code is refused by the CHECK
 - [ ] UPDATE and DELETE are denied by RLS
 
+**Ops can see the answers**
+- [ ] /ops/creators/[id] → Questionnaire tab shows the Growth answers for a
+      Growth creator, badged "Guapd Growth", with the date
+- [ ] A creator answers the Deals questions OR the Growth quiz, never both, so
+      the tab shows whichever exists. A Growth creator must NOT sit permanently
+      on "No response"
+- [ ] "Their words for the niche" appears only when they picked Other
+- [ ] Blank "Anything else" is omitted, not shown as an empty row
+- [ ] /ops/insights has a Guapd Growth section below the Deals one, with a
+      distribution per coded question and the free text underneath
+- [ ] Its denominator is creators with vetting_status = 'growth', NOT
+      is_vetted — Growth creators are is_vetted false by construction (0487),
+      so the approved count would be the wrong denominator
+- [ ] The two cohorts are NOT merged into one distribution: different questions,
+      different population
+- [ ] Options nobody picked still show, greyed, at 0%
+- [ ] Free-text quotes are attributed by creator name
+
 **Migration 0490 (Q1 replaced, Q4 added)**
 - [ ] Applied to staging BEFORE the deploy: the action inserts
       posting_frequency, so an unmigrated DB fails every submission

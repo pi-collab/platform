@@ -45,7 +45,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     wantsWhatsapp: prefs.notify_whatsapp === true,
   }
 
-  const [{ data: products }, { data: addonRates }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding, error: onboardingErr }] = await Promise.all([
+  const [{ data: products }, { data: addonRates }, { data: deals }, { data: pairRates }, { data: appeals }, { data: onboarding, error: onboardingErr }, { data: growthQuiz, error: growthQuizErr }] = await Promise.all([
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
@@ -83,6 +83,14 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
       .select('biggest_pains, pain_other, deal_handling, monthly_deals, anything_else, created_at')
       .eq('creator_id', params.id)
       .maybeSingle(),
+    // The Guapd Growth quiz. A separate table and a separate questionnaire:
+    // a creator answers one or the other depending on the vetting outcome,
+    // never both, so the Questionnaire tab shows whichever exists.
+    admin
+      .from('creator_growth_quiz_responses')
+      .select('posting_frequency, growth_goal, niche, niche_other, anything_else, created_at')
+      .eq('creator_id', params.id)
+      .maybeSingle(),
   ])
 
   // Surfaced rather than swallowed. This query silently returned null for a day
@@ -90,6 +98,11 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   // response" — which is indistinguishable from a creator who has not answered.
   if (onboardingErr) {
     console.error(`[ops] onboarding response query failed for ${params.id}: ${onboardingErr.message}`)
+  }
+  // Same reasoning: a failed query and an unanswered quiz both arrive as
+  // null, and the tab cannot tell them apart.
+  if (growthQuizErr) {
+    console.error(`[ops] growth quiz query failed for ${params.id}: ${growthQuizErr.message}`)
   }
 
   return (
@@ -234,7 +247,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <CreatorTabs onboarding={onboarding as never} creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
+      <CreatorTabs onboarding={onboarding as never} growthQuiz={growthQuiz as never} creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
     </div>
   )
 }

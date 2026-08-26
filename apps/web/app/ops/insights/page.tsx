@@ -1,8 +1,19 @@
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { QUESTIONS, labelFor, type QuestionKey } from '@/lib/creator-onboarding'
+import { GROWTH_QUESTIONS } from '@/lib/growth-quiz-labels'
 
 export const metadata = { title: 'Creator insights · Ops' }
+
+interface GrowthRow {
+  creator_id: string
+  posting_frequency: string
+  growth_goal: string
+  niche: string
+  niche_other: string | null
+  anything_else: string | null
+  created_at: string
+}
 
 interface ResponseRow {
   creator_id: string
@@ -33,6 +44,19 @@ export default async function OpsInsightsPage() {
     admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true),
   ])
 
+  // The Guapd Growth quiz, counted separately. Growth creators are is_vetted
+  // false by construction (0487), so they are not in approvedCount above, and
+  // folding the two sets together would report a response rate against the
+  // wrong denominator.
+  const [{ data: growthRows }, { count: growthCount }] = await Promise.all([
+    admin
+      .from('creator_growth_quiz_responses')
+      .select('creator_id, posting_frequency, growth_goal, niche, niche_other, anything_else, created_at')
+      .order('created_at', { ascending: false }),
+    admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth'),
+  ])
+  const growth = (growthRows ?? []) as GrowthRow[]
+
   const responses = (rows ?? []) as ResponseRow[]
   const total = responses.length
 
@@ -45,7 +69,14 @@ export default async function OpsInsightsPage() {
     for (const c of creators ?? []) names[c.id] = c.full_name ?? '-'
   }
 
+  if (growth.length > 0) {
+    const { data: creators } = await admin
+      .from('creators').select('id, full_name').in('id', growth.map(r => r.creator_id))
+    for (const c of creators ?? []) names[c.id] = c.full_name ?? '-'
+  }
+
   const freeText = responses.filter(r => r.pain_other || r.anything_else)
+  const growthFreeText = growth.filter(r => r.niche_other || r.anything_else)
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: 980 }}>
@@ -111,6 +142,76 @@ export default async function OpsInsightsPage() {
           )}
         </>
       )}
+
+        {/* Guapd Growth, its own section rather than merged in. These are
+            different questions asked of a different cohort; one combined
+            distribution would be an average of two populations. */}
+        <section style={{ marginTop: '2.5rem', paddingTop: '1.75rem', borderTop: '2px solid #eee' }}>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>Guapd Growth</h1>
+          <p style={{ fontSize: '0.8125rem', color: '#666', margin: '0.4rem 0 1.5rem' }}>
+            Answers to the one-time quiz asked when a creator lands in Guapd Growth.{' '}
+            <strong>{growth.length}</strong> response{growth.length === 1 ? '' : 's'}
+            {growthCount ? ` of ${growthCount} Growth creators` : ''}
+            {growth.length > 0 && growthCount ? ` (${Math.round((growth.length / growthCount) * 100)}%)` : ''}.
+          </p>
+
+          {growth.length === 0 ? (
+            <div style={emptyStyle}>
+              No responses yet. This fills up as creators are moved to Guapd Growth and answer the
+              quiz on their first visit.
+            </div>
+          ) : (
+            <>
+              {GROWTH_QUESTIONS.filter(q => q.kind !== 'text').map(q => (
+                <Distribution
+                  key={q.key}
+                  title={q.prompt}
+                  /* EVERY option, including ones nobody picked. Silently omitting
+                     the unchosen reads as "not offered" rather than "offered and
+                     refused", and which options fall flat is half of what the
+                     question was asked to find out. */
+                  rows={(() => {
+                    const counts: Record<string, number> = {}
+                    for (const r of growth) {
+                      const code = String((r as unknown as Record<string, unknown>)[q.key] ?? '')
+                      if (code) counts[code] = (counts[code] ?? 0) + 1
+                    }
+                    return q.options
+                      .map(o => {
+                        const c = counts[o.code] ?? 0
+                        return { label: o.label, count: c, pct: growth.length ? Math.round((c / growth.length) * 100) : 0 }
+                      })
+                      .sort((a, b) => b.count - a.count)
+                  })()}
+                />
+              ))}
+
+              {growthFreeText.length > 0 && (
+                <section style={{ marginTop: '2rem' }}>
+                  <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '0 0 0.75rem' }}>
+                    In their own words ({growthFreeText.length})
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {growthFreeText.map(r => (
+                      <div key={r.creator_id} style={quoteStyle}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111' }}>
+                          {names[r.creator_id] ?? '-'}
+                        </div>
+                        {r.niche_other && (
+                          <p style={quoteBody}><span style={quoteTag}>niche</span> {r.niche_other}</p>
+                        )}
+                        {r.anything_else && (
+                          <p style={quoteBody}><span style={quoteTag}>anything else</span> {r.anything_else}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </section>
+
     </div>
   )
 }
