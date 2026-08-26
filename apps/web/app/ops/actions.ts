@@ -4,7 +4,7 @@ import { verifyOpsAccess } from '@/lib/ops-auth'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected } from '@/lib/account-emails'
+import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected, notifyCreatorGrowth } from '@/lib/account-emails'
 import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
 import { logOpsEvent } from '@/lib/ops-audit'
 import { notifyDealParty } from '@/lib/notifications'
@@ -91,7 +91,7 @@ export async function addCreator(input: AddCreatorInput) {
     worked_with: worked_with ?? [],
     portfolio_links: portfolio_links ?? [],
     rate_card: rate_card ?? {},
-    is_vetted: false,
+    vetting_status: 'pending',
   }).select('id').single()
 
   if (error) return { error: error.message }
@@ -107,102 +107,108 @@ export async function addCreator(input: AddCreatorInput) {
 
 // ── Vet (approve) creator ────────────────────────────────────────────────────
 
-export async function vetCreator(creatorId: string) {
+/**
+ * The vetting decision, in one place.
+ *
+ * Three outcomes now: Deals, Growth, rejected. All of them write
+ * vetting_status and NOTHING writes is_vetted or is_rejected — a trigger
+ * derives those, so there is one source of truth rather than a status column
+ * and two booleans that can disagree.
+ *
+ * Notifications fire only on a real TRANSITION. Re-deciding an outcome someone
+ * already has is an ops no-op and must not tell them twice — the one message
+ * nobody should receive by accident is the second copy of a decision.
+ */
+type VettingOutcome = 'deals_approved' | 'growth' | 'rejected'
+
+async function decideVetting(creatorId: string, outcome: VettingOutcome) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
   const admin = createAdminClient()
 
-  // Fetch before state
   const { data: before } = await admin
     .from('creators')
-    .select('is_vetted, is_rejected')
+    .select('vetting_status')
     .eq('id', creatorId)
     .maybeSingle()
 
+  const from = (before?.vetting_status as VettingOutcome | 'pending' | undefined) ?? 'pending'
+  if (from === outcome) {
+    // Already there. Nothing to write, nobody to notify.
+    revalidatePath('/ops/creators')
+    return { success: true }
+  }
+
   const { error } = await admin
     .from('creators')
-    .update({ is_vetted: true, is_rejected: false })
+    .update({ vetting_status: outcome })
     .eq('id', creatorId)
 
   if (error) return { error: error.message }
 
-  await logOpsEvent(user, 'creator.vetted', 'creators', creatorId, {
-    before: { is_vetted: before?.is_vetted, is_rejected: before?.is_rejected },
-    after: { is_vetted: true, is_rejected: false },
+  await logOpsEvent(user, `creator.${outcome}`, 'creators', creatorId, {
+    before: { vetting_status: from },
+    after: { vetting_status: outcome },
   })
 
-  // Only on a real transition. Re-vetting an already-vetted creator is an ops
-  // no-op and must not email them a second time about the same decision.
-  // Email AND WhatsApp. Email reaches only creators who gave an address, and
-  // most signed up by phone — so on its own it notified almost nobody.
-  if (!before?.is_vetted) {
+  if (outcome === 'deals_approved') {
     await notifyCreatorApproved(creatorId)
     await notifyCreatorStatusChanged(creatorId, 'approved')
 
-    // Marks the post-approval questions as due for this creator. Gating on this
-    // event rather than on "has no answers yet" is what keeps the existing
-    // approved roster out of it — they have no such event, so they go straight
-    // to their dashboard instead of meeting a form mid-task.
+    // Marks the post-approval questions as due. Fired for a creator arriving
+    // from GROWTH as well as from pending: they are newly in Deals either way,
+    // and the questions are about working with brands.
     await admin.from('events').insert({
       event_type: QUESTIONS_DUE_EVENT,
       detail: { creator_id: creatorId },
     })
   }
 
+  if (outcome === 'growth') {
+    await notifyCreatorGrowth(creatorId)
+    // The same neutral template as every other outcome: it says an update
+    // exists and links to the status page, which routes by vetting_status.
+    await notifyCreatorStatusChanged(creatorId, 'growth')
+  }
+
+  if (outcome === 'rejected') {
+    await notifyCreatorRejected(creatorId)
+    await notifyCreatorStatusChanged(creatorId, 'rejected')
+  }
+
+  // Leaving Deals invalidates any acknowledgement of the approved screen: the
+  // acknowledgement is permanent, the approval it acknowledged is not.
+  if (from === 'deals_approved' && outcome !== 'deals_approved') {
+    await admin
+      .from('events')
+      .delete()
+      .eq('event_type', CREATOR_APPROVAL_ACK)
+      .contains('detail', { creator_id: creatorId })
+  }
+
   revalidatePath('/ops/creators')
+  revalidatePath('/creator', 'layout')
   return { success: true }
 }
 
 // ── Reject creator (soft-reject — keeps the row) ────────────────────────────
 
+export async function approveForDeals(creatorId: string) {
+  return decideVetting(creatorId, 'deals_approved')
+}
+
+export async function moveToGrowth(creatorId: string) {
+  return decideVetting(creatorId, 'growth')
+}
+
 export async function rejectCreator(creatorId: string) {
-  const user = await verifyOpsAccess()
-  if (!user) return { error: 'Not authorized' }
+  return decideVetting(creatorId, 'rejected')
+}
 
-  const admin = createAdminClient()
-
-  const { data: before } = await admin
-    .from('creators')
-    .select('is_vetted, is_rejected')
-    .eq('id', creatorId)
-    .maybeSingle()
-
-  const { error } = await admin
-    .from('creators')
-    .update({ is_vetted: false, is_rejected: true })
-    .eq('id', creatorId)
-
-  if (error) return { error: error.message }
-
-  await logOpsEvent(user, 'creator.rejected', 'creators', creatorId, {
-    before: { is_vetted: before?.is_vetted, is_rejected: before?.is_rejected },
-    after: { is_vetted: false, is_rejected: true },
-  })
-
-  // Only on a real transition, so re-rejecting does not send the same bad news
-  // twice. This is the one email nobody wants to receive by accident.
-  if (!before?.is_rejected) {
-    await notifyCreatorRejected(creatorId)
-    // Sent for a rejection too. The template says an update exists rather than
-    // announcing the outcome, and silence after applying is worse than a
-    // message that asks someone to look.
-    await notifyCreatorStatusChanged(creatorId, 'rejected')
-  }
-
-  // Clear any past acknowledgement of the approved screen. Without this a
-  // creator who was approved, saw it, was later rejected, and is then approved
-  // again would land straight on the dashboard — the acknowledgement is
-  // permanent, but the approval it acknowledged is not. Rejection is the point
-  // where that record stops being true.
-  await admin
-    .from('events')
-    .delete()
-    .eq('event_type', CREATOR_APPROVAL_ACK)
-    .contains('detail', { creator_id: creatorId })
-
-  revalidatePath('/ops/creators')
-  return { success: true }
+/** @deprecated Use approveForDeals. Kept so no caller silently breaks. */
+export async function vetCreator(creatorId: string) {
+  return decideVetting(creatorId, 'deals_approved')
 }
 
 // ── Delete creator (hard delete — removes creator, products, and linked auth/users rows) ──

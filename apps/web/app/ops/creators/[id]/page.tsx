@@ -13,7 +13,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
   const admin = createAdminClient()
   const { data: creator, error } = await admin
     .from('creators')
-    .select('id, user_id, full_name, phone, contact_email, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, created_at, updated_at')
+    .select('id, user_id, full_name, phone, contact_email, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, vetting_status, created_at, updated_at')
     .eq('id', params.id)
     .maybeSingle()
 

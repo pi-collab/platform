@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { QUESTIONS, labelFor } from '@/lib/creator-onboarding-labels'
-import { vetCreator, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
+import { approveForDeals, moveToGrowth, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 import {
@@ -48,6 +48,7 @@ interface Creator {
   rate_card: Record<string, number> | null
   is_vetted: boolean
   is_rejected: boolean
+  vetting_status: string
   created_at: string
   updated_at: string
 }
@@ -89,7 +90,16 @@ export default function CreatorTabs({ onboarding, creator, products, addonRates 
 
   async function handleVet() {
     setActionLoading(true)
-    const res = await vetCreator(creator.id)
+    const res = await approveForDeals(creator.id)
+    if (res.error) alert(res.error)
+    else router.refresh()
+    setActionLoading(false)
+  }
+
+  async function handleGrowth() {
+    if (!confirm('Move this creator to Guapd Growth? They will not receive brand deals yet.')) return
+    setActionLoading(true)
+    const res = await moveToGrowth(creator.id)
     if (res.error) alert(res.error)
     else router.refresh()
     setActionLoading(false)
@@ -117,15 +127,24 @@ export default function CreatorTabs({ onboarding, creator, products, addonRates 
     <div>
       {/* Vet/Reject actions */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        {!creator.is_vetted && (
-          <>
-            <button onClick={handleVet} disabled={actionLoading} style={{ ...actionBtn, background: '#16a34a', color: '#fff' }}>
-              {actionLoading ? '...' : 'Approve'}
-            </button>
-            <button onClick={handleReject} disabled={actionLoading} style={{ ...actionBtn, background: '#dc2626', color: '#fff' }}>
-              {actionLoading ? '...' : 'Reject'}
-            </button>
-          </>
+        {/* Keyed on vetting_status, not is_vetted. A Growth creator has
+            is_vetted false, so the old condition showed them the same
+            untouched-applicant buttons and hid that a decision had been made.
+            Each action appears only where it would be a real change. */}
+        {creator.vetting_status !== 'deals_approved' && (
+          <button onClick={handleVet} disabled={actionLoading} style={{ ...actionBtn, background: '#16a34a', color: '#fff' }}>
+            {actionLoading ? '...' : 'Approve for Deals'}
+          </button>
+        )}
+        {creator.vetting_status !== 'growth' && (
+          <button onClick={handleGrowth} disabled={actionLoading} style={{ ...actionBtn, background: '#4f46e5', color: '#fff' }}>
+            {actionLoading ? '...' : 'Move to Growth'}
+          </button>
+        )}
+        {creator.vetting_status !== 'rejected' && (
+          <button onClick={handleReject} disabled={actionLoading} style={{ ...actionBtn, background: '#dc2626', color: '#fff' }}>
+            {actionLoading ? '...' : 'Reject'}
+          </button>
         )}
         <button onClick={handleDelete} disabled={actionLoading} style={{ ...actionBtn, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}>
           {actionLoading ? '...' : 'Delete'}

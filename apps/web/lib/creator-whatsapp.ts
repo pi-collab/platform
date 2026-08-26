@@ -103,7 +103,7 @@ export async function creatorWhatsAppContact(creatorId: string): Promise<Creator
  */
 export async function notifyCreatorStatusChanged(
   creatorId: string,
-  status: 'approved' | 'rejected' | 'pending',
+  status: 'approved' | 'rejected' | 'pending' | 'growth',
 ): Promise<void> {
   try {
     const { phone, skipReason } = await creatorWhatsAppContact(creatorId)

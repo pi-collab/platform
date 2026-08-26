@@ -797,3 +797,32 @@ CREATE POLICY creator_addon_rates_read_vetted
         AND c.is_vetted = true
     )
   );
+
+-- ── creator_growth_quiz_responses ───────────────────────────────────────────
+-- The Guapd Growth quiz (migration 0488). A snapshot: a creator writes their
+-- answers once and reads them back. UPDATE and DELETE are denied outright, so
+-- an answer cannot be revised after the fact and the aggregate the Growth
+-- product will be built on stays trustworthy.
+
+ALTER TABLE creator_growth_quiz_responses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS growth_quiz_select_own  ON creator_growth_quiz_responses;
+DROP POLICY IF EXISTS growth_quiz_insert_own  ON creator_growth_quiz_responses;
+DROP POLICY IF EXISTS growth_quiz_deny_update ON creator_growth_quiz_responses;
+DROP POLICY IF EXISTS growth_quiz_deny_delete ON creator_growth_quiz_responses;
+
+CREATE POLICY growth_quiz_select_own
+  ON creator_growth_quiz_responses FOR SELECT
+  USING (creator_id = my_creator_id());
+
+CREATE POLICY growth_quiz_insert_own
+  ON creator_growth_quiz_responses FOR INSERT
+  WITH CHECK (creator_id = my_creator_id());
+
+CREATE POLICY growth_quiz_deny_update
+  ON creator_growth_quiz_responses FOR UPDATE
+  USING (false);
+
+CREATE POLICY growth_quiz_deny_delete
+  ON creator_growth_quiz_responses FOR DELETE
+  USING (false);

@@ -386,7 +386,9 @@ export async function verifyAndMatch(rawPhone: string, inputCode: string): Promi
       user_id: userId,
       full_name: '',
       phone,
-      is_vetted: false,
+      // The trigger derives is_vetted/is_rejected from this; writing them
+      // directly is what the status column exists to stop.
+      vetting_status: 'pending',
     })
 
     if (createErr) {

@@ -1,0 +1,209 @@
+/* ── Guapd Growth ─────────────────────────────────────────────────────────────
+   Built from the welcome-questions tokens, deliberately. A creator arriving
+   here has already met that flow, and Growth reading as the same product is
+   half of what makes it a track rather than a rejection.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.gr-page {
+  position: relative;
+  z-index: 1;
+  padding: clamp(24px, 4vw, 56px) clamp(18px, 5vw, 48px) clamp(60px, 6vw, 96px);
+}
+
+.gr-shell { max-width: 640px; margin: 0 auto; }
+
+.gr-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.gr-title {
+  margin: 18px 0 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(26px, 3.4vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--ink, #12151C);
+}
+
+.gr-lede {
+  margin: 12px 0 0;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-soft, #565C68);
+  max-width: 460px;
+}
+
+.gr-card {
+  margin-top: clamp(22px, 3vw, 32px);
+  background: #fff;
+  border: 1px solid rgba(24, 28, 36, .08);
+  border-radius: 22px;
+  box-shadow: 0 1px 2px rgba(24, 28, 36, .04), 0 18px 34px -22px rgba(24, 28, 36, .22);
+  padding: clamp(20px, 2.6vw, 30px);
+}
+
+.gr-card--done { display: flex; gap: 14px; align-items: flex-start; }
+
+.gr-check {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+}
+
+.gr-done-title { margin: 4px 0 0; font-family: var(--font-ui); font-size: 14.5px; font-weight: 700; color: var(--ink, #12151C); }
+.gr-done-body { margin: 6px 0 0; font-family: var(--font-ui); font-size: 13.5px; line-height: 1.6; color: var(--ink-soft, #565C68); }
+
+/* ── Progress ───────────────────────────────────────────────────────────── */
+
+.gr-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.gr-progress__bar { flex: 1; height: 4px; border-radius: 20px; background: rgba(24, 28, 36, .10); overflow: hidden; }
+.gr-progress__fill { height: 100%; border-radius: 20px; background: var(--neon-deep, #C9EB3C); transition: width .32s cubic-bezier(.4, 0, .2, 1); }
+.gr-progress__label { flex-shrink: 0; font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--ink-faint, #878D99); }
+
+@media (prefers-reduced-motion: reduce) { .gr-progress__fill { transition: none; } }
+
+/* ── Question ───────────────────────────────────────────────────────────── */
+
+.gr-ask {
+  margin: 0 0 18px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(19px, 2.1vw, 23px);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--ink, #12151C);
+}
+
+.gr-options { display: flex; flex-direction: column; gap: 9px; }
+
+.gr-option {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 56px;
+  padding: 13px 16px;
+  border-radius: 15px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink, #12151C);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.gr-option:hover { border-color: rgba(24, 28, 36, .24); }
+
+.gr-option[aria-pressed='true'] {
+  border-color: var(--neon-deep, #C9EB3C);
+  background: color-mix(in oklab, var(--neon, #E8FF66) 18%, #fff);
+  font-weight: 600;
+}
+
+.gr-option__label { flex: 1; min-width: 0; }
+
+/* Shape as well as colour, so the choice does not rest on the tint alone. */
+.gr-mark {
+  flex: 0 0 21px;
+  width: 21px; height: 21px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(24, 28, 36, .22);
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.gr-option[aria-pressed='true'] .gr-mark { border-color: var(--neon-deep, #C9EB3C); background: var(--neon, #E8FF66); }
+
+/* ── Free text ──────────────────────────────────────────────────────────── */
+
+.gr-follow { margin-top: 16px; }
+.gr-follow__label { display: block; margin-bottom: 7px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink, #12151C); }
+.gr-optional { font-weight: 500; color: var(--ink-faint, #878D99); }
+
+.gr-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(24, 28, 36, .10);
+  background: #fff;
+  font-family: var(--font-ui);
+  /* 16px: below this Safari zooms on focus and pans the field out from under
+     the thumb mid-sentence. */
+  font-size: 16px;
+  color: var(--ink, #12151C);
+}
+
+.gr-input:focus { outline: none; border-color: var(--neon-deep, #C9EB3C); box-shadow: 0 0 0 3px rgba(218, 254, 12, .18); }
+
+.gr-error {
+  margin: 16px 0 0;
+  padding: 10px 13px;
+  border-radius: 12px;
+  background: rgba(180, 38, 42, .06);
+  color: #B4262A;
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.gr-actions { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
+
+.gr-back {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(24, 28, 36, .12);
+  background: #fff;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.gr-next {
+  flex: 1;
+  min-height: 50px;
+  padding: 0 22px;
+  border-radius: 999px;
+  border: none;
+  background: var(--ink, #12151C);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.gr-next:disabled { opacity: .5; cursor: default; }
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 767.98px) {
+  .gr-card { border-radius: 18px; padding: 18px 16px 20px; }
+  .gr-ask { font-size: 19px; }
+  .gr-option { font-size: 14.5px; min-height: 54px; }
+  .gr-option:hover { border-color: rgba(24, 28, 36, .10); }
+  /* Room for the tab bar, which is present here — Growth is inside the creator
+     app shell, unlike the signup questions that replace the screen. */
+  .gr-page { padding-bottom: 96px; }
+}

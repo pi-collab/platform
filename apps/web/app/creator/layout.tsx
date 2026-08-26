@@ -27,11 +27,12 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   let creatorPhoto: string | null = null
   let isVetted = false
   let isRejected = false
+  let vettingStatus = 'pending'
   let creatorId: string | null = null
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('id, full_name, is_vetted, is_rejected, profile_photo_url')
+      .select('id, full_name, is_vetted, is_rejected, vetting_status, profile_photo_url')
       .eq('user_id', profile.id)
       .maybeSingle()
     creatorId = creator?.id ?? null
@@ -39,6 +40,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     creatorPhoto = creator?.profile_photo_url ?? null
     isVetted = creator?.is_vetted ?? false
     isRejected = creator?.is_rejected ?? false
+    vettingStatus = (creator?.vetting_status as string | undefined) ?? 'pending'
   }
 
   // No name means they verified a phone and never finished the profile step.
@@ -96,6 +98,13 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   // also carries the notification preferences, which are the whole reason a
   // waiting creator would want to be on it.
   if (!isVetted) {
+    /* Growth is a THIRD outcome, not a soft rejection, and it is checked before
+       the rejection branch so a Growth creator never meets the appeal box —
+       appealing a decision that was not a rejection only junks the queue. */
+    if (vettingStatus === 'growth') {
+      redirect('/creator/growth')
+    }
+
     if (isRejected) {
       // Whether they have already appealed, so the box does not invite a
       // second note the action would refuse anyway.

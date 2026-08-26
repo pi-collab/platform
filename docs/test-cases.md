@@ -1973,6 +1973,50 @@ silently offered one free revision.
 - [ ] Select one package with 2 free and one with revisions off: the deal offers
       min(2, 0) = 0 free — the stricter package wins, which is the safe direction
 
+### Guapd Growth — the third vetting outcome
+
+vetting_status (pending | deals_approved | growth | rejected) is the SINGLE
+source of truth; is_vetted and is_rejected are derived by trigger.
+
+**The encoding is what keeps Growth away from brands**
+- [ ] A growth creator has is_vetted = false and is_rejected = false
+- [ ] They do NOT appear in /browse, the storefront RPC, or any brand's creator
+      picker — no new gating was added, so if one leaks the encoding is wrong
+- [ ] A brand cannot send them an offer
+
+**Single source of truth**
+- [ ] Write `is_vetted = true` directly on a growth creator: the trigger must
+      overwrite it back to false. A surviving old code path is a no-op, not a
+      corruption
+- [ ] grep the tree: NO code writes is_vetted/is_rejected. Only vetting_status
+
+**Ops**
+- [ ] Three actions on a creator: Approve for Deals / Move to Growth / Reject
+- [ ] Each is offered only where it would change something (no "Move to Growth"
+      on a creator already in Growth)
+- [ ] Re-applying the same outcome sends NO second notification
+- [ ] Every decision writes an ops_events row with before/after status
+
+**Creator experience**
+- [ ] A growth creator lands on /creator/growth, not the under-review page
+- [ ] THE APPEAL BOX DOES NOT RENDER for them — growth is checked before the
+      rejection branch. Appealing a non-rejection would junk the appeal queue
+- [ ] A non-growth creator who types /creator/growth is redirected away
+- [ ] WhatsApp: the same neutral status_update; the link routes by status
+- [ ] Email: "You're in Guapd Growth" — positive, not a softened rejection
+
+**Quiz**
+- [ ] Three questions, one per screen, all required; last one reveals a text box
+      for "Other"
+- [ ] Shows ONCE — gated on the response row existing, not a separate flag
+- [ ] Submitting twice (double-tap, stale tab) is not an error
+- [ ] An unknown code is refused by the CHECK
+- [ ] UPDATE and DELETE are denied by RLS
+
+**growth -> deals_approved**
+- [ ] Promoting a growth creator sends the normal approval email AND queues the
+      post-approval onboarding questions, exactly as a fresh approval does
+
 ---
 
 | When | What to run |

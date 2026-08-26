@@ -120,6 +120,50 @@ async function creatorEmail(creatorId: string): Promise<{ email: string | null; 
   return { email, name: creator.full_name?.split(' ')[0] || 'there' }
 }
 
+/**
+ * Welcome a creator into Guapd Growth.
+ *
+ * A POSITIVE outcome, written as one. Growth is a track for creators who are
+ * not ready for the Deals side yet, and the difference between "you're in a
+ * programme" and "you didn't get in" is entirely in how this reads. It is not a
+ * softened rejection, and it does not apologise.
+ */
+export async function notifyCreatorGrowth(creatorId: string): Promise<void> {
+  try {
+    const { email, name } = await creatorEmail(creatorId)
+    if (!email) {
+      await record('creator.growth_email_skipped', { creator_id: creatorId, reason: 'no_address' })
+      return
+    }
+
+    const { html, text } = renderAccountEmail({
+      heading: `You're in Guapd Growth, ${name}`,
+      body: [
+        `We have reviewed your profile and brought you into Guapd Growth \u2014 our track for creators building towards their first brand deals.`,
+        'It is where we help you grow your following and learn how brand collaborations actually work, so that when the deals come you are ready for them.',
+        'We are building the Growth tools now. In the meantime there are three quick questions on your Growth page \u2014 your answers shape what we build first.',
+      ],
+      ctaUrl: `${siteBase()}/creator/growth`,
+      ctaLabel: 'See your Growth page',
+    })
+
+    const res = await sendAccountEmail({
+      to: [email],
+      subject: `You're in Guapd Growth`,
+      html,
+      text,
+      idempotencyKey: `creator-growth-${creatorId}`,
+    })
+
+    await record(res.ok ? 'creator.growth_email_sent' : 'creator.growth_email_failed', {
+      creator_id: creatorId,
+      ...(res.ok ? {} : { reason: res.reason }),
+    })
+  } catch (err) {
+    console.error(`[account-email] notifyCreatorGrowth failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 /** Tell a creator their profile passed vetting. */
 export async function notifyCreatorApproved(creatorId: string): Promise<void> {
   try {
