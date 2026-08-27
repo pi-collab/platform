@@ -17,12 +17,36 @@ export interface ShopfrontSection {
   enabled: boolean
 }
 
+/** 1234 -> 1.2K, 1200000 -> 1.2M. Whole numbers keep no decimal. */
+function formatCount(n: number): string {
+  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
+  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
+  return String(n)
+}
+
 export interface PlatformStat {
   platform: 'instagram' | 'youtube'
   handle: string
-  followers: number
-  engagement: number
-  avgViews: number
+  /**
+   * Every figure NULLABLE, and every one self-reported.
+   *
+   * `engagement: number` used to sit here and was rendered as a percentage that
+   * nothing computed -- it fell back to a hardcoded 6.4 on every storefront. It
+   * is replaced by `interactions`, a count the creator states, because a rate we
+   * cannot calculate should not be shown as one.
+   *
+   * null means the creator did not say. The renderer omits it rather than
+   * printing a zero, which would read as a measured result.
+   */
+  followers: number | null
+  avgViews: number | null
+  interactions?: number | null
+  /** YouTube only. Free text, e.g. "4:20". */
+  avgViewDuration?: string | null
+  /** YouTube only. */
+  uploadsPerMonth?: number | null
+  /** Omitted entirely unless there is a real series. Six hardcoded months used
+   *  to be drawn here, identical on every creator's page. */
   reachData?: { month: string; value: number }[]
 }
 
@@ -154,7 +178,8 @@ export interface ShopfrontData {
   isVerified: boolean
   replyTime: string
   totalFollowers: string
-  engagementRate: string
+  /** A COUNT the creator stated, not a rate. Blank when unsaid. */
+  interactions: string
   avgViews: string
   // Stats strip
   monthlyReach: string
@@ -162,6 +187,9 @@ export interface ShopfrontData {
   avgDealValue: string
   // Platform stats
   platforms: PlatformStat[]
+  /** YouTube channels, shown as a separate section and omitted when empty.
+   *  Kept apart from `platforms` because the storefront leads on Instagram. */
+  youtube?: PlatformStat[]
   // Audience
   audience: AudienceData
   // Content
@@ -466,8 +494,8 @@ export default function ShopfrontPreview({
                       <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Total followers</div>
                     </div>
                     <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.engagementRate}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Engagement</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.interactions}</div>
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Interactions</div>
                     </div>
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.avgViews}</div>
@@ -791,15 +819,23 @@ export default function ShopfrontPreview({
                     </a>
                   </div>
 
-                  {/* Follower stats */}
-                  <div className="sf-aud-stat" style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(36px,4vw,52px)', letterSpacing: '-0.04em', lineHeight: 0.85, color: 'var(--ink)' }}>
-                      {(p.followers / 1000).toFixed(0)}K
-                    </span>
-                    <span className="t-body" style={{ color: 'var(--ink-soft)' }}>
-                      {p.platform === 'instagram' ? 'followers' : 'subscribers'} · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.engagement}%</span> engagement · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{(p.avgViews / 1000).toFixed(0)}K</span> avg views
-                    </span>
-                  </div>
+                  {/* Follower stats. Each part appears only if the creator said it: a
+                          zero here would read as a measured result rather than a
+                          blank, and "0% engagement" is worse than no claim. */}
+                      <div className="sf-aud-stat" style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
+                        {p.followers != null && (
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(36px,4vw,52px)', letterSpacing: '-0.04em', lineHeight: 0.85, color: 'var(--ink)' }}>
+                            {formatCount(p.followers)}
+                          </span>
+                        )}
+                        <span className="t-body" style={{ color: 'var(--ink-soft)' }}>
+                          {p.platform === 'instagram' ? 'followers' : 'subscribers'}
+                          {p.interactions != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.interactions)}</span> interactions</>}
+                          {p.avgViews != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.avgViews)}</span> avg views</>}
+                          {p.avgViewDuration && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.avgViewDuration}</span> avg watch</>}
+                          {p.uploadsPerMonth != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.uploadsPerMonth}</span>/month</>}
+                        </span>
+                      </div>
 
                   {/* Reach bar chart */}
                   {p.reachData && p.reachData.length > 0 && (
@@ -1030,7 +1066,7 @@ export default function ShopfrontPreview({
                           )}
                           {item.engagement && (
                             <div className="sf-srow">
-                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Engagement</span>
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Interactions</span>
                               <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.engagement}</b>
                             </div>
                           )}

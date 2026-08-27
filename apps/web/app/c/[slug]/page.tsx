@@ -17,6 +17,12 @@ interface SocialAccount {
   handle: string
   url: string | null
   follower_count: number | null
+  // Stated by the creator, per channel. Nothing here is measured: this codebase
+  // has no YouTube or Meta client. Absent means absent, never zero.
+  avg_views?: number | null
+  interactions?: number | null
+  avg_view_duration?: string | null
+  uploads_per_month?: number | null
 }
 
 interface StorefrontStats {
@@ -69,36 +75,38 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const stats = (storefront.stats ?? {}) as StorefrontStats
   const activeProducts = products.filter(p => p.is_active)
 
-  // Build platform stats from social accounts
+  // Per channel, from what the creator actually stated on that channel.
+  //
+  // These used to read engagement and avgViews off the STOREFRONT stats, so
+  // every channel showed the same number, and both fell back to hardcoded
+  // figures (6.4% and 340,000) that no code anywhere computed. Every storefront
+  // therefore published the same invented pair on the page a brand prices from.
+  // A missing number is now missing, and the renderer omits it.
+  //
+  // The Feb-Jul "reach" series went the same way: it was six hardcoded values,
+  // identical on every creator's page, drawn as though it were their trend.
   const platforms = socials
     .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
     .map(s => ({
       platform: s.platform as 'instagram' | 'youtube',
       handle: s.handle || handle,
-      followers: s.follower_count || 0,
-      engagement: stats.engagement_rate || 6.4,
-      avgViews: stats.avg_views || 0,
-      reachData: [
-        { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-        { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-        { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-      ],
+      followers: s.follower_count ?? null,
+      avgViews: s.avg_views ?? null,
+      interactions: s.interactions ?? null,
+      avgViewDuration: s.avg_view_duration ?? null,
+      uploadsPerMonth: s.uploads_per_month ?? null,
     }))
-  if (platforms.length === 0) {
-    platforms.push({
-      platform: 'instagram' as const, handle,
-      followers: stats.followers || 500000,
-      engagement: stats.engagement_rate || 6.4,
-      avgViews: stats.avg_views || 340000,
-      reachData: [
-        { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-        { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-        { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-      ],
-    })
-  }
 
-  const totalFollowers = stats.followers || platforms.reduce((s, p) => s + p.followers, 0)
+  // The main storefront is Instagram for now. YouTube renders as its own
+  // section when the creator has filled it in, and not at all when they have not.
+  const igPlatforms = platforms.filter(p => p.platform === 'instagram')
+  const ytPlatforms = platforms.filter(p => p.platform === 'youtube')
+  const primary = igPlatforms[0] ?? null
+
+  // NOT a sum across channels. Adding Instagram followers to YouTube
+  // subscribers produces a number that describes nobody: the same person
+  // following both is counted twice, and the two are not the same unit.
+  const totalFollowers = primary?.followers ?? null
   const niches = (storefront.categories?.length ? storefront.categories : creator.niches) ?? []
   const workedWith = creator.worked_with ?? []
   const audience = stats.audience ?? {}
@@ -145,13 +153,15 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     // to '-'; this one asserted a response time nobody measured, on the page
     // a brand decides from.
     replyTime: stats.reply_time || '',
-    totalFollowers: formatStat(totalFollowers),
-    engagementRate: `${stats.engagement_rate || 6.4}%`,
-    avgViews: formatStat(stats.avg_views || 340000),
+    totalFollowers: totalFollowers != null ? formatStat(totalFollowers) : '',
+    // Blank, never a fabricated figure. The renderer hides what is blank.
+    interactions: primary?.interactions != null ? formatStat(primary.interactions) : '',
+    avgViews: primary?.avgViews != null ? formatStat(primary.avgViews) : '',
     monthlyReach: stats.monthly_reach || '-',
     repeatBrands: stats.repeat_brands || '-',
     avgDealValue: stats.avg_deal_value || '-',
-    platforms,
+    platforms: igPlatforms,
+    youtube: ytPlatforms,
     audience: {
       ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
       gender: (audience as Record<string, unknown>).gender_women != null

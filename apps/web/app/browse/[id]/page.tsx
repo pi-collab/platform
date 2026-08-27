@@ -12,6 +12,10 @@ interface SocialAccount {
   handle: string
   url: string | null
   follower_count: number | null
+  avg_views?: number | null
+  interactions?: number | null
+  avg_view_duration?: string | null
+  uploads_per_month?: number | null
   verified: boolean
 }
 
@@ -123,35 +127,29 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       )
     }
 
-    const platforms = socials
-      .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
-      .map(s => ({
-        platform: s.platform as 'instagram' | 'youtube',
-        handle: s.handle || handle,
-        followers: s.follower_count || 0,
-        engagement: stats.engagement_rate || 6.4,
-        avgViews: stats.avg_views || 0,
-        reachData: [
-          { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-          { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-          { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-        ],
-      }))
-    if (platforms.length === 0) {
-      platforms.push({
-        platform: 'instagram' as const, handle,
-        followers: stats.followers || 500000,
-        engagement: stats.engagement_rate || 6.4,
-        avgViews: stats.avg_views || 340000,
-        reachData: [
-          { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-          { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-          { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-        ],
-      })
-    }
+      // Per channel, from what the creator stated. These used to read engagement
+      // and avgViews off the STOREFRONT stats -- so every channel showed the same
+      // number -- and both fell back to hardcoded figures (6.4% and 340,000) that
+      // nothing computed. The Feb-Jul series was six hardcoded values drawn as
+      // though they were this creator's trend, identical on every profile.
+      const allPlatforms = socials
+        .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
+        .map(s => ({
+          platform: s.platform as 'instagram' | 'youtube',
+          handle: s.handle || handle,
+          followers: s.follower_count ?? null,
+          avgViews: s.avg_views ?? null,
+          interactions: s.interactions ?? null,
+          avgViewDuration: s.avg_view_duration ?? null,
+          uploadsPerMonth: s.uploads_per_month ?? null,
+        }))
+      const platforms = allPlatforms.filter(p => p.platform === 'instagram')
+      const youtube = allPlatforms.filter(p => p.platform === 'youtube')
 
-    const totalFollowers = stats.followers || platforms.reduce((s, p) => s + p.followers, 0)
+    // NOT a sum across channels: adding Instagram followers to YouTube
+    // subscribers double-counts anyone following both and mixes two units.
+    // Instagram leads the profile, so the headline is its number.
+    const totalFollowers = platforms[0]?.followers ?? null
     const niches = (storefront.categories?.length ? storefront.categories : creator.niches) ?? []
     const workedWith = creator.worked_with ?? []
     const audience = stats.audience ?? {}
@@ -179,13 +177,15 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       // Blank, not an invented '~4h'. See /c/[slug]: an unmeasured response
       // time must not be stated as fact to a brand.
       replyTime: stats.reply_time || '',
-      totalFollowers: formatStat(totalFollowers),
-      engagementRate: `${stats.engagement_rate || 6.4}%`,
-      avgViews: formatStat(stats.avg_views || 340000),
+      totalFollowers: totalFollowers != null ? formatStat(totalFollowers) : '',
+      // Blank, never a fabricated figure. See /c/[slug].
+      interactions: '',
+      avgViews: '',
       monthlyReach: stats.monthly_reach || '-',
       repeatBrands: stats.repeat_brands || '-',
       avgDealValue: stats.avg_deal_value || '-',
       platforms,
+      youtube,
       audience: {
         ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
         gender: (audience as Record<string, unknown>).gender_women != null

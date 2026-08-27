@@ -135,6 +135,9 @@ function sectionsWithAutoHide(sections: ShopfrontSection[], edit: EditState, pro
 function buildShopfrontData(
   creator: Creator | null, products: Product[],
   storefront: StorefrontRow | null, sections: ShopfrontSection[], edit: EditState,
+  // The LIVE per-channel numbers, so the preview shows what publishing would
+  // actually put on the page rather than what was last saved.
+  chan: Record<string, ChannelStatFields>,
   currentSlug?: string,
 ): ShopfrontData {
   const handle = creator?.handle || 'creator'
@@ -153,44 +156,54 @@ function buildShopfrontData(
       { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
     )
   }
-  const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string; follower_count?: number }>
-  const platforms = socials
-    .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
-    .map(s => ({
-      platform: s.platform as 'instagram' | 'youtube', handle: s.handle || handle,
-      followers: s.follower_count || 0, engagement: storefront?.stats?.engagement_rate || 6.4,
-      avgViews: storefront?.stats?.avg_views || 0,
-      reachData: [
-        { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-        { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-        { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-      ],
-    }))
-  if (platforms.length === 0) {
-    platforms.push({
-      platform: 'instagram', handle,
-      followers: storefront?.stats?.followers || 500000,
-      engagement: storefront?.stats?.engagement_rate || 6.4,
-      avgViews: storefront?.stats?.avg_views || 340000,
-      reachData: [
-        { month: 'Feb', value: 210000 }, { month: 'Mar', value: 260000 },
-        { month: 'Apr', value: 235000 }, { month: 'May', value: 300000 },
-        { month: 'Jun', value: 355000 }, { month: 'Jul', value: 428000 },
-      ],
-    })
-  }
-  const totalFollowers = storefront?.stats?.followers || platforms.reduce((s, p) => s + p.followers, 0)
+    const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>
+    // Built from the LIVE editor state, not from what was last saved, so the
+    // preview shows what publishing would actually put on the page.
+    //
+    // The previous version read engagement and avgViews off storefront stats and
+    // fell back to 6.4 and 340,000 -- so the preview asserted numbers the creator
+    // had never entered and could not edit, then the public page asserted the
+    // same ones. A blank is now blank in both places.
+    const num = (v?: string) => {
+      const t = (v ?? '').trim()
+      if (t === '') return null
+      const n = parseInt(t.replace(/\D/g, ''), 10)
+      return Number.isFinite(n) ? n : null
+    }
+    const allPlatforms = socials
+      .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
+      .map(s => {
+        const v = chan[`${s.platform}|${s.handle}`] ?? EMPTY_CHANNEL_STATS
+        return {
+          platform: s.platform as 'instagram' | 'youtube',
+          handle: s.handle || handle,
+          followers: num(v.followers),
+          avgViews: num(v.avgViews),
+          interactions: num(v.interactions),
+          avgViewDuration: v.avgViewDuration.trim() || null,
+          uploadsPerMonth: num(v.uploadsPerMonth),
+          // No reachData. Six hardcoded months used to be drawn here as though
+          // they were this creator's trend, identical on every storefront.
+        }
+      })
+    const platforms = allPlatforms.filter(p => p.platform === 'instagram')
+    const youtube = allPlatforms.filter(p => p.platform === 'youtube')
+
   return {
     creatorName: edit.displayName || 'Creator', handle,
     bio: edit.bio || 'Creator on Guapd.',
     profilePhotoUrl: creator?.profile_photo_url,
     niches: edit.niches.length > 0 ? edit.niches : ['Creator'],
     isVerified: creator?.is_vetted ?? false, replyTime: edit.replyTime,
-    totalFollowers: formatStat(totalFollowers),
-    engagementRate: `${storefront?.stats?.engagement_rate || 6.4}%`,
-    avgViews: formatStat(storefront?.stats?.avg_views || 340000),
+    // Instagram leads the storefront, so the headline is ITS number, never a
+    // sum across channels: adding followers to subscribers counts the same
+    // person twice and mixes two units that are not the same thing.
+    totalFollowers: platforms[0]?.followers != null ? formatStat(platforms[0].followers) : '',
+    interactions: platforms[0]?.interactions != null ? formatStat(platforms[0].interactions) : '',
+    avgViews: platforms[0]?.avgViews != null ? formatStat(platforms[0].avgViews) : '',
     monthlyReach: edit.monthlyReach, repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
     platforms,
+    youtube,
     audience: {
       ageBreakdown: edit.ageBreakdown,
       gender: { women: edit.genderWomen, men: 100 - edit.genderWomen },
@@ -980,7 +993,7 @@ export default function StorefrontManager({
   }
 
   const resolvedSections = sectionsWithAutoHide(sections, edit, products, !!storefront)
-  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, slug)
+  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug)
 
   /* ── EDIT MODE ────────────────────────────────────────── */
 
