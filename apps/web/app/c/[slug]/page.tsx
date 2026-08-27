@@ -85,7 +85,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   //
   // The Feb-Jul "reach" series went the same way: it was six hardcoded values,
   // identical on every creator's page, drawn as though it were their trend.
-  const platforms = socials
+  const allPlatforms = socials
     .filter(s => s.platform === 'instagram' || s.platform === 'youtube')
     .map(s => ({
       platform: s.platform as 'instagram' | 'youtube',
@@ -97,11 +97,10 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
       watchTime: s.watch_time ?? null,
     }))
 
-  // The main storefront is Instagram for now. YouTube renders as its own
-  // section when the creator has filled it in, and not at all when they have not.
-  const igPlatforms = platforms.filter(p => p.platform === 'instagram')
-  const ytPlatforms = platforms.filter(p => p.platform === 'youtube')
-  const primary = igPlatforms[0] ?? null
+  // The headline strip is Instagram-led. The audience section below carries
+  // a per-channel toggle, so YouTube is reachable there rather than needing a
+  // section of its own.
+  const primary = allPlatforms.find(p => p.platform === 'instagram') ?? allPlatforms[0] ?? null
 
   // NOT a sum across channels. Adding Instagram followers to YouTube
   // subscribers produces a number that describes nobody: the same person
@@ -160,8 +159,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     monthlyReach: stats.monthly_reach || '-',
     repeatBrands: stats.repeat_brands || '-',
     avgDealValue: stats.avg_deal_value || '-',
-    platforms: igPlatforms,
-    youtube: ytPlatforms,
+    platforms: allPlatforms,
     audience: {
       ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
       gender: (audience as Record<string, unknown>).gender_women != null

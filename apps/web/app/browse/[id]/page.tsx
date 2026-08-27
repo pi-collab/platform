@@ -143,13 +143,11 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
           views: s.views ?? null,
           watchTime: s.watch_time ?? null,
         }))
-      const platforms = allPlatforms.filter(p => p.platform === 'instagram')
-      const youtube = allPlatforms.filter(p => p.platform === 'youtube')
 
     // NOT a sum across channels: adding Instagram followers to YouTube
     // subscribers double-counts anyone following both and mixes two units.
     // Instagram leads the profile, so the headline is its number.
-    const totalFollowers = platforms[0]?.followers ?? null
+    const totalFollowers = (allPlatforms.find(p => p.platform === 'instagram') ?? allPlatforms[0])?.followers ?? null
     const niches = (storefront.categories?.length ? storefront.categories : creator.niches) ?? []
     const workedWith = creator.worked_with ?? []
     const audience = stats.audience ?? {}
@@ -184,8 +182,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       monthlyReach: stats.monthly_reach || '-',
       repeatBrands: stats.repeat_brands || '-',
       avgDealValue: stats.avg_deal_value || '-',
-      platforms,
-      youtube,
+      platforms: allPlatforms,
       audience: {
         ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
         gender: (audience as Record<string, unknown>).gender_women != null

@@ -187,9 +187,6 @@ export interface ShopfrontData {
   avgDealValue: string
   // Platform stats
   platforms: PlatformStat[]
-  /** YouTube channels, shown as a separate section and omitted when empty.
-   *  Kept apart from `platforms` because the storefront leads on Instagram. */
-  youtube?: PlatformStat[]
   // Audience
   audience: AudienceData
   // Content
@@ -757,7 +754,10 @@ export default function ShopfrontPreview({
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>{firstName}&apos;s <span className="t-accent">audience</span></h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Real reach and growth on each platform, updated monthly.</p>
               </div>
-              <div role="tablist" style={{ display: 'inline-flex', gap: 10, flexShrink: 0 }}>
+              {/* Only when there is something to switch BETWEEN. A tablist with one
+                  tab is a control that cannot do anything, and it implies a second
+                  channel the creator does not have. */}
+              <div role="tablist" style={{ display: data.platforms.length > 1 ? 'inline-flex' : 'none', gap: 10, flexShrink: 0 }}>
                 {data.platforms.map(p => {
                   const isActive = activePlatform === p.platform
                   return (
@@ -789,7 +789,12 @@ export default function ShopfrontPreview({
 
             {/* Platform cards */}
             {data.platforms.map(p => (
-              <div key={p.platform} style={{ display: activePlatform === p.platform ? 'block' : 'none', marginTop: 'clamp(24px,3vw,34px)' }}>
+              <div key={p.platform} style={{
+                // With one channel there is no toggle to select it, so the single
+                // card must not depend on a selection having been made.
+                display: data.platforms.length === 1 || activePlatform === p.platform ? 'block' : 'none',
+                marginTop: 'clamp(24px,3vw,34px)',
+              }}>
                 <div style={{
                   background: 'var(--card)', borderRadius: 20, padding: 'clamp(20px,2.6vw,30px)',
                   boxShadow: 'inset 0 2px 7px rgba(40,45,25,.11),inset 0 0 0 1px rgba(40,45,25,.06)',

@@ -186,9 +186,8 @@ function buildShopfrontData(
           // they were this creator's trend, identical on every storefront.
         }
       })
-    const platforms = allPlatforms.filter(p => p.platform === 'instagram')
-    const youtube = allPlatforms.filter(p => p.platform === 'youtube')
 
+  const igPrimary = allPlatforms.find(p => p.platform === 'instagram') ?? allPlatforms[0] ?? null
   return {
     creatorName: edit.displayName || 'Creator', handle,
     bio: edit.bio || 'Creator on Guapd.',
@@ -198,12 +197,11 @@ function buildShopfrontData(
     // Instagram leads the storefront, so the headline is ITS number, never a
     // sum across channels: adding followers to subscribers counts the same
     // person twice and mixes two units that are not the same thing.
-    totalFollowers: platforms[0]?.followers != null ? formatStat(platforms[0].followers) : '',
-    interactions: platforms[0]?.interactions != null ? formatStat(platforms[0].interactions) : '',
-    avgViews: platforms[0]?.avgViews != null ? formatStat(platforms[0].avgViews) : '',
+    totalFollowers: igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
+    interactions: igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
+    avgViews: igPrimary?.avgViews != null ? formatStat(igPrimary.avgViews) : '',
     monthlyReach: edit.monthlyReach, repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
-    platforms,
-    youtube,
+    platforms: allPlatforms,
     audience: {
       ageBreakdown: edit.ageBreakdown,
       gender: { women: edit.genderWomen, men: 100 - edit.genderWomen },
