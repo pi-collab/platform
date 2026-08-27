@@ -158,7 +158,11 @@
   text-decoration: none;
 }
 
-.pk-btn-primary { background: var(--neon, #E8FF66); color: var(--lime-950, #161B08); }
+.pk-btn-primary {
+  background: var(--ink, #12151C);
+  color: #fff;
+}
+.pk-btn-primary:hover { background: #000; }
 .pk-btn-primary:disabled { opacity: .6; cursor: default; }
 
 .pk-btn-ghost {

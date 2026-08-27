@@ -110,6 +110,19 @@ export async function savePackage(input: SavePackageInput): Promise<PackageResul
     // consumers read this flag and must keep agreeing with the mode.
     display_price: mode !== 'on_request',
     is_active: true,
+    // ZEROED EXPLICITLY, and this is not tidiness.
+    //
+    // included_revisions defaults to 1 (0080) while revisions_enabled defaults
+    // to false (0485), and 0485 added
+    //   CHECK (revisions_enabled OR (included_revisions = 0 AND per_extra = 0))
+    // An insert omitting all three therefore takes 1 / false and is rejected,
+    // which broke adding a package outright. Existing rows were backfilled to
+    // enabled = true, so nothing failed until the first NEW package after 0485.
+    //
+    // Zeroed rather than enabling revisions here: 0486 moved revision terms onto
+    // the CREATOR, so these package columns are vestigial and nothing reads them.
+    included_revisions: 0,
+    price_per_extra_revision_paise: 0,
   }
 
   // Service role, but every write is pinned to ctx.creatorId: on update the

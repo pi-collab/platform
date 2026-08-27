@@ -2010,7 +2010,22 @@ in place.
 - [ ] The shopfront page reads these through the RLS-scoped client, so this is
       also the regression check for the creators column grant (0489)
 
-#### Creator inbox, empty state, desktop
+#### Packages
+
+- [ ] A creator can ADD a package. This was broken outright from 0485 until
+      0491: included_revisions defaults to 1 while revisions_enabled defaults to
+      false, and 0485's coherence CHECK rejects that combination, so every
+      insert failed with "Could not save that. Please try again."
+- [ ] It failed silently for existing creators: 0485 backfilled existing rows to
+      enabled = true, so nothing on the table violated the constraint and only
+      the next NEW package did
+- [ ] Test on EVERY channel and price mode, not just Instagram exact: the
+      constraint has nothing to do with either, so one case proves the rest
+- [ ] Editing an existing package still saves
+- [ ] Run 0491 BEFORE relying on the app fix alone. The action writes both
+      columns now, but any other insert path still takes the column defaults
+
+### Creator inbox, empty state, desktop
 
 - [ ] A creator with no conversations on a DESKTOP sees the drawn empty state:
       the workspace card, an inert search, four filter chips, ghost rows down
