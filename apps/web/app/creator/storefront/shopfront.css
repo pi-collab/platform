@@ -104,3 +104,62 @@
     min-height: 44px;
   }
 }
+
+/* ── Gender split slider ───────────────────────────────────────────────────
+   accent-color alone leaves the browser's own thumb, which Chrome and Safari
+   draw with a dark ring. Styling the thumb explicitly is the only way to get
+   a clean lime dot with no border on it.
+
+   Both vendor prefixes are needed and they CANNOT be combined into one rule:
+   an unrecognised selector invalidates the whole selector list, so pairing
+   ::-webkit-slider-thumb with ::-moz-range-thumb silently drops both.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sf-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(24, 28, 36, .10);
+  outline: none;
+}
+
+/* The filled portion, painted as a gradient because a native range gives no
+   hook for "the part to the left of the thumb". --fill is set inline. */
+.sf-range {
+  background: linear-gradient(
+    to right,
+    var(--neon, #E8FF66) 0%,
+    var(--neon, #E8FF66) var(--fill, 50%),
+    rgba(24, 28, 36, .10) var(--fill, 50%),
+    rgba(24, 28, 36, .10) 100%
+  );
+}
+
+.sf-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--neon-deep, #C9EB3C);
+  box-shadow: 0 1px 4px rgba(40, 45, 25, .35);
+  cursor: pointer;
+}
+
+.sf-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--neon-deep, #C9EB3C);
+  box-shadow: 0 1px 4px rgba(40, 45, 25, .35);
+  cursor: pointer;
+}
+
+.sf-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+}

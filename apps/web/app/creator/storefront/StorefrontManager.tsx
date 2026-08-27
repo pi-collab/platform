@@ -1187,7 +1187,7 @@ export default function StorefrontManager({
                                         type="text"
                                         inputMode={f.numeric ? 'numeric' : 'text'}
                                         aria-label={`${f.label} on ${plat}`}
-                                        placeholder="-"
+                                        placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 4:20'}
                                         value={vals[f.key]}
                                         onChange={e => {
                                           // Digits only for counts, and kept as a STRING so a
@@ -1199,7 +1199,20 @@ export default function StorefrontManager({
                                             : e.target.value.slice(0, 12)
                                           setChanField(k, f.key, v)
                                         }}
-                                        style={{ width: 120, textAlign: 'right', border: 'none', background: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}
+                                        // A VISIBLE field. This inherited the
+                                        // borderless style from the old followers
+                                        // row, which worked only because that value
+                                        // was always populated with "0". Blank, right
+                                        // aligned and borderless, it reads as static
+                                        // text and nobody can tell it is typeable.
+                                        style={{
+                                          width: 130, textAlign: 'right',
+                                          height: 38, padding: '0 12px',
+                                          borderRadius: 10, border: `1px solid ${BHL}`,
+                                          background: '#fff', outline: 'none',
+                                          fontFamily: 'var(--font-display)', fontWeight: 800,
+                                          fontSize: 15, color: 'var(--ink)',
+                                        }}
                                       />
                                     </div>
                                     {f.hint && (
@@ -1274,8 +1287,14 @@ export default function StorefrontManager({
                     <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${BHL}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{edit.genderWomen}%</div>
-                        <input type="range" min={0} max={100} value={edit.genderWomen} onChange={e => set('genderWomen', parseInt(e.target.value))}
-                          style={{ flex: 1, accentColor: 'var(--lime-400)', height: 6 }} />
+                        <input
+                          type="range" min={0} max={100} value={edit.genderWomen}
+                          onChange={e => set('genderWomen', parseInt(e.target.value))}
+                          className="sf-range"
+                          // --fill drives the track gradient: a native range gives no
+                          // hook for styling "the part left of the thumb".
+                          style={{ flex: 1, ['--fill' as string]: `${edit.genderWomen}%` }}
+                        />
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34, textAlign: 'right' }}>{100 - edit.genderWomen}%</div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-faint)', marginTop: 6, padding: '0 2px' }}>
