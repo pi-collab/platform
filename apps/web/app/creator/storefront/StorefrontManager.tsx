@@ -735,7 +735,6 @@ export default function StorefrontManager({
         .map(a => [`${a.platform}|${a.handle}`, String(a.follower_count ?? 0)]),
     ),
   )
-  const [savingFollowers, setSavingFollowers] = useState(false)
 
   /* Which package the shared form is open on: 'new', a row, or nothing.
      Same state shape the packages screen uses, because it is the same form. */
@@ -848,8 +847,29 @@ export default function StorefrontManager({
       show_rates: true, show_past_collabs: edit.brandCollabs.length > 0,
       is_published: publish ?? storefront?.is_published ?? false,
     })
+    if ('error' in result) { setSaving(false); setSaveMsg({ type: 'err', text: result.error ?? 'Error saving.' }); return false }
+
+    // Follower counts live on creators.social_accounts, not on the storefront
+    // row, so they are a SECOND write. Done here rather than behind their own
+    // button: a number typed into the form and then lost because a second
+    // button was never pressed is silent data loss, and nothing on screen gives
+    // the creator any reason to suspect it.
+    //
+    // Skipped when there is nothing to write. saveFollowerCounts refuses
+    // outright for a creator with no channels, and that refusal would then fail
+    // EVERY save on this page rather than just the follower part.
+    const typedFollowers = Object.entries(followers).filter(([, v]) => v.trim() !== '')
+    if (typedFollowers.length > 0) {
+      const fRes = await saveFollowerCounts(
+        typedFollowers.map(([k, v]) => {
+          const [platform, handle] = k.split('|')
+          return { platform, handle, followers: parseInt(v || '0', 10) }
+        }),
+      )
+      if (!fRes.ok) { setSaving(false); setSaveMsg({ type: 'err', text: fRes.message }); return false }
+    }
+
     setSaving(false)
-    if ('error' in result) { setSaveMsg({ type: 'err', text: result.error ?? 'Error saving.' }); return false }
     setSaveMsg({ type: 'ok', text: publish ? 'Published!' : 'Saved!' })
     if (publish) setJustPublished(true)
     router.refresh()
@@ -1095,26 +1115,10 @@ export default function StorefrontManager({
                           Add a channel on your profile first.
                         </p>
                       )}
-                      <button
-                        type="button"
-                        disabled={savingFollowers}
-                        onClick={async () => {
-                          setSavingFollowers(true)
-                          const res = await saveFollowerCounts(
-                            Object.entries(followers).map(([k, v]) => {
-                              const [platform, handle] = k.split('|')
-                              return { platform, handle, followers: parseInt(v || '0', 10) }
-                            }),
-                          )
-                          setSavingFollowers(false)
-                          setSaveMsg(res.ok
-                            ? { type: 'ok', text: 'Follower counts saved.' }
-                            : { type: 'err', text: res.message })
-                        }}
-                        style={{ ...secondBtn, alignSelf: 'flex-start' }}
-                      >
-                        {savingFollowers ? 'Saving…' : 'Save followers'}
-                      </button>
+                      {/* The "Save followers" button was here. Removed: these now save with
+                          everything else on Continue, Save draft and Publish, and a second
+                          button that must ALSO be pressed is exactly how the number got
+                          lost. */}
                     </div>
                   </Field>
 
@@ -1415,8 +1419,11 @@ export default function StorefrontManager({
 
             {wizard && step < lastStep ? (
               <button
-                onClick={() => setStep(step + 1)}
-                disabled={!canAdvance}
+                // Saves on the way OUT of each step. Advancing used to be
+                // setStep alone, so everything typed on a step lived only in
+                // React state until someone remembered to press "Save draft".
+                onClick={async () => { if (await handleSave(false)) setStep(step + 1) }}
+                disabled={!canAdvance || saving}
                 title={canAdvance ? undefined : 'Pick an available link first'}
                 style={{
                   ...primaryBtn,
