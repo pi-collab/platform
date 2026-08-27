@@ -448,13 +448,21 @@ export default function ShopfrontPreview({
                         key={p.platform}
                         href={profileUrl(p.platform, p.handle) ?? '#'}
                         target="_blank" rel="noopener noreferrer"
+                        // NOT a pill. It was one, with 12px of horizontal padding
+                        // and `border: 1px solid var(--frost-edge)` -- which is
+                        // rgba(255,255,255,.85), invisible on a white card. So the
+                        // padding indented this row past the name and the bio while
+                        // the chip that justified the indent could not be seen, and
+                        // the reply time beside it used 4px. One row, two treatments,
+                        // neither aligned to the column.
+                        //
+                        // frost-edge is a glass edge meant for the mesh background;
+                        // on white it reads as nothing at all.
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '5px 12px', borderRadius: 999,
-                          background: 'var(--card)', border: '1px solid var(--frost-edge)',
+                          padding: '5px 10px 5px 0',
                           fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
                           color: 'var(--ink-soft)', textDecoration: 'none',
-                          transition: 'border-color .15s',
                         }}
                       >
                         {p.platform === 'instagram' ? (
@@ -466,7 +474,7 @@ export default function ShopfrontPreview({
                       </a>
                     ))}
                     {data.replyTime && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0 5px 4px', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
                         <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: 0 }} />
                         Replies in {data.replyTime}
                       </span>
