@@ -14,8 +14,8 @@ interface SocialAccount {
   follower_count: number | null
   avg_views?: number | null
   interactions?: number | null
-  avg_view_duration?: string | null
-  uploads_per_month?: number | null
+  views?: number | null
+  watch_time?: string | null
   verified: boolean
 }
 
@@ -140,8 +140,8 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
           followers: s.follower_count ?? null,
           avgViews: s.avg_views ?? null,
           interactions: s.interactions ?? null,
-          avgViewDuration: s.avg_view_duration ?? null,
-          uploadsPerMonth: s.uploads_per_month ?? null,
+          views: s.views ?? null,
+          watchTime: s.watch_time ?? null,
         }))
       const platforms = allPlatforms.filter(p => p.platform === 'instagram')
       const youtube = allPlatforms.filter(p => p.platform === 'youtube')

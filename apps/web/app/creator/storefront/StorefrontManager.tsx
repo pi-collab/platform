@@ -180,8 +180,8 @@ function buildShopfrontData(
           followers: num(v.followers),
           avgViews: num(v.avgViews),
           interactions: num(v.interactions),
-          avgViewDuration: v.avgViewDuration.trim() || null,
-          uploadsPerMonth: num(v.uploadsPerMonth),
+          views: num(v.views),
+          watchTime: v.watchTime.trim() || null,
           // No reachData. Six hardcoded months used to be drawn here as though
           // they were this creator's trend, identical on every storefront.
         }
@@ -565,7 +565,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
           <div style={{ paddingTop: 16 }}>
             <Field label="Title">
               <input type="text" value={item.title} onChange={e => u({ title: e.target.value })}
-                placeholder="What was this content about?" maxLength={200} style={dinput} />
+                placeholder="What was this content about?" maxLength={200} onKeyDown={onFieldEnter} style={dinput} />
             </Field>
 
             <Field label="Content type">
@@ -601,11 +601,11 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
             <div className="sf-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <Field label="Brand">
                 <input type="text" value={item.brand || ''} onChange={e => u({ brand: e.target.value })}
-                  placeholder="Brand name" style={dinput} />
+                  placeholder="Brand name" onKeyDown={onFieldEnter} style={dinput} />
               </Field>
               <Field label="When">
                 <input type="text" value={item.date || ''} onChange={e => u({ date: e.target.value })}
-                  placeholder="Jul 2026" style={dinput} />
+                  placeholder="Jul 2026" onKeyDown={onFieldEnter} style={dinput} />
               </Field>
             </div>
 
@@ -690,7 +690,7 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
           <div style={{ paddingTop: 14 }}>
             <Field label="Brand name">
               <input type="text" value={collab.name} onChange={e => u({ name: e.target.value })}
-                placeholder="e.g. Groww, boAt, Mamaearth" style={dinput} />
+                placeholder="e.g. Groww, boAt, Mamaearth" onKeyDown={onFieldEnter} style={dinput} />
             </Field>
             <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr', gap: 10 }}>
               <Field label="What you delivered" style={{ marginBottom: 0 }}>
@@ -720,12 +720,25 @@ interface ChannelStatFields {
   followers: string
   avgViews: string
   interactions: string
-  avgViewDuration: string
-  uploadsPerMonth: string
+  views: string
+  watchTime: string
 }
 
 const EMPTY_CHANNEL_STATS: ChannelStatFields = {
-  followers: '', avgViews: '', interactions: '', avgViewDuration: '', uploadsPerMonth: '',
+  followers: '', avgViews: '', interactions: '', views: '', watchTime: '',
+}
+
+/**
+ * The reporting window, per platform.
+ *
+ * 30 for Instagram and 28 for YouTube because those are the defaults each app
+ * shows its own creators. Asking for "last 30 days" on YouTube means asking
+ * someone to re-derive a number Studio already puts in front of them, which is
+ * how you get an estimate instead of a figure.
+ */
+const CHANNEL_WINDOW: Record<string, string> = {
+  instagram: 'Last 30 days.',
+  youtube: 'Last 28 days, the window YouTube Studio shows.',
 }
 
 /**
@@ -744,19 +757,58 @@ const EMPTY_CHANNEL_STATS: ChannelStatFields = {
 const CHANNEL_FIELDS: Record<string, { key: keyof ChannelStatFields; label: string; hint?: string; numeric: boolean }[]> = {
   instagram: [
     { key: 'followers', label: 'Followers', numeric: true },
-    { key: 'avgViews', label: 'Avg views', hint: 'Last 30 days.', numeric: true },
-    { key: 'interactions', label: 'Interactions', hint: 'Last 30 days. Likes, comments and shares added up. A count, not a percentage.', numeric: true },
+    { key: 'avgViews', label: 'Avg views', numeric: true },
+    { key: 'interactions', label: 'Interactions', hint: 'Likes, comments and shares added up. A count, not a percentage.', numeric: true },
   ],
+  // Views, subscribers and watch time: the three figures on the front page of
+  // YouTube Studio, so a creator copies rather than calculates.
   youtube: [
+    { key: 'views', label: 'Views', numeric: true },
     { key: 'followers', label: 'Subscribers', numeric: true },
-    { key: 'avgViews', label: 'Avg views', hint: 'Last 30 days. The number a brand is actually buying.', numeric: true },
-    { key: 'avgViewDuration', label: 'Avg view duration', hint: 'Last 30 days, e.g. 4:20. Tells a brand whether a mid-roll gets seen.', numeric: false },
-    { key: 'uploadsPerMonth', label: 'Uploads', hint: 'Last 30 days.', numeric: true },
+    { key: 'watchTime', label: 'Watch time', hint: 'As Studio shows it, e.g. 1.2K hours.', numeric: false },
   ],
 }
 
 /** Anything not named above still gets the basics. */
 const DEFAULT_CHANNEL_FIELDS = CHANNEL_FIELDS.instagram
+
+/**
+ * Enter moves to the next field.
+ *
+ * On a form of small numeric boxes, Enter doing nothing means reaching for the
+ * mouse between every one of them. Scoped to the editor shell so focus cannot
+ * jump into the live preview, and textareas are excluded because Enter there
+ * means a new line.
+ */
+function focusNextField(from: HTMLElement) {
+  const shell = from.closest('.sf-editor-shell')
+  if (!shell) return
+  const fields = Array.from(
+    shell.querySelectorAll<HTMLElement>(
+      'input:not([type="range"]):not([disabled]):not([type="file"]), select',
+    ),
+  ).filter(el => el.offsetParent !== null)   // skip anything a closed section is hiding
+  const i = fields.indexOf(from)
+  if (i >= 0 && i + 1 < fields.length) {
+    const next = fields[i + 1]
+    next.focus()
+    if (next instanceof HTMLInputElement) next.select()
+  }
+}
+
+function onFieldEnter(e: React.KeyboardEvent<HTMLElement>) {
+  if (e.key !== 'Enter') return
+  e.preventDefault()
+  focusNextField(e.currentTarget)
+}
+
+/** Clicking anywhere on a row puts the caret in its input, so the target is the
+ *  whole row rather than the few characters of the number itself. */
+function focusRowInput(e: React.MouseEvent<HTMLElement>) {
+  if ((e.target as HTMLElement).closest('input, button, a, select, textarea')) return
+  const input = e.currentTarget.querySelector<HTMLInputElement>('input:not([disabled])')
+  if (input) { input.focus(); input.select() }
+}
 
 export default function StorefrontManager({
   storefront, creator, products, creatorName, addonRates = [], revisionPolicy,
@@ -795,8 +847,8 @@ export default function StorefrontManager({
           followers: a.follower_count == null ? '' : String(a.follower_count),
           avgViews: a.avg_views == null ? '' : String(a.avg_views),
           interactions: a.interactions == null ? '' : String(a.interactions),
-          avgViewDuration: a.avg_view_duration == null ? '' : String(a.avg_view_duration),
-          uploadsPerMonth: a.uploads_per_month == null ? '' : String(a.uploads_per_month),
+          views: a.views == null ? '' : String(a.views),
+          watchTime: a.watch_time == null ? '' : String(a.watch_time),
         }]),
     ),
   )
@@ -940,8 +992,8 @@ export default function StorefrontManager({
             followers: num(v.followers),
             avgViews: num(v.avgViews),
             interactions: num(v.interactions),
-            uploadsPerMonth: num(v.uploadsPerMonth),
-            avgViewDuration: v.avgViewDuration.trim() === '' ? null : v.avgViewDuration.trim(),
+            views: num(v.views),
+            watchTime: v.watchTime.trim() === '' ? null : v.watchTime.trim(),
           }
         }),
       )
@@ -1116,13 +1168,13 @@ export default function StorefrontManager({
                     <AvatarUpload currentUrl={creator?.profile_photo_url ?? null} name={edit.displayName || creator?.full_name || ''} />
                   </Field>
                   <Field label="Display name">
-                    <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} style={dinput} />
+                    <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
                   <Field label="Bio" hint="One or two lines telling brands what you bring to the table.">
                     <textarea value={edit.bio} onChange={e => set('bio', e.target.value)} placeholder="Everyday money, style and slow travel for a young Indian audience that actually buys." maxLength={500} rows={3} style={dtextarea} />
                   </Field>
                   <Field label="Reply time" hint="How fast you typically come back to a brand. Brands read this as a signal of how you work.">
-                    <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} style={dinput} />
+                    <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
                   <Field label="Your niches" hint={edit.niches.length < 5 ? 'Type and press Enter or click Add. Up to 5.' : undefined}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: edit.niches.length > 0 ? 12 : 0 }}>
@@ -1158,7 +1210,7 @@ export default function StorefrontManager({
 
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
-                  <Field label="Your numbers" hint="Per channel, over the last 30 days, and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
+                  <Field label="Your numbers" hint="Per channel and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
                         .filter(a => a?.handle)
@@ -1176,10 +1228,15 @@ export default function StorefrontManager({
                               }}>
                                 {plat.charAt(0).toUpperCase() + plat.slice(1)} &middot; @{String(a.handle).replace(/^@/, '')}
                               </div>
+                              {CHANNEL_WINDOW[plat] && (
+                                <p style={{ margin: '-4px 0 10px', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                                  {CHANNEL_WINDOW[plat]}
+                                </p>
+                              )}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {fields.map(f => (
                                   <div key={f.key}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'text' }}>
                                       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                                         {f.label}
                                       </span>
@@ -1199,6 +1256,7 @@ export default function StorefrontManager({
                                             : e.target.value.slice(0, 12)
                                           setChanField(k, f.key, v)
                                         }}
+                                        onKeyDown={onFieldEnter}
                                         // A VISIBLE field. This inherited the
                                         // borderless style from the old followers
                                         // row, which worked only because that value
@@ -1237,7 +1295,7 @@ export default function StorefrontManager({
                   <Field label="Age breakdown">
                     <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                       {edit.ageBreakdown.map((age, i) => (
-                        <div key={i} style={{
+                        <div key={i} onClick={focusRowInput} style={{ cursor: 'text',
                           borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
                           background: age.pct === Math.max(...edit.ageBreakdown.map(a => a.pct))
                                 ? 'color-mix(in oklab, var(--neon) 22%, #fff)'
@@ -1464,13 +1522,13 @@ export default function StorefrontManager({
               <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
                   <Field label="Monthly reach">
-                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
+                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
                   <Field label="Deals per month">
-                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="4" style={dinput} />
+                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="4" onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
                   <Field label="Avg deal value">
-                    <input type="text" value={edit.avgDealValue} onChange={e => set('avgDealValue', e.target.value)} placeholder="₹78K" style={dinput} />
+                    <input type="text" value={edit.avgDealValue} onChange={e => set('avgDealValue', e.target.value)} placeholder="₹78K" onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
                   <div style={{
                     padding: '10px 14px', borderRadius: 12, background: '#F4F6F2', border: `1px solid ${BHL}`,

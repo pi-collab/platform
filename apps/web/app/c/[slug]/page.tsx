@@ -21,8 +21,8 @@ interface SocialAccount {
   // has no YouTube or Meta client. Absent means absent, never zero.
   avg_views?: number | null
   interactions?: number | null
-  avg_view_duration?: string | null
-  uploads_per_month?: number | null
+  views?: number | null
+  watch_time?: string | null
 }
 
 interface StorefrontStats {
@@ -93,8 +93,8 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
       followers: s.follower_count ?? null,
       avgViews: s.avg_views ?? null,
       interactions: s.interactions ?? null,
-      avgViewDuration: s.avg_view_duration ?? null,
-      uploadsPerMonth: s.uploads_per_month ?? null,
+      views: s.views ?? null,
+      watchTime: s.watch_time ?? null,
     }))
 
   // The main storefront is Instagram for now. YouTube renders as its own

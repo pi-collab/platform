@@ -309,13 +309,14 @@ export interface ChannelStatsInput {
   handle: string
   /** Followers, or subscribers on YouTube. */
   followers?: number | null
+  /** Instagram only. */
   avgViews?: number | null
-  /** Instagram only, and a COUNT, not a rate. See interactionsNote in the UI. */
+  /** Instagram only, and a COUNT, not a rate. */
   interactions?: number | null
-  /** YouTube only. Free text because "4:20" is how creators read it. */
-  avgViewDuration?: string | null
-  /** YouTube only. */
-  uploadsPerMonth?: number | null
+  /** YouTube only: total views in the window, not an average. */
+  views?: number | null
+  /** YouTube only. Free text: creators read watch time as "1.2K hours". */
+  watchTime?: string | null
 }
 
 /**
@@ -382,13 +383,13 @@ export async function saveChannelStats(
     put('follower_count', count(want.followers))
     put('avg_views', count(want.avgViews))
     put('interactions', count(want.interactions))
-    put('uploads_per_month', count(want.uploadsPerMonth))
-    // Free text: "4:20" is how a creator reads a watch time, and parsing it into
-    // seconds here would only have to be formatted back for display.
-    put('avg_view_duration',
-      want.avgViewDuration === undefined ? undefined
-        : want.avgViewDuration === null ? null
-          : String(want.avgViewDuration).trim().slice(0, 12) || null)
+    put('views', count(want.views))
+    // Free text: a creator reads watch time as "1.2K hours", and parsing that
+    // into a number here would only have to be formatted back for display.
+    put('watch_time',
+      want.watchTime === undefined ? undefined
+        : want.watchTime === null ? null
+          : String(want.watchTime).trim().slice(0, 16) || null)
     return next
   })
 

@@ -41,10 +41,10 @@ export interface PlatformStat {
   followers: number | null
   avgViews: number | null
   interactions?: number | null
-  /** YouTube only. Free text, e.g. "4:20". */
-  avgViewDuration?: string | null
-  /** YouTube only. */
-  uploadsPerMonth?: number | null
+  /** YouTube only: total views in the window, not an average. */
+  views?: number | null
+  /** YouTube only. Free text, e.g. "1.2K hours". */
+  watchTime?: string | null
   /** Omitted entirely unless there is a real series. Six hardcoded months used
    *  to be drawn here, identical on every creator's page. */
   reachData?: { month: string; value: number }[]
@@ -832,8 +832,8 @@ export default function ShopfrontPreview({
                           {p.platform === 'instagram' ? 'followers' : 'subscribers'}
                           {p.interactions != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.interactions)}</span> interactions</>}
                           {p.avgViews != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.avgViews)}</span> avg views</>}
-                          {p.avgViewDuration && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.avgViewDuration}</span> avg watch</>}
-                          {p.uploadsPerMonth != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.uploadsPerMonth}</span>/month</>}
+                          {p.views != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.views)}</span> views</>}
+                          {p.watchTime && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.watchTime}</span> watch time</>}
                         </span>
                       </div>
 
