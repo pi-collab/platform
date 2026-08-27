@@ -2230,6 +2230,21 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] An unknown code is refused by the CHECK
 - [ ] UPDATE and DELETE are denied by RLS
 
+**Deciding from the creators LIST**
+- [ ] Each row carries Deals / Growth / Reject, and the detail page still has
+      its own copy. Working a queue should not mean opening every profile
+- [ ] Both surfaces call the SAME server actions, so decideVetting stays the
+      single writer of vetting_status and the emails and ops_events are
+      identical whichever one is used
+- [ ] A button only appears where it would CHANGE something, keyed on
+      vetting_status. A Growth creator is is_vetted false, so a boolean test
+      would offer to approve someone already decided on
+- [ ] Every action confirms first, including from a row. Reject emails the
+      creator, and a misclick in a dense table is easier than on a profile page
+      opened deliberately
+- [ ] The row's status badge updates without a manual reload
+- [ ] Header and body cell counts still match after adding the column
+
 **Ops shows the vetting state, all four of them**
 - [ ] A Growth creator reads "Vetted for growth", NOT "Pending". This is the bug:
       a Growth creator is is_vetted false AND is_rejected false by construction

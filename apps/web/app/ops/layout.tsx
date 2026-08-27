@@ -42,7 +42,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 960, margin: '0 auto', padding: '1rem' }}>
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1280, margin: '0 auto', padding: '1rem' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
         <Link href="/ops" style={{ fontWeight: 700, fontSize: '1.125rem', color: '#111', textDecoration: 'none' }}>
           Ops Console

@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import VettingActions from '@/components/ops/VettingActions'
 import VettingBadge from '@/components/ops/VettingBadge'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
@@ -152,6 +153,10 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                 <th style={thStyle}>Phone</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Created</th>
+                {/* Vetting from the row. The detail page keeps its own copy: opening a
+                    profile first is right when the decision is not obvious, and this is
+                    for when it is. */}
+                <th style={thStyle}>Decide</th>
               </tr>
             </thead>
             <tbody>
@@ -210,6 +215,7 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
                       <VettingBadge row={c} />
                     </td>
                     <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
+                    <td style={tdStyle}><VettingActions creator={c} /></td>
                   </tr>
                 )
               })}
