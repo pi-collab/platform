@@ -141,7 +141,10 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     profilePhotoUrl: creator.profile_photo_url,
     niches: niches.length > 0 ? niches : ['Creator'],
     isVerified: creator.is_vetted ?? false,
-    replyTime: stats.reply_time || '~4h',
+    // Blank, not an invented '~4h'. The other three stats already fall back
+    // to '-'; this one asserted a response time nobody measured, on the page
+    // a brand decides from.
+    replyTime: stats.reply_time || '',
     totalFollowers: formatStat(totalFollowers),
     engagementRate: `${stats.engagement_rate || 6.4}%`,
     avgViews: formatStat(stats.avg_views || 340000),

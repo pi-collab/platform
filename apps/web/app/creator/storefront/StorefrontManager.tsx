@@ -80,10 +80,15 @@ function initEditState(creator: Creator | null, storefront: StorefrontRow | null
     displayName: storefront?.display_name || creator?.full_name || '',
     bio: storefront?.bio || creator?.bio || '',
     niches: (storefront?.categories?.length ? storefront.categories : creator?.niches) ?? [],
-    replyTime: (stats.reply_time as string) || '~4h',
-    monthlyReach: (stats.monthly_reach as string) || '2.8M',
-    repeatBrands: (stats.repeat_brands as string) || '68%',
-    avgDealValue: (stats.avg_deal_value as string) || '₹78K',
+    // EMPTY when unset, never a sample figure. These were seeded with '2.8M',
+    // '68%' and '₹78K', which are initial VALUES rather than placeholders: the
+    // field is then never empty, the placeholder never renders, and a creator
+    // who never opens Highlights publishes those numbers as their own. Brands
+    // price against these. The public page already renders '-' for a blank.
+    replyTime: (stats.reply_time as string) || '',
+    monthlyReach: (stats.monthly_reach as string) || '',
+    repeatBrands: (stats.repeat_brands as string) || '',
+    avgDealValue: (stats.avg_deal_value as string) || '',
     ageBreakdown: storedAge || [
       { label: '18–24', pct: 32 }, { label: '25–34', pct: 41 },
       { label: '35–44', pct: 18 }, { label: '45+', pct: 9 },
@@ -1340,7 +1345,7 @@ export default function StorefrontManager({
                     <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" style={dinput} />
                   </Field>
                   <Field label="Deals per month">
-                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="68%" style={dinput} />
+                    <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="4" style={dinput} />
                   </Field>
                   <Field label="Avg deal value">
                     <input type="text" value={edit.avgDealValue} onChange={e => set('avgDealValue', e.target.value)} placeholder="₹78K" style={dinput} />

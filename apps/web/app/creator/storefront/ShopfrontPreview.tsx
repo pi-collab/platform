@@ -437,10 +437,12 @@ export default function ShopfrontPreview({
                         {atHandle(p.handle)}
                       </a>
                     ))}
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0 5px 4px', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: 0 }} />
-                      Replies in {data.replyTime}
-                    </span>
+                    {data.replyTime && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0 5px 4px', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--neon-deep)', flexShrink: 0 }} />
+                        Replies in {data.replyTime}
+                      </span>
+                    )}
                   </div>
 
                   {/* Bio */}
@@ -527,7 +529,7 @@ export default function ShopfrontPreview({
           <div className="sf-stats-strip" style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
             {[
               { value: data.monthlyReach, label: 'Monthly reach' },
-              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '~4h', label: 'Replies in' },
+              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '-', label: 'Replies in' },
               { value: data.repeatBrands, label: 'Deals per month' },
               { value: data.avgDealValue, label: 'Avg deal value' },
             ].map((stat, i) => (
@@ -1134,7 +1136,10 @@ export default function ShopfrontPreview({
                   Pick deliverables at {firstName}&apos;s set rates and {firstName} gets a structured offer, not a DM. They review, then accept, counter, or decline. Nothing is locked until you both agree.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 26 }}>
-                  {['Transparent, itemised pricing', 'Written terms before anyone commits', `Replies in ${data.replyTime}`].map((point, i) => (
+                  {['Transparent, itemised pricing', 'Written terms before anyone commits',
+                    // Omitted, not stubbed: a bullet reading "Replies in" with nothing
+                    // after it is worse than one fewer bullet.
+                    ...(data.replyTime ? [`Replies in ${data.replyTime}`] : [])].map((point, i) => (
                     <div key={i} className="sf-pitch-point" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

@@ -176,7 +176,9 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       profilePhotoUrl: creator.profile_photo_url,
       niches: niches.length > 0 ? niches : ['Creator'],
       isVerified: creator.is_vetted ?? false,
-      replyTime: stats.reply_time || '~4h',
+      // Blank, not an invented '~4h'. See /c/[slug]: an unmeasured response
+      // time must not be stated as fact to a brand.
+      replyTime: stats.reply_time || '',
       totalFollowers: formatStat(totalFollowers),
       engagementRate: `${stats.engagement_rate || 6.4}%`,
       avgViews: formatStat(stats.avg_views || 340000),
