@@ -853,10 +853,13 @@ export default function ShopfrontPreview({
                       <div className="sf-aud-stat" style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                        gap: 'clamp(16px,2vw,28px)',
+                        // Generous on desktop: these are the figures a brand reads
+                        // first, and at clamp(16px,2vw,28px) three of them ran
+                        // together as one string of digits.
+                        gap: 'clamp(20px,2.6vw,44px)',
                         margin: p.reachData && p.reachData.length > 0
-                          ? 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)'
-                          : 'clamp(18px,2.2vw,26px) 0 0',
+                          ? 'clamp(26px,3vw,36px) 0 clamp(24px,2.8vw,32px)'
+                          : 'clamp(26px,3vw,36px) 0 clamp(4px,0.6vw,8px)',
                       }}>
                         {([
                           { v: p.followers, label: p.platform === 'instagram' ? 'Followers' : 'Subscribers' },
@@ -875,7 +878,7 @@ export default function ShopfrontPreview({
                               }}>
                                 {typeof st.v === 'number' ? formatCount(st.v) : st.v}
                               </div>
-                              <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 7 }}>
+                              <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 11 }}>
                                 {st.label}
                               </div>
                             </div>

@@ -5,7 +5,7 @@ import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
 import { saveChannelStats, createContentUploadUrl } from './actions'
-import { PackageForm, AddonRatesEditor, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
+import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
@@ -1429,9 +1429,13 @@ export default function StorefrontManager({
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                         alignSelf: 'flex-start',
                         minHeight: 40, padding: '0 16px', borderRadius: 999,
-                        background: products.length === 0 ? 'var(--neon)' : '#fff',
-                        border: products.length === 0 ? 'none' : `1px solid ${BHL}`,
-                        color: products.length === 0 ? 'var(--lime-950)' : 'var(--ink)',
+                        // Black either way. It went ghost-white once a first package
+                        // existed, which made "Add a package" the faintest thing on
+                        // a step whose whole job is adding them, indistinguishable
+                        // from the row borders around it.
+                        background: 'var(--ink)',
+                        border: 'none',
+                        color: '#fff',
                         fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                       }}
                     >
@@ -1444,17 +1448,11 @@ export default function StorefrontManager({
                         card, not the part that happens to be packages. Both are the same
                         components the packages screen uses, so there is one editor for each
                         and no second version to drift. */}
-                    {pkgChannels.map(ch => (
-                      <AddonRatesEditor
-                        key={`${ch.platform}/${ch.handle}`}
-                        platform={ch.platform}
-                        handle={ch.handle}
-                        initial={addonRates.find(
-                          r => String(r.platform ?? '').trim().toLowerCase() === ch.platform
-                            && String(r.handle ?? '').replace(/^@/, '').toLowerCase() === ch.handle.toLowerCase(),
-                        )}
-                      />
-                    ))}
+                    {/* ONE block with channel tabs inside, not one per channel.
+                        Two collapsibles both titled "Collab & boosting" are the
+                        same question asked twice; the rates behind them stay
+                        per channel. */}
+                    <AddonRatesGroup channels={pkgChannels} rates={addonRates} />
                   
                     <RevisionPolicyEditor initial={revisionPolicy} />
                   </div>

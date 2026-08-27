@@ -60,10 +60,100 @@ export interface PackageRow {
    points before it leaves the browser — the column and every calculation are
    integers, and the conversion has exactly one home.
    ────────────────────────────────────────────────────────────────────────── */
-export function AddonRatesEditor({ platform, handle, initial }: {
+/**
+ * Collab & boosting for every channel, in ONE block.
+ *
+ * A creator with Instagram and YouTube saw two collapsibles, both titled
+ * "Collab & boosting", differing only by a small channel label. They are the
+ * same question asked per channel, so this is one block with tabs inside.
+ *
+ * The rates themselves stay per channel and are NOT merged: creator_addon_rates
+ * is keyed (creator_id, platform, handle) and deals/new prices each deliverable
+ * from its own channel's row, so a shared rate would misprice one of them.
+ */
+export function AddonRatesGroup({ channels, rates }: {
+  channels: { platform: string; handle: string }[]
+  rates: AddonRateRow[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+
+  const rateFor = (ch: { platform: string; handle: string }) => rates.find(
+    r => String(r.platform ?? '').trim().toLowerCase() === ch.platform.trim().toLowerCase()
+      && String(r.handle ?? '').replace(/^@/, '').toLowerCase() === ch.handle.replace(/^@/, '').toLowerCase(),
+  )
+
+  if (channels.length === 0) return null
+
+  // "Set" only when EVERY channel has one. "2 of 3" would be precise and is more
+  // than the header can carry; what matters is whether anything is missing.
+  const setCount = channels.filter(ch => {
+    const r = rateFor(ch)
+    return (r?.collab_rate_type != null) || (r?.boosting_30day_paise != null)
+  }).length
+  const state = setCount === 0 ? 'Not set'
+    : setCount === channels.length ? 'Set'
+      : `${setCount} of ${channels.length}`
+
+  const ch = channels[Math.min(active, channels.length - 1)]
+
+  return (
+    <div className="pk-addons">
+      <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="pk-addons-title">Collab &amp; boosting</span>
+        <span className="pk-addons-state">{state}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+          strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="pk-addons-open">
+          {/* Only with something to switch between. One tab is a control that
+              cannot do anything. */}
+          {channels.length > 1 && (
+            <div className="pk-chan-tabs" role="tablist">
+              {channels.map((c, i) => (
+                <button
+                  key={`${c.platform}/${c.handle}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === active}
+                  className="pk-chan-tab"
+                  onClick={() => setActive(i)}
+                >
+                  {c.platform.charAt(0).toUpperCase() + c.platform.slice(1)}
+                  <span className="pk-chan-tab__handle">@{c.handle.replace(/^@/, '')}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Keyed on the channel so switching tabs REMOUNTS the editor. Without
+              it the inputs keep the previous channel's state and a creator edits
+              one channel's rate into another's. */}
+          <AddonRatesEditor
+            key={`${ch.platform}/${ch.handle}`}
+            platform={ch.platform}
+            handle={ch.handle}
+            initial={rateFor(ch)}
+            embedded
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function AddonRatesEditor({ platform, handle, initial, embedded }: {
   platform: string
   handle: string
   initial?: AddonRateRow
+  /** Rendered inside AddonRatesGroup, which owns the header and the channel
+   *  tabs. Without this each channel brings its own collapsible and a creator
+   *  with two channels sees two identical "Collab & boosting" rows. */
+  embedded?: boolean
 }) {
   const [open, setOpen] = useState(false)
   /* Fixed is the default for a channel with nothing set yet — it is what most
@@ -125,28 +215,8 @@ export function AddonRatesEditor({ platform, handle, initial }: {
     ? Math.round((Number(boost) * 100) / 30)
     : null
 
-  return (
-    <div className="pk-addons">
-      <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-        {/* The CHANNEL, not just "Collab & boosting". A creator with both
-            Instagram and YouTube got two identical blocks with nothing to tell
-            them apart, and these rates price different deliverables. */}
-        <span className="pk-addons-title">
-          Collab &amp; boosting
-          <span className="pk-addons-chan">
-            {platform.charAt(0).toUpperCase() + platform.slice(1)} &middot; @{handle.replace(/^@/, '')}
-          </span>
-        </span>
-        <span className="pk-addons-state">{configured ? 'Set' : 'Not set'}</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
-          strokeLinecap="round" strokeLinejoin="round"
-          style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
-          <path d="m6 9 6 6 6-6" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="pk-addons-body">
+  const body = (
+    <>
           <p className="pk-addons-note">
             Optional extras a brand can add to any deliverable on this channel. Leave blank and the option
             simply is not offered.
@@ -228,8 +298,36 @@ export function AddonRatesEditor({ platform, handle, initial }: {
           <button type="button" className="pk-btn pk-btn-primary" disabled={busy} onClick={save}>
             {busy ? 'Saving\u2026' : 'Save rates'}
           </button>
-        </div>
-      )}
+    </>
+  )
+
+  if (embedded) {
+    // The group already said which channel this is, and it is the only body on
+    // screen, so it is always open.
+    return <div className="pk-addons-body pk-addons-body--flush">{body}</div>
+  }
+
+  return (
+    <div className="pk-addons">
+      <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
+        {/* The CHANNEL, not just "Collab & boosting". A creator with both
+            Instagram and YouTube got two identical blocks with nothing to tell
+            them apart, and these rates price different deliverables. */}
+        <span className="pk-addons-title">
+          Collab &amp; boosting
+          <span className="pk-addons-chan">
+            {platform.charAt(0).toUpperCase() + platform.slice(1)} &middot; @{handle.replace(/^@/, '')}
+          </span>
+        </span>
+        <span className="pk-addons-state">{configured ? 'Set' : 'Not set'}</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+          strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && <div className="pk-addons-body">{body}</div>}
     </div>
   )
 }
