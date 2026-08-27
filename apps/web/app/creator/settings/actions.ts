@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { mergeSocialAccounts } from '@/lib/social-accounts'
 
 // ── Update Creator Profile ───────────────────────────────────────
 
@@ -33,7 +34,16 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
     const cleaned = data.socials
       .map(s => ({ platform: s.platform.trim(), handle: s.handle.trim().replace(/^@/, '') }))
       .filter(s => s.platform && s.handle)
-    update.social_accounts = cleaned
+
+    // MERGED, not replaced. This wrote `cleaned` straight over the column,
+    // keeping only platform and handle, so saving the profile silently deleted
+    // every other key on each entry: follower_range — the ONLY source of
+    // creators.follower_band, so the creator then disappeared from every band
+    // filter in ops — plus follower_count and the storefront's per-channel
+    // stats. Nothing errored and nothing was logged.
+    const { data: row } = await admin
+      .from('creators').select('social_accounts').eq('id', ctx.creatorId).maybeSingle()
+    update.social_accounts = mergeSocialAccounts(row?.social_accounts, cleaned)
   }
 
   if (Object.keys(update).length > 0) {

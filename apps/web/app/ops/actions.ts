@@ -1,6 +1,7 @@
 'use server'
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
+import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -323,6 +324,17 @@ export async function editCreator(input: EditCreatorInput) {
   }
 
   const admin = createAdminClient()
+  // MERGED, not replaced. SocialAccountEntry has no follower_range, so
+  // writing this array straight over the column dropped it, and the
+  // trigger then nulled creators.follower_band -- an ops edit removed the
+  // creator from every band filter in ops. Same for the storefront stats
+  // the creator owns on these entries.
+  const { data: prevRow } = await admin
+    .from('creators').select('social_accounts').eq('id', id).maybeSingle()
+  const mergedSocials = social_accounts
+    ? mergeSocialAccounts(prevRow?.social_accounts, social_accounts as unknown as Record<string, unknown>[])
+    : (prevRow?.social_accounts ?? [])
+
   const { error } = await admin
     .from('creators')
     .update({
@@ -332,7 +344,7 @@ export async function editCreator(input: EditCreatorInput) {
       handle: handle?.trim() || null,
       bio: bio?.trim() || null,
       profile_photo_url: profile_photo_url?.trim() || null,
-      social_accounts: social_accounts ?? [],
+      social_accounts: mergedSocials,
       worked_with: worked_with ?? [],
       portfolio_links: portfolio_links ?? [],
       rate_card: rate_card ?? {},

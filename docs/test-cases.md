@@ -2230,6 +2230,22 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 - [ ] An unknown code is refused by the CHECK
 - [ ] UPDATE and DELETE are denied by RLS
 
+**social_accounts must be MERGED, never rebuilt**
+- [ ] Save the profile in creator settings, then check the creator still appears
+      under their follower band in ops. Settings kept only platform and handle,
+      so it deleted follower_range, the trigger nulled creators.follower_band,
+      and the creator silently left every band filter
+- [ ] Same after an ops edit: SocialAccountEntry has no follower_range either
+- [ ] The storefront's per-channel numbers (follower_count, avg_views,
+      interactions, views, watch_time) survive both saves
+- [ ] Removing a channel still removes it; adding one starts it bare
+- [ ] KNOWN LIMIT: renaming a handle does not carry that channel's extras.
+      Matching is on (platform, handle), and guessing which old entry a renamed
+      one was would risk attaching one channel's range to another
+- [ ] Any NEW writer of social_accounts goes through mergeSocialAccounts. The
+      column accumulates keys owned by four different screens, and rebuilding it
+      from one screen's fields deletes the other three's
+
 **Deciding from the creators LIST**
 - [ ] Each row carries Deals / Growth / Reject, and the detail page still has
       its own copy. Working a queue should not mean opening every profile
