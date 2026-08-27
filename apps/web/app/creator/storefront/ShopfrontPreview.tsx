@@ -839,10 +839,24 @@ export default function ShopfrontPreview({
 
                           Each appears only if the creator said it: a zero would read
                           as a measured result rather than as a blank. */}
+                      {/* A GRID, not a flex row. Flex with a fixed gap packs three
+                          or four stats against the left edge and leaves the rest of
+                          a full-width card empty. auto-fit columns spread them
+                          across whatever width there is and still wrap to two on a
+                          phone.
+
+                          The bottom margin is conditional: it existed to separate
+                          these from the reach chart, and that chart only renders
+                          when there is a real series. Without one, the margin was
+                          reserving space for something that never arrived, which is
+                          the empty band under the numbers. */}
                       <div className="sf-aud-stat" style={{
-                        display: 'flex', flexWrap: 'wrap',
-                        gap: 'clamp(26px,3.4vw,52px)',
-                        margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                        gap: 'clamp(16px,2vw,28px)',
+                        margin: p.reachData && p.reachData.length > 0
+                          ? 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)'
+                          : 'clamp(18px,2.2vw,26px) 0 0',
                       }}>
                         {([
                           { v: p.followers, label: p.platform === 'instagram' ? 'Followers' : 'Subscribers' },
