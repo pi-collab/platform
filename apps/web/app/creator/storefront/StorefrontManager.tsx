@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter } from 'next/navigation'
-import { saveFollowerCounts, createContentUploadUrl } from './actions'
+import { saveChannelStats, createContentUploadUrl } from './actions'
 import { PackageForm, AddonRatesEditor, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
@@ -702,6 +702,49 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
 
 /* ── Main Component ───────────────────────────────────────── */
 
+/** Held as strings so "blank" is representable. See the state comment below. */
+interface ChannelStatFields {
+  followers: string
+  avgViews: string
+  interactions: string
+  avgViewDuration: string
+  uploadsPerMonth: string
+}
+
+const EMPTY_CHANNEL_STATS: ChannelStatFields = {
+  followers: '', avgViews: '', interactions: '', avgViewDuration: '', uploadsPerMonth: '',
+}
+
+/**
+ * What each platform is asked for.
+ *
+ * Instagram and YouTube are not the same question. A brand buying a YouTube
+ * integration cares whether people are still watching when the mention lands,
+ * which is what avg view duration answers and Instagram has no equivalent of.
+ * Asking both channels the same four fields would mean asking each of them two
+ * that do not apply.
+ *
+ * EVERY field is optional. None of this is measured -- there is no YouTube or
+ * Meta integration in this codebase -- so all of it is a claim the creator
+ * makes, and a blank one stays blank rather than becoming a zero.
+ */
+const CHANNEL_FIELDS: Record<string, { key: keyof ChannelStatFields; label: string; hint?: string; numeric: boolean }[]> = {
+  instagram: [
+    { key: 'followers', label: 'Followers', numeric: true },
+    { key: 'avgViews', label: 'Avg views per reel', numeric: true },
+    { key: 'interactions', label: 'Interactions per post', hint: 'Likes, comments and shares added up. A count, not a percentage.', numeric: true },
+  ],
+  youtube: [
+    { key: 'followers', label: 'Subscribers', numeric: true },
+    { key: 'avgViews', label: 'Avg views per video', hint: 'The number a brand is actually buying.', numeric: true },
+    { key: 'avgViewDuration', label: 'Avg view duration', hint: 'e.g. 4:20. Tells a brand whether a mid-roll gets seen.', numeric: false },
+    { key: 'uploadsPerMonth', label: 'Uploads per month', numeric: true },
+  ],
+}
+
+/** Anything not named above still gets the basics. */
+const DEFAULT_CHANNEL_FIELDS = CHANNEL_FIELDS.instagram
+
 export default function StorefrontManager({
   storefront, creator, products, creatorName, addonRates = [], revisionPolicy,
 }: {
@@ -728,13 +771,26 @@ export default function StorefrontManager({
   // Follower counts, keyed per channel. Held apart from `edit` because they
   // belong to creators.social_accounts, not the storefront row — a different
   // table with a different save.
-  const [followers, setFollowers] = useState<Record<string, string>>(() =>
+  // All of them held as STRINGS. A number in state cannot represent "blank",
+  // and blank is the whole point: nothing here is measured, so an untouched
+  // field must publish nothing rather than 0.
+  const [chan, setChan] = useState<Record<string, ChannelStatFields>>(() =>
     Object.fromEntries(
-      ((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string; follower_count?: number }>)
+      ((creator?.social_accounts ?? []) as Array<Record<string, unknown>>)
         .filter(a => a?.handle)
-        .map(a => [`${a.platform}|${a.handle}`, String(a.follower_count ?? 0)]),
+        .map(a => [`${a.platform}|${a.handle}`, {
+          followers: a.follower_count == null ? '' : String(a.follower_count),
+          avgViews: a.avg_views == null ? '' : String(a.avg_views),
+          interactions: a.interactions == null ? '' : String(a.interactions),
+          avgViewDuration: a.avg_view_duration == null ? '' : String(a.avg_view_duration),
+          uploadsPerMonth: a.uploads_per_month == null ? '' : String(a.uploads_per_month),
+        }]),
     ),
   )
+
+  const setChanField = useCallback((k: string, field: keyof ChannelStatFields, v: string) => {
+    setChan(c => ({ ...c, [k]: { ...(c[k] ?? EMPTY_CHANNEL_STATS), [field]: v } }))
+  }, [])
 
   /* Which package the shared form is open on: 'new', a row, or nothing.
      Same state shape the packages screen uses, because it is the same form. */
@@ -855,15 +911,25 @@ export default function StorefrontManager({
     // button was never pressed is silent data loss, and nothing on screen gives
     // the creator any reason to suspect it.
     //
-    // Skipped when there is nothing to write. saveFollowerCounts refuses
+    // Skipped when there is nothing to write. saveChannelStats refuses
     // outright for a creator with no channels, and that refusal would then fail
     // EVERY save on this page rather than just the follower part.
-    const typedFollowers = Object.entries(followers).filter(([, v]) => v.trim() !== '')
-    if (typedFollowers.length > 0) {
-      const fRes = await saveFollowerCounts(
-        typedFollowers.map(([k, v]) => {
+    const chanEntries = Object.entries(chan)
+    if (chanEntries.length > 0) {
+      // null CLEARS, so emptying a field a creator no longer stands behind
+      // actually removes it. '' -> null is the whole reason these are strings.
+      const num = (v: string) => (v.trim() === '' ? null : parseInt(v.replace(/\D/g, '') || '0', 10))
+      const fRes = await saveChannelStats(
+        chanEntries.map(([k, v]) => {
           const [platform, handle] = k.split('|')
-          return { platform, handle, followers: parseInt(v || '0', 10) }
+          return {
+            platform, handle,
+            followers: num(v.followers),
+            avgViews: num(v.avgViews),
+            interactions: num(v.interactions),
+            uploadsPerMonth: num(v.uploadsPerMonth),
+            avgViewDuration: v.avgViewDuration.trim() === '' ? null : v.avgViewDuration.trim(),
+          }
         }),
       )
       if (!fRes.ok) { setSaving(false); setSaveMsg({ type: 'err', text: fRes.message }); return false }
@@ -1079,34 +1145,58 @@ export default function StorefrontManager({
 
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
-                  <Field label="Followers" hint="Per channel. Brands see the total at the top of your shopfront.">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Field label="Your numbers" hint="Per channel, and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
                         .filter(a => a?.handle)
                         .map(a => {
                           const k = `${a.platform}|${a.handle}`
+                          const plat = String(a.platform ?? '').trim().toLowerCase()
+                          const fields = CHANNEL_FIELDS[plat] ?? DEFAULT_CHANNEL_FIELDS
+                          const vals = chan[k] ?? EMPTY_CHANNEL_STATS
                           return (
-                            <div key={k} style={{
-                              display: 'flex', alignItems: 'center', gap: 10,
-                              borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
-                            }}>
-                              <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {a.platform} &middot; @{String(a.handle).replace(/^@/, '')}
-                              </span>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                aria-label={`Followers on ${a.platform}`}
-                                value={followers[k] ?? '0'}
-                                onChange={e => {
-                                  // Digits only, and stored as a STRING so a leading zero can
-                                  // be typed over rather than sticking — the same bug the age
-                                  // bands had.
-                                  const digits = e.target.value.replace(/\D/g, '').slice(0, 11).replace(/^0+(?=\d)/, '')
-                                  setFollowers(f => ({ ...f, [k]: digits }))
-                                }}
-                                style={{ width: 110, textAlign: 'right', border: 'none', background: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}
-                              />
+                            <div key={k} style={{ borderRadius: 12, border: `1px solid ${BHL}`, padding: '12px 14px' }}>
+                              <div style={{
+                                fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700,
+                                color: 'var(--ink)', marginBottom: 10,
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                                {plat.charAt(0).toUpperCase() + plat.slice(1)} &middot; @{String(a.handle).replace(/^@/, '')}
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {fields.map(f => (
+                                  <div key={f.key}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                      <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
+                                        {f.label}
+                                      </span>
+                                      <input
+                                        type="text"
+                                        inputMode={f.numeric ? 'numeric' : 'text'}
+                                        aria-label={`${f.label} on ${plat}`}
+                                        placeholder="-"
+                                        value={vals[f.key]}
+                                        onChange={e => {
+                                          // Digits only for counts, and kept as a STRING so a
+                                          // leading zero can be typed over rather than sticking,
+                                          // the same bug the age bands had. Duration is free text
+                                          // because "4:20" is how a creator reads a watch time.
+                                          const v = f.numeric
+                                            ? e.target.value.replace(/\D/g, '').slice(0, 11).replace(/^0+(?=\d)/, '')
+                                            : e.target.value.slice(0, 12)
+                                          setChanField(k, f.key, v)
+                                        }}
+                                        style={{ width: 120, textAlign: 'right', border: 'none', background: 'none', outline: 'none', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}
+                                      />
+                                    </div>
+                                    {f.hint && (
+                                      <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', lineHeight: 1.4 }}>
+                                        {f.hint}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )
                         })}
@@ -1115,10 +1205,6 @@ export default function StorefrontManager({
                           Add a channel on your profile first.
                         </p>
                       )}
-                      {/* The "Save followers" button was here. Removed: these now save with
-                          everything else on Continue, Save draft and Publish, and a second
-                          button that must ALSO be pressed is exactly how the number got
-                          lost. */}
                     </div>
                   </Field>
 

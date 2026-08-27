@@ -302,8 +302,24 @@ export async function checkSlugAvailable(slug: string): Promise<{ available: boo
   return { available: true }
 }
 
+/** What a creator can state about one channel. Every field optional: the whole
+ *  section is optional, and a blank must stay blank rather than becoming 0. */
+export interface ChannelStatsInput {
+  platform: string
+  handle: string
+  /** Followers, or subscribers on YouTube. */
+  followers?: number | null
+  avgViews?: number | null
+  /** Instagram only, and a COUNT, not a rate. See interactionsNote in the UI. */
+  interactions?: number | null
+  /** YouTube only. Free text because "4:20" is how creators read it. */
+  avgViewDuration?: string | null
+  /** YouTube only. */
+  uploadsPerMonth?: number | null
+}
+
 /**
- * Follower counts, per connected channel.
+ * Per-channel numbers, stated by the creator.
  *
  * They live in creators.social_accounts — a JSONB array the editor has always
  * READ (the audience section renders them) and never let anyone write. So a
@@ -313,9 +329,19 @@ export async function checkSlugAvailable(slug: string): Promise<{ available: boo
  * Merged into the existing entries rather than replacing the array: handles and
  * platforms are owned by the profile screen, and rewriting the whole array here
  * would let a stale editor tab undo a handle changed elsewhere.
+ *
+ * NOTHING here is measured. There is no YouTube or Meta integration in this
+ * codebase — no client, no credentials — so every one of these is self-reported
+ * and must be treated as a claim, never presented as a platform-verified figure.
+ * A future integration would fill these same fields per channel, which is why
+ * they live here rather than on the storefront row.
+ *
+ * A null CLEARS the field. Undefined leaves it alone. That distinction is what
+ * lets a creator empty a number they no longer stand behind, instead of being
+ * stuck with whatever they first typed.
  */
-export async function saveFollowerCounts(
-  counts: { platform: string; handle: string; followers: number }[],
+export async function saveChannelStats(
+  counts: ChannelStatsInput[],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const ctx = await verifyCreator()
   const admin = createAdminClient()
@@ -332,16 +358,38 @@ export async function saveFollowerCounts(
   const key = (p: unknown, h: unknown) =>
     `${String(p ?? '').trim().toLowerCase()}|${String(h ?? '').trim().replace(/^@/, '').toLowerCase()}`
 
-  const wanted = new Map(counts.map(c => [key(c.platform, c.handle), c.followers]))
+  const wanted = new Map(counts.map(c => [key(c.platform, c.handle), c]))
+
+  // A whole, non-negative number. The cap is a typo guard: nobody has 10 billion
+  // of anything here, and a slipped digit published on a shopfront is worse than
+  // a rejected save. Returns undefined for "leave alone", null for "clear".
+  const count = (v: number | null | undefined): number | null | undefined => {
+    if (v === undefined) return undefined
+    if (v === null) return null
+    if (!Number.isFinite(v) || v < 0 || v > 10_000_000_000) return undefined
+    return Math.round(v)
+  }
 
   const merged = existing.map(a => {
-    const n = wanted.get(key(a.platform, a.handle))
-    if (n == null) return a
-    // A follower count is a whole, non-negative number. The cap is a typo guard:
-    // no Indian creator has 10 billion followers, and a slipped digit published
-    // on a shopfront is worse than a rejected save.
-    if (!Number.isFinite(n) || n < 0 || n > 10_000_000_000) return a
-    return { ...a, follower_count: Math.round(n) }
+    const want = wanted.get(key(a.platform, a.handle))
+    if (!want) return a
+    const next: Record<string, unknown> = { ...a }
+    const put = (field: string, v: number | string | null | undefined) => {
+      if (v === undefined) return
+      if (v === null) { delete next[field]; return }
+      next[field] = v
+    }
+    put('follower_count', count(want.followers))
+    put('avg_views', count(want.avgViews))
+    put('interactions', count(want.interactions))
+    put('uploads_per_month', count(want.uploadsPerMonth))
+    // Free text: "4:20" is how a creator reads a watch time, and parsing it into
+    // seconds here would only have to be formatted back for display.
+    put('avg_view_duration',
+      want.avgViewDuration === undefined ? undefined
+        : want.avgViewDuration === null ? null
+          : String(want.avgViewDuration).trim().slice(0, 12) || null)
+    return next
   })
 
   const { error } = await admin
@@ -356,6 +404,14 @@ export async function saveFollowerCounts(
 
   revalidatePath('/creator/storefront')
   return { ok: true }
+}
+
+/** @deprecated Use saveChannelStats. Kept so any caller not yet migrated keeps
+ *  working rather than silently writing nothing. */
+export async function saveFollowerCounts(
+  counts: { platform: string; handle: string; followers: number }[],
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  return saveChannelStats(counts)
 }
 
 /* ── Content showcase media ──────────────────────────────────────────────────
