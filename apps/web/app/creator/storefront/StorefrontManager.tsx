@@ -744,14 +744,14 @@ const EMPTY_CHANNEL_STATS: ChannelStatFields = {
 const CHANNEL_FIELDS: Record<string, { key: keyof ChannelStatFields; label: string; hint?: string; numeric: boolean }[]> = {
   instagram: [
     { key: 'followers', label: 'Followers', numeric: true },
-    { key: 'avgViews', label: 'Avg views per reel', numeric: true },
-    { key: 'interactions', label: 'Interactions per post', hint: 'Likes, comments and shares added up. A count, not a percentage.', numeric: true },
+    { key: 'avgViews', label: 'Avg views', hint: 'Last 30 days.', numeric: true },
+    { key: 'interactions', label: 'Interactions', hint: 'Last 30 days. Likes, comments and shares added up. A count, not a percentage.', numeric: true },
   ],
   youtube: [
     { key: 'followers', label: 'Subscribers', numeric: true },
-    { key: 'avgViews', label: 'Avg views per video', hint: 'The number a brand is actually buying.', numeric: true },
-    { key: 'avgViewDuration', label: 'Avg view duration', hint: 'e.g. 4:20. Tells a brand whether a mid-roll gets seen.', numeric: false },
-    { key: 'uploadsPerMonth', label: 'Uploads per month', numeric: true },
+    { key: 'avgViews', label: 'Avg views', hint: 'Last 30 days. The number a brand is actually buying.', numeric: true },
+    { key: 'avgViewDuration', label: 'Avg view duration', hint: 'Last 30 days, e.g. 4:20. Tells a brand whether a mid-roll gets seen.', numeric: false },
+    { key: 'uploadsPerMonth', label: 'Uploads', hint: 'Last 30 days.', numeric: true },
   ],
 }
 
@@ -1158,7 +1158,7 @@ export default function StorefrontManager({
 
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
-                  <Field label="Your numbers" hint="Per channel, and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
+                  <Field label="Your numbers" hint="Per channel, over the last 30 days, and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
                         .filter(a => a?.handle)
