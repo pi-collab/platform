@@ -1244,13 +1244,13 @@ export default function StorefrontManager({
                                         type="text"
                                         inputMode={f.numeric ? 'numeric' : 'text'}
                                         aria-label={`${f.label} on ${plat}`}
-                                        placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 4:20'}
+                                        placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 1.2K hours'}
                                         value={vals[f.key]}
                                         onChange={e => {
                                           // Digits only for counts, and kept as a STRING so a
                                           // leading zero can be typed over rather than sticking,
                                           // the same bug the age bands had. Duration is free text
-                                          // because "4:20" is how a creator reads a watch time.
+                                          // because "1.2K hours" is how Studio reports watch time.
                                           const v = f.numeric
                                             ? e.target.value.replace(/\D/g, '').slice(0, 11).replace(/^0+(?=\d)/, '')
                                             : e.target.value.slice(0, 12)
