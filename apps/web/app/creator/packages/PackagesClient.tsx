@@ -128,7 +128,15 @@ export function AddonRatesEditor({ platform, handle, initial }: {
   return (
     <div className="pk-addons">
       <button type="button" className="pk-addons-head" onClick={() => setOpen(!open)} aria-expanded={open}>
-        <span className="pk-addons-title">Collab &amp; boosting</span>
+        {/* The CHANNEL, not just "Collab & boosting". A creator with both
+            Instagram and YouTube got two identical blocks with nothing to tell
+            them apart, and these rates price different deliverables. */}
+        <span className="pk-addons-title">
+          Collab &amp; boosting
+          <span className="pk-addons-chan">
+            {platform.charAt(0).toUpperCase() + platform.slice(1)} &middot; @{handle.replace(/^@/, '')}
+          </span>
+        </span>
         <span className="pk-addons-state">{configured ? 'Set' : 'Not set'}</span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
           strokeLinecap="round" strokeLinejoin="round"
