@@ -832,22 +832,40 @@ export default function ShopfrontPreview({
                     </a>
                   </div>
 
-                  {/* Follower stats. Each part appears only if the creator said it: a
-                          zero here would read as a measured result rather than a
-                          blank, and "0% engagement" is worse than no claim. */}
-                      <div className="sf-aud-stat" style={{ display: 'flex', alignItems: 'baseline', gap: 14, margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)', flexWrap: 'wrap' }}>
-                        {p.followers != null && (
-                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(36px,4vw,52px)', letterSpacing: '-0.04em', lineHeight: 0.85, color: 'var(--ink)' }}>
-                            {formatCount(p.followers)}
-                          </span>
-                        )}
-                        <span className="t-body" style={{ color: 'var(--ink-soft)' }}>
-                          {p.platform === 'instagram' ? 'followers' : 'subscribers'}
-                          {p.interactions != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.interactions)}</span> interactions</>}
-                          {p.avgViews != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.avgViews)}</span> avg views</>}
-                          {p.views != null && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{formatCount(p.views)}</span> views</>}
-                          {p.watchTime && <> · <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.watchTime}</span> watch time</>}
-                        </span>
+                      {/* ONE treatment for all of them. Followers was set at
+                          clamp(36px,4vw,52px) while the rest were inline body text,
+                          so the first number read as the headline and the others as
+                          a caption under it, though a brand weighs all three.
+
+                          Each appears only if the creator said it: a zero would read
+                          as a measured result rather than as a blank. */}
+                      <div className="sf-aud-stat" style={{
+                        display: 'flex', flexWrap: 'wrap',
+                        gap: 'clamp(26px,3.4vw,52px)',
+                        margin: 'clamp(18px,2.2vw,26px) 0 clamp(20px,2.4vw,28px)',
+                      }}>
+                        {([
+                          { v: p.followers, label: p.platform === 'instagram' ? 'Followers' : 'Subscribers' },
+                          { v: p.interactions, label: 'Interactions' },
+                          { v: p.avgViews, label: 'Avg views' },
+                          { v: p.views, label: 'Views' },
+                          { v: p.watchTime, label: 'Watch time' },
+                        ] as { v: number | string | null | undefined; label: string }[])
+                          .filter(st => st.v != null && st.v !== '')
+                          .map(st => (
+                            <div key={st.label}>
+                              <div style={{
+                                fontFamily: 'var(--font-display)', fontWeight: 800,
+                                fontSize: 'clamp(28px,3vw,38px)', letterSpacing: '-0.03em',
+                                lineHeight: 1, color: 'var(--ink)',
+                              }}>
+                                {typeof st.v === 'number' ? formatCount(st.v) : st.v}
+                              </div>
+                              <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 7 }}>
+                                {st.label}
+                              </div>
+                            </div>
+                          ))}
                       </div>
 
                   {/* Reach bar chart */}
@@ -891,6 +909,14 @@ export default function ShopfrontPreview({
             {/* Age + Gender + Location */}
             {(data.audience.ageBreakdown || data.audience.gender || data.audience.topLocations) && (
               <div style={{ marginTop: 'clamp(8px,1vw,14px)', paddingTop: 'clamp(14px,1.6vw,20px)', borderTop: '1px solid rgba(255,255,255,.5)' }}>
+                {/* INSTAGRAM ONLY. Age, gender and cities are ONE set of demographics,
+                    stored on the storefront rather than per channel. Left visible while
+                    the YouTube tab is selected they read as the YouTube audience, which
+                    nothing here measures.
+                
+                    Hidden rather than relabelled: someone on the YouTube tab should see
+                    YouTube numbers or nothing, not Instagram numbers with a caveat. */}
+                {(data.platforms.length < 2 || activePlatform === 'instagram') && (
                 <div className="sf-aud-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.55fr) minmax(0,1fr)', gap: 'clamp(14px,1.8vw,20px)', alignItems: 'stretch' }}>
                   {/* Age breakdown */}
                   {data.audience.ageBreakdown && (
@@ -1020,6 +1046,7 @@ export default function ShopfrontPreview({
                     )}
                   </div>
                 </div>
+                )}
               </div>
             )}
           </div>
