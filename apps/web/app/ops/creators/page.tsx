@@ -1,18 +1,23 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import VettingActions from '@/components/ops/VettingActions'
 import VettingBadge from '@/components/ops/VettingBadge'
+import { VETTING_STATUSES, VETTING_LABEL, type VettingStatus } from '@/lib/vetting-status'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 
 /** Must match FOLLOWER_RANGES in the creator onboarding form. */
 const BANDS = ['Under 20k', '20k \u2013 50k', '50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
 const NOT_ANSWERED = 'none'
+/** A uuid that cannot exist, for "match nothing": .in() rejects an empty list. */
+const NO_MATCH = '00000000-0000-0000-0000-000000000000'
 import { followerRangeOf } from '@/lib/follower-range'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function OpsCreatorsPage({ searchParams }: { searchParams: { page?: string; band?: string | string[] } }) {
+export default async function OpsCreatorsPage({ searchParams }: {
+  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string }
+}) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
@@ -26,24 +31,69 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
     .filter((b) => b === NOT_ANSWERED || BANDS.includes(b))
   const wantsUnanswered = selected.includes(NOT_ANSWERED)
   const wantsBands = selected.filter((b) => b !== NOT_ANSWERED)
-  const filterQuery = selected.map((b) => `band=${encodeURIComponent(b)}`).join('&')
+  // Vetting status. Multi-select like the bands, and validated against the same
+  // list the badge renders from so a hand-edited URL cannot reach the database.
+  const rawStatus = searchParams?.status
+  const statuses = (Array.isArray(rawStatus) ? rawStatus : rawStatus ? [rawStatus] : [])
+    .filter((v): v is VettingStatus => (VETTING_STATUSES as string[]).includes(v))
+
+  // Shopfront: yes, no, or unset. A tri-state radio rather than a checkbox,
+  // because "no" is a real question here and an unchecked box cannot ask it.
+  const shopfront = searchParams?.shopfront === 'yes' ? 'yes'
+    : searchParams?.shopfront === 'no' ? 'no' : ''
+
+  const filterQuery = [
+    ...selected.map((b) => `band=${encodeURIComponent(b)}`),
+    ...statuses.map((v) => `status=${encodeURIComponent(v)}`),
+    ...(shopfront ? [`shopfront=${shopfront}`] : []),
+  ].join('&')
+  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== ''
 
   const admin = createAdminClient()
-  let listQuery = admin
-    .from('creators')
-    .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, vetting_status, rate_card, created_at', { count: 'exact' })
-    .order('created_at', { ascending: false })
 
-  // Unanswered is NULL, which .in() cannot express, so the two cases are
-  // separate filters rather than one clever OR. "Not answered" alongside bands
-  // is not supported and the form prevents choosing both — a mixed selection
-  // would need an or() carrying quoted values with spaces and an en-dash inside
-  // a comma-separated filter string, which fails at runtime, not at build.
-  if (wantsUnanswered) {
-    listQuery = listQuery.is('follower_band', null)
-  } else if (wantsBands.length) {
-    listQuery = listQuery.in('follower_band', wantsBands)
+  // Resolved BEFORE anything is filtered: the per-page storefront lookup further
+  // down runs on the ids this page returned, which is too late to filter by, and
+  // the summary counts need the same set. One id-only sweep of a small table.
+  let shopfrontIds: string[] = []
+  if (shopfront) {
+    const { data: withShopfront } = await admin
+      .from('creator_storefronts').select('creator_id')
+    shopfrontIds = Array.from(new Set((withShopfront ?? []).map((r) => r.creator_id).filter(Boolean)))
   }
+
+  // One definition per filter, applied to BOTH the list and the summary counts.
+  // The counts previously carried only the bands, so filtering by status or
+  // shopfront produced a breakdown that did not add up to the total above it.
+  //
+  // Unanswered is NULL, which .in() cannot express, so the two band cases are
+  // separate filters rather than one clever OR. "Not answered" alongside bands
+  // is not supported: a mixed selection would need an or() carrying quoted
+  // values with spaces and an en dash inside a comma-separated filter string,
+  // which fails at runtime, not at build.
+  type Q = { is: Function; in: Function; not: Function; eq: Function }
+  const applyBands = <T extends Q>(q: T): T =>
+    wantsUnanswered ? (q.is('follower_band', null) as T)
+      : wantsBands.length ? (q.in('follower_band', wantsBands) as T)
+        : q
+  const applyStatus = <T extends Q>(q: T): T =>
+    statuses.length ? (q.in('vetting_status', statuses) as T) : q
+  const applyShopfront = <T extends Q>(q: T): T => {
+    if (!shopfront) return q
+    if (shopfront === 'yes') {
+      // No storefronts at all means nothing can match, and .in() with an empty
+      // list is a syntax error rather than an empty result.
+      return shopfrontIds.length ? (q.in('id', shopfrontIds) as T) : (q.eq('id', NO_MATCH) as T)
+    }
+    return shopfrontIds.length ? (q.not('id', 'in', `(${shopfrontIds.join(',')})`) as T) : q
+  }
+  const applyAll = <T extends Q>(q: T): T => applyShopfront(applyStatus(applyBands(q)))
+
+  const listQuery = applyAll(
+    admin
+      .from('creators')
+      .select('id, full_name, phone, niches, handle, social_accounts, is_vetted, is_rejected, vetting_status, rate_card, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false }),
+  )
 
   const { data: creators, error, count } = await listQuery.range(from, to)
 
@@ -67,17 +117,13 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
   // Counted across the whole filtered set, not the page. `all` used to be every
   // creator, so counting it was right; once pagination landed it became the 50
   // rows on screen and the line read "50 total" against a table of 378.
-  const applyBands = <T extends { is: Function; in: Function }>(q: T): T =>
-    wantsUnanswered
-      ? (q.is('follower_band', null) as T)
-      : wantsBands.length
-        ? (q.in('follower_band', wantsBands) as T)
-        : q
-
+  // Every filter, applied to the summary counts too. They previously carried
+  // only the bands, so filtering by status or shopfront gave a breakdown that
+  // did not add up to the total above it.
   const [vettedRes, rejectedRes, growthRes] = await Promise.all([
-    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'deals_approved')),
-    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'rejected')),
-    applyBands(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth')),
+    applyAll(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'deals_approved')),
+    applyAll(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'rejected')),
+    applyAll(admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth')),
   ])
   const total = count ?? 0
   const vetted = vettedRes.count ?? 0
@@ -126,8 +172,35 @@ export default async function OpsCreatorsPage({ searchParams }: { searchParams: 
           <input type="checkbox" name="band" value={NOT_ANSWERED} defaultChecked={wantsUnanswered} />
           Not answered
         </label>
+        {/* Break, so each filter reads as its own question rather than one long
+            row of unrelated checkboxes. */}
+        <span style={{ flexBasis: '100%', height: 0 }} />
+
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Status</span>
+        {VETTING_STATUSES.map((v) => (
+          <label key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
+            <input type="checkbox" name="status" value={v} defaultChecked={statuses.includes(v)} />
+            {VETTING_LABEL[v]}
+          </label>
+        ))}
+
+        <span style={{ flexBasis: '100%', height: 0 }} />
+
+        {/* Radios, not a checkbox: "no shopfront" is a question worth asking, and an
+            unchecked box cannot distinguish it from "do not care". */}
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Shopfront</span>
+        {([['', 'Any'], ['yes', 'Has one'], ['no', 'None']] as [string, string][]).map(([val, label]) => (
+          <label key={val || 'any'} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
+            <input type="radio" name="shopfront" value={val} defaultChecked={shopfront === val} />
+            {label}
+          </label>
+        ))}
+
+        <span style={{ flexBasis: '100%', height: 0 }} />
+
+
         <button type="submit" style={{ padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Apply</button>
-        {selected.length > 0 && (
+        {anyFilter && (
           <Link href="/ops/creators" style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}>Clear</Link>
         )}
         {wantsUnanswered && wantsBands.length > 0 && (

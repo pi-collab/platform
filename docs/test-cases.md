@@ -2246,6 +2246,20 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       column accumulates keys owned by four different screens, and rebuilding it
       from one screen's fields deletes the other three's
 
+**Creator list filters**
+- [ ] Status filters on vetting_status, multi-select, all four values
+- [ ] Shopfront is a RADIO: Any / Has one / None. "None" is a real question and
+      an unchecked box cannot distinguish it from "do not care"
+- [ ] Filters combine: status + shopfront + band together
+- [ ] The summary line AGREES with the table. Its counts run through the same
+      filter as the list; they previously carried only the bands, so filtering by
+      status gave a breakdown that did not add up to the total above it
+- [ ] Pagination keeps every filter, not just the bands
+- [ ] Clear appears when ANY filter is set, not only a band
+- [ ] Shopfront=Has one with zero storefronts anywhere returns nothing rather
+      than erroring: .in() with an empty list is a syntax error, not an empty set
+- [ ] An invented ?status=whatever is dropped, not passed to the database
+
 **Deciding from the creators LIST**
 - [ ] Each row carries Deals / Growth / Reject, and the detail page still has
       its own copy. Working a queue should not mean opening every profile
