@@ -2025,6 +2025,31 @@ in place.
 - [ ] Run 0491 BEFORE relying on the app fix alone. The action writes both
       columns now, but any other insert path still takes the column defaults
 
+### Brand deals, empty state
+
+- [ ] A brand with zero deals sees the drawn screen: "My deals", three zeroed
+      counters, inert search and sort, seven filter chips, "No deals yet"
+- [ ] It replaces the page's OWN hero rather than sitting under it. The export
+      carries its own heading, so rendering it inside would put two on one page
+- [ ] A search or filter that returns nothing still shows the TABLE and its
+      controls, NOT this screen. Someone who filtered to Declined and got
+      nothing needs the filters, not "start your first deal"
+- [ ] HeldNotice still renders above it
+- [ ] Search and sort are genuinely not interactive
+- [ ] Nothing outside /deals changes appearance; CSS scoped under .bdeals-desk
+
+### Converter
+
+- [ ] ONE script, scripts/desktop-export.py, taking --src --scope --out --css.
+      There were three near-identical copies and the same three bugs had to be
+      fixed by hand in each
+- [ ] Proven by regenerating the creator deals and inbox stylesheets with it:
+      both came out byte-identical to what those ports already shipped
+- [ ] Its fatal checks still abort: leaking selectors, comments left in
+      selectors, self-nested scope, links that would 404
+- [ ] It NOTES reveal-dependent classes rather than aborting, because the fix is
+      a judgement call, but silence there ships a blank-looking page
+
 ### Brand dashboard, empty state
 
 - [ ] A brand with zero deals sees the drawn empty dashboard: hero, period

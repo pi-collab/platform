@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import BrandDealsEmpty from './BrandDealsEmpty'
 import HeldNotice from '@/components/HeldNotice'
 import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
@@ -133,6 +134,26 @@ export default async function DealsListPage({
   // prominently — a brand seeing no creator response with no explanation
   // assumes the product is broken, and may re-send and create duplicates.
 
+  // The genuinely-empty screen. Returned BEFORE the hero: the drawn state
+  // carries its own "My deals" heading and counters, so rendering it inside
+  // the existing hero would put two headings on one page.
+  //
+  // HeldNotice stays above it. A brand whose first deal is sitting unsent needs
+  // that before anything else, and the design has nowhere to put a banner.
+  if (totalCount === 0 && !q && !status) {
+    return (
+      <main style={container}>
+        <HeldNotice
+          heldCount={heldCount ?? 0}
+          status={brand.brandStatus}
+          rejectionReason={brand.rejectionReason}
+          showDealsLink={false}
+        />
+        <BrandDealsEmpty />
+      </main>
+    )
+  }
+  
   return (
     <main style={container}>
 
@@ -182,45 +203,22 @@ export default async function DealsListPage({
       </section>
 
       {/* ══════ DEALS LIST (or empty state) ══════ */}
-      {totalCount === 0 && !q && !status ? (
-        <section style={{ ...emptyCard, marginTop: 30 }}>
-          <div style={{ filter: 'drop-shadow(0 14px 22px rgba(150,175,60,.28))' }}>
-            <Mascot size={64} />
-          </div>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em', margin: '18px 0 0', color: 'var(--ink)' }}>
-            No deals yet
-          </p>
-          <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-faint)', margin: '9px 0 0', maxWidth: 340, lineHeight: 1.55 }}>
-            Browse creators and start your first deal. Your deals will appear here once you send an offer.
-          </p>
-          <Link href="/browse" style={{ ...neonBtnStyle, marginTop: 20, fontSize: 13 }}>
-            Browse creators
-          </Link>
-        </section>
-      ) : (
-        <DealsTable
-          deals={all}
-          currentStatus={status}
-          currentQuery={q}
-          currentPage={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-        />
-      )}
+      {/* The empty case returns earlier, with the drawn screen. Reaching here
+          means there are deals, or a search or filter is narrowing them, and a
+          zero-result search wants the table and its controls, not a first-run
+          screen telling someone to start their first deal. */}
+      <DealsTable
+        deals={all}
+        currentStatus={status}
+        currentQuery={q}
+        currentPage={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+      />
     </main>
   )
 }
 
-// ── Mascot SVG ──
-function Mascot({ size = 56 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 336 336" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M168 12C278 12 324 112 324 188C324 276 252 324 168 324C84 324 12 276 12 188C12 112 58 12 168 12Z" fill="#E8FF66" />
-      <ellipse cx="114" cy="126" rx="54" ry="36" fill="#fff" opacity="0.55" />
-      <ellipse cx="168" cy="188" rx="24" ry="10" fill="#fff" opacity="0.18" />
-    </svg>
-  )
-}
 
 // ── Styles ──
 const container: React.CSSProperties = {
@@ -238,16 +236,6 @@ const heroCard: React.CSSProperties = {
   padding: 28,
 }
 
-const emptyCard: React.CSSProperties = {
-  borderRadius: 20,
-  background: 'var(--card)',
-  boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
-  padding: '64px 38px',
-  textAlign: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-}
 
 const kpiLabel: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
