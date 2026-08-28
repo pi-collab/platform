@@ -570,3 +570,22 @@
 .bdash-desk .g-progress-track { height:5px; border-radius:999px; overflow:hidden; background:linear-gradient(90deg,var(--sec),var(--sec-2)); }
 .bdash-desk .g-progress-fill { height:100%; border-radius:999px; background:var(--lime-400); }
 .bdash-desk .g-section-rule { width:40px; height:1px; background:linear-gradient(90deg,var(--sec-mid),var(--sec-mid-2)); margin-top:12px; }
+
+/* ── Scroll reveal ─────────────────────────────────────────────────────────
+   The export hides every .sr element at opacity 0 and reveals it with an inline
+   <script> that adds .in on scroll. The converter strips scripts, so the class
+   applies, the animation never runs, and SEVEN of the eight sections stayed
+   invisible: the page rendered as one section and a lot of blank space.
+
+   Made visible rather than reimplementing the reveal. An empty state whose
+   content fades in reads as a page still loading, which is the opposite of what
+   a first-run screen should say. Same call the creator app made, see
+   creator-app.css.
+
+   MUST stay last: it overrides the scoped .sr rules above at equal specificity,
+   so order is what decides it. Re-running the converter rewrites this file and
+   drops this block -- re-add it. */
+.bdash-desk .sr {
+  opacity: 1;
+  transform: none;
+}

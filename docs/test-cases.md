@@ -2039,6 +2039,14 @@ in place.
       its own dashboard has already signed up
 - [ ] Every figure on it is genuinely zero. This renders only when the brand has
       no deals, so nothing here is a placeholder awaiting real data
+- [ ] ALL EIGHT sections render. The export hides .sr elements at opacity 0 and
+      reveals them with an inline script that the converter strips, so seven of
+      eight were invisible and the page looked like one section and blank space.
+      The scoped CSS overrides .sr to visible, and that override must stay LAST
+      in the file: it beats the generated rules at equal specificity, so order
+      is what decides it
+- [ ] Re-running the converter REWRITES that CSS and drops the override. Re-add
+      it, then confirm all eight sections are still on screen
 - [ ] Nothing outside /dashboard changes appearance: all CSS scoped under
       .bdash-desk. Same checks as the other ports, no leaks, no self-nesting, no
       comments inside selectors, tokens reachable from the wrapper

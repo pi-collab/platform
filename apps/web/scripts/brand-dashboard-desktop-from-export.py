@@ -225,6 +225,23 @@ if nested:
     print(f'  ABORT - {len(nested)} rule(s) require {SCOPE} inside {SCOPE}')
     sys.exit(1)
 
+# Content the export only reveals with JavaScript.
+#
+# These exports hide elements at opacity 0 and add a class on scroll from an
+# inline <script>, which is stripped. The class still applies, the reveal never
+# runs, and the page renders mostly blank -- seven of eight sections vanished on
+# the brand dashboard and it looked like the conversion had dropped them.
+#
+# Warned, not fatal: the fix is a one-line override in the scoped CSS, and which
+# way to resolve it is a judgement (show it, or reimplement the reveal).
+_hidden = re.findall(r'\.([a-z][\w-]*)\s*\{[^}]*opacity\s*:\s*0[^}]*\}', css)
+_revealed = set(re.findall(r'\.([a-z][\w-]*)\.\w+\s*\{[^}]*opacity\s*:\s*1', css))
+_needs_js = sorted({c for c in _hidden if c in _revealed})
+if _needs_js:
+    print('  NOTE - hidden until a class is added by script, which is stripped:')
+    for c in _needs_js:
+        print(f'    .{c}  -> override it in the scoped CSS or nothing will show')
+
 bad = sorted(set(leaks(css)))
 if bad:
     print(f'  ABORT - {len(bad)} selector(s) would leak site-wide:')
