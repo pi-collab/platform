@@ -142,13 +142,21 @@ export default async function DealsListPage({
   // that before anything else, and the design has nowhere to put a banner.
   if (totalCount === 0 && !q && !status) {
     return (
-      <main style={container}>
-        <HeldNotice
-          heldCount={heldCount ?? 0}
-          status={brand.brandStatus}
-          rejectionReason={brand.rejectionReason}
-          showDealsLink={false}
-        />
+      // NOT `container`. That caps at 1080 and the drawn screen sets its own
+      // 1200, the same width the brand dashboard's empty state uses; nested, the
+      // narrower cap wins and the two screens disagree by 120px.
+      //
+      // HeldNotice keeps the page width, since it belongs to the page rather
+      // than to the drawn screen.
+      <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+          <HeldNotice
+            heldCount={heldCount ?? 0}
+            status={brand.brandStatus}
+            rejectionReason={brand.rejectionReason}
+            showDealsLink={false}
+          />
+        </div>
         <BrandDealsEmpty />
       </main>
     )
