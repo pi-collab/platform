@@ -2034,6 +2034,9 @@ in place.
 - [ ] A search or filter that returns nothing still shows the TABLE and its
       controls, NOT this screen. Someone who filtered to Declined and got
       nothing needs the filters, not "start your first deal"
+- [ ] The gap between the top nav and the first section MATCHES the dashboard's.
+      This kept the export's own <main> and its padding, which stacked on the
+      page's, so the deals screen sat visibly lower than the dashboard
 - [ ] It is the SAME WIDTH as the brand dashboard's empty state. Both drawn
       screens set 1200; the deals page wrapped it in its own 1080 container, and
       a nested narrower cap wins, so the two disagreed by 120px

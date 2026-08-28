@@ -20,75 +20,77 @@ import './brand-deals-empty.css'
 export default function BrandDealsEmpty() {
   return (
     <div className="bdeals-desk">
-      <main className="main-app" style={{flex: '1', minWidth: '0', padding: 'clamp(22px,3vw,38px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)'}}>
-          <div style={{maxWidth: '1200px', margin: '0 auto'}}>
+      {/* The export's own <main> is dropped, as it is on the dashboard.
+          It carries its own padding, which stacked on top of the page's
+          and left this screen with a visibly bigger gap under the header
+          than the dashboard has. The page owns the spacing. */}
+        <div style={{maxWidth: '1200px', margin: '0 auto'}}>
 
 
-            <div style={{background: 'var(--card)', borderRadius: '24px', boxShadow: 'var(--sh-2)', padding: 'clamp(26px,3vw,40px) clamp(24px,3vw,40px) clamp(28px,3.4vw,40px)'}}>
-              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap'}}>
-                <div style={{flex: '1', minWidth: '240px'}}>
-                  <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', lineHeight: '1.0', fontSize: 'clamp(34px,4.4vw,44px)', margin: '0', color: 'var(--ink)'}}>My <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400', letterSpacing: '0', fontSize: '1.05em'}}>deals</span></h1>
-                  <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--wg-600)', margin: '8px 0 0'}}>Everything you have running with creators, newest first.</p>
-                </div>
-                <button className="neonbtn" style={{flexShrink: '0', display: 'inline-flex', alignItems: 'center', gap: '8px', height: '46px', padding: '0 22px', borderRadius: '999px', background: 'var(--lime-400)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', cursor: 'pointer', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" /><path d="M3 9h18" /><path d="M11 13h2" /></svg>New deal</button>
+          <div style={{background: 'var(--card)', borderRadius: '24px', boxShadow: 'var(--sh-2)', padding: 'clamp(26px,3vw,40px) clamp(24px,3vw,40px) clamp(28px,3.4vw,40px)'}}>
+            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24px', flexWrap: 'wrap'}}>
+              <div style={{flex: '1', minWidth: '240px'}}>
+                <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', lineHeight: '1.0', fontSize: 'clamp(34px,4.4vw,44px)', margin: '0', color: 'var(--ink)'}}>My <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400', letterSpacing: '0', fontSize: '1.05em'}}>deals</span></h1>
+                <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--wg-600)', margin: '8px 0 0'}}>Everything you have running with creators, newest first.</p>
               </div>
-              <div className="kpis" style={{display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0', marginTop: '24px', borderRadius: '16px', background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden'}}>
-                <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column'}}>
-                  <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Needs your action</div>
-                  <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
-                </div>
-                <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--hair)'}}>
-                  <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Live right now</div>
-                  <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
-                </div>
-                <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--hair)'}}>
-                  <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Total deals</div>
-                  <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
-                </div>
+              <button className="neonbtn" style={{flexShrink: '0', display: 'inline-flex', alignItems: 'center', gap: '8px', height: '46px', padding: '0 22px', borderRadius: '999px', background: 'var(--lime-400)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', cursor: 'pointer', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" /><path d="M3 9h18" /><path d="M11 13h2" /></svg>New deal</button>
+            </div>
+            <div className="kpis" style={{display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0', marginTop: '24px', borderRadius: '16px', background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden'}}>
+              <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Needs your action</div>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
+              </div>
+              <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--hair)'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Live right now</div>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
+              </div>
+              <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--hair)'}}>
+                <div style={{fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '700', letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--wg-500)'}}>Total deals</div>
+                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(34px,3.6vw,40px)', lineHeight: '1', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '14px'}}>0</div>
               </div>
             </div>
-
-
-            <div style={{background: '#FFFFFF', borderRadius: '20px', boxShadow: 'var(--sh-2)', marginTop: 'clamp(28px,3.2vw,42px)', overflow: 'hidden'}}>
-              <div style={{padding: '26px clamp(18px,2.4vw,26px)'}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'}}>
-                  <div className="searchwrap" style={{display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 320px', minWidth: '200px', height: '54px', padding: '0 10px 0 20px', borderRadius: '999px', background: '#F5F7FA', border: 'none', boxShadow: 'inset 0 1px 3px rgba(24,28,36,.08),inset 0 0 0 1px rgba(24,28,36,.03)'}}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink: '0'}}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                    <input type="search" placeholder="Search deals or creators" disabled style={{flex: '1', minWidth: '0', border: 'none', outline: 'none', background: 'none', fontFamily: 'var(--font-ui)', fontSize: '15.5px', fontWeight: '500', color: 'var(--ink)'}} />
-                  </div>
-                  <div style={{position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: '0'}}>
-                    <select disabled style={{height: '46px', padding: '0 38px 0 18px', borderRadius: '999px', border: '1px solid var(--line)', background: '#fff', WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-400)', cursor: 'not-allowed', whiteSpace: 'nowrap'}}>
-                      <option>Needs you first</option>
-                    </select>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none'}}><path d="m6 9 6 6 6-6" /></svg>
-                  </div>
-                </div>
-
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid var(--line)'}}>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: '#fff', background: 'var(--ink)'}}>All<span style={{fontSize: '11.5px', fontWeight: '700', color: 'rgba(255,255,255,.6)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Needs you<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Negotiating<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>In production<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>In review<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Posted<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                  <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Declined<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
-                </div>
-              </div>
-
-              <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 'clamp(48px,6vw,72px) 24px', borderTop: '1px solid var(--hair)'}}>
-                <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', borderRadius: '16px', background: '#F5F7FA', border: '1px solid var(--line)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M2 13h20" /></svg></span>
-                <div style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '20px', marginTop: '16px', color: 'var(--ink)'}}>No deals yet</div>
-                <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--wg-600)', margin: '9px 0 0', maxWidth: '370px', lineHeight: '1.55'}}>Deals you start with creators land here. Browse creators to send your first brief.</p>
-                <Link href="/browse" className="neonbtn" style={{marginTop: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--ink)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: '#fff', boxShadow: '0 8px 16px -8px rgba(24,28,36,.35)'}}>Browse creators<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></Link>
-              </div>
-            </div>
-
-            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '22px', padding: '0 4px', flexWrap: 'wrap'}}>
-              <span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>0 deals</span>
-            </div>
-
           </div>
-        </main>
+
+
+          <div style={{background: '#FFFFFF', borderRadius: '20px', boxShadow: 'var(--sh-2)', marginTop: 'clamp(28px,3.2vw,42px)', overflow: 'hidden'}}>
+            <div style={{padding: '26px clamp(18px,2.4vw,26px)'}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap'}}>
+                <div className="searchwrap" style={{display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 320px', minWidth: '200px', height: '54px', padding: '0 10px 0 20px', borderRadius: '999px', background: '#F5F7FA', border: 'none', boxShadow: 'inset 0 1px 3px rgba(24,28,36,.08),inset 0 0 0 1px rgba(24,28,36,.03)'}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink: '0'}}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                  <input type="search" placeholder="Search deals or creators" disabled style={{flex: '1', minWidth: '0', border: 'none', outline: 'none', background: 'none', fontFamily: 'var(--font-ui)', fontSize: '15.5px', fontWeight: '500', color: 'var(--ink)'}} />
+                </div>
+                <div style={{position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: '0'}}>
+                  <select disabled style={{height: '46px', padding: '0 38px 0 18px', borderRadius: '999px', border: '1px solid var(--line)', background: '#fff', WebkitAppearance: 'none', MozAppearance: 'none', appearance: 'none', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-400)', cursor: 'not-allowed', whiteSpace: 'nowrap'}}>
+                    <option>Needs you first</option>
+                  </select>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none'}}><path d="m6 9 6 6 6-6" /></svg>
+                </div>
+              </div>
+
+              <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '18px', paddingTop: '16px', borderTop: '1px solid var(--line)'}}>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: '#fff', background: 'var(--ink)'}}>All<span style={{fontSize: '11.5px', fontWeight: '700', color: 'rgba(255,255,255,.6)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Needs you<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Negotiating<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>In production<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>In review<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Posted<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+                <div style={{display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '999px', fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-600)', background: '#F5F7FA'}}>Declined<span style={{fontSize: '11.5px', fontWeight: '700', color: 'var(--wg-400)'}}>0</span></div>
+              </div>
+            </div>
+
+            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: 'clamp(48px,6vw,72px) 24px', borderTop: '1px solid var(--hair)'}}>
+              <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', borderRadius: '16px', background: '#F5F7FA', border: '1px solid var(--line)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M2 13h20" /></svg></span>
+              <div style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '20px', marginTop: '16px', color: 'var(--ink)'}}>No deals yet</div>
+              <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--wg-600)', margin: '9px 0 0', maxWidth: '370px', lineHeight: '1.55'}}>Deals you start with creators land here. Browse creators to send your first brief.</p>
+              <Link href="/browse" className="neonbtn" style={{marginTop: '20px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--ink)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: '#fff', boxShadow: '0 8px 16px -8px rgba(24,28,36,.35)'}}>Browse creators<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></Link>
+            </div>
+          </div>
+
+          <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '22px', padding: '0 4px', flexWrap: 'wrap'}}>
+            <span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>0 deals</span>
+          </div>
+
+        </div>
     </div>
   )
 }
