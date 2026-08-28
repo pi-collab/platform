@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import BrandDashboardEmpty from './BrandDashboardEmpty'
 import { verifyBrand } from '@/lib/brand-auth'
 import HeldNotice from '@/components/HeldNotice'
 import ApprovalNotice from '@/components/ApprovalNotice'
@@ -179,44 +180,17 @@ export default async function DashboardPage({
     return (
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-          {/* Above the hero: a brand whose first deal is sitting unsent needs
-              to know that before anything else on the page. */}
+          {/* Above everything: a brand whose first deal is sitting unsent needs
+              to know that before it reads a word of the dashboard. Kept OUTSIDE
+              the drawn empty state, which has no place for a status banner. */}
           {showApproval && <ApprovalNotice />}
-
           <HeldNotice
             heldCount={heldCount ?? 0}
             status={brand.brandStatus}
             rejectionReason={brand.rejectionReason}
           />
-
-          <section style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)' }}>
-            <div style={{ position: 'relative', zIndex: 2 }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--meta)' }}>Welcome</span>
-              <h1 style={heroH1Style}>Hey, <NameHighlight name={brandFirstName} />.</h1>
-              <div style={badgeRowStyle}>
-                <span style={badgeDotStyle}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)' }} />Brand</span>
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
-                <Link href="/browse" style={ghostBtnStyle}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                  Browse creators
-                </Link>
-                <Link href="/deals/new" style={neonBtnStyle}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                  Start a new deal
-                </Link>
-              </div>
-            </div>
-          </section>
-
-          <section style={{ marginTop: 40, borderRadius: 24, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: '64px 38px', textAlign: 'center' as const, display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
-            <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px' }}>Start your first deal</p>
-            <p style={{ fontSize: 14, color: 'var(--wg-500)', margin: '0 0 24px', maxWidth: 360 }}>
-              Browse vetted creators and send your first offer. Your dashboard will light up once deals are in motion.
-            </p>
-            <Link href="/browse" style={neonBtnStyle}>Browse creators</Link>
-          </section>
         </div>
+        <BrandDashboardEmpty />
       </main>
     )
   }

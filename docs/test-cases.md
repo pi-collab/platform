@@ -2025,6 +2025,24 @@ in place.
 - [ ] Run 0491 BEFORE relying on the app fix alone. The action writes both
       columns now, but any other insert path still takes the column defaults
 
+### Brand dashboard, empty state
+
+- [ ] A brand with zero deals sees the drawn empty dashboard: hero, period
+      selector, four zeroed stat cards, the three-step getting started, and the
+      empty Deals / Campaigns / Spend / Track record / Reach / Creators sections
+- [ ] ApprovalNotice and HeldNotice still render ABOVE it. A brand whose first
+      deal is sitting unsent needs to know before it reads the dashboard, and
+      the drawn state has nowhere to put a status banner
+- [ ] The export's own page wrapper and empty <header> are dropped; there is one
+      background and one top nav, not two
+- [ ] The marketing CTA at the end of the export is NOT shipped. A brand reading
+      its own dashboard has already signed up
+- [ ] Every figure on it is genuinely zero. This renders only when the brand has
+      no deals, so nothing here is a placeholder awaiting real data
+- [ ] Nothing outside /dashboard changes appearance: all CSS scoped under
+      .bdash-desk. Same checks as the other ports, no leaks, no self-nesting, no
+      comments inside selectors, tokens reachable from the wrapper
+
 ### Creator inbox, empty state, desktop
 
 - [ ] A creator with no conversations on a DESKTOP sees the drawn empty state:
