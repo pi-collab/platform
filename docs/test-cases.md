@@ -2039,6 +2039,13 @@ in place.
       its own dashboard has already signed up
 - [ ] Every figure on it is genuinely zero. This renders only when the brand has
       no deals, so nothing here is a placeholder awaiting real data
+- [ ] "Complete your profile" goes to /settings, the brand profile. The export
+      shipped it as href="#", a dead link on the first step of a getting-started
+- [ ] "Browse creators & send a brief" goes to /browse
+- [ ] The third step has no button: it describes what happens after a creator
+      accepts, which is not something the brand can go and do
+- [ ] Internal links are next/link, not <a>. An <a> to an app route is a full
+      document reload
 - [ ] ALL EIGHT sections render. The export hides .sr elements at opacity 0 and
       reveals them with an inline script that the converter strips, so seven of
       eight were invisible and the page looked like one section and blank space.
