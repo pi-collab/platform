@@ -116,18 +116,44 @@ function formatStat(n: number): string {
 }
 
 /** Determine which sections have real content (not just defaults) */
-function sectionsWithAutoHide(sections: ShopfrontSection[], edit: EditState, products: Product[], hasStorefront: boolean): ShopfrontSection[] {
+/**
+ * A section a creator left empty does not appear on their shopfront.
+ *
+ * HERO and PITCH are deliberately never hidden, and that is the whole list of
+ * exceptions:
+ *
+ *   hero   carries the name and handle. There is no shopfront without it.
+ *   pitch  is the control a brand uses to start a deal. Hiding it because the
+ *          creator wrote nothing would remove the only thing the page is for.
+ *
+ * Everything else answers "did they fill this in".
+ */
+function sectionsWithAutoHide(
+  sections: ShopfrontSection[], edit: EditState, products: Product[],
+  chan: Record<string, ChannelStatFields>, hasStorefront: boolean,
+): ShopfrontSection[] {
   // For new creators (dummy preview), show everything
   if (!hasStorefront) return sections
   const hasContent = edit.contentItems.some(i => i.title.trim())
   const hasCollabs = edit.brandCollabs.some(c => c.name.trim())
   const hasRates = products.length > 0
   const hasAudience = edit.topLocations.some(l => l.city.trim())
+
+  // The strip shows the per-channel numbers alongside the cross-channel ones,
+  // so it is empty only when NEITHER was filled. Before the storefront stopped
+  // inventing figures this could never be empty, which is why it had no rule.
+  const hasChannelNumbers = Object.values(chan).some(v =>
+    [v.followers, v.avgViews, v.interactions, v.views, v.watchTime].some(x => x.trim() !== ''))
+  const hasStats = hasChannelNumbers
+    || [edit.monthlyReach, edit.repeatBrands, edit.avgDealValue, edit.replyTime]
+      .some(v => (v ?? '').trim() !== '')
+
   return sections.map(s => {
     if (s.key === 'content' && !hasContent) return { ...s, enabled: false }
     if (s.key === 'collabs' && !hasCollabs) return { ...s, enabled: false }
     if (s.key === 'ratecard' && !hasRates) return { ...s, enabled: false }
     if (s.key === 'audience' && !hasAudience) return { ...s, enabled: false }
+    if (s.key === 'stats' && !hasStats) return { ...s, enabled: false }
     return s
   })
 }
@@ -1042,7 +1068,7 @@ export default function StorefrontManager({
     const collabs = [...edit.brandCollabs]; collabs[index] = updated; set('brandCollabs', collabs)
   }
 
-  const resolvedSections = sectionsWithAutoHide(sections, edit, products, !!storefront)
+  const resolvedSections = sectionsWithAutoHide(sections, edit, products, chan, !!storefront)
   const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug)
 
   /* ── EDIT MODE ────────────────────────────────────────── */

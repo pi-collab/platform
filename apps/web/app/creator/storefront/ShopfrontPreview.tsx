@@ -752,7 +752,7 @@ export default function ShopfrontPreview({
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
               <div>
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>{firstName}&apos;s <span className="t-accent">audience</span></h2>
-                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Real reach and growth on each platform, updated monthly.</p>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Figures {firstName} reports for each channel.</p>
               </div>
               {/* Only when there is something to switch BETWEEN. A tablist with one
                   tab is a control that cannot do anything, and it implies a second

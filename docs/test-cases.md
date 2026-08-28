@@ -2250,6 +2250,21 @@ source of truth; is_vetted and is_rejected are derived by trigger.
       can see the rung above them and what reaches it
 - [ ] Neither tier is a link. Nothing here is clickable yet
 
+**Shopfront sections hide when empty**
+- [ ] A creator who fills nothing publishes a page with no empty sections on it
+- [ ] Covered: content, past collabs, rate card, audience, AND the stats strip.
+      The strip had no rule because before the invented figures were removed it
+      could never be empty
+- [ ] The strip hides only when NEITHER the per-channel numbers nor the
+      cross-channel ones (monthly reach, deals per month, avg deal value, reply
+      time) were filled
+- [ ] Hero and Work With Me are NEVER auto-hidden, deliberately. Hero carries
+      the name; Work With Me is the control a brand starts a deal with, and
+      hiding it removes the only thing the page is for
+- [ ] The audience section says "Figures <name> reports for each channel", NOT
+      "Real reach and growth, updated monthly". Nothing verifies these and
+      nothing refreshes them on a schedule
+
 **Copy rules that apply everywhere**
 - [ ] Never "Growth" on its own in anything a person reads — always "Guapd
       Growth". Covers the page, the email, and the ops buttons
