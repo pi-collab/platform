@@ -2025,6 +2025,62 @@ in place.
 - [ ] Run 0491 BEFORE relying on the app fix alone. The action writes both
       columns now, but any other insert path still takes the column defaults
 
+### Instagram connection (Phase One)
+
+**Connect**
+- [ ] "Connected accounts" is its own settings section, NOT part of the social
+      handles list. A handle is text; a connection has a token, an expiry and
+      five states, and social_accounts has a history of writers destroying each
+      other's keys
+- [ ] Connecting never signs the creator in or out. They stay on phone OTP
+- [ ] The state nonce is compared before the code is spent. Without it, a
+      crafted callback URL would bind an attacker's Instagram to the creator's
+      account and the storefront would show the wrong person's audience
+- [ ] The trailing "#_" is stripped from the code
+- [ ] A personal account lands on status personal_account with the switch steps,
+      NOT a generic error
+- [ ] account_type is re-read on EVERY sync: a creator can switch back to
+      personal, and verified figures must stop the moment we cannot verify them
+
+**Storage**
+- [ ] Token is AES-256-GCM encrypted before it reaches the table. Tampering with
+      the ciphertext fails decryption rather than sending garbage to Meta
+- [ ] RLS denies all client access AND the grant is revoked. No client component
+      imports the token helpers or names the table
+- [ ] BOTH ids stored: ig_user_id (insights) and ig_app_scoped_id (Meta's
+      callbacks). They are different values and each flow needs its own
+- [ ] Encryption does NOT protect against app compromise; the key sits beside
+      the service-role key. Stated in the file, not implied
+
+**Refresh**
+- [ ] Cron runs daily and refreshes independent of creator login. On-demand
+      refresh would disconnect anyone not returning within 60 days
+- [ ] Refresh only when the token is <14 days from expiry AND >24h old (Meta's
+      rule)
+- [ ] An expired token sets status expired and clears the connected marker
+- [ ] A failed sync KEEPS the last good snapshot: a transient Instagram outage
+      must not blank a live storefront
+- [ ] The cron route rejects requests without the CRON_SECRET bearer token
+
+**Storefront**
+- [ ] SNAPSHOT-FIRST, never overwrite. Creator-typed values are untouched, and
+      disconnecting reveals them again with nothing to restore
+- [ ] Verified figures carry a "From Instagram" badge; typed ones do not
+- [ ] Age/gender percentages exclude under-18s and the page SAYS so. Instagram
+      returns a 13-17 bucket the shopfront has no band for
+- [ ] Gender is F/(F+M+U) with unknown shown, not folded into men
+- [ ] Avg views is NOT auto-filled. Instagram omits `views` at account level and
+      an omitted metric returns an empty set, not an error
+- [ ] Under 100 followers: demographics unavailable is explained, not shown as 0
+- [ ] Meta's own metric titles are never rendered — they come back locale-derived
+      (Marathi on the test account)
+
+**Meta callbacks**
+- [ ] Deauthorize and data-deletion VERIFY the signed_request signature. Both are
+      public unauthenticated URLs that delete data; the signature is the only gate
+- [ ] Data deletion returns { url, confirmation_code } and the status page says
+      what was deleted AND what was kept (deals are not Instagram data)
+
 ### Brand deals, empty state
 
 - [ ] A brand with zero deals sees the drawn screen: "My deals", three zeroed

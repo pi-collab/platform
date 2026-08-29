@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getPublicSnapshot } from '@/lib/instagram-sync'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { notFound } from 'next/navigation'
 import { getPublicStorefront, getRichStorefront } from './actions'
@@ -109,6 +110,13 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const niches = (storefront.categories?.length ? storefront.categories : creator.niches) ?? []
   const workedWith = creator.worked_with ?? []
   const audience = stats.audience ?? {}
+
+  // SNAPSHOT FIRST, typed values second. The creator's own figures are never
+  // overwritten: a verified number simply takes precedence while the connection
+  // is healthy, and disconnecting reveals what they typed again with nothing to
+  // restore. That also means there is no per-field provenance to keep in sync —
+  // "verified" is exactly "this came from the snapshot".
+  const ig = await getPublicSnapshot(creator.id)
   const contentItems = (stats.content_items ?? []) as ContentItem[]
   const brandCollabs = (stats.brand_collabs ?? workedWith.map((b: string) => ({ name: b, type: 'Reel + Stories', views: '', engagement: '' }))) as BrandCollab[]
 
@@ -134,7 +142,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     { key: 'hero', label: 'Hero', enabled: true },
     { key: 'stats', label: 'Stats Strip', enabled: true },
     { key: 'ratecard', label: 'Rate Card', enabled: activeProducts.length > 0 },
-    { key: 'audience', label: 'Audience', enabled: !!(audience as Record<string, unknown>).top_locations },
+    { key: 'audience', label: 'Audience', enabled: Boolean(ig?.topLocations || (audience as Record<string, unknown>).top_locations) },
     { key: 'content', label: 'Content Showcase', enabled: contentItems.some(i => i.title?.trim()) },
     { key: 'collabs', label: 'Past Collaborations', enabled: brandCollabs.some(c => c.name?.trim()) },
     { key: 'pitch', label: 'Work With Me', enabled: true },
@@ -152,7 +160,9 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     // to '-'; this one asserted a response time nobody measured, on the page
     // a brand decides from.
     replyTime: stats.reply_time || '',
-    totalFollowers: totalFollowers != null ? formatStat(totalFollowers) : '',
+    totalFollowers: ig?.followersCount != null
+      ? formatStat(ig.followersCount)
+      : totalFollowers != null ? formatStat(totalFollowers) : '',
     // Blank, never a fabricated figure. The renderer hides what is blank.
     interactions: primary?.interactions != null ? formatStat(primary.interactions) : '',
     avgViews: primary?.avgViews != null ? formatStat(primary.avgViews) : '',
@@ -161,12 +171,29 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     avgDealValue: stats.avg_deal_value || '-',
     platforms: allPlatforms,
     audience: {
-      ageBreakdown: (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
-      gender: (audience as Record<string, unknown>).gender_women != null
-        ? { women: (audience as Record<string, unknown>).gender_women as number, men: 100 - ((audience as Record<string, unknown>).gender_women as number) }
-        : undefined,
-      topLocations: (audience as Record<string, unknown>).top_locations as { city: string; pct: number }[] | undefined,
+      ageBreakdown: ig?.ageBreakdown
+        ?? (audience as Record<string, unknown>).age_breakdown as { label: string; pct: number }[] | undefined,
+      // The verified split reports unknown as its own share rather than folding
+      // it into men, which is what dividing by F+M alone would do.
+      gender: ig?.gender
+        ? { women: ig.gender.womenPct, men: ig.gender.menPct, unknown: ig.gender.unknownPct }
+        : (audience as Record<string, unknown>).gender_women != null
+          ? { women: (audience as Record<string, unknown>).gender_women as number, men: 100 - ((audience as Record<string, unknown>).gender_women as number) }
+          : undefined,
+      topLocations: ig?.topLocations
+        ?? (audience as Record<string, unknown>).top_locations as { city: string; pct: number }[] | undefined,
     },
+    // What a brand may be told is measured. Only ever set from the snapshot.
+    verified: ig
+      ? {
+          followers: ig.followersCount != null,
+          audience: Boolean(ig.ageBreakdown || ig.gender || ig.topLocations),
+          // Stated because the shopfront has no band under 18, so these
+          // percentages describe adult followers.
+          adultsOnly: (ig.under18Excluded ?? 0) > 0,
+          username: ig.username,
+        }
+      : undefined,
     contentItems,
     brandCollabs,
     rateCardItems,

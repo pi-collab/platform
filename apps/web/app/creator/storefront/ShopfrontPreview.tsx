@@ -17,6 +17,27 @@ export interface ShopfrontSection {
   enabled: boolean
 }
 
+function VerifiedBadge({ username }: { username?: string }) {
+  return (
+    <span
+      title={username ? `From @${username} on Instagram` : 'From Instagram'}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        marginLeft: 8, padding: '2px 8px', borderRadius: 999,
+        background: 'var(--neon, #E8FF66)', color: 'var(--lime-950, #161B08)',
+        fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700,
+        letterSpacing: '.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+        verticalAlign: 'middle',
+      }}
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+      From Instagram
+    </span>
+  )
+}
+
 /** 1234 -> 1.2K, 1200000 -> 1.2M. Whole numbers keep no decimal. */
 function formatCount(n: number): string {
   if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
@@ -52,8 +73,27 @@ export interface PlatformStat {
 
 export interface AudienceData {
   ageBreakdown?: { label: string; pct: number }[]
-  gender?: { women: number; men: number }
+  /** `unknown` is present only on a VERIFIED split. Instagram reports a real
+   *  unknown share (19% on the account this was built against) and folding it
+   *  into men would overstate one and hide the other. */
+  gender?: { women: number; men: number; unknown?: number }
   topLocations?: { city: string; pct: number }[]
+}
+
+/**
+ * Which figures came from a connected account rather than from the creator.
+ *
+ * Set ONLY from an Instagram snapshot on a healthy connection. Absent means
+ * everything on the page is self-reported, which is the honest default and what
+ * every storefront showed before this existed.
+ */
+export interface VerifiedMarks {
+  followers?: boolean
+  audience?: boolean
+  /** The age and gender percentages exclude under-18s, because the shopfront
+   *  has no band for them. Surfaced so it is stated, not implied. */
+  adultsOnly?: boolean
+  username?: string
 }
 
 /* ── The cover on a showcase card ────────────────────────────────────────────
@@ -187,6 +227,7 @@ export interface ShopfrontData {
   avgDealValue: string
   // Platform stats
   platforms: PlatformStat[]
+  verified?: VerifiedMarks
   // Audience
   audience: AudienceData
   // Content
@@ -496,7 +537,10 @@ export default function ShopfrontPreview({
                   <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.totalFollowers}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Total followers</div>
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
+                        Total followers
+                        {data.verified?.followers && <VerifiedBadge username={data.verified.username} />}
+                      </div>
                     </div>
                     <div>
                       <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.interactions}</div>
@@ -751,8 +795,15 @@ export default function ShopfrontPreview({
             {/* Header + tabs */}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
               <div>
-                <h2 className="t-title" style={{ margin: '0 0 6px' }}>{firstName}&apos;s <span className="t-accent">audience</span></h2>
-                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Figures {firstName} reports for each channel.</p>
+                <h2 className="t-title" style={{ margin: '0 0 6px' }}>
+                  {firstName}&apos;s <span className="t-accent">audience</span>
+                  {data.verified?.audience && <VerifiedBadge username={data.verified.username} />}
+                </h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>
+                    {data.verified?.audience
+                      ? <>Pulled from Instagram{data.verified.adultsOnly ? ', covering followers aged 18 and over' : ''}.</>
+                      : <>Figures {firstName} reports for each channel.</>}
+                  </p>
               </div>
               {/* Only when there is something to switch BETWEEN. A tablist with one
                   tab is a control that cannot do anything, and it implies a second
