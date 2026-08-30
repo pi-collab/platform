@@ -104,8 +104,75 @@ export default function OpsPagination({
         <PageLink href={`${basePath}?page=${page + 1}`} disabled={page >= lastPage}>
           Next
         </PageLink>
+
+        {/* Only worth the space once the window starts hiding pages. Below that
+            every page already has its own link. */}
+        {lastPage > 7 && <PageJump basePath={basePath} lastPage={lastPage} />}
       </div>
     </nav>
+  )
+}
+
+/**
+ * Go straight to a page.
+ *
+ * The window above shows the first, the last and the current page's
+ * neighbours, so on a list of 40 pages most of them cannot be reached without
+ * stepping. This is the way to page 23.
+ *
+ * A plain GET form, so it works with no JavaScript and lands on a real URL like
+ * every other control here. The filters currently applied are re-submitted as
+ * hidden fields: a GET form REPLACES the query string of its action, so without
+ * them, jumping a page would silently clear the band and status filters and
+ * quietly show a different set of creators than the one being worked through.
+ */
+function PageJump({ basePath, lastPage }: { basePath: string; lastPage: number }) {
+  const [path, queryString] = basePath.split('?')
+  const carried = new URLSearchParams(queryString ?? '')
+  carried.delete('page')
+
+  return (
+    <form
+      action={path}
+      method="get"
+      style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.4rem' }}
+    >
+      {Array.from(carried.entries()).map(([k, v], i) => (
+        <input key={`${k}-${i}`} type="hidden" name={k} value={v} />
+      ))}
+      <label htmlFor="ops-page-jump" style={{ color: '#777' }}>Go to</label>
+      <input
+        id="ops-page-jump"
+        name="page"
+        type="number"
+        min={1}
+        max={lastPage}
+        placeholder={String(lastPage)}
+        aria-label={`Go to page, 1 to ${lastPage}`}
+        style={{
+          width: 58,
+          padding: '0.3rem 0.4rem',
+          borderRadius: 6,
+          border: '1px solid #e5e7eb',
+          fontSize: '0.8125rem',
+          textAlign: 'center',
+        }}
+      />
+      <button
+        type="submit"
+        style={{
+          padding: '0.35rem 0.6rem',
+          borderRadius: 6,
+          border: '1px solid #e5e7eb',
+          background: '#fff',
+          fontSize: '0.8125rem',
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        Go
+      </button>
+    </form>
   )
 }
 

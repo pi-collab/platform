@@ -1259,6 +1259,25 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] "Not started" says so plainly, since that is the first thing worth nudging
 - [ ] The column count on the list still matches (8 headers / 8 cells) — adding a column and forgetting its cell shifts every row from that point on, which happened once already
 
+### 45b. Ops list rows and pagination
+
+- [ ] The three vetting actions sit on ONE line in a creators-list row at any
+      column width. Word labels wrapped to two or three rows, which stretched
+      every row in the table to the height of the tallest
+- [ ] Icon-only buttons still carry a NAME: `title` and `aria-label`, identical.
+      The confirm dialog still names the creator and the consequence in full
+- [ ] The creator DETAIL page keeps word labels. It has the width, and that is
+      where a decision that is not obvious gets made
+- [ ] "Go to" jumps straight to a page on creators, brands, deals and offers.
+      The window only shows first/last/current±1, so on 40 pages most were
+      reachable only by stepping
+- [ ] JUMPING PRESERVES FILTERS. A GET form replaces the query string of its
+      action, so the band/status/shopfront filters are re-submitted as hidden
+      fields. Without them, changing page silently clears the filter and shows a
+      different set than the one being worked through
+- [ ] The jump box is hidden at 7 pages or fewer, where every page has a link
+- [ ] It works with JavaScript disabled, and lands on a real shareable URL
+
 ### 46. Dashboard checklist and fixed-element clearance
 
 - [ ] Get started is the FIRST section, above Overview — it is what a creator with no deals should act on
