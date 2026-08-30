@@ -48,90 +48,78 @@ export default function VettingActions({ creator }: {
     setBusy(false)
   }
 
-  // ONE line, never wrapped. Three word-labelled buttons wrapped to two or three
-  // rows inside a table cell, which stretched every row in the list to fit the
-  // tallest one. Icons keep all three on a single line at any column width; the
-  // words survive as the tooltip and as the accessible name, and the confirm
-  // dialog still says in full what is about to happen.
+  // ONE line, never wrapped. These labels used to wrap to two or three rows
+  // inside a narrow cell, and because a table row is as tall as its tallest
+  // cell, that stretched every row in the list. nowrap plus a compact size keeps
+  // the words — which are clearer than any icon for a decision that emails the
+  // creator — while the table's own horizontal scroll handles a narrow viewport.
   return (
     <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}>
       {status !== 'deals_approved' && (
-        <IconButton
+        <ActionButton
           busy={busy}
-          label="Approve for Guapd Deals"
+          label="Deals"
+          title="Approve for Guapd Deals"
           style={{ background: '#16a34a', color: '#fff' }}
           onClick={() => run(approveForDeals, `Approve ${who} for Guapd Deals?`)}
-        >
-          <svg {...svgProps}><path d="M20 6 9 17l-5-5" /></svg>
-        </IconButton>
+        />
       )}
       {status !== 'growth' && (
-        <IconButton
+        <ActionButton
           busy={busy}
-          label="Move to Guapd Growth"
+          label="Growth"
+          title="Move to Guapd Growth"
           style={{ background: '#4f46e5', color: '#fff' }}
           onClick={() => run(moveToGrowth, `Move ${who} to Guapd Growth? They will not receive brand deals yet.`)}
-        >
-          <svg {...svgProps}><path d="M3 17l6-6 4 4 7-7" /><path d="M17 8h4v4" /></svg>
-        </IconButton>
+        />
       )}
       {status !== 'rejected' && (
-        <IconButton
+        <ActionButton
           busy={busy}
+          label="Reject"
+          title="Reject"
           // Confirmed even from the row. It emails the creator, and a misclick
           // in a dense table is far easier than on a profile page opened on
           // purpose.
-          label="Reject"
           style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}
           onClick={() => run(rejectCreator, `Reject ${who}? They will be told, and can appeal.`)}
-        >
-          <svg {...svgProps}><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </IconButton>
+        />
       )}
     </div>
   )
 }
 
-const svgProps = {
-  width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
-  stroke: 'currentColor', strokeWidth: 2.6,
-  strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
-  'aria-hidden': true,
-}
-
-/** An icon-only control still needs a NAME. title alone is not announced
- *  reliably, so both are set and kept identical. */
-function IconButton({ busy, label, style, onClick, children }: {
+function ActionButton({ busy, label, title, style, onClick }: {
   busy: boolean
   label: string
+  title: string
   style: React.CSSProperties
   onClick: () => void
-  children: React.ReactNode
 }) {
   return (
     <button
       type="button"
       disabled={busy}
       onClick={onClick}
-      title={label}
-      aria-label={label}
+      title={title}
       style={{ ...btn, ...style, opacity: busy ? 0.5 : 1 }}
     >
-      {children}
+      {/* The LABEL stays put while busy. Swapping it for "..." changed the
+          button's width mid-click, so the row shifted under the cursor and the
+          next target moved. Dimming says the same thing without moving. */}
+      {label}
     </button>
   )
 }
 
 const btn: React.CSSProperties = {
-  width: 26,
-  height: 26,
   flexShrink: 0,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 0,
+  padding: '0.2rem 0.45rem',
   borderRadius: 6,
   border: 'none',
+  fontSize: '0.7rem',
+  fontWeight: 600,
   cursor: 'pointer',
-  lineHeight: 1,
+  whiteSpace: 'nowrap',
+  lineHeight: 1.6,
 }
