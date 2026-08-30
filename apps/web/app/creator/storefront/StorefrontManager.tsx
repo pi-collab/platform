@@ -924,8 +924,11 @@ const CHANNEL_WINDOW: Record<string, string> = {
 const CHANNEL_FIELDS: Record<string, { key: keyof ChannelStatFields; label: string; hint?: string; numeric: boolean }[]> = {
   instagram: [
     { key: 'followers', label: 'Followers', numeric: true },
-    { key: 'avgViews', label: 'Avg views', numeric: true },
-    { key: 'interactions', label: 'Interactions', hint: 'Likes, comments and shares added up. A count, not a percentage.', numeric: true },
+    // Instagram does not report views at ACCOUNT level, so this one stays the
+    // creator's own figure. Said on the field, because a number sitting blank
+    // beside three that fill themselves reads as something broken.
+    { key: 'avgViews', label: 'Avg views', hint: 'Instagram does not share this one, so enter it yourself.', numeric: true },
+    { key: 'interactions', label: 'Interactions', hint: 'Likes, comments, shares and saves added up. Filled from Instagram once you connect.', numeric: true },
   ],
   // Views, subscribers and watch time: the three figures on the front page of
   // YouTube Studio, so a creator copies rather than calculates.
