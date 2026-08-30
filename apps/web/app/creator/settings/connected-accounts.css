@@ -138,9 +138,12 @@
 .ca-btn--quiet   { color: var(--ink-faint, #878D99); }
 .ca-btn:disabled { opacity: .55; cursor: default; }
 
-.ca-msg { margin: 12px 0 0; font-family: var(--font-ui); font-size: 13px; }
+.ca-msg { margin: 12px 0 0; font-family: var(--font-ui); font-size: 13px; line-height: 1.6; }
 .ca-msg--ok  { color: #166534; }
 .ca-msg--err { color: #B4262A; }
+/* A creator who chose not to continue has not hit an error, and red would say
+   they had. */
+.ca-msg--info { color: var(--ink-faint, #878D99); }
 
 /* Phones: the figures wrap to two columns and the buttons go full width, so a
    destructive action is never a small target beside a primary one. */

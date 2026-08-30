@@ -1,9 +1,51 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useTransition } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { disconnectInstagram, resyncInstagram } from './instagram-actions'
 import type { IgConnectionView } from '@/lib/instagram-sync'
+
+/**
+ * What the OAuth callback reported, in words.
+ *
+ * The callback redirects back with `?ig=<reason>` for every outcome it has. For
+ * a while nothing read it, so a creator whose connection failed saw only "Not
+ * connected" with no reason, and the cause could be recovered only from the
+ * server logs. Every branch the callback can take has an entry here.
+ *
+ * "cancelled" is deliberately not an error: the creator chose not to continue,
+ * and colouring that red reads as though something broke.
+ */
+const OUTCOME: Record<string, { tone: 'ok' | 'info' | 'err'; text: string }> = {
+  connected: {
+    tone: 'ok',
+    text: 'Instagram connected. Your verified numbers are on your shopfront now.',
+  },
+  personal_account: {
+    tone: 'err',
+    text: 'That account is a personal one, so Instagram will not share audience data for it. Switch it to a Business or Creator account, then reconnect.',
+  },
+  cancelled: {
+    tone: 'info',
+    text: 'Instagram was not connected. Nothing has changed.',
+  },
+  state_mismatch: {
+    tone: 'err',
+    text: 'That attempt expired, or it was started in a different tab. Please try connecting again.',
+  },
+  no_code: {
+    tone: 'err',
+    text: 'Instagram did not send an authorisation back. Please try connecting again.',
+  },
+  save_failed: {
+    tone: 'err',
+    text: 'We reached Instagram but could not save the connection. Please try again, and email contact@guapd.com if it keeps happening.',
+  },
+  failed: {
+    tone: 'err',
+    text: 'We could not finish connecting to Instagram. Please try again, and email contact@guapd.com if it keeps happening.',
+  },
+}
 
 /**
  * Connected accounts.
@@ -17,8 +59,29 @@ import type { IgConnectionView } from '@/lib/instagram-sync'
  */
 export default function ConnectedAccounts({ connection }: { connection: IgConnectionView }) {
   const router = useRouter()
+  const search = useSearchParams()
   const [pending, startTransition] = useTransition()
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [outcome, setOutcome] = useState<{ tone: 'ok' | 'info' | 'err'; text: string } | null>(null)
+
+  // Read the callback's `?ig=` once, then strip it from the URL. Held in state
+  // first because removing the parameter is what makes it unreadable, and
+  // stripping it is what stops a refresh from replaying an outcome that has
+  // already been dealt with. This also clears the "#_" fragment Instagram
+  // appends on the way back.
+  //
+  // Runs on mount only: the parameter is a one-time report, not live state.
+  useEffect(() => {
+    const reason = search.get('ig')
+    if (!reason) return
+    setOutcome(OUTCOME[reason] ?? OUTCOME.failed)
+
+    const rest = new URLSearchParams(search.toString())
+    rest.delete('ig')
+    const qs = rest.toString()
+    router.replace(qs ? `/creator/settings?${qs}` : '/creator/settings', { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const s = connection.status
   const snap = connection.snapshot
@@ -51,6 +114,12 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
         </div>
         <StatusPill status={s} />
       </div>
+
+      {/* What the OAuth callback reported. Suppressed once an action on this
+          card has its own message, so the two never stack. */}
+      {!msg && outcome && (
+        <p className={`ca-msg ca-msg--${outcome.tone}`} role="status">{outcome.text}</p>
+      )}
 
       {/* ── Not connected ───────────────────────────────────────────────── */}
       {s === 'not_connected' && (

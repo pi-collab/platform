@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       key_version: enc.keyVersion,
       token_expires_at: new Date(Date.now() + long.expiresInSeconds * 1000).toISOString(),
       last_refreshed_at: new Date().toISOString(),
-      scopes: short.permissions ? short.permissions.split(',') : [...IG_SCOPES],
+      scopes: short.permissions.length ? short.permissions : [...IG_SCOPES],
       snapshot: status === 'connected' ? snapshot : null,
       last_synced_at: status === 'connected' ? new Date().toISOString() : null,
       sync_error: null,

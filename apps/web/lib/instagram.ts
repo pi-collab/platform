@@ -88,7 +88,29 @@ export async function exchangeCodeForToken(code: string, redirectUri: string) {
   if (!res.ok || !json.access_token) {
     throw new Error(`code exchange failed: ${json?.error_message ?? json?.error?.message ?? res.status}`)
   }
-  return { token: json.access_token as string, userId: String(json.user_id), permissions: json.permissions as string | undefined }
+  return { token: json.access_token as string, userId: String(json.user_id), permissions: normalizeScopes(json.permissions) }
+}
+
+/**
+ * The granted scopes, as an array, whatever shape Instagram sent.
+ *
+ * The token exchange returns `permissions` as an ARRAY on the Instagram Login
+ * path, not the comma-separated string the older Basic Display docs show. It is
+ * also absent on some grants. Treating it as a string threw
+ * "permissions.split is not a function" from inside the row being written,
+ * AFTER every network call had already succeeded, so the creator saw a failed
+ * connection with a working token behind it.
+ *
+ * Normalised here at the boundary rather than at the call site, so the shape
+ * Instagram happens to use never reaches the rest of the app.
+ */
+function normalizeScopes(value: unknown): string[] {
+  const parts = Array.isArray(value)
+    ? value.map((v) => String(v))
+    : typeof value === 'string'
+      ? value.split(',')
+      : []
+  return parts.map((s) => s.trim()).filter(Boolean)
 }
 
 /** Short-lived tokens last an hour. Everything downstream assumes the 60-day
