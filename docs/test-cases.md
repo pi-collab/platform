@@ -2138,6 +2138,41 @@ in place.
       badge. It was in the snapshot but unused for a while, so the stat strip
       showed a typed figure on a connected account
 
+**One verified mark, beside the account it vouches for**
+- [ ] "From Instagram" appears ZERO times as a per-figure badge. A brand read it
+      four or five times on one screen, which spent the emphasis
+- [ ] A small check sits next to the Instagram handle. Opening it names every
+      fetched figure, states the daily refresh, says when the snapshot was taken,
+      and says plainly that everything else is entered by the creator
+- [ ] It opens with JavaScript disabled and is keyboard operable (native
+      `<details>`), and carries BOTH marker resets — WebKit uses its own
+      pseudo-element and would otherwise show a stray triangle
+- [ ] Opening it does not push the hero's bio and buttons down: the card is
+      absolutely positioned. On a narrow screen it anchors to the handle ROW so
+      it cannot overflow the viewport
+
+**Gender is three-way wherever Instagram reports three**
+- [ ] The donut has THREE segments when an unknown share exists. A two-segment
+      donut drew that share in the men colour, so the chart overstated men by
+      exactly the amount nobody knows
+- [ ] A "Not stated" row appears in the legend only when the share is above zero,
+      so a typed two-way split is unchanged
+- [ ] The editor's slider takes men from Instagram's own figure, never
+      100 minus women, for the same reason
+
+**Interactions come from the API, best effort**
+- [ ] `total_interactions` fills Interactions when Instagram serves it, and the
+      creator's typed figure stands when it does not. NEVER a zero
+- [ ] BOTH response shapes are read: `total_value.value`, and a summed day series
+      if Instagram answers with one. `views` was documented and omitted, and
+      `permissions` came back an array where the docs said string, so the shape
+      is not assumed
+- [ ] A failure of this ONE metric does not cost the whole snapshot: it is
+      caught alongside the demographics
+- [ ] NOT verified live against a real account at build time (the token key had
+      been rotated, correctly). First real sync is the test: connect, press Sync
+      now, and check whether Interactions appears
+
 **Blank stats are omitted, not rendered empty**
 - [ ] The hero renders only stats that HAVE a value. A connected creator who has
       typed no interactions and no avg views sees followers and posts, not two

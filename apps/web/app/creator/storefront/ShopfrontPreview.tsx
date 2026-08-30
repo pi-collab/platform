@@ -37,24 +37,24 @@ function VerifiedPanel({ v }: { v: VerifiedMarks }) {
   if (v.followers) fetched.push('Followers')
   if (v.posts) fetched.push('Posts')
   if (v.reach) fetched.push('Monthly reach')
+  if (v.interactions) fetched.push('Interactions')
   if (v.audience) fetched.push('Audience age, gender and cities')
   if (fetched.length === 0) return null
 
   return (
     <details className="sf-verified">
-      <summary className="sf-verified__chip">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <summary
+        className="sf-verified__chip"
+        title="Verified from Instagram. Tap to see which figures."
+        aria-label="Verified from Instagram. Open to see which figures are fetched."
+      >
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M20 6 9 17l-5-5" />
         </svg>
-        Verified from Instagram
-        <span className="sf-verified__caret" aria-hidden="true">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </span>
       </summary>
 
       <div className="sf-verified__body">
+        <p className="sf-verified__title">Verified from Instagram</p>
         <p className="sf-verified__lead">
           These figures are read directly from
           {v.username ? <> <strong>@{v.username}</strong>&rsquo;s</> : ' this creator&rsquo;s'} Instagram
@@ -138,6 +138,8 @@ export interface VerifiedMarks {
   reach?: boolean
   /** Posts. Always true when a snapshot exists, since /me always returns it. */
   posts?: boolean
+  /** Likes, comments, shares and saves over 30 days. */
+  interactions?: boolean
   /** The age and gender percentages exclude under-18s, because the shopfront
    *  has no band for them. Surfaced so it is stated, not implied. */
   adultsOnly?: boolean
@@ -536,8 +538,8 @@ export default function ShopfrontPreview({
                   {/* Social handles + storefront link — single row */}
                   <div className="sf-hero-handles" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
                     {data.platforms.map(p => (
+                      <React.Fragment key={p.platform}>
                       <a
-                        key={p.platform}
                         href={profileUrl(p.platform, p.handle) ?? '#'}
                         target="_blank" rel="noopener noreferrer"
                         // NOT a pill. It was one, with 12px of horizontal padding
@@ -564,6 +566,12 @@ export default function ShopfrontPreview({
                         )}
                         {atHandle(p.handle)}
                       </a>
+                      {/* Beside the account it vouches for, so the claim is
+                          attached to a handle rather than floating over the page. */}
+                      {p.platform === 'instagram' && data.verified && (
+                        <VerifiedPanel v={data.verified} />
+                      )}
+                      </React.Fragment>
                     ))}
                     {data.replyTime && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
@@ -606,9 +614,6 @@ export default function ShopfrontPreview({
                     if (heroStats.length === 0) return null
 
                     return (
-                      <>
-                      {/* Once, above the numbers it describes. */}
-                      {data.verified && <VerifiedPanel v={data.verified} />}
                       <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
                         {heroStats.map(s => (
                           <div key={s.key}>
@@ -619,7 +624,6 @@ export default function ShopfrontPreview({
                           </div>
                         ))}
                       </div>
-                      </>
                     )
                   })()}
 
@@ -1107,7 +1111,17 @@ export default function ShopfrontPreview({
                   {/* Right column: Gender + Locations */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)', minWidth: 0 }}>
                     {/* Gender donut */}
-                    {data.audience.gender && (
+                    {data.audience.gender && (() => {
+                      const g = data.audience.gender!
+                      // Instagram reports a share it cannot attribute, and on this
+                      // account it is not a rounding error. A two-segment donut
+                      // drew that share in the men colour, so the chart overstated
+                      // men by exactly the amount nobody actually knows.
+                      const unknown = g.unknown != null && g.unknown > 0 ? g.unknown : 0
+                      const gradient = unknown > 0
+                        ? `conic-gradient(var(--neon-deep) 0 ${g.women}%,var(--sec-mid-2) ${g.women}% ${g.women + g.men}%,var(--hairline) ${g.women + g.men}% 100%)`
+                        : `conic-gradient(var(--neon-deep) 0 ${g.women}%,var(--sec-mid-2) ${g.women}% 100%)`
+                      return (
                       <div style={{
                         flex: '0 0 auto', border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
                         boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(18px,2vw,22px) clamp(22px,2.4vw,28px)',
@@ -1119,14 +1133,14 @@ export default function ShopfrontPreview({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 'auto', paddingTop: 16 }}>
                           <div className="aud-donut" style={{
                             position: 'relative', width: 'clamp(84px,22vw,112px)', height: 'clamp(84px,22vw,112px)', flexShrink: 0, borderRadius: '50%',
-                            background: `conic-gradient(var(--neon-deep) 0 ${data.audience.gender.women}%,var(--sec-mid-2) ${data.audience.gender.women}% 100%)`,
+                            background: gradient,
                             boxShadow: '0 12px 26px -14px rgba(40,45,25,.35)',
                           } as React.CSSProperties}>
                             <div style={{
                               position: 'absolute', inset: 15, borderRadius: '50%', background: 'var(--card)',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{data.audience.gender.women}%</span>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{g.women}%</span>
                               <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>women</span>
                             </div>
                           </div>
@@ -1134,21 +1148,33 @@ export default function ShopfrontPreview({
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                               <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--neon-deep)' }} />
                               <div>
-                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.women}%</div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.women}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Women</div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                               <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--sec-mid-2)' }} />
                               <div>
-                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.men}%</div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.men}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Men</div>
                               </div>
                             </div>
+                            {/* Shown only when Instagram actually reports one, so a
+                                typed two-way split is unchanged. */}
+                            {unknown > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--hairline)' }} />
+                                <div>
+                                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{unknown}%</div>
+                                  <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Not stated</div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                    )}
+                      )
+                    })()}
 
                     {/* Top locations */}
                     {data.audience.topLocations && (

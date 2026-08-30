@@ -164,7 +164,9 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
       ? formatStat(ig.followersCount)
       : totalFollowers != null ? formatStat(totalFollowers) : '',
     // Blank, never a fabricated figure. The renderer omits what is blank.
-    interactions: primary?.interactions != null ? formatStat(primary.interactions) : '',
+    interactions: ig?.interactionsLast30 != null
+      ? formatStat(ig.interactionsLast30)
+      : primary?.interactions != null ? formatStat(primary.interactions) : '',
     avgViews: primary?.avgViews != null ? formatStat(primary.avgViews) : '',
     // Verified only. There is no typed posts field to fall back to, so an
     // unconnected creator has no Posts stat rather than an empty one.
@@ -195,6 +197,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
           audience: Boolean(ig.ageBreakdown || ig.gender || ig.topLocations),
           reach: ig.reachLast30 != null,
           posts: ig.mediaCount != null,
+          interactions: ig.interactionsLast30 != null,
           fetchedAt: ig.fetchedAt,
           // Stated because the shopfront has no band under 18, so these
           // percentages describe adult followers.

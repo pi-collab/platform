@@ -54,6 +54,9 @@ export interface IgSnapshot {
   gender?: { womenPct: number; menPct: number; unknownPct: number }
   topLocations?: { city: string; pct: number }[]
   reachLast30?: number
+  /** Likes, comments, shares and saves over the same 30 days. Best effort:
+   *  absent rather than zero when Instagram does not answer. */
+  interactionsLast30?: number
   /** Followers under 18, excluded from ageBreakdown. Kept so the UI can say the
    *  percentages describe adult followers rather than quietly implying all. */
   under18Excluded?: number
@@ -243,6 +246,44 @@ async function fetchReach30(token: string): Promise<number | undefined> {
 }
 
 /**
+ * Interactions over the last 30 days: likes, comments, shares and saves.
+ *
+ * BEST EFFORT, exactly like reach. Anything unexpected returns undefined and the
+ * creator's own typed figure stands, because the alternative is publishing a
+ * zero on the page a brand prices from.
+ *
+ * Written defensively on purpose. `views` turned out to be omitted at account
+ * level despite being documented, and `permissions` came back as an array where
+ * the docs said string, so this reads BOTH response shapes: `total_value.value`
+ * for a total_value metric, and a summed day series if Instagram answers with
+ * one instead.
+ */
+async function fetchInteractions30(token: string): Promise<number | undefined> {
+  const until = Math.floor(Date.now() / 1000)
+  const since = until - 30 * 24 * 3600
+  const p = new URLSearchParams({
+    metric: 'total_interactions',
+    metric_type: 'total_value',
+    period: 'day',
+    since: String(since),
+    until: String(until),
+    access_token: token,
+  })
+  const res = await fetch(`${GRAPH}/me/insights?${p}`)
+  if (!res.ok) return undefined
+  const json = await res.json()
+  const row = json?.data?.find((d: { name: string }) => d.name === 'total_interactions')
+  if (!row) return undefined
+
+  const total = row.total_value?.value
+  if (typeof total === 'number') return total
+
+  const values = row.values ?? []
+  if (!values.length) return undefined
+  return values.reduce((s: number, v: { value?: number }) => s + (v.value ?? 0), 0)
+}
+
+/**
  * One sync: profile plus demographics plus reach.
  *
  * Demographics are best-effort. Under 100 followers Instagram returns nothing
@@ -270,14 +311,22 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
   if (profile.account_type === 'PERSONAL') return base
 
   if (profile.followers_count < 100) {
-    return { ...base, demographicsUnavailable: true, reachLast30: await fetchReach30(token) }
+    return {
+      ...base,
+      demographicsUnavailable: true,
+      reachLast30: await fetchReach30(token),
+      interactionsLast30: await fetchInteractions30(token),
+    }
   }
 
-  const [age, gender, city, reach] = await Promise.all([
+  const [age, gender, city, reach, interactions] = await Promise.all([
     demographic(token, 'age').catch(() => [] as [string, number][]),
     demographic(token, 'gender').catch(() => [] as [string, number][]),
     demographic(token, 'city').catch(() => [] as [string, number][]),
     fetchReach30(token),
+    // Caught for the same reason the demographics are: one metric Instagram
+    // declines to serve must not cost the whole snapshot.
+    fetchInteractions30(token).catch(() => undefined),
   ])
 
   const ages = mapAges(age)
@@ -288,6 +337,7 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
     gender: mapGender(gender),
     topLocations: mapCities(city),
     reachLast30: reach,
+    interactionsLast30: interactions,
   }
 }
 

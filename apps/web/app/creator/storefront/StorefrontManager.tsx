@@ -235,7 +235,9 @@ function buildShopfrontData(
       ? formatStat(igSnap.followersCount)
       : igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
     postsCount: igSnap?.mediaCount != null ? formatStat(igSnap.mediaCount) : undefined,
-    interactions: igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
+    interactions: igSnap?.interactionsLast30 != null
+      ? formatStat(igSnap.interactionsLast30)
+      : igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
     avgViews: igPrimary?.avgViews != null ? formatStat(igPrimary.avgViews) : '',
     monthlyReach: igSnap?.reachLast30 != null ? formatStat(igSnap.reachLast30) : edit.monthlyReach,
     repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
@@ -251,6 +253,7 @@ function buildShopfrontData(
       ? {
           followers: igSnap.followersCount != null,
           posts: igSnap.mediaCount != null,
+          interactions: igSnap.interactionsLast30 != null,
           reach: igSnap.reachLast30 != null,
           audience: Boolean(igSnap.ageBreakdown || igSnap.gender || igSnap.topLocations),
           adultsOnly: (igSnap.under18Excluded ?? 0) > 0,
@@ -1467,15 +1470,22 @@ export default function StorefrontManager({
                                   // Only the field Instagram actually supplies is
                                   // locked. Avg views and interactions are not
                                   // returned by Meta, so they stay editable.
-                                  const fieldLocked = Boolean(isIg && igSnap && f.key === 'followers')
+                                  const fieldLocked = Boolean(
+                                    isIg && igSnap && (
+                                      f.key === 'followers' ||
+                                      (f.key === 'interactions' && igSnap.interactionsLast30 != null)
+                                    ),
+                                  )
                                   // The SAME input, filled with Instagram's value
                                   // rather than a separate panel beside it. The
                                   // creator's own figure stays in the database as
                                   // the fallback; it is simply not what this field
                                   // shows while the connection is live.
-                                  const shownValue = fieldLocked && igSnap
-                                    ? String(igSnap.followersCount)
-                                    : vals[f.key]
+                                  const shownValue = !fieldLocked || !igSnap
+                                    ? vals[f.key]
+                                    : f.key === 'followers'
+                                      ? String(igSnap.followersCount)
+                                      : String(igSnap.interactionsLast30 ?? '')
                                   return (
                                   <div
                                     key={f.key}
