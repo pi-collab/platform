@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
+import { resyncForCreator } from '@/lib/instagram-sync'
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -478,4 +479,40 @@ export async function createContentUploadUrl(
 
   const { data: pub } = admin.storage.from('storefronts').getPublicUrl(storagePath)
   return { path: data.path, token: data.token, publicUrl: pub.publicUrl }
+}
+
+/**
+ * Refresh the Instagram figures from the editor.
+ *
+ * The same action settings offers, placed where a creator is actually looking at
+ * the numbers. Both call resyncForCreator, so there is one path that refreshes a
+ * connection rather than two that can drift.
+ *
+ * The public page is revalidated too: a creator who syncs here is usually about
+ * to look at what a brand sees, and a 60 second ISR window is long enough to
+ * make a working refresh look broken.
+ */
+export async function syncInstagram(): Promise<{ ok: boolean; message?: string }> {
+  const ctx = await verifyCreator()
+  const result = await resyncForCreator(ctx.creatorId)
+
+  if (result.detail === 'not connected') {
+    return { ok: false, message: 'Instagram is not connected.' }
+  }
+
+  revalidatePath('/creator/storefront')
+  revalidatePath('/creator/settings')
+
+  const { data: sf } = await createAdminClient()
+    .from('creator_storefronts')
+    .select('slug')
+    .eq('creator_id', ctx.creatorId)
+    .maybeSingle()
+  if (sf?.slug) revalidatePath(`/c/${sf.slug}`)
+
+  // The detail is shown rather than swallowed. "personal account" and "expired"
+  // are things the creator can act on, and a generic failure leaves them
+  // pressing the button again.
+  if (!result.ok) return { ok: false, message: `Could not sync: ${result.detail}.` }
+  return { ok: true }
 }

@@ -281,3 +281,37 @@
   opacity: .62;
   cursor: not-allowed;
 }
+
+/* The refresh control, in the panel header beside the status pill. */
+.sf-ig-sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-hairline, rgba(24, 28, 36, .12));
+  background: #fff;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.sf-ig-sync:hover:not(:disabled) { color: var(--ink, #12151C); }
+.sf-ig-sync:disabled { opacity: .55; cursor: default; }
+
+/* Turns while it works, so a sync that takes a few seconds does not look like a
+   button that did nothing. */
+.sf-ig-sync__spin { animation: sf-ig-spin 1s linear infinite; }
+
+@keyframes sf-ig-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Respects a reduced-motion preference: the disabled state still reads as busy
+   without anything moving. */
+@media (prefers-reduced-motion: reduce) {
+  .sf-ig-sync__spin { animation: none; }
+}

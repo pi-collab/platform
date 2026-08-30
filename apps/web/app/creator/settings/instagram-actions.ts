@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { removeConnection, refreshAndSync } from '@/lib/instagram-sync'
+import { removeConnection, resyncForCreator } from '@/lib/instagram-sync'
 
 export type IgActionResult = { ok: true } | { ok: false; message: string }
 
@@ -37,17 +36,11 @@ export async function disconnectInstagram(): Promise<IgActionResult> {
  */
 export async function resyncInstagram(): Promise<IgActionResult> {
   const ctx = await verifyCreator()
-  const admin = createAdminClient()
 
-  const { data } = await admin
-    .from('creator_instagram_connections')
-    .select('creator_id, token_ciphertext, token_iv, token_tag, key_version, token_expires_at, last_refreshed_at')
-    .eq('creator_id', ctx.creatorId)
-    .maybeSingle()
-
-  if (!data) return { ok: false, message: 'Instagram is not connected.' }
-
-  const result = await refreshAndSync(data)
+  const result = await resyncForCreator(ctx.creatorId)
+  if (result.detail === 'not connected') {
+    return { ok: false, message: 'Instagram is not connected.' }
+  }
   revalidatePath('/creator/settings')
   revalidatePath('/creator/storefront')
 

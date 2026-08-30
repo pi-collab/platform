@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
 import type { IgConnectionView } from '@/lib/instagram-sync'
 import type { IgSnapshot } from '@/lib/instagram'
-import { saveChannelStats, createContentUploadUrl } from './actions'
+import { saveChannelStats, createContentUploadUrl, syncInstagram } from './actions'
 import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
@@ -821,11 +821,13 @@ function LockIcon() {
 }
 
 /** The connect card, and what it says in each state. */
-function InstagramPanel({ connection, outcome, connecting, onConnect }: {
+function InstagramPanel({ connection, outcome, connecting, onConnect, onSync, syncing }: {
   connection: IgConnectionView
   outcome: { tone: OutcomeTone; text: string } | null
   connecting: boolean
   onConnect: () => void
+  onSync: () => void
+  syncing: boolean
 }) {
   const s = connection.status
   const connected = s === 'connected'
@@ -852,7 +854,29 @@ function InstagramPanel({ connection, outcome, connecting, onConnect }: {
               : 'Fill your followers, audience and reach automatically.'}
           </div>
         </div>
-        {connected && <span className="sf-ig-panel__pill">Verified</span>}
+        {connected && (
+          <>
+            <button
+              type="button"
+              className="sf-ig-sync"
+              onClick={onSync}
+              disabled={syncing}
+              title="Refresh the figures from Instagram"
+              aria-label="Refresh the figures from Instagram"
+            >
+              <svg
+                className={syncing ? 'sf-ig-sync__spin' : undefined}
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
+            </button>
+            <span className="sf-ig-panel__pill">Verified</span>
+          </>
+        )}
       </div>
 
       {!connected && (
@@ -1197,6 +1221,7 @@ export default function StorefrontManager({
 
   const [igOutcomeMsg, setIgOutcomeMsg] = useState<{ tone: OutcomeTone; text: string } | null>(null)
   const [igConnecting, setIgConnecting] = useState(false)
+  const [igSyncing, setIgSyncing] = useState(false)
 
   // The callback's report, read once and then stripped from the URL so a
   // refresh does not replay an outcome already dealt with.
@@ -1222,6 +1247,20 @@ export default function StorefrontManager({
    * leaving for Instagram at that moment would discard the very edits the save
    * just failed to keep.
    */
+  /** Pull the figures again, without leaving the editor. */
+  async function runInstagramSync() {
+    setIgSyncing(true)
+    setIgOutcomeMsg(null)
+    const res = await syncInstagram()
+    setIgOutcomeMsg(res.ok
+      ? { tone: 'ok', text: 'Figures refreshed from Instagram.' }
+      : { tone: 'err', text: res.message ?? 'Could not refresh.' })
+    setIgSyncing(false)
+    // The snapshot lives on the server, so the new figures only reach this
+    // screen on a refetch.
+    router.refresh()
+  }
+
   async function startInstagramConnect() {
     setIgConnecting(true)
     setIgOutcomeMsg(null)
@@ -1438,6 +1477,8 @@ export default function StorefrontManager({
                     outcome={igOutcomeMsg}
                     connecting={igConnecting}
                     onConnect={startInstagramConnect}
+                    onSync={runInstagramSync}
+                    syncing={igSyncing}
                   />
 
                   <Field label="Your numbers" hint="Per channel and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">

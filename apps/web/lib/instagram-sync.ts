@@ -375,3 +375,22 @@ async function copyAvatar(creatorId: string, sourceUrl: string): Promise<string 
     return null
   }
 }
+
+/**
+ * Re-sync one creator, on demand.
+ *
+ * Lifted out of the settings action so the storefront editor can offer the same
+ * thing without importing a server action across routes, which this codebase has
+ * been bitten by before. Both screens call THIS, so there is one path that
+ * refreshes a connection and no second one to drift from it.
+ */
+export async function resyncForCreator(creatorId: string): Promise<{ ok: boolean; detail: string }> {
+  const { data } = await createAdminClient()
+    .from('creator_instagram_connections')
+    .select('creator_id, token_ciphertext, token_iv, token_tag, key_version, token_expires_at, last_refreshed_at')
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  if (!data) return { ok: false, detail: 'not connected' }
+  return refreshAndSync(data)
+}
