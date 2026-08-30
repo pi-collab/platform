@@ -59,7 +59,7 @@ function VerifiedPanel({ v }: { v: VerifiedMarks }) {
         <p className="sf-verified__lead">
           These figures are read directly from
           {v.username ? <> <strong>@{v.username}</strong>&rsquo;s</> : ' this creator&rsquo;s'} Instagram
-          account, not entered by hand:
+          account:
         </p>
         <ul className="sf-verified__list">
           {fetched.map(f => <li key={f}>{f}</li>)}
