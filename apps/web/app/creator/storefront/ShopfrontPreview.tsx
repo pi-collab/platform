@@ -43,16 +43,16 @@ function VerifiedPanel({ v }: { v: VerifiedMarks }) {
 
   return (
     <details className="sf-verified">
-      <summary
-        className="sf-verified__chip"
-        title="Verified from Instagram. Tap to see which figures."
-      >
-        <span className="sf-verified__tick" aria-hidden="true">
-          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 6 9 17l-5-5" />
+      <summary className="sf-verified__chip">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        Verified from Instagram
+        <span className="sf-verified__caret" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
           </svg>
         </span>
-        Verified from Instagram
       </summary>
 
       <div className="sf-verified__body">
@@ -567,11 +567,6 @@ export default function ShopfrontPreview({
                         )}
                         {atHandle(p.handle)}
                       </a>
-                      {/* Beside the account it vouches for, so the claim is
-                          attached to a handle rather than floating over the page. */}
-                      {p.platform === 'instagram' && data.verified && (
-                        <VerifiedPanel v={data.verified} />
-                      )}
                       </React.Fragment>
                     ))}
                     {data.replyTime && (
@@ -615,6 +610,9 @@ export default function ShopfrontPreview({
                     if (heroStats.length === 0) return null
 
                     return (
+                      <>
+                      {/* Once, heading the numbers it describes. */}
+                      {data.verified && <VerifiedPanel v={data.verified} />}
                       <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
                         {heroStats.map(s => (
                           <div key={s.key}>
@@ -625,6 +623,7 @@ export default function ShopfrontPreview({
                           </div>
                         ))}
                       </div>
+                      </>
                     )
                   })()}
 

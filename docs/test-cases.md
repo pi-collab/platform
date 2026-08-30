@@ -2141,15 +2141,17 @@ in place.
 **One verified mark, beside the account it vouches for**
 - [ ] "From Instagram" appears ZERO times as a per-figure badge. A brand read it
       four or five times on one screen, which spent the emphasis
-- [ ] A small check sits next to the Instagram handle. Opening it names every
-      fetched figure, states the daily refresh, says when the snapshot was taken,
-      and says plainly that everything else is entered by the creator
+- [ ] ONE "Verified from Instagram" chip in the hero, heading the numbers it
+      describes. NOT in the handle row. Expanding it names every fetched figure,
+      states the daily refresh, says when the snapshot was taken, and says
+      plainly that everything else is entered by the creator
+- [ ] The caret rotates on open, so the chip reads as expandable rather than as
+      a static label
 - [ ] It opens with JavaScript disabled and is keyboard operable (native
       `<details>`), and carries BOTH marker resets — WebKit uses its own
       pseudo-element and would otherwise show a stray triangle
-- [ ] Opening it does not push the hero's bio and buttons down: the card is
-      absolutely positioned. On a narrow screen it anchors to the handle ROW so
-      it cannot overflow the viewport
+- [ ] The panel sits in the hero flow beneath the chip, capped at 460px so a
+      long list does not run the width of a desktop hero
 
 **Gender is three-way wherever Instagram reports three**
 - [ ] The donut has THREE segments when an unknown share exists. A two-segment
