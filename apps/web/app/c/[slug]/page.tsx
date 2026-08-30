@@ -166,7 +166,9 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     // Blank, never a fabricated figure. The renderer hides what is blank.
     interactions: primary?.interactions != null ? formatStat(primary.interactions) : '',
     avgViews: primary?.avgViews != null ? formatStat(primary.avgViews) : '',
-    monthlyReach: stats.monthly_reach || '-',
+    // Instagram's reach is a 30-day window, which is what this stat claims.
+    // Snapshot first, typed second, same as followers and audience.
+    monthlyReach: ig?.reachLast30 != null ? formatStat(ig.reachLast30) : (stats.monthly_reach || '-'),
     repeatBrands: stats.repeat_brands || '-',
     avgDealValue: stats.avg_deal_value || '-',
     platforms: allPlatforms,
@@ -188,6 +190,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
       ? {
           followers: ig.followersCount != null,
           audience: Boolean(ig.ageBreakdown || ig.gender || ig.topLocations),
+          reach: ig.reachLast30 != null,
           // Stated because the shopfront has no band under 18, so these
           // percentages describe adult followers.
           adultsOnly: (ig.under18Excluded ?? 0) > 0,

@@ -3,49 +3,8 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { disconnectInstagram, resyncInstagram } from './instagram-actions'
+import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
 import type { IgConnectionView } from '@/lib/instagram-sync'
-
-/**
- * What the OAuth callback reported, in words.
- *
- * The callback redirects back with `?ig=<reason>` for every outcome it has. For
- * a while nothing read it, so a creator whose connection failed saw only "Not
- * connected" with no reason, and the cause could be recovered only from the
- * server logs. Every branch the callback can take has an entry here.
- *
- * "cancelled" is deliberately not an error: the creator chose not to continue,
- * and colouring that red reads as though something broke.
- */
-const OUTCOME: Record<string, { tone: 'ok' | 'info' | 'err'; text: string }> = {
-  connected: {
-    tone: 'ok',
-    text: 'Instagram connected. Your verified numbers are on your shopfront now.',
-  },
-  personal_account: {
-    tone: 'err',
-    text: 'That account is a personal one, so Instagram will not share audience data for it. Switch it to a Business or Creator account, then reconnect.',
-  },
-  cancelled: {
-    tone: 'info',
-    text: 'Instagram was not connected. Nothing has changed.',
-  },
-  state_mismatch: {
-    tone: 'err',
-    text: 'That attempt expired, or it was started in a different tab. Please try connecting again.',
-  },
-  no_code: {
-    tone: 'err',
-    text: 'Instagram did not send an authorisation back. Please try connecting again.',
-  },
-  save_failed: {
-    tone: 'err',
-    text: 'We reached Instagram but could not save the connection. Please try again, and email contact@guapd.com if it keeps happening.',
-  },
-  failed: {
-    tone: 'err',
-    text: 'We could not finish connecting to Instagram. Please try again, and email contact@guapd.com if it keeps happening.',
-  },
-}
 
 /**
  * Connected accounts.
@@ -62,7 +21,7 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
   const search = useSearchParams()
   const [pending, startTransition] = useTransition()
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [outcome, setOutcome] = useState<{ tone: 'ok' | 'info' | 'err'; text: string } | null>(null)
+  const [outcome, setOutcome] = useState<{ tone: OutcomeTone; text: string } | null>(null)
 
   // Read the callback's `?ig=` once, then strip it from the URL. Held in state
   // first because removing the parameter is what makes it unreadable, and
@@ -74,7 +33,7 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
   useEffect(() => {
     const reason = search.get('ig')
     if (!reason) return
-    setOutcome(OUTCOME[reason] ?? OUTCOME.failed)
+    setOutcome(igOutcome(reason))
 
     const rest = new URLSearchParams(search.toString())
     rest.delete('ig')
@@ -245,12 +204,3 @@ function fmt(n: number): string {
   return String(n)
 }
 
-function timeAgo(iso: string): string {
-  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (mins < 2) return 'just now'
-  if (mins < 60) return `${mins} minutes ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs} ${hrs === 1 ? 'hour' : 'hours'} ago`
-  const days = Math.floor(hrs / 24)
-  return `${days} ${days === 1 ? 'day' : 'days'} ago`
-}

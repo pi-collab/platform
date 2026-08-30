@@ -3,7 +3,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
+import type { IgConnectionView } from '@/lib/instagram-sync'
 import { saveChannelStats, createContentUploadUrl } from './actions'
 import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
@@ -737,6 +739,116 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
   )
 }
 
+/* ── Instagram in the editor ──────────────────────────────── */
+
+/** The mark a brand also sees on the public page, so the two agree. */
+function VerifiedBadge() {
+  return <span className="sf-ig-badge">From Instagram</span>
+}
+
+/**
+ * A figure that came from Instagram, shown above the creator's own.
+ *
+ * Read only because it is not ours to edit: it is what Instagram reported at
+ * the last sync, and an editable copy would imply otherwise.
+ */
+function VerifiedStat({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="sf-ig-stat">
+      <div className="sf-ig-stat__head">
+        <span className="sf-ig-stat__label">{label}</span>
+        <VerifiedBadge />
+      </div>
+      <div className="sf-ig-stat__value">{value}</div>
+      {note && <p className="sf-ig-stat__note">{note}</p>}
+    </div>
+  )
+}
+
+/**
+ * Locks a group of inputs while Instagram is supplying the same figures.
+ *
+ * A `fieldset` rather than a per-input `disabled`, because it disables every
+ * descendant control natively, including the add and remove buttons. Doing it
+ * by hand across a dozen inputs is how one gets missed.
+ *
+ * The typed values stay VISIBLE rather than hidden: they are what the storefront
+ * falls back to if the connection is ever lost, and a creator cannot judge that
+ * fallback without seeing it.
+ */
+function LockedFields({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  return (
+    <fieldset className={locked ? 'sf-ig-locked' : undefined} disabled={locked}>
+      {locked && (
+        <p className="sf-ig-locked__note">
+          Your own figures, shown if you disconnect Instagram.
+        </p>
+      )}
+      {children}
+    </fieldset>
+  )
+}
+
+/** The connect card, and what it says in each state. */
+function InstagramPanel({ connection, outcome, connecting, onConnect }: {
+  connection: IgConnectionView
+  outcome: { tone: OutcomeTone; text: string } | null
+  connecting: boolean
+  onConnect: () => void
+}) {
+  const s = connection.status
+  const connected = s === 'connected'
+
+  return (
+    <div className={`sf-ig-panel${connected ? ' sf-ig-panel--on' : ''}`}>
+      <div className="sf-ig-panel__head">
+        <span className="sf-ig-panel__icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="20" height="20" x="2" y="2" rx="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+          </svg>
+        </span>
+        <div className="sf-ig-panel__text">
+          <div className="sf-ig-panel__title">
+            Instagram{connected && connection.username ? ` · @${connection.username}` : ''}
+          </div>
+          <div className="sf-ig-panel__sub">
+            {connected
+              ? connection.lastSyncedAt
+                ? `Synced ${timeAgo(connection.lastSyncedAt)}. Refreshes daily.`
+                : 'Connected. Not synced yet.'
+              : 'Fill your followers, audience and reach automatically.'}
+          </div>
+        </div>
+        {connected && <span className="sf-ig-panel__pill">Verified</span>}
+      </div>
+
+      {!connected && (
+        <>
+          <p className="sf-ig-panel__body">
+            {s === 'personal_account'
+              ? 'That account is a personal one, so Instagram will not share audience data for it. Switch it to a Business or Creator account, then reconnect.'
+              : s === 'expired' || s === 'needs_reconnect'
+                ? 'The connection to Instagram needs renewing. Your shopfront is showing the numbers you entered yourself until you reconnect.'
+                : 'Brands trust a number they can see came from Instagram. Connecting fills these in for you and keeps them current.'}
+          </p>
+          <button type="button" className="sf-ig-panel__btn" onClick={onConnect} disabled={connecting}>
+            {connecting
+              ? 'Saving your changes…'
+              : s === 'not_connected' ? 'Connect Instagram' : 'Reconnect Instagram'}
+          </button>
+          <p className="sf-ig-panel__hint">
+            Your changes are saved first, so nothing is lost while you connect.
+          </p>
+        </>
+      )}
+
+      {outcome && <p className={`sf-ig-msg sf-ig-msg--${outcome.tone}`} role="status">{outcome.text}</p>}
+    </div>
+  )
+}
+
 /* ── Main Component ───────────────────────────────────────── */
 
 /** Held as strings so "blank" is representable. See the state comment below. */
@@ -836,13 +948,22 @@ function focusRowInput(e: React.MouseEvent<HTMLElement>) {
 
 export default function StorefrontManager({
   storefront, creator, products, creatorName, addonRates = [], revisionPolicy,
+  instagramConnection = { status: 'not_connected' },
 }: {
   storefront: StorefrontRow | null; creator: Creator | null
   products: Product[]; creatorName: string
   addonRates?: AddonRateRow[]
   revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
+  instagramConnection?: IgConnectionView
 }) {
   const router = useRouter()
+  const search = useSearchParams()
+
+  // The verified snapshot, and ONLY while the connection is healthy. An expired
+  // or broken connection falls back to what the creator typed, which is the same
+  // rule the public page applies, so the editor cannot promise a brand something
+  // the storefront will not show.
+  const igSnap = instagramConnection.status === 'connected' ? instagramConnection.snapshot : undefined
   const isNew = storefront === null
   const [mode, setMode] = useState<'preview' | 'edit'>('preview')
   // The welcome panel covers the sample shopfront it is describing, so it must
@@ -1029,6 +1150,43 @@ export default function StorefrontManager({
     if (publish) setJustPublished(true)
     router.refresh()
     return true
+  }
+
+  /* ── Instagram ──────────────────────────────────────────────────────────── */
+
+  const [igOutcomeMsg, setIgOutcomeMsg] = useState<{ tone: OutcomeTone; text: string } | null>(null)
+  const [igConnecting, setIgConnecting] = useState(false)
+
+  // The callback's report, read once and then stripped from the URL so a
+  // refresh does not replay an outcome already dealt with.
+  useEffect(() => {
+    const reason = search.get('ig')
+    if (!reason) return
+    setIgOutcomeMsg(igOutcome(reason))
+    const rest = new URLSearchParams(search.toString())
+    rest.delete('ig')
+    const qs = rest.toString()
+    router.replace(qs ? `/creator/storefront?${qs}` : '/creator/storefront', { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
+   * Save, then hand off to Instagram.
+   *
+   * The editor holds a multi-step form in local state and connecting leaves the
+   * page entirely, so anything typed and not yet saved would be gone by the time
+   * the creator came back. Saving first makes the round trip non-destructive.
+   *
+   * A failed save STOPS the handoff: the error message is already on screen, and
+   * leaving for Instagram at that moment would discard the very edits the save
+   * just failed to keep.
+   */
+  async function startInstagramConnect() {
+    setIgConnecting(true)
+    setIgOutcomeMsg(null)
+    const saved = await handleSave()
+    if (!saved) { setIgConnecting(false); return }
+    window.location.href = '/api/instagram/connect?return=storefront'
   }
 
   function addNiche() {
@@ -1234,6 +1392,13 @@ export default function StorefrontManager({
 
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
+                  <InstagramPanel
+                    connection={instagramConnection}
+                    outcome={igOutcomeMsg}
+                    connecting={igConnecting}
+                    onConnect={startInstagramConnect}
+                  />
+
                   <Field label="Your numbers" hint="Per channel and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
@@ -1243,6 +1408,10 @@ export default function StorefrontManager({
                           const plat = String(a.platform ?? '').trim().toLowerCase()
                           const fields = CHANNEL_FIELDS[plat] ?? DEFAULT_CHANNEL_FIELDS
                           const vals = chan[k] ?? EMPTY_CHANNEL_STATS
+                          // Matched on platform, not on handle: a creator can
+                          // rename their Instagram handle without that silently
+                          // detaching the verified figures from the channel.
+                          const isIg = plat === 'instagram'
                           return (
                             <div key={k} style={{ borderRadius: 12, border: `1px solid ${BHL}`, padding: '12px 14px' }}>
                               <div style={{
@@ -1257,10 +1426,32 @@ export default function StorefrontManager({
                                   {CHANNEL_WINDOW[plat]}
                                 </p>
                               )}
+                              {/* Instagram supplies followers and reach for THIS
+                                  channel only. Avg views and interactions are
+                                  not returned by Meta, so they stay typed and
+                                  editable alongside. */}
+                              {isIg && igSnap && (
+                                <div className="sf-ig-stats">
+                                  <VerifiedStat label="Followers" value={formatStat(igSnap.followersCount)} />
+                                  {igSnap.reachLast30 != null && (
+                                    <VerifiedStat label="Reach, 30 days" value={formatStat(igSnap.reachLast30)} />
+                                  )}
+                                </div>
+                              )}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {fields.map(f => (
+                                {fields.map(f => {
+                                  // Only the field Instagram actually supplies is
+                                  // locked. Locking the whole channel would take
+                                  // away two figures nobody verified.
+                                  const fieldLocked = Boolean(isIg && igSnap && f.key === 'followers')
+                                  return (
                                   <div key={f.key}>
-                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'text' }}>
+                                    {fieldLocked && (
+                                      <p className="sf-ig-locked__note" style={{ margin: '0 0 4px' }}>
+                                        Your own figure, shown if you disconnect Instagram.
+                                      </p>
+                                    )}
+                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'text', opacity: fieldLocked ? 0.55 : 1 }}>
                                       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                                         {f.label}
                                       </span>
@@ -1268,6 +1459,7 @@ export default function StorefrontManager({
                                         type="text"
                                         inputMode={f.numeric ? 'numeric' : 'text'}
                                         aria-label={`${f.label} on ${plat}`}
+                                        disabled={fieldLocked}
                                         placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 1.2K hours'}
                                         value={vals[f.key]}
                                         onChange={e => {
@@ -1303,7 +1495,8 @@ export default function StorefrontManager({
                                       </p>
                                     )}
                                   </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             </div>
                           )
@@ -1317,6 +1510,24 @@ export default function StorefrontManager({
                   </Field>
 
                   <Field label="Age breakdown">
+                    {igSnap?.ageBreakdown && (
+                      <div className="sf-ig-readout">
+                        <div className="sf-ig-readout__head">
+                          <VerifiedBadge />
+                          {(igSnap.under18Excluded ?? 0) > 0 && (
+                            <span className="sf-ig-readout__note">Covers followers aged 18 and over</span>
+                          )}
+                        </div>
+                        <div className="sf-ig-readout__rows">
+                          {igSnap.ageBreakdown.map(a => (
+                            <span key={a.label} className="sf-ig-readout__pair">
+                              <b>{a.label}</b> {a.pct}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <LockedFields locked={Boolean(igSnap?.ageBreakdown)}>
                     <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                       {edit.ageBreakdown.map((age, i) => (
                         <div key={i} onClick={focusRowInput} style={{ cursor: 'text',
@@ -1363,9 +1574,25 @@ export default function StorefrontManager({
                         </div>
                       ))}
                     </div>
+                    </LockedFields>
                   </Field>
 
                   <Field label="Gender split">
+                    {/* The verified split is THREE way. The slider below can only
+                        express two, women against the remainder, so a verified
+                        value is reported here rather than pushed into a control
+                        that would have to drop the unknown share to fit. */}
+                    {igSnap?.gender && (
+                      <div className="sf-ig-readout">
+                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
+                        <div className="sf-ig-readout__rows">
+                          <span className="sf-ig-readout__pair"><b>Women</b> {igSnap.gender.womenPct}%</span>
+                          <span className="sf-ig-readout__pair"><b>Men</b> {igSnap.gender.menPct}%</span>
+                          <span className="sf-ig-readout__pair"><b>Unknown</b> {igSnap.gender.unknownPct}%</span>
+                        </div>
+                      </div>
+                    )}
+                    <LockedFields locked={Boolean(igSnap?.gender)}>
                     <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${BHL}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{edit.genderWomen}%</div>
@@ -1383,9 +1610,21 @@ export default function StorefrontManager({
                         <span>Women</span><span>Men</span>
                       </div>
                     </div>
+                    </LockedFields>
                   </Field>
 
                   <Field label="Top locations">
+                    {igSnap?.topLocations && igSnap.topLocations.length > 0 && (
+                      <div className="sf-ig-readout">
+                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
+                        <div className="sf-ig-readout__rows">
+                          {igSnap.topLocations.map(l => (
+                            <span key={l.city} className="sf-ig-readout__pair"><b>{l.city}</b> {l.pct}%</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <LockedFields locked={Boolean(igSnap?.topLocations?.length)}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                       {edit.topLocations.map((loc, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1407,6 +1646,7 @@ export default function StorefrontManager({
                         <AddButton label="Add city" onClick={() => set('topLocations', [...edit.topLocations, { city: '', pct: 0 }])} />
                       </div>
                     )}
+                    </LockedFields>
                   </Field>
                 </Section>
               </div>
@@ -1544,7 +1784,17 @@ export default function StorefrontManager({
               <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
                   <Field label="Monthly reach">
-                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" onKeyDown={onFieldEnter} style={dinput} />
+                    {igSnap?.reachLast30 != null && (
+                      <div className="sf-ig-readout">
+                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
+                        <div className="sf-ig-readout__rows">
+                          <span className="sf-ig-readout__pair"><b>{formatStat(igSnap.reachLast30)}</b> in the last 30 days</span>
+                        </div>
+                      </div>
+                    )}
+                    <LockedFields locked={igSnap?.reachLast30 != null}>
+                      <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" onKeyDown={onFieldEnter} style={dinput} />
+                    </LockedFields>
                   </Field>
                   <Field label="Deals per month">
                     <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="4" onKeyDown={onFieldEnter} style={dinput} />

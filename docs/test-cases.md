@@ -2081,6 +2081,52 @@ in place.
 - [ ] Data deletion returns { url, confirmation_code } and the status page says
       what was deleted AND what was kept (deals are not Instagram data)
 
+**Scopes come back in a shape the docs do not describe**
+- [ ] The token exchange returns `permissions` as an ARRAY on the Instagram Login
+      path, not the comma-separated string Basic Display documents. Both shapes,
+      plus absent/null/empty, must normalise to a string array
+- [ ] Regression: calling `.split()` on it threw AFTER every network call had
+      succeeded, so the creator saw a failed connection with a working token
+      behind it. The failure point was assembling the row, not the API
+
+**The callback's outcome is shown, not just logged**
+- [ ] Every `?ig=` reason renders wording on the card: connected, personal_account,
+      cancelled, state_mismatch, no_code, save_failed, failed
+- [ ] An unrecognised reason still says something rather than rendering nothing
+- [ ] `cancelled` is styled neutral, NOT as an error. The creator chose to stop
+- [ ] The parameter is stripped after being read, so a refresh does not replay a
+      stale outcome. This also clears Instagram's trailing `#_`
+
+**Connecting from the storefront editor**
+- [ ] Connect from the editor returns to the EDITOR, not to settings; connect from
+      settings returns to settings
+- [ ] `?return=` is an ALLOWLIST (`settings` | `storefront`), validated on the way
+      in AND on the way out. `?return=https://evil.example` lands on settings.
+      This route is authenticated and ends in a redirect, so an echoed path would
+      be an open redirect
+- [ ] Unsaved edits SURVIVE connecting: the draft is saved before the handoff
+- [ ] A FAILED save aborts the handoff. Leaving for Instagram would discard the
+      edits the save just failed to keep
+- [ ] Both OAuth cookies are deleted with `path: '/api/instagram'`. A bare delete
+      targets "/" and silently misses them, leaving a spent nonce in the jar
+
+**Verified figures in the editor**
+- [ ] Not connected: a Connect card appears in the Audience step
+- [ ] Connected: followers, age, gender, cities and reach show the verified value
+      with the badge and "synced Xh ago"
+- [ ] Typed values stay VISIBLE but locked while connected, because they are the
+      fallback if the connection is ever lost
+- [ ] Avg views and interactions stay EDITABLE while connected. Meta returns
+      neither, so locking the whole channel would take away two unverified figures
+- [ ] Gender renders as a three-way readout, not the two-way slider. The slider
+      cannot express the unknown share without dropping it
+- [ ] `expired` / `needs_reconnect` / `personal_account` offer Reconnect and do
+      NOT lock anything: an unhealthy connection falls back to typed values, so
+      the creator must still be able to edit them
+- [ ] Reach reaches the PUBLIC page: `reachLast30` fills Monthly reach with a
+      badge. It was in the snapshot but unused for a while, so the stat strip
+      showed a typed figure on a connected account
+
 ### Brand deals, empty state
 
 - [ ] A brand with zero deals sees the drawn screen: "My deals", three zeroed

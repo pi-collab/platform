@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
+import { getConnection } from '@/lib/instagram-sync'
 import { getMyStorefront } from './actions'
 import StorefrontManager from './StorefrontManager'
 
@@ -36,10 +37,15 @@ export default async function StorefrontPage() {
       .eq('id', ctx.creatorId).maybeSingle(),
   ])
 
+  // Selected through the same helper the settings screen uses, which reads
+  // explicit non-token columns. The editor never sees the access token.
+  const instagramConnection = await getConnection(ctx.creatorId)
+
   return (
     <StorefrontManager
       storefront={storefront}
       creator={creator}
+      instagramConnection={instagramConnection}
       products={products ?? []}
       creatorName={ctx.creatorName}
       addonRates={(addonRates ?? []) as never}

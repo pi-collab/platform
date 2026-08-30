@@ -90,6 +90,10 @@ export interface AudienceData {
 export interface VerifiedMarks {
   followers?: boolean
   audience?: boolean
+  /** Reach over the last 30 days, as Instagram reported it. Separate from
+   *  `audience` because a creator under 100 followers gets no demographics but
+   *  still gets a reach figure. */
+  reach?: boolean
   /** The age and gender percentages exclude under-18s, because the shopfront
    *  has no band for them. Surfaced so it is stated, not implied. */
   adultsOnly?: boolean
@@ -605,19 +609,20 @@ export default function ShopfrontPreview({
         <section className="sf-sec" style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
           <div className="sf-stats-strip" style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
             {[
-              { value: data.monthlyReach, label: 'Monthly reach' },
-              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '-', label: 'Replies in' },
-              { value: data.repeatBrands, label: 'Deals per month' },
-              { value: data.avgDealValue, label: 'Avg deal value' },
+              { value: data.monthlyReach, label: 'Monthly reach', verified: data.verified?.reach },
+              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '-', label: 'Replies in', verified: false },
+              { value: data.repeatBrands, label: 'Deals per month', verified: false },
+              { value: data.avgDealValue, label: 'Avg deal value', verified: false },
             ].map((stat, i) => (
               <div key={i} style={{
                 position: 'relative', borderRadius: 20, background: 'var(--card)', padding: '22px 24px',
                 boxShadow: '0 20px 46px -30px rgba(40,45,25,.4)',
               }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 34, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sec-ink)' }} />
                   <span className="t-meta" style={{ color: 'var(--ink-soft)' }}>{stat.label}</span>
+                  {stat.verified && <VerifiedBadge username={data.verified?.username} />}
                 </div>
               </div>
             ))}

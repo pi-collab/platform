@@ -17,8 +17,31 @@ export function instagramRedirectUri(): string {
   return `${base}/api/instagram/callback`
 }
 
-/** Where the creator lands after connecting, succeeded or not. */
-export function instagramReturnPath(params?: Record<string, string>): string {
+/**
+ * Where the creator lands after connecting, succeeded or not.
+ *
+ * An ALLOWLIST, not a path taken from the query string. The connect route is
+ * authenticated and ends in a redirect, so echoing back a caller-supplied URL
+ * would let a crafted link bounce a signed-in creator to an attacker's page
+ * carrying our own origin as the referrer. Only these two screens offer the
+ * connect action, so only these two are reachable, and anything unrecognised
+ * falls back to settings rather than being honoured.
+ */
+const RETURN_TARGETS = {
+  settings: '/creator/settings?tab=profile',
+  storefront: '/creator/storefront?step=audience',
+} as const
+
+export type InstagramReturnTarget = keyof typeof RETURN_TARGETS
+
+export function isReturnTarget(v: string | undefined | null): v is InstagramReturnTarget {
+  return v === 'settings' || v === 'storefront'
+}
+
+export function instagramReturnPath(
+  params?: Record<string, string>,
+  target: InstagramReturnTarget = 'settings',
+): string {
   const q = params ? `&${new URLSearchParams(params)}` : ''
-  return `/creator/settings?tab=profile${q}`
+  return `${RETURN_TARGETS[target]}${q}`
 }

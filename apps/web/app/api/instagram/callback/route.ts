@@ -6,7 +6,7 @@ import { encryptToken } from '@/lib/instagram-token'
 import {
   exchangeCodeForToken, exchangeForLongLivedToken, buildSnapshot, IG_SCOPES,
 } from '@/lib/instagram'
-import { instagramRedirectUri, instagramReturnPath } from '@/lib/instagram-config'
+import { instagramRedirectUri, instagramReturnPath, isReturnTarget } from '@/lib/instagram-config'
 import { markChannelConnected } from '@/lib/instagram-sync'
 
 /**
@@ -17,8 +17,15 @@ import { markChannelConnected } from '@/lib/instagram-sync'
  */
 export async function GET(request: NextRequest) {
   const { origin, searchParams } = new URL(request.url)
+
+  // Set by the connect route, and re-validated here rather than trusted. A
+  // cookie is attacker-writable in ways a server-side session is not, so the
+  // allowlist is applied on the way out too; anything else lands on settings.
+  const requestedReturn = cookies().get('ig_return')?.value
+  const target = isReturnTarget(requestedReturn) ? requestedReturn : 'settings'
+
   const back = (params: Record<string, string>) =>
-    NextResponse.redirect(`${origin}${instagramReturnPath(params)}`)
+    NextResponse.redirect(`${origin}${instagramReturnPath(params, target)}`)
 
   // The creator denied the prompt, or Instagram refused. Not an error worth a
   // stack trace: they simply did not connect.
@@ -33,7 +40,11 @@ export async function GET(request: NextRequest) {
   // started by this browser, and the code may belong to someone else's account.
   const expected = cookies().get('ig_oauth_state')?.value
   const given = searchParams.get('state')
-  cookies().delete('ig_oauth_state')
+  // Deleted with the SAME path they were set on. A bare delete targets "/" and
+  // silently misses a cookie scoped to /api/instagram, leaving a spent nonce
+  // sitting in the jar for its full ten minutes.
+  cookies().delete({ name: 'ig_oauth_state', path: '/api/instagram' })
+  cookies().delete({ name: 'ig_return', path: '/api/instagram' })
   if (!expected || !given || expected !== given) {
     return back({ ig: 'state_mismatch' })
   }

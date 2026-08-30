@@ -163,3 +163,197 @@
   border-radius: 999px;
   background: transparent;
 }
+
+/* ── Instagram in the editor ──────────────────────────────────────────────────
+   The connect card and the verified readouts that sit above the creator's own
+   figures. Built from the editor's existing tokens so a verified number reads
+   as part of the form rather than as an integration bolted onto it.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sf-ig-panel {
+  border-radius: 14px;
+  border: 1px solid var(--border-hairline, rgba(24, 28, 36, .1));
+  background: #fff;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.sf-ig-panel--on {
+  background: color-mix(in oklab, var(--neon) 10%, #fff);
+  border-color: color-mix(in oklab, var(--neon) 42%, transparent);
+}
+
+.sf-ig-panel__head { display: flex; align-items: center; gap: 10px; }
+
+.sf-ig-panel__icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: #F7F4FB;
+  color: var(--ink, #12151C);
+}
+
+.sf-ig-panel__text { flex: 1; min-width: 0; }
+
+.sf-ig-panel__title {
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 700;
+  color: var(--ink, #12151C);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.sf-ig-panel__sub {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  color: var(--ink-faint, #878D99);
+  margin-top: 1px;
+}
+
+.sf-ig-panel__pill {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+.sf-ig-panel__body {
+  margin: 10px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-soft, #565C68);
+}
+
+.sf-ig-panel__btn {
+  margin-top: 11px;
+  min-height: 38px;
+  padding: 0 15px;
+  border-radius: 999px;
+  border: 1px solid var(--ink, #12151C);
+  background: var(--ink, #12151C);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12.5px; font-weight: 700;
+}
+.sf-ig-panel__btn:disabled { opacity: .55; cursor: default; }
+
+.sf-ig-panel__hint {
+  margin: 7px 0 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint, #878D99);
+}
+
+.sf-ig-msg {
+  margin: 10px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px; line-height: 1.55;
+}
+.sf-ig-msg--ok   { color: #166534; }
+.sf-ig-msg--err  { color: #B4262A; }
+/* Choosing not to connect is not a failure, and red would say it was. */
+.sf-ig-msg--info { color: var(--ink-faint, #878D99); }
+
+/* The mark itself. Same words as the public page uses, so a creator recognises
+   what a brand will see. */
+.sf-ig-badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--neon) 30%, #fff);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sf-ig-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sf-ig-stat {
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: color-mix(in oklab, var(--neon) 12%, #fff);
+  border: 1px solid color-mix(in oklab, var(--neon) 38%, transparent);
+}
+
+.sf-ig-stat__head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+.sf-ig-stat__label {
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600;
+  color: var(--ink-soft, #565C68);
+}
+
+.sf-ig-stat__value {
+  margin-top: 3px;
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 19px;
+  letter-spacing: -0.02em;
+  color: var(--ink, #12151C);
+}
+
+.sf-ig-stat__note {
+  margin: 3px 0 0;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  color: var(--ink-faint, #878D99);
+}
+
+/* A verified figure that has no single-number form: age bands, the three way
+   gender split, the city list. */
+.sf-ig-readout {
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: color-mix(in oklab, var(--neon) 12%, #fff);
+  border: 1px solid color-mix(in oklab, var(--neon) 38%, transparent);
+}
+
+.sf-ig-readout__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.sf-ig-readout__note {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  color: var(--ink-faint, #878D99);
+}
+
+.sf-ig-readout__rows {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  margin-top: 7px;
+}
+
+.sf-ig-readout__pair {
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--ink-soft, #565C68);
+}
+.sf-ig-readout__pair b {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--ink, #12151C);
+}
+
+/* A disabled fieldset, reset to carry none of the browser's own chrome. The
+   creator's typed values stay VISIBLE while Instagram supplies the same
+   figures, because they are what the storefront falls back to. */
+.sf-ig-locked {
+  border: 0; margin: 0; padding: 0; min-width: 0;
+  opacity: .55;
+}
+
+.sf-ig-locked__note {
+  margin: 0 0 6px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint, #878D99);
+}
