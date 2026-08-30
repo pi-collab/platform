@@ -418,20 +418,35 @@
 .sf-verified__chip {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--neon-deep, #7BA334);
-  color: #fff;
+  gap: 5px;
+  padding: 3px 9px 3px 4px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--neon-deep, #7BA334) 12%, #fff);
+  border: 1px solid color-mix(in oklab, var(--neon-deep, #7BA334) 34%, transparent);
+  color: var(--ink, #12151C);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   list-style: none;
   user-select: none;
-  margin-left: -4px;
 }
 
-/* Both are needed: WebKit uses its own pseudo-element for the marker and
-   ignores list-style. Without this the check carries a stray triangle. */
+/* The tick keeps its weight in a filled circle, so the mark still reads as a
+   mark at a glance rather than as one more grey label in the handle row. */
+.sf-verified__tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--neon-deep, #7BA334);
+  color: #fff;
+}
+
 .sf-verified__chip::-webkit-details-marker { display: none; }
 .sf-verified__chip::marker { content: ''; }
 

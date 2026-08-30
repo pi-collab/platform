@@ -2157,6 +2157,16 @@ in place.
       exactly the amount nobody knows
 - [ ] A "Not stated" row appears in the legend only when the share is above zero,
       so a typed two-way split is unchanged
+- [ ] The CENTRE reports the LARGER of women and men, not always women. Palak's
+      account is 13/68/19, so the middle reads "68% men". Fixed to women it read
+      "13% women" over a ring two thirds the other colour, leaving a brand to do
+      the subtraction the chart exists to save them
+- [ ] The highlight colour follows the leader, so the emphasised slice and the
+      number in the middle describe the same thing. Legend swatches match
+- [ ] "Not stated" never wins the centre even when it is the largest share: it
+      is the absence of an answer, not an audience
+- [ ] The MOBILE shopfront gets the same treatment. It is a second donut in
+      ShopfrontMobile, and it showed women only and no unknown share at all
 - [ ] The editor's slider takes men from Instagram's own figure, never
       100 minus women, for the same reason
 

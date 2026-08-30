@@ -46,15 +46,16 @@ function VerifiedPanel({ v }: { v: VerifiedMarks }) {
       <summary
         className="sf-verified__chip"
         title="Verified from Instagram. Tap to see which figures."
-        aria-label="Verified from Instagram. Open to see which figures are fetched."
       >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        <span className="sf-verified__tick" aria-hidden="true">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </span>
+        Verified from Instagram
       </summary>
 
       <div className="sf-verified__body">
-        <p className="sf-verified__title">Verified from Instagram</p>
         <p className="sf-verified__lead">
           These figures are read directly from
           {v.username ? <> <strong>@{v.username}</strong>&rsquo;s</> : ' this creator&rsquo;s'} Instagram
@@ -1118,9 +1119,27 @@ export default function ShopfrontPreview({
                       // drew that share in the men colour, so the chart overstated
                       // men by exactly the amount nobody actually knows.
                       const unknown = g.unknown != null && g.unknown > 0 ? g.unknown : 0
+
+                      // The centre reports the LARGER share, not always women.
+                      // A donut whose middle read "29% women" while two thirds of
+                      // it was the other colour made a brand do the subtraction to
+                      // reach the fact the chart exists to state.
+                      //
+                      // Between women and men only. "Not stated" is the absence of
+                      // an answer, so leading with it would headline a gap as if
+                      // it were an audience.
+                      const menLeads = g.men > g.women
+                      const leadPct = menLeads ? g.men : g.women
+                      const leadLabel = menLeads ? 'men' : 'women'
+
+                      // The highlight follows the leader, so the emphasised colour
+                      // and the number in the middle are describing the same slice.
+                      const womenColor = menLeads ? 'var(--sec-mid-2)' : 'var(--neon-deep)'
+                      const menColor = menLeads ? 'var(--neon-deep)' : 'var(--sec-mid-2)'
+
                       const gradient = unknown > 0
-                        ? `conic-gradient(var(--neon-deep) 0 ${g.women}%,var(--sec-mid-2) ${g.women}% ${g.women + g.men}%,var(--hairline) ${g.women + g.men}% 100%)`
-                        : `conic-gradient(var(--neon-deep) 0 ${g.women}%,var(--sec-mid-2) ${g.women}% 100%)`
+                        ? `conic-gradient(${womenColor} 0 ${g.women}%,${menColor} ${g.women}% ${g.women + g.men}%,var(--hairline) ${g.women + g.men}% 100%)`
+                        : `conic-gradient(${womenColor} 0 ${g.women}%,${menColor} ${g.women}% 100%)`
                       return (
                       <div style={{
                         flex: '0 0 auto', border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
@@ -1140,20 +1159,20 @@ export default function ShopfrontPreview({
                               position: 'absolute', inset: 15, borderRadius: '50%', background: 'var(--card)',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{g.women}%</span>
-                              <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>women</span>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{leadPct}%</span>
+                              <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>{leadLabel}</span>
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--neon-deep)' }} />
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: womenColor }} />
                               <div>
                                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.women}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Women</div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--sec-mid-2)' }} />
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: menColor }} />
                               <div>
                                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.men}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Men</div>
