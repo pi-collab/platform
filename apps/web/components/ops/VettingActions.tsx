@@ -48,55 +48,90 @@ export default function VettingActions({ creator }: {
     setBusy(false)
   }
 
+  // ONE line, never wrapped. Three word-labelled buttons wrapped to two or three
+  // rows inside a table cell, which stretched every row in the list to fit the
+  // tallest one. Icons keep all three on a single line at any column width; the
+  // words survive as the tooltip and as the accessible name, and the confirm
+  // dialog still says in full what is about to happen.
   return (
-    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}>
       {status !== 'deals_approved' && (
-        <button
-          type="button"
-          disabled={busy}
+        <IconButton
+          busy={busy}
+          label="Approve for Guapd Deals"
+          style={{ background: '#16a34a', color: '#fff' }}
           onClick={() => run(approveForDeals, `Approve ${who} for Guapd Deals?`)}
-          style={{ ...btn, background: '#16a34a', color: '#fff' }}
-          title="Approve for Deals"
         >
-          {busy ? '...' : 'Deals'}
-        </button>
+          <svg {...svgProps}><path d="M20 6 9 17l-5-5" /></svg>
+        </IconButton>
       )}
       {status !== 'growth' && (
-        <button
-          type="button"
-          disabled={busy}
+        <IconButton
+          busy={busy}
+          label="Move to Guapd Growth"
+          style={{ background: '#4f46e5', color: '#fff' }}
           onClick={() => run(moveToGrowth, `Move ${who} to Guapd Growth? They will not receive brand deals yet.`)}
-          style={{ ...btn, background: '#4f46e5', color: '#fff' }}
-          title="Move to Guapd Growth"
         >
-          {busy ? '...' : 'Growth'}
-        </button>
+          <svg {...svgProps}><path d="M3 17l6-6 4 4 7-7" /><path d="M17 8h4v4" /></svg>
+        </IconButton>
       )}
       {status !== 'rejected' && (
-        <button
-          type="button"
-          disabled={busy}
+        <IconButton
+          busy={busy}
           // Confirmed even from the row. It emails the creator, and a misclick
           // in a dense table is far easier than on a profile page opened on
           // purpose.
+          label="Reject"
+          style={{ background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}
           onClick={() => run(rejectCreator, `Reject ${who}? They will be told, and can appeal.`)}
-          style={{ ...btn, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}
-          title="Reject"
         >
-          {busy ? '...' : 'Reject'}
-        </button>
+          <svg {...svgProps}><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </IconButton>
       )}
     </div>
   )
 }
 
+const svgProps = {
+  width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
+  stroke: 'currentColor', strokeWidth: 2.6,
+  strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const,
+  'aria-hidden': true,
+}
+
+/** An icon-only control still needs a NAME. title alone is not announced
+ *  reliably, so both are set and kept identical. */
+function IconButton({ busy, label, style, onClick, children }: {
+  busy: boolean
+  label: string
+  style: React.CSSProperties
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      style={{ ...btn, ...style, opacity: busy ? 0.5 : 1 }}
+    >
+      {children}
+    </button>
+  )
+}
+
 const btn: React.CSSProperties = {
-  padding: '0.2rem 0.5rem',
+  width: 26,
+  height: 26,
+  flexShrink: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
   borderRadius: 6,
   border: 'none',
-  fontSize: '0.7rem',
-  fontWeight: 600,
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
-  lineHeight: 1.6,
+  lineHeight: 1,
 }
