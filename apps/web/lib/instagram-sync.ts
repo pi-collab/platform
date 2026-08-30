@@ -204,6 +204,14 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
     }).eq('creator_id', row.creator_id)
 
     await markChannelConnected(row.creator_id, snapshot.username)
+
+    // Prefill runs on EVERY sync, not only on connect. It fills empty fields and
+    // never touches a filled one, so repeating it is a no-op the moment the
+    // creator has written anything. Running it only at connect meant everyone who
+    // connected before it existed had a bio, a name and a photo sitting in their
+    // snapshot that nothing ever used.
+    await prefillFromInstagram(row.creator_id, snapshot).catch(() => {})
+
     return { ok: true, detail: 'synced' }
   } catch (err) {
     // The token may still be good; a sync can fail for rate limits or an
@@ -277,11 +285,56 @@ export async function prefillFromInstagram(creatorId: string, snapshot: IgSnapsh
     if (stored) update.profile_photo_url = stored
   }
 
+  if (Object.keys(update).length > 0) {
+    const { error } = await admin.from('creators').update(update).eq('id', creatorId)
+    if (error) {
+      console.error(`[instagram] prefill failed creator=${creatorId}: ${error.message}`)
+    }
+  }
+
+  await prefillStorefront(creatorId, snapshot)
+}
+
+/**
+ * The storefront's own display name and bio, where the creator has left them
+ * blank.
+ *
+ * A SEPARATE row from creators, and separately optional: a creator who has not
+ * started a storefront has nothing to prefill, and one who has written their own
+ * headline keeps it. Instagram's `name` is a display name ("Palak Jain") where
+ * the creators row often holds only a first name, so this is the field where it
+ * is worth something.
+ */
+async function prefillStorefront(creatorId: string, snapshot: IgSnapshot): Promise<void> {
+  const admin = createAdminClient()
+
+  const { data: sf } = await admin
+    .from('creator_storefronts')
+    .select('display_name, bio')
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  // No storefront yet. Nothing to fill, and creating one here would publish a
+  // page the creator never chose to make.
+  if (!sf) return
+
+  const update: Record<string, string> = {}
+
+  const hasName = typeof sf.display_name === 'string' && sf.display_name.trim() !== ''
+  if (!hasName && snapshot.name?.trim()) update.display_name = snapshot.name.trim()
+
+  const hasBio = typeof sf.bio === 'string' && sf.bio.trim() !== ''
+  if (!hasBio && snapshot.biography?.trim()) update.bio = snapshot.biography.trim()
+
   if (Object.keys(update).length === 0) return
 
-  const { error } = await admin.from('creators').update(update).eq('id', creatorId)
+  const { error } = await admin
+    .from('creator_storefronts')
+    .update(update)
+    .eq('creator_id', creatorId)
+
   if (error) {
-    console.error(`[instagram] prefill failed creator=${creatorId}: ${error.message}`)
+    console.error(`[instagram] storefront prefill failed creator=${creatorId}: ${error.message}`)
   }
 }
 

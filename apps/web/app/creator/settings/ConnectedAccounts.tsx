@@ -130,7 +130,15 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
           <dl className="ca-figures">
             <Figure label="Followers" value={fmt(snap.followersCount)} />
             <Figure label="Posts" value={fmt(snap.mediaCount)} />
+            {/* Shown to the CREATOR so nothing we hold is invisible to them, but
+                deliberately kept off the public storefront: how many accounts
+                someone follows is not something a brand is buying, and it would
+                sit beside three figures that are. */}
+            <Figure label="Following" value={fmt(snap.followsCount)} />
             {snap.reachLast30 != null && <Figure label="Reach, 30 days" value={fmt(snap.reachLast30)} />}
+            {snap.interactionsLast30 != null && (
+              <Figure label="Interactions, 30 days" value={fmt(snap.interactionsLast30)} />
+            )}
           </dl>
 
           {snap.demographicsUnavailable && (

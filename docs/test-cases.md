@@ -2202,6 +2202,27 @@ in place.
 - [ ] The jump box is hidden at 7 pages or fewer, where every page has a link
 - [ ] It works with JavaScript disabled, and lands on a real shareable URL
 
+**Nothing fetched is left unused**
+- [ ] Every field on IgSnapshot has a consumer. followersCount, mediaCount,
+      followsCount, reachLast30, interactionsLast30, name, biography,
+      profilePictureUrl, the three demographics, under18Excluded and fetchedAt
+- [ ] Following is shown to the CREATOR in settings but NOT on the public
+      storefront. How many accounts someone follows is not what a brand is
+      buying, and it would sit beside three figures that are
+
+**Prefill runs on every sync, not only on connect**
+- [ ] A creator who connected BEFORE prefill existed gets their bio, name and
+      photo on the next sync. Running it only at connect left that data sitting
+      in the snapshot with nothing ever reading it, which is exactly what
+      happened to the first connected account
+- [ ] Re-running is a no-op once anything is filled, so a daily cron cannot
+      slowly overwrite a creator's own words
+- [ ] creator_storefronts is prefilled separately from creators, and SKIPPED
+      when no storefront row exists. Creating one here would publish a page the
+      creator never chose to make
+- [ ] Instagram's `name` fills the storefront display name, where the creators
+      row often holds only a first name
+
 **Bio and photo prefill: presentation, not proof**
 - [ ] Prefilled ONLY when empty. A creator who has written their own bio must
       never find it replaced on connect, or on any later reconnect
