@@ -7,7 +7,7 @@ import {
   exchangeCodeForToken, exchangeForLongLivedToken, buildSnapshot, IG_SCOPES,
 } from '@/lib/instagram'
 import { instagramRedirectUri, instagramReturnPath, isReturnTarget } from '@/lib/instagram-config'
-import { markChannelConnected } from '@/lib/instagram-sync'
+import { markChannelConnected, prefillFromInstagram } from '@/lib/instagram-sync'
 
 /**
  * Instagram OAuth callback.
@@ -106,6 +106,12 @@ export async function GET(request: NextRequest) {
     // different screens and rebuilding it deletes the others.
     if (status === 'connected') {
       await markChannelConnected(ctx.creatorId, snapshot.username)
+
+      // Bio and photo, but ONLY where the creator has left them empty. These are
+      // presentation rather than proof, so they are a starting point the creator
+      // can then change, and they never lock. Deliberately not awaited for its
+      // result: a failed prefill must not fail a working connection.
+      await prefillFromInstagram(ctx.creatorId, snapshot).catch(() => {})
     }
 
     return back({ ig: status === 'connected' ? 'connected' : 'personal_account' })

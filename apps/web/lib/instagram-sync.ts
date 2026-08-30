@@ -226,3 +226,99 @@ export async function connectionsDueForSync(): Promise<ConnectionRow[]> {
     .limit(200)
   return (data ?? []) as ConnectionRow[]
 }
+
+/* ── Prefill: presentation, not proof ───────────────────────────────────────── */
+
+const AVATAR_BUCKET = 'storefronts'
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
+
+/**
+ * Fill in bio and profile photo from Instagram, ONCE, and only where empty.
+ *
+ * These are not verified stats and they never lock. A creator's Guapd bio is
+ * their pitch to brands and can reasonably differ from the one on their
+ * Instagram; the photo is their storefront branding. So this is a starting
+ * point, not a source of truth: anything the creator has already written is
+ * left exactly as it is, and reconnecting later will not overwrite what they
+ * have since edited.
+ *
+ * The photo is COPIED into our own storage rather than linked. Instagram serves
+ * profile pictures from a signed CDN URL that expires, so storing the URL would
+ * give every prefilled storefront a broken image some days later — a failure
+ * that would appear long after the connect that caused it.
+ *
+ * NON-FATAL by design. This runs after the connection is already saved, and a
+ * creator whose bio could not be copied still has a working, verified
+ * connection. Nothing here is allowed to fail the connect.
+ */
+export async function prefillFromInstagram(creatorId: string, snapshot: IgSnapshot): Promise<void> {
+  const admin = createAdminClient()
+
+  const { data: creator } = await admin
+    .from('creators')
+    .select('bio, profile_photo_url')
+    .eq('id', creatorId)
+    .maybeSingle()
+
+  if (!creator) return
+
+  const update: Record<string, string> = {}
+
+  // Only when there is nothing there. A creator who has written their own bio
+  // must never find it replaced by their Instagram one.
+  const hasBio = typeof creator.bio === 'string' && creator.bio.trim() !== ''
+  if (!hasBio && snapshot.biography?.trim()) {
+    update.bio = snapshot.biography.trim()
+  }
+
+  const hasPhoto = typeof creator.profile_photo_url === 'string' && creator.profile_photo_url.trim() !== ''
+  if (!hasPhoto && snapshot.profilePictureUrl) {
+    const stored = await copyAvatar(creatorId, snapshot.profilePictureUrl)
+    if (stored) update.profile_photo_url = stored
+  }
+
+  if (Object.keys(update).length === 0) return
+
+  const { error } = await admin.from('creators').update(update).eq('id', creatorId)
+  if (error) {
+    console.error(`[instagram] prefill failed creator=${creatorId}: ${error.message}`)
+  }
+}
+
+/** Downloads Instagram's profile picture and stores it as ours. Returns the
+ *  public URL, or null if anything at all went wrong. */
+async function copyAvatar(creatorId: string, sourceUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(sourceUrl)
+    if (!res.ok) return null
+
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.startsWith('image/')) return null
+
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_AVATAR_BYTES) return null
+
+    // Same path convention the manual upload uses, so a creator replacing the
+    // photo later overwrites this rather than leaving two files behind.
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg'
+    const path = `avatars/${creatorId}/avatar.${ext}`
+
+    const admin = createAdminClient()
+    const { error } = await admin.storage
+      .from(AVATAR_BUCKET)
+      .upload(path, bytes, { upsert: true, contentType })
+
+    if (error) {
+      console.error(`[instagram] avatar copy failed creator=${creatorId}: ${error.message}`)
+      return null
+    }
+
+    const { data } = admin.storage.from(AVATAR_BUCKET).getPublicUrl(path)
+    // The version stamp exists because the path is stable across replacements,
+    // so without it a later photo change serves the old bytes from cache.
+    return `${data.publicUrl}?v=${Date.now()}`
+  } catch (err) {
+    console.error(`[instagram] avatar copy threw creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+    return null
+  }
+}

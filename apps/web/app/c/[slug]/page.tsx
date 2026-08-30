@@ -163,9 +163,12 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     totalFollowers: ig?.followersCount != null
       ? formatStat(ig.followersCount)
       : totalFollowers != null ? formatStat(totalFollowers) : '',
-    // Blank, never a fabricated figure. The renderer hides what is blank.
+    // Blank, never a fabricated figure. The renderer omits what is blank.
     interactions: primary?.interactions != null ? formatStat(primary.interactions) : '',
     avgViews: primary?.avgViews != null ? formatStat(primary.avgViews) : '',
+    // Verified only. There is no typed posts field to fall back to, so an
+    // unconnected creator has no Posts stat rather than an empty one.
+    postsCount: ig?.mediaCount != null ? formatStat(ig.mediaCount) : undefined,
     // Instagram's reach is a 30-day window, which is what this stat claims.
     // Snapshot first, typed second, same as followers and audience.
     monthlyReach: ig?.reachLast30 != null ? formatStat(ig.reachLast30) : (stats.monthly_reach || '-'),
@@ -191,6 +194,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
           followers: ig.followersCount != null,
           audience: Boolean(ig.ageBreakdown || ig.gender || ig.topLocations),
           reach: ig.reachLast30 != null,
+          posts: ig.mediaCount != null,
           // Stated because the shopfront has no band under 18, so these
           // percentages describe adult followers.
           adultsOnly: (ig.under18Excluded ?? 0) > 0,

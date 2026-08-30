@@ -94,6 +94,8 @@ export interface VerifiedMarks {
    *  `audience` because a creator under 100 followers gets no demographics but
    *  still gets a reach figure. */
   reach?: boolean
+  /** Posts. Always true when a snapshot exists, since /me always returns it. */
+  posts?: boolean
   /** The age and gender percentages exclude under-18s, because the shopfront
    *  has no band for them. Surfaced so it is stated, not implied. */
   adultsOnly?: boolean
@@ -225,6 +227,9 @@ export interface ShopfrontData {
   /** A COUNT the creator stated, not a rate. Blank when unsaid. */
   interactions: string
   avgViews: string
+  /** Posts, from the connected account only. There is no typed equivalent, so
+   *  this is absent rather than blank when Instagram is not connected. */
+  postsCount?: string
   // Stats strip
   monthlyReach: string
   repeatBrands: string
@@ -537,24 +542,38 @@ export default function ShopfrontPreview({
                     ))}
                   </div>
 
-                  {/* Quick stats */}
-                  <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.totalFollowers}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
-                        Total followers
-                        {data.verified?.followers && <VerifiedBadge username={data.verified.username} />}
+                  {/* Quick stats.
+
+                      OMITTED when blank, not rendered empty. These three were
+                      unconditional, so a creator with a verified follower count
+                      and no self-entered figures got one number beside two
+                      label-only blocks — a page that reads as broken rather than
+                      as brief. Posts comes from the connected account, so it
+                      appears only when there is one. */}
+                  {(() => {
+                    const heroStats = [
+                      { key: 'followers', value: data.totalFollowers, label: 'Total followers', verified: data.verified?.followers },
+                      { key: 'posts', value: data.postsCount ?? '', label: 'Posts', verified: data.verified?.posts },
+                      { key: 'interactions', value: data.interactions, label: 'Interactions', verified: false },
+                      { key: 'avgViews', value: data.avgViews, label: 'Avg views', verified: false },
+                    ].filter(s => s.value !== '' && s.value != null)
+
+                    if (heroStats.length === 0) return null
+
+                    return (
+                      <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
+                        {heroStats.map(s => (
+                          <div key={s.key}>
+                            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{s.value}</div>
+                            <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
+                              {s.label}
+                              {s.verified && <VerifiedBadge username={data.verified?.username} />}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.interactions}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Interactions</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.avgViews}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Avg views</div>
-                    </div>
-                  </div>
+                    )
+                  })()}
 
                   {/* CTAs */}
                   <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>

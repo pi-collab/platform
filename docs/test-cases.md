@@ -2138,6 +2138,30 @@ in place.
       badge. It was in the snapshot but unused for a while, so the stat strip
       showed a typed figure on a connected account
 
+**Blank stats are omitted, not rendered empty**
+- [ ] The hero renders only stats that HAVE a value. A connected creator who has
+      typed no interactions and no avg views sees followers and posts, not two
+      label-only blocks with no number above them
+- [ ] With every hero stat blank, the row itself does not render
+- [ ] Posts appears ONLY when connected. There is no typed posts field, so it is
+      verified or absent, never an empty slot
+
+**Bio and photo prefill: presentation, not proof**
+- [ ] Prefilled ONLY when empty. A creator who has written their own bio must
+      never find it replaced on connect, or on any later reconnect
+- [ ] Neither ever LOCKS. A Guapd bio may legitimately differ from the Instagram
+      one, and the photo is storefront branding
+- [ ] The photo is COPIED into the storefronts bucket, never linked. Instagram
+      serves it from a signed CDN URL that expires, so a stored link would break
+      days after the connect that created it
+- [ ] The copy reuses `avatars/{creatorId}/avatar.{ext}`, so replacing the photo
+      later overwrites it rather than leaving an orphan
+- [ ] The stored URL carries a `?v=` stamp. The path is stable across
+      replacements, so without it a later change serves the old bytes from cache
+- [ ] A failed prefill does NOT fail the connect. It runs after the connection is
+      saved; a creator whose bio could not be copied still has a working one
+- [ ] Non-image or oversized responses are rejected rather than stored
+
 ### Brand deals, empty state
 
 - [ ] A brand with zero deals sees the drawn screen: "My deals", three zeroed

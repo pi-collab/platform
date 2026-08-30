@@ -778,14 +778,31 @@ function VerifiedStat({ label, value, note }: { label: string; value: string; no
  */
 function LockedFields({ locked, children }: { locked: boolean; children: React.ReactNode }) {
   return (
-    <fieldset className={locked ? 'sf-ig-locked' : undefined} disabled={locked}>
+    <fieldset
+      className={locked ? 'sf-ig-locked' : undefined}
+      disabled={locked}
+      // Native tooltip rather than a custom one: it works on the whole group,
+      // needs no state, and does not have to be positioned inside a scrolling
+      // editor column.
+      title={locked ? 'Synced from Instagram. Disconnect to edit these again.' : undefined}
+    >
       {locked && (
         <p className="sf-ig-locked__note">
-          Your own figures, shown if you disconnect Instagram.
+          <LockIcon />
+          Your own figures, kept for if you disconnect Instagram
         </p>
       )}
       {children}
     </fieldset>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg className="sf-ig-lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="18" height="11" x="3" y="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
   )
 }
 
@@ -1433,6 +1450,10 @@ export default function StorefrontManager({
                               {isIg && igSnap && (
                                 <div className="sf-ig-stats">
                                   <VerifiedStat label="Followers" value={formatStat(igSnap.followersCount)} />
+                                  {/* No typed counterpart exists for posts, so
+                                      there is nothing to lock beneath it. It is
+                                      verified or it is absent. */}
+                                  <VerifiedStat label="Posts" value={formatStat(igSnap.mediaCount)} />
                                   {igSnap.reachLast30 != null && (
                                     <VerifiedStat label="Reach, 30 days" value={formatStat(igSnap.reachLast30)} />
                                   )}
@@ -1445,13 +1466,18 @@ export default function StorefrontManager({
                                   // away two figures nobody verified.
                                   const fieldLocked = Boolean(isIg && igSnap && f.key === 'followers')
                                   return (
-                                  <div key={f.key}>
+                                  <div
+                                    key={f.key}
+                                    className={fieldLocked ? 'sf-ig-locked' : undefined}
+                                    title={fieldLocked ? 'Synced from Instagram. Disconnect to edit this again.' : undefined}
+                                  >
                                     {fieldLocked && (
-                                      <p className="sf-ig-locked__note" style={{ margin: '0 0 4px' }}>
-                                        Your own figure, shown if you disconnect Instagram.
+                                      <p className="sf-ig-locked__note">
+                                        <LockIcon />
+                                        Your own figure, kept for if you disconnect
                                       </p>
                                     )}
-                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'text', opacity: fieldLocked ? 0.55 : 1 }}>
+                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: fieldLocked ? 'default' : 'text' }}>
                                       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                                         {f.label}
                                       </span>

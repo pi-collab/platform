@@ -348,12 +348,27 @@
    figures, because they are what the storefront falls back to. */
 .sf-ig-locked {
   border: 0; margin: 0; padding: 0; min-width: 0;
-  opacity: .55;
+}
+
+/* Dimmed, not hidden. The typed values are the storefront's fallback if the
+   connection is ever lost, so a creator has to be able to read them. Applied to
+   the CONTROLS rather than the whole group, so the explanatory note beside them
+   stays legible. */
+.sf-ig-locked input,
+.sf-ig-locked .sf-range,
+.sf-ig-locked button {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .sf-ig-locked__note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin: 0 0 6px;
   font-family: var(--font-ui);
   font-size: 11px;
   color: var(--ink-faint, #878D99);
 }
+
+.sf-ig-lock { flex-shrink: 0; opacity: .8; }
