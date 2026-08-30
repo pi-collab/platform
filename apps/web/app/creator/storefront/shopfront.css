@@ -165,9 +165,11 @@
 }
 
 /* ── Instagram in the editor ──────────────────────────────────────────────────
-   The connect card and the verified readouts that sit above the creator's own
-   figures. Built from the editor's existing tokens so a verified number reads
-   as part of the form rather than as an integration bolted onto it.
+   The connect card, and the one quiet line that says a field's value came from
+   Instagram. Deliberately restrained: an earlier version highlighted every
+   verified figure in neon, which made the audience step read as a wall of
+   highlight rather than as a form. The neon is now spent on the one thing that
+   is genuinely a state change, the connected pill.
    ────────────────────────────────────────────────────────────────────────── */
 
 .sf-ig-panel {
@@ -176,11 +178,6 @@
   background: #fff;
   padding: 14px 16px;
   margin-bottom: 16px;
-}
-
-.sf-ig-panel--on {
-  background: color-mix(in oklab, var(--neon) 10%, #fff);
-  border-color: color-mix(in oklab, var(--neon) 42%, transparent);
 }
 
 .sf-ig-panel__head { display: flex; align-items: center; gap: 10px; }
@@ -258,117 +255,29 @@
 /* Choosing not to connect is not a failure, and red would say it was. */
 .sf-ig-msg--info { color: var(--ink-faint, #878D99); }
 
-/* The mark itself. Same words as the public page uses, so a creator recognises
-   what a brand will see. */
-.sf-ig-badge {
-  display: inline-flex; align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in oklab, var(--neon) 30%, #fff);
-  color: var(--lime-950, #161B08);
-  font-family: var(--font-ui);
-  font-size: 10px; font-weight: 700;
-  letter-spacing: .03em; text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.sf-ig-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.sf-ig-stat {
-  border-radius: 10px;
-  padding: 9px 11px;
-  background: color-mix(in oklab, var(--neon) 12%, #fff);
-  border: 1px solid color-mix(in oklab, var(--neon) 38%, transparent);
-}
-
-.sf-ig-stat__head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-
-.sf-ig-stat__label {
-  font-family: var(--font-ui);
-  font-size: 11px; font-weight: 600;
-  color: var(--ink-soft, #565C68);
-}
-
-.sf-ig-stat__value {
-  margin-top: 3px;
-  font-family: var(--font-display);
-  font-weight: 800; font-size: 19px;
-  letter-spacing: -0.02em;
-  color: var(--ink, #12151C);
-}
-
-.sf-ig-stat__note {
-  margin: 3px 0 0;
-  font-family: var(--font-ui);
-  font-size: 10.5px;
-  color: var(--ink-faint, #878D99);
-}
-
-/* A verified figure that has no single-number form: age bands, the three way
-   gender split, the city list. */
-.sf-ig-readout {
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  background: color-mix(in oklab, var(--neon) 12%, #fff);
-  border: 1px solid color-mix(in oklab, var(--neon) 38%, transparent);
-}
-
-.sf-ig-readout__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
-.sf-ig-readout__note {
-  font-family: var(--font-ui);
-  font-size: 10.5px;
-  color: var(--ink-faint, #878D99);
-}
-
-.sf-ig-readout__rows {
-  display: flex; flex-wrap: wrap; gap: 4px 14px;
-  margin-top: 7px;
-}
-
-.sf-ig-readout__pair {
-  font-family: var(--font-ui);
-  font-size: 12.5px;
-  color: var(--ink-soft, #565C68);
-}
-.sf-ig-readout__pair b {
-  font-family: var(--font-display);
-  font-weight: 800;
-  color: var(--ink, #12151C);
-}
-
-/* A disabled fieldset, reset to carry none of the browser's own chrome. The
-   creator's typed values stay VISIBLE while Instagram supplies the same
-   figures, because they are what the storefront falls back to. */
-.sf-ig-locked {
-  border: 0; margin: 0; padding: 0; min-width: 0;
-}
-
-/* Dimmed, not hidden. The typed values are the storefront's fallback if the
-   connection is ever lost, so a creator has to be able to read them. Applied to
-   the CONTROLS rather than the whole group, so the explanatory note beside them
-   stays legible. */
-.sf-ig-locked input,
-.sf-ig-locked .sf-range,
-.sf-ig-locked button {
-  opacity: .5;
-  cursor: not-allowed;
-}
-
-.sf-ig-locked__note {
+/* Where a value came from. One line, above the group it describes. */
+.sf-ig-from {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin: 0 0 6px;
+  margin: 0 0 7px;
   font-family: var(--font-ui);
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--ink-faint, #878D99);
 }
 
 .sf-ig-lock { flex-shrink: 0; opacity: .8; }
+
+/* The fields keep their normal shape and simply cannot be edited. Dimmed enough
+   to read as fixed, not so far that the numbers a brand will see become hard to
+   check. */
+.sf-ig-locked {
+  border: 0; margin: 0; padding: 0; min-width: 0;
+}
+
+.sf-ig-locked input,
+.sf-ig-locked .sf-range,
+.sf-ig-locked button {
+  opacity: .62;
+  cursor: not-allowed;
+}

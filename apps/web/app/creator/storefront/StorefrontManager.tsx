@@ -6,6 +6,7 @@ import './shopfront.css'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
 import type { IgConnectionView } from '@/lib/instagram-sync'
+import type { IgSnapshot } from '@/lib/instagram'
 import { saveChannelStats, createContentUploadUrl } from './actions'
 import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
@@ -167,6 +168,11 @@ function buildShopfrontData(
   // actually put on the page rather than what was last saved.
   chan: Record<string, ChannelStatFields>,
   currentSlug?: string,
+  // The verified snapshot, applied here exactly as the PUBLIC page applies it.
+  // Without this the preview showed typed values while the published page showed
+  // Instagram's, so the one screen whose entire job is "this is what a brand will
+  // see" was the one screen showing something else.
+  igSnap?: IgSnapshot,
 ): ShopfrontData {
   const handle = creator?.handle || 'creator'
   const rateCardItems = products.map(p => ({
@@ -225,16 +231,32 @@ function buildShopfrontData(
     // Instagram leads the storefront, so the headline is ITS number, never a
     // sum across channels: adding followers to subscribers counts the same
     // person twice and mixes two units that are not the same thing.
-    totalFollowers: igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
+    totalFollowers: igSnap?.followersCount != null
+      ? formatStat(igSnap.followersCount)
+      : igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
+    postsCount: igSnap?.mediaCount != null ? formatStat(igSnap.mediaCount) : undefined,
     interactions: igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
     avgViews: igPrimary?.avgViews != null ? formatStat(igPrimary.avgViews) : '',
-    monthlyReach: edit.monthlyReach, repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
+    monthlyReach: igSnap?.reachLast30 != null ? formatStat(igSnap.reachLast30) : edit.monthlyReach,
+    repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
     platforms: allPlatforms,
     audience: {
-      ageBreakdown: edit.ageBreakdown,
-      gender: { women: edit.genderWomen, men: 100 - edit.genderWomen },
-      topLocations: edit.topLocations,
+      ageBreakdown: igSnap?.ageBreakdown ?? edit.ageBreakdown,
+      gender: igSnap?.gender
+        ? { women: igSnap.gender.womenPct, men: igSnap.gender.menPct, unknown: igSnap.gender.unknownPct }
+        : { women: edit.genderWomen, men: 100 - edit.genderWomen },
+      topLocations: igSnap?.topLocations ?? edit.topLocations,
     },
+    verified: igSnap
+      ? {
+          followers: igSnap.followersCount != null,
+          posts: igSnap.mediaCount != null,
+          reach: igSnap.reachLast30 != null,
+          audience: Boolean(igSnap.ageBreakdown || igSnap.gender || igSnap.topLocations),
+          adultsOnly: (igSnap.under18Excluded ?? 0) > 0,
+          username: igSnap.username,
+        }
+      : undefined,
     contentItems: edit.contentItems, brandCollabs: edit.brandCollabs,
     rateCardItems, sections,
     // The creator is looking at their own shopfront; the offer buttons are for
@@ -741,27 +763,21 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
 
 /* ── Instagram in the editor ──────────────────────────────── */
 
-/** The mark a brand also sees on the public page, so the two agree. */
-function VerifiedBadge() {
-  return <span className="sf-ig-badge">From Instagram</span>
-}
-
 /**
- * A figure that came from Instagram, shown above the creator's own.
+ * Says where a field's value came from. One quiet line, not a panel.
  *
- * Read only because it is not ours to edit: it is what Instagram reported at
- * the last sync, and an editable copy would imply otherwise.
+ * An earlier version put every verified figure in its own neon card above the
+ * field it described, which doubled the height of the audience step and made the
+ * page read as a wall of highlight rather than as a form. The fields themselves
+ * now carry Instagram's values, so all that is left to say is where they came
+ * from, once, above the group.
  */
-function VerifiedStat({ label, value, note }: { label: string; value: string; note?: string }) {
+function FromInstagram({ note }: { note?: string }) {
   return (
-    <div className="sf-ig-stat">
-      <div className="sf-ig-stat__head">
-        <span className="sf-ig-stat__label">{label}</span>
-        <VerifiedBadge />
-      </div>
-      <div className="sf-ig-stat__value">{value}</div>
-      {note && <p className="sf-ig-stat__note">{note}</p>}
-    </div>
+    <p className="sf-ig-from">
+      <LockIcon />
+      <span>Fetched from Instagram{note ? `. ${note}` : ''}</span>
+    </p>
   )
 }
 
@@ -784,14 +800,8 @@ function LockedFields({ locked, children }: { locked: boolean; children: React.R
       // Native tooltip rather than a custom one: it works on the whole group,
       // needs no state, and does not have to be positioned inside a scrolling
       // editor column.
-      title={locked ? 'Synced from Instagram. Disconnect to edit these again.' : undefined}
+      title={locked ? 'Fetched from Instagram. Disconnect to edit these again.' : undefined}
     >
-      {locked && (
-        <p className="sf-ig-locked__note">
-          <LockIcon />
-          Your own figures, kept for if you disconnect Instagram
-        </p>
-      )}
       {children}
     </fieldset>
   )
@@ -817,7 +827,7 @@ function InstagramPanel({ connection, outcome, connecting, onConnect }: {
   const connected = s === 'connected'
 
   return (
-    <div className={`sf-ig-panel${connected ? ' sf-ig-panel--on' : ''}`}>
+    <div className="sf-ig-panel">
       <div className="sf-ig-panel__head">
         <span className="sf-ig-panel__icon" aria-hidden="true">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -1036,6 +1046,13 @@ export default function StorefrontManager({
     0,
     100 - (edit.ageBreakdown ?? []).slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0),
   )
+
+  // What the gender control DISPLAYS. Instagram reports three shares and the
+  // slider has only two ends, so men is shown as Instagram's own figure rather
+  // than as 100 minus women: the difference is the unknown share, and folding it
+  // into men would overstate men by exactly that much.
+  const genderWomenShown = igSnap?.gender ? igSnap.gender.womenPct : edit.genderWomen
+  const genderMenShown = igSnap?.gender ? igSnap.gender.menPct : 100 - edit.genderWomen
   const [nicheInput, setNicheInput] = useState('')
   const [newContentIdx, setNewContentIdx] = useState<number | null>(null)
   const [newCollabIdx, setNewCollabIdx] = useState<number | null>(null)
@@ -1244,7 +1261,7 @@ export default function StorefrontManager({
   }
 
   const resolvedSections = sectionsWithAutoHide(sections, edit, products, chan, !!storefront)
-  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug)
+  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug, igSnap)
 
   /* ── EDIT MODE ────────────────────────────────────────── */
 
@@ -1443,41 +1460,27 @@ export default function StorefrontManager({
                                   {CHANNEL_WINDOW[plat]}
                                 </p>
                               )}
-                              {/* Instagram supplies followers and reach for THIS
-                                  channel only. Avg views and interactions are
-                                  not returned by Meta, so they stay typed and
-                                  editable alongside. */}
-                              {isIg && igSnap && (
-                                <div className="sf-ig-stats">
-                                  <VerifiedStat label="Followers" value={formatStat(igSnap.followersCount)} />
-                                  {/* No typed counterpart exists for posts, so
-                                      there is nothing to lock beneath it. It is
-                                      verified or it is absent. */}
-                                  <VerifiedStat label="Posts" value={formatStat(igSnap.mediaCount)} />
-                                  {igSnap.reachLast30 != null && (
-                                    <VerifiedStat label="Reach, 30 days" value={formatStat(igSnap.reachLast30)} />
-                                  )}
-                                </div>
-                              )}
+                              {isIg && igSnap && <FromInstagram />}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {fields.map(f => {
                                   // Only the field Instagram actually supplies is
-                                  // locked. Locking the whole channel would take
-                                  // away two figures nobody verified.
+                                  // locked. Avg views and interactions are not
+                                  // returned by Meta, so they stay editable.
                                   const fieldLocked = Boolean(isIg && igSnap && f.key === 'followers')
+                                  // The SAME input, filled with Instagram's value
+                                  // rather than a separate panel beside it. The
+                                  // creator's own figure stays in the database as
+                                  // the fallback; it is simply not what this field
+                                  // shows while the connection is live.
+                                  const shownValue = fieldLocked && igSnap
+                                    ? String(igSnap.followersCount)
+                                    : vals[f.key]
                                   return (
                                   <div
                                     key={f.key}
-                                    className={fieldLocked ? 'sf-ig-locked' : undefined}
-                                    title={fieldLocked ? 'Synced from Instagram. Disconnect to edit this again.' : undefined}
+                                    title={fieldLocked ? 'Fetched from Instagram. Disconnect to edit this again.' : undefined}
                                   >
-                                    {fieldLocked && (
-                                      <p className="sf-ig-locked__note">
-                                        <LockIcon />
-                                        Your own figure, kept for if you disconnect
-                                      </p>
-                                    )}
-                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: fieldLocked ? 'default' : 'text' }}>
+                                    <div onClick={fieldLocked ? undefined : focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: fieldLocked ? 'default' : 'text' }}>
                                       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                                         {f.label}
                                       </span>
@@ -1487,7 +1490,7 @@ export default function StorefrontManager({
                                         aria-label={`${f.label} on ${plat}`}
                                         disabled={fieldLocked}
                                         placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 1.2K hours'}
-                                        value={vals[f.key]}
+                                        value={shownValue}
                                         onChange={e => {
                                           // Digits only for counts, and kept as a STRING so a
                                           // leading zero can be typed over rather than sticking,
@@ -1537,28 +1540,19 @@ export default function StorefrontManager({
 
                   <Field label="Age breakdown">
                     {igSnap?.ageBreakdown && (
-                      <div className="sf-ig-readout">
-                        <div className="sf-ig-readout__head">
-                          <VerifiedBadge />
-                          {(igSnap.under18Excluded ?? 0) > 0 && (
-                            <span className="sf-ig-readout__note">Covers followers aged 18 and over</span>
-                          )}
-                        </div>
-                        <div className="sf-ig-readout__rows">
-                          {igSnap.ageBreakdown.map(a => (
-                            <span key={a.label} className="sf-ig-readout__pair">
-                              <b>{a.label}</b> {a.pct}%
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      <FromInstagram
+                        note={(igSnap.under18Excluded ?? 0) > 0 ? 'Covers followers aged 18 and over' : undefined}
+                      />
                     )}
                     <LockedFields locked={Boolean(igSnap?.ageBreakdown)}>
+                    {/* The same grid, showing Instagram's bands when connected.
+                        Our band labels match theirs exactly, so this is a value
+                        swap rather than a different control. */}
                     <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                      {edit.ageBreakdown.map((age, i) => (
-                        <div key={i} onClick={focusRowInput} style={{ cursor: 'text',
+                      {(igSnap?.ageBreakdown ?? edit.ageBreakdown).map((age, i) => (
+                        <div key={i} onClick={igSnap?.ageBreakdown ? undefined : focusRowInput} style={{ cursor: igSnap?.ageBreakdown ? 'default' : 'text',
                           borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
-                          background: age.pct === Math.max(...edit.ageBreakdown.map(a => a.pct))
+                          background: age.pct === Math.max(...(igSnap?.ageBreakdown ?? edit.ageBreakdown).map(a => a.pct))
                                 ? 'color-mix(in oklab, var(--neon) 22%, #fff)'
                                 : '#FFFFFF',
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1576,7 +1570,14 @@ export default function StorefrontManager({
                                  this showed "045": typing into a field containing 0 produces the
                                  string "045", parseInt gives 45, and React sees its value prop
                                  still 45 — so it never rewrites the DOM and the zero stays. */
-                              value={i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
+                              /* When Instagram supplies the bands, every one of
+                                 them is its own reported figure. The derived
+                                 remainder only applies to the typed set, where
+                                 the last band is our arithmetic, not a number
+                                 anybody stated. */
+                              value={igSnap?.ageBreakdown
+                                ? String(age.pct)
+                                : i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
                               onChange={e => {
                                 if (i === edit.ageBreakdown.length - 1) return
                                 const digits = e.target.value.replace(/\D/g, '').slice(0, 3).replace(/^0+(?=\d)/, '')
@@ -1604,33 +1605,31 @@ export default function StorefrontManager({
                   </Field>
 
                   <Field label="Gender split">
-                    {/* The verified split is THREE way. The slider below can only
-                        express two, women against the remainder, so a verified
-                        value is reported here rather than pushed into a control
-                        that would have to drop the unknown share to fit. */}
+                    {/* Instagram reports a THIRD share, unknown, that this slider
+                        has no position for. The slider is filled with the women
+                        figure and the unknown share is stated beside it, rather
+                        than being folded into men to make the two ends add to a
+                        hundred — which would overstate men by exactly that share. */}
                     {igSnap?.gender && (
-                      <div className="sf-ig-readout">
-                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
-                        <div className="sf-ig-readout__rows">
-                          <span className="sf-ig-readout__pair"><b>Women</b> {igSnap.gender.womenPct}%</span>
-                          <span className="sf-ig-readout__pair"><b>Men</b> {igSnap.gender.menPct}%</span>
-                          <span className="sf-ig-readout__pair"><b>Unknown</b> {igSnap.gender.unknownPct}%</span>
-                        </div>
-                      </div>
+                      <FromInstagram
+                        note={igSnap.gender.unknownPct > 0
+                          ? `${igSnap.gender.unknownPct}% of followers are not reported as either`
+                          : undefined}
+                      />
                     )}
                     <LockedFields locked={Boolean(igSnap?.gender)}>
                     <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${BHL}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{edit.genderWomen}%</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{genderWomenShown}%</div>
                         <input
-                          type="range" min={0} max={100} value={edit.genderWomen}
+                          type="range" min={0} max={100} value={genderWomenShown}
                           onChange={e => set('genderWomen', parseInt(e.target.value))}
                           className="sf-range"
                           // --fill drives the track gradient: a native range gives no
                           // hook for styling "the part left of the thumb".
-                          style={{ flex: 1, ['--fill' as string]: `${edit.genderWomen}%` }}
+                          style={{ flex: 1, ['--fill' as string]: `${genderWomenShown}%` }}
                         />
-                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34, textAlign: 'right' }}>{100 - edit.genderWomen}%</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34, textAlign: 'right' }}>{genderMenShown}%</div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-faint)', marginTop: 6, padding: '0 2px' }}>
                         <span>Women</span><span>Men</span>
@@ -1640,19 +1639,10 @@ export default function StorefrontManager({
                   </Field>
 
                   <Field label="Top locations">
-                    {igSnap?.topLocations && igSnap.topLocations.length > 0 && (
-                      <div className="sf-ig-readout">
-                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
-                        <div className="sf-ig-readout__rows">
-                          {igSnap.topLocations.map(l => (
-                            <span key={l.city} className="sf-ig-readout__pair"><b>{l.city}</b> {l.pct}%</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {igSnap?.topLocations && igSnap.topLocations.length > 0 && <FromInstagram />}
                     <LockedFields locked={Boolean(igSnap?.topLocations?.length)}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {edit.topLocations.map((loc, i) => (
+                      {(igSnap?.topLocations?.length ? igSnap.topLocations : edit.topLocations).map((loc, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <input type="text" value={loc.city} onChange={e => {
                             const u = [...edit.topLocations]; u[i] = { ...loc, city: e.target.value }; set('topLocations', u)
@@ -1667,7 +1657,7 @@ export default function StorefrontManager({
                         </div>
                       ))}
                     </div>
-                    {edit.topLocations.length < 6 && (
+                    {!igSnap?.topLocations?.length && edit.topLocations.length < 6 && (
                       <div style={{ marginTop: 10 }}>
                         <AddButton label="Add city" onClick={() => set('topLocations', [...edit.topLocations, { city: '', pct: 0 }])} />
                       </div>
@@ -1810,16 +1800,16 @@ export default function StorefrontManager({
               <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
                   <Field label="Monthly reach">
-                    {igSnap?.reachLast30 != null && (
-                      <div className="sf-ig-readout">
-                        <div className="sf-ig-readout__head"><VerifiedBadge /></div>
-                        <div className="sf-ig-readout__rows">
-                          <span className="sf-ig-readout__pair"><b>{formatStat(igSnap.reachLast30)}</b> in the last 30 days</span>
-                        </div>
-                      </div>
-                    )}
+                    {igSnap?.reachLast30 != null && <FromInstagram note="Last 30 days" />}
                     <LockedFields locked={igSnap?.reachLast30 != null}>
-                      <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" onKeyDown={onFieldEnter} style={dinput} />
+                      <input
+                        type="text"
+                        value={igSnap?.reachLast30 != null ? formatStat(igSnap.reachLast30) : edit.monthlyReach}
+                        onChange={e => set('monthlyReach', e.target.value)}
+                        placeholder="2.8M"
+                        onKeyDown={onFieldEnter}
+                        style={dinput}
+                      />
                     </LockedFields>
                   </Field>
                   <Field label="Deals per month">
