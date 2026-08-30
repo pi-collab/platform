@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
+import { timeAgo } from '@/lib/instagram-outcomes'
 
 // Imported here, not by a page: this component is the editor preview, the
 // public /c/[slug] page and /browse/[id]. Rules kept in the editor's own
@@ -17,24 +18,65 @@ export interface ShopfrontSection {
   enabled: boolean
 }
 
-function VerifiedBadge({ username }: { username?: string }) {
+/**
+ * ONE mark for the whole page, not one per number.
+ *
+ * A badge beside every verified figure meant a brand read "From Instagram" four
+ * or five times on a single screen, which turned the thing that should carry
+ * weight into visual noise. Said once, at the top, it is a claim about the page.
+ *
+ * Opening it answers the two questions a brand actually has: WHICH numbers came
+ * from Instagram, and how current they are. Both matter for a decision to price
+ * against them, and neither was answerable before.
+ *
+ * A native <details>, so it needs no state, works with JavaScript off, and is
+ * keyboard operable without any of that being built by hand.
+ */
+function VerifiedPanel({ v }: { v: VerifiedMarks }) {
+  const fetched: string[] = []
+  if (v.followers) fetched.push('Followers')
+  if (v.posts) fetched.push('Posts')
+  if (v.reach) fetched.push('Monthly reach')
+  if (v.audience) fetched.push('Audience age, gender and cities')
+  if (fetched.length === 0) return null
+
   return (
-    <span
-      title={username ? `From @${username} on Instagram` : 'From Instagram'}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        marginLeft: 8, padding: '2px 8px', borderRadius: 999,
-        background: 'var(--neon, #E8FF66)', color: 'var(--lime-950, #161B08)',
-        fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700,
-        letterSpacing: '.04em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-        verticalAlign: 'middle',
-      }}
-    >
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M20 6 9 17l-5-5" />
-      </svg>
-      From Instagram
-    </span>
+    <details className="sf-verified">
+      <summary className="sf-verified__chip">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        Verified from Instagram
+        <span className="sf-verified__caret" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </summary>
+
+      <div className="sf-verified__body">
+        <p className="sf-verified__lead">
+          These figures are read directly from
+          {v.username ? <> <strong>@{v.username}</strong>&rsquo;s</> : ' this creator&rsquo;s'} Instagram
+          account, not entered by hand:
+        </p>
+        <ul className="sf-verified__list">
+          {fetched.map(f => <li key={f}>{f}</li>)}
+        </ul>
+        <p className="sf-verified__meta">
+          Refreshed every day.
+          {v.fetchedAt && <> Last updated {timeAgo(v.fetchedAt)}.</>}
+        </p>
+        {v.adultsOnly && (
+          <p className="sf-verified__meta">
+            Age and gender cover followers aged 18 and over.
+          </p>
+        )}
+        <p className="sf-verified__meta sf-verified__meta--quiet">
+          Everything else on this page is entered by the creator.
+        </p>
+      </div>
+    </details>
   )
 }
 
@@ -100,6 +142,9 @@ export interface VerifiedMarks {
    *  has no band for them. Surfaced so it is stated, not implied. */
   adultsOnly?: boolean
   username?: string
+  /** When the snapshot was taken. A brand deciding on these numbers is owed
+   *  their age, not just their provenance. */
+  fetchedAt?: string
 }
 
 /* ── The cover on a showcase card ────────────────────────────────────────────
@@ -561,17 +606,20 @@ export default function ShopfrontPreview({
                     if (heroStats.length === 0) return null
 
                     return (
+                      <>
+                      {/* Once, above the numbers it describes. */}
+                      {data.verified && <VerifiedPanel v={data.verified} />}
                       <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
                         {heroStats.map(s => (
                           <div key={s.key}>
                             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{s.value}</div>
                             <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
                               {s.label}
-                              {s.verified && <VerifiedBadge username={data.verified?.username} />}
                             </div>
                           </div>
                         ))}
                       </div>
+                      </>
                     )
                   })()}
 
@@ -641,7 +689,6 @@ export default function ShopfrontPreview({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sec-ink)' }} />
                   <span className="t-meta" style={{ color: 'var(--ink-soft)' }}>{stat.label}</span>
-                  {stat.verified && <VerifiedBadge username={data.verified?.username} />}
                 </div>
               </div>
             ))}
@@ -821,7 +868,7 @@ export default function ShopfrontPreview({
               <div>
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>
                   {firstName}&apos;s <span className="t-accent">audience</span>
-                  {data.verified?.audience && <VerifiedBadge username={data.verified.username} />}
+
                 </h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>
                     {data.verified?.audience

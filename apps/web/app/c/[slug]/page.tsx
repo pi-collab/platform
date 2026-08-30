@@ -195,6 +195,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
           audience: Boolean(ig.ageBreakdown || ig.gender || ig.topLocations),
           reach: ig.reachLast30 != null,
           posts: ig.mediaCount != null,
+          fetchedAt: ig.fetchedAt,
           // Stated because the shopfront has no band under 18, so these
           // percentages describe adult followers.
           adultsOnly: (ig.under18Excluded ?? 0) > 0,

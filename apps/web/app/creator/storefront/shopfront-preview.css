@@ -401,3 +401,79 @@
 /* The shimmer exists to make an empty gradient look alive. Over real media it
    is a smear. */
 .sf-exp:has(.sf-vid-media) .sf-vid::after { display: none; }
+
+/* ── The single verified mark ─────────────────────────────────────────────────
+   One claim for the whole page. A badge beside every figure meant a brand read
+   "From Instagram" four or five times on one screen, which spent the emphasis
+   rather than earning it.
+
+   A native <details>, so it opens with no JavaScript and is keyboard operable
+   without any of that being hand-built.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sf-verified { margin-top: 20px; }
+
+.sf-verified__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* Both are needed: WebKit uses its own pseudo-element for the marker and
+   ignores list-style. Without this the chip carries a stray triangle. */
+.sf-verified__chip::-webkit-details-marker { display: none; }
+.sf-verified__chip::marker { content: ''; }
+
+.sf-verified__caret { display: inline-flex; transition: transform .15s ease; }
+.sf-verified[open] .sf-verified__caret { transform: rotate(180deg); }
+
+.sf-verified__body {
+  margin-top: 10px;
+  max-width: 460px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--card, #fff);
+  border: 1px solid var(--frost-edge, rgba(24, 28, 36, .1));
+  box-shadow: 0 18px 40px -32px rgba(40, 45, 25, .5);
+}
+
+.sf-verified__lead {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft, #565C68);
+}
+
+.sf-verified__list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink, #12151C);
+  font-weight: 600;
+}
+
+.sf-verified__meta {
+  margin: 10px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-soft, #565C68);
+}
+
+.sf-verified__meta--quiet { color: var(--ink-faint, #878D99); }
