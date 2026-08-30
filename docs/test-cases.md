@@ -2080,6 +2080,17 @@ in place.
       public unauthenticated URLs that delete data; the signature is the only gate
 - [ ] Data deletion returns { url, confirmation_code } and the status page says
       what was deleted AND what was kept (deals are not Instagram data)
+- [ ] Both are EXEMPT from the staging Basic Auth middleware. Meta calls them
+      server to server with no credentials to offer, so a 401 is not a login
+      prompt, it is the callback silently failing. A deauthorize we never receive
+      leaves us holding a token the creator has revoked
+- [ ] The exemption is an EXACT path allowlist. `/api/instagram/connect` and
+      `/callback` must still 401 on staging; a `/api/instagram/` prefix would
+      have opened them too
+- [ ] `/api/instagram/deauthorize/../connect` must 401. Traversal must not reach
+      a gated route through an exempt prefix
+- [ ] An unsigned POST to deauthorize returns 200 and DELETES NOTHING. Always-200
+      is for Meta's retry semantics; verify the connection row still exists after
 
 **Scopes come back in a shape the docs do not describe**
 - [ ] The token exchange returns `permissions` as an ARRAY on the Instagram Login

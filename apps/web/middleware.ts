@@ -10,12 +10,40 @@ import { NextResponse, type NextRequest } from 'next/server'
  * 2. Once past the gate (or if the vars are unset), the existing Supabase
  *    session-refresh logic runs unchanged.
  */
+/**
+ * Paths the Basic Auth gate must NOT cover.
+ *
+ * Meta calls these server to server, with no browser and no credentials to
+ * offer, so a 401 here is not a login prompt, it is the callback failing. A
+ * deauthorize we never receive means we keep a token for a creator who has
+ * revoked it, which is the exact state the callback exists to prevent, and App
+ * Review checks that both respond.
+ *
+ * They are NOT unguarded: each verifies the `signed_request` HMAC against the
+ * app secret before touching anything, which is a stronger gate than a shared
+ * staging password and the only one Meta can actually satisfy.
+ *
+ * An EXACT allowlist, not a prefix. `/api/instagram/` as a prefix would also
+ * expose connect and callback, which have no reason to leave the gate.
+ */
+const BASIC_AUTH_EXEMPT = new Set([
+  '/api/instagram/deauthorize',
+  '/api/instagram/data-deletion',
+])
+
+function isExemptFromBasicAuth(pathname: string): boolean {
+  // Compared without a trailing slash, so "/…/deauthorize/" cannot miss the
+  // allowlist and land on the gate instead of the route.
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  return BASIC_AUTH_EXEMPT.has(normalized)
+}
+
 export async function middleware(request: NextRequest) {
   // ── 1. Basic Auth gate (opt-in) ──────────────────────────────────
   const authUser = process.env.STAGING_BASIC_AUTH_USER
   const authPass = process.env.STAGING_BASIC_AUTH_PASSWORD
 
-  if (authUser && authPass) {
+  if (authUser && authPass && !isExemptFromBasicAuth(request.nextUrl.pathname)) {
     const authorization = request.headers.get('authorization')
     if (authorization) {
       const [scheme, encoded] = authorization.split(' ')
