@@ -2150,10 +2150,13 @@ in place.
 - [ ] The three vetting actions sit on ONE line in a creators-list row at any
       column width. Word labels wrapped to two or three rows, which stretched
       every row in the table to the height of the tallest
-- [ ] Icon-only buttons still carry a NAME: `title` and `aria-label`, identical.
-      The confirm dialog still names the creator and the consequence in full
-- [ ] The creator DETAIL page keeps word labels. It has the width, and that is
-      where a decision that is not obvious gets made
+- [ ] The labels stay WORDS (Deals / Growth / Reject), not icons. These actions
+      email the creator, and a word is unambiguous where an icon has to be
+      learned. The full intent is on the tooltip and in the confirm dialog
+- [ ] The label does NOT change to "..." while busy. Swapping it resized the
+      button mid-click, so the row shifted under the cursor; it dims instead
+- [ ] With a narrow viewport the TABLE scrolls (OpsTableScroll), rather than the
+      buttons wrapping or the page pushing sideways
 - [ ] "Go to" jumps straight to a page on creators, brands, deals and offers.
       The window only shows first/last/current±1, so on 40 pages most were
       reachable only by stepping
