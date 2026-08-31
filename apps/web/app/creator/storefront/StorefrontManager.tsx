@@ -3,8 +3,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
-import { useRouter } from 'next/navigation'
-import { saveChannelStats, createContentUploadUrl } from './actions'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
+import type { IgConnectionView } from '@/lib/instagram-sync'
+import type { IgSnapshot } from '@/lib/instagram'
+import { saveChannelStats, createContentUploadUrl, syncInstagram, findBrandLogo, uploadBrandLogo } from './actions'
 import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
@@ -45,6 +48,9 @@ const DEFAULT_SECTIONS: ShopfrontSection[] = [
   { key: 'ratecard', label: 'Rate Card', enabled: true },
   { key: 'audience', label: 'Audience', enabled: true },
   { key: 'content', label: 'Content Showcase', enabled: true },
+  // Auto-hides on its own when there is no connected account, but it needs a
+  // registered key or SectionWrapper has nothing to look up.
+  { key: 'reels', label: 'Recent reels', enabled: true },
   { key: 'collabs', label: 'Past Collaborations', enabled: true },
   { key: 'pitch', label: 'Work With Me', enabled: true },
 ]
@@ -165,6 +171,11 @@ function buildShopfrontData(
   // actually put on the page rather than what was last saved.
   chan: Record<string, ChannelStatFields>,
   currentSlug?: string,
+  // The verified snapshot, applied here exactly as the PUBLIC page applies it.
+  // Without this the preview showed typed values while the published page showed
+  // Instagram's, so the one screen whose entire job is "this is what a brand will
+  // see" was the one screen showing something else.
+  igSnap?: IgSnapshot,
 ): ShopfrontData {
   const handle = creator?.handle || 'creator'
   const rateCardItems = products.map(p => ({
@@ -223,16 +234,37 @@ function buildShopfrontData(
     // Instagram leads the storefront, so the headline is ITS number, never a
     // sum across channels: adding followers to subscribers counts the same
     // person twice and mixes two units that are not the same thing.
-    totalFollowers: igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
-    interactions: igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
+    totalFollowers: igSnap?.followersCount != null
+      ? formatStat(igSnap.followersCount)
+      : igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
+    postsCount: igSnap?.mediaCount != null ? formatStat(igSnap.mediaCount) : undefined,
+
+    interactions: igSnap?.interactionsLast30 != null
+      ? formatStat(igSnap.interactionsLast30)
+      : igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',
     avgViews: igPrimary?.avgViews != null ? formatStat(igPrimary.avgViews) : '',
-    monthlyReach: edit.monthlyReach, repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
+    monthlyReach: igSnap?.reachLast30 != null ? formatStat(igSnap.reachLast30) : edit.monthlyReach,
+    repeatBrands: edit.repeatBrands, avgDealValue: edit.avgDealValue,
     platforms: allPlatforms,
     audience: {
-      ageBreakdown: edit.ageBreakdown,
-      gender: { women: edit.genderWomen, men: 100 - edit.genderWomen },
-      topLocations: edit.topLocations,
+      ageBreakdown: igSnap?.ageBreakdown ?? edit.ageBreakdown,
+      gender: igSnap?.gender
+        ? { women: igSnap.gender.womenPct, men: igSnap.gender.menPct, unknown: igSnap.gender.unknownPct }
+        : { women: edit.genderWomen, men: 100 - edit.genderWomen },
+      topLocations: igSnap?.topLocations ?? edit.topLocations,
     },
+    verified: igSnap
+      ? {
+          followers: igSnap.followersCount != null,
+          posts: igSnap.mediaCount != null,
+          interactions: igSnap.interactionsLast30 != null,
+          reach: igSnap.reachLast30 != null,
+          audience: Boolean(igSnap.ageBreakdown || igSnap.gender || igSnap.topLocations),
+          adultsOnly: (igSnap.under18Excluded ?? 0) > 0,
+          username: igSnap.username,
+          fetchedAt: igSnap.fetchedAt,
+        }
+      : undefined,
     contentItems: edit.contentItems, brandCollabs: edit.brandCollabs,
     rateCardItems, sections,
     // The creator is looking at their own shopfront; the offer buttons are for
@@ -666,6 +698,99 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
 
 /* ── Brand collab card ────────────────────────────────────── */
 
+/**
+ * The brand's logo: find it, or upload it.
+ *
+ * Both, because neither alone works. The auto-fetch is favicon grade — Clearbit,
+ * which served real wordmarks, no longer exists — so it produces a small square
+ * mark that is right often enough to save typing and wrong often enough that it
+ * cannot be the only option. Uploading always works and is the only way to get a
+ * logo that fills the tile.
+ *
+ * The preview is capped at the mark's natural size rather than stretched, so a
+ * 32px favicon reads as a deliberate small mark instead of a blurred one.
+ */
+function BrandLogoRow({ collab, onUpdate }: {
+  collab: BrandCollab
+  onUpdate: (patch: Partial<BrandCollab>) => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function find() {
+    setBusy(true); setMsg(null)
+    const res = await findBrandLogo(collab.name || '')
+    setBusy(false)
+    if (res.ok) { onUpdate({ logoUrl: res.url }); setMsg(`Found via ${res.domain}`) }
+    else setMsg(res.message)
+  }
+
+  async function upload(file: File) {
+    setBusy(true); setMsg(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('key', collab.name || 'brand')
+    const res = await uploadBrandLogo(fd)
+    setBusy(false)
+    if (res.ok) { onUpdate({ logoUrl: res.url }); setMsg('Uploaded') }
+    else setMsg(res.message)
+  }
+
+  return (
+    <Field label="Logo" hint="Optional. We can try to find it, or upload your own.">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{
+          width: 46, height: 46, flexShrink: 0, borderRadius: 10,
+          border: `1px solid ${BHL}`, background: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        }}>
+          {collab.logoUrl
+            /* eslint-disable-next-line @next/next/no-img-element */
+            ? <img src={collab.logoUrl} alt="" style={{ maxWidth: 38, maxHeight: 38, objectFit: 'contain' }} />
+            : <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink-faint)' }}>
+                {collab.name ? collab.name[0].toUpperCase() : '?'}
+              </span>}
+        </div>
+
+        <button type="button" onClick={find} disabled={busy || !collab.name?.trim()} style={sfSmallBtn}>
+          {busy ? 'Working…' : 'Find logo'}
+        </button>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} style={sfSmallBtn}>
+          Upload
+        </button>
+        {collab.logoUrl && (
+          <button type="button" onClick={() => { onUpdate({ logoUrl: undefined }); setMsg(null) }} disabled={busy}
+            style={{ ...sfSmallBtn, color: '#B4262A' }}>
+            Remove
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }}
+        />
+      </div>
+      {msg && <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>{msg}</p>}
+    </Field>
+  )
+}
+
+const sfSmallBtn: React.CSSProperties = {
+  minHeight: 32,
+  padding: '0 11px',
+  borderRadius: 8,
+  border: `1px solid ${BHL}`,
+  background: '#fff',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--ink)',
+}
+
 function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
   collab: BrandCollab; index: number; isNew?: boolean
   onUpdate: (updated: BrandCollab) => void
@@ -716,6 +841,20 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
               <input type="text" value={collab.name} onChange={e => u({ name: e.target.value })}
                 placeholder="e.g. Groww, boAt, Mamaearth" onKeyDown={onFieldEnter} style={dinput} />
             </Field>
+            <BrandLogoRow collab={collab} onUpdate={u} />
+
+            <Field label="Link to the post you made" hint="Optional. The reel or post you delivered for them.">
+              <input
+                type="url"
+                inputMode="url"
+                value={collab.reelUrl || ''}
+                onChange={e => u({ reelUrl: e.target.value })}
+                placeholder="https://www.instagram.com/reel/..."
+                onKeyDown={onFieldEnter}
+                style={dinput}
+              />
+            </Field>
+
             <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr', gap: 10 }}>
               <Field label="What you delivered" style={{ marginBottom: 0 }}>
                 <input type="text" value={collab.type || ''} onChange={e => u({ type: e.target.value })}
@@ -733,6 +872,145 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Instagram in the editor ──────────────────────────────── */
+
+/**
+ * Says where a field's value came from. One quiet line, not a panel.
+ *
+ * An earlier version put every verified figure in its own neon card above the
+ * field it described, which doubled the height of the audience step and made the
+ * page read as a wall of highlight rather than as a form. The fields themselves
+ * now carry Instagram's values, so all that is left to say is where they came
+ * from, once, above the group.
+ */
+function FromInstagram({ note }: { note?: string }) {
+  return (
+    <p className="sf-ig-from">
+      <LockIcon />
+      <span>Fetched from Instagram{note ? `. ${note}` : ''}</span>
+    </p>
+  )
+}
+
+/**
+ * Locks a group of inputs while Instagram is supplying the same figures.
+ *
+ * A `fieldset` rather than a per-input `disabled`, because it disables every
+ * descendant control natively, including the add and remove buttons. Doing it
+ * by hand across a dozen inputs is how one gets missed.
+ *
+ * The typed values stay VISIBLE rather than hidden: they are what the storefront
+ * falls back to if the connection is ever lost, and a creator cannot judge that
+ * fallback without seeing it.
+ */
+function LockedFields({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  return (
+    <fieldset
+      className={locked ? 'sf-ig-locked' : undefined}
+      disabled={locked}
+      // Native tooltip rather than a custom one: it works on the whole group,
+      // needs no state, and does not have to be positioned inside a scrolling
+      // editor column.
+      title={locked ? 'Fetched from Instagram. Disconnect to edit these again.' : undefined}
+    >
+      {children}
+    </fieldset>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg className="sf-ig-lock" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect width="18" height="11" x="3" y="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+
+/** The connect card, and what it says in each state. */
+function InstagramPanel({ connection, outcome, connecting, onConnect, onSync, syncing }: {
+  connection: IgConnectionView
+  outcome: { tone: OutcomeTone; text: string } | null
+  connecting: boolean
+  onConnect: () => void
+  onSync: () => void
+  syncing: boolean
+}) {
+  const s = connection.status
+  const connected = s === 'connected'
+
+  return (
+    <div className="sf-ig-panel">
+      <div className="sf-ig-panel__head">
+        <span className="sf-ig-panel__icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="20" height="20" x="2" y="2" rx="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+          </svg>
+        </span>
+        <div className="sf-ig-panel__text">
+          <div className="sf-ig-panel__title">
+            Instagram{connected && connection.username ? ` · @${connection.username}` : ''}
+          </div>
+          <div className="sf-ig-panel__sub">
+            {connected
+              ? connection.lastSyncedAt
+                ? `Synced ${timeAgo(connection.lastSyncedAt)}. Refreshes daily.`
+                : 'Connected. Not synced yet.'
+              : 'Fill your followers, audience and reach automatically.'}
+          </div>
+        </div>
+        {connected && (
+          <>
+            <button
+              type="button"
+              className="sf-ig-sync"
+              onClick={onSync}
+              disabled={syncing}
+              title="Refresh the figures from Instagram"
+              aria-label="Refresh the figures from Instagram"
+            >
+              <svg
+                className={syncing ? 'sf-ig-sync__spin' : undefined}
+                width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                <path d="M21 3v6h-6" />
+              </svg>
+            </button>
+            <span className="sf-ig-panel__pill">Verified</span>
+          </>
+        )}
+      </div>
+
+      {!connected && (
+        <>
+          <p className="sf-ig-panel__body">
+            {s === 'personal_account'
+              ? 'That account is a personal one, so Instagram will not share audience data for it. Switch it to a Business or Creator account, then reconnect.'
+              : s === 'expired' || s === 'needs_reconnect'
+                ? 'The connection to Instagram needs renewing. Your shopfront is showing the numbers you entered yourself until you reconnect.'
+                : 'Brands trust a number they can see came from Instagram. Connecting fills these in for you and keeps them current.'}
+          </p>
+          <button type="button" className="sf-ig-panel__btn" onClick={onConnect} disabled={connecting}>
+            {connecting
+              ? 'Saving your changes…'
+              : s === 'not_connected' ? 'Connect Instagram' : 'Reconnect Instagram'}
+          </button>
+          <p className="sf-ig-panel__hint">
+            Your changes are saved first, so nothing is lost while you connect.
+          </p>
+        </>
+      )}
+
+      {outcome && <p className={`sf-ig-msg sf-ig-msg--${outcome.tone}`} role="status">{outcome.text}</p>}
     </div>
   )
 }
@@ -781,8 +1059,11 @@ const CHANNEL_WINDOW: Record<string, string> = {
 const CHANNEL_FIELDS: Record<string, { key: keyof ChannelStatFields; label: string; hint?: string; numeric: boolean }[]> = {
   instagram: [
     { key: 'followers', label: 'Followers', numeric: true },
-    { key: 'avgViews', label: 'Avg views', numeric: true },
-    { key: 'interactions', label: 'Interactions', hint: 'Likes, comments and shares added up. A count, not a percentage.', numeric: true },
+    // Instagram does not report views at ACCOUNT level, so this one stays the
+    // creator's own figure. Said on the field, because a number sitting blank
+    // beside three that fill themselves reads as something broken.
+    { key: 'avgViews', label: 'Avg views', hint: 'Instagram does not share this one, so enter it yourself.', numeric: true },
+    { key: 'interactions', label: 'Interactions', hint: 'Likes, comments, shares and saves added up. Filled from Instagram once you connect.', numeric: true },
   ],
   // Views, subscribers and watch time: the three figures on the front page of
   // YouTube Studio, so a creator copies rather than calculates.
@@ -836,13 +1117,22 @@ function focusRowInput(e: React.MouseEvent<HTMLElement>) {
 
 export default function StorefrontManager({
   storefront, creator, products, creatorName, addonRates = [], revisionPolicy,
+  instagramConnection = { status: 'not_connected' },
 }: {
   storefront: StorefrontRow | null; creator: Creator | null
   products: Product[]; creatorName: string
   addonRates?: AddonRateRow[]
   revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
+  instagramConnection?: IgConnectionView
 }) {
   const router = useRouter()
+  const search = useSearchParams()
+
+  // The verified snapshot, and ONLY while the connection is healthy. An expired
+  // or broken connection falls back to what the creator typed, which is the same
+  // rule the public page applies, so the editor cannot promise a brand something
+  // the storefront will not show.
+  const igSnap = instagramConnection.status === 'connected' ? instagramConnection.snapshot : undefined
   const isNew = storefront === null
   const [mode, setMode] = useState<'preview' | 'edit'>('preview')
   // The welcome panel covers the sample shopfront it is describing, so it must
@@ -898,6 +1188,13 @@ export default function StorefrontManager({
     0,
     100 - (edit.ageBreakdown ?? []).slice(0, -1).reduce((t, a) => t + (a.pct || 0), 0),
   )
+
+  // What the gender control DISPLAYS. Instagram reports three shares and the
+  // slider has only two ends, so men is shown as Instagram's own figure rather
+  // than as 100 minus women: the difference is the unknown share, and folding it
+  // into men would overstate men by exactly that much.
+  const genderWomenShown = igSnap?.gender ? igSnap.gender.womenPct : edit.genderWomen
+  const genderMenShown = igSnap?.gender ? igSnap.gender.menPct : 100 - edit.genderWomen
   const [nicheInput, setNicheInput] = useState('')
   const [newContentIdx, setNewContentIdx] = useState<number | null>(null)
   const [newCollabIdx, setNewCollabIdx] = useState<number | null>(null)
@@ -1031,6 +1328,58 @@ export default function StorefrontManager({
     return true
   }
 
+  /* ── Instagram ──────────────────────────────────────────────────────────── */
+
+  const [igOutcomeMsg, setIgOutcomeMsg] = useState<{ tone: OutcomeTone; text: string } | null>(null)
+  const [igConnecting, setIgConnecting] = useState(false)
+  const [igSyncing, setIgSyncing] = useState(false)
+
+  // The callback's report, read once and then stripped from the URL so a
+  // refresh does not replay an outcome already dealt with.
+  useEffect(() => {
+    const reason = search.get('ig')
+    if (!reason) return
+    setIgOutcomeMsg(igOutcome(reason))
+    const rest = new URLSearchParams(search.toString())
+    rest.delete('ig')
+    const qs = rest.toString()
+    router.replace(qs ? `/creator/storefront?${qs}` : '/creator/storefront', { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
+   * Save, then hand off to Instagram.
+   *
+   * The editor holds a multi-step form in local state and connecting leaves the
+   * page entirely, so anything typed and not yet saved would be gone by the time
+   * the creator came back. Saving first makes the round trip non-destructive.
+   *
+   * A failed save STOPS the handoff: the error message is already on screen, and
+   * leaving for Instagram at that moment would discard the very edits the save
+   * just failed to keep.
+   */
+  /** Pull the figures again, without leaving the editor. */
+  async function runInstagramSync() {
+    setIgSyncing(true)
+    setIgOutcomeMsg(null)
+    const res = await syncInstagram()
+    setIgOutcomeMsg(res.ok
+      ? { tone: 'ok', text: 'Figures refreshed from Instagram.' }
+      : { tone: 'err', text: res.message ?? 'Could not refresh.' })
+    setIgSyncing(false)
+    // The snapshot lives on the server, so the new figures only reach this
+    // screen on a refetch.
+    router.refresh()
+  }
+
+  async function startInstagramConnect() {
+    setIgConnecting(true)
+    setIgOutcomeMsg(null)
+    const saved = await handleSave()
+    if (!saved) { setIgConnecting(false); return }
+    window.location.href = '/api/instagram/connect?return=storefront'
+  }
+
   function addNiche() {
     const v = nicheInput.trim()
     if (v && !edit.niches.includes(v) && edit.niches.length < 5) {
@@ -1069,7 +1418,7 @@ export default function StorefrontManager({
   }
 
   const resolvedSections = sectionsWithAutoHide(sections, edit, products, chan, !!storefront)
-  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug)
+  const shopfrontData = buildShopfrontData(creator, products, storefront, resolvedSections, edit, chan, slug, igSnap)
 
   /* ── EDIT MODE ────────────────────────────────────────── */
 
@@ -1234,6 +1583,15 @@ export default function StorefrontManager({
 
               <div style={{ display: wizard && step !== 2 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Audience" subtitle="Who follows you" icon={IconUsers}>
+                  <InstagramPanel
+                    connection={instagramConnection}
+                    outcome={igOutcomeMsg}
+                    connecting={igConnecting}
+                    onConnect={startInstagramConnect}
+                    onSync={runInstagramSync}
+                    syncing={igSyncing}
+                  />
+
                   <Field label="Your numbers" hint="Per channel and all optional. Leave anything you cannot back up blank; a blank is simply not shown.">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       {((creator?.social_accounts ?? []) as Array<{ platform?: string; handle?: string }>)
@@ -1243,6 +1601,10 @@ export default function StorefrontManager({
                           const plat = String(a.platform ?? '').trim().toLowerCase()
                           const fields = CHANNEL_FIELDS[plat] ?? DEFAULT_CHANNEL_FIELDS
                           const vals = chan[k] ?? EMPTY_CHANNEL_STATS
+                          // Matched on platform, not on handle: a creator can
+                          // rename their Instagram handle without that silently
+                          // detaching the verified figures from the channel.
+                          const isIg = plat === 'instagram'
                           return (
                             <div key={k} style={{ borderRadius: 12, border: `1px solid ${BHL}`, padding: '12px 14px' }}>
                               <div style={{
@@ -1257,10 +1619,34 @@ export default function StorefrontManager({
                                   {CHANNEL_WINDOW[plat]}
                                 </p>
                               )}
+                              {isIg && igSnap && <FromInstagram />}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {fields.map(f => (
-                                  <div key={f.key}>
-                                    <div onClick={focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'text' }}>
+                                {fields.map(f => {
+                                  // Only the field Instagram actually supplies is
+                                  // locked. Avg views and interactions are not
+                                  // returned by Meta, so they stay editable.
+                                  const fieldLocked = Boolean(
+                                    isIg && igSnap && (
+                                      f.key === 'followers' ||
+                                      (f.key === 'interactions' && igSnap.interactionsLast30 != null)
+                                    ),
+                                  )
+                                  // The SAME input, filled with Instagram's value
+                                  // rather than a separate panel beside it. The
+                                  // creator's own figure stays in the database as
+                                  // the fallback; it is simply not what this field
+                                  // shows while the connection is live.
+                                  const shownValue = !fieldLocked || !igSnap
+                                    ? vals[f.key]
+                                    : f.key === 'followers'
+                                      ? String(igSnap.followersCount)
+                                      : String(igSnap.interactionsLast30 ?? '')
+                                  return (
+                                  <div
+                                    key={f.key}
+                                    title={fieldLocked ? 'Fetched from Instagram. Disconnect to edit this again.' : undefined}
+                                  >
+                                    <div onClick={fieldLocked ? undefined : focusRowInput} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: fieldLocked ? 'default' : 'text' }}>
                                       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                                         {f.label}
                                       </span>
@@ -1268,8 +1654,9 @@ export default function StorefrontManager({
                                         type="text"
                                         inputMode={f.numeric ? 'numeric' : 'text'}
                                         aria-label={`${f.label} on ${plat}`}
+                                        disabled={fieldLocked}
                                         placeholder={f.numeric ? 'e.g. 12400' : 'e.g. 1.2K hours'}
-                                        value={vals[f.key]}
+                                        value={shownValue}
                                         onChange={e => {
                                           // Digits only for counts, and kept as a STRING so a
                                           // leading zero can be typed over rather than sticking,
@@ -1303,7 +1690,8 @@ export default function StorefrontManager({
                                       </p>
                                     )}
                                   </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             </div>
                           )
@@ -1317,11 +1705,20 @@ export default function StorefrontManager({
                   </Field>
 
                   <Field label="Age breakdown">
+                    {igSnap?.ageBreakdown && (
+                      <FromInstagram
+                        note={(igSnap.under18Excluded ?? 0) > 0 ? 'Covers followers aged 18 and over' : undefined}
+                      />
+                    )}
+                    <LockedFields locked={Boolean(igSnap?.ageBreakdown)}>
+                    {/* The same grid, showing Instagram's bands when connected.
+                        Our band labels match theirs exactly, so this is a value
+                        swap rather than a different control. */}
                     <div className="sf-grid-pairs" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                      {edit.ageBreakdown.map((age, i) => (
-                        <div key={i} onClick={focusRowInput} style={{ cursor: 'text',
+                      {(igSnap?.ageBreakdown ?? edit.ageBreakdown).map((age, i) => (
+                        <div key={i} onClick={igSnap?.ageBreakdown ? undefined : focusRowInput} style={{ cursor: igSnap?.ageBreakdown ? 'default' : 'text',
                           borderRadius: 12, border: `1px solid ${BHL}`, padding: '10px 14px',
-                          background: age.pct === Math.max(...edit.ageBreakdown.map(a => a.pct))
+                          background: age.pct === Math.max(...(igSnap?.ageBreakdown ?? edit.ageBreakdown).map(a => a.pct))
                                 ? 'color-mix(in oklab, var(--neon) 22%, #fff)'
                                 : '#FFFFFF',
                           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1339,7 +1736,14 @@ export default function StorefrontManager({
                                  this showed "045": typing into a field containing 0 produces the
                                  string "045", parseInt gives 45, and React sees its value prop
                                  still 45 — so it never rewrites the DOM and the zero stays. */
-                              value={i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
+                              /* When Instagram supplies the bands, every one of
+                                 them is its own reported figure. The derived
+                                 remainder only applies to the typed set, where
+                                 the last band is our arithmetic, not a number
+                                 anybody stated. */
+                              value={igSnap?.ageBreakdown
+                                ? String(age.pct)
+                                : i === edit.ageBreakdown.length - 1 ? String(ageRemainder) : String(age.pct)}
                               onChange={e => {
                                 if (i === edit.ageBreakdown.length - 1) return
                                 const digits = e.target.value.replace(/\D/g, '').slice(0, 3).replace(/^0+(?=\d)/, '')
@@ -1363,31 +1767,48 @@ export default function StorefrontManager({
                         </div>
                       ))}
                     </div>
+                    </LockedFields>
                   </Field>
 
                   <Field label="Gender split">
+                    {/* Instagram reports a THIRD share, unknown, that this slider
+                        has no position for. The slider is filled with the women
+                        figure and the unknown share is stated beside it, rather
+                        than being folded into men to make the two ends add to a
+                        hundred — which would overstate men by exactly that share. */}
+                    {igSnap?.gender && (
+                      <FromInstagram
+                        note={igSnap.gender.unknownPct > 0
+                          ? `${igSnap.gender.unknownPct}% of followers are not reported as either`
+                          : undefined}
+                      />
+                    )}
+                    <LockedFields locked={Boolean(igSnap?.gender)}>
                     <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${BHL}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{edit.genderWomen}%</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34 }}>{genderWomenShown}%</div>
                         <input
-                          type="range" min={0} max={100} value={edit.genderWomen}
+                          type="range" min={0} max={100} value={genderWomenShown}
                           onChange={e => set('genderWomen', parseInt(e.target.value))}
                           className="sf-range"
                           // --fill drives the track gradient: a native range gives no
                           // hook for styling "the part left of the thumb".
-                          style={{ flex: 1, ['--fill' as string]: `${edit.genderWomen}%` }}
+                          style={{ flex: 1, ['--fill' as string]: `${genderWomenShown}%` }}
                         />
-                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34, textAlign: 'right' }}>{100 - edit.genderWomen}%</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--ink)', minWidth: 34, textAlign: 'right' }}>{genderMenShown}%</div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-faint)', marginTop: 6, padding: '0 2px' }}>
                         <span>Women</span><span>Men</span>
                       </div>
                     </div>
+                    </LockedFields>
                   </Field>
 
                   <Field label="Top locations">
+                    {igSnap?.topLocations && igSnap.topLocations.length > 0 && <FromInstagram />}
+                    <LockedFields locked={Boolean(igSnap?.topLocations?.length)}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {edit.topLocations.map((loc, i) => (
+                      {(igSnap?.topLocations?.length ? igSnap.topLocations : edit.topLocations).map((loc, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <input type="text" value={loc.city} onChange={e => {
                             const u = [...edit.topLocations]; u[i] = { ...loc, city: e.target.value }; set('topLocations', u)
@@ -1402,11 +1823,12 @@ export default function StorefrontManager({
                         </div>
                       ))}
                     </div>
-                    {edit.topLocations.length < 6 && (
+                    {!igSnap?.topLocations?.length && edit.topLocations.length < 6 && (
                       <div style={{ marginTop: 10 }}>
                         <AddButton label="Add city" onClick={() => set('topLocations', [...edit.topLocations, { city: '', pct: 0 }])} />
                       </div>
                     )}
+                    </LockedFields>
                   </Field>
                 </Section>
               </div>
@@ -1544,7 +1966,17 @@ export default function StorefrontManager({
               <div style={{ display: wizard && step !== 6 ? 'none' : undefined }}>
                 <Section forceOpen={wizard} title="Highlights" subtitle="Numbers brands notice first" icon={IconChart} defaultOpen>
                   <Field label="Monthly reach">
-                    <input type="text" value={edit.monthlyReach} onChange={e => set('monthlyReach', e.target.value)} placeholder="2.8M" onKeyDown={onFieldEnter} style={dinput} />
+                    {igSnap?.reachLast30 != null && <FromInstagram note="Last 30 days" />}
+                    <LockedFields locked={igSnap?.reachLast30 != null}>
+                      <input
+                        type="text"
+                        value={igSnap?.reachLast30 != null ? formatStat(igSnap.reachLast30) : edit.monthlyReach}
+                        onChange={e => set('monthlyReach', e.target.value)}
+                        placeholder="2.8M"
+                        onKeyDown={onFieldEnter}
+                        style={dinput}
+                      />
+                    </LockedFields>
                   </Field>
                   <Field label="Deals per month">
                     <input type="text" value={edit.repeatBrands} onChange={e => set('repeatBrands', e.target.value)} placeholder="4" onKeyDown={onFieldEnter} style={dinput} />

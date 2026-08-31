@@ -300,6 +300,16 @@ export default function ShopfrontMobile({
   const cities = data.audience.topLocations ?? []
   const womenPct = data.audience.gender?.women ?? 0
   const menPct = data.audience.gender?.men ?? Math.max(0, 100 - womenPct)
+  // Instagram reports a share it cannot attribute. Present only on a verified
+  // split, so a typed two-way breakdown is unaffected.
+  const unknownPct = data.audience.gender?.unknown ?? 0
+  // The ring and its centre report the LARGER share. Fixed to women, a mostly
+  // male audience read "29% WOMEN" over a ring two thirds filled with the other
+  // colour, leaving a brand to do the subtraction the chart exists to save
+  // them. Between women and men only: "not stated" is a gap, not an audience.
+  const menLeads = menPct > womenPct
+  const leadPct = menLeads ? menPct : womenPct
+  const leadLabel = menLeads ? 'MEN' : 'WOMEN'
 
   const shareLabel = linkCopied ? 'Copied' : 'Share'
   const copyShopfrontLink = copyLink
@@ -378,7 +388,7 @@ export default function ShopfrontMobile({
                 </div>
                 <p style={{fontSize: '13px', lineHeight: '1.55', color: 'var(--ink)', margin: '18px auto 0', maxWidth: '280px'}}>{data.bio}</p>
                 <div style={{display: 'flex', alignItems: 'center', marginTop: '24px'}}>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Followers</div></div>
+                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Followers{data.verified?.followers && (<span title={data.verified.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'} style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}} />)}</div></div>
                   <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
                   <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.interactions}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Interactions</div></div>
                   <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
@@ -470,7 +480,7 @@ export default function ShopfrontMobile({
 
                   <div style={{display: igShow ? 'block' : 'none'}}>
                     <div style={{display: 'flex', gap: '44px', marginTop: '24px', flexWrap: 'wrap'}}>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Followers</div></div>
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Followers{data.verified?.followers && (<span title={data.verified.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'} style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}} />)}</div></div>
                       <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.interactions}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Interactions</div></div>
                       <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
                     </div>
@@ -508,11 +518,14 @@ export default function ShopfrontMobile({
                 </div>
 
                 <div className="mcard sfm-gender" style={{marginTop: '16px', padding: '24px 22px', display: 'flex', alignItems: 'center', gap: '24px'}}>
-                  <div data-anim="donut" style={{['--donut-target' as string]: `${womenPct}%`, position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: undefined}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{womenPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>WOMEN</div></div></div>
+                  <div data-anim="donut" style={{['--donut-target' as string]: `${leadPct}%`, position: 'relative', width: '68px', height: '68px', flexShrink: '0', borderRadius: '50%', background: undefined}}><div style={{position: 'absolute', inset: '9px', borderRadius: '50%', background: 'var(--card)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}><div className="t-figure" style={{fontSize: '13px', fontWeight: '700', color: 'var(--ink)', lineHeight: '1'}}>{leadPct + "%"}</div><div className="t-meta" style={{color: '#878D99', fontSize: '7px', marginTop: '2px'}}>{leadLabel}</div></div></div>
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px', flex: '1'}}>
                     <span className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Gender</span>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--ink)'}}>Women</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>{womenPct + "%"}</span></div>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--wg-500)'}}>Men</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--wg-500)'}}>{menPct + "%"}</span></div>
+                    {unknownPct > 0 && (
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}><span style={{fontSize: '13px', color: 'var(--meta)'}}>Not stated</span><span style={{fontWeight: '600', fontSize: '15px', color: 'var(--meta)'}}>{unknownPct + "%"}</span></div>
+                    )}
                   </div>
                 </div>
 

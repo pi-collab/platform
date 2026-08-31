@@ -1,0 +1,154 @@
+/* ── Connected accounts ──────────────────────────────────────────────────────
+   Built from the creator app's own tokens (--card, --frost-edge, --ink,
+   --font-ui, --neon) so it reads as the same product as the panels beside it,
+   rather than as an integration bolted on.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.ca-card {
+  padding: clamp(16px, 2.2vw, 22px);
+  border-radius: 20px;
+  border: 1px solid var(--frost-edge, rgba(255, 255, 255, .85));
+  background: var(--card, #fff);
+  box-shadow: 0 24px 54px -40px rgba(40, 45, 25, .32), inset 0 1px 0 rgba(255, 255, 255, .92);
+}
+
+.ca-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ca-icon {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--sec-2, #F7F4FB);
+  color: var(--ink, #12151C);
+}
+
+.ca-head__text { flex: 1; min-width: 0; }
+
+.ca-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.015em;
+  color: var(--ink, #12151C);
+}
+
+.ca-sub {
+  margin: 2px 0 0;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-faint, #878D99);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.ca-pill {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ca-pill--ok   { background: var(--neon, #E8FF66); color: var(--lime-950, #161B08); }
+.ca-pill--warn { background: #FEF3C7; color: #92400E; }
+.ca-pill--idle { background: rgba(24, 28, 36, .06); color: var(--ink-faint, #878D99); }
+
+.ca-body, .ca-note, .ca-synced {
+  font-family: var(--font-ui);
+  line-height: 1.6;
+  color: var(--ink-soft, #565C68);
+}
+
+.ca-body  { margin: 14px 0 0; font-size: 14px; }
+.ca-note  { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-faint, #878D99); }
+.ca-synced { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-faint, #878D99); }
+.ca-warn  { color: #92400E; }
+
+.ca-steps {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--ink-soft, #565C68);
+}
+
+/* The verified figures. Same treatment as the shopfront's own stat row, so a
+   creator recognises what a brand will see. */
+.ca-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 14px;
+  margin: 16px 0 0;
+}
+
+.ca-figure { margin: 0; }
+
+.ca-figure__label {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #878D99);
+}
+
+.ca-figure__value {
+  margin: 5px 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--ink, #12151C);
+}
+
+.ca-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+
+.ca-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--frost-edge, rgba(255, 255, 255, .85));
+  background: var(--card, #fff);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #12151C);
+  text-decoration: none;
+  margin-top: 16px;
+}
+
+.ca-actions .ca-btn { margin-top: 0; }
+
+.ca-btn--primary { background: var(--ink, #12151C); border-color: var(--ink, #12151C); color: #fff; }
+.ca-btn--quiet   { color: var(--ink-faint, #878D99); }
+.ca-btn:disabled { opacity: .55; cursor: default; }
+
+.ca-msg { margin: 12px 0 0; font-family: var(--font-ui); font-size: 13px; line-height: 1.6; }
+.ca-msg--ok  { color: #166534; }
+.ca-msg--err { color: #B4262A; }
+/* A creator who chose not to continue has not hit an error, and red would say
+   they had. */
+.ca-msg--info { color: var(--ink-faint, #878D99); }
+
+/* Phones: the figures wrap to two columns and the buttons go full width, so a
+   destructive action is never a small target beside a primary one. */
+@media (max-width: 767.98px) {
+  .ca-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ca-actions { flex-direction: column; }
+  .ca-actions .ca-btn { width: 100%; }
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
+import { timeAgo } from '@/lib/instagram-outcomes'
 
 // Imported here, not by a page: this component is the editor preview, the
 // public /c/[slug] page and /browse/[id]. Rules kept in the editor's own
@@ -15,6 +16,113 @@ export interface ShopfrontSection {
   key: string
   label: string
   enabled: boolean
+}
+
+/**
+ * ONE mark for the whole page, not one per number.
+ *
+ * A badge beside every verified figure meant a brand read "From Instagram" four
+ * or five times on a single screen, which turned the thing that should carry
+ * weight into visual noise. Said once, at the top, it is a claim about the page.
+ *
+ * Opening it answers the two questions a brand actually has: WHICH numbers came
+ * from Instagram, and how current they are. Both matter for a decision to price
+ * against them, and neither was answerable before.
+ *
+ * A native <details>, so it needs no state, works with JavaScript off, and is
+ * keyboard operable without any of that being built by hand.
+ */
+/**
+ * A reel on the Recent work strip.
+ *
+ * Every metric is optional and independently so. Instagram serves no insights
+ * for media posted before the account's last conversion to a professional
+ * account, so a reel with a thumbnail and nothing else is the ordinary case.
+ * The card renders NOTHING where the numbers would be rather than dashes or
+ * empty slots: five cards each showing "—" reads as five broken cards, which is
+ * worse than five clean ones.
+ */
+export interface RecentReel {
+  id: string
+  permalink: string
+  thumbnailUrl?: string
+  caption?: string
+  views?: number
+  reach?: number
+  likes?: number
+  comments?: number
+  saved?: number
+  shares?: number
+}
+
+/** 12400 -> 12.4K. Compact, because these sit four to a card. */
+function fmtCount(n: number): string {
+  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
+  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
+  return String(n)
+}
+
+function isSafeUrl(raw?: string): boolean {
+  if (!raw) return false
+  try {
+    const u = new URL(raw.trim())
+    // Creator-entered and rendered as an anchor, so the scheme is CHECKED rather
+    // than assumed: `javascript:` in an href executes on click, and "looks like
+    // a URL" is a different question from "is safe to link". Parsed rather than
+    // pattern-matched, because the parser is what the browser will use.
+    return u.protocol === 'https:' || u.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function VerifiedPanel({ v }: { v: VerifiedMarks }) {
+  const fetched: string[] = []
+  if (v.followers) fetched.push('Followers')
+  if (v.posts) fetched.push('Posts')
+  if (v.reach) fetched.push('Monthly reach')
+  if (v.interactions) fetched.push('Interactions')
+  if (v.audience) fetched.push('Audience age, gender and cities')
+  if (fetched.length === 0) return null
+
+  return (
+    <details className="sf-verified">
+      <summary className="sf-verified__chip">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        Verified from Instagram
+        <span className="sf-verified__caret" aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </span>
+      </summary>
+
+      <div className="sf-verified__body">
+        <p className="sf-verified__lead">
+          These figures are read directly from
+          {v.username ? <> <strong>@{v.username}</strong>&rsquo;s</> : ' this creator&rsquo;s'} Instagram
+          account:
+        </p>
+        <ul className="sf-verified__list">
+          {fetched.map(f => <li key={f}>{f}</li>)}
+        </ul>
+        <p className="sf-verified__meta">
+          Refreshed every day.
+          {v.fetchedAt && <> Last updated {timeAgo(v.fetchedAt)}.</>}
+        </p>
+        {v.adultsOnly && (
+          <p className="sf-verified__meta">
+            Age and gender cover followers aged 18 and over.
+          </p>
+        )}
+        <p className="sf-verified__meta sf-verified__meta--quiet">
+          Everything else on this page is entered by the creator.
+        </p>
+      </div>
+    </details>
+  )
 }
 
 /** 1234 -> 1.2K, 1200000 -> 1.2M. Whole numbers keep no decimal. */
@@ -52,8 +160,38 @@ export interface PlatformStat {
 
 export interface AudienceData {
   ageBreakdown?: { label: string; pct: number }[]
-  gender?: { women: number; men: number }
+  /** `unknown` is present only on a VERIFIED split. Instagram reports a real
+   *  unknown share (19% on the account this was built against) and folding it
+   *  into men would overstate one and hide the other. */
+  gender?: { women: number; men: number; unknown?: number }
   topLocations?: { city: string; pct: number }[]
+}
+
+/**
+ * Which figures came from a connected account rather than from the creator.
+ *
+ * Set ONLY from an Instagram snapshot on a healthy connection. Absent means
+ * everything on the page is self-reported, which is the honest default and what
+ * every storefront showed before this existed.
+ */
+export interface VerifiedMarks {
+  followers?: boolean
+  audience?: boolean
+  /** Reach over the last 30 days, as Instagram reported it. Separate from
+   *  `audience` because a creator under 100 followers gets no demographics but
+   *  still gets a reach figure. */
+  reach?: boolean
+  /** Posts. Always true when a snapshot exists, since /me always returns it. */
+  posts?: boolean
+  /** Likes, comments, shares and saves over 30 days. */
+  interactions?: boolean
+  /** The age and gender percentages exclude under-18s, because the shopfront
+   *  has no band for them. Surfaced so it is stated, not implied. */
+  adultsOnly?: boolean
+  username?: string
+  /** When the snapshot was taken. A brand deciding on these numbers is owed
+   *  their age, not just their provenance. */
+  fetchedAt?: string
 }
 
 /* ── The cover on a showcase card ────────────────────────────────────────────
@@ -148,6 +286,9 @@ export interface BrandCollab {
   views?: string
   engagement?: string
   logoUrl?: string
+  /** The post the creator made for this brand. Optional, and validated to
+   *  http(s) before it is stored, since it is rendered as a link. */
+  reelUrl?: string
 }
 
 export interface RateCardItem {
@@ -181,12 +322,18 @@ export interface ShopfrontData {
   /** A COUNT the creator stated, not a rate. Blank when unsaid. */
   interactions: string
   avgViews: string
+  /** Recent reels from the connected account, newest first. */
+  recentReels?: RecentReel[]
+  /** Posts, from the connected account only. There is no typed equivalent, so
+   *  this is absent rather than blank when Instagram is not connected. */
+  postsCount?: string
   // Stats strip
   monthlyReach: string
   repeatBrands: string
   avgDealValue: string
   // Platform stats
   platforms: PlatformStat[]
+  verified?: VerifiedMarks
   // Audience
   audience: AudienceData
   // Content
@@ -227,6 +374,9 @@ const DEFAULT_SECTIONS: ShopfrontSection[] = [
   { key: 'ratecard', label: 'Rate Card', enabled: true },
   { key: 'audience', label: 'Audience', enabled: true },
   { key: 'content', label: 'Content Showcase', enabled: true },
+  // Auto-hides on its own when there is no connected account, but it needs a
+  // registered key or SectionWrapper has nothing to look up.
+  { key: 'reels', label: 'Recent reels', enabled: true },
   { key: 'collabs', label: 'Past Collaborations', enabled: true },
   { key: 'pitch', label: 'Work With Me', enabled: true },
 ]
@@ -441,8 +591,8 @@ export default function ShopfrontPreview({
                   {/* Social handles + storefront link — single row */}
                   <div className="sf-hero-handles" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 12 }}>
                     {data.platforms.map(p => (
+                      <React.Fragment key={p.platform}>
                       <a
-                        key={p.platform}
                         href={profileUrl(p.platform, p.handle) ?? '#'}
                         target="_blank" rel="noopener noreferrer"
                         // NOT a pill. It was one, with 12px of horizontal padding
@@ -469,6 +619,7 @@ export default function ShopfrontPreview({
                         )}
                         {atHandle(p.handle)}
                       </a>
+                      </React.Fragment>
                     ))}
                     {data.replyTime && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 0', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
@@ -492,21 +643,41 @@ export default function ShopfrontPreview({
                     ))}
                   </div>
 
-                  {/* Quick stats */}
-                  <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.totalFollowers}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Total followers</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.interactions}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Interactions</div>
-                    </div>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{data.avgViews}</div>
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>Avg views</div>
-                    </div>
-                  </div>
+                  {/* Quick stats.
+
+                      OMITTED when blank, not rendered empty. These three were
+                      unconditional, so a creator with a verified follower count
+                      and no self-entered figures got one number beside two
+                      label-only blocks — a page that reads as broken rather than
+                      as brief. Posts comes from the connected account, so it
+                      appears only when there is one. */}
+                  {(() => {
+                    const heroStats = [
+                      { key: 'followers', value: data.totalFollowers, label: 'Total followers', verified: data.verified?.followers },
+                      { key: 'posts', value: data.postsCount ?? '', label: 'Posts', verified: data.verified?.posts },
+                      { key: 'interactions', value: data.interactions, label: 'Interactions', verified: false },
+                      { key: 'avgViews', value: data.avgViews, label: 'Avg views', verified: false },
+                    ].filter(s => s.value !== '' && s.value != null)
+
+                    if (heroStats.length === 0) return null
+
+                    return (
+                      <>
+                      {/* Once, heading the numbers it describes. */}
+                      {data.verified && <VerifiedPanel v={data.verified} />}
+                      <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
+                        {heroStats.map(s => (
+                          <div key={s.key}>
+                            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{s.value}</div>
+                            <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
+                              {s.label}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      </>
+                    )
+                  })()}
 
                   {/* CTAs */}
                   <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
@@ -561,17 +732,17 @@ export default function ShopfrontPreview({
         <section className="sf-sec" style={{ padding: 'clamp(16px,2vw,28px) clamp(20px,5vw,72px)' }}>
           <div className="sf-stats-strip" style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap: 16 }}>
             {[
-              { value: data.monthlyReach, label: 'Monthly reach' },
-              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '-', label: 'Replies in' },
-              { value: data.repeatBrands, label: 'Deals per month' },
-              { value: data.avgDealValue, label: 'Avg deal value' },
+              { value: data.monthlyReach, label: 'Monthly reach', verified: data.verified?.reach },
+              { value: data.replyTime ? `~${data.replyTime.replace('~', '')}` : '-', label: 'Replies in', verified: false },
+              { value: data.repeatBrands, label: 'Deals per month', verified: false },
+              { value: data.avgDealValue, label: 'Avg deal value', verified: false },
             ].map((stat, i) => (
               <div key={i} style={{
                 position: 'relative', borderRadius: 20, background: 'var(--card)', padding: '22px 24px',
                 boxShadow: '0 20px 46px -30px rgba(40,45,25,.4)',
               }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 34, lineHeight: 1 }}>{stat.value}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 11, flexWrap: 'wrap' }}>
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sec-ink)' }} />
                   <span className="t-meta" style={{ color: 'var(--ink-soft)' }}>{stat.label}</span>
                 </div>
@@ -751,8 +922,15 @@ export default function ShopfrontPreview({
             {/* Header + tabs */}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
               <div>
-                <h2 className="t-title" style={{ margin: '0 0 6px' }}>{firstName}&apos;s <span className="t-accent">audience</span></h2>
-                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>Figures {firstName} reports for each channel.</p>
+                <h2 className="t-title" style={{ margin: '0 0 6px' }}>
+                  {firstName}&apos;s <span className="t-accent">audience</span>
+
+                </h2>
+                <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 440, margin: 0 }}>
+                    {data.verified?.audience
+                      ? <>Pulled from Instagram{data.verified.adultsOnly ? ', covering followers aged 18 and over' : ''}.</>
+                      : <>Figures {firstName} reports for each channel.</>}
+                  </p>
               </div>
               {/* Only when there is something to switch BETWEEN. A tablist with one
                   tab is a control that cannot do anything, and it implies a second
@@ -985,7 +1163,35 @@ export default function ShopfrontPreview({
                   {/* Right column: Gender + Locations */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(14px,1.8vw,20px)', minWidth: 0 }}>
                     {/* Gender donut */}
-                    {data.audience.gender && (
+                    {data.audience.gender && (() => {
+                      const g = data.audience.gender!
+                      // Instagram reports a share it cannot attribute, and on this
+                      // account it is not a rounding error. A two-segment donut
+                      // drew that share in the men colour, so the chart overstated
+                      // men by exactly the amount nobody actually knows.
+                      const unknown = g.unknown != null && g.unknown > 0 ? g.unknown : 0
+
+                      // The centre reports the LARGER share, not always women.
+                      // A donut whose middle read "29% women" while two thirds of
+                      // it was the other colour made a brand do the subtraction to
+                      // reach the fact the chart exists to state.
+                      //
+                      // Between women and men only. "Not stated" is the absence of
+                      // an answer, so leading with it would headline a gap as if
+                      // it were an audience.
+                      const menLeads = g.men > g.women
+                      const leadPct = menLeads ? g.men : g.women
+                      const leadLabel = menLeads ? 'men' : 'women'
+
+                      // The highlight follows the leader, so the emphasised colour
+                      // and the number in the middle are describing the same slice.
+                      const womenColor = menLeads ? 'var(--sec-mid-2)' : 'var(--neon-deep)'
+                      const menColor = menLeads ? 'var(--neon-deep)' : 'var(--sec-mid-2)'
+
+                      const gradient = unknown > 0
+                        ? `conic-gradient(${womenColor} 0 ${g.women}%,${menColor} ${g.women}% ${g.women + g.men}%,var(--hairline) ${g.women + g.men}% 100%)`
+                        : `conic-gradient(${womenColor} 0 ${g.women}%,${menColor} ${g.women}% 100%)`
+                      return (
                       <div style={{
                         flex: '0 0 auto', border: '1px solid var(--hairline)', borderRadius: 24, background: 'var(--card)',
                         boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(18px,2vw,22px) clamp(22px,2.4vw,28px)',
@@ -997,36 +1203,48 @@ export default function ShopfrontPreview({
                         <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginTop: 'auto', paddingTop: 16 }}>
                           <div className="aud-donut" style={{
                             position: 'relative', width: 'clamp(84px,22vw,112px)', height: 'clamp(84px,22vw,112px)', flexShrink: 0, borderRadius: '50%',
-                            background: `conic-gradient(var(--neon-deep) 0 ${data.audience.gender.women}%,var(--sec-mid-2) ${data.audience.gender.women}% 100%)`,
+                            background: gradient,
                             boxShadow: '0 12px 26px -14px rgba(40,45,25,.35)',
                           } as React.CSSProperties}>
                             <div style={{
                               position: 'absolute', inset: 15, borderRadius: '50%', background: 'var(--card)',
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{data.audience.gender.women}%</span>
-                              <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>women</span>
+                              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 25, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--ink)' }}>{leadPct}%</span>
+                              <span className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 3 }}>{leadLabel}</span>
                             </div>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--neon-deep)' }} />
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: womenColor }} />
                               <div>
-                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.women}%</div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.women}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Women</div>
                               </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                              <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--sec-mid-2)' }} />
+                              <span style={{ width: 11, height: 11, borderRadius: 4, background: menColor }} />
                               <div>
-                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{data.audience.gender.men}%</div>
+                                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{g.men}%</div>
                                 <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Men</div>
                               </div>
                             </div>
+                            {/* Shown only when Instagram actually reports one, so a
+                                typed two-way split is unchanged. */}
+                            {unknown > 0 && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                <span style={{ width: 11, height: 11, borderRadius: 4, background: 'var(--hairline)' }} />
+                                <div>
+                                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 18, color: 'var(--ink)' }}>{unknown}%</div>
+                                  <div className="t-meta" style={{ color: 'var(--ink-faint)' }}>Not stated</div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                    )}
+                      )
+                    })()}
 
                     {/* Top locations */}
                     {data.audience.topLocations && (
@@ -1075,8 +1293,13 @@ export default function ShopfrontPreview({
         <SectionWrapper sectionKey="content">
           <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
             <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Recent work</span>
-              <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>A look at {firstName}&apos;s content</h2>
+              {/* "Selected", not "Recent". This section is what the creator
+                  chose to be judged on, and labelling curated work as recent
+                  claimed a currency it does not have — the exact claim the
+                  Instagram strip would have made and that we decided not to
+                  show. */}
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Selected work</span>
+              <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>Work {firstName} has picked out</h2>
 
               <div className="sf-exprow">
                 {data.contentItems.slice(0, 5).map((item, i) => {
@@ -1145,6 +1368,14 @@ export default function ShopfrontPreview({
         </SectionWrapper>
       )}
 
+      {/* Recent reels are deliberately NOT shown.
+          The curated Content Showcase above is what a creator chose to be judged
+          on, and the brands section below carries the reel they made for each
+          brand. An automatic strip of latest posts competes with the first and
+          duplicates the second. The fetch is disabled to match — see
+          buildSnapshot — so nothing is downloaded or stored for a hidden
+          section. The renderer and the fetch both remain, one call site each. */}
+
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
       {data.brandCollabs.length > 0 && (
         <SectionWrapper sectionKey="collabs">
@@ -1154,7 +1385,16 @@ export default function ShopfrontPreview({
               <div style={{ margin: '10px 0 clamp(10px,1.3vw,16px)' }}>
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>Brands {firstName} has delivered for</h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: 0 }}>Real campaigns, real numbers from brands who booked {firstName} and came back.</p>
-                <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>{data.brandCollabs.length} brands booked on our platform</div>
+                {/* NOT "booked on our platform". These entries are typed by the
+                    creator; nothing about them went through Guapd. The claim was
+                    the same class of thing as the 6.4% engagement and the
+                    340,000 avg views: a credential the page asserted that no
+                    code could support. It becomes true only when the brand side
+                    can auto-populate from a real deal, and it can be said again
+                    then. */}
+                <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>
+                  {data.brandCollabs.length} {data.brandCollabs.length === 1 ? 'brand' : 'brands'}
+                </div>
               </div>
             </div>
 
@@ -1183,14 +1423,32 @@ export default function ShopfrontPreview({
                     boxShadow: '0 24px 52px -34px rgba(40,45,25,.34)',
                     display: 'flex', flexDirection: 'column', padding: 18,
                   }}>
-                    {/* Brand logo placeholder */}
+                    {/* The logo when there is one, the name when there is not.
+                        NEVER upscaled: the auto-fetched marks are favicons, often
+                        32px, and stretching one across this tile turns a brand's
+                        logo into a smudge on the page they are being judged on.
+                        maxWidth/maxHeight cap it; an uploaded logo is usually
+                        large enough to fill. */}
                     <div style={{
                       width: '100%', height: 214, borderRadius: 18,
                       border: '1px solid var(--sec-mid-2)',
                       background: 'linear-gradient(150deg,#F4F8FC 0%,#F7F4FB 55%,#FAFAF8 100%)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: 12, padding: 18,
                     }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-faint)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                      {brand.logoUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={brand.logoUrl}
+                            alt=""
+                            style={{ maxWidth: 96, maxHeight: 96, objectFit: 'contain', flexShrink: 0 }}
+                          />
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-faint)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                      )}
                     </div>
                     <div style={{ marginTop: 'auto', paddingTop: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
@@ -1202,6 +1460,27 @@ export default function ShopfrontPreview({
                         {brand.views && brand.engagement && ' · '}
                         {brand.engagement && <><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{brand.engagement}</span> engagement</>}
                       </div>
+                      {/* The work itself. Only ever http(s), and only on the real
+                          tile — the duplicate exists for the marquee loop and is
+                          aria-hidden, so giving it a focusable link would put a
+                          keyboard user on a copy of a card. */}
+                      {isSafeUrl(brand.reelUrl) && i < data.brandCollabs.length && (
+                        <a
+                          href={brand.reelUrl}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 9,
+                            fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+                            color: 'var(--ink)', textDecoration: 'none', borderBottom: '1px solid var(--sec-mid-2)',
+                          }}
+                        >
+                          See the post
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 17 17 7M9 7h8v8" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { getConnection } from '@/lib/instagram-sync'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
 import { displayEmail } from '@/lib/synthetic-email'
@@ -29,6 +30,7 @@ export default async function CreatorSettingsPage() {
     .eq('id', ctx.creatorId)
     .single()
 
+  const instagramConnection = await getConnection(ctx.creatorId)
   const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>
   const prefs = (user?.preferences ?? {}) as Record<string, string>
 
@@ -42,6 +44,7 @@ export default async function CreatorSettingsPage() {
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}
+      instagramConnection={instagramConnection}
       creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
       userEmail={displayEmail(user?.email) ?? ''}
       userPhone={user?.phone ?? ''}

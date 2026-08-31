@@ -163,3 +163,155 @@
   border-radius: 999px;
   background: transparent;
 }
+
+/* ── Instagram in the editor ──────────────────────────────────────────────────
+   The connect card, and the one quiet line that says a field's value came from
+   Instagram. Deliberately restrained: an earlier version highlighted every
+   verified figure in neon, which made the audience step read as a wall of
+   highlight rather than as a form. The neon is now spent on the one thing that
+   is genuinely a state change, the connected pill.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.sf-ig-panel {
+  border-radius: 14px;
+  border: 1px solid var(--border-hairline, rgba(24, 28, 36, .1));
+  background: #fff;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.sf-ig-panel__head { display: flex; align-items: center; gap: 10px; }
+
+.sf-ig-panel__icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: #F7F4FB;
+  color: var(--ink, #12151C);
+}
+
+.sf-ig-panel__text { flex: 1; min-width: 0; }
+
+.sf-ig-panel__title {
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 700;
+  color: var(--ink, #12151C);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.sf-ig-panel__sub {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  color: var(--ink-faint, #878D99);
+  margin-top: 1px;
+}
+
+.sf-ig-panel__pill {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--neon, #E8FF66);
+  color: var(--lime-950, #161B08);
+  font-family: var(--font-ui);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+.sf-ig-panel__body {
+  margin: 10px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px; line-height: 1.55;
+  color: var(--ink-soft, #565C68);
+}
+
+.sf-ig-panel__btn {
+  margin-top: 11px;
+  min-height: 38px;
+  padding: 0 15px;
+  border-radius: 999px;
+  border: 1px solid var(--ink, #12151C);
+  background: var(--ink, #12151C);
+  color: #fff;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 12.5px; font-weight: 700;
+}
+.sf-ig-panel__btn:disabled { opacity: .55; cursor: default; }
+
+.sf-ig-panel__hint {
+  margin: 7px 0 0;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint, #878D99);
+}
+
+.sf-ig-msg {
+  margin: 10px 0 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px; line-height: 1.55;
+}
+.sf-ig-msg--ok   { color: #166534; }
+.sf-ig-msg--err  { color: #B4262A; }
+/* Choosing not to connect is not a failure, and red would say it was. */
+.sf-ig-msg--info { color: var(--ink-faint, #878D99); }
+
+/* Where a value came from. One line, above the group it describes. */
+.sf-ig-from {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 7px;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  color: var(--ink-faint, #878D99);
+}
+
+.sf-ig-lock { flex-shrink: 0; opacity: .8; }
+
+/* The fields keep their normal shape and simply cannot be edited. Dimmed enough
+   to read as fixed, not so far that the numbers a brand will see become hard to
+   check. */
+.sf-ig-locked {
+  border: 0; margin: 0; padding: 0; min-width: 0;
+}
+
+.sf-ig-locked input,
+.sf-ig-locked .sf-range,
+.sf-ig-locked button {
+  opacity: .62;
+  cursor: not-allowed;
+}
+
+/* The refresh control, in the panel header beside the status pill. */
+.sf-ig-sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-hairline, rgba(24, 28, 36, .12));
+  background: #fff;
+  color: var(--ink-soft, #565C68);
+  cursor: pointer;
+}
+
+.sf-ig-sync:hover:not(:disabled) { color: var(--ink, #12151C); }
+.sf-ig-sync:disabled { opacity: .55; cursor: default; }
+
+/* Turns while it works, so a sync that takes a few seconds does not look like a
+   button that did nothing. */
+.sf-ig-sync__spin { animation: sf-ig-spin 1s linear infinite; }
+
+@keyframes sf-ig-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Respects a reduced-motion preference: the disabled state still reads as busy
+   without anything moving. */
+@media (prefers-reduced-motion: reduce) {
+  .sf-ig-sync__spin { animation: none; }
+}

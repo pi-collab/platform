@@ -1259,28 +1259,6 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] "Not started" says so plainly, since that is the first thing worth nudging
 - [ ] The column count on the list still matches (8 headers / 8 cells) — adding a column and forgetting its cell shifts every row from that point on, which happened once already
 
-### 45b. Ops list rows and pagination
-
-- [ ] The three vetting actions sit on ONE line in a creators-list row at any
-      column width. Word labels wrapped to two or three rows, which stretched
-      every row in the table to the height of the tallest
-- [ ] The labels stay WORDS (Deals / Growth / Reject), not icons. These actions
-      email the creator, and a word is unambiguous where an icon has to be
-      learned. The full intent is on the tooltip and in the confirm dialog
-- [ ] The label does NOT change to "..." while busy. Swapping it resized the
-      button mid-click, so the row shifted under the cursor; it dims instead
-- [ ] With a narrow viewport the TABLE scrolls (OpsTableScroll), rather than the
-      buttons wrapping or the page pushing sideways
-- [ ] "Go to" jumps straight to a page on creators, brands, deals and offers.
-      The window only shows first/last/current±1, so on 40 pages most were
-      reachable only by stepping
-- [ ] JUMPING PRESERVES FILTERS. A GET form replaces the query string of its
-      action, so the band/status/shopfront filters are re-submitted as hidden
-      fields. Without them, changing page silently clears the filter and shows a
-      different set than the one being worked through
-- [ ] The jump box is hidden at 7 pages or fewer, where every page has a link
-- [ ] It works with JavaScript disabled, and lands on a real shareable URL
-
 ### 45c. Ops search, appeals queue and appeal replies
 
 - [ ] Creators search matches name OR handle; brands search matches brand name,
@@ -2072,6 +2050,284 @@ in place.
 - [ ] Editing an existing package still saves
 - [ ] Run 0491 BEFORE relying on the app fix alone. The action writes both
       columns now, but any other insert path still takes the column defaults
+
+### Instagram connection (Phase One)
+
+**Connect**
+- [ ] "Connected accounts" is its own settings section, NOT part of the social
+      handles list. A handle is text; a connection has a token, an expiry and
+      five states, and social_accounts has a history of writers destroying each
+      other's keys
+- [ ] Connecting never signs the creator in or out. They stay on phone OTP
+- [ ] The state nonce is compared before the code is spent. Without it, a
+      crafted callback URL would bind an attacker's Instagram to the creator's
+      account and the storefront would show the wrong person's audience
+- [ ] The trailing "#_" is stripped from the code
+- [ ] A personal account lands on status personal_account with the switch steps,
+      NOT a generic error
+- [ ] account_type is re-read on EVERY sync: a creator can switch back to
+      personal, and verified figures must stop the moment we cannot verify them
+
+**Storage**
+- [ ] Token is AES-256-GCM encrypted before it reaches the table. Tampering with
+      the ciphertext fails decryption rather than sending garbage to Meta
+- [ ] RLS denies all client access AND the grant is revoked. No client component
+      imports the token helpers or names the table
+- [ ] BOTH ids stored: ig_user_id (insights) and ig_app_scoped_id (Meta's
+      callbacks). They are different values and each flow needs its own
+- [ ] Encryption does NOT protect against app compromise; the key sits beside
+      the service-role key. Stated in the file, not implied
+
+**Refresh**
+- [ ] Cron runs daily and refreshes independent of creator login. On-demand
+      refresh would disconnect anyone not returning within 60 days
+- [ ] Refresh only when the token is <14 days from expiry AND >24h old (Meta's
+      rule)
+- [ ] An expired token sets status expired and clears the connected marker
+- [ ] A failed sync KEEPS the last good snapshot: a transient Instagram outage
+      must not blank a live storefront
+- [ ] The cron route rejects requests without the CRON_SECRET bearer token
+
+**Storefront**
+- [ ] SNAPSHOT-FIRST, never overwrite. Creator-typed values are untouched, and
+      disconnecting reveals them again with nothing to restore
+- [ ] Verified figures carry a "From Instagram" badge; typed ones do not
+- [ ] Age/gender percentages exclude under-18s and the page SAYS so. Instagram
+      returns a 13-17 bucket the shopfront has no band for
+- [ ] Gender is F/(F+M+U) with unknown shown, not folded into men
+- [ ] Avg views is NOT auto-filled. Instagram omits `views` at account level and
+      an omitted metric returns an empty set, not an error
+- [ ] Under 100 followers: demographics unavailable is explained, not shown as 0
+- [ ] Meta's own metric titles are never rendered — they come back locale-derived
+      (Marathi on the test account)
+
+**Meta callbacks**
+- [ ] Deauthorize and data-deletion VERIFY the signed_request signature. Both are
+      public unauthenticated URLs that delete data; the signature is the only gate
+- [ ] Data deletion returns { url, confirmation_code } and the status page says
+      what was deleted AND what was kept (deals are not Instagram data)
+- [ ] Both are EXEMPT from the staging Basic Auth middleware. Meta calls them
+      server to server with no credentials to offer, so a 401 is not a login
+      prompt, it is the callback silently failing. A deauthorize we never receive
+      leaves us holding a token the creator has revoked
+- [ ] The exemption is an EXACT path allowlist. `/api/instagram/connect` and
+      `/callback` must still 401 on staging; a `/api/instagram/` prefix would
+      have opened them too
+- [ ] `/api/instagram/deauthorize/../connect` must 401. Traversal must not reach
+      a gated route through an exempt prefix
+- [ ] An unsigned POST to deauthorize returns 200 and DELETES NOTHING. Always-200
+      is for Meta's retry semantics; verify the connection row still exists after
+
+**Scopes come back in a shape the docs do not describe**
+- [ ] The token exchange returns `permissions` as an ARRAY on the Instagram Login
+      path, not the comma-separated string Basic Display documents. Both shapes,
+      plus absent/null/empty, must normalise to a string array
+- [ ] Regression: calling `.split()` on it threw AFTER every network call had
+      succeeded, so the creator saw a failed connection with a working token
+      behind it. The failure point was assembling the row, not the API
+
+**The callback's outcome is shown, not just logged**
+- [ ] Every `?ig=` reason renders wording on the card: connected, personal_account,
+      cancelled, state_mismatch, no_code, save_failed, failed
+- [ ] An unrecognised reason still says something rather than rendering nothing
+- [ ] `cancelled` is styled neutral, NOT as an error. The creator chose to stop
+- [ ] The parameter is stripped after being read, so a refresh does not replay a
+      stale outcome. This also clears Instagram's trailing `#_`
+
+**Connecting from the storefront editor**
+- [ ] Connect from the editor returns to the EDITOR, not to settings; connect from
+      settings returns to settings
+- [ ] `?return=` is an ALLOWLIST (`settings` | `storefront`), validated on the way
+      in AND on the way out. `?return=https://evil.example` lands on settings.
+      This route is authenticated and ends in a redirect, so an echoed path would
+      be an open redirect
+- [ ] Unsaved edits SURVIVE connecting: the draft is saved before the handoff
+- [ ] A FAILED save aborts the handoff. Leaving for Instagram would discard the
+      edits the save just failed to keep
+- [ ] Both OAuth cookies are deleted with `path: '/api/instagram'`. A bare delete
+      targets "/" and silently misses them, leaving a spent nonce in the jar
+
+**Verified figures in the editor**
+- [ ] Not connected: a Connect card appears in the Audience step
+- [ ] Connected: followers, age, gender, cities and reach show the verified value
+      with the badge and "synced Xh ago"
+- [ ] Typed values stay VISIBLE but locked while connected, because they are the
+      fallback if the connection is ever lost
+- [ ] Avg views and interactions stay EDITABLE while connected. Meta returns
+      neither, so locking the whole channel would take away two unverified figures
+- [ ] Gender renders as a three-way readout, not the two-way slider. The slider
+      cannot express the unknown share without dropping it
+- [ ] `expired` / `needs_reconnect` / `personal_account` offer Reconnect and do
+      NOT lock anything: an unhealthy connection falls back to typed values, so
+      the creator must still be able to edit them
+- [ ] Reach reaches the PUBLIC page: `reachLast30` fills Monthly reach with a
+      badge. It was in the snapshot but unused for a while, so the stat strip
+      showed a typed figure on a connected account
+
+**One verified mark, beside the account it vouches for**
+- [ ] "From Instagram" appears ZERO times as a per-figure badge. A brand read it
+      four or five times on one screen, which spent the emphasis
+- [ ] ONE "Verified from Instagram" chip in the hero, heading the numbers it
+      describes. NOT in the handle row. Expanding it names every fetched figure,
+      states the daily refresh, says when the snapshot was taken, and says
+      plainly that everything else is entered by the creator
+- [ ] The caret rotates on open, so the chip reads as expandable rather than as
+      a static label
+- [ ] It opens with JavaScript disabled and is keyboard operable (native
+      `<details>`), and carries BOTH marker resets — WebKit uses its own
+      pseudo-element and would otherwise show a stray triangle
+- [ ] The panel sits in the hero flow beneath the chip, capped at 460px so a
+      long list does not run the width of a desktop hero
+
+**Gender is three-way wherever Instagram reports three**
+- [ ] The donut has THREE segments when an unknown share exists. A two-segment
+      donut drew that share in the men colour, so the chart overstated men by
+      exactly the amount nobody knows
+- [ ] A "Not stated" row appears in the legend only when the share is above zero,
+      so a typed two-way split is unchanged
+- [ ] The CENTRE reports the LARGER of women and men, not always women. Palak's
+      account is 13/68/19, so the middle reads "68% men". Fixed to women it read
+      "13% women" over a ring two thirds the other colour, leaving a brand to do
+      the subtraction the chart exists to save them
+- [ ] The highlight colour follows the leader, so the emphasised slice and the
+      number in the middle describe the same thing. Legend swatches match
+- [ ] "Not stated" never wins the centre even when it is the largest share: it
+      is the absence of an answer, not an audience
+- [ ] The MOBILE shopfront gets the same treatment. It is a second donut in
+      ShopfrontMobile, and it showed women only and no unknown share at all
+- [ ] The editor's slider takes men from Instagram's own figure, never
+      100 minus women, for the same reason
+
+**Interactions come from the API, best effort**
+- [ ] `total_interactions` fills Interactions when Instagram serves it, and the
+      creator's typed figure stands when it does not. NEVER a zero
+- [ ] BOTH response shapes are read: `total_value.value`, and a summed day series
+      if Instagram answers with one. `views` was documented and omitted, and
+      `permissions` came back an array where the docs said string, so the shape
+      is not assumed
+- [ ] A failure of this ONE metric does not cost the whole snapshot: it is
+      caught alongside the demographics
+- [ ] NOT verified live against a real account at build time (the token key had
+      been rotated, correctly). First real sync is the test: connect, press Sync
+      now, and check whether Interactions appears
+
+**Recent reels (Phase Two)**
+- [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
+      needs comparable reel numbers
+- [ ] ALONGSIDE the curated Content Showcase, never replacing it. Curated is the
+      standard being sold; this is what it is doing now, unchosen
+- [ ] A reel with NO insights renders a clean card: thumbnail, Reel tag, caption.
+      No dash, no empty stat row, no reserved gap. Verified there is no "-" or
+      placeholder anywhere in the card markup
+- [ ] Instagram refuses insights for media posted before the account's last
+      conversion to professional. Verified live: 10 of 11 reels on the test
+      account. This is the ORDINARY case, not an error state
+- [ ] likeCount and commentsCount come from /me/media, not insights, so they
+      survive that refusal — every card carries at least a like count
+- [ ] The insights loop STOPS at the first pre-conversion refusal. The failure is
+      chronological, so every older post would fail too; one call instead of six
+- [ ] Only that specific error stops the loop. A transient failure must not
+      silently skip the remaining posts
+- [ ] The five metrics are requested together because all five are confirmed for
+      reels. An unsupported metric in a batch fails the WHOLE call, which is why
+      the spike probed one at a time
+- [ ] Thumbnails are copied to our bucket. Instagram's URL is signed and expires,
+      so a stored link becomes a grid of broken images days after the sync
+- [ ] Copied ONLY for media ids not already held: this runs nightly per creator
+- [ ] Files for posts that left the recent six are deleted in the same pass, or
+      the bucket grows one file per reel per creator forever
+- [ ] thumbnailSourceUrl is NEVER persisted, on any path including failures
+- [ ] Cards align to the TOP of the row, so one tall card does not pad five short
+      ones out to match it
+- [ ] Section auto-hides with no media, and is connected-only
+
+**Brands worked with: logo and reel link**
+- [ ] "Find logo" accepts a brand NAME (tries name.com then name.in) or a domain
+- [ ] A domain that does not exist yields NOTHING, not a placeholder. Both
+      services answer 404 for unknown domains, verified live; the status is the
+      match test. A generic globe silently attached to a brand would be worse
+      than no logo
+- [ ] Clearbit is NOT used. The domain no longer resolves — HubSpot sunset it
+- [ ] Logos are COPIED into the storefronts bucket, never hotlinked: no dead
+      links later and no visitor IP handed to Google
+- [ ] The fetch calls FIXED hosts with the domain as a parameter; we never
+      request the brand's own site, so there is no SSRF surface. The domain is
+      validated to a bare hostname before it is interpolated
+- [ ] The tile NEVER upscales a logo. Auto-fetched marks are favicons, often
+      32px; stretched across a 280px tile a brand's logo becomes a smudge
+- [ ] Manual upload always works, caps at 2 MB, and accepts PNG/JPEG/WebP/SVG
+- [ ] The stored URL carries ?v= — the path is stable across replacements, so
+      without it a new logo serves the old bytes from cache
+- [ ] The reel link renders only for http(s). `javascript:`, `data:` and
+      `vbscript:` are rejected by parsing the URL, not by pattern matching
+- [ ] The link appears only on the REAL tile, not the aria-hidden marquee
+      duplicate, or a keyboard user lands on a copy of a card
+
+**Blank stats are omitted, not rendered empty**
+- [ ] The hero renders only stats that HAVE a value. A connected creator who has
+      typed no interactions and no avg views sees followers and posts, not two
+      label-only blocks with no number above them
+- [ ] With every hero stat blank, the row itself does not render
+- [ ] Posts appears ONLY when connected. There is no typed posts field, so it is
+      verified or absent, never an empty slot
+
+**Ops list rows and pagination**
+- [ ] The three vetting actions sit on ONE line in a creators-list row at any
+      column width. Word labels wrapped to two or three rows, which stretched
+      every row in the table to the height of the tallest
+- [ ] The labels stay WORDS (Deals / Growth / Reject), not icons. These actions
+      email the creator, and a word is unambiguous where an icon has to be
+      learned. The full intent is on the tooltip and in the confirm dialog
+- [ ] The label does NOT change to "..." while busy. Swapping it resized the
+      button mid-click, so the row shifted under the cursor; it dims instead
+- [ ] With a narrow viewport the TABLE scrolls (OpsTableScroll), rather than the
+      buttons wrapping or the page pushing sideways
+- [ ] "Go to" jumps straight to a page on creators, brands, deals and offers.
+      The window only shows first/last/current±1, so on 40 pages most were
+      reachable only by stepping
+- [ ] JUMPING PRESERVES FILTERS. A GET form replaces the query string of its
+      action, so the band/status/shopfront filters are re-submitted as hidden
+      fields. Without them, changing page silently clears the filter and shows a
+      different set than the one being worked through
+- [ ] The jump box is hidden at 7 pages or fewer, where every page has a link
+- [ ] It works with JavaScript disabled, and lands on a real shareable URL
+
+**Nothing fetched is left unused**
+- [ ] Every field on IgSnapshot has a consumer. followersCount, mediaCount,
+      followsCount, reachLast30, interactionsLast30, name, biography,
+      profilePictureUrl, the three demographics, under18Excluded and fetchedAt
+- [ ] Following is shown to the CREATOR in settings but NOT on the public
+      storefront. How many accounts someone follows is not what a brand is
+      buying, and it would sit beside three figures that are
+
+**Prefill runs on every sync, not only on connect**
+- [ ] A creator who connected BEFORE prefill existed gets their bio, name and
+      photo on the next sync. Running it only at connect left that data sitting
+      in the snapshot with nothing ever reading it, which is exactly what
+      happened to the first connected account
+- [ ] Re-running is a no-op once anything is filled, so a daily cron cannot
+      slowly overwrite a creator's own words
+- [ ] creator_storefronts is prefilled separately from creators, and SKIPPED
+      when no storefront row exists. Creating one here would publish a page the
+      creator never chose to make
+- [ ] Instagram's `name` fills the storefront display name, where the creators
+      row often holds only a first name
+
+**Bio and photo prefill: presentation, not proof**
+- [ ] Prefilled ONLY when empty. A creator who has written their own bio must
+      never find it replaced on connect, or on any later reconnect
+- [ ] Neither ever LOCKS. A Guapd bio may legitimately differ from the Instagram
+      one, and the photo is storefront branding
+- [ ] The photo is COPIED into the storefronts bucket, never linked. Instagram
+      serves it from a signed CDN URL that expires, so a stored link would break
+      days after the connect that created it
+- [ ] The copy reuses `avatars/{creatorId}/avatar.{ext}`, so replacing the photo
+      later overwrites it rather than leaving an orphan
+- [ ] The stored URL carries a `?v=` stamp. The path is stable across
+      replacements, so without it a later change serves the old bytes from cache
+- [ ] A failed prefill does NOT fail the connect. It runs after the connection is
+      saved; a creator whose bio could not be copied still has a working one
+- [ ] Non-image or oversized responses are rejected rather than stored
 
 ### Brand deals, empty state
 
