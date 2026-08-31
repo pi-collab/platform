@@ -113,6 +113,32 @@ export default function PrivacyPolicyPage() {
           payouts and TDS), deal history, messages sent through the platform, uploaded
           deliverable files.
         </p>
+        {/* Meta reads this against what the app actually requests at App
+            Review, and the section above describes only handles and links. A
+            connected account gives us measured audience data, which is a
+            materially different thing to disclose. */}
+        <p style={pStyle}>
+          <strong>Creators who connect an Instagram account:</strong> connecting is
+          optional and separate from signing in, which stays on phone OTP. When you
+          connect, we read and store your Instagram username, account type, follower
+          and following counts, number of posts, your name, biography and profile
+          picture, and your audience figures: age bands, gender split, top cities,
+          reach over the last 30 days and interactions over the last 30 days. We
+          store an access token so these can refresh once a day; it is encrypted
+          before it is written and no browser ever receives it. We do not post on
+          your behalf, read your direct messages, or access anyone else&rsquo;s
+          account.
+        </p>
+        <p style={pStyle}>
+          You can disconnect at any time from Settings, or revoke our access from
+          Instagram itself under <em>Settings &rarr; Website permissions &rarr; Apps
+          and websites</em>. Either one deletes the token and the stored Instagram
+          figures. Your Guapd account, your deals and any figures you entered
+          yourself are unaffected, because none of those came from Instagram.
+          Disconnecting Instagram is not the same as closing your Guapd account; to
+          do that, email{' '}
+          <a href="mailto:contact@guapd.com" style={{ color: 'inherit', fontWeight: 600 }}>contact@guapd.com</a>.
+        </p>
         <p style={pStyle}>
           <strong>Brands:</strong> name, work email, company name, GSTIN (optional,
           required only to issue a GST-compliant invoice), team member names
