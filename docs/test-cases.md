@@ -2211,6 +2211,27 @@ in place.
       been rotated, correctly). First real sync is the test: connect, press Sync
       now, and check whether Interactions appears
 
+**App Review login access (SECURITY — read before changing)**
+- [ ] Inert unless BOTH REVIEW_LOGIN_PHONE and REVIEW_LOGIN_CODE are set.
+      Deleting either is the revoke switch. Verified: 7 cases including each var
+      set alone
+- [ ] Matches ONE phone exactly. A different phone with the correct code is
+      refused, so the code alone reaches nothing
+- [ ] A REVIEW_LOGIN_CODE that is not 6 digits disables the path and logs. A
+      truncated env var must not create a weaker bypass than intended
+- [ ] Compared with timingSafeEqual. The secret is long-lived, which is exactly
+      when a byte-by-byte comparison becomes worth attacking
+- [ ] DISTINCT from STAGING_OTP_BYPASS, which accepts 000000/123456 for ANY
+      phone and is refused when VERCEL_ENV is production. That one must stay off
+      production; this one deliberately works there
+- [ ] Every attempt on the review phone writes an ops_events row, success or
+      failure. OTP verify is unthrottled, so a run of failures is the only
+      signal that someone is guessing
+- [ ] The review account holds NO deals, payouts or real audience data. Six
+      digits with no rate limiting is guessable given time; the control that
+      carries the weight is that a compromise is worth nothing
+- [ ] REMOVE both env vars when the review closes
+
 **Recent reels (Phase Two)**
 - [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
       needs comparable reel numbers
