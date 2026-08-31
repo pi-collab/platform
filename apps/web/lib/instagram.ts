@@ -57,12 +57,48 @@ export interface IgSnapshot {
   /** Likes, comments, shares and saves over the same 30 days. Best effort:
    *  absent rather than zero when Instagram does not answer. */
   interactionsLast30?: number
+  /** Recent reels, newest first. Present only for a connected account. */
+  media?: IgMediaItem[]
   /** Followers under 18, excluded from ageBreakdown. Kept so the UI can say the
    *  percentages describe adult followers rather than quietly implying all. */
   under18Excluded?: number
   /** Demographics need 100+ followers. Below that Instagram returns nothing,
    *  which is not an error and must not be shown as zero. */
   demographicsUnavailable?: boolean
+}
+
+/**
+ * One recent reel.
+ *
+ * Every metric is optional and independently so, because Instagram serves NO
+ * insights for media posted before the account's most recent conversion to a
+ * professional account. Verified live: on the account this was built against,
+ * ten of eleven reels return exactly that error and only the newest has
+ * numbers. A reel with a thumbnail and no metrics is the normal case here, not
+ * a failure to handle.
+ *
+ * likeCount and commentsCount come from /me/media itself and cost no insights
+ * call, which is why they survive on posts where every other metric is refused.
+ */
+export interface IgMediaItem {
+  id: string
+  permalink: string
+  timestamp: string
+  caption?: string
+  /** Instagram's CDN URL at fetch time. SIGNED and expiring, so it is copied
+   *  into our own bucket before anything renders it. */
+  thumbnailSourceUrl?: string
+  /** Our stored copy. What the storefront actually shows. */
+  thumbnailUrl?: string
+  likeCount?: number
+  commentsCount?: number
+  views?: number
+  reach?: number
+  saved?: number
+  shares?: number
+  totalInteractions?: number
+  /** Milliseconds. Reels only. */
+  avgWatchTimeMs?: number
 }
 
 /* ── OAuth ────────────────────────────────────────────────────────────────── */
@@ -283,6 +319,102 @@ async function fetchInteractions30(token: string): Promise<number | undefined> {
   return values.reduce((s: number, v: { value?: number }) => s + (v.value ?? 0), 0)
 }
 
+/** How many reels the storefront shows. */
+const RECENT_REELS = 6
+
+/**
+ * The most recent reels, with per-post numbers where Instagram will give them.
+ *
+ * ── Why insights are best effort, per post ──────────────────────────────────
+ * Instagram refuses insights for any media posted before the account's most
+ * recent conversion to a professional account. On the account this was built
+ * against that is ten of eleven reels. So a reel WITHOUT numbers is expected,
+ * and the storefront shows it as a clean card rather than an empty one.
+ *
+ * ── Why it stops early ──────────────────────────────────────────────────────
+ * That refusal is chronological: if one reel predates the conversion, so does
+ * every older reel. Once it happens there is nothing to gain from asking about
+ * the rest, so the remaining calls are skipped. On this account that is one
+ * insights call instead of six.
+ *
+ * The five metrics are requested TOGETHER because all five are confirmed to
+ * work for reels. Batching an unsupported metric would fail the whole call,
+ * which is why the spike probed them one at a time first.
+ */
+export async function fetchRecentReels(token: string): Promise<IgMediaItem[]> {
+  const fields = 'id,media_product_type,permalink,thumbnail_url,caption,timestamp,like_count,comments_count'
+  const res = await fetch(`${GRAPH}/me/media?fields=${fields}&limit=25&access_token=${encodeURIComponent(token)}`)
+  if (!res.ok) return []
+
+  const json = await res.json()
+  const reels = ((json?.data ?? []) as Record<string, unknown>[])
+    .filter((m) => m.media_product_type === 'REELS')
+    .slice(0, RECENT_REELS)
+
+  const out: IgMediaItem[] = []
+  let insightsExhausted = false
+
+  for (const m of reels) {
+    const item: IgMediaItem = {
+      id: String(m.id),
+      permalink: String(m.permalink ?? ''),
+      timestamp: String(m.timestamp ?? ''),
+      caption: typeof m.caption === 'string' ? m.caption : undefined,
+      thumbnailSourceUrl: typeof m.thumbnail_url === 'string' ? m.thumbnail_url : undefined,
+      // From the media list itself, so these survive on posts whose insights
+      // are refused outright.
+      likeCount: typeof m.like_count === 'number' ? m.like_count : undefined,
+      commentsCount: typeof m.comments_count === 'number' ? m.comments_count : undefined,
+    }
+
+    if (!insightsExhausted) {
+      const stats = await fetchMediaInsights(token, item.id)
+      if (stats === 'pre_conversion') insightsExhausted = true
+      else if (stats) Object.assign(item, stats)
+    }
+
+    out.push(item)
+  }
+
+  return out
+}
+
+type MediaStats = Pick<IgMediaItem, 'views' | 'reach' | 'saved' | 'shares' | 'totalInteractions' | 'avgWatchTimeMs'>
+
+/** Returns the stats, null for an ordinary failure, or the sentinel
+ *  'pre_conversion' which tells the caller every OLDER post will fail too. */
+async function fetchMediaInsights(token: string, mediaId: string): Promise<MediaStats | null | 'pre_conversion'> {
+  const p = new URLSearchParams({
+    metric: 'views,reach,saved,shares,total_interactions,ig_reels_avg_watch_time',
+    access_token: token,
+  })
+  const res = await fetch(`${GRAPH}/${mediaId}/insights?${p}`)
+  const json = await res.json()
+
+  if (!res.ok) {
+    const message = String(json?.error?.message ?? '')
+    // Matched on the message because Meta returns the same generic error code
+    // for it. Narrow on purpose: anything else is a transient failure and must
+    // NOT stop the remaining posts from being asked about.
+    if (message.includes('posted before')) return 'pre_conversion'
+    return null
+  }
+
+  const v = Object.fromEntries(
+    ((json?.data ?? []) as { name: string; total_value?: { value?: number }; values?: { value?: number }[] }[])
+      .map((d) => [d.name, d.total_value?.value ?? d.values?.[0]?.value]),
+  ) as Record<string, number | undefined>
+
+  return {
+    views: v.views,
+    reach: v.reach,
+    saved: v.saved,
+    shares: v.shares,
+    totalInteractions: v.total_interactions,
+    avgWatchTimeMs: v.ig_reels_avg_watch_time,
+  }
+}
+
 /**
  * One sync: profile plus demographics plus reach.
  *
@@ -316,10 +448,13 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
       demographicsUnavailable: true,
       reachLast30: await fetchReach30(token),
       interactionsLast30: await fetchInteractions30(token),
+      // Demographics need 100 followers; reels do not. A smaller creator still
+      // has recent work worth showing.
+      media: await fetchRecentReels(token).catch(() => []),
     }
   }
 
-  const [age, gender, city, reach, interactions] = await Promise.all([
+  const [age, gender, city, reach, interactions, media] = await Promise.all([
     demographic(token, 'age').catch(() => [] as [string, number][]),
     demographic(token, 'gender').catch(() => [] as [string, number][]),
     demographic(token, 'city').catch(() => [] as [string, number][]),
@@ -327,6 +462,7 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
     // Caught for the same reason the demographics are: one metric Instagram
     // declines to serve must not cost the whole snapshot.
     fetchInteractions30(token).catch(() => undefined),
+    fetchRecentReels(token).catch(() => [] as IgMediaItem[]),
   ])
 
   const ages = mapAges(age)
@@ -338,6 +474,7 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
     topLocations: mapCities(city),
     reachLast30: reach,
     interactionsLast30: interactions,
+    media,
   }
 }
 

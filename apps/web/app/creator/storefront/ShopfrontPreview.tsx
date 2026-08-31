@@ -32,6 +32,36 @@ export interface ShopfrontSection {
  * A native <details>, so it needs no state, works with JavaScript off, and is
  * keyboard operable without any of that being built by hand.
  */
+/**
+ * A reel on the Recent work strip.
+ *
+ * Every metric is optional and independently so. Instagram serves no insights
+ * for media posted before the account's last conversion to a professional
+ * account, so a reel with a thumbnail and nothing else is the ordinary case.
+ * The card renders NOTHING where the numbers would be rather than dashes or
+ * empty slots: five cards each showing "—" reads as five broken cards, which is
+ * worse than five clean ones.
+ */
+export interface RecentReel {
+  id: string
+  permalink: string
+  thumbnailUrl?: string
+  caption?: string
+  views?: number
+  reach?: number
+  likes?: number
+  comments?: number
+  saved?: number
+  shares?: number
+}
+
+/** 12400 -> 12.4K. Compact, because these sit four to a card. */
+function fmtCount(n: number): string {
+  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
+  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
+  return String(n)
+}
+
 function isSafeUrl(raw?: string): boolean {
   if (!raw) return false
   try {
@@ -292,6 +322,8 @@ export interface ShopfrontData {
   /** A COUNT the creator stated, not a rate. Blank when unsaid. */
   interactions: string
   avgViews: string
+  /** Recent reels from the connected account, newest first. */
+  recentReels?: RecentReel[]
   /** Posts, from the connected account only. There is no typed equivalent, so
    *  this is absent rather than blank when Instagram is not connected. */
   postsCount?: string
@@ -342,6 +374,9 @@ const DEFAULT_SECTIONS: ShopfrontSection[] = [
   { key: 'ratecard', label: 'Rate Card', enabled: true },
   { key: 'audience', label: 'Audience', enabled: true },
   { key: 'content', label: 'Content Showcase', enabled: true },
+  // Auto-hides on its own when there is no connected account, but it needs a
+  // registered key or SectionWrapper has nothing to look up.
+  { key: 'reels', label: 'Recent reels', enabled: true },
   { key: 'collabs', label: 'Past Collaborations', enabled: true },
   { key: 'pitch', label: 'Work With Me', enabled: true },
 ]
@@ -1320,6 +1355,75 @@ export default function ShopfrontPreview({
                       </div>
                     </div>
                   </Card>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        </SectionWrapper>
+      )}
+
+      {/* ═══ 5b. RECENT REELS, FROM INSTAGRAM ══════════════════
+          Alongside the curated showcase above, never replacing it. The two
+          answer different objections: curated says "this is the standard of work
+          you are buying", this says "and here is what it is doing now". A brand
+          distrusts a highlight reel precisely because it was chosen, which is
+          what makes unchosen numbers beside it worth having. */}
+      {(data.recentReels?.length ?? 0) > 0 && (
+        <SectionWrapper sectionKey="reels">
+          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+            <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Straight from Instagram</span>
+              <h2 className="t-title" style={{ margin: '10px 0 6px' }}>{firstName}&apos;s latest reels</h2>
+              <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: '0 0 clamp(20px,2.4vw,30px)' }}>
+                The most recent posts on the account, with verified numbers where Instagram reports them.
+              </p>
+
+              <div className="sf-reelrow">
+                {data.recentReels!.map((reel) => {
+                  // Built first, so "are there any numbers" is one check rather
+                  // than four conditions inside the markup.
+                  const stats = [
+                    { label: 'Views', value: reel.views },
+                    { label: 'Reach', value: reel.reach },
+                    { label: 'Likes', value: reel.likes },
+                    { label: 'Saves', value: reel.saved },
+                  ].filter((s) => s.value != null)
+
+                  return (
+                    <a
+                      key={reel.id}
+                      href={isSafeUrl(reel.permalink) ? reel.permalink : undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="sf-reel"
+                    >
+                      <div className="sf-reel__media">
+                        {reel.thumbnailUrl
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          ? <img src={reel.thumbnailUrl} alt="" loading="lazy" />
+                          : <span className="sf-reel__ph" aria-hidden="true" />}
+                        <span className="sf-reel__tag">Reel</span>
+                      </div>
+
+                      {reel.caption && <p className="sf-reel__cap">{reel.caption}</p>}
+
+                      {/* NOTHING renders here when there are no numbers. Not a
+                          dash, not an empty row, not a reserved gap. Instagram
+                          refuses insights for anything posted before the account
+                          became professional, so most reels legitimately have
+                          none — and five cards each showing "—" reads as five
+                          broken cards rather than as a clean strip. */}
+                      {stats.length > 0 && (
+                        <div className="sf-reel__stats">
+                          {stats.map((s) => (
+                            <span key={s.label} className="sf-reel__stat">
+                              <b>{fmtCount(s.value!)}</b> {s.label.toLowerCase()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </a>
                   )
                 })}
               </div>

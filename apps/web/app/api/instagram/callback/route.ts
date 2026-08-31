@@ -7,7 +7,7 @@ import {
   exchangeCodeForToken, exchangeForLongLivedToken, buildSnapshot, IG_SCOPES,
 } from '@/lib/instagram'
 import { instagramRedirectUri, instagramReturnPath, isReturnTarget } from '@/lib/instagram-config'
-import { markChannelConnected, prefillFromInstagram } from '@/lib/instagram-sync'
+import { markChannelConnected, prefillFromInstagram, syncMediaThumbnails } from '@/lib/instagram-sync'
 
 /**
  * Instagram OAuth callback.
@@ -63,6 +63,10 @@ export async function GET(request: NextRequest) {
     const long = await exchangeForLongLivedToken(short.token)
 
     const snapshot = await buildSnapshot(long.token)
+
+    // First connect: nothing is held yet, so every thumbnail is copied. Done
+    // before the row is written so no expiring CDN link is ever stored.
+    await syncMediaThumbnails(ctx.creatorId, snapshot).catch(() => {})
 
     // A personal account authenticated but cannot serve insights. Recorded as
     // its own status so the UI can tell them exactly what to change, rather

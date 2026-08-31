@@ -48,6 +48,9 @@ const DEFAULT_SECTIONS: ShopfrontSection[] = [
   { key: 'ratecard', label: 'Rate Card', enabled: true },
   { key: 'audience', label: 'Audience', enabled: true },
   { key: 'content', label: 'Content Showcase', enabled: true },
+  // Auto-hides on its own when there is no connected account, but it needs a
+  // registered key or SectionWrapper has nothing to look up.
+  { key: 'reels', label: 'Recent reels', enabled: true },
   { key: 'collabs', label: 'Past Collaborations', enabled: true },
   { key: 'pitch', label: 'Work With Me', enabled: true },
 ]
@@ -235,6 +238,21 @@ function buildShopfrontData(
       ? formatStat(igSnap.followersCount)
       : igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
     postsCount: igSnap?.mediaCount != null ? formatStat(igSnap.mediaCount) : undefined,
+    // Verified-only: there is no typed equivalent, so an unconnected creator has
+    // no strip rather than an empty one.
+    recentReels: (igSnap?.media ?? []).map(m => ({
+      id: m.id,
+      permalink: m.permalink,
+      thumbnailUrl: m.thumbnailUrl,
+      caption: m.caption,
+      views: m.views,
+      reach: m.reach,
+      likes: m.likeCount,
+      comments: m.commentsCount,
+      saved: m.saved,
+      shares: m.shares,
+    })),
+
     interactions: igSnap?.interactionsLast30 != null
       ? formatStat(igSnap.interactionsLast30)
       : igPrimary?.interactions != null ? formatStat(igPrimary.interactions) : '',

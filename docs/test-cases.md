@@ -2211,6 +2211,36 @@ in place.
       been rotated, correctly). First real sync is the test: connect, press Sync
       now, and check whether Interactions appears
 
+**Recent reels (Phase Two)**
+- [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
+      needs comparable reel numbers
+- [ ] ALONGSIDE the curated Content Showcase, never replacing it. Curated is the
+      standard being sold; this is what it is doing now, unchosen
+- [ ] A reel with NO insights renders a clean card: thumbnail, Reel tag, caption.
+      No dash, no empty stat row, no reserved gap. Verified there is no "-" or
+      placeholder anywhere in the card markup
+- [ ] Instagram refuses insights for media posted before the account's last
+      conversion to professional. Verified live: 10 of 11 reels on the test
+      account. This is the ORDINARY case, not an error state
+- [ ] likeCount and commentsCount come from /me/media, not insights, so they
+      survive that refusal — every card carries at least a like count
+- [ ] The insights loop STOPS at the first pre-conversion refusal. The failure is
+      chronological, so every older post would fail too; one call instead of six
+- [ ] Only that specific error stops the loop. A transient failure must not
+      silently skip the remaining posts
+- [ ] The five metrics are requested together because all five are confirmed for
+      reels. An unsupported metric in a batch fails the WHOLE call, which is why
+      the spike probed one at a time
+- [ ] Thumbnails are copied to our bucket. Instagram's URL is signed and expires,
+      so a stored link becomes a grid of broken images days after the sync
+- [ ] Copied ONLY for media ids not already held: this runs nightly per creator
+- [ ] Files for posts that left the recent six are deleted in the same pass, or
+      the bucket grows one file per reel per creator forever
+- [ ] thumbnailSourceUrl is NEVER persisted, on any path including failures
+- [ ] Cards align to the TOP of the row, so one tall card does not pad five short
+      ones out to match it
+- [ ] Section auto-hides with no media, and is connected-only
+
 **Brands worked with: logo and reel link**
 - [ ] "Find logo" accepts a brand NAME (tries name.com then name.in) or a domain
 - [ ] A domain that does not exist yields NOTHING, not a placeholder. Both

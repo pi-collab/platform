@@ -182,6 +182,19 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
   try {
     const snapshot = await buildSnapshot(token)
 
+    // Before the write, so the stored snapshot never contains an expiring CDN
+    // link. The previous snapshot is read for the images we already hold.
+    const { data: prevRow } = await admin
+      .from('creator_instagram_connections')
+      .select('snapshot')
+      .eq('creator_id', row.creator_id)
+      .maybeSingle()
+    await syncMediaThumbnails(
+      row.creator_id,
+      snapshot,
+      (prevRow?.snapshot ?? undefined) as IgSnapshot | undefined,
+    ).catch(() => {})
+
     // Re-read every sync: a creator can switch back to a personal account at
     // any time, and the storefront must stop showing verified figures the
     // moment we can no longer verify them.
@@ -393,4 +406,102 @@ export async function resyncForCreator(creatorId: string): Promise<{ ok: boolean
 
   if (!data) return { ok: false, detail: 'not connected' }
   return refreshAndSync(data)
+}
+
+/* ── Reel thumbnails ───────────────────────────────────────────────────────── */
+
+const MEDIA_BUCKET = 'storefronts'
+const MAX_THUMB_BYTES = 3 * 1024 * 1024
+
+/**
+ * Copy reel thumbnails into our bucket, and clean up the ones we no longer need.
+ *
+ * Instagram serves thumbnails from a SIGNED CDN URL that expires, so storing
+ * the link would give every storefront a grid of broken images some days after
+ * the sync that created it — a failure that appears long after its cause.
+ *
+ * Copied ONLY for media ids we do not already hold. This runs nightly for every
+ * connected creator, and re-downloading six images each time is bandwidth spent
+ * to produce bytes we already have.
+ *
+ * Files for posts that have dropped out of the recent six are deleted in the
+ * same pass. Without that the bucket only ever grows, one file per reel per
+ * creator, forever.
+ *
+ * Mutates the snapshot in place: each item gets thumbnailUrl pointing at our
+ * copy, and thumbnailSourceUrl is dropped so an expiring link is never stored.
+ */
+export async function syncMediaThumbnails(
+  creatorId: string,
+  snapshot: IgSnapshot,
+  previous?: IgSnapshot,
+): Promise<void> {
+  const media = snapshot.media ?? []
+  if (media.length === 0) return
+
+  const admin = createAdminClient()
+  const prefix = `reels/${creatorId}`
+
+  // What we already stored, from the last snapshot. Keyed by media id, which is
+  // stable for the life of a post.
+  const held = new Map(
+    (previous?.media ?? [])
+      .filter((m) => m.thumbnailUrl)
+      .map((m) => [m.id, m.thumbnailUrl as string]),
+  )
+
+  for (const item of media) {
+    const existing = held.get(item.id)
+    if (existing) {
+      item.thumbnailUrl = existing
+      delete item.thumbnailSourceUrl
+      continue
+    }
+
+    if (!item.thumbnailSourceUrl) continue
+
+    try {
+      const res = await fetch(item.thumbnailSourceUrl, { signal: AbortSignal.timeout(8000) })
+      if (!res.ok) { delete item.thumbnailSourceUrl; continue }
+
+      const contentType = res.headers.get('content-type') ?? ''
+      if (!contentType.startsWith('image/')) { delete item.thumbnailSourceUrl; continue }
+
+      const bytes = new Uint8Array(await res.arrayBuffer())
+      if (bytes.byteLength === 0 || bytes.byteLength > MAX_THUMB_BYTES) {
+        delete item.thumbnailSourceUrl
+        continue
+      }
+
+      const path = `${prefix}/${item.id}.jpg`
+      const { error } = await admin.storage
+        .from(MEDIA_BUCKET)
+        .upload(path, bytes, { upsert: true, contentType })
+
+      if (!error) {
+        const { data } = admin.storage.from(MEDIA_BUCKET).getPublicUrl(path)
+        item.thumbnailUrl = data.publicUrl
+      }
+    } catch (err) {
+      console.error(`[instagram] thumbnail copy failed creator=${creatorId} media=${item.id}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      // Never stored, whatever happened. It expires, so keeping it would only
+      // preserve a link that is guaranteed to stop working.
+      delete item.thumbnailSourceUrl
+    }
+  }
+
+  // Anything we hold for a post that is no longer in the recent set.
+  const keep = new Set(media.map((m) => `${m.id}.jpg`))
+  try {
+    const { data: files } = await admin.storage.from(MEDIA_BUCKET).list(prefix, { limit: 100 })
+    const stale = (files ?? []).map((f) => f.name).filter((n) => !keep.has(n))
+    if (stale.length > 0) {
+      await admin.storage.from(MEDIA_BUCKET).remove(stale.map((n) => `${prefix}/${n}`))
+    }
+  } catch (err) {
+    // A failed cleanup leaves files behind. That is a cost, not a fault, and it
+    // must not fail a sync that otherwise worked.
+    console.error(`[instagram] thumbnail cleanup failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
