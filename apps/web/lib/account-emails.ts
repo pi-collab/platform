@@ -510,3 +510,53 @@ export async function notifyOpsBrandSignup(brandId: string): Promise<void> {
     console.error(`[account-email] notifyOpsBrandSignup failed brand=${brandId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+/**
+ * A reply to a creator's appeal, written by ops.
+ *
+ * Sent from the same address and in the same shell as every other account email,
+ * so a creator who has already had a rejection from Guapd recognises this as
+ * being from Guapd. The body is whatever ops actually wrote: the templates on
+ * the ops page are a starting point that gets edited, not a fixed set, because
+ * an appeal is a person asking to be reconsidered and a form letter reads like
+ * one.
+ *
+ * Returns the outcome rather than swallowing it. Unlike a notification, this is
+ * an action someone took deliberately and is waiting on, so "we could not send
+ * that" has to reach them rather than a log.
+ */
+export async function replyToCreatorAppeal(
+  creatorId: string,
+  subject: string,
+  message: string,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isEmailConfigured()) {
+    return { ok: false, reason: 'Email is not configured on this environment.' }
+  }
+
+  const { email, name } = await creatorEmail(creatorId)
+  if (!email) {
+    return { ok: false, reason: 'We have no email address for this creator.' }
+  }
+
+  // Paragraphs, split on blank lines. Ops writes in a textarea and expects the
+  // breaks they typed to survive; a single block would arrive as a wall.
+  const body = message.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+  if (body.length === 0) return { ok: false, reason: 'The message is empty.' }
+
+  const { html, text } = renderAccountEmail({
+    heading: subject,
+    body: [`Hi ${name},`, ...body],
+    footerNote: `You are receiving this because you appealed a decision on your ${BRAND_NAME} account.`,
+  })
+
+  try {
+    const res = await sendAccountEmail({ to: [email], subject, html, text })
+    if (!res.ok) return { ok: false, reason: res.reason ?? 'The email provider rejected it.' }
+    return { ok: true }
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err)
+    console.error(`[account-email] appeal reply failed creator=${creatorId}: ${detail}`)
+    return { ok: false, reason: 'Could not send that. Please try again.' }
+  }
+}
