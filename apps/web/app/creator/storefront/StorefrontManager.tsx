@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
 import type { IgConnectionView } from '@/lib/instagram-sync'
 import type { IgSnapshot } from '@/lib/instagram'
-import { saveChannelStats, createContentUploadUrl, syncInstagram } from './actions'
+import { saveChannelStats, createContentUploadUrl, syncInstagram, findBrandLogo, uploadBrandLogo } from './actions'
 import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, type AddonRateRow } from '@/app/creator/packages/PackagesClient'
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
@@ -694,6 +694,99 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
 
 /* ── Brand collab card ────────────────────────────────────── */
 
+/**
+ * The brand's logo: find it, or upload it.
+ *
+ * Both, because neither alone works. The auto-fetch is favicon grade — Clearbit,
+ * which served real wordmarks, no longer exists — so it produces a small square
+ * mark that is right often enough to save typing and wrong often enough that it
+ * cannot be the only option. Uploading always works and is the only way to get a
+ * logo that fills the tile.
+ *
+ * The preview is capped at the mark's natural size rather than stretched, so a
+ * 32px favicon reads as a deliberate small mark instead of a blurred one.
+ */
+function BrandLogoRow({ collab, onUpdate }: {
+  collab: BrandCollab
+  onUpdate: (patch: Partial<BrandCollab>) => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function find() {
+    setBusy(true); setMsg(null)
+    const res = await findBrandLogo(collab.name || '')
+    setBusy(false)
+    if (res.ok) { onUpdate({ logoUrl: res.url }); setMsg(`Found via ${res.domain}`) }
+    else setMsg(res.message)
+  }
+
+  async function upload(file: File) {
+    setBusy(true); setMsg(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('key', collab.name || 'brand')
+    const res = await uploadBrandLogo(fd)
+    setBusy(false)
+    if (res.ok) { onUpdate({ logoUrl: res.url }); setMsg('Uploaded') }
+    else setMsg(res.message)
+  }
+
+  return (
+    <Field label="Logo" hint="Optional. We can try to find it, or upload your own.">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{
+          width: 46, height: 46, flexShrink: 0, borderRadius: 10,
+          border: `1px solid ${BHL}`, background: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        }}>
+          {collab.logoUrl
+            /* eslint-disable-next-line @next/next/no-img-element */
+            ? <img src={collab.logoUrl} alt="" style={{ maxWidth: 38, maxHeight: 38, objectFit: 'contain' }} />
+            : <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: 'var(--ink-faint)' }}>
+                {collab.name ? collab.name[0].toUpperCase() : '?'}
+              </span>}
+        </div>
+
+        <button type="button" onClick={find} disabled={busy || !collab.name?.trim()} style={sfSmallBtn}>
+          {busy ? 'Working…' : 'Find logo'}
+        </button>
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={busy} style={sfSmallBtn}>
+          Upload
+        </button>
+        {collab.logoUrl && (
+          <button type="button" onClick={() => { onUpdate({ logoUrl: undefined }); setMsg(null) }} disabled={busy}
+            style={{ ...sfSmallBtn, color: '#B4262A' }}>
+            Remove
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }}
+        />
+      </div>
+      {msg && <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>{msg}</p>}
+    </Field>
+  )
+}
+
+const sfSmallBtn: React.CSSProperties = {
+  minHeight: 32,
+  padding: '0 11px',
+  borderRadius: 8,
+  border: `1px solid ${BHL}`,
+  background: '#fff',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: 'var(--ink)',
+}
+
 function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
   collab: BrandCollab; index: number; isNew?: boolean
   onUpdate: (updated: BrandCollab) => void
@@ -744,6 +837,20 @@ function CollabCard({ collab, index, isNew, onUpdate, onRemove }: {
               <input type="text" value={collab.name} onChange={e => u({ name: e.target.value })}
                 placeholder="e.g. Groww, boAt, Mamaearth" onKeyDown={onFieldEnter} style={dinput} />
             </Field>
+            <BrandLogoRow collab={collab} onUpdate={u} />
+
+            <Field label="Link to the post you made" hint="Optional. The reel or post you delivered for them.">
+              <input
+                type="url"
+                inputMode="url"
+                value={collab.reelUrl || ''}
+                onChange={e => u({ reelUrl: e.target.value })}
+                placeholder="https://www.instagram.com/reel/..."
+                onKeyDown={onFieldEnter}
+                style={dinput}
+              />
+            </Field>
+
             <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr', gap: 10 }}>
               <Field label="What you delivered" style={{ marginBottom: 0 }}>
                 <input type="text" value={collab.type || ''} onChange={e => u({ type: e.target.value })}

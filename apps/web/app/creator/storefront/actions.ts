@@ -516,3 +516,141 @@ export async function syncInstagram(): Promise<{ ok: boolean; message?: string }
   if (!result.ok) return { ok: false, message: `Could not sync: ${result.detail}.` }
   return { ok: true }
 }
+
+/* ── Brand logos ────────────────────────────────────────────────────────────
+   Two ways to get one, because neither alone is enough: the auto-fetch is
+   favicon-grade and sometimes wrong, and asking every creator to find a PNG for
+   every brand they have worked with is how the section stays empty.
+   ────────────────────────────────────────────────────────────────────────── */
+
+const LOGO_BUCKET = 'storefronts'
+const MAX_LOGO_BYTES = 2 * 1024 * 1024
+
+/** A hostname, or null. Rejects schemes, paths, ports and anything that is not
+ *  a plain dotted name — it is interpolated into a URL, so it is validated
+ *  before it goes anywhere near one. */
+function toDomain(input: string): string | null {
+  const t = input.trim().toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/[/?#].*$/, '')
+  return /^[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+$/.test(t) && t.length <= 80 ? t : null
+}
+
+/** Domains worth trying for a brand NAME. Indian brands are as likely to be .in
+ *  as .com, and trying both costs one extra request that 404s fast. */
+function guessDomains(name: string): string[] {
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (slug.length < 2) return []
+  return [`${slug}.com`, `${slug}.in`]
+}
+
+/**
+ * Fetch a brand mark, server-side, and store it as ours.
+ *
+ * Clearbit is gone — the domain no longer resolves — so these are FAVICON
+ * services. They return a small square mark rather than a wordmark, which is why
+ * the tile renders it at natural size and never upscales it.
+ *
+ * A 404 is the match test. Both services answer 404 for a domain that does not
+ * exist rather than serving a generic placeholder, so an unknown brand fails
+ * cleanly instead of quietly attaching a globe to somebody's storefront.
+ *
+ * Fixed hosts, with the domain as a parameter: we never fetch the brand's own
+ * site, so there is no request to a user-controlled address and no SSRF surface.
+ * The bytes are then copied into our bucket, so nothing hotlinks a third party
+ * and no visitor's IP is handed to Google.
+ */
+export async function findBrandLogo(input: string): Promise<
+  { ok: true; url: string; domain: string } | { ok: false; message: string }
+> {
+  const ctx = await verifyCreator()
+
+  const raw = (input ?? '').trim().slice(0, 80)
+  if (!raw) return { ok: false, message: 'Enter a brand name or website first.' }
+
+  const explicit = toDomain(raw)
+  const candidates = explicit ? [explicit] : guessDomains(raw)
+  if (candidates.length === 0) return { ok: false, message: 'That does not look like a brand name or website.' }
+
+  for (const domain of candidates) {
+    for (const url of [
+      `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+      `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=256`,
+    ]) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+        if (!res.ok) continue
+
+        const contentType = res.headers.get('content-type') ?? ''
+        if (!contentType.startsWith('image/')) continue
+
+        const bytes = new Uint8Array(await res.arrayBuffer())
+        if (bytes.byteLength < 100 || bytes.byteLength > MAX_LOGO_BYTES) continue
+
+        const ext = contentType.includes('png') ? 'png'
+          : contentType.includes('svg') ? 'svg'
+            : contentType.includes('jpeg') ? 'jpg' : 'ico'
+        const path = `collab-logos/${ctx.creatorId}/${domain.replace(/[^a-z0-9]/g, '-')}.${ext}`
+
+        const admin = createAdminClient()
+        const { error } = await admin.storage
+          .from(LOGO_BUCKET)
+          .upload(path, bytes, { upsert: true, contentType })
+        if (error) continue
+
+        const { data } = admin.storage.from(LOGO_BUCKET).getPublicUrl(path)
+        return { ok: true, url: `${data.publicUrl}?v=${Date.now()}`, domain }
+      } catch {
+        // A timeout or a network blip on one source is not a failure of the
+        // feature; the next candidate is tried.
+        continue
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    message: explicit
+      ? `Nothing found for ${explicit}. Upload the logo instead.`
+      : 'Could not find that one. Try the website address, or upload the logo.',
+  }
+}
+
+/** Manual upload: the path that always works, and the one that produces a good
+ *  tile, since an uploaded logo can fill it and a favicon cannot. */
+export async function uploadBrandLogo(formData: FormData): Promise<
+  { ok: true; url: string } | { ok: false; message: string }
+> {
+  const ctx = await verifyCreator()
+
+  const file = formData.get('file') as File | null
+  const key = String(formData.get('key') ?? '').replace(/[^a-z0-9]/gi, '-').toLowerCase().slice(0, 40)
+  if (!file) return { ok: false, message: 'No file chosen.' }
+  if (!key) return { ok: false, message: 'Add the brand name first.' }
+
+  if (!['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(file.type)) {
+    return { ok: false, message: 'PNG, JPEG, WebP or SVG only.' }
+  }
+  if (file.size > MAX_LOGO_BYTES) return { ok: false, message: 'That file is over 2 MB.' }
+
+  const ext = file.type.includes('png') ? 'png'
+    : file.type.includes('svg') ? 'svg'
+      : file.type.includes('webp') ? 'webp' : 'jpg'
+  const path = `collab-logos/${ctx.creatorId}/${key}.${ext}`
+
+  const admin = createAdminClient()
+  const { error } = await admin.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (error) {
+    console.error(`[storefront] brand logo upload failed creator=${ctx.creatorId}: ${error.message}`)
+    return { ok: false, message: 'Upload failed. Please try again.' }
+  }
+
+  const { data } = admin.storage.from(LOGO_BUCKET).getPublicUrl(path)
+  // Same version stamp as the avatar: the path is stable across replacements, so
+  // without it a new logo serves the old bytes from cache.
+  return { ok: true, url: `${data.publicUrl}?v=${Date.now()}` }
+}

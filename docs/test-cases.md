@@ -2211,6 +2211,28 @@ in place.
       been rotated, correctly). First real sync is the test: connect, press Sync
       now, and check whether Interactions appears
 
+**Brands worked with: logo and reel link**
+- [ ] "Find logo" accepts a brand NAME (tries name.com then name.in) or a domain
+- [ ] A domain that does not exist yields NOTHING, not a placeholder. Both
+      services answer 404 for unknown domains, verified live; the status is the
+      match test. A generic globe silently attached to a brand would be worse
+      than no logo
+- [ ] Clearbit is NOT used. The domain no longer resolves — HubSpot sunset it
+- [ ] Logos are COPIED into the storefronts bucket, never hotlinked: no dead
+      links later and no visitor IP handed to Google
+- [ ] The fetch calls FIXED hosts with the domain as a parameter; we never
+      request the brand's own site, so there is no SSRF surface. The domain is
+      validated to a bare hostname before it is interpolated
+- [ ] The tile NEVER upscales a logo. Auto-fetched marks are favicons, often
+      32px; stretched across a 280px tile a brand's logo becomes a smudge
+- [ ] Manual upload always works, caps at 2 MB, and accepts PNG/JPEG/WebP/SVG
+- [ ] The stored URL carries ?v= — the path is stable across replacements, so
+      without it a new logo serves the old bytes from cache
+- [ ] The reel link renders only for http(s). `javascript:`, `data:` and
+      `vbscript:` are rejected by parsing the URL, not by pattern matching
+- [ ] The link appears only on the REAL tile, not the aria-hidden marquee
+      duplicate, or a keyboard user lands on a copy of a card
+
 **Blank stats are omitted, not rendered empty**
 - [ ] The hero renders only stats that HAVE a value. A connected creator who has
       typed no interactions and no avg views sees followers and posts, not two

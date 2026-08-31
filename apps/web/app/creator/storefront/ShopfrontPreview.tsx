@@ -32,6 +32,20 @@ export interface ShopfrontSection {
  * A native <details>, so it needs no state, works with JavaScript off, and is
  * keyboard operable without any of that being built by hand.
  */
+function isSafeUrl(raw?: string): boolean {
+  if (!raw) return false
+  try {
+    const u = new URL(raw.trim())
+    // Creator-entered and rendered as an anchor, so the scheme is CHECKED rather
+    // than assumed: `javascript:` in an href executes on click, and "looks like
+    // a URL" is a different question from "is safe to link". Parsed rather than
+    // pattern-matched, because the parser is what the browser will use.
+    return u.protocol === 'https:' || u.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 function VerifiedPanel({ v }: { v: VerifiedMarks }) {
   const fetched: string[] = []
   if (v.followers) fetched.push('Followers')
@@ -242,6 +256,9 @@ export interface BrandCollab {
   views?: string
   engagement?: string
   logoUrl?: string
+  /** The post the creator made for this brand. Optional, and validated to
+   *  http(s) before it is stored, since it is rendered as a link. */
+  reelUrl?: string
 }
 
 export interface RateCardItem {
@@ -1349,14 +1366,32 @@ export default function ShopfrontPreview({
                     boxShadow: '0 24px 52px -34px rgba(40,45,25,.34)',
                     display: 'flex', flexDirection: 'column', padding: 18,
                   }}>
-                    {/* Brand logo placeholder */}
+                    {/* The logo when there is one, the name when there is not.
+                        NEVER upscaled: the auto-fetched marks are favicons, often
+                        32px, and stretching one across this tile turns a brand's
+                        logo into a smudge on the page they are being judged on.
+                        maxWidth/maxHeight cap it; an uploaded logo is usually
+                        large enough to fill. */}
                     <div style={{
                       width: '100%', height: 214, borderRadius: 18,
                       border: '1px solid var(--sec-mid-2)',
                       background: 'linear-gradient(150deg,#F4F8FC 0%,#F7F4FB 55%,#FAFAF8 100%)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      gap: 12, padding: 18,
                     }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-faint)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                      {brand.logoUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={brand.logoUrl}
+                            alt=""
+                            style={{ maxWidth: 96, maxHeight: 96, objectFit: 'contain', flexShrink: 0 }}
+                          />
+                          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--ink)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-faint)', letterSpacing: '-0.02em' }}>{brand.name}</span>
+                      )}
                     </div>
                     <div style={{ marginTop: 'auto', paddingTop: 14 }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
@@ -1368,6 +1403,27 @@ export default function ShopfrontPreview({
                         {brand.views && brand.engagement && ' · '}
                         {brand.engagement && <><span style={{ fontWeight: 700, color: 'var(--ink)' }}>{brand.engagement}</span> engagement</>}
                       </div>
+                      {/* The work itself. Only ever http(s), and only on the real
+                          tile — the duplicate exists for the marquee loop and is
+                          aria-hidden, so giving it a focusable link would put a
+                          keyboard user on a copy of a card. */}
+                      {isSafeUrl(brand.reelUrl) && i < data.brandCollabs.length && (
+                        <a
+                          href={brand.reelUrl}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 9,
+                            fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+                            color: 'var(--ink)', textDecoration: 'none', borderBottom: '1px solid var(--sec-mid-2)',
+                          }}
+                        >
+                          See the post
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M7 17 17 7M9 7h8v8" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
