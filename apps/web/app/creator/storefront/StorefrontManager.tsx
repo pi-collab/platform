@@ -238,20 +238,6 @@ function buildShopfrontData(
       ? formatStat(igSnap.followersCount)
       : igPrimary?.followers != null ? formatStat(igPrimary.followers) : '',
     postsCount: igSnap?.mediaCount != null ? formatStat(igSnap.mediaCount) : undefined,
-    // Verified-only: there is no typed equivalent, so an unconnected creator has
-    // no strip rather than an empty one.
-    recentReels: (igSnap?.media ?? []).map(m => ({
-      id: m.id,
-      permalink: m.permalink,
-      thumbnailUrl: m.thumbnailUrl,
-      caption: m.caption,
-      views: m.views,
-      reach: m.reach,
-      likes: m.likeCount,
-      comments: m.commentsCount,
-      saved: m.saved,
-      shares: m.shares,
-    })),
 
     interactions: igSnap?.interactionsLast30 != null
       ? formatStat(igSnap.interactionsLast30)

@@ -144,7 +144,6 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     { key: 'ratecard', label: 'Rate Card', enabled: activeProducts.length > 0 },
     { key: 'audience', label: 'Audience', enabled: Boolean(ig?.topLocations || (audience as Record<string, unknown>).top_locations) },
     { key: 'content', label: 'Content Showcase', enabled: contentItems.some(i => i.title?.trim()) },
-    { key: 'reels', label: 'Recent reels', enabled: (ig?.media?.length ?? 0) > 0 },
     { key: 'collabs', label: 'Past Collaborations', enabled: brandCollabs.some(c => c.name?.trim()) },
     { key: 'pitch', label: 'Work With Me', enabled: true },
   ]
@@ -172,20 +171,6 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     // Verified only. There is no typed posts field to fall back to, so an
     // unconnected creator has no Posts stat rather than an empty one.
     postsCount: ig?.mediaCount != null ? formatStat(ig.mediaCount) : undefined,
-    // Verified-only: there is no typed equivalent, so an unconnected creator has
-    // no strip rather than an empty one.
-    recentReels: (ig?.media ?? []).map(m => ({
-      id: m.id,
-      permalink: m.permalink,
-      thumbnailUrl: m.thumbnailUrl,
-      caption: m.caption,
-      views: m.views,
-      reach: m.reach,
-      likes: m.likeCount,
-      comments: m.commentsCount,
-      saved: m.saved,
-      shares: m.shares,
-    })),
 
     // Instagram's reach is a 30-day window, which is what this stat claims.
     // Snapshot first, typed second, same as followers and audience.

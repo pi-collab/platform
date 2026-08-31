@@ -448,13 +448,10 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
       demographicsUnavailable: true,
       reachLast30: await fetchReach30(token),
       interactionsLast30: await fetchInteractions30(token),
-      // Demographics need 100 followers; reels do not. A smaller creator still
-      // has recent work worth showing.
-      media: await fetchRecentReels(token).catch(() => []),
     }
   }
 
-  const [age, gender, city, reach, interactions, media] = await Promise.all([
+  const [age, gender, city, reach, interactions] = await Promise.all([
     demographic(token, 'age').catch(() => [] as [string, number][]),
     demographic(token, 'gender').catch(() => [] as [string, number][]),
     demographic(token, 'city').catch(() => [] as [string, number][]),
@@ -462,7 +459,6 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
     // Caught for the same reason the demographics are: one metric Instagram
     // declines to serve must not cost the whole snapshot.
     fetchInteractions30(token).catch(() => undefined),
-    fetchRecentReels(token).catch(() => [] as IgMediaItem[]),
   ])
 
   const ages = mapAges(age)
@@ -474,7 +470,6 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
     topLocations: mapCities(city),
     reachLast30: reach,
     interactionsLast30: interactions,
-    media,
   }
 }
 

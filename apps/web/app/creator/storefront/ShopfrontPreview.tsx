@@ -1293,8 +1293,13 @@ export default function ShopfrontPreview({
         <SectionWrapper sectionKey="content">
           <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
             <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Recent work</span>
-              <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>A look at {firstName}&apos;s content</h2>
+              {/* "Selected", not "Recent". This section is what the creator
+                  chose to be judged on, and labelling curated work as recent
+                  claimed a currency it does not have — the exact claim the
+                  Instagram strip would have made and that we decided not to
+                  show. */}
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Selected work</span>
+              <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>Work {firstName} has picked out</h2>
 
               <div className="sf-exprow">
                 {data.contentItems.slice(0, 5).map((item, i) => {
@@ -1363,74 +1368,13 @@ export default function ShopfrontPreview({
         </SectionWrapper>
       )}
 
-      {/* ═══ 5b. RECENT REELS, FROM INSTAGRAM ══════════════════
-          Alongside the curated showcase above, never replacing it. The two
-          answer different objections: curated says "this is the standard of work
-          you are buying", this says "and here is what it is doing now". A brand
-          distrusts a highlight reel precisely because it was chosen, which is
-          what makes unchosen numbers beside it worth having. */}
-      {(data.recentReels?.length ?? 0) > 0 && (
-        <SectionWrapper sectionKey="reels">
-          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
-            <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Straight from Instagram</span>
-              <h2 className="t-title" style={{ margin: '10px 0 6px' }}>{firstName}&apos;s latest reels</h2>
-              <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: '0 0 clamp(20px,2.4vw,30px)' }}>
-                The most recent posts on the account, with verified numbers where Instagram reports them.
-              </p>
-
-              <div className="sf-reelrow">
-                {data.recentReels!.map((reel) => {
-                  // Built first, so "are there any numbers" is one check rather
-                  // than four conditions inside the markup.
-                  const stats = [
-                    { label: 'Views', value: reel.views },
-                    { label: 'Reach', value: reel.reach },
-                    { label: 'Likes', value: reel.likes },
-                    { label: 'Saves', value: reel.saved },
-                  ].filter((s) => s.value != null)
-
-                  return (
-                    <a
-                      key={reel.id}
-                      href={isSafeUrl(reel.permalink) ? reel.permalink : undefined}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="sf-reel"
-                    >
-                      <div className="sf-reel__media">
-                        {reel.thumbnailUrl
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          ? <img src={reel.thumbnailUrl} alt="" loading="lazy" />
-                          : <span className="sf-reel__ph" aria-hidden="true" />}
-                        <span className="sf-reel__tag">Reel</span>
-                      </div>
-
-                      {reel.caption && <p className="sf-reel__cap">{reel.caption}</p>}
-
-                      {/* NOTHING renders here when there are no numbers. Not a
-                          dash, not an empty row, not a reserved gap. Instagram
-                          refuses insights for anything posted before the account
-                          became professional, so most reels legitimately have
-                          none — and five cards each showing "—" reads as five
-                          broken cards rather than as a clean strip. */}
-                      {stats.length > 0 && (
-                        <div className="sf-reel__stats">
-                          {stats.map((s) => (
-                            <span key={s.label} className="sf-reel__stat">
-                              <b>{fmtCount(s.value!)}</b> {s.label.toLowerCase()}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </a>
-                  )
-                })}
-              </div>
-            </div>
-          </section>
-        </SectionWrapper>
-      )}
+      {/* Recent reels are deliberately NOT shown.
+          The curated Content Showcase above is what a creator chose to be judged
+          on, and the brands section below carries the reel they made for each
+          brand. An automatic strip of latest posts competes with the first and
+          duplicates the second. The fetch is disabled to match — see
+          buildSnapshot — so nothing is downloaded or stored for a hidden
+          section. The renderer and the fetch both remain, one call site each. */}
 
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
       {data.brandCollabs.length > 0 && (
@@ -1441,7 +1385,16 @@ export default function ShopfrontPreview({
               <div style={{ margin: '10px 0 clamp(10px,1.3vw,16px)' }}>
                 <h2 className="t-title" style={{ margin: '0 0 6px' }}>Brands {firstName} has delivered for</h2>
                 <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: 0 }}>Real campaigns, real numbers from brands who booked {firstName} and came back.</p>
-                <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>{data.brandCollabs.length} brands booked on our platform</div>
+                {/* NOT "booked on our platform". These entries are typed by the
+                    creator; nothing about them went through Guapd. The claim was
+                    the same class of thing as the 6.4% engagement and the
+                    340,000 avg views: a credential the page asserted that no
+                    code could support. It becomes true only when the brand side
+                    can auto-populate from a real deal, and it can be said again
+                    then. */}
+                <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 12 }}>
+                  {data.brandCollabs.length} {data.brandCollabs.length === 1 ? 'brand' : 'brands'}
+                </div>
               </div>
             </div>
 

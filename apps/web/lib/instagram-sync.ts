@@ -182,18 +182,6 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
   try {
     const snapshot = await buildSnapshot(token)
 
-    // Before the write, so the stored snapshot never contains an expiring CDN
-    // link. The previous snapshot is read for the images we already hold.
-    const { data: prevRow } = await admin
-      .from('creator_instagram_connections')
-      .select('snapshot')
-      .eq('creator_id', row.creator_id)
-      .maybeSingle()
-    await syncMediaThumbnails(
-      row.creator_id,
-      snapshot,
-      (prevRow?.snapshot ?? undefined) as IgSnapshot | undefined,
-    ).catch(() => {})
 
     // Re-read every sync: a creator can switch back to a personal account at
     // any time, and the storefront must stop showing verified figures the
