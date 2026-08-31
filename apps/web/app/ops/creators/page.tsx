@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import VettingActions from '@/components/ops/VettingActions'
+import { opsSearchTerm, opsSearchFilter, stripLeadingAt } from '@/lib/ops-search'
 import VettingBadge from '@/components/ops/VettingBadge'
 import { VETTING_STATUSES, VETTING_LABEL, type VettingStatus } from '@/lib/vetting-status'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
@@ -16,7 +17,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function OpsCreatorsPage({ searchParams }: {
-  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string }
+  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; q?: string }
 }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
@@ -42,12 +43,17 @@ export default async function OpsCreatorsPage({ searchParams }: {
   const shopfront = searchParams?.shopfront === 'yes' ? 'yes'
     : searchParams?.shopfront === 'no' ? 'no' : ''
 
+  // Name or handle. A leading @ is stripped because that is how ops will type a
+  // handle and how the creator writes it, but handles are stored bare.
+  const term = stripLeadingAt(opsSearchTerm(searchParams?.q))
+
   const filterQuery = [
+    ...(term ? [`q=${encodeURIComponent(term)}`] : []),
     ...selected.map((b) => `band=${encodeURIComponent(b)}`),
     ...statuses.map((v) => `status=${encodeURIComponent(v)}`),
     ...(shopfront ? [`shopfront=${shopfront}`] : []),
   ].join('&')
-  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== ''
+  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== '' || term !== ''
 
   const admin = createAdminClient()
 
@@ -70,7 +76,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
   // is not supported: a mixed selection would need an or() carrying quoted
   // values with spaces and an en dash inside a comma-separated filter string,
   // which fails at runtime, not at build.
-  type Q = { is: Function; in: Function; not: Function; eq: Function }
+  type Q = { is: Function; in: Function; not: Function; eq: Function; or: Function }
   const applyBands = <T extends Q>(q: T): T =>
     wantsUnanswered ? (q.is('follower_band', null) as T)
       : wantsBands.length ? (q.in('follower_band', wantsBands) as T)
@@ -86,7 +92,9 @@ export default async function OpsCreatorsPage({ searchParams }: {
     }
     return shopfrontIds.length ? (q.not('id', 'in', `(${shopfrontIds.join(',')})`) as T) : q
   }
-  const applyAll = <T extends Q>(q: T): T => applyShopfront(applyStatus(applyBands(q)))
+  const applySearch = <T extends Q>(q: T): T =>
+    term ? (q.or(opsSearchFilter(['full_name', 'handle'], term)) as T) : q
+  const applyAll = <T extends Q>(q: T): T => applySearch(applyShopfront(applyStatus(applyBands(q))))
 
   const listQuery = applyAll(
     admin
@@ -161,6 +169,22 @@ export default async function OpsCreatorsPage({ searchParams }: {
       {/* A GET form: no client component, no state, and the resulting URL is
           the filter itself. Checkboxes because the question is "any of these". */}
       <form method="get" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', margin: '0 0 1rem', padding: '0.7rem 0.85rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        {/* Inside the same form as the filters, so searching keeps them and a
+            filter keeps the search. Carrying no `page` is deliberate: a new
+            search must land on page one, or it lands on page 4 of 2 and looks
+            like it found nothing. */}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8125rem' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Search</span>
+          <input
+            type="search"
+            name="q"
+            defaultValue={term}
+            placeholder="Name or handle"
+            aria-label="Search creators by name or handle"
+            style={{ width: 190, padding: '0.3rem 0.5rem', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: '0.8125rem' }}
+          />
+        </label>
+        <span style={{ width: 1, alignSelf: 'stretch', background: '#e5e7eb' }} aria-hidden="true" />
         <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Followers</span>
         {BANDS.map((b) => (
           <label key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
@@ -211,7 +235,13 @@ export default async function OpsCreatorsPage({ searchParams }: {
       </form>
 
       {all.length === 0 ? (
-        <p style={{ color: '#888', fontSize: '0.875rem' }}>No creators yet.</p>
+        // "No creators yet" is wrong when a search or filter is what emptied the
+        // list, and it reads as though the table is broken.
+        <p style={{ color: '#888', fontSize: '0.875rem' }}>
+          {term
+            ? `No creators match “${term}”${anyFilter && (selected.length || statuses.length || shopfront) ? ' with these filters' : ''}.`
+            : anyFilter ? 'No creators match these filters.' : 'No creators yet.'}
+        </p>
       ) : (
         <>
           <OpsTableScroll>

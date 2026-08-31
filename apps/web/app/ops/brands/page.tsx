@@ -1,16 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
+import { opsSearchTerm, opsSearchFilter } from '@/lib/ops-search'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import BrandStatusActions from './BrandStatusActions'
 
-export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string } }) {
+export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
   const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
   const admin = createAdminClient()
   const { page, from, to } = opsRange(searchParams?.page)
+  const term = opsSearchTerm(searchParams?.q)
 
   // The review queue is fetched SEPARATELY and unpaginated. It used to be
   // filtered out of the same list, which was fine while that list was
@@ -24,11 +26,19 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
     .eq('brand_status', 'pending_review')
     .order('created_at', { ascending: false })
 
-  const { data: brands, error, count } = await admin
+  // The name a brand is known by, plus the person ops would actually be looking
+  // for. A brand is often remembered as "whoever emailed us" rather than by its
+  // registered name.
+  const brandsQuery = admin
     .from('brands')
     .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .range(from, to)
+
+  const { data: brands, error, count } = await (
+    term
+      ? brandsQuery.or(opsSearchFilter(['name', 'contact_name', 'contact_email'], term))
+      : brandsQuery
+  ).range(from, to)
 
   if (error) return <p style={{ color: 'red' }}>Error loading brands: {error.message}</p>
 
@@ -94,8 +104,27 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
         </section>
       )}
 
+      {/* A GET form, so the result is a shareable URL and there is no client
+          component. It carries no `page`, so a new search lands on page one
+          rather than on page 4 of a 2-page result and looking empty. */}
+      <form method="get" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem', margin: '0 0 1rem', padding: '0.7rem 0.85rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Search</span>
+        <input
+          type="search"
+          name="q"
+          defaultValue={term}
+          placeholder="Brand, contact name or email"
+          aria-label="Search brands by name, contact name or email"
+          style={{ width: 250, padding: '0.3rem 0.5rem', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: '0.8125rem' }}
+        />
+        <button type="submit" style={{ padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Search</button>
+        {term && <Link href="/ops/brands" style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}>Clear</Link>}
+      </form>
+
       {!brands || brands.length === 0 ? (
-        <p style={{ color: '#888', fontSize: '0.875rem' }}>No brands registered yet.</p>
+        <p style={{ color: '#888', fontSize: '0.875rem' }}>
+          {term ? `No brands match “${term}”.` : 'No brands registered yet.'}
+        </p>
       ) : (
         <>
           <OpsTableScroll>
@@ -148,7 +177,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
             </tbody>
         </table>
           </OpsTableScroll>
-        <OpsPagination page={page} total={count ?? 0} basePath="/ops/brands" />
+        <OpsPagination page={page} total={count ?? 0} basePath={term ? `/ops/brands?q=${encodeURIComponent(term)}` : '/ops/brands'} />
         </>
       )}
     </div>
