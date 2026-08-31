@@ -5,6 +5,7 @@ import { sendOTP as sendSignupOTP } from '@/app/signup/creator/actions'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/phone'
+import { checkReviewLogin, logReviewLogin } from '@/lib/review-access'
 import { safeNext } from '@/lib/safe-next'
 import { sendOTP } from '@/app/signup/creator/actions'
 
@@ -104,6 +105,19 @@ export async function verifyAndSignIn(
     process.env.STAGING_OTP_BYPASS === 'true' &&
     process.env.VERCEL_ENV !== 'production'
 
+  // App Review access: ONE phone, one secret code, and inert unless both env
+  // vars are set. Deliberately allowed on production, which is what the staging
+  // bypass above refuses — a Meta reviewer cannot receive our SMS, and the
+  // review is of the production app.
+  const review = checkReviewLogin(phone, trimmedCode)
+  if (review.attemptedOnReviewPhone) {
+    // Audited either way. OTP verification is unthrottled, so a run of failures
+    // against this number is the only signal that someone is guessing.
+    await logReviewLogin(phone, review.accepted)
+  }
+  const isReviewLogin = review.accepted
+  const skipOtpCheck = isStagingBypass || isReviewLogin
+
   // The OTP check and the creator lookup are independent — the second needs
   // only the phone — so they go out together. Each round-trip costs the full
   // distance between the function and the database.
@@ -112,7 +126,7 @@ export async function verifyAndSignIn(
   // is only used AFTER the check below returns successfully, and a wrong code
   // still gets the same message it always did.
   const [verifyResult, creatorResult] = await Promise.all([
-    isStagingBypass
+    skipOtpCheck
       ? Promise.resolve({ data: null })
       : admin
           .from('phone_verifications')
@@ -127,7 +141,7 @@ export async function verifyAndSignIn(
     admin.from('creators').select('id, user_id').eq('phone', phone),
   ])
 
-  if (!isStagingBypass) {
+  if (!skipOtpCheck) {
     const verification = verifyResult.data
     if (!verification) {
       return { status: 'error', message: 'Invalid or expired code. Try again.' }
