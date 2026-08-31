@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { vettingStatusOf, VETTING_LABEL, type VettingStatus } from '@/lib/vetting-status'
+import ReplyBox from './ReplyBox'
 
 export const dynamic = 'force-dynamic'
 
@@ -160,7 +161,7 @@ export default async function OpsAppealsPage({ searchParams }: {
                       {a.note || <em style={{ color: '#9ca3af' }}>No note was written.</em>}
                     </p>
 
-                    <div style={{ marginTop: '0.7rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.7rem', flexWrap: 'wrap' }}>
                       <Link
                         href={`/ops/creators/${a.creatorId}`}
                         style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}
@@ -168,6 +169,12 @@ export default async function OpsAppealsPage({ searchParams }: {
                         Open profile to decide &rarr;
                       </Link>
                     </div>
+
+                    {/* Replying is possible from here because the decision is
+                        usually made by reading the note directly above it.
+                        Reversing the decision still happens on the profile,
+                        where the vetting actions are. */}
+                    <ReplyBox creatorId={a.creatorId} creatorName={name} />
                   </article>
                 )
               })}

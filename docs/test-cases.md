@@ -1281,6 +1281,32 @@ Only three paths can make someone a brand member. All three are now guarded:
 - [ ] The jump box is hidden at 7 pages or fewer, where every page has a link
 - [ ] It works with JavaScript disabled, and lands on a real shareable URL
 
+### 45c. Ops search, appeals queue and appeal replies
+
+- [ ] Creators search matches name OR handle; brands search matches brand name,
+      contact name or contact email
+- [ ] A leading @ is stripped. Ops types "@palak_pj"; handles are stored bare
+- [ ] The term is SANITISED, not escaped. It lands in a PostgREST or=() filter,
+      which is a grammar: "Mehta, Aarav" would start a second condition and fail
+      the whole query. Verify commas, parens, % and * do not error
+- [ ] Dots SURVIVE — handles and domains need them and they cannot start a clause
+- [ ] Searching keeps the active filters and filtering keeps the search: one form
+- [ ] A new search lands on page ONE, never on page 4 of a 2-page result
+- [ ] Paging preserves the search term
+- [ ] Empty states distinguish "nothing here" from "nothing matched"
+
+- [ ] The Appeals tab lists appeals oldest FIRST, note shown in full
+- [ ] Appeals whose creator is no longer rejected are hidden by default, with a
+      count and a way to show them
+- [ ] Reply templates FILL AN EDITABLE BOX; there is no send-template button. A
+      form letter answering an appeal is worse than a short written reply
+- [ ] The reply is gated by verifyOpsAccess IN THE ACTION, not only by the
+      layout. A server action is its own entry point
+- [ ] Every reply writes an ops_events row INCLUDING the message body, and a
+      FAILED send is logged too — needed when a creator says they never heard back
+- [ ] With email unconfigured, the failure is shown to the sender rather than
+      swallowed: they are waiting on it
+
 ### 46. Dashboard checklist and fixed-element clearance
 
 - [ ] Get started is the FIRST section, above Overview — it is what a creator with no deals should act on
