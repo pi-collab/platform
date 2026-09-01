@@ -184,3 +184,79 @@ async function fetchPostInsights(
     return base
   }
 }
+
+/**
+ * Posts whose numbers are worth reading again.
+ *
+ * ── Why a decaying cadence ──────────────────────────────────────────────────
+ * A reel's reach climbs for days after posting and then stops moving. Reading
+ * every post nightly forever would spend a call per post per creator per night
+ * to re-fetch numbers that stopped changing weeks ago; reading once at post time
+ * would understate every campaign, because the numbers a brand sees would be
+ * whatever the post managed in its first few minutes.
+ *
+ *   first 14 days   daily
+ *   to 30 days      weekly
+ *   after 30 days   stopped
+ *
+ * Instagram retains insights for 90 days, so stopping at 30 is our choice, not
+ * a limit: growth has flattened well before then and the last read stays on the
+ * record.
+ */
+export interface RefreshCandidate {
+  id: string
+  creator_id: string
+  ig_media_id: string
+}
+
+export async function postsDueForRefresh(limit = 200): Promise<RefreshCandidate[]> {
+  const admin = createAdminClient()
+  const now = Date.now()
+
+  const { data } = await admin
+    .from('deal_deliverable_items')
+    .select('id, ig_media_id, ig_last_synced_at, posted_at, deals(creator_id)')
+    .eq('ig_match_status', 'resolved')
+    .not('ig_media_id', 'is', null)
+    .gte('posted_at', new Date(now - 30 * 86_400_000).toISOString())
+    .order('ig_last_synced_at', { ascending: true, nullsFirst: true })
+    .limit(limit)
+
+  const out: RefreshCandidate[] = []
+
+  for (const row of (data ?? []) as unknown as {
+    id: string
+    ig_media_id: string
+    ig_last_synced_at: string | null
+    posted_at: string | null
+    deals?: { creator_id?: string }
+  }[]) {
+    const creatorId = row.deals?.creator_id
+    if (!creatorId || !row.posted_at) continue
+
+    const ageDays = (now - new Date(row.posted_at).getTime()) / 86_400_000
+    const sinceSync = row.ig_last_synced_at
+      ? (now - new Date(row.ig_last_synced_at).getTime()) / 86_400_000
+      : Infinity
+
+    const due = ageDays <= 14 ? sinceSync >= 1 : sinceSync >= 7
+    if (due) out.push({ id: row.id, creator_id: creatorId, ig_media_id: row.ig_media_id })
+  }
+
+  return out
+}
+
+/** Re-read one post and store it. Keeps the LAST GOOD numbers on any failure:
+ *  a transient outage must not blank a brand's campaign screen. */
+export async function refreshOnePost(candidate: RefreshCandidate): Promise<boolean> {
+  const insights = await refreshPostInsights(candidate.creator_id, candidate.ig_media_id)
+  if (!insights) return false
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('deal_deliverable_items')
+    .update({ ig_insights: insights, ig_last_synced_at: new Date().toISOString() })
+    .eq('id', candidate.id)
+
+  return !error
+}

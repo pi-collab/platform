@@ -2264,6 +2264,34 @@ in place.
 - [ ] The 0494 CHECK accepts its own column DEFAULT ('pending'). A CHECK whose
       default violates it passes its own migration and breaks every later INSERT
 
+**Campaign performance rollup**
+- [ ] Reach and views are SUMMED across posts. The engagement rate is computed
+      ONCE from campaign totals (interactions / reach), never as an average of
+      per-post rates: averaging 9% over 800 reach with 2% over 400,000 gives
+      5.5%, which describes nobody and flatters the campaign
+- [ ] "X of Y posts verified" is always on screen, and the totals say they cover
+      verified posts only. A total that silently omits unconnected creators
+      understates the campaign while looking authoritative
+- [ ] Per-creator rows sort by reach, and a creator contributing no verified
+      numbers shows the REASON rather than a blank row
+- [ ] Each row links through to that deal's per-post screen
+- [ ] Empty state when nothing is posted yet, not a zeroed dashboard
+- [ ] The campaign CTA already existed and pointed at a 404; it resolves now
+
+**Post insight refresh (decaying cadence)**
+- [ ] Daily for the first 14 days, weekly to 30 days, then stopped. Verified
+      against 7 cases including never-synced
+- [ ] Posts older than 30 days are excluded by the QUERY, so they never reach
+      the cadence check
+- [ ] Reading once at post time would understate every campaign: a reel's reach
+      climbs for days. Reading nightly forever spends a call per post per
+      creator to re-fetch numbers that stopped moving
+- [ ] A failed refresh KEEPS the last good numbers. A transient outage must not
+      blank a brand's campaign screen
+- [ ] Runs AFTER the connection sync in the same cron, inside the same time
+      budget: an overrunning post refresh must not cost the token refreshes,
+      which are the ones that expire
+
 **Recent reels (Phase Two)**
 - [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
       needs comparable reel numbers
