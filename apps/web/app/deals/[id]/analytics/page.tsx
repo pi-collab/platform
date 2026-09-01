@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
 import { readInsightHistory } from '@/lib/deal-post-insights'
-import InsightChart from './InsightChart'
+import InsightChart from '@/components/InsightChart'
 
 export const metadata: Metadata = { title: 'Post performance · Guapd' }
 export const dynamic = 'force-dynamic'

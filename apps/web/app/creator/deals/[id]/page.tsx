@@ -196,7 +196,21 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
             </Link>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
               <div>
-                <div style={metaLabel}>{deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}</div>
+                <div style={metaLabel}>
+                  {deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}
+                  {/* Only once something is posted, since there is nothing to
+                      show before that. The creator sees the same numbers the
+                      brand does, which is what they will be negotiating their
+                      next rate against. */}
+                  {deal.is_posted && (
+                    <>
+                      {' \u00B7 '}
+                      <Link href={`/creator/deals/${deal.id}/analytics`} style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none' }}>
+                        How your post did
+                      </Link>
+                    </>
+                  )}
+                </div>
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
                   {isNegotiating && hasBrandCounter ? 'Counter received from '
                     : isNegotiating ? 'Offer received from '
