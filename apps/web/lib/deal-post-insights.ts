@@ -253,10 +253,70 @@ export async function refreshOnePost(candidate: RefreshCandidate): Promise<boole
   if (!insights) return false
 
   const admin = createAdminClient()
+
+  // Read-then-append. The history is what makes a chart possible: overwriting
+  // ig_insights alone says what a post has done and can never say how it got
+  // there.
+  const { data: current } = await admin
+    .from('deal_deliverable_items')
+    .select('ig_insight_history')
+    .eq('id', candidate.id)
+    .maybeSingle()
+
+  const history = appendInsightPoint(
+    readInsightHistory((current as { ig_insight_history?: unknown } | null)?.ig_insight_history),
+    insights,
+  )
+
   const { error } = await admin
     .from('deal_deliverable_items')
-    .update({ ig_insights: insights, ig_last_synced_at: new Date().toISOString() })
+    .update({ ig_insights: insights, ig_insight_history: history, ig_last_synced_at: new Date().toISOString() })
     .eq('id', candidate.id)
 
   return !error
+}
+
+/* ── History ───────────────────────────────────────────────────────────────── */
+
+/** About eighteen readings arrive over the refresh window. The cap is headroom,
+ *  not a target: it stops a stuck job growing the row without bound. */
+const MAX_HISTORY = 60
+
+export interface InsightPoint extends PostInsights {
+  at: string
+}
+
+/**
+ * Append a reading, or replace the last one taken the same day.
+ *
+ * Same-day replacement keeps the series one point per day during the daily
+ * phase. Without it, a creator pressing re-check three times would put three
+ * points on today and flatten the chart's shape around a single day.
+ */
+export function appendInsightPoint(
+  history: InsightPoint[] | null | undefined,
+  insights: PostInsights,
+  at: Date = new Date(),
+): InsightPoint[] {
+  const point: InsightPoint = { ...insights, at: at.toISOString() }
+  const existing = Array.isArray(history) ? [...history] : []
+
+  const sameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10)
+  const last = existing[existing.length - 1]
+
+  if (last && sameDay(last.at, point.at)) existing[existing.length - 1] = point
+  else existing.push(point)
+
+  // Oldest first, and the oldest go first when trimming: the recent shape is
+  // what a brand reads, and the first reading is already the post's baseline.
+  return existing.slice(-MAX_HISTORY)
+}
+
+/** Read the stored history defensively. It is creator-adjacent JSON that has
+ *  been through a migration default, so it is not assumed to be well formed. */
+export function readInsightHistory(raw: unknown): InsightPoint[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((p): p is InsightPoint => !!p && typeof p === 'object' && typeof (p as InsightPoint).at === 'string')
+    .sort((a, b) => a.at.localeCompare(b.at))
 }

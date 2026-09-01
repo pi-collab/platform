@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { resolvePostedUrl } from '@/lib/deal-post-insights'
+import { resolvePostedUrl, appendInsightPoint, readInsightHistory } from '@/lib/deal-post-insights'
 import { storePostThumbnail } from '@/lib/deal-post-thumbnails'
 
 /**
@@ -32,10 +32,27 @@ export async function resolveAndStorePostInsights(itemId: string, postedUrl: str
 
   const result = await resolvePostedUrl(creatorId, postedUrl)
 
+  // The first reading is the post's baseline, so it goes on the history too.
+  // Without it the chart would start at the first refresh and lose the shape of
+  // the first day, which is when a reel moves most.
+  let history: unknown
+  if (result.insights) {
+    const { data: current } = await admin
+      .from('deal_deliverable_items')
+      .select('ig_insight_history')
+      .eq('id', itemId)
+      .maybeSingle()
+    history = appendInsightPoint(
+      readInsightHistory((current as { ig_insight_history?: unknown } | null)?.ig_insight_history),
+      result.insights,
+    )
+  }
+
   const patch: Record<string, unknown> = {
     ig_match_status: result.status,
     ig_media_id: result.mediaId ?? null,
     ig_insights: result.insights ?? null,
+    ...(history ? { ig_insight_history: history } : {}),
     ig_last_synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }

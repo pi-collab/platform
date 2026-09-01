@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
+import { readInsightHistory } from '@/lib/deal-post-insights'
+import InsightChart from './InsightChart'
 
 export const metadata: Metadata = { title: 'Post performance · Guapd' }
 export const dynamic = 'force-dynamic'
@@ -31,6 +33,7 @@ interface ItemRow {
   ig_insights: Record<string, number | undefined> | null
   ig_thumbnail_url: string | null
   ig_last_synced_at: string | null
+  ig_insight_history: unknown
 }
 
 export default async function DealAnalyticsPage({ params }: { params: { id: string } }) {
@@ -47,7 +50,7 @@ export default async function DealAnalyticsPage({ params }: { params: { id: stri
       .maybeSingle(),
     supabase
       .from('deal_deliverable_items')
-      .select('id, label, platform, posted_url, posted_at, ig_match_status, ig_insights, ig_thumbnail_url, ig_last_synced_at')
+      .select('id, label, platform, posted_url, posted_at, ig_match_status, ig_insights, ig_thumbnail_url, ig_last_synced_at, ig_insight_history')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
   ])
@@ -193,6 +196,10 @@ function PostCard({ item, creatorName }: { item: ItemRow; creatorName: string })
             See the post &rarr;
           </a>
         )}
+
+        {/* Only once there is a shape to show. One reading is a dot, and a
+            chart of a dot invites a brand to read a trend that is not there. */}
+        <InsightChart history={readInsightHistory(item.ig_insight_history)} />
 
         {status === 'resolved' && item.ig_last_synced_at && (
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)', margin: '8px 0 0' }}>
