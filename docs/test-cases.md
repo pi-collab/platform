@@ -2232,6 +2232,38 @@ in place.
       carries the weight is that a compromise is worth nothing
 - [ ] REMOVE both env vars when the review closes
 
+**Verified post performance on a deal (0494)**
+- [ ] Matching is on the SHORTCODE, not the URL. /p/{code} and /reel/{code} are
+      the same post; Instagram's share sheet gives one form and `permalink`
+      returns the other, so URL comparison would report not_found for most
+      correctly pasted links. 18 cases pass including tracking params, no-www,
+      no-scheme, m. host, username-prefixed, /reels/ plural and legacy /tv/
+- [ ] instagram.com.evil.co is REJECTED. A hostname.includes() check would have
+      accepted it
+- [ ] Stories are rejected: they expire, so a deliverable pointing at one cannot
+      be verified later
+- [ ] Resolution is LIVE at mark-posted time, not from the stored snapshot. The
+      snapshot is up to a day old and will not contain a post published minutes
+      ago
+- [ ] ig_match_status is written on EVERY path: resolved, not_found,
+      not_connected, unsupported. Never NULL, never a zero
+- [ ] A failed resolve does NOT fail markItemPosted. Marking a deliverable
+      posted is the creator's action; the re-check action is the retry
+- [ ] Re-check is scoped to the creator's OWN deal inside the action, not only
+      by the page
+- [ ] The brand screen names the REASON for every post without numbers, and
+      not_found does not accuse: wrong link, deleted post and wrong account are
+      indistinguishable to us
+- [ ] Coverage is stated as "X of Y posts verified". A total that silently omits
+      posts is worse than no total
+- [ ] Totals SUM reach and views. No averaged rate across posts
+- [ ] Thumbnails are copied to our bucket, keyed on media id. Instagram's URL is
+      signed and expires, and this screen is read months after delivery
+- [ ] The two "View analytics" pills are real links now. They were <span> with
+      cursor:default pointing nowhere
+- [ ] The 0494 CHECK accepts its own column DEFAULT ('pending'). A CHECK whose
+      default violates it passes its own migration and breaks every later INSERT
+
 **Recent reels (Phase Two)**
 - [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
       needs comparable reel numbers

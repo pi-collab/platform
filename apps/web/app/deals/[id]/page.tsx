@@ -258,7 +258,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
                     Re-engage {firstName}
                   </Link>
-                  <span className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 42, padding: '0 16px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', cursor: 'default', whiteSpace: 'nowrap' }}>View analytics</span>
+                  <Link href={`/deals/${deal.id}/analytics`} className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 42, padding: '0 16px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View analytics</Link>
                 </>
               ) : (
                 <>
@@ -440,7 +440,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                       {deal.posted_url && (
                         <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3 }}>View post</a>
                       )}
-                      <span className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 6px 14px -10px rgba(40,45,25,.4)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', cursor: 'default' }}>View analytics</span>
+                      <Link href={`/deals/${deal.id}/analytics`} className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 6px 14px -10px rgba(40,45,25,.4)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none' }}>View analytics</Link>
                     </div>
                   </div>
                 )
