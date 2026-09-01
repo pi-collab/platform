@@ -8,6 +8,7 @@ import { NICHES } from '@/lib/niches'
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
+/** The typed figure. Kept as the fallback for creators who have not connected. */
 function bestFollowers(sa: Array<{ follower_count: number | null }> | null): number {
   if (!sa || sa.length === 0) return 0
   return Math.max(0, ...sa.map((s) => s.follower_count ?? 0))
@@ -105,7 +106,18 @@ function useAnimatedPlaceholder() {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creators: BrowseCreator[]; storefrontSlugs?: Record<string, string> }) {
+export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {} }: {
+  creators: BrowseCreator[]
+  storefrontSlugs?: Record<string, string>
+  /** creatorId -> followers from a connected Instagram account. */
+  verifiedFollowers?: Record<string, number>
+}) {
+  // Verified first, typed second. Connecting Instagram does not write into
+  // social_accounts, so a connected creator's typed count is usually absent and
+  // reading it alone showed them as 0 and sorted them last.
+  const followersOf = (c: BrowseCreator) =>
+    verifiedFollowers[c.id] ?? bestFollowers(c.social_accounts)
+
   const [search, setSearch] = useState('')
   const [nicheFilter, setNicheFilter] = useState('all')
   const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
@@ -169,7 +181,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
 
     // Sort
     list = [...list].sort((a, b) => {
-      if (sort === 'followers') return bestFollowers(b.social_accounts) - bestFollowers(a.social_accounts)
+      if (sort === 'followers') return followersOf(b) - followersOf(a)
       if (sort === 'rateLow') return (lowestRate(a.rate_card) ?? 0) - (lowestRate(b.rate_card) ?? 0)
       return a.full_name.localeCompare(b.full_name)
     })
@@ -450,7 +462,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
               {pageList.map((c) => (
-                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} />
+                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} verifiedFollowers={verifiedFollowers[c.id]} />
               ))}
             </div>
 
@@ -533,14 +545,18 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
 
 /* ── Creator Card ──────────────────────────────────────────────── */
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers }: {
   creator: BrowseCreator
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
   storefrontSlug: string | null
+  /** From a connected Instagram account, when there is one. */
+  verifiedFollowers?: number
 }) {
   const primary = primarySocial(c.social_accounts)
-  const followers = bestFollowers(c.social_accounts)
+  // Verified first. The typed figure is usually absent for a connected creator,
+  // which is how a real 535 rendered as 0.
+  const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
   const low = lowestRate(c.rate_card)
   const niche = (c.niches ?? [])[0]
 
