@@ -178,13 +178,15 @@ interface Props {
   currentPage: number
   totalPages: number
   totalCount: number
+  /** Computed server-side over ALL the brand's deals, not the current page. */
+  tabCounts: Record<string, number>
 }
 
 // ════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 
-export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount }: Props) {
+export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(currentQuery)
@@ -226,21 +228,11 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
     }, 300)
   }
 
-  // Tab counts from current page's deals
-  const tabCounts = useMemo(() => {
-    const NEEDS_YOU = new Set(['negotiating', 'delivered', 'approved'])
-    const m: Record<string, number> = { all: deals.length, needs_you: 0 }
-    for (const d of deals) {
-      m[d.status] = (m[d.status] ?? 0) + 1
-      // Group paid/complete into posted tab
-      if (d.status === 'complete') m['paid'] = (m['paid'] ?? 0) + 1
-      // Group revision into review tab with delivered
-      if (d.status === 'revision') m['delivered'] = (m['delivered'] ?? 0) + 1
-      // Count needs-you
-      if (NEEDS_YOU.has(d.status)) m['needs_you'] = (m['needs_you'] ?? 0) + 1
-    }
-    return m
-  }, [deals])
+  // Counts come from the SERVER, over every deal the brand has. Deriving them
+  // here meant counting `deals`, which is the current page AFTER the status
+  // filter — so "All" counted one page, and with any filter active every other
+  // tab counted zero because those rows were not in the response. That is why
+  // "In review 0" turned into two the moment it was clicked.
 
   // Client-side sort
   const sorted = useMemo(() => sortDeals(deals, sortKey), [deals, sortKey])

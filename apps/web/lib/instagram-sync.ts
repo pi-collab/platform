@@ -1,7 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptToken, encryptToken } from '@/lib/instagram-token'
-import { buildSnapshot, refreshLongLivedToken, type IgSnapshot } from '@/lib/instagram'
+import { buildSnapshot, refreshLongLivedToken, fetchReelCandidates, fetchReelById, type IgSnapshot, type IgMediaItem } from '@/lib/instagram'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 
 /**
@@ -212,6 +212,10 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
     // connected before it existed had a bio, a name and a photo sitting in their
     // snapshot that nothing ever used.
     await prefillFromInstagram(row.creator_id, snapshot).catch(() => {})
+
+    // The featured set is refreshed with everything else, so a brand sees
+    // current numbers on the reels a creator chose.
+    await syncFeaturedReels(row.creator_id).catch(() => {})
 
     return { ok: true, detail: 'synced' }
   } catch (err) {
@@ -491,5 +495,145 @@ export async function syncMediaThumbnails(
     // A failed cleanup leaves files behind. That is a cost, not a fault, and it
     // must not fail a sync that otherwise worked.
     console.error(`[instagram] thumbnail cleanup failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+/* ── Featured reels on the storefront ──────────────────────────────────────── */
+
+/** How many reels a creator may feature. Six fills the row at desktop and keeps
+ *  the section a highlight rather than an archive. */
+export const MAX_FEATURED_REELS = 6
+
+/**
+ * The creator's reels, fetched LIVE for the picker.
+ *
+ * Not from the snapshot, and deliberately not persisted. Instagram's thumbnail
+ * URLs are signed and expire, so a stored candidate list would show broken
+ * images in the editor within days. The picker is a private, authenticated
+ * screen showing the creator their OWN account, so hotlinking Instagram's CDN
+ * there leaks nothing and costs no bandwidth — unlike the public storefront,
+ * where every thumbnail is copied into our bucket.
+ */
+export async function listReelCandidates(creatorId: string): Promise<IgMediaItem[]> {
+  const { data } = await createAdminClient()
+    .from('creator_instagram_connections')
+    .select('status, token_ciphertext, token_iv, token_tag, key_version')
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  if (!data || data.status !== 'connected') return []
+
+  let token: string
+  try {
+    token = decryptToken({
+      ciphertext: data.token_ciphertext, iv: data.token_iv, tag: data.token_tag, keyVersion: data.key_version,
+    })
+  } catch {
+    return []
+  }
+
+  return fetchReelCandidates(token)
+}
+
+/**
+ * Resolve the reels a creator has chosen, and store them on the snapshot.
+ *
+ * Resolved BY ID, one call each, rather than filtered out of a recent list. A
+ * creator can feature a reel from two years ago; verified live that a 2022 post
+ * still returns its thumbnail, likes and permalink. Filtering a paginated window
+ * would silently drop that pick the moment it fell off the end.
+ *
+ * Thumbnails are copied here because this is the set that reaches a public page.
+ * Only new ids are downloaded, and files for reels no longer featured are
+ * removed, so the bucket tracks the selection rather than growing forever.
+ */
+export async function syncFeaturedReels(creatorId: string): Promise<void> {
+  const admin = createAdminClient()
+
+  const [{ data: sf }, { data: conn }] = await Promise.all([
+    admin.from('creator_storefronts').select('stats').eq('creator_id', creatorId).maybeSingle(),
+    admin.from('creator_instagram_connections')
+      .select('status, snapshot, token_ciphertext, token_iv, token_tag, key_version')
+      .eq('creator_id', creatorId).maybeSingle(),
+  ])
+
+  const stats = (sf?.stats ?? {}) as Record<string, unknown>
+  const ids = Array.isArray(stats.featured_reel_ids)
+    ? (stats.featured_reel_ids as string[]).slice(0, MAX_FEATURED_REELS)
+    : []
+
+  if (!conn || conn.status !== 'connected') return
+
+  let token: string
+  try {
+    token = decryptToken({
+      ciphertext: conn.token_ciphertext, iv: conn.token_iv, tag: conn.token_tag, keyVersion: conn.key_version,
+    })
+  } catch {
+    return
+  }
+
+  const snapshot = (conn.snapshot ?? {}) as IgSnapshot
+  const held = new Map((snapshot.media ?? []).filter(m => m.thumbnailUrl).map(m => [m.id, m.thumbnailUrl as string]))
+
+  const resolved: IgMediaItem[] = []
+  for (const id of ids) {
+    const item = await fetchReelById(token, id)
+    if (!item) continue
+
+    const existing = held.get(id)
+    if (existing) {
+      item.thumbnailUrl = existing
+    } else if (item.thumbnailSourceUrl) {
+      const stored = await copyReelThumbnail(creatorId, id, item.thumbnailSourceUrl)
+      if (stored) item.thumbnailUrl = stored
+    }
+    // Never persisted: it expires, so keeping it would preserve a link that is
+    // guaranteed to stop working.
+    delete item.thumbnailSourceUrl
+    resolved.push(item)
+  }
+
+  await admin
+    .from('creator_instagram_connections')
+    .update({ snapshot: { ...snapshot, media: resolved }, updated_at: new Date().toISOString() })
+    .eq('creator_id', creatorId)
+
+  await pruneReelThumbnails(creatorId, new Set(resolved.map(r => `${r.id}.jpg`)))
+}
+
+async function copyReelThumbnail(creatorId: string, mediaId: string, sourceUrl: string): Promise<string | null> {
+  try {
+    const res = await fetch(sourceUrl, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return null
+    const contentType = res.headers.get('content-type') ?? ''
+    if (!contentType.startsWith('image/')) return null
+
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    if (bytes.byteLength === 0 || bytes.byteLength > 3 * 1024 * 1024) return null
+
+    const admin = createAdminClient()
+    const path = `reels/${creatorId}/${mediaId}.jpg`
+    const { error } = await admin.storage.from('storefronts').upload(path, bytes, { upsert: true, contentType })
+    if (error) return null
+
+    const { data } = admin.storage.from('storefronts').getPublicUrl(path)
+    return data.publicUrl
+  } catch {
+    return null
+  }
+}
+
+/** Files for reels no longer featured. Without this the bucket only grows, one
+ *  file per reel a creator ever tried. */
+async function pruneReelThumbnails(creatorId: string, keep: Set<string>): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const prefix = `reels/${creatorId}`
+    const { data: files } = await admin.storage.from('storefronts').list(prefix, { limit: 100 })
+    const stale = (files ?? []).map(f => f.name).filter(n => !keep.has(n))
+    if (stale.length) await admin.storage.from('storefronts').remove(stale.map(n => `${prefix}/${n}`))
+  } catch (err) {
+    console.error(`[instagram] reel thumbnail prune failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
