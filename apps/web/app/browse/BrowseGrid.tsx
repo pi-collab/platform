@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import FilterDropdown from '@/components/FilterDropdown'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
 import { NICHES } from '@/lib/niches'
@@ -119,7 +120,23 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     verifiedFollowers[c.id] ?? bestFollowers(c.social_accounts)
 
   const [search, setSearch] = useState('')
-  const [nicheFilter, setNicheFilter] = useState('all')
+  // An array, empty meaning no niche filter. A creator's storefront can carry
+  // several categories, so filtering on one at a time asked a brand to guess
+  // which of them we happened to match on.
+  const [nicheFilter, setNicheFilter] = useState<string[]>([])
+
+  // Built from the creators actually listed, not a fixed list. NICHES was a
+  // hardcoded set, so it offered options nobody matched and hid the ones
+  // creators had entered on their storefront.
+  const nicheOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const c of creators) {
+      for (const n of c.niches ?? []) counts.set(n, (counts.get(n) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([label, n]) => ({ value: label, label, hint: String(n) }))
+  }, [creators])
   const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
   const [rateFilter, setRateFilter] = useState('any')
   const [sort, setSort] = useState('followers')
@@ -155,8 +172,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     }
 
     // Niche
-    if (nicheFilter !== 'all') {
-      list = list.filter((c) => (c.niches ?? []).includes(nicheFilter))
+    if (nicheFilter.length > 0) {
+      // ANY, not all: a brand picking Beauty and Fashion wants either, not
+      // creators who happen to carry both.
+      list = list.filter((c) => (c.niches ?? []).some((n) => nicheFilter.includes(n)))
     }
 
     // Platform
@@ -195,13 +214,13 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   // Active filter chips
   const chips: { label: string; onRemove: () => void }[] = []
   if (platformFilter !== 'all') chips.push({ label: platformFilter === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => setPlatformFilter('all') })
-  if (nicheFilter !== 'all') chips.push({ label: nicheFilter, onRemove: () => setNicheFilter('all') })
+  for (const n of nicheFilter) chips.push({ label: n, onRemove: () => setNicheFilter((prev) => prev.filter((x) => x !== n)) })
   if (rateFilter !== 'any') chips.push({ label: RATE_FILTERS.find((r) => r.value === rateFilter)?.label ?? rateFilter, onRemove: () => setRateFilter('any') })
   const hasChips = chips.length > 0
 
   function clearAll() {
     setSearch('')
-    setNicheFilter('all')
+    setNicheFilter([])
     setPlatformFilter('all')
     setRateFilter('any')
     setSort('followers')
@@ -352,33 +371,39 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 </button>
               </div>
 
-              {/* Niche dropdown */}
-              <select
+              {/* All three share the dashboard's dropdown, so one page stops
+                  carrying two visual languages. Niche is multi-select, which a
+                  native <select> cannot do without ctrl-click. */}
+              <FilterDropdown
+                multiple
+                placeholder="All niches"
                 value={nicheFilter}
-                onChange={(e) => { setNicheFilter(e.target.value); setShown(PAGE_SIZE) }}
-                style={selectStyle}
-              >
-                <option value="all">All niches</option>
-                {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+                onChange={(v) => { setNicheFilter(v); setShown(PAGE_SIZE) }}
+                options={[
+                  { value: 'all', label: 'All niches' },
+                  // Only niches some creator actually has, with a count. An
+                  // option that returns nothing is a dead end dressed as a
+                  // choice.
+                  ...nicheOptions,
+                ]}
+              />
 
-              {/* Rate dropdown */}
-              <select
+              <FilterDropdown
+                placeholder="Any rate"
                 value={rateFilter}
-                onChange={(e) => { setRateFilter(e.target.value); setShown(PAGE_SIZE) }}
-                style={selectStyle}
-              >
-                {RATE_FILTERS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
+                onChange={(v) => { setRateFilter(v); setShown(PAGE_SIZE) }}
+                options={RATE_FILTERS.map((r) => ({ value: r.value, label: r.label }))}
+                minWidth={190}
+              />
 
-              {/* Sort dropdown */}
-              <select
+              <FilterDropdown
+                placeholder="Sort"
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                style={selectStyle}
-              >
-                {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+                onChange={setSort}
+                options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                align="right"
+                minWidth={190}
+              />
             </div>
           </div>
         </div>
@@ -545,6 +570,40 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
 /* ── Creator Card ──────────────────────────────────────────────── */
 
+/** Two chips and a +N that reveals the rest in place. */
+function NicheChips({ niches }: { niches: string[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const VISIBLE = 2
+  const shown = expanded ? niches : niches.slice(0, VISIBLE)
+  const hidden = niches.length - shown.length
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, flexWrap: 'wrap' }}>
+      {shown.map((n) => (
+        <span key={n} style={chipStyle}>{n}</span>
+      ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          // The card itself navigates, so this has to keep its click.
+          onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
+          style={{ ...chipStyle, background: 'transparent', cursor: 'pointer', color: 'var(--ink-soft)' }}
+        >
+          +{hidden} more
+        </button>
+      )}
+    </div>
+  )
+}
+
+const chipStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center',
+  padding: '4px 11px', borderRadius: 'var(--radius-pill)',
+  background: 'rgba(232,255,102,.4)', border: '1px solid rgba(210,240,74,.5)',
+  fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
+  color: 'var(--ink)', whiteSpace: 'nowrap',
+}
+
 function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers }: {
   creator: BrowseCreator
   isSaved: boolean
@@ -558,7 +617,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
   // which is how a real 535 rendered as 0.
   const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
   const low = lowestRate(c.rate_card)
-  const niche = (c.niches ?? [])[0]
+  const niches = (c.niches ?? []).filter(Boolean)
 
   const router = useRouter()
 
@@ -623,19 +682,12 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
         </button>
       </div>
 
-      {/* Niche pill */}
-      {niche && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center',
-            padding: '4px 11px', borderRadius: 'var(--radius-pill)',
-            background: 'rgba(232,255,102,.4)', border: '1px solid rgba(210,240,74,.5)',
-            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
-            color: 'var(--ink)', whiteSpace: 'nowrap',
-          }}>
-            {niche}
-          </span>
-        </div>
+      {/* Niche chips. A storefront can carry several categories and this showed
+          only the first, so a creator listing Beauty, Fashion and Travel read as
+          "Beauty" alone. Two are shown and the rest sit behind a +N, because six
+          chips reflow the card and make the grid ragged. */}
+      {niches.length > 0 && (
+        <NicheChips niches={niches} />
       )}
 
       {/* Stats row */}
