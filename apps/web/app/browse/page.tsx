@@ -54,12 +54,21 @@ export default async function BrowsePage() {
   // Fetch which creators have published storefronts (RLS blocks brand reads)
   const { data: storefronts } = await admin
     .from('creator_storefronts')
-    .select('creator_id, slug')
+    .select('creator_id, slug, categories')
     .eq('is_published', true)
 
   const storefrontSlugs: Record<string, string> = {}
+  // Niches are entered in the STOREFRONT editor, which writes
+  // creator_storefronts.categories. This page filtered on creators.niches,
+  // which nothing populates: on production every vetted creator had an empty
+  // niches array while 24 had categories, so the niche filter had nothing to
+  // offer and looked broken. Merged, with categories first, because that is the
+  // field a creator actually fills in.
+  const storefrontCategories: Record<string, string[]> = {}
   for (const s of storefronts ?? []) {
     storefrontSlugs[s.creator_id] = s.slug
+    const cats = Array.isArray(s.categories) ? (s.categories as unknown[]).filter((c): c is string => typeof c === 'string') : []
+    if (cats.length) storefrontCategories[s.creator_id] = cats
   }
 
   // Verified follower counts, for creators who have connected Instagram.
@@ -86,7 +95,10 @@ export default async function BrowsePage() {
 
   return (
     <BrowseGrid
-      creators={(creators ?? []) as BrowseCreator[]}
+      creators={((creators ?? []) as BrowseCreator[]).map((c) => ({
+        ...c,
+        niches: storefrontCategories[c.id] ?? c.niches ?? [],
+      }))}
       storefrontSlugs={storefrontSlugs}
       verifiedFollowers={verifiedFollowers}
     />

@@ -92,6 +92,39 @@ export default async function DashboardPage({
   ])
 
   const allDeals = (deals ?? []) as DealRow[]
+
+  // Verified performance across this brand's posted deliverables.
+  //
+  // RLS scopes deal_deliverable_items through the deal, so this returns only
+  // this brand's posts. Reach and interactions are summed; nothing is inferred
+  // and posts without verified numbers simply do not contribute, which is why
+  // the coverage count is shown beneath.
+  const postedDealIds = allDeals.map((d) => d.id)
+  const { data: perfRows } = postedDealIds.length
+    ? await supabase
+        .from('deal_deliverable_items')
+        .select('deal_id, ig_match_status, ig_insights')
+        .in('deal_id', postedDealIds)
+        .eq('ig_match_status', 'resolved')
+    : { data: [] as { deal_id: string; ig_insights: Record<string, number | undefined> | null }[] }
+
+  const perf = (perfRows ?? []) as { deal_id: string; ig_insights: Record<string, number | undefined> | null }[]
+  const verifiedPosts = perf.filter((p) => p.ig_insights && Object.values(p.ig_insights).some((v) => typeof v === 'number'))
+
+  const reachTotal = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.reach ?? 0), 0)
+  const interactionsTotal = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.totalInteractions ?? 0), 0)
+
+  // Interactions over reach, computed ONCE from the totals. Averaging each
+  // post's rate would weight a 500-reach post the same as a 400,000 one.
+  const engagementPct = reachTotal > 0 ? (interactionsTotal / reachTotal) * 100 : null
+
+  // NOT "return on spend". We hold spend and reach; we hold no conversions and
+  // no revenue, so a return figure would be invented on the screen a brand
+  // judges spend from. Cost per thousand reach is the same inputs and is true.
+  const spendOnVerifiedPaise = allDeals
+    .filter((d) => verifiedPosts.some((p) => p.deal_id === d.id))
+    .reduce((n, d) => n + (d.price_paise ?? 0), 0)
+  const cpmRupees = reachTotal > 0 ? (spendOnVerifiedPaise / 100) / (reachTotal / 1000) : null
   const allInvoices = (invoices ?? []) as InvoiceRow[]
 
   const invoiceMap = new Map<string, InvoiceRow>()
@@ -487,23 +520,47 @@ export default async function DashboardPage({
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const }}>
               <div className="t-meta" style={{ color: 'var(--meta)' }}>Total reach</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
+                  {reachTotal > 0 ? compactNumber(reachTotal) : '-'}
+                </div>
               </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
+              {/* Coverage, not a bare total. Posts from creators who have not
+                  connected contribute nothing, and a total that hides that
+                  understates the brand's reach while looking complete. */}
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
+                {verifiedPosts.length > 0
+                  ? `Verified across ${verifiedPosts.length} ${verifiedPosts.length === 1 ? 'post' : 'posts'}`
+                  : 'No verified posts yet'}
+              </div>
             </div>
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>Avg engagement</div>
+              <div className="t-meta" style={{ color: 'var(--meta)' }}>Engagement</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
+                  {engagementPct != null ? `${engagementPct.toFixed(1)}%` : '-'}
+                </div>
               </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
+              {/* Named precisely. "Avg engagement" implies a mean of per-post
+                  rates, which would weight a 500-reach post the same as a
+                  400,000 one. This is one ratio of two totals. */}
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
+                {engagementPct != null ? 'Interactions per reach' : 'No verified posts yet'}
+              </div>
             </div>
             <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>Return on spend</div>
+              {/* NOT "return on spend". We hold what was paid and what it
+                  reached; we hold no conversions and no revenue, so a return
+                  would be a number nothing in this codebase can compute. Cost
+                  per thousand reach uses the same two inputs and is true. */}
+              <div className="t-meta" style={{ color: 'var(--meta)' }}>Cost per 1,000 reach</div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>-</div>
+                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
+                  {cpmRupees != null ? `\u20B9${cpmRupees.toFixed(0)}` : '-'}
+                </div>
               </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
+                {cpmRupees != null ? 'On deals with verified reach' : 'No verified posts yet'}
+              </div>
             </div>
           </div>
         </section>
@@ -764,6 +821,13 @@ function SpendChart({ data }: { data: { label: string; total: number }[] }) {
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/** 3615 -> 3.6K. Reach runs large enough that the full digits stop being read. */
+function compactNumber(n: number): string {
+  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
+  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
+  return String(n)
+}
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
