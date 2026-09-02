@@ -279,8 +279,13 @@ export default async function CreatorDashboardPage({
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
               Edit your profile
             </Link>
+            {/* The shopfront opens in a NEW TAB. It is the public page, not a
+                section of the creator app: following it in place dropped a
+                creator out of their dashboard with only the back button to
+                return, and the profile row linking to the same URL already
+                opened a tab. */}
             {storefront?.is_published ? (
-              <Link href={`/c/${storefront.slug}`} className="neonbtn" style={neonBtn}>
+              <Link href={`/c/${storefront.slug}`} target="_blank" rel="noopener noreferrer" className="neonbtn" style={neonBtn}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18l-1.5 11a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2Z" /><path d="M3 9l2.5-5h13L21 9" /><path d="M9 13a3 3 0 0 0 6 0" /></svg>
                 View your shopfront
               </Link>
@@ -502,7 +507,7 @@ export default async function CreatorDashboardPage({
                 One home for offers, contracts, content, and payments, so you can focus on making, not chasing.
               </p>
               {storefront?.is_published ? (
-                <Link href={`/c/${storefront.slug}`} className="neonbtn" style={{ ...neonBtn, marginTop: 26 }}>
+                <Link href={`/c/${storefront.slug}`} target="_blank" rel="noopener noreferrer" className="neonbtn" style={{ ...neonBtn, marginTop: 26 }}>
                   Share your shopfront
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </Link>

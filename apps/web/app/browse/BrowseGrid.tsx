@@ -686,7 +686,15 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
           </a>
         ) : (
-          <span
+          /* A real link. This was a <span> with nothing but
+             stopPropagation on it: it looked like a button, did nothing when
+             pressed, and swallowed the click the card itself would have
+             handled — so a creator without a published storefront had no way
+             through from here at all. /browse/[id] exists and is exactly the
+             profile this promises. It stays in the tab, unlike Storefront,
+             because it is part of the app rather than the public page. */
+          <Link
+            href={`/browse/${c.id}`}
             onClick={(e) => e.stopPropagation()}
             style={{
               flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
@@ -694,11 +702,11 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
               padding: 11, borderRadius: 11,
               background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
               fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
-              color: 'var(--ink)', whiteSpace: 'nowrap',
+              color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
             }}
           >
             View Profile
-          </span>
+          </Link>
         )}
         <Link
           href={`/deals/new?creator=${c.id}`}
