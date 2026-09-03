@@ -276,11 +276,24 @@ export default async function DealPage({ params, searchParams }: {
                   )}
                   {creator && (
                     <OpenDealChat
-                      className="bell"
+                      className="neonbtn"
                       aria-label={`Message ${firstName}`}
-                      style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', textDecoration: 'none' }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        height: 40, padding: '0 18px', borderRadius: 11,
+                        background: 'var(--neon)', border: 'none',
+                        boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                        fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                      }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      {/* Named, not a bare icon. The creator side already said
+                          "Message brand"; an unlabelled circle on the other side
+                          left a brand guessing what it did. */}
+                      Message {firstName}
                     </OpenDealChat>
                   )}
                 </>

@@ -37,10 +37,14 @@ export default function DealThread({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(autoOpen)
+  // Minimised is the resting state once a conversation exists: a bar you can
+  // see, rather than nothing at all. Closing collapses to it instead of hiding,
+  // which is how a chat you have already opened stays findable.
+  const [dismissed, setDismissed] = useState(false)
 
   // Opened from a Message control elsewhere on the page. See OpenDealChat.
   useEffect(() => {
-    const openIt = () => setOpen(true)
+    const openIt = () => { setDismissed(false); setOpen(true) }
     window.addEventListener('guapd:open-deal-chat', openIt)
     return () => window.removeEventListener('guapd:open-deal-chat', openIt)
   }, [])
@@ -139,6 +143,28 @@ export default function DealThread({
 
       {/* No full-screen backdrop — panel sits alongside content like LinkedIn/Facebook chat */}
 
+      {/* Minimised bar. Sits where the panel will appear, so expanding does not
+          move the thing you just clicked. Hidden while the panel is open, and
+          gone entirely once dismissed — the page's Message button brings it
+          back. */}
+      {!open && !dismissed && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label={hasMessages ? `Open messages, ${messages.length} in this deal` : 'Start a conversation'}
+          style={minBar}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left' }}>
+            {hasMessages ? 'Messages' : 'Send a message'}
+          </span>
+          {hasMessages && (
+            <span style={minCount}>{messages.length}</span>
+          )}
+        </button>
+      )}
+
       {/* Slide-out panel */}
       <div style={{
         ...panel,
@@ -152,12 +178,20 @@ export default function DealThread({
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
             Messages
           </h2>
-          <button onClick={() => setOpen(false)} style={closeBtn} aria-label="Close chat">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Minimise, not close. The conversation stays on screen as a bar. */}
+            <button onClick={() => setOpen(false)} style={closeBtn} aria-label="Minimise chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="18" x2="18" y2="18" />
+              </svg>
+            </button>
+            <button onClick={() => { setOpen(false); setDismissed(true) }} style={closeBtn} aria-label="Close chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Messages area */}
@@ -293,6 +327,40 @@ const ctaButton: React.CSSProperties = {
   fontFamily: 'var(--font-body)',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+}
+
+const minBar: React.CSSProperties = {
+  position: 'fixed',
+  bottom: 16,
+  right: 16,
+  zIndex: 998,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 9,
+  width: 220,
+  maxWidth: 'calc(100vw - 32px)',
+  padding: '11px 14px',
+  borderRadius: 12,
+  background: 'var(--section-bg, #fff)',
+  border: '1px solid var(--color-border)',
+  boxShadow: '0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--ink, #12151C)',
+  cursor: 'pointer',
+}
+
+const minCount: React.CSSProperties = {
+  flexShrink: 0,
+  minWidth: 20,
+  padding: '1px 6px',
+  borderRadius: 999,
+  background: 'var(--neon, #E8FF66)',
+  color: 'var(--lime-950, #161B08)',
+  fontSize: 11,
+  fontWeight: 700,
+  textAlign: 'center',
 }
 
 const panel: React.CSSProperties = {
