@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { messagingState, messagingClosedNotice } from '@/lib/messaging-window'
 import { sendMessage } from '@/app/inbox/actions'
@@ -53,6 +54,7 @@ export default function CreatorThread({
   const [open, setOpen] = useState(autoOpen)
   // Minimised is the resting state once a conversation exists: a bar you can
   // see, rather than nothing at all. Closing collapses to it instead of hiding.
+  const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
   // Unread means unread, not "how many messages exist". The bar showed the
   // total, so a finished conversation sat there reading "12" forever and the
@@ -84,8 +86,17 @@ export default function CreatorThread({
     const latest = messages[messages.length - 1].id
     setLastSeenId(latest)
     try { window.localStorage.setItem(seenKey, latest) } catch { /* private mode */ }
-    void markDealThreadRead(dealId)
-  }, [open, messages, seenKey, dealId])
+
+    // Marking read is a server write; the header badge is computed in the
+    // layout. Without a refresh the number sits there until the next
+    // navigation, which reads as "it didn't work". Only when there WAS
+    // something unread, so opening a read thread does not refetch the page.
+    if (unread > 0) {
+      void markDealThreadRead(dealId).then(() => router.refresh())
+    } else {
+      void markDealThreadRead(dealId)
+    }
+  }, [open, messages, seenKey, dealId, unread, router])
 
   const hasMessages = messages.length > 0
 

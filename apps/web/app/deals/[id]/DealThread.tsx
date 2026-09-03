@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { messagingState, messagingClosedNotice } from '@/lib/messaging-window'
 import { sendMessage } from '@/app/inbox/actions'
@@ -57,6 +58,7 @@ export default function DealThread({
   // Minimised is the resting state once a conversation exists: a bar you can
   // see, rather than nothing at all. Closing collapses to it instead of hiding,
   // which is how a chat you have already opened stays findable.
+  const router = useRouter()
   const [dismissed, setDismissed] = useState(false)
 
   // Opened from a Message control elsewhere on the page. See OpenDealChat.
@@ -179,8 +181,17 @@ export default function DealThread({
     const latest = messages[messages.length - 1].id
     setLastSeenId(latest)
     try { window.localStorage.setItem(seenKey, latest) } catch { /* private mode */ }
-    void markDealThreadRead(dealId)
-  }, [open, messages, seenKey, dealId])
+
+    // Marking read is a server write; the header badge is computed in the
+    // layout. Without a refresh the number sits there until the next
+    // navigation, which reads as "it didn't work". Only when there WAS
+    // something unread, so opening a read thread does not refetch the page.
+    if (unread > 0) {
+      void markDealThreadRead(dealId).then(() => router.refresh())
+    } else {
+      void markDealThreadRead(dealId)
+    }
+  }, [open, messages, seenKey, dealId, unread, router])
 
   const hasMessages = messages.length > 0
 

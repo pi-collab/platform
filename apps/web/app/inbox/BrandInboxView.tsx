@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { sendMessage } from './actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -76,6 +78,16 @@ export default function BrandInboxView({
       ?? threads[0]?.dealId
       ?? null,
   )
+  const router = useRouter()
+
+  // Selecting a thread here IS reading it. The inbox marked nothing, so the
+  // header badge survived the one screen whose whole purpose is reading
+  // messages. Refreshed afterwards so the number in the header actually moves.
+  useEffect(() => {
+    if (!selected) return
+    void markDealThreadRead(selected).then(() => router.refresh())
+  }, [selected, router])
+
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
     for (const msg of allMessages) {
