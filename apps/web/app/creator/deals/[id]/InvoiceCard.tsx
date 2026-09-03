@@ -339,7 +339,7 @@ function InvoiceDetail({ invoice, dealRef, dealId, onIssue, loading, error, item
           )}
 
           {isAwaitingPayment && (
-            <Link href="/creator/inbox" className="pill-hover" style={{
+            <Link href={`/creator/inbox?deal=${dealId}`} className="pill-hover" style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               height: 54, padding: '0 20px', borderRadius: 14,
               background: 'var(--card)', border: '1px solid var(--frost-edge, var(--border-hairline, #EAEAE3))',

@@ -60,11 +60,21 @@ function formatRupees(paise: number): string {
 export default function CreatorInboxView({
   threads,
   allMessages,
+  initialDealId = null,
 }: {
   threads: Thread[]
   allMessages: Message[]
+  /** The deal to open on arrival, from ?deal= on the URL. */
+  initialDealId?: string | null
 }) {
-  const [selected, setSelected] = useState<string | null>(threads[0]?.dealId ?? null)
+  // Open the thread the URL asked for. Pressing Message on a deal used to land
+  // on whichever thread happened to be first, or on an empty state, and left
+  // the person to find the conversation they had just come from.
+  const [selected, setSelected] = useState<string | null>(
+    (initialDealId && threads.some((t) => t.dealId === initialDealId) ? initialDealId : null)
+      ?? threads[0]?.dealId
+      ?? null,
+  )
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
     for (const msg of allMessages) {

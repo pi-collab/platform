@@ -237,7 +237,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" /><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9" /><path d="M12 3v6" /></svg>
                     </Link>
                     <Link
-                      href={`/inbox?creator=${creator.id}`}
+                      href={`/inbox?deal=${deal.id}`}
                       aria-label={`Message ${firstName}`}
                       style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', textDecoration: 'none' }}
                     >
@@ -273,7 +273,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                   )}
                   {creator && (
                     <Link
-                      href={`/inbox?creator=${creator.id}`}
+                      href={`/inbox?deal=${deal.id}`}
                       className="bell"
                       aria-label={`Message ${firstName}`}
                       style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', textDecoration: 'none' }}

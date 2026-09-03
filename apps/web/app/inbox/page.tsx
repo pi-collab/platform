@@ -2,14 +2,31 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrandInboxView from './BrandInboxView'
 
-export default async function BrandInboxPage() {
+export default async function BrandInboxPage({ searchParams }: {
+  searchParams: { deal?: string }
+}) {
   await verifyBrand()
   const supabase = createClient()
 
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, creators(full_name, profile_photo_url))')
-    .order('created_at', { ascending: false })
+  // Threads come from DEALS as well as from messages.
+  //
+  // They were built from messages alone, so a deal nobody had written on yet had
+  // no thread — and pressing Message on that deal landed here on an empty inbox
+  // with no way to start. A conversation that only exists once it exists is a
+  // chicken and egg, and it is the whole of this bug.
+  //
+  // Closed deals are excluded: messaging is open until the deal completes.
+  const [{ data: messages }, { data: openDeals }] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, creators(full_name, profile_photo_url))')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('deals')
+      .select('id, title, status, price_paise, creators(full_name, profile_photo_url)')
+      .not('status', 'in', '(cancelled,declined)')
+      .order('created_at', { ascending: false }),
+  ])
 
   const threadMap = new Map<string, {
     dealId: string; dealTitle: string; dealStatus: string; creatorName: string;
@@ -38,6 +55,27 @@ export default async function BrandInboxPage() {
     }
   }
 
+  // Every live deal gets a thread, even with nothing said on it yet. Added
+  // after the message pass so a deal that HAS messages keeps its last-message
+  // preview rather than being overwritten by an empty one.
+  for (const deal of openDeals ?? []) {
+    if (threadMap.has(deal.id)) continue
+    const creatorObj = Array.isArray(deal.creators) ? deal.creators[0] : (deal.creators as any)
+    const creatorName = creatorObj?.full_name || 'Unknown'
+    threadMap.set(deal.id, {
+      dealId: deal.id,
+      dealTitle: deal.title || 'Untitled deal',
+      dealStatus: deal.status || '',
+      creatorName,
+      creatorPhoto: creatorObj?.profile_photo_url || null,
+      creatorInitials: getInitials(creatorName),
+      lastMessage: '',
+      senderParty: '',
+      createdAt: '',
+      amountPaise: deal.price_paise ?? 0,
+    })
+  }
+
   const threads = Array.from(threadMap.values())
   const allMessages = (messages ?? []).map((m) => ({
     id: m.id,
@@ -47,7 +85,7 @@ export default async function BrandInboxPage() {
     created_at: m.created_at,
   }))
 
-  return <BrandInboxView threads={threads} allMessages={allMessages} />
+  return <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} />
 }
 
 function getInitials(name: string): string {

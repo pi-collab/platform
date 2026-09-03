@@ -8,14 +8,27 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
-export default async function CreatorInboxPage() {
+export default async function CreatorInboxPage({ searchParams }: {
+  searchParams: { deal?: string }
+}) {
   await verifyCreator()
   const supabase = createClient()
 
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name))')
-    .order('created_at', { ascending: false })
+  // Threads come from DEALS as well as messages: a deal nobody has written on
+  // had no thread, so Message from that deal landed on an empty inbox with no
+  // way to start. Closed deals are excluded — messaging stays open until the
+  // deal completes.
+  const [{ data: messages }, { data: openDeals }] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name))')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('deals')
+      .select('id, title, status, price_paise, brands(name)')
+      .not('status', 'in', '(cancelled,declined)')
+      .order('created_at', { ascending: false }),
+  ])
 
   const threadMap = new Map<string, {
     dealId: string; dealTitle: string; dealStatus: string; brandName: string;
@@ -41,6 +54,25 @@ export default async function CreatorInboxPage() {
         amountPaise: deal?.price_paise ?? 0,
       })
     }
+  }
+
+  // Live deals with nothing said yet. After the message pass, so a deal that
+  // HAS messages keeps its preview instead of being overwritten by a blank one.
+  for (const deal of openDeals ?? []) {
+    if (threadMap.has(deal.id)) continue
+    const brandObj = Array.isArray(deal.brands) ? deal.brands[0] : (deal.brands as any)
+    const brandName = brandObj?.name || 'Brand'
+    threadMap.set(deal.id, {
+      dealId: deal.id,
+      dealTitle: deal.title || 'Untitled deal',
+      dealStatus: deal.status || '',
+      brandName,
+      brandInitials: getInitials(brandName),
+      lastMessage: '',
+      senderParty: '',
+      createdAt: '',
+      amountPaise: deal.price_paise ?? 0,
+    })
   }
 
   const threads = Array.from(threadMap.values())
@@ -85,7 +117,7 @@ export default async function CreatorInboxPage() {
     )
   }
 
-  return <CreatorInboxView threads={threads} allMessages={allMessages} />
+  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} />
 }
 
 function getInitials(name: string): string {

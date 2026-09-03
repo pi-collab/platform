@@ -224,7 +224,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
               </div>
-              <Link href="/creator/inbox" className="neonbtn" style={{
+              <Link href={`/creator/inbox?deal=${deal.id}`} className="neonbtn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 height: 42, padding: '0 18px', borderRadius: 11,
                 background: 'var(--neon)', border: 'none',
@@ -956,7 +956,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                               View in payments
                             </Link>
-                            <Link href="/creator/inbox" className="pill-hover" style={{
+                            <Link href={`/creator/inbox?deal=${deal.id}`} className="pill-hover" style={{
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                               height: 46, padding: '0 20px', borderRadius: 12,
                               background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
