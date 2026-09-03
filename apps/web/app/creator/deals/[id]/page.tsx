@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import CreatorThread from './CreatorThread'
+import OpenDealChat from '@/components/OpenDealChat'
 import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
@@ -65,13 +67,16 @@ function formatDateWithTime(dateStr: string): string {
   return `${day} ${months[d.getMonth()]}, ${h12}:${m} ${ampm}`
 }
 
-export default async function CreatorDealDetailPage({ params }: { params: { id: string } }) {
+export default async function CreatorDealDetailPage({ params, searchParams }: {
+  params: { id: string }
+  searchParams: { chat?: string }
+}) {
   // Pass the deal path so a logged-out creator arriving from a WhatsApp
   // notification returns to THIS deal after signing in, not the deals list.
   await verifyCreator(`/creator/deals/${params.id}`)
   const supabase = createClient()
 
-  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }] = await Promise.all([
+  const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
       .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
@@ -95,6 +100,13 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
     supabase
       .from('events')
       .select('id, event_type, detail, created_at')
+      .eq('deal_id', params.id)
+      .order('created_at', { ascending: true }),
+    // The thread. This page had no messages query at all, which is why the
+    // creator's Message button could only send them to the inbox.
+    supabase
+      .from('messages')
+      .select('id, deal_id, sender_party, body, created_at')
       .eq('deal_id', params.id)
       .order('created_at', { ascending: true }),
   ])
@@ -224,7 +236,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
               </div>
-              <Link href={`/creator/inbox?deal=${deal.id}`} className="neonbtn" style={{
+              <OpenDealChat className="neonbtn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 height: 42, padding: '0 18px', borderRadius: 11,
                 background: 'var(--neon)', border: 'none',
@@ -233,7 +245,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                 textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
               }}>
                 Message brand
-              </Link>
+              </OpenDealChat>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
@@ -956,7 +968,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                               View in payments
                             </Link>
-                            <Link href={`/creator/inbox?deal=${deal.id}`} className="pill-hover" style={{
+                            <OpenDealChat className="pill-hover" style={{
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                               height: 46, padding: '0 20px', borderRadius: 12,
                               background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
@@ -965,7 +977,7 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
                             }}>
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" /></svg>
                               Message brand
-                            </Link>
+                            </OpenDealChat>
                           </div>
                         </div>
                       </div>
@@ -1041,6 +1053,24 @@ export default async function CreatorDealDetailPage({ params }: { params: { id: 
 
         </div>
       </div>
+    
+      {/* The panel, rendered at last. CreatorThread existed and was never
+          imported anywhere, so Message had nothing to open and navigated away
+          from the deal instead. */}
+      <CreatorThread
+        dealId={deal.id}
+        dealStatus={deal.status}
+        initialMessages={(messages ?? []).map((m) => ({
+          id: m.id,
+          deal_id: m.deal_id,
+          sender_party: m.sender_party as 'brand' | 'creator',
+          body: m.body,
+          created_at: m.created_at,
+        }))}
+        autoOpen={searchParams?.chat === '1'}
+        hideLauncher
+      />
+
     </main>
   )
 }

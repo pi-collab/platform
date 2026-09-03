@@ -19,17 +19,28 @@ export default function CreatorThread({
   dealId,
   dealStatus,
   initialMessages,
+  autoOpen = false,
+  hideLauncher = false,
 }: {
   dealId: string
   dealStatus: string
   initialMessages: Message[]
+  autoOpen?: boolean
+  hideLauncher?: boolean
 }) {
   const isTerminal = TERMINAL_STATUSES.includes(dealStatus)
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
+
+  // Opened from a Message control elsewhere on the page. See OpenDealChat.
+  useEffect(() => {
+    const openIt = () => setOpen(true)
+    window.addEventListener('guapd:open-deal-chat', openIt)
+    return () => window.removeEventListener('guapd:open-deal-chat', openIt)
+  }, [])
   const [emojiOpen, setEmojiOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)

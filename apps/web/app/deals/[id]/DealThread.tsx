@@ -19,17 +19,31 @@ export default function DealThread({
   dealId,
   dealStatus,
   initialMessages,
+  autoOpen = false,
+  hideLauncher = false,
 }: {
   dealId: string
   dealStatus: string
   initialMessages: Message[]
+  /** Open on arrival, so ?chat=1 from a Message button lands in the thread. */
+  autoOpen?: boolean
+  /** Hide the built-in button when the page already has its own Message
+   *  control, so a deal does not show two ways into the same panel. */
+  hideLauncher?: boolean
 }) {
   const isTerminal = TERMINAL_STATUSES.includes(dealStatus)
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
+
+  // Opened from a Message control elsewhere on the page. See OpenDealChat.
+  useEffect(() => {
+    const openIt = () => setOpen(true)
+    window.addEventListener('guapd:open-deal-chat', openIt)
+    return () => window.removeEventListener('guapd:open-deal-chat', openIt)
+  }, [])
   const [emojiOpen, setEmojiOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
@@ -112,7 +126,10 @@ export default function DealThread({
       {/* CTA Button */}
       <button
         onClick={() => setOpen(true)}
-        style={ctaButton}
+        style={{ ...ctaButton, ...(hideLauncher ? { display: 'none' } : null) }}
+        // Reachable from anywhere on the page, so an existing Message control
+        // can open this panel instead of navigating away from the deal.
+        data-open-deal-chat
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
