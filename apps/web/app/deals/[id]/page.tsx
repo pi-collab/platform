@@ -279,7 +279,7 @@ export default async function DealPage({ params, searchParams }: {
                       className="neonbtn"
                       aria-label={`Message ${firstName}`}
                       style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 7,
+                        display: 'inline-flex', alignItems: 'center',
                         height: 40, padding: '0 18px', borderRadius: 11,
                         background: 'var(--neon)', border: 'none',
                         boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
@@ -287,12 +287,9 @@ export default async function DealPage({ params, searchParams }: {
                         whiteSpace: 'nowrap', flexShrink: 0,
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                      </svg>
-                      {/* Named, not a bare icon. The creator side already said
-                          "Message brand"; an unlabelled circle on the other side
-                          left a brand guessing what it did. */}
+                      {/* Text only, matching the creator side's "Message brand".
+                          The label carries it; the icon was repeating what the
+                          word already said. */}
                       Message {firstName}
                     </OpenDealChat>
                   )}
