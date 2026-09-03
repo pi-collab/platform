@@ -2292,6 +2292,24 @@ in place.
       budget: an overrunning post refresh must not cost the token refreshes,
       which are the ones that expire
 
+**Messaging window**
+- [ ] Open through negotiating, delivered, approved — the whole working life
+- [ ] Still open for 30 days AFTER payment. It closed at `complete` before,
+      which is exactly when payment and usage-rights questions arrive
+- [ ] The clock runs from the LATER of paid_at and completed_at. A deal
+      completed 40 days ago but paid 5 days ago is OPEN: `complete` can be set
+      before money lands, and closing while a creator is owed is the outcome
+      worth designing against
+- [ ] With no anchor at all it stays OPEN. Guessing shut is the harmful direction
+- [ ] declined and cancelled close IMMEDIATELY, whatever the dates. Leaving them
+      open lets someone keep messaging a brand that declined them
+- [ ] The closed notice names the reason and, for a wrapped deal, points at
+      starting another — the repeat-deal path, not a dead end
+- [ ] roadmap.md:296 defers a persistent inbox until payment protection and says
+      keep messaging deal-scoped; :298 says do NOT build restrictions as an
+      anti-leak defence. The window is sized to the questions that follow a
+      delivery, and it ends because the deal did
+
 **Deal chat and unread (0496)**
 - [ ] Message on a deal opens the panel IN PLACE. Both thread components existed
       and were rendered nowhere, which is why it navigated to the inbox

@@ -79,7 +79,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -94,7 +94,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
       .order('created_at', { ascending: true }),
     supabase
       .from('invoices')
-      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
+      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at, paid_at')
       .eq('deal_id', params.id)
       .maybeSingle(),
     supabase
@@ -1060,6 +1060,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
       <CreatorThread
         dealId={deal.id}
         dealStatus={deal.status}
+        dealCompletedAt={deal.completed_at}
+        dealPaidAt={invoice?.paid_at ?? null}
         initialMessages={(messages ?? []).map((m) => ({
           id: m.id,
           deal_id: m.deal_id,

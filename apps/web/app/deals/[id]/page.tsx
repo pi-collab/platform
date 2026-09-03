@@ -102,7 +102,7 @@ export default async function DealPage({ params, searchParams }: {
       .order('created_at', { ascending: true }),
     supabase
       .from('invoices')
-      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
+      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at, paid_at')
       .eq('deal_id', params.id)
       .maybeSingle(),
   ])
@@ -1040,6 +1040,8 @@ export default async function DealPage({ params, searchParams }: {
         <DealThread
           dealId={deal.id}
           dealStatus={deal.status}
+          dealCompletedAt={deal.completed_at}
+          dealPaidAt={invoice?.paid_at ?? null}
           initialMessages={(messages ?? []).map((m) => ({
             id: m.id,
             deal_id: m.deal_id,

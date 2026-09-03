@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { messagingState, messagingClosedNotice } from '@/lib/messaging-window'
 import { sendMessage } from '@/app/inbox/actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -19,12 +20,19 @@ const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 export default function DealThread({
   dealId,
   dealStatus,
+  dealCompletedAt = null,
+  dealPaidAt = null,
   initialMessages,
   autoOpen = false,
   hideLauncher = false,
 }: {
   dealId: string
   dealStatus: string
+  /** Anchors for the messaging window. Payment first: `complete` can be set
+   *  before money lands, and closing while a creator is owed is the one
+   *  outcome worth designing against. */
+  dealCompletedAt?: string | null
+  dealPaidAt?: string | null
   initialMessages: Message[]
   /** Open on arrival, so ?chat=1 from a Message button lands in the thread. */
   autoOpen?: boolean
@@ -32,7 +40,15 @@ export default function DealThread({
    *  control, so a deal does not show two ways into the same panel. */
   hideLauncher?: boolean
 }) {
-  const isTerminal = TERMINAL_STATUSES.includes(dealStatus)
+  // Not "is the status terminal". That closed the channel the moment a deal
+  // completed, which is exactly when payment and usage-rights questions arrive.
+  // See lib/messaging-window.ts for the window and why it ends at all.
+  const chatWindow = messagingState({
+    status: dealStatus,
+    completed_at: dealCompletedAt,
+    paid_at: dealPaidAt,
+  })
+  const isTerminal = !chatWindow.open
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
@@ -276,7 +292,7 @@ export default function DealThread({
         {/* Compose */}
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>This deal is {dealStatus}, so messaging is closed.</p>
+            <p style={closedNotice}>{messagingClosedNotice(chatWindow, 'the creator')}</p>
           ) : (
             <>
               {emojiOpen && (
