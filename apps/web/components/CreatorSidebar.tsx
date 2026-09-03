@@ -121,7 +121,7 @@ function InboxIcon() {
   )
 }
 
-export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, unreadCount: initialUnread = 0, recentNotifications = [], notifBrandMap = {} }: { creatorName: string; creatorPhoto?: string | null; userEmail?: string | null; unreadCount?: number; recentNotifications?: NotifItem[]; notifBrandMap?: NotifBrandMap }) {
+export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, unreadCount: initialUnread = 0, recentNotifications = [], notifBrandMap = {}, unreadInbox = 0 }: { creatorName: string; creatorPhoto?: string | null; userEmail?: string | null; unreadCount?: number; recentNotifications?: NotifItem[]; notifBrandMap?: NotifBrandMap; unreadInbox?: number }) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -187,8 +187,11 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
           {/* Right: messages + bell + avatar */}
           <div style={rightGroup}>
             {/* Messages */}
-            <Link href="/creator/inbox" style={iconBtn} title="Messages">
+            <Link href="/creator/inbox" style={{ ...iconBtn, position: 'relative' }} title="Messages">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              {unreadInbox > 0 && (
+                <span style={inboxBadge}>{unreadInbox > 99 ? '99+' : unreadInbox}</span>
+              )}
             </Link>
 
             {/* Bell / Notifications */}
@@ -488,6 +491,23 @@ const navPillInactive: React.CSSProperties = {
 
 const rightGroup: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+}
+
+const inboxBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: -3,
+  right: -3,
+  minWidth: 16,
+  height: 16,
+  padding: '0 4px',
+  borderRadius: 999,
+  background: 'var(--neon, #E8FF66)',
+  color: 'var(--lime-950, #161B08)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 9.5,
+  fontWeight: 800,
+  lineHeight: '16px',
+  textAlign: 'center',
 }
 
 const iconBtn: React.CSSProperties = {

@@ -2292,6 +2292,31 @@ in place.
       budget: an overrunning post refresh must not cost the token refreshes,
       which are the ones that expire
 
+**Deal chat and unread (0496)**
+- [ ] Message on a deal opens the panel IN PLACE. Both thread components existed
+      and were rendered nowhere, which is why it navigated to the inbox
+- [ ] Three states: minimised bar, open panel, dismissed. The header minus
+      minimises, the cross dismisses, and the page's Message button brings a
+      dismissed panel back
+- [ ] The bar counts UNREAD, not total. It showed the message count, so a
+      finished conversation read "12" forever
+- [ ] Your OWN messages never count as unread
+- [ ] A new message opens the panel — unless it was dismissed, in which case it
+      returns as the bar. Dismissing means leave me alone
+- [ ] The panel's read state is localStorage per deal, so the count restarts on
+      another device. That is the accepted limit of not adding a column for it
+- [ ] The HEADER badge is server-side (message_reads) and must be right across
+      devices, which is why it is a table and the panel's is not
+- [ ] The header badge clears when the THREAD is opened, not when notifications
+      are visited. It counted unread notifications of type 'message' before, so
+      a brand could read everything in the panel and still carry a badge
+- [ ] message_reads is per USER, not per party: marking a thread read for a
+      brand colleague who never opened it HIDES a message rather than miscounts
+- [ ] Its RLS allows own rows only, and the policies are in rls.sql as well as
+      the migration
+- [ ] Inbox threads exist for every live deal, not only deals with messages. A
+      conversation that only exists once it exists is the original bug
+
 **Recent reels (Phase Two)**
 - [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
       needs comparable reel numbers

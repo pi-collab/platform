@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { sendMessage } from '@/app/inbox/actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -155,13 +156,15 @@ export default function DealThread({
     return messages.slice(from + 1).filter((m) => m.sender_party !== 'brand').length
   })()
 
-  // Opening IS reading.
+  // Opening IS reading. Locally for this bar, and on the server for the header
+  // badge, which spans deals and has to be right on another device.
   useEffect(() => {
     if (!open || messages.length === 0) return
     const latest = messages[messages.length - 1].id
     setLastSeenId(latest)
     try { window.localStorage.setItem(seenKey, latest) } catch { /* private mode */ }
-  }, [open, messages, seenKey])
+    void markDealThreadRead(dealId)
+  }, [open, messages, seenKey, dealId])
 
   const hasMessages = messages.length > 0
 

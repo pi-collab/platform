@@ -832,3 +832,22 @@ CREATE POLICY growth_quiz_deny_update
 CREATE POLICY growth_quiz_deny_delete
   ON creator_growth_quiz_responses FOR DELETE
   USING (false);
+
+-- ── message_reads (0496) ────────────────────────────────────────────────────
+-- Per-user, per-deal read marker behind the header unread badge. Per USER and
+-- not per party on purpose: a brand team does not read as one person, and
+-- marking a thread read for a colleague hides a message rather than miscounting
+-- it. Own rows only — "has the brand read my message yet" is a question this
+-- table would answer if it were readable across the boundary.
+ALTER TABLE message_reads ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS message_reads_select_own ON message_reads;
+DROP POLICY IF EXISTS message_reads_insert_own ON message_reads;
+DROP POLICY IF EXISTS message_reads_update_own ON message_reads;
+
+CREATE POLICY message_reads_select_own ON message_reads
+  FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY message_reads_insert_own ON message_reads
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY message_reads_update_own ON message_reads
+  FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
