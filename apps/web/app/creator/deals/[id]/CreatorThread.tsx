@@ -37,6 +37,37 @@ export default function CreatorThread({
   // Minimised is the resting state once a conversation exists: a bar you can
   // see, rather than nothing at all. Closing collapses to it instead of hiding.
   const [dismissed, setDismissed] = useState(false)
+  // Unread means unread, not "how many messages exist". The bar showed the
+  // total, so a finished conversation sat there reading "12" forever and the
+  // number said nothing about whether anything needed attention.
+  //
+  // Read state is per device, in localStorage, keyed on the deal. The messages
+  // table has no read marker, and adding one is the right fix for a header
+  // badge that must be right across devices — but for a bar on the page you are
+  // already looking at, remembering what this browser has seen is enough and
+  // needs no migration.
+  const seenKey = `guapd:deal-chat-seen:${dealId}`
+  const [lastSeenId, setLastSeenId] = useState<string | null>(null)
+
+  useEffect(() => {
+    try { setLastSeenId(window.localStorage.getItem(seenKey)) } catch { /* private mode */ }
+  }, [seenKey])
+
+  // Only the OTHER party's messages count: your own are read by definition.
+  const unread = (() => {
+    if (messages.length === 0) return 0
+    const from = lastSeenId ? messages.findIndex((m) => m.id === lastSeenId) : -1
+    return messages.slice(from + 1).filter((m) => m.sender_party !== 'creator').length
+  })()
+
+  // Opening IS reading.
+  useEffect(() => {
+    if (!open || messages.length === 0) return
+    const latest = messages[messages.length - 1].id
+    setLastSeenId(latest)
+    try { window.localStorage.setItem(seenKey, latest) } catch { /* private mode */ }
+  }, [open, messages, seenKey])
+
   const hasMessages = messages.length > 0
 
   // Opened from a Message control elsewhere on the page. See OpenDealChat.
@@ -60,6 +91,15 @@ export default function CreatorThread({
       knownIdsRef.current.add(msg.id)
       setMessages((prev) => [...prev, msg as Message])
       playGuapSound()
+      // A message arriving opens the panel. If it was DISMISSED, it comes back
+      // as the bar instead: dismissing means "leave me alone", and answering
+      // that by throwing a panel open would be the wrong reading of it.
+      if (msg.sender_party !== 'creator') {
+        setDismissed((wasDismissed) => {
+          if (!wasDismissed) setOpen(true)
+          return false
+        })
+      }
     },
     knownIdsRef,
   )
@@ -116,7 +156,7 @@ export default function CreatorThread({
     setBody('')
   }
 
-  const unread = messages.filter((m) => m.sender_party === 'brand').length
+
 
   return (
     <>
@@ -132,7 +172,7 @@ export default function CreatorThread({
       {!open && !dismissed && (
         <button
           onClick={() => setOpen(true)}
-          aria-label={hasMessages ? `Open messages, ${messages.length} in this deal` : 'Start a conversation'}
+          aria-label={unread > 0 ? `Open messages, ${unread} unread` : hasMessages ? 'Open messages' : 'Start a conversation'}
           style={minBar}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -141,7 +181,7 @@ export default function CreatorThread({
           <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left' }}>
             {hasMessages ? 'Messages' : 'Send a message'}
           </span>
-          {hasMessages && <span style={minCount}>{messages.length}</span>}
+          {unread > 0 && <span style={minCount}>{unread}</span>}
         </button>
       )}
 
