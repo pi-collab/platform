@@ -536,6 +536,10 @@ export default function ShopfrontPreview({
 
   const firstName = data.creatorName.split(' ')[0]
 
+  // Five or more, i.e. more than four, before anything moves.
+
+  const shouldScrollBrands = data.brandCollabs.length > 4
+
   return (
     <SectionCtx.Provider value={sectionCtx}>
     <div className="sf-root" style={{ fontFamily: 'var(--font-ui)', color: 'var(--ink)', position: 'relative', overflowX: 'hidden', minHeight: '100vh', background: '#F7F7F4' }}>
@@ -1377,6 +1381,10 @@ export default function ShopfrontPreview({
           section. The renderer and the fetch both remain, one call site each. */}
 
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
+      {/* A marquee needs enough tiles to be a marquee. Below five the track was
+          still duplicated and still animating, so one brand slid endlessly past
+          itself — motion that reads as a loading state rather than as a list.
+          Under the threshold it renders once and sits still, centred. */}
       {data.brandCollabs.length > 0 && (
         <SectionWrapper sectionKey="collabs">
           <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) 0 clamp(16px,2vw,28px)' }}>
@@ -1398,15 +1406,15 @@ export default function ShopfrontPreview({
               </div>
             </div>
 
-            <div className="sf-brandmarquee" aria-label={`Brands ${firstName} has worked with`} style={{
+            <div className={`sf-brandmarquee${shouldScrollBrands ? ' sf-brandmarquee--scroll' : ''}`} aria-label={`Brands ${firstName} has worked with`} style={{
               position: 'relative', overflow: 'hidden',
               WebkitMask: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)',
               mask: 'linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)',
               padding: '44px 0',
             }}>
-              <div className="sf-brandtrack" style={{ display: 'flex', alignItems: 'center', gap: 40, width: 'max-content', padding: '0 20px' }}>
+              <div className="sf-brandtrack" style={{ display: 'flex', alignItems: 'center', gap: 40, width: 'max-content', padding: '0 20px', margin: shouldScrollBrands ? undefined : '0 auto' }}>
                 {/* Double the items for seamless loop */}
-                {[...data.brandCollabs, ...data.brandCollabs].map((brand, i) => (
+                {(shouldScrollBrands ? [...data.brandCollabs, ...data.brandCollabs] : data.brandCollabs).map((brand, i) => (
                   <div
                     key={i}
                     // The second copy exists only so the marquee can loop

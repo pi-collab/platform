@@ -3,6 +3,7 @@ import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import DealThread from './DealThread'
+import OpenDealChat from '@/components/OpenDealChat'
 import ItemReview from './ItemReview'
 import BrandInvoiceCard from './BrandInvoiceCard'
 import { calculateFee } from '@/lib/fee'
@@ -70,7 +71,10 @@ const NEXT_LABELS: Record<string, string> = {
   complete: 'Deal complete',
 }
 
-export default async function DealDetailPage({ params }: { params: { id: string } }) {
+export default async function DealPage({ params, searchParams }: {
+  params: { id: string }
+  searchParams: { chat?: string }
+}) {
   const brand = await verifyBrand()
 
   const supabase = createClient()
@@ -98,7 +102,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabase
       .from('invoices')
-      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at')
+      .select('id, status, base_paise, overage_paise, fee_paise, fee_percent, fee_mode, brand_pays_paise, creator_receives_paise, payment_terms, due_date, issued_at, accepted_at, paid_at')
       .eq('deal_id', params.id)
       .maybeSingle(),
   ])
@@ -236,13 +240,12 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" /><path d="m3 9 2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9" /><path d="M12 3v6" /></svg>
                     </Link>
-                    <Link
-                      href={`/inbox?creator=${creator.id}`}
+                    <OpenDealChat
                       aria-label={`Message ${firstName}`}
                       style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', textDecoration: 'none' }}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                    </Link>
+                    </OpenDealChat>
                   </>
                 )}
               </div>
@@ -258,7 +261,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
                     Re-engage {firstName}
                   </Link>
-                  <span className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 42, padding: '0 16px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', cursor: 'default', whiteSpace: 'nowrap' }}>View analytics</span>
+                  <Link href={`/deals/${deal.id}/analytics`} className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 42, padding: '0 16px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', whiteSpace: 'nowrap' }}>View analytics</Link>
                 </>
               ) : (
                 <>
@@ -272,14 +275,23 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                     </Link>
                   )}
                   {creator && (
-                    <Link
-                      href={`/inbox?creator=${creator.id}`}
-                      className="bell"
+                    <OpenDealChat
+                      className="neonbtn"
                       aria-label={`Message ${firstName}`}
-                      style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', textDecoration: 'none' }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        height: 40, padding: '0 18px', borderRadius: 11,
+                        background: 'var(--neon)', border: 'none',
+                        boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+                        fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
+                        whiteSpace: 'nowrap', flexShrink: 0,
+                      }}
                     >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                    </Link>
+                      {/* Text only, matching the creator side's "Message brand".
+                          The label carries it; the icon was repeating what the
+                          word already said. */}
+                      Message {firstName}
+                    </OpenDealChat>
                   )}
                 </>
               )}
@@ -440,7 +452,7 @@ export default async function DealDetailPage({ params }: { params: { id: string 
                       {deal.posted_url && (
                         <a href={deal.posted_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3 }}>View post</a>
                       )}
-                      <span className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 6px 14px -10px rgba(40,45,25,.4)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', cursor: 'default' }}>View analytics</span>
+                      <Link href={`/deals/${deal.id}/analytics`} className="pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--frost-edge, var(--hairline))', boxShadow: '0 6px 14px -10px rgba(40,45,25,.4)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none' }}>View analytics</Link>
                     </div>
                   </div>
                 )
@@ -1018,6 +1030,29 @@ export default async function DealDetailPage({ params }: { params: { id: string 
           {deal.completed_at && <span> &middot; Completed {new Date(deal.completed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
         </div>
       </div>
+
+      {/* The chat panel, finally rendered. It was imported and never used, so
+          every Message control had to send a brand to the inbox to reach a
+          conversation that could have opened here. Its own launcher is hidden
+          because the page already has Message buttons; two ways into one panel
+          reads as two different features. */}
+      {creator && (
+        <DealThread
+          dealId={deal.id}
+          dealStatus={deal.status}
+          dealCompletedAt={deal.completed_at}
+          dealPaidAt={invoice?.paid_at ?? null}
+          initialMessages={(messages ?? []).map((m) => ({
+            id: m.id,
+            deal_id: m.deal_id,
+            sender_party: m.sender_party as 'brand' | 'creator',
+            body: m.body,
+            created_at: m.created_at,
+          }))}
+          autoOpen={searchParams?.chat === '1'}
+          hideLauncher
+        />
+      )}
     </main>
   )
 }

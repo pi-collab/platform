@@ -2232,6 +2232,109 @@ in place.
       carries the weight is that a compromise is worth nothing
 - [ ] REMOVE both env vars when the review closes
 
+**Verified post performance on a deal (0494)**
+- [ ] Matching is on the SHORTCODE, not the URL. /p/{code} and /reel/{code} are
+      the same post; Instagram's share sheet gives one form and `permalink`
+      returns the other, so URL comparison would report not_found for most
+      correctly pasted links. 18 cases pass including tracking params, no-www,
+      no-scheme, m. host, username-prefixed, /reels/ plural and legacy /tv/
+- [ ] instagram.com.evil.co is REJECTED. A hostname.includes() check would have
+      accepted it
+- [ ] Stories are rejected: they expire, so a deliverable pointing at one cannot
+      be verified later
+- [ ] Resolution is LIVE at mark-posted time, not from the stored snapshot. The
+      snapshot is up to a day old and will not contain a post published minutes
+      ago
+- [ ] ig_match_status is written on EVERY path: resolved, not_found,
+      not_connected, unsupported. Never NULL, never a zero
+- [ ] A failed resolve does NOT fail markItemPosted. Marking a deliverable
+      posted is the creator's action; the re-check action is the retry
+- [ ] Re-check is scoped to the creator's OWN deal inside the action, not only
+      by the page
+- [ ] The brand screen names the REASON for every post without numbers, and
+      not_found does not accuse: wrong link, deleted post and wrong account are
+      indistinguishable to us
+- [ ] Coverage is stated as "X of Y posts verified". A total that silently omits
+      posts is worse than no total
+- [ ] Totals SUM reach and views. No averaged rate across posts
+- [ ] Thumbnails are copied to our bucket, keyed on media id. Instagram's URL is
+      signed and expires, and this screen is read months after delivery
+- [ ] The two "View analytics" pills are real links now. They were <span> with
+      cursor:default pointing nowhere
+- [ ] The 0494 CHECK accepts its own column DEFAULT ('pending'). A CHECK whose
+      default violates it passes its own migration and breaks every later INSERT
+
+**Campaign performance rollup**
+- [ ] Reach and views are SUMMED across posts. The engagement rate is computed
+      ONCE from campaign totals (interactions / reach), never as an average of
+      per-post rates: averaging 9% over 800 reach with 2% over 400,000 gives
+      5.5%, which describes nobody and flatters the campaign
+- [ ] "X of Y posts verified" is always on screen, and the totals say they cover
+      verified posts only. A total that silently omits unconnected creators
+      understates the campaign while looking authoritative
+- [ ] Per-creator rows sort by reach, and a creator contributing no verified
+      numbers shows the REASON rather than a blank row
+- [ ] Each row links through to that deal's per-post screen
+- [ ] Empty state when nothing is posted yet, not a zeroed dashboard
+- [ ] The campaign CTA already existed and pointed at a 404; it resolves now
+
+**Post insight refresh (decaying cadence)**
+- [ ] Daily for the first 14 days, weekly to 30 days, then stopped. Verified
+      against 7 cases including never-synced
+- [ ] Posts older than 30 days are excluded by the QUERY, so they never reach
+      the cadence check
+- [ ] Reading once at post time would understate every campaign: a reel's reach
+      climbs for days. Reading nightly forever spends a call per post per
+      creator to re-fetch numbers that stopped moving
+- [ ] A failed refresh KEEPS the last good numbers. A transient outage must not
+      blank a brand's campaign screen
+- [ ] Runs AFTER the connection sync in the same cron, inside the same time
+      budget: an overrunning post refresh must not cost the token refreshes,
+      which are the ones that expire
+
+**Messaging window**
+- [ ] Open through negotiating, delivered, approved — the whole working life
+- [ ] Still open for 30 days AFTER payment. It closed at `complete` before,
+      which is exactly when payment and usage-rights questions arrive
+- [ ] The clock runs from the LATER of paid_at and completed_at. A deal
+      completed 40 days ago but paid 5 days ago is OPEN: `complete` can be set
+      before money lands, and closing while a creator is owed is the outcome
+      worth designing against
+- [ ] With no anchor at all it stays OPEN. Guessing shut is the harmful direction
+- [ ] declined and cancelled close IMMEDIATELY, whatever the dates. Leaving them
+      open lets someone keep messaging a brand that declined them
+- [ ] The closed notice names the reason and, for a wrapped deal, points at
+      starting another — the repeat-deal path, not a dead end
+- [ ] roadmap.md:296 defers a persistent inbox until payment protection and says
+      keep messaging deal-scoped; :298 says do NOT build restrictions as an
+      anti-leak defence. The window is sized to the questions that follow a
+      delivery, and it ends because the deal did
+
+**Deal chat and unread (0496)**
+- [ ] Message on a deal opens the panel IN PLACE. Both thread components existed
+      and were rendered nowhere, which is why it navigated to the inbox
+- [ ] Three states: minimised bar, open panel, dismissed. The header minus
+      minimises, the cross dismisses, and the page's Message button brings a
+      dismissed panel back
+- [ ] The bar counts UNREAD, not total. It showed the message count, so a
+      finished conversation read "12" forever
+- [ ] Your OWN messages never count as unread
+- [ ] A new message opens the panel — unless it was dismissed, in which case it
+      returns as the bar. Dismissing means leave me alone
+- [ ] The panel's read state is localStorage per deal, so the count restarts on
+      another device. That is the accepted limit of not adding a column for it
+- [ ] The HEADER badge is server-side (message_reads) and must be right across
+      devices, which is why it is a table and the panel's is not
+- [ ] The header badge clears when the THREAD is opened, not when notifications
+      are visited. It counted unread notifications of type 'message' before, so
+      a brand could read everything in the panel and still carry a badge
+- [ ] message_reads is per USER, not per party: marking a thread read for a
+      brand colleague who never opened it HIDES a message rather than miscounts
+- [ ] Its RLS allows own rows only, and the policies are in rls.sql as well as
+      the migration
+- [ ] Inbox threads exist for every live deal, not only deals with messages. A
+      conversation that only exists once it exists is the original bug
+
 **Recent reels (Phase Two)**
 - [ ] Six most recent REELS only, not mixed media. A brand pricing a reel deal
       needs comparable reel numbers

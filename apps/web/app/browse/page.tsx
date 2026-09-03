@@ -54,13 +54,53 @@ export default async function BrowsePage() {
   // Fetch which creators have published storefronts (RLS blocks brand reads)
   const { data: storefronts } = await admin
     .from('creator_storefronts')
-    .select('creator_id, slug')
+    .select('creator_id, slug, categories')
     .eq('is_published', true)
 
   const storefrontSlugs: Record<string, string> = {}
+  // Niches are entered in the STOREFRONT editor, which writes
+  // creator_storefronts.categories. This page filtered on creators.niches,
+  // which nothing populates: on production every vetted creator had an empty
+  // niches array while 24 had categories, so the niche filter had nothing to
+  // offer and looked broken. Merged, with categories first, because that is the
+  // field a creator actually fills in.
+  const storefrontCategories: Record<string, string[]> = {}
   for (const s of storefronts ?? []) {
     storefrontSlugs[s.creator_id] = s.slug
+    const cats = Array.isArray(s.categories) ? (s.categories as unknown[]).filter((c): c is string => typeof c === 'string') : []
+    if (cats.length) storefrontCategories[s.creator_id] = cats
   }
 
-  return <BrowseGrid creators={(creators ?? []) as BrowseCreator[]} storefrontSlugs={storefrontSlugs} />
+  // Verified follower counts, for creators who have connected Instagram.
+  //
+  // This card read social_accounts.follower_count only, which is the figure a
+  // creator TYPES. A connected creator's real count lives on the snapshot, and
+  // the two are independent: connecting does not write into social_accounts. So
+  // a creator with 535 verified followers showed 0 here, and sorting by
+  // followers put them last. Snapshot-first, the same rule the storefront and
+  // the editor already follow.
+  //
+  // Server-side and via the admin client: creator_instagram_connections denies
+  // all client access, and only the follower count leaves this function.
+  const { data: connections } = await admin
+    .from('creator_instagram_connections')
+    .select('creator_id, snapshot')
+    .eq('status', 'connected')
+
+  const verifiedFollowers: Record<string, number> = {}
+  for (const c of connections ?? []) {
+    const n = (c.snapshot as { followersCount?: number } | null)?.followersCount
+    if (typeof n === 'number') verifiedFollowers[c.creator_id] = n
+  }
+
+  return (
+    <BrowseGrid
+      creators={((creators ?? []) as BrowseCreator[]).map((c) => ({
+        ...c,
+        niches: storefrontCategories[c.id] ?? c.niches ?? [],
+      }))}
+      storefrontSlugs={storefrontSlugs}
+      verifiedFollowers={verifiedFollowers}
+    />
+  )
 }

@@ -289,9 +289,29 @@ export default function CreatorSettingsClient({
                   <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="you@email.com" />
                 </div>
 
+              </div>
+            )}
+
+            {/* ── ACCOUNT ── */}
+            {section === 'connected' && (
+              <div className="set-panel">
+                <div style={{ marginBottom: 16 }}>
+                  <h2 style={h2Style}>Your accounts</h2>
+                  <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-faint)' }}>
+                    Connect a platform and brands see figures verified from the source. Anything you
+                    only type here is shown as your own claim.
+                  </p>
+                </div>
+                <ConnectedAccounts connection={instagramConnection} />
+
+                {/* The typed handles, in the same place as the connection.
+                    They were in two different settings sections: a creator linked
+                    Instagram under Account and then typed the same handle again
+                    under Profile, with nothing saying how the two related. Verified
+                    first, typed beneath, so the difference is the order. */}
                 {/* Social accounts */}
                 <div style={{ marginTop: 22, paddingTop: 22, borderTop: '1px solid var(--border-hairline)' }}>
-                  <div style={eyebrowStyle}>Social accounts</div>
+                  <div style={eyebrowStyle}>Other handles</div>
                   <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 14 }}>
                     {SOCIAL_PLATFORMS.map(p => (
                       <div key={p.key}>
@@ -318,19 +338,6 @@ export default function CreatorSettingsClient({
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* ── ACCOUNT ── */}
-            {section === 'connected' && (
-              <div className="set-panel">
-                <div style={{ marginBottom: 16 }}>
-                  <h2 style={h2Style}>Connected accounts</h2>
-                  <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-faint)' }}>
-                    Link a platform so brands see figures verified from the source, not typed in.
-                  </p>
-                </div>
-                <ConnectedAccounts connection={instagramConnection} />
               </div>
             )}
 

@@ -5,6 +5,7 @@ import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
 import DealsTable from './DealsTable'
+import { countDealsByTab, TAB_STATUSES } from '@/lib/deal-tabs'
 
 const PAGE_SIZE = 20
 
@@ -66,14 +67,14 @@ export default async function DealsListPage({
     .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, held_at, created_at, creators(id, full_name, profile_photo_url)', { count: 'exact' })
 
   // Status filter (server-side)
-  if (status === 'needs_you') {
-    query = query.in('status', ['negotiating', 'delivered', 'approved'])
-  } else if (status === 'paid') {
-    // "Posted" tab — includes paid, complete, and is_posted deals
-    query = query.or('status.eq.paid,status.eq.complete,is_posted.eq.true')
-  } else if (status === 'delivered') {
-    // "In review" tab — includes delivered and revision
-    query = query.in('status', ['delivered', 'revision'])
+  // Built from TAB_STATUSES, the same definition the counts use. They were
+  // written out separately here and in the component, which is how a tab could
+  // filter on one rule and count on another.
+  if (status === 'paid') {
+    // The only tab that also matches a flag, so it cannot be a plain .in().
+    query = query.or(`status.in.(${TAB_STATUSES.paid.join(',')}),is_posted.eq.true`)
+  } else if (status && TAB_STATUSES[status]) {
+    query = query.in('status', TAB_STATUSES[status])
   } else if (status) {
     query = query.eq('status', status)
   }
@@ -87,13 +88,17 @@ export default async function DealsListPage({
   query = query.order('created_at', { ascending: false }).range(from, to)
 
   // Also fetch ALL deals (unfiltered) for KPI computation + invoices
-  const [{ data: deals, error, count }, { data: invoices }, { data: allDealsForKpi }] = await Promise.all([
+  const [{ data: deals, error, count }, { data: invoices }, { data: allDealsForKpi }, { data: dealCensus }] = await Promise.all([
     query,
     supabase.from('invoices').select('deal_id, status, due_date'),
     supabase
       .from('deals')
       .select('id, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted')
       .not('status', 'in', '(cancelled,declined)'),
+    // Every deal, unfiltered and unpaginated, for the tab counts. Separate from
+    // the KPI query above because that one excludes cancelled and declined, and
+    // the Declined tab needs to count exactly those.
+    supabase.from('deals').select('status, is_posted'),
   ])
 
   if (error) {
@@ -222,6 +227,10 @@ export default async function DealsListPage({
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}
+        tabCounts={countDealsByTab(
+          (dealCensus ?? []) as { status: string; is_posted?: boolean | null }[],
+          ['needs_you', 'negotiating', 'agreed', 'delivered', 'paid', 'declined'],
+        )}
       />
     </main>
   )

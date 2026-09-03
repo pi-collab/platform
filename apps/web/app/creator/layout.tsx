@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CreatorSidebar from '@/components/CreatorSidebar'
+import { unreadMessageCount } from '@/lib/unread'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { currentPath } from '@/lib/creator-auth'
 import { creatorLoginUrl } from '@/lib/safe-next'
@@ -52,6 +53,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
 
   // Unread notification count + recent notifications for dropdown
   let unreadCount = 0
+  let unreadInbox = 0
   let recentNotifications: { id: string; deal_id: string | null; type: string; body: string; read_at: string | null; created_at: string }[] = []
   let notifBrandMap: Record<string, { name: string; photo: string | null }> = {}
 
@@ -71,6 +73,16 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     ])
     unreadCount = count ?? 0
     recentNotifications = recentNotifs ?? []
+
+    // Unread MESSAGES, for the inbox badge. Counted against message_reads, so
+    // it clears when the creator opens the thread rather than when they happen
+    // to visit the notifications page.
+    const { data: myDeals } = await supabase.from('deals').select('id')
+    unreadInbox = await unreadMessageCount(
+      profile.id,
+      'creator',
+      (myDeals ?? []).map((d) => d.id as string),
+    )
 
     // Fetch brand names for recent notifications
     const recentDealIds = Array.from(new Set(recentNotifications.map((n) => n.deal_id).filter(Boolean))) as string[]
@@ -143,7 +155,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profile?.id && <AnalyticsIdentify userId={profile.id} role="creator" />}
       <div className="creator-main creator-app">
-        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
+        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
         {/* Phones get the tab bar; the sidebar's own media query hides its
             mobile top bar at the same breakpoint, so a creator never sees two

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { unreadMessageCount } from '@/lib/unread'
 import BrandSidebar from '@/components/BrandSidebar'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 
@@ -39,15 +40,18 @@ export default async function BrandNav() {
 
       unreadCount = count ?? 0
 
-      // Unread inbox (messages) count
-      const { count: msgCount } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', profile.id)
-        .is('read_at', null)
-        .eq('type', 'message')
-
-      unreadInbox = msgCount ?? 0
+      // Unread MESSAGES, not unread message-notifications.
+      //
+      // This counted notifications of type 'message', which clear when someone
+      // visits the notifications page — so a brand could read every message in
+      // the chat panel and still carry a badge saying they had not. Counted
+      // against message_reads now, which the panel updates when it opens.
+      const { data: dealRows } = await supabase.from('deals').select('id')
+      unreadInbox = await unreadMessageCount(
+        profile.id,
+        'brand',
+        (dealRows ?? []).map((d) => d.id as string),
+      )
 
       // Recent notifications for dropdown
       const { data: recentNotifs } = await supabase

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { sendMessage } from './actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -61,11 +63,34 @@ function formatRupees(paise: number): string {
 export default function BrandInboxView({
   threads,
   allMessages,
+  initialDealId = null,
+  unreadByDeal = {},
 }: {
   threads: Thread[]
   allMessages: Message[]
+  /** The deal to open on arrival, from ?deal= on the URL. */
+  initialDealId?: string | null
+  /** dealId -> unread count, so a row can say it is waiting. */
+  unreadByDeal?: Record<string, number>
 }) {
-  const [selected, setSelected] = useState<string | null>(threads[0]?.dealId ?? null)
+  // Open the thread the URL asked for. Pressing Message on a deal used to land
+  // on whichever thread happened to be first, or on an empty state, and left
+  // the person to find the conversation they had just come from.
+  const [selected, setSelected] = useState<string | null>(
+    (initialDealId && threads.some((t) => t.dealId === initialDealId) ? initialDealId : null)
+      ?? threads[0]?.dealId
+      ?? null,
+  )
+  const router = useRouter()
+
+  // Selecting a thread here IS reading it. The inbox marked nothing, so the
+  // header badge survived the one screen whose whole purpose is reading
+  // messages. Refreshed afterwards so the number in the header actually moves.
+  useEffect(() => {
+    if (!selected) return
+    void markDealThreadRead(selected).then(() => router.refresh())
+  }, [selected, router])
+
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
     for (const msg of allMessages) {
@@ -105,14 +130,17 @@ export default function BrandInboxView({
 
   const counts = useMemo(() => ({
     all: threads.length,
-    unread: 0,
+    // Was hardcoded to 0, so the tab existed and never counted anything.
+    unread: threads.filter((t) => (unreadByDeal[t.dealId] ?? 0) > 0).length,
     active: threads.filter((t) => ACTIVE_STATUSES.includes(t.dealStatus)).length,
     completed: threads.filter((t) => TERMINAL_STATUSES.includes(t.dealStatus)).length,
   }), [threads])
 
   const filteredThreads = useMemo(() => {
     let list = threads
-    if (filter === 'active') list = list.filter((t) => ACTIVE_STATUSES.includes(t.dealStatus))
+    // The unread tab was defined and never applied: selecting it did nothing.
+    if (filter === 'unread') list = list.filter((t) => (unreadByDeal[t.dealId] ?? 0) > 0)
+    else if (filter === 'active') list = list.filter((t) => ACTIVE_STATUSES.includes(t.dealStatus))
     else if (filter === 'completed') list = list.filter((t) => TERMINAL_STATUSES.includes(t.dealStatus))
     if (query.trim()) {
       const q = query.trim().toLowerCase()
@@ -295,8 +323,15 @@ export default function BrandInboxView({
                       <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {t.creatorName}
                       </span>
-                      <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', flexShrink: 0 }}>
-                        {formatTimeAgo(t.createdAt)}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                        {/* Which conversations are waiting on you. Every row looked
+                            alike, so the list said nothing about where to start. */}
+                        {(unreadByDeal[t.dealId] ?? 0) > 0 && (
+                          <span style={rowUnread}>{unreadByDeal[t.dealId]! > 99 ? '99+' : unreadByDeal[t.dealId]}</span>
+                        )}
+                        <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 9.5, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', flexShrink: 0 }}>
+                          {formatTimeAgo(t.createdAt)}
+                        </span>
                       </span>
                     </div>
                     <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -563,4 +598,18 @@ function formatTimeAgo(dateStr: string): string {
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days}d`
   return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+}
+
+const rowUnread: React.CSSProperties = {
+  minWidth: 18,
+  height: 18,
+  padding: '0 5px',
+  borderRadius: 999,
+  background: 'var(--neon, #E8FF66)',
+  color: 'var(--lime-950, #161B08)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 10,
+  fontWeight: 800,
+  lineHeight: '18px',
+  textAlign: 'center',
 }

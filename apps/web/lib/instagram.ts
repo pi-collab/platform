@@ -514,3 +514,64 @@ function required(name: string): string {
   if (!v) throw new Error(`${name} is not configured`)
   return v
 }
+
+/**
+ * Every reel on the account, newest first, for the storefront picker.
+ *
+ * WITHOUT insights. The picker shows candidates and a creator may have dozens;
+ * one insights call each would turn opening a dialog into thirty API calls.
+ * Likes and comments come free on the media list, which is enough to choose
+ * from, and the full numbers are read once a reel is actually featured.
+ */
+export async function fetchReelCandidates(token: string, maxPages = 4): Promise<IgMediaItem[]> {
+  const fields = 'id,media_product_type,permalink,thumbnail_url,caption,timestamp,like_count,comments_count'
+  const out: IgMediaItem[] = []
+  let url: string | null = `${GRAPH}/me/media?fields=${fields}&limit=25&access_token=${encodeURIComponent(token)}`
+
+  for (let page = 0; page < maxPages && url; page++) {
+    const res: Response = await fetch(url)
+    if (!res.ok) break
+    const json = await res.json()
+
+    for (const m of (json?.data ?? []) as Record<string, unknown>[]) {
+      if (m.media_product_type !== 'REELS') continue
+      out.push({
+        id: String(m.id),
+        permalink: String(m.permalink ?? ''),
+        timestamp: String(m.timestamp ?? ''),
+        caption: typeof m.caption === 'string' ? m.caption : undefined,
+        thumbnailSourceUrl: typeof m.thumbnail_url === 'string' ? m.thumbnail_url : undefined,
+        likeCount: typeof m.like_count === 'number' ? m.like_count : undefined,
+        commentsCount: typeof m.comments_count === 'number' ? m.comments_count : undefined,
+      })
+    }
+
+    url = (json?.paging?.next as string | undefined) ?? null
+  }
+
+  return out
+}
+
+/** One reel, by id, with its insights. Used for a FEATURED reel, which is
+ *  resolved directly rather than looked for in a paginated window — so a pick
+ *  cannot rot out of the recent list months later. */
+export async function fetchReelById(token: string, mediaId: string): Promise<IgMediaItem | null> {
+  const fields = 'id,permalink,thumbnail_url,caption,timestamp,like_count,comments_count'
+  const res = await fetch(`${GRAPH}/${mediaId}?fields=${fields}&access_token=${encodeURIComponent(token)}`)
+  if (!res.ok) return null
+  const m = await res.json()
+
+  const item: IgMediaItem = {
+    id: String(m.id),
+    permalink: String(m.permalink ?? ''),
+    timestamp: String(m.timestamp ?? ''),
+    caption: typeof m.caption === 'string' ? m.caption : undefined,
+    thumbnailSourceUrl: typeof m.thumbnail_url === 'string' ? m.thumbnail_url : undefined,
+    likeCount: typeof m.like_count === 'number' ? m.like_count : undefined,
+    commentsCount: typeof m.comments_count === 'number' ? m.comments_count : undefined,
+  }
+
+  const stats = await fetchMediaInsights(token, item.id)
+  if (stats && stats !== 'pre_conversion') Object.assign(item, stats)
+  return item
+}

@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { messagingState, messagingClosedNotice } from '@/lib/messaging-window'
 import { sendMessage } from '@/app/inbox/actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -18,18 +21,52 @@ const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 export default function DealThread({
   dealId,
   dealStatus,
+  dealCompletedAt = null,
+  dealPaidAt = null,
   initialMessages,
+  autoOpen = false,
+  hideLauncher = false,
 }: {
   dealId: string
   dealStatus: string
+  /** Anchors for the messaging window. Payment first: `complete` can be set
+   *  before money lands, and closing while a creator is owed is the one
+   *  outcome worth designing against. */
+  dealCompletedAt?: string | null
+  dealPaidAt?: string | null
   initialMessages: Message[]
+  /** Open on arrival, so ?chat=1 from a Message button lands in the thread. */
+  autoOpen?: boolean
+  /** Hide the built-in button when the page already has its own Message
+   *  control, so a deal does not show two ways into the same panel. */
+  hideLauncher?: boolean
 }) {
-  const isTerminal = TERMINAL_STATUSES.includes(dealStatus)
+  // Not "is the status terminal". That closed the channel the moment a deal
+  // completed, which is exactly when payment and usage-rights questions arrive.
+  // See lib/messaging-window.ts for the window and why it ends at all.
+  const chatWindow = messagingState({
+    status: dealStatus,
+    completed_at: dealCompletedAt,
+    paid_at: dealPaidAt,
+  })
+  const isTerminal = !chatWindow.open
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
+  // Minimised is the resting state once a conversation exists: a bar you can
+  // see, rather than nothing at all. Closing collapses to it instead of hiding,
+  // which is how a chat you have already opened stays findable.
+  const router = useRouter()
+  const [dismissed, setDismissed] = useState(false)
+
+  // Opened from a Message control elsewhere on the page. See OpenDealChat.
+  useEffect(() => {
+    const openIt = () => { setDismissed(false); setOpen(true) }
+    window.addEventListener('guapd:open-deal-chat', openIt)
+    return () => window.removeEventListener('guapd:open-deal-chat', openIt)
+  }, [])
   const [emojiOpen, setEmojiOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const emojiRef = useRef<HTMLDivElement>(null)
@@ -45,6 +82,15 @@ export default function DealThread({
       knownIdsRef.current.add(msg.id)
       setMessages((prev) => [...prev, msg as Message])
       playGuapSound()
+      // A message arriving opens the panel. If it was DISMISSED, it comes back
+      // as the bar instead: dismissing means "leave me alone", and answering
+      // that by throwing a panel open would be the wrong reading of it.
+      if (msg.sender_party !== 'brand') {
+        setDismissed((wasDismissed) => {
+          if (!wasDismissed) setOpen(true)
+          return false
+        })
+      }
     },
     knownIdsRef,
   )
@@ -105,6 +151,48 @@ export default function DealThread({
     setBody('')
   }
 
+  // Unread means unread, not "how many messages exist". The bar showed the
+  // total, so a finished conversation sat there reading "12" forever and the
+  // number said nothing about whether anything needed attention.
+  //
+  // Read state is per device, in localStorage, keyed on the deal. The messages
+  // table has no read marker, and adding one is the right fix for a header
+  // badge that must be right across devices — but for a bar on the page you are
+  // already looking at, remembering what this browser has seen is enough and
+  // needs no migration.
+  const seenKey = `guapd:deal-chat-seen:${dealId}`
+  const [lastSeenId, setLastSeenId] = useState<string | null>(null)
+
+  useEffect(() => {
+    try { setLastSeenId(window.localStorage.getItem(seenKey)) } catch { /* private mode */ }
+  }, [seenKey])
+
+  // Only the OTHER party's messages count: your own are read by definition.
+  const unread = (() => {
+    if (messages.length === 0) return 0
+    const from = lastSeenId ? messages.findIndex((m) => m.id === lastSeenId) : -1
+    return messages.slice(from + 1).filter((m) => m.sender_party !== 'brand').length
+  })()
+
+  // Opening IS reading. Locally for this bar, and on the server for the header
+  // badge, which spans deals and has to be right on another device.
+  useEffect(() => {
+    if (!open || messages.length === 0) return
+    const latest = messages[messages.length - 1].id
+    setLastSeenId(latest)
+    try { window.localStorage.setItem(seenKey, latest) } catch { /* private mode */ }
+
+    // Marking read is a server write; the header badge is computed in the
+    // layout. Without a refresh the number sits there until the next
+    // navigation, which reads as "it didn't work". Only when there WAS
+    // something unread, so opening a read thread does not refetch the page.
+    if (unread > 0) {
+      void markDealThreadRead(dealId).then(() => router.refresh())
+    } else {
+      void markDealThreadRead(dealId)
+    }
+  }, [open, messages, seenKey, dealId, unread, router])
+
   const hasMessages = messages.length > 0
 
   return (
@@ -112,7 +200,10 @@ export default function DealThread({
       {/* CTA Button */}
       <button
         onClick={() => setOpen(true)}
-        style={ctaButton}
+        style={{ ...ctaButton, ...(hideLauncher ? { display: 'none' } : null) }}
+        // Reachable from anywhere on the page, so an existing Message control
+        // can open this panel instead of navigating away from the deal.
+        data-open-deal-chat
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -121,6 +212,26 @@ export default function DealThread({
       </button>
 
       {/* No full-screen backdrop — panel sits alongside content like LinkedIn/Facebook chat */}
+
+      {/* Minimised bar. Sits where the panel will appear, so expanding does not
+          move the thing you just clicked. Hidden while the panel is open, and
+          gone entirely once dismissed — the page's Message button brings it
+          back. */}
+      {!open && !dismissed && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label={unread > 0 ? `Open messages, ${unread} unread` : hasMessages ? 'Open messages' : 'Start a conversation'}
+          style={minBar}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'left' }}>
+            {hasMessages ? 'Messages' : 'Send a message'}
+          </span>
+          {unread > 0 && <span style={minCount}>{unread}</span>}
+        </button>
+      )}
 
       {/* Slide-out panel */}
       <div style={{
@@ -135,12 +246,20 @@ export default function DealThread({
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
             Messages
           </h2>
-          <button onClick={() => setOpen(false)} style={closeBtn} aria-label="Close chat">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Minimise, not close. The conversation stays on screen as a bar. */}
+            <button onClick={() => setOpen(false)} style={closeBtn} aria-label="Minimise chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="6" y1="18" x2="18" y2="18" />
+              </svg>
+            </button>
+            <button onClick={() => { setOpen(false); setDismissed(true) }} style={closeBtn} aria-label="Close chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Messages area */}
@@ -184,7 +303,7 @@ export default function DealThread({
         {/* Compose */}
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>This deal is {dealStatus}, so messaging is closed.</p>
+            <p style={closedNotice}>{messagingClosedNotice(chatWindow, 'the creator')}</p>
           ) : (
             <>
               {emojiOpen && (
@@ -276,6 +395,40 @@ const ctaButton: React.CSSProperties = {
   fontFamily: 'var(--font-body)',
   cursor: 'pointer',
   whiteSpace: 'nowrap',
+}
+
+const minBar: React.CSSProperties = {
+  position: 'fixed',
+  bottom: 16,
+  right: 16,
+  zIndex: 998,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 9,
+  width: 220,
+  maxWidth: 'calc(100vw - 32px)',
+  padding: '11px 14px',
+  borderRadius: 12,
+  background: 'var(--section-bg, #fff)',
+  border: '1px solid var(--color-border)',
+  boxShadow: '0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08)',
+  fontFamily: 'var(--font-ui)',
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--ink, #12151C)',
+  cursor: 'pointer',
+}
+
+const minCount: React.CSSProperties = {
+  flexShrink: 0,
+  minWidth: 20,
+  padding: '1px 6px',
+  borderRadius: 999,
+  background: 'var(--neon, #E8FF66)',
+  color: 'var(--lime-950, #161B08)',
+  fontSize: 11,
+  fontWeight: 700,
+  textAlign: 'center',
 }
 
 const panel: React.CSSProperties = {

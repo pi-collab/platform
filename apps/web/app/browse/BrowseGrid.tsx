@@ -2,12 +2,14 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import FilterDropdown from '@/components/FilterDropdown'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
 import { NICHES } from '@/lib/niches'
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
+/** The typed figure. Kept as the fallback for creators who have not connected. */
 function bestFollowers(sa: Array<{ follower_count: number | null }> | null): number {
   if (!sa || sa.length === 0) return 0
   return Math.max(0, ...sa.map((s) => s.follower_count ?? 0))
@@ -105,9 +107,36 @@ function useAnimatedPlaceholder() {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creators: BrowseCreator[]; storefrontSlugs?: Record<string, string> }) {
+export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {} }: {
+  creators: BrowseCreator[]
+  storefrontSlugs?: Record<string, string>
+  /** creatorId -> followers from a connected Instagram account. */
+  verifiedFollowers?: Record<string, number>
+}) {
+  // Verified first, typed second. Connecting Instagram does not write into
+  // social_accounts, so a connected creator's typed count is usually absent and
+  // reading it alone showed them as 0 and sorted them last.
+  const followersOf = (c: BrowseCreator) =>
+    verifiedFollowers[c.id] ?? bestFollowers(c.social_accounts)
+
   const [search, setSearch] = useState('')
-  const [nicheFilter, setNicheFilter] = useState('all')
+  // An array, empty meaning no niche filter. A creator's storefront can carry
+  // several categories, so filtering on one at a time asked a brand to guess
+  // which of them we happened to match on.
+  const [nicheFilter, setNicheFilter] = useState<string[]>([])
+
+  // Built from the creators actually listed, not a fixed list. NICHES was a
+  // hardcoded set, so it offered options nobody matched and hid the ones
+  // creators had entered on their storefront.
+  const nicheOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const c of creators) {
+      for (const n of c.niches ?? []) counts.set(n, (counts.get(n) ?? 0) + 1)
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([label, n]) => ({ value: label, label, hint: String(n) }))
+  }, [creators])
   const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
   const [rateFilter, setRateFilter] = useState('any')
   const [sort, setSort] = useState('followers')
@@ -143,8 +172,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
     }
 
     // Niche
-    if (nicheFilter !== 'all') {
-      list = list.filter((c) => (c.niches ?? []).includes(nicheFilter))
+    if (nicheFilter.length > 0) {
+      // ANY, not all: a brand picking Beauty and Fashion wants either, not
+      // creators who happen to carry both.
+      list = list.filter((c) => (c.niches ?? []).some((n) => nicheFilter.includes(n)))
     }
 
     // Platform
@@ -169,7 +200,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
 
     // Sort
     list = [...list].sort((a, b) => {
-      if (sort === 'followers') return bestFollowers(b.social_accounts) - bestFollowers(a.social_accounts)
+      if (sort === 'followers') return followersOf(b) - followersOf(a)
       if (sort === 'rateLow') return (lowestRate(a.rate_card) ?? 0) - (lowestRate(b.rate_card) ?? 0)
       return a.full_name.localeCompare(b.full_name)
     })
@@ -183,13 +214,13 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
   // Active filter chips
   const chips: { label: string; onRemove: () => void }[] = []
   if (platformFilter !== 'all') chips.push({ label: platformFilter === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => setPlatformFilter('all') })
-  if (nicheFilter !== 'all') chips.push({ label: nicheFilter, onRemove: () => setNicheFilter('all') })
+  for (const n of nicheFilter) chips.push({ label: n, onRemove: () => setNicheFilter((prev) => prev.filter((x) => x !== n)) })
   if (rateFilter !== 'any') chips.push({ label: RATE_FILTERS.find((r) => r.value === rateFilter)?.label ?? rateFilter, onRemove: () => setRateFilter('any') })
   const hasChips = chips.length > 0
 
   function clearAll() {
     setSearch('')
-    setNicheFilter('all')
+    setNicheFilter([])
     setPlatformFilter('all')
     setRateFilter('any')
     setSort('followers')
@@ -340,33 +371,39 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
                 </button>
               </div>
 
-              {/* Niche dropdown */}
-              <select
+              {/* All three share the dashboard's dropdown, so one page stops
+                  carrying two visual languages. Niche is multi-select, which a
+                  native <select> cannot do without ctrl-click. */}
+              <FilterDropdown
+                multiple
+                placeholder="All niches"
                 value={nicheFilter}
-                onChange={(e) => { setNicheFilter(e.target.value); setShown(PAGE_SIZE) }}
-                style={selectStyle}
-              >
-                <option value="all">All niches</option>
-                {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
+                onChange={(v) => { setNicheFilter(v); setShown(PAGE_SIZE) }}
+                options={[
+                  { value: 'all', label: 'All niches' },
+                  // Only niches some creator actually has, with a count. An
+                  // option that returns nothing is a dead end dressed as a
+                  // choice.
+                  ...nicheOptions,
+                ]}
+              />
 
-              {/* Rate dropdown */}
-              <select
+              <FilterDropdown
+                placeholder="Any rate"
                 value={rateFilter}
-                onChange={(e) => { setRateFilter(e.target.value); setShown(PAGE_SIZE) }}
-                style={selectStyle}
-              >
-                {RATE_FILTERS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
+                onChange={(v) => { setRateFilter(v); setShown(PAGE_SIZE) }}
+                options={RATE_FILTERS.map((r) => ({ value: r.value, label: r.label }))}
+                minWidth={190}
+              />
 
-              {/* Sort dropdown */}
-              <select
+              <FilterDropdown
+                placeholder="Sort"
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                style={selectStyle}
-              >
-                {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+                onChange={setSort}
+                options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                align="right"
+                minWidth={190}
+              />
             </div>
           </div>
         </div>
@@ -450,7 +487,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
               {pageList.map((c) => (
-                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} />
+                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} verifiedFollowers={verifiedFollowers[c.id]} />
               ))}
             </div>
 
@@ -533,16 +570,54 @@ export default function BrowseGrid({ creators, storefrontSlugs = {} }: { creator
 
 /* ── Creator Card ──────────────────────────────────────────────── */
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
+/** Two chips and a +N that reveals the rest in place. */
+function NicheChips({ niches }: { niches: string[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const VISIBLE = 2
+  const shown = expanded ? niches : niches.slice(0, VISIBLE)
+  const hidden = niches.length - shown.length
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, flexWrap: 'wrap' }}>
+      {shown.map((n) => (
+        <span key={n} style={chipStyle}>{n}</span>
+      ))}
+      {hidden > 0 && (
+        <button
+          type="button"
+          // The card itself navigates, so this has to keep its click.
+          onClick={(e) => { e.stopPropagation(); setExpanded(true) }}
+          style={{ ...chipStyle, background: 'transparent', cursor: 'pointer', color: 'var(--ink-soft)' }}
+        >
+          +{hidden} more
+        </button>
+      )}
+    </div>
+  )
+}
+
+const chipStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center',
+  padding: '4px 11px', borderRadius: 'var(--radius-pill)',
+  background: 'rgba(232,255,102,.4)', border: '1px solid rgba(210,240,74,.5)',
+  fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
+  color: 'var(--ink)', whiteSpace: 'nowrap',
+}
+
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers }: {
   creator: BrowseCreator
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
   storefrontSlug: string | null
+  /** From a connected Instagram account, when there is one. */
+  verifiedFollowers?: number
 }) {
   const primary = primarySocial(c.social_accounts)
-  const followers = bestFollowers(c.social_accounts)
+  // Verified first. The typed figure is usually absent for a connected creator,
+  // which is how a real 535 rendered as 0.
+  const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
   const low = lowestRate(c.rate_card)
-  const niche = (c.niches ?? [])[0]
+  const niches = (c.niches ?? []).filter(Boolean)
 
   const router = useRouter()
 
@@ -607,19 +682,12 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
         </button>
       </div>
 
-      {/* Niche pill */}
-      {niche && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12, flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center',
-            padding: '4px 11px', borderRadius: 'var(--radius-pill)',
-            background: 'rgba(232,255,102,.4)', border: '1px solid rgba(210,240,74,.5)',
-            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
-            color: 'var(--ink)', whiteSpace: 'nowrap',
-          }}>
-            {niche}
-          </span>
-        </div>
+      {/* Niche chips. A storefront can carry several categories and this showed
+          only the first, so a creator listing Beauty, Fashion and Travel read as
+          "Beauty" alone. Two are shown and the rest sit behind a +N, because six
+          chips reflow the card and make the grid ragged. */}
+      {niches.length > 0 && (
+        <NicheChips niches={niches} />
       )}
 
       {/* Stats row */}
@@ -670,7 +738,15 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
           </a>
         ) : (
-          <span
+          /* A real link. This was a <span> with nothing but
+             stopPropagation on it: it looked like a button, did nothing when
+             pressed, and swallowed the click the card itself would have
+             handled — so a creator without a published storefront had no way
+             through from here at all. /browse/[id] exists and is exactly the
+             profile this promises. It stays in the tab, unlike Storefront,
+             because it is part of the app rather than the public page. */
+          <Link
+            href={`/browse/${c.id}`}
             onClick={(e) => e.stopPropagation()}
             style={{
               flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
@@ -678,11 +754,11 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug }: {
               padding: 11, borderRadius: 11,
               background: 'var(--card)', border: '1px solid rgba(40,45,25,.18)',
               fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12,
-              color: 'var(--ink)', whiteSpace: 'nowrap',
+              color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
             }}
           >
             View Profile
-          </span>
+          </Link>
         )}
         <Link
           href={`/deals/new?creator=${c.id}`}

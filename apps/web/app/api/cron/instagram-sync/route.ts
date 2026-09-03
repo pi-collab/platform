@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectionsDueForSync, refreshAndSync } from '@/lib/instagram-sync'
+import { postsDueForRefresh, refreshOnePost } from '@/lib/deal-post-insights'
 
 /**
  * Daily Instagram refresh and re-sync.
@@ -63,5 +64,17 @@ export async function GET(request: NextRequest) {
     console.info(`[instagram-cron] ${synced} synced in ${Date.now() - started}ms`)
   }
 
-  return NextResponse.json({ synced, failed, considered: rows.length })
+  // Delivered posts, on their own decaying cadence. Runs AFTER the connection
+  // sync so a token refreshed above is the one used here, and inside the same
+  // time budget: an overrunning post refresh must not cost tomorrow's token
+  // refreshes, which are the ones that expire.
+  let posts = 0
+  if (Date.now() - started < 240_000) {
+    for (const candidate of await postsDueForRefresh()) {
+      if (Date.now() - started > 270_000) break
+      if (await refreshOnePost(candidate)) posts++
+    }
+  }
+
+  return NextResponse.json({ synced, failed, considered: rows.length, posts })
 }

@@ -517,8 +517,9 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .sf-comet::after{content:"";position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--card);box-shadow:0 0 7px 3px rgba(255,255,255,.95),0 0 12px 5px rgba(232,255,102,.4);}
 @keyframes rcShine{0%{left:-70%;opacity:0;}18%{opacity:1;}100%{left:135%;opacity:0;}}
 @keyframes sfMarquee{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-.sf-brandtrack{animation:sfMarquee 34s linear infinite;will-change:transform;}
-.sf-brandmarquee:hover .sf-brandtrack{animation-play-state:paused;}
+.sf-brandmarquee--scroll .sf-brandtrack{animation:sfMarquee 34s linear infinite;will-change:transform;}
+.sf-brandmarquee--scroll:hover .sf-brandtrack{animation-play-state:paused;}
+@media (prefers-reduced-motion:reduce){.sf-brandmarquee--scroll .sf-brandtrack{animation:none;}}
 .sf-exprow{display:flex;gap:11px;height:400px;}
 .sf-exp{position:relative;display:flex;flex:1 1 0;min-width:0;border-radius:18px;overflow:hidden;cursor:pointer;border:1px solid var(--sec-mid-2);background:var(--card);transition:flex .5s cubic-bezier(.22,1,.36,1);}
 .sf-exprow:hover .sf-exp{flex:.66 1 0;}

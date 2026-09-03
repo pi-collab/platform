@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
-import { resyncForCreator } from '@/lib/instagram-sync'
+import { resyncForCreator, listReelCandidates, syncFeaturedReels, MAX_FEATURED_REELS } from '@/lib/instagram-sync'
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -653,4 +653,80 @@ export async function uploadBrandLogo(formData: FormData): Promise<
   // Same version stamp as the avatar: the path is stable across replacements, so
   // without it a new logo serves the old bytes from cache.
   return { ok: true, url: `${data.publicUrl}?v=${Date.now()}` }
+}
+
+/* ── Featured reels ─────────────────────────────────────────────────────────
+   Which of their own reels a creator puts on the shopfront. Curated, not
+   chronological: an automatic strip of latest posts shows whatever they last
+   made, which is not the same as their best work.
+   ────────────────────────────────────────────────────────────────────────── */
+
+export interface ReelCandidate {
+  id: string
+  permalink: string
+  timestamp: string
+  caption?: string
+  thumbnailUrl?: string
+  likeCount?: number
+  commentsCount?: number
+}
+
+/** Their reels, fetched live for the picker. Thumbnails are Instagram's own
+ *  CDN URLs, used only on this private screen and never stored. */
+export async function listMyReels(): Promise<{ ok: true; reels: ReelCandidate[] } | { ok: false; message: string }> {
+  const ctx = await verifyCreator()
+  const reels = await listReelCandidates(ctx.creatorId)
+
+  if (reels.length === 0) {
+    return { ok: false, message: 'No reels found on your connected account. Connect Instagram, or post a reel first.' }
+  }
+
+  return {
+    ok: true,
+    reels: reels.map(r => ({
+      id: r.id,
+      permalink: r.permalink,
+      timestamp: r.timestamp,
+      caption: r.caption,
+      thumbnailUrl: r.thumbnailSourceUrl,
+      likeCount: r.likeCount,
+      commentsCount: r.commentsCount,
+    })),
+  }
+}
+
+/**
+ * Save the selection.
+ *
+ * Stores IDS only. The reels themselves are resolved by id on every sync, so a
+ * featured pick stays current and cannot go stale against a cached copy.
+ */
+export async function saveFeaturedReels(ids: string[]): Promise<{ ok: boolean; message?: string }> {
+  const ctx = await verifyCreator()
+  const admin = createAdminClient()
+
+  const clean = Array.from(new Set(ids.filter(id => /^\d{5,32}$/.test(id)))).slice(0, MAX_FEATURED_REELS)
+
+  const { data: sf } = await admin
+    .from('creator_storefronts')
+    .select('id, slug, stats')
+    .eq('creator_id', ctx.creatorId)
+    .maybeSingle()
+
+  if (!sf) return { ok: false, message: 'Create your shopfront first.' }
+
+  // Merged into stats, never assigned over it: that object carries keys written
+  // by several steps of this editor and replacing it would drop the others.
+  const stats = { ...((sf.stats ?? {}) as Record<string, unknown>), featured_reel_ids: clean }
+
+  const { error } = await admin.from('creator_storefronts').update({ stats }).eq('id', sf.id)
+  if (error) return { ok: false, message: 'Could not save that. Please try again.' }
+
+  // Resolve immediately so the shopfront shows the choice now rather than after
+  // tonight's cron.
+  await syncFeaturedReels(ctx.creatorId).catch(() => {})
+
+  revalidatePath('/creator/storefront')
+  if (sf.slug) revalidatePath(`/c/${sf.slug}`)
+  return { ok: true }
 }

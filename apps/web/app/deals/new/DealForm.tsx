@@ -127,8 +127,21 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     if (storefrontSelections && Object.keys(prefillResult.sel).length === 0) {
       const sel: Record<string, { qty: number; customPricePaise: number | null }> = {}
       for (const [productId, qty] of Object.entries(storefrontSelections)) {
-        if (products.some(p => p.id === productId)) {
-          sel[productId] = { qty, customPricePaise: null }
+        const product = products.find((p) => p.id === productId)
+        if (!product) continue
+        // Resolved exactly as the repeat-a-deal path above does it.
+        //
+        // null means "use the product's own fixed price", which is only true
+        // for an exact one. A "from ₹50,000" or a range has no fixed price to
+        // fall back on, so null left the line at zero — the deal opened saying
+        // "1 deliverable · 0 value" with a package plainly selected.
+        //
+        // on_request stays null on purpose: there is no figure to prefill and
+        // inventing one would put a number in front of a brand that the creator
+        // never quoted.
+        sel[productId] = {
+          qty,
+          customPricePaise: isFixedPrice(product) ? null : offerPrefillPaise(product),
         }
       }
       return sel

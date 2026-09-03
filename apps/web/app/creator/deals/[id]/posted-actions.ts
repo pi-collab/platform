@@ -3,6 +3,7 @@
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveAndStorePostInsights } from './insight-actions'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
 
@@ -77,6 +78,16 @@ export async function markItemPosted(dealId: string, itemId: string, postedUrl: 
     .eq('id', itemId)
 
   if (itemErr) return { status: 'error', message: `Failed to update item: ${itemErr.message}` }
+
+  // Resolve the post to the creator's own Instagram media, so a brand can see
+  // what it actually did. Deliberately AFTER the item is saved and deliberately
+  // not awaited for its outcome: marking a deliverable posted is the creator's
+  // action and must not fail because Instagram was slow or refused. Every
+  // outcome, including "no match", is recorded as a status the brand screen can
+  // explain — never as a zero.
+  await resolveAndStorePostInsights(itemId, rawUrl).catch((err) => {
+    console.error(`[posted] insight resolve failed item=${itemId}: ${err instanceof Error ? err.message : String(err)}`)
+  })
 
   // Check if ALL items in this deal are now posted
   const { data: allItems } = await supabase

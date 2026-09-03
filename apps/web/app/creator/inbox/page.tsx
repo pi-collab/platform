@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { unreadByDeal } from '@/lib/unread'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -8,14 +9,32 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
-export default async function CreatorInboxPage() {
+export default async function CreatorInboxPage({ searchParams }: {
+  searchParams: { deal?: string }
+}) {
   await verifyCreator()
   const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  // The users row, not the auth user: message_reads keys on users(id).
+  const { data: profile } = user
+    ? await supabase.from('users').select('id').eq('auth_id', user.id).maybeSingle()
+    : { data: null }
 
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name))')
-    .order('created_at', { ascending: false })
+  // Threads come from DEALS as well as messages: a deal nobody has written on
+  // had no thread, so Message from that deal landed on an empty inbox with no
+  // way to start. Closed deals are excluded — messaging stays open until the
+  // deal completes.
+  const [{ data: messages }, { data: openDeals }] = await Promise.all([
+    supabase
+      .from('messages')
+      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name))')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('deals')
+      .select('id, title, status, price_paise, brands(name)')
+      .not('status', 'in', '(cancelled,declined)')
+      .order('created_at', { ascending: false }),
+  ])
 
   const threadMap = new Map<string, {
     dealId: string; dealTitle: string; dealStatus: string; brandName: string;
@@ -43,7 +62,32 @@ export default async function CreatorInboxPage() {
     }
   }
 
+  // Live deals with nothing said yet. After the message pass, so a deal that
+  // HAS messages keeps its preview instead of being overwritten by a blank one.
+  for (const deal of openDeals ?? []) {
+    if (threadMap.has(deal.id)) continue
+    const brandObj = Array.isArray(deal.brands) ? deal.brands[0] : (deal.brands as any)
+    const brandName = brandObj?.name || 'Brand'
+    threadMap.set(deal.id, {
+      dealId: deal.id,
+      dealTitle: deal.title || 'Untitled deal',
+      dealStatus: deal.status || '',
+      brandName,
+      brandInitials: getInitials(brandName),
+      lastMessage: '',
+      senderParty: '',
+      createdAt: '',
+      amountPaise: deal.price_paise ?? 0,
+    })
+  }
+
   const threads = Array.from(threadMap.values())
+
+  // Per-thread unread, so the list can say which conversations are waiting.
+  // The Unread tab was hardcoded to 0 and every row looked alike.
+  const unread = profile?.id
+    ? await unreadByDeal(profile.id, 'creator', threads.map((t) => t.dealId))
+    : {}
   const allMessages = (messages ?? []).map((m) => ({
     id: m.id,
     deal_id: m.deal_id,
@@ -85,7 +129,7 @@ export default async function CreatorInboxPage() {
     )
   }
 
-  return <CreatorInboxView threads={threads} allMessages={allMessages} />
+  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
 }
 
 function getInitials(name: string): string {
