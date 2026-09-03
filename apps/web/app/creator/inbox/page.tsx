@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { unreadByDeal } from '@/lib/unread'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -13,6 +14,7 @@ export default async function CreatorInboxPage({ searchParams }: {
 }) {
   await verifyCreator()
   const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Threads come from DEALS as well as messages: a deal nobody has written on
   // had no thread, so Message from that deal landed on an empty inbox with no
@@ -76,6 +78,12 @@ export default async function CreatorInboxPage({ searchParams }: {
   }
 
   const threads = Array.from(threadMap.values())
+
+  // Per-thread unread, so the list can say which conversations are waiting.
+  // The Unread tab was hardcoded to 0 and every row looked alike.
+  const unread = user
+    ? await unreadByDeal(user.id, 'creator', threads.map((t) => t.dealId))
+    : {}
   const allMessages = (messages ?? []).map((m) => ({
     id: m.id,
     deal_id: m.deal_id,
@@ -117,7 +125,7 @@ export default async function CreatorInboxPage({ searchParams }: {
     )
   }
 
-  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} />
+  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
 }
 
 function getInitials(name: string): string {

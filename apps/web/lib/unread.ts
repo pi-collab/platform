@@ -61,3 +61,47 @@ export async function markThreadRead(userId: string, dealId: string): Promise<vo
       { onConflict: 'user_id,deal_id' },
     )
 }
+
+/**
+ * Unread per deal, for the inbox list.
+ *
+ * The same rule as the header total, kept as one query rather than one per
+ * thread: an inbox with fifty conversations would otherwise make fifty round
+ * trips to render a column of small numbers.
+ */
+export async function unreadByDeal(
+  userId: string,
+  party: Party,
+  dealIds: string[],
+): Promise<Record<string, number>> {
+  if (dealIds.length === 0) return {}
+
+  const admin = createAdminClient()
+
+  const [{ data: reads }, { data: messages }] = await Promise.all([
+    admin
+      .from('message_reads')
+      .select('deal_id, last_read_at')
+      .eq('user_id', userId)
+      .in('deal_id', dealIds),
+    admin
+      .from('messages')
+      .select('deal_id, created_at')
+      .in('deal_id', dealIds)
+      .neq('sender_party', party),
+  ])
+
+  const readAt = new Map((reads ?? []).map((r) => [r.deal_id as string, r.last_read_at as string]))
+  const out: Record<string, number> = {}
+
+  for (const m of messages ?? []) {
+    const dealId = m.deal_id as string
+    const seen = readAt.get(dealId)
+    // No marker means never opened, which is not the same as nothing to read.
+    if (!seen || (m.created_at as string) > seen) {
+      out[dealId] = (out[dealId] ?? 0) + 1
+    }
+  }
+
+  return out
+}
