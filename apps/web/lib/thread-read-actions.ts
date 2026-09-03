@@ -26,19 +26,26 @@ export async function markDealThreadRead(dealId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  // The users row id, not the auth id: message_reads keys on users(id), which
-  // is what every other table here joins on.
+  // users.auth_id, NOT users.id. This looked up `id` and found nothing, fell
+  // back to the auth id, and message_reads.user_id references users(id) — so
+  // every write violated the foreign key and the catch below swallowed it.
+  // Zero rows were ever written and the badge never moved.
   const { data: profile } = await supabase
     .from('users')
     .select('id')
-    .eq('id', user.id)
+    .eq('auth_id', user.id)
     .maybeSingle()
 
-  const userId = profile?.id ?? user.id
+  if (!profile?.id) {
+    console.error(`[thread-read] no users row for auth ${user.id}`)
+    return
+  }
 
   try {
-    await markThreadRead(userId, dealId)
-  } catch {
-    /* see above */
+    await markThreadRead(profile.id, dealId)
+  } catch (err) {
+    // Logged, not silent. A swallowed failure here is invisible: the only
+    // symptom is a badge that will not clear, which is exactly what happened.
+    console.error(`[thread-read] failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }

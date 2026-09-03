@@ -9,6 +9,10 @@ export default async function BrandInboxPage({ searchParams }: {
   await verifyBrand()
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  // The users row, not the auth user: message_reads keys on users(id).
+  const { data: profile } = user
+    ? await supabase.from('users').select('id').eq('auth_id', user.id).maybeSingle()
+    : { data: null }
 
   // Threads come from DEALS as well as from messages.
   //
@@ -82,8 +86,8 @@ export default async function BrandInboxPage({ searchParams }: {
 
   // Per-thread unread, so the list can say which conversations are waiting.
   // The Unread tab was hardcoded to 0 and every row looked alike.
-  const unread = user
-    ? await unreadByDeal(user.id, 'brand', threads.map((t) => t.dealId))
+  const unread = profile?.id
+    ? await unreadByDeal(profile.id, 'brand', threads.map((t) => t.dealId))
     : {}
   const allMessages = (messages ?? []).map((m) => ({
     id: m.id,
