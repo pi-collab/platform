@@ -654,6 +654,14 @@ CREATE POLICY pipeline_feedback_deny_all
   USING (false)
   WITH CHECK (false);
 
+-- The REVOKE is part of the posture, not an afterthought (see 0498). Supabase's
+-- default privileges GRANT ALL on every new public table to anon and
+-- authenticated, so a deny-all policy with no revoke is a SINGLE layer, not
+-- two. Re-runnable, and included here because rls.sql is the source of truth
+-- for how these tables are protected.
+REVOKE ALL ON TABLE pipeline_leads    FROM anon, authenticated;
+REVOKE ALL ON TABLE pipeline_feedback FROM anon, authenticated;
+
 
 -- ── deal_reviews ──────────────────────────────────────────────────
 -- Post-deal ratings. Each side can only see/write their OWN review.

@@ -184,8 +184,14 @@ COMMENT ON TABLE pipeline_feedback IS
 
 -- (RLS for both tables is enabled inline above, immediately after each CREATE.)
 --
--- No GRANTs to anon/authenticated. The service role bypasses RLS and is the
--- only intended reader. The missing grant is the OUTER lock: it stops the query
--- before RLS is consulted, so a brand or creator token gets "permission denied"
--- rather than an empty result. Both are correct; do not add a GRANT to quieten
--- an error, or the deny-all policy becomes the only thing standing there.
+-- CORRECTED BY 0498 — read this before trusting the sentence that was here.
+--
+-- This file issues no GRANT, and the comment here used to claim that made the
+-- missing grant an outer lock in front of RLS. That was wrong. Supabase sets
+-- ALTER DEFAULT PRIVILEGES ... GRANT ALL ON TABLES TO anon, authenticated on
+-- the public schema, so both roles were granted ALL on these tables the moment
+-- they were created. Writing no GRANT does not withhold one.
+--
+-- The deny-all policies above still returned zero rows, so nothing leaked — but
+-- they were the only layer. 0498 issues the explicit REVOKE that makes the
+-- claim true.

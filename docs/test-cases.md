@@ -2930,11 +2930,18 @@ open, and a missed call site would be an outsider with a delete button.
 - [ ] Lead deletion records the name and stage it had before deletion
 
 ### RLS
-- [ ] `pipeline_leads` and `pipeline_feedback` are deny-all: an authenticated
-      brand or creator token reading either gets zero rows, never an error that
-      leaks column names
 - [ ] Both policies exist in `supabase/rls.sql`, not only in migration 0497
-- [ ] Anon token: zero rows
+- [ ] **After 0498**, `SET LOCAL ROLE authenticated; SELECT * FROM pipeline_leads;`
+      fails with `permission denied for table pipeline_leads` — NOT "0 rows".
+      Same for pipeline_feedback, and same for the `anon` role
+- [ ] Before 0498 the same query returned 0 rows, because Supabase's default
+      privileges GRANT ALL on every new public table to anon/authenticated.
+      Writing no GRANT does not withhold one — only REVOKE does. A "0 rows"
+      result here now means the revoke is missing and RLS is the ONLY layer
+- [ ] `SELECT grantee, privilege_type FROM information_schema.role_table_grants
+      WHERE table_name IN ('pipeline_leads','pipeline_feedback')
+        AND grantee IN ('anon','authenticated');` -> zero rows
+- [ ] service_role still reads both tables, and the ops console works normally
 
 ### Migration
 - [ ] 0497 is re-runnable (IF NOT EXISTS throughout; constraint guards in DO blocks)
