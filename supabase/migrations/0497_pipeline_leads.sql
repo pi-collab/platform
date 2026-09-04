@@ -75,6 +75,16 @@ CREATE TABLE IF NOT EXISTS pipeline_leads (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
+-- RLS is enabled in the SAME breath as the CREATE, not in a block at the foot
+-- of the file. Run outside a transaction, the gap between the two is a window
+-- where the table exists unprotected — short, and on a service-role-only
+-- database not much of a risk, but there is no reason to have it. It also
+-- stops the dashboard's linter reporting a table created without RLS, which
+-- is a warning worth keeping trustworthy rather than learning to ignore.
+ALTER TABLE pipeline_leads ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pipeline_leads_deny_all ON pipeline_leads;
+CREATE POLICY pipeline_leads_deny_all ON pipeline_leads FOR ALL USING (false) WITH CHECK (false);
+
 -- The DEFAULT above ('contacted') is a value these CHECKs accept. A CHECK whose
 -- column default violates it passes its own migration and then fails every
 -- future INSERT, because a migration never exercises the defaults it just
@@ -136,6 +146,10 @@ CREATE TABLE IF NOT EXISTS pipeline_feedback (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE pipeline_feedback ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS pipeline_feedback_deny_all ON pipeline_feedback;
+CREATE POLICY pipeline_feedback_deny_all ON pipeline_feedback FOR ALL USING (false) WITH CHECK (false);
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'pipeline_feedback_kind_chk') THEN
@@ -168,14 +182,10 @@ COMMENT ON TABLE pipeline_feedback IS
 -- the single source of truth, and migration-only policies have already caused
 -- orphaned duplicates in the live DB.
 
-ALTER TABLE pipeline_leads    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pipeline_feedback ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS pipeline_leads_deny_all    ON pipeline_leads;
-DROP POLICY IF EXISTS pipeline_feedback_deny_all ON pipeline_feedback;
-
-CREATE POLICY pipeline_leads_deny_all    ON pipeline_leads    FOR ALL USING (false) WITH CHECK (false);
-CREATE POLICY pipeline_feedback_deny_all ON pipeline_feedback FOR ALL USING (false) WITH CHECK (false);
-
+-- (RLS for both tables is enabled inline above, immediately after each CREATE.)
+--
 -- No GRANTs to anon/authenticated. The service role bypasses RLS and is the
--- only intended reader.
+-- only intended reader. The missing grant is the OUTER lock: it stops the query
+-- before RLS is consulted, so a brand or creator token gets "permission denied"
+-- rather than an empty result. Both are correct; do not add a GRANT to quieten
+-- an error, or the deny-all policy becomes the only thing standing there.
