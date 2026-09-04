@@ -6,6 +6,7 @@ import { RECOVERY_COOKIE, RECOVERY_COOKIE_MAX_AGE } from '@/lib/recovery-cookie'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateWorkEmail } from '@/lib/work-email'
+import { opsRoutingEmails } from '@/lib/ops-capabilities'
 
 /**
  * Email-link confirmation handler (token_hash flow).
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
       : { data: null }
 
     if (!byAuthId && !byEmail) {
-      const check = validateWorkEmail(user.email ?? '', process.env.OPS_ALLOWED_EMAILS)
+      const check = validateWorkEmail(user.email ?? '', opsRoutingEmails())
       if (!check.ok) {
         await supabase.auth.signOut()
         return NextResponse.redirect(`${origin}/signup/brand?error=work_email_required`)

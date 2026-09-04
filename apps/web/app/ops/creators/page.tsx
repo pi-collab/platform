@@ -12,14 +12,14 @@ const NOT_ANSWERED = 'none'
 /** A uuid that cannot exist, for "match nothing": .in() rejects an empty list. */
 const NO_MATCH = '00000000-0000-0000-0000-000000000000'
 import { followerRangeOf } from '@/lib/follower-range'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function OpsCreatorsPage({ searchParams }: {
   searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; q?: string }
 }) {
-  const user = await verifyOpsAccess()
+  const user = await requireOps('creators.read')
   if (!user) redirect('/login/brand')
 
   const { page, from, to } = opsRange(searchParams?.page)

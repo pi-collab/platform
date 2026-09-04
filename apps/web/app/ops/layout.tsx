@@ -1,14 +1,20 @@
 import Link from 'next/link'
 import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { resolveOpsActor } from '@/lib/ops-capabilities'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Ops Console', robots: { index: false, follow: false } }
 
 export default async function OpsLayout({ children }: { children: React.ReactNode }) {
-  // Single source of truth for ops access — same check as server actions
-  const opsUser = await verifyOpsAccess()
+  /* The layout only decides whether to render the shell at all — it is not the
+     authorisation boundary. Every page and action inside still runs its own
+     check, so an outreach user reaching an admin-only page by typing the URL
+     is refused there. Widening the shell to two roles therefore grants
+     nothing on its own. */
+  const actor = await resolveOpsActor()
+  const opsUser = actor?.user ?? null
+  const isAdmin = actor?.role === 'admin'
 
   if (!opsUser) {
     // Need auth state to show sign-in vs sign-out UI
@@ -47,16 +53,25 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
         <Link href="/ops" style={{ fontWeight: 700, fontSize: '1.125rem', color: '#111', textDecoration: 'none' }}>
           Ops Console
         </Link>
+        {/* Admin-only links are omitted rather than shown-and-refused. The page
+            gates are what actually enforce this; hiding them just stops the
+            outreach team walking into dead ends all day. */}
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
+          <Link href="/ops/pipeline" style={{ color: '#555', textDecoration: 'none' }}>Pipeline</Link>
           <Link href="/ops/creators" style={{ color: '#555', textDecoration: 'none' }}>Creators</Link>
-          <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>
+          {isAdmin && <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>}
           <Link href="/ops/brands" style={{ color: '#555', textDecoration: 'none' }}>Brands</Link>
-          <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>
-          <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>
+          {isAdmin && <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>}
+          {isAdmin && <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>}
           <Link href="/ops/insights" style={{ color: '#555', textDecoration: 'none' }}>Insights</Link>
-          <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>
+          {isAdmin && <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>}
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {!isAdmin && (
+            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', border: '1px solid #e9d5ff', borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+              Outreach
+            </span>
+          )}
           <span style={{ fontSize: '0.75rem', color: '#888' }}>{opsUser.email}</span>
           <SignOutButton redirectTo="/login/brand" />
         </div>

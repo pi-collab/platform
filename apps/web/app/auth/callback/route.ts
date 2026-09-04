@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { validateWorkEmail } from '@/lib/work-email'
+import { opsRoutingEmails, isOpsRoutingEmail } from '@/lib/ops-capabilities'
 
 /**
  * OAuth callback handler.
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       : { data: null }
 
     if (!byAuthId && !byEmail) {
-      const check = validateWorkEmail(user.email ?? '', process.env.OPS_ALLOWED_EMAILS)
+      const check = validateWorkEmail(user.email ?? '', opsRoutingEmails())
       if (!check.ok) {
         // Undo the sign-in: no users row was created, so nothing to clean up
         // beyond the session itself.
@@ -91,16 +92,11 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next')
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null
 
-  // Founders go straight to /ops — skip brand onboarding entirely
-  // (unless they have an explicit next param, e.g. accepting an invite)
-  if (!safeNext && user?.email) {
-    const allowedRaw = process.env.OPS_ALLOWED_EMAILS
-    if (allowedRaw) {
-      const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
-      if (allowed.has(user.email.toLowerCase())) {
-        return NextResponse.redirect(`${origin}/ops`)
-      }
-    }
+  // Ops people go straight to /ops — skip brand onboarding entirely
+  // (unless they have an explicit next param, e.g. accepting an invite).
+  // Covers the scoped outreach role too: routing, not authorisation.
+  if (!safeNext && user?.email && isOpsRoutingEmail(user.email)) {
+    return NextResponse.redirect(`${origin}/ops`)
   }
 
   return NextResponse.redirect(`${origin}${safeNext || '/dashboard'}`)

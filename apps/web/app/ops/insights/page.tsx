@@ -1,4 +1,4 @@
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { QUESTIONS, labelFor, type QuestionKey } from '@/lib/creator-onboarding'
 import { GROWTH_QUESTIONS } from '@/lib/growth-quiz-labels'
@@ -32,7 +32,7 @@ interface ResponseRow {
  * strings would have made every copy edit a break in the series.
  */
 export default async function OpsInsightsPage() {
-  const user = await verifyOpsAccess()
+  const user = await requireOps('insights.read')
   if (!user) return <p style={{ padding: '2rem' }}>Not authorised.</p>
 
   const admin = createAdminClient()

@@ -2,14 +2,22 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import VettingBadge from '@/components/ops/VettingBadge'
 import { followerRangeOf } from '@/lib/follower-range'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import CreatorTabs from './CreatorTabs'
 
 export default async function CreatorDetailPage({ params }: { params: { id: string } }) {
-  const user = await verifyOpsAccess()
-  if (!user) redirect('/login/brand')
+  /* Outreach reaches this page because vetting a creator without seeing their
+     social accounts or questionnaire is not really vetting. What they do NOT
+     get is the Deals and Fee Rates tabs — deal values and per-pair commercials.
+
+     Those are withheld by NOT FETCHING them below, not by hiding the tab. A
+     hidden tab whose data still arrives in props is not a control at all: the
+     rows would sit in the HTML payload for anyone who opens dev tools. */
+  const actor = await requireOps('creators.read')
+  if (!actor) redirect('/login/brand')
+  const isAdmin = actor.role === 'admin'
 
   const admin = createAdminClient()
   const { data: creator, error } = await admin
@@ -58,16 +66,22 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
       .from('creator_addon_rates')
       .select('platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
       .eq('creator_id', params.id),
-    admin
-      .from('deals')
-      .select('id, title, status, price_paise, created_at, brands(name)')
-      .eq('creator_id', params.id)
-      .order('created_at', { ascending: false }),
-    admin
-      .from('brand_creator_rates')
-      .select('id, brand_id, fee_pct, reason, set_by, updated_at, brands(id, name, platform_fee_percent)')
-      .eq('creator_id', params.id)
-      .order('updated_at', { ascending: false }),
+    // Commercials. Skipped entirely for the outreach role rather than fetched
+    // and hidden — see the note at the top of this function.
+    isAdmin
+      ? admin
+          .from('deals')
+          .select('id, title, status, price_paise, created_at, brands(name)')
+          .eq('creator_id', params.id)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    isAdmin
+      ? admin
+          .from('brand_creator_rates')
+          .select('id, brand_id, fee_pct, reason, set_by, updated_at, brands(id, name, platform_fee_percent)')
+          .eq('creator_id', params.id)
+          .order('updated_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
     // Appeals from a rejected creator. Shown here, not only mailed, because
     // this is the page the decision gets reversed on - reading the appeal in
     // an inbox and acting on it here means holding it in your head in between.
@@ -132,20 +146,22 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
             )}
           </p>
         </div>
-        <Link
-          href={`/ops/creators/${creator.id}/edit`}
-          style={{
-            padding: '0.5rem 1rem',
-            background: '#111',
-            color: '#fff',
-            borderRadius: 6,
-            fontWeight: 600,
-            fontSize: '0.8125rem',
-            textDecoration: 'none',
-          }}
-        >
-          Edit
-        </Link>
+        {isAdmin && (
+          <Link
+            href={`/ops/creators/${creator.id}/edit`}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#111',
+              color: '#fff',
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: '0.8125rem',
+              textDecoration: 'none',
+            }}
+          >
+            Edit
+          </Link>
+        )}
 
       </div>
 
@@ -242,7 +258,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
         </div>
       )}
 
-      <CreatorTabs onboarding={onboarding as never} growthQuiz={growthQuiz as never} creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
+      <CreatorTabs isAdmin={isAdmin} onboarding={onboarding as never} growthQuiz={growthQuiz as never} creator={creator} products={products ?? []} deals={deals ?? []} pairRates={(pairRates ?? []) as any} />
     </div>
   )
 }

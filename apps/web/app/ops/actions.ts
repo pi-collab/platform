@@ -1,6 +1,7 @@
 'use server'
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
@@ -44,7 +45,7 @@ function isValidUrl(s: string): boolean {
 }
 
 export async function addCreator(input: AddCreatorInput) {
-  const user = await verifyOpsAccess()
+  const user = (await requireOps('creators.add'))?.user
   if (!user) return { error: 'Not authorized' }
 
   const { full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card } = input
@@ -123,7 +124,10 @@ export async function addCreator(input: AddCreatorInput) {
 type VettingOutcome = 'deals_approved' | 'growth' | 'rejected'
 
 async function decideVetting(creatorId: string, outcome: VettingOutcome) {
-  const user = await verifyOpsAccess()
+  /* All three outcomes, including reject, are one capability: vetting a creator
+     means deciding, and an approver who cannot say no is not vetting. Each
+     outcome is a status flip that another decision can reverse. */
+  const user = (await requireOps('creators.vet'))?.user
   if (!user) return { error: 'Not authorized' }
 
   const admin = createAdminClient()
@@ -391,7 +395,11 @@ export async function generateOfferLink(dealId: string) {
 // ── Approve brand ────────────────────────────────────────────────────────────
 
 export async function approveBrand(brandId: string) {
-  const user = await verifyOpsAccess()
+  /* Approve only. `rejectBrand` stays admin-only: you named onboarding and
+     approval as the outreach job, and rejecting writes a rejection_reason that
+     blocks a company from the platform. The reject button is hidden for them
+     rather than left to fail here. */
+  const user = (await requireOps('brands.approve'))?.user
   if (!user) return { error: 'Not authorized' }
 
   const admin = createAdminClient()

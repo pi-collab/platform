@@ -4,7 +4,11 @@ import { useState } from 'react'
 import { approveBrand, rejectBrand } from '../actions'
 import { useRouter } from 'next/navigation'
 
-export default function BrandStatusActions({ brandId, currentStatus }: { brandId: string; currentStatus: string }) {
+/* `canReject` defaults true so every existing call site keeps its current
+   behaviour. Only the outreach role passes false, and `rejectBrand` refuses
+   them server-side regardless — this just stops a button that would always
+   fail. */
+export default function BrandStatusActions({ brandId, currentStatus, canReject = true }: { brandId: string; currentStatus: string; canReject?: boolean }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
@@ -26,6 +30,7 @@ export default function BrandStatusActions({ brandId, currentStatus }: { brandId
   }
 
   if (currentStatus === 'approved') {
+    if (!canReject) return <span style={{ fontSize: '0.75rem', color: '#888' }}>&mdash;</span>
     return (
       <button onClick={handleReject} disabled={loading} style={{ ...btn, background: '#fee2e2', color: '#991b1b' }}>
         {loading ? '...' : 'Reject'}
@@ -47,9 +52,11 @@ export default function BrandStatusActions({ brandId, currentStatus }: { brandId
       <button onClick={handleApprove} disabled={loading} style={{ ...btn, background: '#dcfce7', color: '#166534' }}>
         {loading ? '...' : 'Approve'}
       </button>
-      <button onClick={handleReject} disabled={loading} style={{ ...btn, background: '#fee2e2', color: '#991b1b' }}>
-        {loading ? '...' : 'Reject'}
-      </button>
+      {canReject && (
+        <button onClick={handleReject} disabled={loading} style={{ ...btn, background: '#fee2e2', color: '#991b1b' }}>
+          {loading ? '...' : 'Reject'}
+        </button>
+      )}
     </>
   )
 }

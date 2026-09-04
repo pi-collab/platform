@@ -509,6 +509,26 @@ export default function ShopfrontPreview({
   )
   const rateCount = Object.values(qty).reduce((s, n) => s + n, 0)
 
+  /**
+   * No packages, no offer.
+   *
+   * Every CTA on this page ends at the offer builder, and that builder cannot
+   * produce a valid offer with nothing to select — its submit is disabled on
+   * `selectedCount === 0`. So for a creator who has not published a rate card,
+   * the button was a round trip to a dead end.
+   *
+   * It also said the wrong thing. A "Create an offer" button reads as "this
+   * creator is open for work"; a brand who clicks it, lands on an empty form
+   * and reverses out has been told something untrue about the creator, not
+   * merely inconvenienced.
+   *
+   * This is separate from `hideDealCta`, which asks a different question — that
+   * one is "are you the creator looking at yourself", this one is "is there
+   * anything here to buy". Both hide the same buttons for different reasons.
+   */
+  const takesOffers = data.rateCardItems.length > 0
+  const showDealCta = !data.hideDealCta && takesOffers
+
   // Platform tab state
   const [activePlatform, setActivePlatform] = useState<string>(data.platforms[0]?.platform || 'instagram')
 
@@ -685,7 +705,7 @@ export default function ShopfrontPreview({
 
                   {/* CTAs */}
                   <div className="sf-hero-ctas" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginTop: 28 }}>
-                    {data.hideDealCta ? null : onDealClick ? (
+                    {!showDealCta ? null : onDealClick ? (
                       <button onClick={goToPackages} className="g-btn-primary sf-hero-cta" style={{ width: 180, fontSize: 14, padding: '14px 20px', boxShadow: '0 12px 26px -12px rgba(40,45,25,.45)' }}>
                         Create an offer
                       </button>
@@ -878,7 +898,7 @@ export default function ShopfrontPreview({
                     </div>
                   )}
                 </div>
-                {data.hideDealCta ? null : onDealClick ? (
+                {!showDealCta ? null : onDealClick ? (
                   <button onClick={() => onDealClick(qty)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
@@ -1545,7 +1565,7 @@ export default function ShopfrontPreview({
                 <p className="t-body" style={{ color: 'var(--ink-soft)' }}>
                   Select deliverables from the rate card above, then create a structured offer. {firstName} will review and respond.
                 </p>
-                {data.hideDealCta ? null : onDealClick ? (
+                {!showDealCta ? null : onDealClick ? (
                   <button onClick={goToPackages} className="g-btn-primary" style={{ alignSelf: 'flex-start', fontSize: 14, padding: '14px 28px', marginTop: 'auto' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                     Start a deal with {firstName}

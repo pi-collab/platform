@@ -84,7 +84,12 @@ export interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function CreatorTabs({ onboarding, growthQuiz, creator, products, addonRates = [], deals, pairRates }: { addonRates?: AddonRateRow[]; onboarding: OnboardingResponse | null; growthQuiz: GrowthQuizResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[] }) {
+/* Tabs the outreach role does not get. `deals` and `pairRates` arrive empty for
+   them anyway — the page does not fetch them — so this only stops two tabs that
+   would render as blank tables. The withholding happens on the server. */
+const ADMIN_ONLY_TABS: ReadonlySet<string> = new Set(['Deals', 'Fee Rates'])
+
+export default function CreatorTabs({ onboarding, growthQuiz, creator, products, addonRates = [], deals, pairRates, isAdmin = true }: { addonRates?: AddonRateRow[]; onboarding: OnboardingResponse | null; growthQuiz: GrowthQuizResponse | null; creator: Creator; products: Product[]; deals: Deal[]; pairRates: PairRate[]; isAdmin?: boolean }) {
   const [tab, setTab] = useState<Tab>('Basic Details')
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
@@ -147,14 +152,20 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
             {actionLoading ? '...' : 'Reject'}
           </button>
         )}
-        <button onClick={handleDelete} disabled={actionLoading} style={{ ...actionBtn, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}>
-          {actionLoading ? '...' : 'Delete'}
-        </button>
+        {/* Delete cascades to creator_products, users and the Supabase auth
+            account. It is irreversible and it is not an outreach action.
+            `deleteCreator` itself still gates on full ops access, so this is
+            the second lock, not the only one. */}
+        {isAdmin && (
+          <button onClick={handleDelete} disabled={actionLoading} style={{ ...actionBtn, background: '#fff', color: '#dc2626', border: '1px solid #fca5a5' }}>
+            {actionLoading ? '...' : 'Delete'}
+          </button>
+        )}
       </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-        {TABS.map((t) => (
+        {TABS.filter((t) => isAdmin || !ADMIN_ONLY_TABS.has(t)).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
