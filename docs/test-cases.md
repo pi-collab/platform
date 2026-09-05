@@ -3077,6 +3077,30 @@ table with columns. Check at 719px and 721px.
 - [ ] `paid`/`complete` + `is_posted=true` shows "Paid" on mobile
 - [ ] Desktop table is otherwise unchanged from before this work
 
+### Details taken straight from the mockup (all were wrong on first pass)
+- [ ] Live deals carry a **2px neon ring on the avatar**; posted and declined
+      do not. The ring count matches the "Live now" KPI exactly
+- [ ] Stage chip fills use the design's own colours (negotiating #E7F1FC,
+      agreed #F0EAFD, delivered #E9F7F0, revision #FCF6E4) — NOT the desktop
+      table's, which differ on those four
+- [ ] Chip ink is a single #3A3D33 on every stage, not a per-stage colour
+- [ ] Selected tab glow is neon-tinted (rgba(232,255,102,.6)); unselected pills
+      carry the two-part lift, not a flat hairline shadow
+- [ ] Tab count is lighter WEIGHT (500) and its own colour, not the label faded
+- [ ] Avatar initials are 13px
+- [ ] Page size is 6 rows
+- [ ] Footer reads "Showing 1–6 of 23 deals", and "0 deals" when empty — not a
+      bare count
+
+### Search placeholder types itself
+- [ ] Cycles "Search brands" → "Search by delivery" → "Search new offers" →
+      "Search completed deals", typing then deleting
+- [ ] Typing in the box STOPS the animation; clearing it starts again
+- [ ] With prefers-reduced-motion set, the placeholder is static
+      ("Search brands, deals or reference") and never animates
+- [ ] Navigating away mid-animation does not leave a timer running (no React
+      state-update warning in the console)
+
 ### Filters, search, paging
 - [ ] Seven tabs with live counts; counts match the rows the tab shows
 - [ ] Selected tab is neon; the row scrolls horizontally without a visible bar

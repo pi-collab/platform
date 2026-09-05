@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   STAGE, TAB_DEFS, EMPTY, resolveStatus, needsAction, isLive, matchFilter,
@@ -26,12 +26,59 @@ import {
  *   would be inventing a control the design deliberately left out.
  */
 
-const PAGE_SIZE = 8
+const PAGE_SIZE = 6
+
+/* The placeholder types itself: "Search brands" → "Search by delivery" → …
+   Timings are the design's: 65ms a character, a 1400ms hold at full word, 40ms
+   a character deleting, 300ms before the next. */
+const SEARCH_WORDS = ['brands', 'by delivery', 'new offers', 'completed deals']
+
+function useTypedPlaceholder(active: boolean): string {
+  const [word, setWord] = useState(0)
+  const [chars, setChars] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    if (!active) return
+    const full = SEARCH_WORDS[word]
+    let delay = 65
+    if (!deleting && chars >= full.length) {
+      delay = 1400
+      timer.current = setTimeout(() => setDeleting(true), delay)
+    } else if (deleting && chars <= 0) {
+      delay = 300
+      timer.current = setTimeout(() => { setDeleting(false); setWord((w) => (w + 1) % SEARCH_WORDS.length) }, delay)
+    } else {
+      delay = deleting ? 40 : 65
+      timer.current = setTimeout(() => setChars((c) => c + (deleting ? -1 : 1)), delay)
+    }
+    return () => clearTimeout(timer.current)
+  }, [active, word, chars, deleting])
+
+  if (!active) return 'Search brands, deals or reference'
+  return `Search ${SEARCH_WORDS[word].slice(0, chars)}`
+}
 
 export default function CreatorDealsMobile({ deals }: { deals: Deal[] }) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
+
+  /* Animation stops once they type — a placeholder that keeps rewriting itself
+     under live input is a distraction rather than a hint. It also honours
+     prefers-reduced-motion: a permanently animating element is exactly what
+     that setting exists for, and the static placeholder still says the same
+     thing. */
+  const [reduceMotion, setReduceMotion] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReduceMotion(mq.matches)
+    const on = () => setReduceMotion(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  const placeholder = useTypedPlaceholder(!search && !reduceMotion)
 
   const resolved = useMemo(
     () => deals.map((d) => ({ ...d, st: resolveStatus(d) })),
@@ -117,7 +164,7 @@ export default function CreatorDealsMobile({ deals }: { deals: Deal[] }) {
             type="search"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-            placeholder="Search brand, deal or reference"
+            placeholder={placeholder}
             aria-label="Search deals"
           />
           {search && (
@@ -158,7 +205,15 @@ export default function CreatorDealsMobile({ deals }: { deals: Deal[] }) {
             return (
               <Link key={d.id} href={`/creator/deals/${d.id}`} className="cdeals-m__row">
                 <div className="cdeals-m__row-top">
-                  <span className="cdeals-m__avatar" aria-hidden="true">{getInitials(brand)}</span>
+                  {/* Live deals carry a neon ring. Same predicate as the
+                      "Live now" count above, so the hero figure and the rings
+                      below it always agree. */}
+                  <span
+                    className={`cdeals-m__avatar${isLive(d.st) ? ' is-live' : ''}`}
+                    aria-hidden="true"
+                  >
+                    {getInitials(brand)}
+                  </span>
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
                     <div className="cdeals-m__brand">{brand}</div>
                     {sub && <div className="cdeals-m__sub">{sub}</div>}
@@ -170,7 +225,7 @@ export default function CreatorDealsMobile({ deals }: { deals: Deal[] }) {
                 <div className="cdeals-m__row-foot">
                   <span
                     className="cdeals-m__stage"
-                    style={{ background: `color-mix(in srgb, ${st.bg} 55%, #fff)` }}
+                    style={{ background: `color-mix(in srgb, ${st.chipBg} 55%, #fff)` }}
                   >
                     <span className="cdeals-m__stage-dot" style={{ background: st.dot }} />
                     {st.short}
@@ -196,11 +251,11 @@ export default function CreatorDealsMobile({ deals }: { deals: Deal[] }) {
         </div>
       )}
 
-      {rows.length > 0 && (
-        <p className="cdeals-m__result">
-          {rows.length} deal{rows.length === 1 ? '' : 's'}{filter !== 'all' ? ' in this filter' : ''}
-        </p>
-      )}
+      <p className="cdeals-m__result">
+        {rows.length === 0
+          ? '0 deals'
+          : `Showing ${safePage * PAGE_SIZE + 1}\u2013${safePage * PAGE_SIZE + shown.length} of ${rows.length} deals`}
+      </p>
     </div>
   )
 }

@@ -28,17 +28,23 @@ export interface Deal {
 // ── Stage definitions — from design ──
 export const STAGES = ['negotiating', 'agreed', 'delivered', 'awaiting', 'posted'] as const
 
-export const STAGE: Record<string, { i: number; label: string; short: string; dot: string; bg: string; fg: string; action: string; hot: boolean }> = {
-  negotiating: { i: 0, label: 'Offer to review', short: 'Offer to review',       dot: '#4A7FB0', bg: '#EEF6FD', fg: '#3B6A94', action: 'Review offer', hot: true },
-  agreed:      { i: 1, label: 'Agreed \u00B7 in production', short: 'In production', dot: '#7E6BC4', bg: '#F4F0FF', fg: '#5F519B', action: 'View deal',    hot: false },
-  delivered:   { i: 2, label: 'Submitted \u00B7 in review', short: 'In review',  dot: '#4C9E82', bg: '#ECFBF5', fg: '#38765F', action: 'Track review', hot: false },
-  revision:    { i: 2, label: 'Revision requested', short: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
-  awaiting:    { i: 3, label: 'Approved \u00B7 post it', short: 'Awaiting post',     dot: '#8FAF1F', bg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
-  posted:      { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  declined:    { i: -1, label: 'Declined', short: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
-  complete:    { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  paid:        { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  cancelled:   { i: -1, label: 'Cancelled', short: 'Cancelled',             dot: '#8B90A0', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+/* `bg` is the desktop chip fill and is paired with `fg`. `chipBg` is the mobile
+   design's own fill, which is a touch more saturated on four of the stages and
+   is rendered with a single ink (#3A3D33) rather than a per-stage `fg`. Kept as
+   a separate field rather than overwriting `bg`, because changing that would
+   restyle the desktop table nobody asked me to touch. Dots are identical in
+   both designs, so there is only one of those. */
+export const STAGE: Record<string, { i: number; label: string; short: string; dot: string; bg: string; chipBg: string; fg: string; action: string; hot: boolean }> = {
+  negotiating: { i: 0, label: 'Offer to review', short: 'Offer to review',       dot: '#4A7FB0', bg: '#EEF6FD', chipBg: '#E7F1FC', fg: '#3B6A94', action: 'Review offer', hot: true },
+  agreed:      { i: 1, label: 'Agreed \u00B7 in production', short: 'In production', dot: '#7E6BC4', bg: '#F4F0FF', chipBg: '#F0EAFD', fg: '#5F519B', action: 'View deal',    hot: false },
+  delivered:   { i: 2, label: 'Submitted \u00B7 in review', short: 'In review',  dot: '#4C9E82', bg: '#ECFBF5', chipBg: '#E9F7F0', fg: '#38765F', action: 'Track review', hot: false },
+  revision:    { i: 2, label: 'Revision requested', short: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', chipBg: '#FCF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
+  awaiting:    { i: 3, label: 'Approved \u00B7 post it', short: 'Awaiting post',     dot: '#8FAF1F', bg: '#F4FBDC', chipBg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
+  posted:      { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  declined:    { i: -1, label: 'Declined', short: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', chipBg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
+  complete:    { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  paid:        { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  cancelled:   { i: -1, label: 'Cancelled', short: 'Cancelled',             dot: '#8B90A0', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
 }
 
 // ── Filter tabs — from design ──
