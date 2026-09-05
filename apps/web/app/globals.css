@@ -3345,3 +3345,169 @@ button.signup-form__cross-link {
     color: #9AA08C; margin: 8px 0 0;
   }
 }
+
+/* ── Creator payments, mobile ──────────────────────────────────────────────
+   Built to "Creator Payments - Mobile Standalone". Below 720px; PaymentsClient
+   keeps desktop. Values taken from the mockup's inline styles rather than
+   inferred from the desktop screen — the mistake made on the deals list. */
+
+.cpay-m { display: none; }
+.cpay-desktop { display: block; }
+
+@media (max-width: 720px) {
+  .cpay-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; color: #12151C; }
+  .cpay-desktop { display: none; }
+
+  .cpay-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .cpay-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C;
+  }
+  .cpay-m__bell {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; color: #12151C; box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+
+  .cpay-m__stack { padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Hero. The total sits ON the neon, not beside it — the one place on the
+     screen where the brand colour carries the number. */
+  .cpay-m__hero {
+    background: #fff; border-radius: 24px; padding: 26px 24px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.2);
+  }
+  .cpay-m__hero-label {
+    font-family: var(--font-ui); font-weight: 600; font-size: 15px; color: #565C68;
+  }
+  .cpay-m__hero-em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400; color: #12151C;
+  }
+  .cpay-m__hero-amount {
+    display: inline-block; font-family: var(--font-display); font-weight: 700;
+    letter-spacing: -0.03em; font-size: 42px; margin-top: 14px; color: #12151C;
+    background: var(--neon); padding: 2px 12px; border-radius: 10px;
+  }
+  .cpay-m__payout {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-top: 22px; padding-top: 20px; border-top: 1px solid #EDEFEC;
+  }
+  .cpay-m__payout-text {
+    font-size: 13px; color: #565C68;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cpay-m__manage {
+    font-size: 13px; font-weight: 700; color: #12151C;
+    text-decoration: underline; white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Awaiting payment */
+  .cpay-m__pending {
+    background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.2);
+  }
+  .cpay-m__pending-tag {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: #9AA08C;
+  }
+  .cpay-m__pending-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .cpay-m__pending-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-top: 14px;
+  }
+  .cpay-m__pending-brand {
+    font-family: var(--font-ui); font-weight: 600; font-size: 16px; color: #12151C;
+    min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__pending-amount {
+    font-family: 'Sora', var(--font-ui), sans-serif; font-weight: 600; font-size: 18px;
+    color: #12151C; flex-shrink: 0; white-space: nowrap;
+  }
+  .cpay-m__pending-sub { font-size: 12.5px; color: #878D99; margin-top: 5px; }
+  .cpay-m__pending-actions { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .cpay-m__btn-dark, .cpay-m__btn-soft {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center;
+    height: 44px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-size: 13px; text-decoration: none;
+  }
+  .cpay-m__btn-dark { background: #12151C; font-weight: 700; color: #fff; }
+  .cpay-m__btn-dark:disabled { opacity: .55; cursor: default; }
+  .cpay-m__btn-soft { background: #F5F7FA; font-weight: 600; color: #12151C; }
+
+  /* Ledger. Slightly lighter shadow than the cards above it — .16, not .2. */
+  .cpay-m__ledger {
+    background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.16);
+  }
+  .cpay-m__ledger-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .cpay-m__ledger-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 19px;
+    margin: 0; color: #12151C;
+  }
+  .cpay-m__export {
+    display: inline-flex; align-items: center; height: 32px; padding: 0 14px;
+    border-radius: 999px; background: #F5F7FA; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 11.5px; color: #12151C;
+  }
+  .cpay-m__month {
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: #9AA08C; margin-top: 22px;
+  }
+  .cpay-m__drow {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 0; border-top: 1px solid #EDEFEC;
+    text-decoration: none; color: inherit;
+  }
+  .cpay-m__davatar {
+    width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
+    background: #E7EAF0; color: #12151C;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 11.5px;
+  }
+  .cpay-m__dbrand {
+    font-size: 14px; font-weight: 600; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__dsub {
+    font-size: 11.5px; color: #9AA08C; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__damount { font-size: 15px; font-weight: 600; color: #12151C; flex-shrink: 0; }
+
+  .cpay-m__empty {
+    font-family: var(--font-ui); font-size: 13px; color: #565C68;
+    line-height: 1.6; margin: 18px 0 0;
+  }
+
+  .cpay-m__pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin-top: 24px;
+  }
+  .cpay-m .pgbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 600;
+    background: #F5F7FA; color: #12151C;
+  }
+  .cpay-m .pgbtn.is-on { background: #12151C; color: #fff; }
+  .cpay-m .pgbtn:disabled { opacity: .4; cursor: default; }
+
+  /* Tabular figures, so a column of amounts lines up on the decimal. */
+  .cpay-m .tnum {
+    font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (max-width: 720px) {
+  .cpay-m__remind-error {
+    margin: 12px 0 0; font-family: var(--font-ui); font-size: 12px;
+    color: #B4454B; line-height: 1.45;
+  }
+}

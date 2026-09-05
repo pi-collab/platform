@@ -3117,3 +3117,59 @@ table with columns. Check at 719px and 721px.
 - [ ] With no deals at all, the existing CreatorDealsEmpty still takes the
       whole screen on mobile — the new list must not render its KPI card,
       search and seven tabs around nothing
+
+---
+
+## 21. Creator payments — mobile screen (design: "Creator Payments - Mobile Standalone")
+
+`CreatorPaymentsMobile` below 720px; `PaymentsClient` keeps desktop. NOTE: this
+mockup is STATIC (no bindings), so anything dynamic was a judgement call — the
+checks below record which.
+
+### Taken from the mockup exactly
+- [ ] Hero total sits ON a neon block (padding 2px 12px, radius 10), 42px
+      display, letter-spacing -0.03em — the neon carries the number, it is not
+      beside it
+- [ ] "You've *guapped*" with "guapped" serif italic
+- [ ] Amount is full rupees with Indian grouping (₹4,97,250), NOT ₹4.97L —
+      this screen is a statement, not a summary tile
+- [ ] All figures are tabular (`font-variant-numeric: tabular-nums`) so a
+      column of amounts aligns
+- [ ] Awaiting-payment dot is #E0B75C; the ledger card's shadow is lighter than
+      the two cards above it (.16 vs .2)
+- [ ] Send reminder is the dark pill, View deal the soft one; both 44px, equal width
+- [ ] History rows: 38px avatar #E7EAF0, brand 14px/600, sub 11.5px #9AA08C,
+      amount 15px/600, separated by a top hairline (#EDEFEC)
+- [ ] Pager is round 32px buttons ‹ 1 2 ›, current one filled #12151C
+
+### Judgement calls — verify these are what you want
+- [ ] **Page size is 4.** Derived: the mockup shows 4 rows AND a page 2, which
+      is only consistent if page 1 is full
+- [ ] **One card per pending payout.** The mockup draws exactly one; a creator
+      can have several and a hidden invoice is money nobody chases
+- [ ] **Overdue restyles the card** (red dot, "Overdue", "was due") — not in
+      the mockup, but the data already distinguishes it
+- [ ] **Export builds a real CSV** client-side (no server action exists). It
+      covers ALL paid invoices, not the visible page
+- [ ] CSV opens cleanly in Sheets/Excel; a brand or deal name containing a
+      comma or quote is escaped, not split across columns
+
+### Send reminder must not lie
+- [ ] A successful send flips the button to "Reminder sent" and disables it
+- [ ] **A REFUSED send does NOT say "Reminder sent"** — it shows the reason.
+      The action rate-limits repeat chases and rejects invalid invoice states;
+      both return { status: 'error', message }. An optimistic tick here would
+      tell a creator their brand was nudged when nothing was sent
+- [ ] Chase the same invoice twice: the second attempt shows the rate-limit
+      message rather than silently doing nothing
+
+### Data
+- [ ] Total matches the sum of PAID invoices only
+- [ ] Month headings come from rows on the CURRENT page — no heading appears
+      with all its rows on the next page
+- [ ] An invoice with no paid_at groups under "Earlier" rather than crashing
+- [ ] UPI line shows the saved id, or "No payout method added yet" with the
+      link reading "Add UPI"
+- [ ] upi_id still comes from the ADMIN client — it is withheld from client
+      roles as PII, so a session-client read returns null and the row would
+      wrongly say no payout method

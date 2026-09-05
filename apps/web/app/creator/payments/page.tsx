@@ -5,6 +5,7 @@ import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorPaymentsEmpty from './CreatorPaymentsEmpty'
 import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
+import CreatorPaymentsMobile from '@/components/CreatorPaymentsMobile'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
@@ -78,6 +79,8 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       amountPaise: inv.creator_receives_paise ?? 0,
       status: statusLabel,
       meta,
+      dueDateStr,
+      isOverdue: Boolean(isOverdue),
     }
   })
 
@@ -100,6 +103,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       brandInitials: getInitials(brand),
       amountPaise: inv.creator_receives_paise ?? 0,
       paidDate,
+      paidAt: inv.paid_at,
       paidMonthsAgo: monthsDiff,
     }
   })
@@ -113,26 +117,31 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
 
   // Service role: upi_id is withheld from the client roles as PII, so the
   // session client cannot read it back. Only needed for the empty screen.
-  let emptyUpiId: string | null = null
-  if (isEmpty) {
-    const admin = createAdminClient()
-    const { data: creatorRow } = await admin
-      .from('creators')
-      .select('upi_id')
-      .eq('id', ctx.creatorId)
-      .maybeSingle()
-    emptyUpiId = (creatorRow as { upi_id?: string | null } | null)?.upi_id ?? null
-  }
+  const admin = createAdminClient()
+  const { data: creatorRow } = await admin
+    .from('creators')
+    .select('upi_id')
+    .eq('id', ctx.creatorId)
+    .maybeSingle()
+  const upiId = (creatorRow as { upi_id?: string | null } | null)?.upi_id ?? null
 
   return (
     <>
     {isEmpty && (
       <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="Payments" backHref={backHref} />
-        <CreatorPaymentsEmpty upiId={emptyUpiId} totalEarnedPaise={totalEarnedPaise} />
+        <CreatorPaymentsEmpty upiId={upiId} totalEarnedPaise={totalEarnedPaise} />
       </main>
     )}
-    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
+    {!isEmpty && (
+      <CreatorPaymentsMobile
+        totalEarnedPaise={totalEarnedPaise}
+        upiId={upiId}
+        pending={pending}
+        history={history}
+      />
+    )}
+    <main className={isEmpty ? 'creator-empty-desktop' : 'cpay-desktop'} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
       <PaymentsClient
         totalEarnedPaise={totalEarnedPaise}
         pendingAmountPaise={pendingAmountPaise}
