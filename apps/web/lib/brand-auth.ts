@@ -3,6 +3,7 @@ import { brandLoginUrl } from '@/lib/safe-next'
 import { currentPath } from '@/lib/current-path'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { isOpsRoutingEmail } from '@/lib/ops-capabilities'
 
 interface BrandContext {
   userId: string
@@ -62,12 +63,8 @@ export async function verifyBrand(): Promise<BrandContext> {
     .maybeSingle()
 
   if (!membership) {
-    // Check if founder → /ops
-    const allowedRaw = process.env.OPS_ALLOWED_EMAILS
-    if (allowedRaw && user.email) {
-      const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
-      if (allowed.has(user.email.toLowerCase())) redirect('/ops')
-    }
+    // Ops person with no brand membership → /ops, not brand onboarding
+    if (isOpsRoutingEmail(user.email)) redirect('/ops')
     redirect(onboardingWithNext())
   }
 

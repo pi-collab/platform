@@ -95,6 +95,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [droppedItems, setDroppedItems] = useState<string[]>([])
+  /* Product ids whose delivery date is missing, as of the last submit attempt.
+     The message alone was not enough: it named the deliverable but sat at the
+     top of a long form, so the reader was told what was wrong and left to hunt
+     for where. This marks the actual controls. */
+  const [invalidDateIds, setInvalidDateIds] = useState<string[]>([])
 
   // Build initial selections from prefill
   const prefillResult = useMemo<{ sel: Record<string, { qty: number; customPricePaise: number | null }>; dropped: string[] }>(() => {
@@ -359,6 +364,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setInvalidDateIds([])
 
     if (!title.trim()) { setError('Deal title is required'); return }
     if (selectedCount === 0) { setError('Select at least one product'); return }
@@ -367,13 +373,21 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
     // Validate: every selected deliverable needs a delivery date
     const missingDates: string[] = []
+    const missingIds: string[] = []
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
-      if (!itemDeliveryDates[p.id]) missingDates.push(p.product_type)
+      if (!itemDeliveryDates[p.id]) { missingDates.push(p.product_type); missingIds.push(p.id) }
     }
     if (missingDates.length > 0) {
       setError(`Set a delivery date for: ${missingDates.join(', ')}`)
+      setInvalidDateIds(missingIds)
+      /* Take them to the first one. The outline says which control is wrong;
+         this makes sure it is on screen to be seen, since the submit button
+         they just pressed can be a long way below it. */
+      requestAnimationFrame(() => {
+        document.getElementById(dateAnchor(missingIds[0]))?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
       return
     }
 
@@ -519,6 +533,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   // Anchor IDs for platform sections
   function platformAnchor(platform: string) {
     return `deliv-${platform.toLowerCase().replace(/\s+/g, '-')}`
+  }
+
+  // Anchor for a deliverable's date control, so a failed submit can scroll to it.
+  function dateAnchor(productId: string) {
+    return `deliv-date-${productId}`
   }
 
   return (
@@ -763,8 +782,14 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
                                 {/* Per-deliverable delivery date */}
                                 <DatePill
+                                  id={dateAnchor(p.id)}
+                                  invalid={invalidDateIds.includes(p.id)}
                                   value={itemDeliveryDates[p.id] ?? ''}
-                                  onChange={(v) => setItemDeliveryDates((prev) => ({ ...prev, [p.id]: v }))}
+                                  onChange={(v) => {
+                                    setItemDeliveryDates((prev) => ({ ...prev, [p.id]: v }))
+                                    // Fixed — drop the outline as soon as it stops being true.
+                                    setInvalidDateIds((prev) => prev.filter((id) => id !== p.id))
+                                  }}
                                 />
 
                                 {/* Custom price for on-request products */}
@@ -1047,9 +1072,19 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
         {/* Footer */}
         <div style={{ marginTop: 26, paddingTop: 22, borderTop: '1px solid var(--border-hairline)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', maxWidth: 420 }}>
-            {firstName} can accept, counter, or decline. You will be notified either way.
-          </div>
+          {/* The same error, next to the button that was just refused. The copy
+              at the top of the form is out of view by the time anyone reaches
+              here, so on its own it explained nothing. */}
+          {error ? (
+            <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: '#dc2626', fontWeight: 600, maxWidth: 420, lineHeight: 1.45 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+              <span>{error}</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', maxWidth: 420 }}>
+              {firstName} can accept, counter, or decline. You will be notified either way.
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
               type="button"
@@ -1093,7 +1128,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] as const
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as const
 
-function DatePill({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function DatePill({ value, onChange, id, invalid = false }: { value: string; onChange: (v: string) => void; id?: string; invalid?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -1156,9 +1191,10 @@ function DatePill({ value, onChange }: { value: string; onChange: (v: string) =>
     : null
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
+    <div ref={ref} id={id} style={{ position: 'relative', display: 'inline-flex' }}>
       <button
         type="button"
+        aria-invalid={invalid || undefined}
         onClick={() => {
           if (!open) {
             const b = value ? new Date(value + 'T00:00:00') : new Date()
@@ -1170,14 +1206,18 @@ function DatePill({ value, onChange }: { value: string; onChange: (v: string) =>
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 7, height: 27,
           padding: '0 10px', borderRadius: 8,
-          background: 'var(--sec, #F4F8FC)',
-          border: value ? '1px solid transparent' : '1px dashed var(--border-hairline)',
+          background: invalid ? '#fef2f2' : 'var(--sec, #F4F8FC)',
+          /* Solid red at full weight when it is the thing being asked for —
+             a dashed hairline reads as "optional", which is what it looked
+             like right up until it blocked the submit. */
+          border: invalid ? '1px solid #dc2626' : value ? '1px solid transparent' : '1px dashed var(--border-hairline)',
+          boxShadow: invalid ? '0 0 0 3px rgba(220,38,38,.12)' : undefined,
           fontSize: 11.5, cursor: 'pointer', fontFamily: 'var(--font-ui)',
-          color: 'var(--ink)', whiteSpace: 'nowrap',
+          color: invalid ? '#dc2626' : 'var(--ink)', whiteSpace: 'nowrap',
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-        <span style={{ color: 'var(--ink-soft)' }}>Deliver by</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={invalid ? '#dc2626' : 'var(--ink-soft)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+        <span style={{ color: invalid ? '#dc2626' : 'var(--ink-soft)', fontWeight: invalid ? 600 : 400 }}>Deliver by</span>
         {displayText && <b style={{ fontWeight: 700 }}>{displayText}</b>}
       </button>
 

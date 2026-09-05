@@ -12,15 +12,20 @@ const NOT_ANSWERED = 'none'
 /** A uuid that cannot exist, for "match nothing": .in() rejects an empty list. */
 const NO_MATCH = '00000000-0000-0000-0000-000000000000'
 import { followerRangeOf } from '@/lib/follower-range'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function OpsCreatorsPage({ searchParams }: {
   searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; q?: string }
 }) {
-  const user = await verifyOpsAccess()
-  if (!user) redirect('/login/brand')
+  const actor = await requireOps('creators.read')
+  if (!actor) redirect('/login/brand')
+  /* Outreach READS creators and records what happened in the pipeline; it
+     decides nothing about them. Every vetting outcome emails a real person and
+     changes whether brands can see them, so the controls are omitted rather
+     than shown-and-refused. decideVetting/addCreator gate on admin regardless. */
+  const isAdmin = actor.role === 'admin'
 
   const { page, from, to } = opsRange(searchParams?.page)
 
@@ -150,7 +155,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
             {total} total &middot; {vetted} for deals &middot; {growth} for growth &middot; {pending} pending &middot; {rejected} rejected
           </p>
         </div>
-        <Link
+        {isAdmin && <Link
           href="/ops/creators/new"
           style={{
             padding: '0.5rem 1rem',
@@ -163,7 +168,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
           }}
         >
           + Add Creator
-        </Link>
+        </Link>}
       </div>
 
       {/* A GET form: no client component, no state, and the resulting URL is
@@ -259,7 +264,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                 {/* Vetting from the row. The detail page keeps its own copy: opening a
                     profile first is right when the decision is not obvious, and this is
                     for when it is. */}
-                <th style={thStyle}>Decide</th>
+                {isAdmin && <th style={thStyle}>Decide</th>}
               </tr>
             </thead>
             <tbody>
@@ -318,7 +323,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                       <VettingBadge row={c} />
                     </td>
                     <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td style={tdStyle}><VettingActions creator={c} /></td>
+                    {isAdmin && <td style={tdStyle}><VettingActions creator={c} /></td>}
                   </tr>
                 )
               })}

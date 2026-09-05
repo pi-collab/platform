@@ -635,6 +635,34 @@ CREATE POLICY ops_events_deny_all
   WITH CHECK (false);
 
 
+-- ── pipeline_leads / pipeline_feedback (0497) ────────────────────
+-- Outreach pipeline. Deny-all, service-role only — same posture as ops_events.
+-- These hold internal commentary about named companies and people, including
+-- prospects who never became customers and never consented to a profile. There
+-- is no reader outside /ops, and the scoped outreach role reaches them through
+-- the same admin client every other ops read already uses.
+
+DROP POLICY IF EXISTS pipeline_leads_deny_all ON pipeline_leads;
+CREATE POLICY pipeline_leads_deny_all
+  ON pipeline_leads FOR ALL
+  USING (false)
+  WITH CHECK (false);
+
+DROP POLICY IF EXISTS pipeline_feedback_deny_all ON pipeline_feedback;
+CREATE POLICY pipeline_feedback_deny_all
+  ON pipeline_feedback FOR ALL
+  USING (false)
+  WITH CHECK (false);
+
+-- The REVOKE is part of the posture, not an afterthought (see 0498). Supabase's
+-- default privileges GRANT ALL on every new public table to anon and
+-- authenticated, so a deny-all policy with no revoke is a SINGLE layer, not
+-- two. Re-runnable, and included here because rls.sql is the source of truth
+-- for how these tables are protected.
+REVOKE ALL ON TABLE pipeline_leads    FROM anon, authenticated;
+REVOKE ALL ON TABLE pipeline_feedback FROM anon, authenticated;
+
+
 -- ── deal_reviews ──────────────────────────────────────────────────
 -- Post-deal ratings. Each side can only see/write their OWN review.
 -- Ratings are PRIVATE — neither side sees the other's rating.

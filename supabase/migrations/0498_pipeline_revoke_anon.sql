@@ -1,0 +1,45 @@
+-- Migration 0498: take back the grants Supabase hands out automatically
+--
+-- ── The wrong assumption this fixes ─────────────────────────────────────────
+-- 0497 issues no GRANT, and its comment claimed that made the missing grant an
+-- outer lock — that a brand or creator token would be refused before RLS was
+-- ever consulted. That was FALSE on this database, and the schema dump proves
+-- it:
+--
+--   GRANT ALL ON TABLE "public"."pipeline_leads" TO "anon";
+--   GRANT ALL ON TABLE "public"."pipeline_leads" TO "authenticated";
+--
+-- Supabase configures ALTER DEFAULT PRIVILEGES ... GRANT ALL ON TABLES TO anon,
+-- authenticated, service_role on the public schema. Every new table gets them.
+-- WRITING NO GRANT DOES NOT WITHHOLD ONE. Declining to grant is not the same as
+-- revoking, and on this database only the second one does anything.
+--
+-- The tables were never exposed: the deny-all policy from 0497 returns zero
+-- rows for both roles and did its job. But it was doing it ALONE, where the
+-- comment claimed two independent layers. A single `USING (true)` typo in some
+-- future policy edit would have been the whole defence gone.
+--
+-- ── Why these tables specifically ───────────────────────────────────────────
+-- pipeline_leads and pipeline_feedback hold internal commentary about named
+-- companies and people — including prospects who never signed up, never became
+-- customers, and never consented to a profile existing. There is no version of
+-- this product where a logged-in brand or creator should read either table.
+--
+-- service_role keeps ALL and bypasses RLS regardless, so the ops console is
+-- unaffected: every read there already goes through createAdminClient().
+--
+-- ── Note for whoever adds the next deny-all table ───────────────────────────
+-- ops_events and brand_creator_rates carry the same automatic grants and are
+-- also protected by RLS alone. That was left as-is deliberately rather than
+-- swept up here; widening this migration would have meant touching tables
+-- outside the change it belongs to. If you are hardening those, do it as its
+-- own migration with its own testing.
+
+REVOKE ALL ON TABLE public.pipeline_leads    FROM anon, authenticated;
+REVOKE ALL ON TABLE public.pipeline_feedback FROM anon, authenticated;
+
+-- Stop the default privileges re-granting on any table created later in this
+-- schema by the same role. Deliberately NOT done: it would change the posture
+-- for every future table platform-wide, which is a decision far bigger than
+-- this migration and would silently break the normal RLS-scoped tables that
+-- rely on those grants. The revoke above is per-table on purpose.

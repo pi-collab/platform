@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ensureBrandUserRow } from '@/lib/ensure-brand-user'
 import { validateWorkEmail } from '@/lib/work-email'
+import { opsRoutingEmails } from '@/lib/ops-capabilities'
 
 /**
  * Shown when signup hits an address that already has an account and the
@@ -62,7 +63,7 @@ export async function signUpWithEmail(email: string, password: string) {
   // Brands must use a work address. Enforced HERE, not just in the form —
   // client validation is a convenience, a server action is the boundary.
   // Signup only: existing accounts on free providers keep working.
-  const emailCheck = validateWorkEmail(email, process.env.OPS_ALLOWED_EMAILS)
+  const emailCheck = validateWorkEmail(email, opsRoutingEmails())
   if (!emailCheck.ok) {
     return { status: 'error' as const, message: emailCheck.message }
   }

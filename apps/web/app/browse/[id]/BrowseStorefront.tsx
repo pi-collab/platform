@@ -32,6 +32,13 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
 
   const dealUrl = `/deals/new?creator=${creatorId}`
 
+  /* Same rule as the CTAs inside the shopfront: with no published packages
+     there is nothing to build an offer from, so every path to the offer
+     builder is a dead end. Re-engage goes too — it prefills from the last
+     deal, and the prefill drops items the creator no longer offers, so with
+     none offered it arrives empty. */
+  const takesOffers = data.rateCardItems.length > 0
+
   return (
     <div style={{ position: 'relative' }}>
       {/* Floating top bar */}
@@ -65,7 +72,7 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
             <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,.15)' }} />
           </>
         )}
-        {lastDealId && (
+        {lastDealId && takesOffers && (
           <Link href={`/deals/new?from=${lastDealId}`} style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '8px 16px', borderRadius: 999,
@@ -77,19 +84,31 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
             Re-engage
           </Link>
         )}
-        <button
-          onClick={() => handleDealClick({})}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 18px', borderRadius: 999,
-            background: 'var(--neon)', border: '1px solid transparent',
-            fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
-            color: 'var(--ink)', cursor: 'pointer',
-            boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-          }}
-        >
-          Start a deal
-        </button>
+        {takesOffers ? (
+          <button
+            onClick={() => handleDealClick({})}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '8px 18px', borderRadius: 999,
+              background: 'var(--neon)', border: '1px solid transparent',
+              fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700,
+              color: 'var(--ink)', cursor: 'pointer',
+              boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
+            }}
+          >
+            Start a deal
+          </button>
+        ) : (
+          /* Say why, rather than leaving a gap where the button was. A brand
+             who came here to hire someone is owed the reason they cannot. */
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px',
+            fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+            color: 'rgba(255,255,255,.55)', whiteSpace: 'nowrap',
+          }}>
+            No packages published yet
+          </span>
+        )}
       </div>
 
       <ShopfrontPreview data={data} dealUrl={dealUrl} onDealClick={handleDealClick} />

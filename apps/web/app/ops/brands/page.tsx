@@ -1,14 +1,20 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { opsSearchTerm, opsSearchFilter } from '@/lib/ops-search'
-import { verifyOpsAccess } from '@/lib/ops-auth'
+import { requireOps } from '@/lib/ops-capabilities'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import BrandStatusActions from './BrandStatusActions'
 
 export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
-  const user = await verifyOpsAccess()
-  if (!user) redirect('/login/brand')
+  const actor = await requireOps('brands.read')
+  if (!actor) redirect('/login/brand')
+  /* Outreach reads brands and works its pipeline; it approves nothing. Approving
+     releases every held deal for that brand to creators, which is an
+     outward-facing consequence rather than an internal note. Edit is hidden too
+     — it carries platform_fee_percent and fee_mode. Both pages and both actions
+     gate on admin regardless; hiding just avoids locked doors. */
+  const isAdmin = actor.role === 'admin'
 
   const admin = createAdminClient()
   const { page, from, to } = opsRange(searchParams?.page)
@@ -86,7 +92,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                 {pending.map((b) => (
                   <tr key={b.id}>
                     <td style={tdStyle}>
-                      <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link>
+                      {isAdmin ? <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link> : b.name}
                     </td>
                     <td style={tdStyle} data-ph-mask>{b.contact_email || '-'}</td>
                     <td style={tdStyle} data-ph-mask>{b.contact_phone || '-'}</td>
@@ -94,7 +100,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                       <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
                     </td>
                     <td style={tdStyle}>
-                      <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />
+                      {isAdmin && <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />}
                     </td>
                   </tr>
                 ))}
@@ -163,13 +169,15 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                   <td style={tdStyle}>{new Date(b.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />
-                      <Link
-                        href={`/ops/brands/${b.id}/edit`}
-                        style={{ color: '#2563eb', fontSize: '0.8125rem', textDecoration: 'none', fontWeight: 600 }}
-                      >
-                        Edit
-                      </Link>
+                      {isAdmin && <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />}
+                      {isAdmin && (
+                        <Link
+                          href={`/ops/brands/${b.id}/edit`}
+                          style={{ color: '#2563eb', fontSize: '0.8125rem', textDecoration: 'none', fontWeight: 600 }}
+                        >
+                          Edit
+                        </Link>
+                      )}
                     </div>
                   </td>
                 </tr>

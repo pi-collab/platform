@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import BrandLoginForm from './BrandLoginForm'
 import FormError from '@/components/FormError'
+import { isOpsRoutingEmail } from '@/lib/ops-capabilities'
 
 export const metadata = {
   title: 'Log in · Guapd',
@@ -41,12 +42,8 @@ export default async function LoginPage({
 
   // Already logged in — check what state they're in
   if (user) {
-    // Founder → ops
-    const allowedRaw = process.env.OPS_ALLOWED_EMAILS
-    if (allowedRaw && user.email) {
-      const allowed = new Set(allowedRaw.split(',').map(e => e.trim().toLowerCase()))
-      if (allowed.has(user.email.toLowerCase())) redirect('/ops')
-    }
+    // Ops (founder or outreach) → ops console
+    if (isOpsRoutingEmail(user.email)) redirect('/ops')
 
     // Has a brand → dashboard
     const { data: profile } = await supabase

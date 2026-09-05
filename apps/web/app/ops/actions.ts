@@ -123,6 +123,9 @@ export async function addCreator(input: AddCreatorInput) {
 type VettingOutcome = 'deals_approved' | 'growth' | 'rejected'
 
 async function decideVetting(creatorId: string, outcome: VettingOutcome) {
+  /* Admin only. The outreach role reads creators but decides nothing about
+     them: every outcome here emails a real person and changes whether brands
+     can see them. */
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
@@ -391,6 +394,8 @@ export async function generateOfferLink(dealId: string) {
 // ── Approve brand ────────────────────────────────────────────────────────────
 
 export async function approveBrand(brandId: string) {
+  /* Admin only, like rejectBrand. Approving releases every held deal for the
+     brand to creators — an outward-facing consequence, not an admin note. */
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 

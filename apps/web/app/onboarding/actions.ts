@@ -9,6 +9,7 @@ import { BRAND_CATEGORIES } from '@/lib/brand-categories'
 import { notifyOpsBrandSignup } from '@/lib/account-emails'
 import { normalizeE164 } from '@/lib/phone'
 import { validateWorkEmail } from '@/lib/work-email'
+import { opsRoutingEmails } from '@/lib/ops-capabilities'
 
 export type OnboardingState =
   | { status: 'error'; error: string }
@@ -64,7 +65,7 @@ export async function submitOnboarding(
       error: 'This account has no email address. Brands need a work email, sign up with one.',
     }
   }
-  const emailCheck = validateWorkEmail(email, process.env.OPS_ALLOWED_EMAILS)
+  const emailCheck = validateWorkEmail(email, opsRoutingEmails())
   if (!emailCheck.ok) {
     return { status: 'error' as const, error: emailCheck.message }
   }

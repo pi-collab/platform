@@ -2838,3 +2838,119 @@ source of truth; is_vetted and is_rejected are derived by trigger.
 | Before app build (Expo) | Full checklist — confirms web parity baseline |
 | Pre-pilot | Full checklist + realtime environment check |
 | Pre-launch | Full checklist + performance under load |
+
+---
+
+## 18. Scoped outreach ops role + Pipeline CRM (0497)
+
+Two roles now exist. `OPS_ALLOWED_EMAILS` is unchanged and still means FULL
+admin; `OPS_OUTREACH_EMAILS` is a new, narrower role. Set both in the test env,
+with a throwaway address in the outreach list only.
+
+**The property that matters most: adding someone to the outreach list must
+grant NOTHING that was not explicitly opted in.** These checks exist because
+the alternative design — one list plus role checks inside each action — fails
+open, and a missed call site would be an outsider with a delete button.
+
+### Role resolution
+- [ ] Address in `OPS_ALLOWED_EMAILS` only -> admin. Every nav link visible,
+      every existing action works exactly as before
+- [ ] Address in `OPS_OUTREACH_EMAILS` only -> outreach. "Outreach" badge in
+      the header; Appeals / Deals / Careers / Offer Links absent from nav
+- [ ] Address in BOTH -> admin wins, and /ops/access flags it as such
+- [ ] Address in neither -> the same "no ops access" card as before
+- [ ] BOTH env vars unset -> no access for anyone (fails closed, not open)
+
+### Outreach is refused where it should be — test by TYPING THE URL, not clicking
+- [ ] `/ops/deals` -> redirected to /login/brand
+- [ ] `/ops/deals/{id}` -> redirected
+- [ ] `/ops/offers` -> redirected
+- [ ] `/ops/careers` -> redirected
+- [ ] `/ops/appeals` -> redirected
+- [ ] `/ops/access` -> redirected
+- [ ] `/ops/brands/{id}/edit` -> redirected (this is where fee settings live)
+- [ ] `/ops/creators/{id}/edit` -> redirected
+- [ ] `/ops/api/brands` -> 403 (it returns platform_fee_percent)
+
+### Commercials are withheld, not merely hidden
+- [ ] As outreach, open `/ops/creators/{id}`. Deals and Fee Rates tabs are absent
+- [ ] **View source / dev tools on that page: no deal titles, no price_paise, no
+      fee_pct anywhere in the HTML payload.** The page must not fetch them at
+      all — a hidden tab whose data still ships is not a control
+- [ ] As admin, the same page still shows both tabs with data (no regression)
+- [ ] Brands list as outreach: no Edit link, brand name is plain text
+- [ ] Brands list as outreach: Reject button absent; Approve present
+- [ ] Creator detail as outreach: Delete button absent
+
+### Outreach is READ-ONLY on the platform (scope changed 2026-09-05)
+The role writes to pipeline_leads and pipeline_feedback and NOTHING else. If a
+control that changes a creator or brand is visible to them, that is a bug.
+- [ ] Creators list: no "Decide" column, no VettingActions, no "+ Add Creator"
+- [ ] Creator detail: no Approve for Deals / Move to Growth / Reject / Delete
+- [ ] Creator detail > Products: no "+ Add product", no per-product Edit
+- [ ] Brands list: no Approve, no Reject, no Edit
+- [ ] `/ops/creators/new` typed directly -> redirected to /login/brand
+- [ ] Called from devtools as outreach, each returns "Not authorized" and writes
+      NO ops_events row: `addCreator`, `approveForDeals`, `moveToGrowth`,
+      `rejectCreator`, `approveBrand`, `rejectBrand`, `addProduct`, `editProduct`
+- [ ] Admin still sees and can use every one of the above (no regression)
+
+### Server-side enforcement (the real boundary)
+- [ ] Invoke `deleteCreator` directly from the browser console as an outreach
+      user -> "Not authorized", creator still exists
+- [ ] Same for `setDealFeeOverride`, `setBrandCreatorRate`, `editBrand`,
+      `editCreator`, `generateOfferLink`, `deleteRole`
+- [ ] Confirm none of the above wrote an ops_events row (refused before the write)
+
+### Pipeline board
+- [ ] Add a brand lead and a creator lead; both appear under the right tab
+- [ ] Stage dropdown changes stage inline and the row's last-touch resets to today
+- [ ] Filters (stage / owner / source) narrow the table; the FUNNEL COUNTS DO
+      NOT CHANGE — they are deliberately computed on the unfiltered set
+- [ ] Clear returns to the unfiltered view
+- [ ] A lead untouched for >21 days shows its age in amber
+- [ ] Followers field rejects "abc" with a message rather than a stack trace
+- [ ] Deleting a lead removes the pipeline row ONLY — the linked brand/creator
+      account is untouched and still appears in its own tab
+
+### Activation checklist is DERIVED, never stored
+- [ ] Link a creator lead to a real creator id -> stage moves to Signed up
+- [ ] Checklist shows Vetted / Storefront live / Bio link / First deal from the
+      real tables
+- [ ] **Vet that creator from the Creators tab, reload the pipeline: "Vetted"
+      flips to ticked WITHOUT anyone editing the lead.** This is the whole point
+      of deriving it — if it needs a manual update, the split has failed
+- [ ] Publish their storefront -> "Storefront live" ticks on next load
+- [ ] An unlinked lead shows "not linked" rather than a row of empty circles
+- [ ] Linking to an id of the wrong kind (brand id on a creator lead) is refused
+
+### Feedback log
+- [ ] Log an objection; the category count chip increments
+- [ ] Clicking a category chip filters; clicking again clears
+- [ ] Status change persists and writes `pipeline.feedback_status` to ops_events
+
+### Audit (this role is logged deliberately — one holder works at a competitor)
+- [ ] Every pipeline write appears in ops_events with the actor's real email
+      and `detail.role = 'outreach'`
+- [ ] A stage change records `stage_from` and `stage_to`, not just the new value
+- [ ] Lead deletion records the name and stage it had before deletion
+
+### RLS
+- [ ] Both policies exist in `supabase/rls.sql`, not only in migration 0497
+- [ ] **After 0498**, `SET LOCAL ROLE authenticated; SELECT * FROM pipeline_leads;`
+      fails with `permission denied for table pipeline_leads` — NOT "0 rows".
+      Same for pipeline_feedback, and same for the `anon` role
+- [ ] Before 0498 the same query returned 0 rows, because Supabase's default
+      privileges GRANT ALL on every new public table to anon/authenticated.
+      Writing no GRANT does not withhold one — only REVOKE does. A "0 rows"
+      result here now means the revoke is missing and RLS is the ONLY layer
+- [ ] `SELECT grantee, privilege_type FROM information_schema.role_table_grants
+      WHERE table_name IN ('pipeline_leads','pipeline_feedback')
+        AND grantee IN ('anon','authenticated');` -> zero rows
+- [ ] service_role still reads both tables, and the ops console works normally
+
+### Migration
+- [ ] 0497 is re-runnable (IF NOT EXISTS throughout; constraint guards in DO blocks)
+- [ ] Insert with no explicit stage -> defaults to 'contacted' and PASSES the
+      CHECK (the 0485/0491 default-violates-its-own-constraint trap)
+- [ ] `kind='creator'` with a `brand_id` set is rejected by `pipeline_leads_link_chk`
