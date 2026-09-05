@@ -3392,10 +3392,10 @@ button.signup-form__cross-link {
     letter-spacing: -0.03em; font-size: 42px; margin-top: 14px; color: #12151C;
     background: var(--neon); padding: 2px 12px; border-radius: 10px;
   }
-  .cpay-m__payout {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    margin-top: 22px; padding-top: 20px; border-top: 1px solid #EDEFEC;
-  }
+  /* Holds UpiRow, which brings its own surface — so this is spacing and a
+     divider only, not a flex row of text and a link. */
+  .cpay-m__payout { margin-top: 22px; padding-top: 20px; border-top: 1px solid #EDEFEC; }
+  .cpay-m__payout .msurface { box-shadow: none; background: transparent; padding: 0 !important; }
   .cpay-m__payout-text {
     font-size: 13px; color: #565C68;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

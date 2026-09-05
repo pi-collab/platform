@@ -3190,3 +3190,19 @@ posted, 0 invoices.
 - [ ] A deal that already has an invoice does NOT appear twice
 - [ ] The predicate still matches generateInvoice's gate exactly. If that gate
       moves and this does not, the screen offers an action the server refuses
+
+### UPI payout control (regression fixed)
+`UpiRow` used to exist ONLY inside CreatorPaymentsEmpty. Routing an account away
+from the empty state removed the only way to set a payout id.
+- [ ] Mobile payments hero contains the real UpiRow — tapping it opens the
+      input, saving persists and the row updates
+- [ ] Desktop sidebar "Payout method" contains UpiRow, not a link to
+      /creator/settings (which has NO UPI field and was a dead end)
+- [ ] **Nothing anywhere says the UPI id is "verified".** The mockup draws
+      "UPI · utkarsh@upi · verified"; we do not penny-drop, so the word would be
+      a lie about a creator's money. It must read "not verified yet"
+- [ ] With no UPI saved it reads "No payout method yet"
+- [ ] A creator with ready-to-invoice deals (so NOT the empty state) can still
+      set their UPI — this is the exact path that was broken
+- [ ] Desktop with zero invoices but ready deals does NOT say "All settled" or
+      "Nothing owed"; it says "None invoiced yet" / "Not invoiced yet"

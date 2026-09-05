@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import UpiRow from './UpiRow'
 import { sendPaymentReminder } from './actions'
 
 // ── Types ──────────────────────────────────────────────────────
@@ -27,12 +28,24 @@ interface HistoryPayment {
   paidMonthsAgo: number
 }
 
+interface ReadyToInvoice {
+  dealId: string
+  dealTitle: string
+  brandName: string
+  brandInitials: string
+  amountPaise: number
+}
+
 interface Props {
   totalEarnedPaise: number
   pendingAmountPaise: number
   pendingCount: number
   pending: PendingPayment[]
   history: HistoryPayment[]
+  /** Approved, posted, not yet invoiced. See the banner below for why this is
+   *  on the payments screen at all. */
+  readyToInvoice?: ReadyToInvoice[]
+  upiId?: string | null
 }
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -65,7 +78,7 @@ const FILTER_DEFS: [FilterKey, string][] = [['all', 'All'], ['month', 'This mont
 
 const PAGE_SIZE = 5
 
-export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, pendingCount, pending, history }: Props) {
+export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, pendingCount, pending, history, readyToInvoice = [], upiId = null }: Props) {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [remindedIds, setRemindedIds] = useState<Record<string, boolean>>({})
   const [historyPage, setHistoryPage] = useState(0)
@@ -104,6 +117,46 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
         {/* ═══════════ MAIN COLUMN ═══════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
 
+          {/* ── Ready to invoice ──
+              Work finished, money not yet asked for. This screen reads entirely
+              from invoices, so without this a creator with approved, posted
+              deals and no invoice was told "All settled" and "Nothing owed" —
+              both untrue, and both hiding that the next move was theirs. */}
+          {readyToInvoice.length > 0 && (
+            <section className="surface" style={{ padding: 'clamp(20px,2.2vw,26px)', boxShadow: '0 0 0 1.5px var(--neon), 0 8px 16px rgba(22,23,15,.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.02em', fontSize: 18, margin: 0 }}>
+                  Ready to invoice
+                </h2>
+                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
+                  {readyToInvoice.length === 1 ? '1 deal' : `${readyToInvoice.length} deals`}
+                </span>
+              </div>
+              <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)', margin: '6px 0 0', lineHeight: 1.5 }}>
+                Approved and posted. Raise the invoice to start the clock on payment.
+              </p>
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {readyToInvoice.map((r) => (
+                  <div key={r.dealId} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: '#E7EAF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12 }}>
+                      {r.brandInitials}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14 }}>{r.brandName}</div>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 3 }}>{r.dealTitle}</div>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap' }}>
+                      {formatRupees(r.amountPaise)}
+                    </span>
+                    <Link href={`/creator/deals/${r.dealId}`} style={{ flexShrink: 0, padding: '8px 16px', borderRadius: 999, background: 'var(--ink)', color: '#fff', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      Raise invoice
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* ── Pending payments ── */}
           <section className="surface" style={{ padding: 'clamp(20px,2.2vw,26px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -111,7 +164,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                 Pending payments
               </h2>
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
-                {pending.length === 0 ? 'All settled' : pending.length === 1 ? '1 payment' : `${pending.length} payments`}
+                {pending.length === 0 ? (readyToInvoice.length > 0 ? 'None invoiced yet' : 'All settled') : pending.length === 1 ? '1 payment' : `${pending.length} payments`}
               </span>
             </div>
 
@@ -424,7 +477,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                 )}
               </div>
               <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)', marginTop: 3 }}>
-                {pendingCount === 0 ? 'Nothing owed' : `${pendingCount} ${pendingCount === 1 ? 'payment' : 'payments'} due`}
+                {pendingCount === 0 ? (readyToInvoice.length > 0 ? 'Not invoiced yet' : 'Nothing owed') : `${pendingCount} ${pendingCount === 1 ? 'payment' : 'payments'} due`}
               </div>
             </div>
           </div>
@@ -452,8 +505,15 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                 </div>
               </div>
             </div>
+            {/* Was a link to /creator/settings, which has no UPI field — a
+                dead end for the one setting that decides whether a creator can
+                be paid at all. */}
+            <div style={{ marginTop: 15 }}>
+              <UpiRow initialUpiId={upiId} />
+            </div>
             <Link
               href="/creator/settings"
+              hidden
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 marginTop: 15, padding: 11, borderRadius: 14,

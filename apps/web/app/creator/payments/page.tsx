@@ -180,6 +180,8 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         pendingCount={pendingInvoices.length}
         pending={pending}
         history={history}
+        readyToInvoice={readyToInvoice}
+        upiId={upiId}
       />
     </main>
     </>

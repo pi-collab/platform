@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { sendPaymentReminder } from '@/app/creator/payments/actions'
+import UpiRow from '@/app/creator/payments/UpiRow'
 
 /**
  * Creator payments, mobile — built to "Creator Payments - Mobile Standalone".
@@ -156,13 +157,16 @@ export default function CreatorPaymentsMobile({
             You&rsquo;ve <span className="cpay-m__hero-em">guapped</span>
           </div>
           <div className="cpay-m__hero-amount tnum">{inr(totalEarnedPaise)}</div>
+          {/* The real control, not the mockup's static line.
+              Two things were wrong with copying that line across. It linked to
+              /creator/profile, which has no UPI field — so "Add UPI" went
+              nowhere. And it said "verified", which UpiRow's own header
+              explicitly refuses: verifying a UPI ID means a penny-drop through
+              a payment aggregator, which v1 stays out of, so the word would be
+              a lie in the one place a creator most needs the truth about their
+              money. UpiRow says "not verified yet" and means it. */}
           <div className="cpay-m__payout">
-            <span className="cpay-m__payout-text">
-              {upiId ? <>UPI &middot; {upiId} &middot; verified</> : 'No payout method added yet'}
-            </span>
-            <Link href="/creator/profile" className="cpay-m__manage">
-              {upiId ? 'Manage' : 'Add UPI'}
-            </Link>
+            <UpiRow initialUpiId={upiId} />
           </div>
         </section>
 
