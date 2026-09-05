@@ -2954,3 +2954,62 @@ control that changes a creator or brand is visible to them, that is a bug.
 - [ ] Insert with no explicit stage -> defaults to 'contacted' and PASSES the
       CHECK (the 0485/0491 default-violates-its-own-constraint trap)
 - [ ] `kind='creator'` with a `brand_id` set is rejected by `pipeline_leads_link_chk`
+
+---
+
+## 19. Notifications — mobile screen (design: "Creator Notifications - Mobile Standalone")
+
+New `NotificationsMobile` renders below 720px on BOTH the creator and brand
+notification pages; `NotificationFeed` still serves desktop. Both are mounted
+and CSS picks one, so check at 719px and 721px.
+
+### Layout
+- [ ] <720px shows the mobile screen; >720px shows the desktop feed. Neither
+      appears twice, and there is no flash of both on load
+- [ ] Header is sticky: scroll a long list, "Mark all read" stays visible
+- [ ] Back arrow appears on the creator screen and honours `?from=profile`;
+      absent on the brand screen (no back affordance there today)
+- [ ] Sections read TODAY / EARLIER; a section with no rows is not rendered
+- [ ] Rows show initials avatar, bold actor, action text, `body · date`, chevron
+- [ ] Unread rows carry the neon dot; read rows do not
+- [ ] Filter chips scroll horizontally without a visible scrollbar
+
+### Summary + priority accordion
+- [ ] Reads "N unread, M needs your reply" (creator) / "needs your review" (brand)
+- [ ] With unread but nothing pending: no chevron, and tapping does nothing
+- [ ] With nothing unread and nothing pending: the whole summary card is absent
+- [ ] Tapping expands; chevron rotates; tapping again collapses
+- [ ] Expanded card shows counterpart initials, title, deliverables, amount
+- [ ] Amount hidden when price_paise is null or 0 (never renders "₹0")
+- [ ] "Review offer" / "Review work" opens the right deal
+
+### Priority is a LIVE QUERY, not a notification count — the point of the design
+- [ ] Creator: a deal in `negotiating` appears in the card
+- [ ] **Accept or counter that offer from the DEAL PAGE, return to notifications:
+      the card is gone even though the `offer_sent` notification is still
+      unread.** If it persists, it is counting notifications and nagging about
+      finished work
+- [ ] A held deal (`held_at` set, brand unapproved) does NOT appear — the
+      creator cannot see it, so it cannot need their reply
+- [ ] Brand: a deal in `delivered` appears; approving it removes the card
+- [ ] Brand card counts per DEAL, not per deliverable item — a creator uploading
+      three files produces ONE card, not three
+
+### The deadline that does not exist
+- [ ] Screen says "Waiting N days" / "Waiting since yesterday" / "Came in today"
+- [ ] **It must NEVER say "Respond in N days".** The mockup shows that, but no
+      offer expiry exists in the schema and nothing expires an offer, so a
+      countdown would be a promise the product does not keep. If a real expiry
+      is added, build it on `waitingSince`
+
+### Shared vocabulary (regression risk from the extraction)
+- [ ] Type descriptions, filters and avatar colours are IDENTICAL on mobile and
+      desktop for the same notification — both now import
+      `lib/notification-format.ts`, and a divergence means one was re-declared
+- [ ] Brand desktop feed is unchanged from before this work
+- [ ] Mark all read on mobile clears the badge and the desktop feed agrees
+
+### RLS
+- [ ] The priority queries use the USER-scoped client, not the admin client:
+      a creator sees only their own pending offers, a brand only its own
+- [ ] Creator A cannot see Creator B's pending offer in the card
