@@ -123,7 +123,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
               deals and no invoice was told "All settled" and "Nothing owed" —
               both untrue, and both hiding that the next move was theirs. */}
           {readyToInvoice.length > 0 && (
-            <section className="surface" style={{ padding: 'clamp(20px,2.2vw,26px)', boxShadow: '0 0 0 1.5px var(--neon), 0 8px 16px rgba(22,23,15,.04)' }}>
+            <section className="surface" style={{ padding: 'clamp(20px,2.2vw,26px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.02em', fontSize: 18, margin: 0 }}>
                   Ready to invoice

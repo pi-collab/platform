@@ -3395,7 +3395,21 @@ button.signup-form__cross-link {
   /* Holds UpiRow, which brings its own surface — so this is spacing and a
      divider only, not a flex row of text and a link. */
   .cpay-m__payout { margin-top: 22px; padding-top: 20px; border-top: 1px solid #EDEFEC; }
-  .cpay-m__payout .msurface { box-shadow: none; background: transparent; padding: 0 !important; }
+  /* UpiRow brings its own card. Inside the hero that is a card in a card — a
+     second border and a second set of padding, which is what boxed the row and
+     pushed its input past the hero's edge. Specificity has to beat
+     `.creator-app .msurface`, which is the same weight and loads later. */
+  .creator-app .cpay-m__payout .msurface,
+  .cpay-m .cpay-m__payout .msurface {
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 !important;
+  }
+  /* The input is width:100% with border-box; without this the hero's own
+     padding is added on top and the right edge clips. */
+  .cpay-m__payout input { max-width: 100%; }
   .cpay-m__payout-text {
     font-size: 13px; color: #565C68;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -3515,6 +3529,8 @@ button.signup-form__cross-link {
 @media (max-width: 720px) {
   /* Ready-to-invoice is the one card on this screen that is asking the creator
      to do something, so it gets the neon edge the others do not. */
-  .cpay-m__pending--ready { box-shadow: 0 0 0 1.5px var(--neon), 0 10px 24px -18px rgba(40,45,25,.2); }
+  /* No ring. It read as an error outline around the whole section rather than
+     emphasis, and the card already stands out by its label and its button. */
+  .cpay-m__pending--ready { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
   .cpay-m__pending--ready .cpay-m__btn-dark { flex: 0 1 auto; padding: 0 22px; text-decoration: none; }
 }
