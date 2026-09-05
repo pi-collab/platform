@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
+import CreatorDealsMobile from '@/components/CreatorDealsMobile'
 import CreatorDealsEmpty from './CreatorDealsEmpty'
 import CreatorDealsEmptyDesktop from './CreatorDealsEmptyDesktop'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -67,11 +68,16 @@ export default async function CreatorDealsPage() {
         <CreatorDealsEmptyDesktop />
       </main>
     ) : (
-      <main style={wrapper}>
-        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-          <CreatorDealsTable deals={all} />
-        </div>
-      </main>
+      <>
+        {/* Both mounted; CSS picks one at 720px. The table has no responsive
+            handling of its own, so before this a phone got a desktop table. */}
+        <CreatorDealsMobile deals={all} />
+        <main className="cdeals-desktop" style={wrapper}>
+          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+            <CreatorDealsTable deals={all} />
+          </div>
+        </main>
+      </>
     )}
     </>
   )

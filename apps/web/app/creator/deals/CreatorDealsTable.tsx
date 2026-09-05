@@ -3,119 +3,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
-interface Deal {
-  id: string
-  deal_ref: string | null
-  title: string | null
-  deliverables: string | null
-  price_paise: number | null
-  status: string
-  is_posted: boolean | null
-  created_at: string
-  brand: string | null
-}
-
-// ── Stage definitions — from design ──
-const STAGES = ['negotiating', 'agreed', 'delivered', 'awaiting', 'posted'] as const
-
-const STAGE: Record<string, { i: number; label: string; dot: string; bg: string; fg: string; action: string; hot: boolean }> = {
-  negotiating: { i: 0, label: 'Offer to review',       dot: '#4A7FB0', bg: '#EEF6FD', fg: '#3B6A94', action: 'Review offer', hot: true },
-  agreed:      { i: 1, label: 'Agreed \u00B7 in production', dot: '#7E6BC4', bg: '#F4F0FF', fg: '#5F519B', action: 'View deal',    hot: false },
-  delivered:   { i: 2, label: 'Submitted \u00B7 in review',  dot: '#4C9E82', bg: '#ECFBF5', fg: '#38765F', action: 'Track review', hot: false },
-  revision:    { i: 2, label: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
-  awaiting:    { i: 3, label: 'Approved \u00B7 post it',     dot: '#8FAF1F', bg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
-  posted:      { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  declined:    { i: -1, label: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
-  complete:    { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  paid:        { i: 4, label: 'Posted \u00B7 paid',          dot: '#9AA08C', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-  cancelled:   { i: -1, label: 'Cancelled',             dot: '#8B90A0', bg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
-}
-
-// ── Filter tabs — from design ──
-const TAB_DEFS: [string, string][] = [
-  ['all', 'All'],
-  ['action', 'Needs you'],
-  ['negotiating', 'Negotiating'],
-  ['agreed', 'In production'],
-  ['review', 'In review'],
-  ['posted', 'Posted'],
-  ['declined', 'Declined'],
-]
-
-// ── Sort ──
-const SORT_OPTIONS: [string, string][] = [
-  ['priority', 'Needs you first'],
-  ['created', 'Newest'],
-  ['oldest', 'Oldest'],
-  ['price', 'Highest value'],
-  ['stage', 'By stage'],
-]
-
-const PAGE_SIZE = 12
-
-function formatINR(paise: number): string {
-  const rupees = paise / 100
-  const s = String(Math.round(rupees))
-  const last3 = s.slice(-3)
-  const rest = s.slice(0, -3)
-  return '\u20B9' + (rest ? rest.replace(/\B(?=(\d\d)+(?!\d))/g, ',') + ',' + last3 : last3)
-}
-
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100000) { const s = (rupees / 100000).toFixed(2).replace(/\.?0+$/, ''); return `\u20B9${s}L` }
-  if (rupees >= 1000) return `\u20B9${(rupees / 1000).toFixed(0)}K`
-  return `\u20B9${rupees.toLocaleString('en-IN')}`
-}
-
-function createdDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function resolveStatus(d: Deal): string {
-  if (d.status === 'declined' || d.status === 'cancelled') return d.status
-  if ((d.status === 'approved' || d.status === 'complete' || d.status === 'paid') && d.is_posted === false) return 'awaiting'
-  if ((d.status === 'complete' || d.status === 'paid') && d.is_posted === true) return 'posted'
-  if (d.status === 'approved' && d.is_posted === true) return 'posted'
-  return d.status
-}
-
-function needsAction(st: string): boolean {
-  return STAGE[st]?.hot ?? false
-}
-
-function isLive(st: string): boolean {
-  return st !== 'posted' && st !== 'declined' && st !== 'cancelled'
-}
-
-function matchFilter(st: string, filter: string): boolean {
-  if (filter === 'all') return true
-  if (filter === 'action') return needsAction(st)
-  if (filter === 'review') return st === 'delivered' || st === 'revision' || st === 'awaiting'
-  return st === filter
-}
-
-function trackSteps(st: string): { bg: string }[] {
-  const cur = STAGE[st]?.i ?? -1
-  if (cur < 0) return [{ bg: 'linear-gradient(90deg,#E4ECF3,#E8E2F0)' }]
-  return Array.from(STAGES).map((_, i) => {
-    const bg = i < cur ? '#DFF29A' : i === cur ? 'var(--lime-400)' : 'linear-gradient(90deg,#E4ECF3,#E8E2F0)'
-    return { bg }
-  })
-}
-
-function nameHash(name: string): number {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
-  return Math.abs(hash)
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
+import {
+  STAGES, STAGE, TAB_DEFS, SORT_OPTIONS, PAGE_SIZE, EMPTY,
+  formatINR, formatRupees, createdDate, resolveStatus,
+  needsAction, isLive, matchFilter, trackSteps, nameHash, getInitials,
+  type Deal,
+} from '@/lib/deal-stage'
 
 // ── Mascot ──
 function Mascot({ size = 56 }: { size?: number }) {
@@ -128,16 +21,6 @@ function Mascot({ size = 56 }: { size?: number }) {
   )
 }
 
-// ── Empty state messages ──
-const EMPTY: Record<string, [string, string]> = {
-  all: ['No deals yet', 'Deals you land with brands show up here. Discover campaigns to send your first pitch.'],
-  action: ['Nothing needs you', 'Every deal is moving on its own. We will flag anything that needs you.'],
-  negotiating: ['No open offers', 'When a brand sends an offer or replies to your counter, it lands here.'],
-  agreed: ['Nothing in production', 'Deals move here once you and the brand lock the terms.'],
-  review: ['Nothing in review', 'Submitted work, revisions and approved deals collect here.'],
-  posted: ['Nothing posted yet', 'Deals whose content is live and paid will show here.'],
-  declined: ['No declined deals', 'Deals that were declined will be listed here.'],
-}
 
 // ════════════════════════════════════════════════════════════════
 // MAIN COMPONENT

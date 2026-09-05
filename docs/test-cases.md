@@ -3046,3 +3046,50 @@ and CSS picks one, so check at 719px and 721px.
 - [ ] The priority queries use the USER-scoped client, not the admin client:
       a creator sees only their own pending offers, a brand only its own
 - [ ] Creator A cannot see Creator B's pending offer in the card
+
+---
+
+## 20. Creator deals — mobile screen (design: "Creator Deals - Mobile Standalone")
+
+`CreatorDealsMobile` renders below 720px; `CreatorDealsTable` keeps desktop.
+The table had NO media queries, so before this a phone was served a desktop
+table with columns. Check at 719px and 721px.
+
+### Layout
+- [ ] <720px shows the card list; >720px shows the table. Neither appears twice
+- [ ] Title reads "Deals at *a glance*" with the second half serif italic
+- [ ] Bell top-right opens /creator/notifications
+- [ ] Header is sticky while the list scrolls
+- [ ] KPI hero is three-up: Needs you / Live now / **Total deals** (a COUNT —
+      the desktop's third figure is the VALUE of live deals, a different question)
+- [ ] Deal cards: 48px gradient avatar, brand, `title · deliverables` clamped at
+      two lines, price right, stage chip with coloured dot, chevron
+- [ ] A very long title + deliverables does not push the price or chip out of
+      the card
+
+### Vocabulary is shared with desktop (regression risk from the extraction)
+- [ ] The same deal shows the same stage COLOUR and dot on both screens
+- [ ] Mobile uses the short label ("In production"), desktop the long one
+      ("Agreed · in production") — same stage, two lengths, one map
+- [ ] A deal in every stage renders a chip on both: negotiating, agreed,
+      delivered, revision, awaiting, posted, declined, cancelled
+- [ ] `approved` + `is_posted=false` shows "Awaiting post" on both
+- [ ] `paid`/`complete` + `is_posted=true` shows "Paid" on mobile
+- [ ] Desktop table is otherwise unchanged from before this work
+
+### Filters, search, paging
+- [ ] Seven tabs with live counts; counts match the rows the tab shows
+- [ ] Selected tab is neon; the row scrolls horizontally without a visible bar
+- [ ] Search matches brand, title, deliverables AND deal_ref (the ref is what
+      someone pastes from a message)
+- [ ] Clearing search restores the list and resets to page 1
+- [ ] Changing a filter resets to page 1 — not page 4 of a 2-page result
+- [ ] Rows are ordered needs-you first, then newest
+- [ ] Pager appears only above 8 rows; prev/next disable at the ends
+- [ ] Empty state text is per-filter ("No open offers" under Negotiating), and
+      a search with no hits says so rather than showing the filter's empty copy
+
+### Zero deals
+- [ ] With no deals at all, the existing CreatorDealsEmpty still takes the
+      whole screen on mobile — the new list must not render its KPI card,
+      search and seven tabs around nothing
