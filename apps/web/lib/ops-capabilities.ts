@@ -48,22 +48,29 @@ export type OpsCapability =
   | 'brands.read'
   | 'creators.read'
   | 'insights.read'
-  // The pipeline board itself.
+  // The pipeline board — the ONLY thing this role writes to.
   | 'pipeline.read'
   | 'pipeline.write'
-  // The three write actions outreach genuinely needs to do their job.
-  | 'brands.approve'
-  | 'creators.add'
-  | 'creators.vet'
 
 /**
  * Everything the outreach role can do. Anything absent is admin-only.
  *
- * Deliberately NOT here, and each for a reason worth keeping:
- *   creators.delete    — cascades to auth; irreversible
- *   brands.fees        — platform_fee_percent is our commercial terms
- *   deals.*            — deal values, fee overrides, offer links
- *   careers.*, access  — unrelated to outreach
+ * ── Read-only on the platform, read/write on their own pipeline ─────────────
+ * An earlier version also granted `creators.add`, `creators.vet` and
+ * `brands.approve`, on the reasoning that onboarding was their job. That is not
+ * the shape you want: outreach LOOKS UP brands and creators to do their work and
+ * records what happened in the pipeline, but every decision that changes a
+ * creator's or brand's standing on the platform stays with a founder.
+ *
+ * It also removes the awkward middle ground. Vetting sends an approval or
+ * rejection email to a real person; approving a brand releases its held deals to
+ * creators. Those are consequences you cannot quietly undo, and they were the
+ * only outward-facing effects this role could have triggered.
+ *
+ * So the boundary is now simple enough to hold in your head: THIS ROLE CANNOT
+ * CHANGE ANYTHING OUTSIDE pipeline_leads AND pipeline_feedback. If you are
+ * adding a capability that breaks that sentence, it probably belongs on the
+ * admin gate instead.
  */
 const OUTREACH_CAPABILITIES: ReadonlySet<OpsCapability> = new Set<OpsCapability>([
   'brands.read',
@@ -71,9 +78,6 @@ const OUTREACH_CAPABILITIES: ReadonlySet<OpsCapability> = new Set<OpsCapability>
   'insights.read',
   'pipeline.read',
   'pipeline.write',
-  'brands.approve',
-  'creators.add',
-  'creators.vet',
 ])
 
 function emailSet(raw: string | undefined): Set<string> {

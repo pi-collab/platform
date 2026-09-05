@@ -77,10 +77,10 @@ export default async function OpsAccessPage() {
 
       <h2 style={{ ...sectionHead, marginTop: '2rem' }}>Outreach (scoped)</h2>
       <p style={sectionNote}>
-        Read-only on brands, creators and insights. Can add creators, vet them, approve
-        brands, and run the pipeline board. Cannot see fees or deal values, cannot reject
-        a brand, edit a record, or delete anything outside the pipeline. Every pipeline
-        write is recorded in <code>ops_events</code>.
+        <strong>Read-only on the platform.</strong> Can look up brands and creators and
+        read insights; cannot vet, approve, add, edit or delete anything there, and cannot
+        see fees or deal values. Their only write access is the pipeline board, and every
+        pipeline write is recorded in <code>ops_events</code>.
       </p>
       {outreach.length === 0 ? (
         <p style={{ fontSize: '0.8125rem', color: '#888' }}>

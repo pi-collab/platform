@@ -2882,12 +2882,18 @@ open, and a missed call site would be an outsider with a delete button.
 - [ ] Brands list as outreach: Reject button absent; Approve present
 - [ ] Creator detail as outreach: Delete button absent
 
-### Outreach CAN do its job
-- [ ] Add a creator via `/ops/creators/new` -> succeeds, writes `creator.added`
-      to ops_events with the outreach address as actor_email
-- [ ] Approve for Deals / Move to Growth / Reject a creator -> all succeed
-- [ ] Approve a pending brand -> succeeds, held deals release as normal
-- [ ] `rejectBrand` called directly (devtools) as outreach -> "Not authorized"
+### Outreach is READ-ONLY on the platform (scope changed 2026-09-05)
+The role writes to pipeline_leads and pipeline_feedback and NOTHING else. If a
+control that changes a creator or brand is visible to them, that is a bug.
+- [ ] Creators list: no "Decide" column, no VettingActions, no "+ Add Creator"
+- [ ] Creator detail: no Approve for Deals / Move to Growth / Reject / Delete
+- [ ] Creator detail > Products: no "+ Add product", no per-product Edit
+- [ ] Brands list: no Approve, no Reject, no Edit
+- [ ] `/ops/creators/new` typed directly -> redirected to /login/brand
+- [ ] Called from devtools as outreach, each returns "Not authorized" and writes
+      NO ops_events row: `addCreator`, `approveForDeals`, `moveToGrowth`,
+      `rejectCreator`, `approveBrand`, `rejectBrand`, `addProduct`, `editProduct`
+- [ ] Admin still sees and can use every one of the above (no regression)
 
 ### Server-side enforcement (the real boundary)
 - [ ] Invoke `deleteCreator` directly from the browser console as an outreach

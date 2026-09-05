@@ -1,7 +1,6 @@
 'use server'
 
 import { verifyOpsAccess } from '@/lib/ops-auth'
-import { requireOps } from '@/lib/ops-capabilities'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
@@ -45,7 +44,7 @@ function isValidUrl(s: string): boolean {
 }
 
 export async function addCreator(input: AddCreatorInput) {
-  const user = (await requireOps('creators.add'))?.user
+  const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
   const { full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card } = input
@@ -124,10 +123,10 @@ export async function addCreator(input: AddCreatorInput) {
 type VettingOutcome = 'deals_approved' | 'growth' | 'rejected'
 
 async function decideVetting(creatorId: string, outcome: VettingOutcome) {
-  /* All three outcomes, including reject, are one capability: vetting a creator
-     means deciding, and an approver who cannot say no is not vetting. Each
-     outcome is a status flip that another decision can reverse. */
-  const user = (await requireOps('creators.vet'))?.user
+  /* Admin only. The outreach role reads creators but decides nothing about
+     them: every outcome here emails a real person and changes whether brands
+     can see them. */
+  const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
   const admin = createAdminClient()
@@ -395,11 +394,9 @@ export async function generateOfferLink(dealId: string) {
 // ── Approve brand ────────────────────────────────────────────────────────────
 
 export async function approveBrand(brandId: string) {
-  /* Approve only. `rejectBrand` stays admin-only: you named onboarding and
-     approval as the outreach job, and rejecting writes a rejection_reason that
-     blocks a company from the platform. The reject button is hidden for them
-     rather than left to fail here. */
-  const user = (await requireOps('brands.approve'))?.user
+  /* Admin only, like rejectBrand. Approving releases every held deal for the
+     brand to creators — an outward-facing consequence, not an admin note. */
+  const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
   const admin = createAdminClient()

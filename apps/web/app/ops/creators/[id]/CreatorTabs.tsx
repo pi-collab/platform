@@ -131,8 +131,10 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
 
   return (
     <div>
-      {/* Vet/Reject actions */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+      {/* Vet/Reject actions — admin only. Outreach reads this page to research a
+          creator and log the outcome in the pipeline; the decision is not
+          theirs, and each of these emails the creator. */}
+      {isAdmin && <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
         {/* Keyed on vetting_status, not is_vetted. A Growth creator has
             is_vetted false, so the old condition showed them the same
             untouched-applicant buttons and hid that a decision had been made.
@@ -161,7 +163,7 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
             {actionLoading ? '...' : 'Delete'}
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
@@ -190,7 +192,7 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
       {tab === 'Questionnaire' && <Questionnaire response={onboarding} growth={growthQuiz} />}
       {tab === 'Basic Details' && <BasicDetails creator={creator} />}
       {tab === 'Social Accounts' && <SocialAccounts accounts={creator.social_accounts} />}
-      {tab === 'Products' && <Products addonRates={addonRates} creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
+      {tab === 'Products' && <Products isAdmin={isAdmin} addonRates={addonRates} creatorId={creator.id} accounts={creator.social_accounts} products={products} />}
       {tab === 'Deals' && <DealsTab deals={deals} />}
       {tab === 'Fee Rates' && <FeeRatesTab creatorId={creator.id} pairRates={pairRates} />}
       {tab === 'Portfolio & Brands' && <PortfolioBrands workedWith={creator.worked_with} portfolioLinks={creator.portfolio_links} />}
@@ -261,7 +263,10 @@ function SocialAccounts({ accounts }: { accounts: SocialAccount[] | null }) {
 
 /* ── Products tab ──────────────────────────────────────────────── */
 
-function Products({ creatorId, accounts, products, addonRates = [] }: { creatorId: string; addonRates?: AddonRateRow[]; accounts: SocialAccount[] | null; products: Product[] }) {
+/* Read-only for outreach: they look at what a creator sells to judge fit and
+   price a conversation, but the rate card is the creator's own commercial
+   record. addProduct/editProduct gate on admin server-side regardless. */
+function Products({ creatorId, accounts, products, addonRates = [], isAdmin = true }: { creatorId: string; addonRates?: AddonRateRow[]; accounts: SocialAccount[] | null; products: Product[]; isAdmin?: boolean }) {
   const router = useRouter()
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -311,7 +316,7 @@ function Products({ creatorId, accounts, products, addonRates = [] }: { creatorI
           {activeProducts.map((p) => (
             editingId === p.id
               ? <ProductForm key={p.id} creatorId={creatorId} accounts={accounts!} existing={p} onDone={() => { setEditingId(null); router.refresh() }} />
-              : <ProductRow key={p.id} product={p} onEdit={() => setEditingId(p.id)} />
+              : <ProductRow key={p.id} product={p} onEdit={isAdmin ? () => setEditingId(p.id) : null} />
           ))}
         </div>
       )}
@@ -323,7 +328,7 @@ function Products({ creatorId, accounts, products, addonRates = [] }: { creatorI
             {inactiveProducts.map((p) => (
               editingId === p.id
                 ? <ProductForm key={p.id} creatorId={creatorId} accounts={accounts!} existing={p} onDone={() => { setEditingId(null); router.refresh() }} />
-                : <ProductRow key={p.id} product={p} onEdit={() => setEditingId(p.id)} />
+                : <ProductRow key={p.id} product={p} onEdit={isAdmin ? () => setEditingId(p.id) : null} />
             ))}
           </div>
         </div>
@@ -333,7 +338,7 @@ function Products({ creatorId, accounts, products, addonRates = [] }: { creatorI
       {showForm && hasAccounts ? (
         <ProductForm creatorId={creatorId} accounts={accounts!} onDone={() => { setShowForm(false); router.refresh() }} />
       ) : (
-        hasAccounts && (
+        hasAccounts && isAdmin && (
           <button onClick={() => setShowForm(true)} style={addBtnStyle}>+ Add product</button>
         )
       )}
@@ -341,7 +346,7 @@ function Products({ creatorId, accounts, products, addonRates = [] }: { creatorI
   )
 }
 
-function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => void }) {
+function ProductRow({ product: p, onEdit }: { product: Product; onEdit: (() => void) | null }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid #e5e5e5', borderRadius: 6, background: '#fafafa' }}>
       <div>
@@ -359,9 +364,9 @@ function ProductRow({ product: p, onEdit }: { product: Product; onEdit: () => vo
           {p.price_per_extra_revision_paise > 0 && <>, ₹{(p.price_per_extra_revision_paise / 100).toLocaleString('en-IN')}/extra</>}
         </p>
       </div>
-      <button onClick={onEdit} style={{ background: 'none', border: '1px solid #d5d5d5', borderRadius: 4, padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontWeight: 600, color: '#555', cursor: 'pointer' }}>
+      {onEdit && <button onClick={onEdit} style={{ background: 'none', border: '1px solid #d5d5d5', borderRadius: 4, padding: '0.25rem 0.625rem', fontSize: '0.75rem', fontWeight: 600, color: '#555', cursor: 'pointer' }}>
         Edit
-      </button>
+      </button>}
     </div>
   )
 }

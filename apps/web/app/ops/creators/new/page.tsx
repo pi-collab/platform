@@ -1,9 +1,9 @@
-import { requireOps } from '@/lib/ops-capabilities'
+import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
 import AddCreatorForm from './AddCreatorForm'
 
 export default async function NewCreatorPage() {
-  const user = await requireOps('creators.add')
+  const user = await verifyOpsAccess()
   if (!user) redirect('/login/brand')
 
   return (

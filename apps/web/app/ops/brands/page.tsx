@@ -9,9 +9,11 @@ import BrandStatusActions from './BrandStatusActions'
 export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
   const actor = await requireOps('brands.read')
   if (!actor) redirect('/login/brand')
-  /* Edit carries the fee settings — platform_fee_percent and fee_mode — which
-     the outreach role is not shown. The edit page refuses them anyway; the link
-     is hidden so it is not an invitation to a locked door. */
+  /* Outreach reads brands and works its pipeline; it approves nothing. Approving
+     releases every held deal for that brand to creators, which is an
+     outward-facing consequence rather than an internal note. Edit is hidden too
+     — it carries platform_fee_percent and fee_mode. Both pages and both actions
+     gate on admin regardless; hiding just avoids locked doors. */
   const isAdmin = actor.role === 'admin'
 
   const admin = createAdminClient()
@@ -98,7 +100,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                       <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
                     </td>
                     <td style={tdStyle}>
-                      <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} canReject={isAdmin} />
+                      {isAdmin && <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />}
                     </td>
                   </tr>
                 ))}
@@ -167,7 +169,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                   <td style={tdStyle}>{new Date(b.created_at).toLocaleDateString()}</td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} canReject={isAdmin} />
+                      {isAdmin && <BrandStatusActions brandId={b.id} currentStatus={b.brand_status} />}
                       {isAdmin && (
                         <Link
                           href={`/ops/brands/${b.id}/edit`}
