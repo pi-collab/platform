@@ -37,6 +37,14 @@ export interface PendingRow {
   isOverdue: boolean
 }
 
+export interface ReadyRow {
+  dealId: string
+  dealTitle: string
+  brandName: string
+  brandInitials: string
+  amountPaise: number
+}
+
 export interface HistoryRow {
   id: string
   dealId: string
@@ -66,12 +74,13 @@ function csvCell(v: string | number): string {
 }
 
 export default function CreatorPaymentsMobile({
-  totalEarnedPaise, upiId, pending, history,
+  totalEarnedPaise, upiId, pending, history, readyToInvoice = [],
 }: {
   totalEarnedPaise: number
   upiId: string | null
   pending: PendingRow[]
   history: HistoryRow[]
+  readyToInvoice?: ReadyRow[]
 }) {
   const [page, setPage] = useState(0)
   const [reminded, setReminded] = useState<Record<string, boolean>>({})
@@ -156,6 +165,33 @@ export default function CreatorPaymentsMobile({
             </Link>
           </div>
         </section>
+
+        {/* Work finished, money not yet asked for.
+            Not in the mockup, and added because its absence made the screen
+            look broken: a creator with approved, posted deals and no invoice
+            saw an empty ledger and nothing telling them the next move was
+            theirs. The amount is the DEAL value; the exact split after fees is
+            on the invoice screen this links to. */}
+        {readyToInvoice.map((r) => (
+          <section key={r.dealId} className="cpay-m__pending cpay-m__pending--ready">
+            <div className="cpay-m__pending-tag">
+              <span className="cpay-m__pending-dot" style={{ background: '#8FAF1F' }} />
+              <span>Ready to invoice</span>
+            </div>
+            <div className="cpay-m__pending-row">
+              <span className="cpay-m__pending-brand">{r.brandName}</span>
+              <span className="cpay-m__pending-amount tnum">{inr(r.amountPaise)}</span>
+            </div>
+            <div className="cpay-m__pending-sub">
+              {r.dealTitle} &middot; approved and posted
+            </div>
+            <div className="cpay-m__pending-actions">
+              <Link href={`/creator/deals/${r.dealId}`} className="cpay-m__btn-dark">
+                Raise invoice
+              </Link>
+            </div>
+          </section>
+        ))}
 
         {/* One card per pending payout — the design draws one, a creator can
             have several, and a hidden invoice is money nobody chases. */}

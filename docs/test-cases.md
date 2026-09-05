@@ -3173,3 +3173,20 @@ checks below record which.
 - [ ] upi_id still comes from the ADMIN client — it is withheld from client
       roles as PII, so a session-client read returns null and the row would
       wrongly say no payout method
+
+### Ready to invoice (added after a real account looked broken)
+The payments screen is driven entirely by invoices. A creator whose deals were
+approved AND posted with no invoice raised saw "Nothing's landed yet" and no
+hint the next move was theirs. Real staging account: 5 deals, 2 approved +
+posted, 0 invoices.
+- [ ] A deal that is `approved` AND `is_posted` AND has no invoice shows a
+      "Ready to invoice" card with a neon edge and a "Raise invoice" link
+- [ ] That account no longer shows the empty state — `isEmpty` requires no
+      invoices AND nothing ready to invoice
+- [ ] Raising the invoice removes the card and the deal appears under
+      "Awaiting payment"
+- [ ] A deal that is approved but NOT posted does NOT appear (the server
+      refuses with "Mark the content as posted before invoicing")
+- [ ] A deal that already has an invoice does NOT appear twice
+- [ ] The predicate still matches generateInvoice's gate exactly. If that gate
+      moves and this does not, the screen offers an action the server refuses

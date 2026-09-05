@@ -3511,3 +3511,10 @@ button.signup-form__cross-link {
     color: #B4454B; line-height: 1.45;
   }
 }
+
+@media (max-width: 720px) {
+  /* Ready-to-invoice is the one card on this screen that is asking the creator
+     to do something, so it gets the neon edge the others do not. */
+  .cpay-m__pending--ready { box-shadow: 0 0 0 1.5px var(--neon), 0 10px 24px -18px rgba(40,45,25,.2); }
+  .cpay-m__pending--ready .cpay-m__btn-dark { flex: 0 1 auto; padding: 0 22px; text-decoration: none; }
+}

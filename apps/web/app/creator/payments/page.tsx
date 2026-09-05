@@ -108,12 +108,43 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     }
   })
 
+  /* Deals the creator can invoice but has not.
+     This screen is driven entirely by invoices, so a creator whose deals are
+     approved and posted — everything done, money not yet asked for — was shown
+     "Nothing's landed yet" and no hint that the next move was theirs. That is
+     the exact state a real account was sitting in: five deals, two of them
+     approved and posted, zero invoices, and a screen that looked broken.
+
+     The predicate mirrors generateInvoice's gate exactly (status 'approved',
+     is_posted true, no invoice yet). If that gate ever moves, this must move
+     with it or the screen will offer an action the server refuses. */
+  const invoicedDealIds = new Set(all.map((inv) => inv.deal_id))
+  const { data: readyDeals } = await supabase
+    .from('deals')
+    .select('id, title, price_paise, brands(name)')
+    .eq('creator_id', ctx.creatorId)
+    .eq('status', 'approved')
+    .eq('is_posted', true)
+
+  const readyToInvoice = (readyDeals ?? [])
+    .filter((d) => !invoicedDealIds.has(d.id))
+    .map((d) => {
+      const brand = extractBrand(d)
+      return {
+        dealId: d.id as string,
+        dealTitle: (d.title as string) || 'Untitled deal',
+        brandName: brand,
+        brandInitials: getInitials(brand),
+        amountPaise: (d.price_paise as number) ?? 0,
+      }
+    })
+
   // No invoices at all. PaymentsClient renders totals, tabs and a table — all
   // chrome for rows that do not exist.
   // Both render when there are no invoices; the width decides which is visible.
   // Returning the mobile design early fired at every width, so a creator on a
   // desktop never reached the payments screen.
-  const isEmpty = all.length === 0
+  const isEmpty = all.length === 0 && readyToInvoice.length === 0
 
   // Service role: upi_id is withheld from the client roles as PII, so the
   // session client cannot read it back. Only needed for the empty screen.
@@ -139,6 +170,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         upiId={upiId}
         pending={pending}
         history={history}
+        readyToInvoice={readyToInvoice}
       />
     )}
     <main className={isEmpty ? 'creator-empty-desktop' : 'cpay-desktop'} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
