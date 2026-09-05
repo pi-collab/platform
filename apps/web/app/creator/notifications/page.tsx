@@ -44,12 +44,12 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
 
   // For creator side, the "other party" is the brand — fetch brand names + prices
   const dealIds = Array.from(new Set(all.map((n) => n.deal_id).filter(Boolean))) as string[]
-  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null }> = {}
+  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null; title: string | null }> = {}
 
   if (dealIds.length > 0) {
     const { data: deals } = await supabase
       .from('deals')
-      .select('id, price_paise, brands(name)')
+      .select('id, title, price_paise, brands(name)')
       .in('id', dealIds)
 
     if (deals) {
@@ -57,7 +57,7 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
         const raw = d.brands as unknown
         const brand = Array.isArray(raw) ? raw[0] : (raw as { name: string } | null)
         if (brand) {
-          creatorMap[d.id] = { name: brand.name, photo: null, pricePaise: d.price_paise }
+          creatorMap[d.id] = { name: brand.name, photo: null, pricePaise: d.price_paise, title: d.title }
         }
       }
     }

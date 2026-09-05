@@ -4,8 +4,8 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { markAllNotificationsRead } from '@/app/notifications/actions'
 import {
-  AVATAR_GRADS, nameToGradIndex, getInitials, formatRupees, getBucket,
-  matchesFilter, typeDescription, BRAND_FILTERS, CREATOR_FILTERS,
+  getInitials, formatRupees, getBucket, matchesFilter,
+  notificationSentence, BRAND_FILTERS, CREATOR_FILTERS,
   type Notification, type CreatorInfo, type Variant, type Filter,
 } from '@/lib/notification-format'
 import type { PriorityItem } from '@/lib/notification-priority'
@@ -133,7 +133,6 @@ export default function NotificationsMobile({
                     <div className="notif-m__priority-top">
                       <span
                         className="notif-m__avatar notif-m__avatar--lg"
-                        style={{ background: AVATAR_GRADS[nameToGradIndex(p.counterpart)] }}
                         aria-hidden="true"
                       >
                         {getInitials(p.counterpart)}
@@ -197,28 +196,38 @@ export default function NotificationsMobile({
                 {g.items.map((n) => {
                   const info = n.deal_id ? creatorMap[n.deal_id] : undefined
                   const who = info?.name ?? null
-                  const desc = typeDescription(n.type, variant)
                   const href = n.deal_id ? `${dealLinkPrefix}/${n.deal_id}` : null
                   const unread = !n.read_at && !allRead
+                  /* The amount belongs INSIDE the sentence — "paid you ₹70K" —
+                     so it is passed to the template rather than rendered as a
+                     figure on the right. */
+                  const parts = notificationSentence(n.type, variant, who, info?.pricePaise ?? null)
+                  /* Deal title, not the notification body. The body repeats what
+                     the sentence already says; the title is the thing a creator
+                     recognises the deal by. Falls back to the body when a
+                     notification has no deal attached. */
+                  const context = info?.title || n.body || null
                   const inner = (
                     <>
+                      {/* Unread IS the ring. The design carries the state on the
+                          avatar rather than a dot at the far edge, where it sits
+                          past the text and reads as decoration. */}
                       <span
-                        className="notif-m__avatar"
-                        style={{ background: who ? AVATAR_GRADS[nameToGradIndex(who)] : '#E7EAF0' }}
+                        className={`notif-m__avatar${unread ? ' is-unread' : ''}`}
                         aria-hidden="true"
                       >
                         {who ? getInitials(who) : '•'}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="notif-m__row-title">
-                          {who && <strong>{who} </strong>}
-                          <span>{desc}</span>
+                        <div className={`notif-m__row-title${unread ? ' is-unread' : ''}`}>
+                          {parts.map((part, i) => (
+                            part.bold ? <strong key={i}>{part.text}</strong> : <span key={i}>{part.text}</span>
+                          ))}
                         </div>
                         <div className="notif-m__row-sub">
-                          {n.body ? `${n.body} · ` : ''}{dayLabel(n.created_at)}
+                          {context ? `${context} · ` : ''}{dayLabel(n.created_at)}
                         </div>
                       </div>
-                      {unread && <span className="notif-m__unread" aria-label="Unread" />}
                       {href && (
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9CCC2" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                       )}

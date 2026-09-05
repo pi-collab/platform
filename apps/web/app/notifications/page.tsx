@@ -27,12 +27,12 @@ export default async function BrandNotificationsPage() {
 
   // Collect unique deal_ids to fetch creator names + prices
   const dealIds = Array.from(new Set(all.map((n) => n.deal_id).filter(Boolean))) as string[]
-  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null }> = {}
+  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null; title: string | null }> = {}
 
   if (dealIds.length > 0) {
     const { data: deals } = await supabase
       .from('deals')
-      .select('id, price_paise, creators(full_name, profile_photo_url)')
+      .select('id, title, price_paise, creators(full_name, profile_photo_url)')
       .in('id', dealIds)
 
     if (deals) {
@@ -40,7 +40,7 @@ export default async function BrandNotificationsPage() {
         const raw = d.creators as unknown
         const creator = Array.isArray(raw) ? raw[0] : (raw as { full_name: string; profile_photo_url: string | null } | null)
         if (creator) {
-          creatorMap[d.id] = { name: creator.full_name, photo: creator.profile_photo_url, pricePaise: d.price_paise }
+          creatorMap[d.id] = { name: creator.full_name, photo: creator.profile_photo_url, pricePaise: d.price_paise, title: d.title }
         }
       }
     }

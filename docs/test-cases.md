@@ -2970,8 +2970,23 @@ and CSS picks one, so check at 719px and 721px.
 - [ ] Back arrow appears on the creator screen and honours `?from=profile`;
       absent on the brand screen (no back affordance there today)
 - [ ] Sections read TODAY / EARLIER; a section with no rows is not rendered
-- [ ] Rows show initials avatar, bold actor, action text, `body · date`, chevron
-- [ ] Unread rows carry the neon dot; read rows do not
+- [ ] Rows read as a SENTENCE with the name bold: "**abcd** approved your
+      deliverables", "**Bloom Studio**'s product arrived", "New offer from
+      **Nofi**". Never a status label like "Deliverables approved · time to get
+      paid" — that is the desktop feed's vocabulary
+- [ ] Possessives render as "Bloom Studio's product arrived", NOT
+      "Bloom Studio 's product arrived" (the reason these are templates)
+- [ ] An amount sits INSIDE the sentence — "paid you ₹70K" — not as a separate
+      figure on the right
+- [ ] With no price on the deal it reads a bare "paid you", never "paid you ₹0"
+- [ ] Subtitle is `deal title · date` ("Summer Reel · 13 Aug"), not the
+      notification body
+- [ ] **Unread is a 2px neon ring around the avatar**, and there is NO dot at
+      the right-hand edge
+- [ ] Unread avatar fill is #E7EAF0, read is the flatter #EDEFEC — a scanned
+      list recedes without anything being greyed out
+- [ ] Avatars are FLAT, not the desktop feed's gradients
+- [ ] Mark all read removes every ring in one go
 - [ ] Filter chips scroll horizontally without a visible scrollbar
 
 ### Summary + priority accordion
