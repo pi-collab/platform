@@ -2987,6 +2987,24 @@ and CSS picks one, so check at 719px and 721px.
       list recedes without anything being greyed out
 - [ ] Avatars are FLAT, not the desktop feed's gradients
 - [ ] Mark all read removes every ring in one go
+
+### Tapping a notification marks it read
+- [ ] Tap an unread row: the ring clears IMMEDIATELY, before navigation
+- [ ] Come back (back gesture or re-open Notifications): it is still read —
+      the optimistic clear and the database agree
+- [ ] The "N unread" count in the summary drops by one on each tap; the header
+      never contradicts the list under it
+- [ ] Read every unread row one at a time: the summary card disappears once the
+      count hits zero and nothing is pending
+- [ ] A notification with NO deal (no link) still marks read on tap, and is
+      keyboard-reachable (Enter/Space). Otherwise those rows can only ever be
+      cleared by "Mark all read" and they hold the badge up forever
+- [ ] Under the Unread filter, tapping a row clears its ring but does NOT yank
+      the row out of the list mid-tap
+- [ ] Tapping an already-read row does not re-write read_at
+- [ ] Desktop feed is unaffected (it already marked read on click)
+- [ ] Force an RLS failure on notifications UPDATE: the server logs
+      `[notifications] mark read failed` rather than failing silently
 - [ ] Filter chips scroll horizontally without a visible scrollbar
 
 ### Summary + priority accordion

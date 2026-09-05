@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { markAllNotificationsRead } from '@/app/notifications/actions'
+import { markNotificationRead, markAllNotificationsRead } from '@/app/notifications/actions'
 import {
   getInitials, formatRupees, getBucket, matchesFilter,
   notificationSentence, BRAND_FILTERS, CREATOR_FILTERS,
@@ -59,9 +59,26 @@ export default function NotificationsMobile({
   const [allRead, setAllRead] = useState(false)
   const [open, setOpen] = useState(false)
   const [, startTransition] = useTransition()
+  /* Locally-read ids. The server action revalidates, but the tap NAVIGATES —
+     the row is a link — so without this the ring survives until the new page
+     renders and, on a back-gesture to a cached page, appears to have done
+     nothing at all. The set is the optimistic half; the action is the durable
+     half. */
+  const [readNow, setReadNow] = useState<Set<string>>(new Set())
+
+  function markRead(id: string) {
+    setReadNow((prev) => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+    startTransition(() => { markNotificationRead(id) })
+  }
 
   const filters = variant === 'creator' ? CREATOR_FILTERS : BRAND_FILTERS
-  const shown = allRead ? 0 : unreadCount
+  const locallyRead = notifications.filter((n) => !n.read_at && readNow.has(n.id)).length
+  const shown = allRead ? 0 : Math.max(0, unreadCount - locallyRead)
   const needs = priority.length
 
   function handleMarkAllRead() {
@@ -197,7 +214,7 @@ export default function NotificationsMobile({
                   const info = n.deal_id ? creatorMap[n.deal_id] : undefined
                   const who = info?.name ?? null
                   const href = n.deal_id ? `${dealLinkPrefix}/${n.deal_id}` : null
-                  const unread = !n.read_at && !allRead
+                  const unread = !n.read_at && !allRead && !readNow.has(n.id)
                   /* The amount belongs INSIDE the sentence — "paid you ₹70K" —
                      so it is passed to the template rather than rendered as a
                      figure on the right. */
@@ -233,9 +250,34 @@ export default function NotificationsMobile({
                       )}
                     </>
                   )
+                  /* A notification with no deal still marks read on tap.
+                     Otherwise those rows can never be cleared except by
+                     "Mark all read", and they keep the badge up forever. */
                   return href
-                    ? <Link key={n.id} href={href} className="notif-m__row">{inner}</Link>
-                    : <div key={n.id} className="notif-m__row">{inner}</div>
+                    ? (
+                      <Link
+                        key={n.id}
+                        href={href}
+                        className="notif-m__row"
+                        onClick={() => { if (unread) markRead(n.id) }}
+                      >
+                        {inner}
+                      </Link>
+                    )
+                    : (
+                      <div
+                        key={n.id}
+                        className="notif-m__row"
+                        role={unread ? 'button' : undefined}
+                        tabIndex={unread ? 0 : undefined}
+                        onClick={() => { if (unread) markRead(n.id) }}
+                        onKeyDown={(e) => {
+                          if (unread && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); markRead(n.id) }
+                        }}
+                      >
+                        {inner}
+                      </div>
+                    )
                 })}
               </div>
             </section>
