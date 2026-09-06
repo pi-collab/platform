@@ -6,6 +6,7 @@ import CreatorPaymentsEmpty from './CreatorPaymentsEmpty'
 import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
 import CreatorPaymentsMobile from '@/components/CreatorPaymentsMobile'
+import { unreadNotificationCount } from '@/lib/unread'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
@@ -155,6 +156,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     .eq('id', ctx.creatorId)
     .maybeSingle()
   const upiId = (creatorRow as { upi_id?: string | null } | null)?.upi_id ?? null
+  const unreadNotifs = await unreadNotificationCount(supabase, ctx.profileId)
 
   return (
     <>
@@ -171,6 +173,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         pending={pending}
         history={history}
         readyToInvoice={readyToInvoice}
+        unreadNotifications={unreadNotifs}
       />
     )}
     <main className={isEmpty ? 'creator-empty-desktop' : 'cpay-desktop'} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>

@@ -3794,3 +3794,17 @@ button.signup-form__cross-link {
     font-size: 13px; color: #878D99;
   }
 }
+
+@media (max-width: 720px) {
+  /* Unread notifications on the header bell. One class for all three mobile
+     screens — three copies would drift apart the first time one is nudged. */
+  .inbox-m__bell, .cdeals-m__bell, .cpay-m__bell { position: relative; }
+  .mbell-badge {
+    position: absolute; top: -3px; right: -3px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: #12151C; color: #fff;
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 700;
+    line-height: 16px; text-align: center;
+    box-shadow: 0 0 0 2px #F5F7FA;
+  }
+}

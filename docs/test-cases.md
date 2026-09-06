@@ -3338,3 +3338,26 @@ was marking the newest conversation read the moment the inbox loaded.
       does NOT mark it read until clicked. Under-marking is deliberate — a
       lingering badge is a nuisance, a message silently marked read is one
       nobody ever reads
+
+### Thread: no duplicates, live, emoji
+- [ ] Send a message: it appears ONCE. Not twice
+- [ ] Send several in a row: each appears once, in order
+- [ ] With the thread open on two devices, a message sent on one appears on the
+      other WITHOUT a refresh
+- [ ] Your own sent message does not arrive back as a second copy — the send
+      registers the real row id so realtime drops its own echo
+- [ ] A failed send keeps the typed text and shows the reason
+- [ ] Emoji button opens the palette; tapping one inserts it and returns focus
+      to the input; sending closes the palette
+- [ ] The palette is the SAME set as desktop (both import lib/emoji.ts)
+- [ ] Switching threads replaces the messages rather than appending to them
+
+### Unread badges
+- [ ] Bottom nav Inbox tab shows the unread MESSAGE count; it clears when the
+      threads are read
+- [ ] Header bell on inbox, deals and payments shows the unread NOTIFICATION
+      count — a different number from the inbox badge, and it must not be
+      confused with it
+- [ ] Both cap at "9+"
+- [ ] Zero shows no badge at all, not a "0"
+- [ ] Reading a thread drops the Inbox tab count on the next load

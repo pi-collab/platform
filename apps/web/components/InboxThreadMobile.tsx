@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { sendMessage } from '@/app/inbox/actions'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
+import { EMOJI_LIST } from '@/lib/emoji'
 
 /**
  * A single chat thread, mobile — built to "Creator Inbox Thread - Mobile
@@ -65,12 +67,38 @@ export default function InboxThreadMobile({
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [local, setLocal] = useState<ThreadMessage[]>([])
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const all = [...messages, ...local]
+  /* The thread owns its messages once mounted. Seeded from the server, then
+     appended to by realtime and by our own sends — never by a route refresh.
+     Refreshing was the duplicate bug: the sent message came back from the
+     server while an optimistic copy of it was still in state. */
+  const [all, setAll] = useState<ThreadMessage[]>(messages)
+  const knownIdsRef = useRef(new Set(messages.map((m) => m.id)))
 
-  // Opening a thread is reading it.
+  // A different thread means a different conversation, not more of this one.
+  useEffect(() => {
+    setAll(messages)
+    knownIdsRef.current = new Set(messages.map((m) => m.id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId])
+
+  /* Live. Ids we already hold are ignored, which is how our own send does not
+     arrive back as a second copy of itself. */
+  useRealtimeMessages(
+    dealId,
+    (msg) => {
+      if (knownIdsRef.current.has(msg.id)) return
+      knownIdsRef.current.add(msg.id)
+      setAll((prev) => [...prev, msg as ThreadMessage])
+    },
+    knownIdsRef,
+  )
+
+  // Opening a thread is reading it. The refresh is for the unread badges
+  // elsewhere on the page, not for the messages here.
   useEffect(() => {
     void markDealThreadRead(dealId).then(() => router.refresh())
   }, [dealId, router])
@@ -92,18 +120,24 @@ export default function InboxThreadMobile({
     setSending(false)
 
     if (res.status === 'error') {
+      // The text stays put. Losing what someone wrote is the worst outcome.
       setError(res.message ?? 'Could not send that message.')
       return
     }
-    /* Shown immediately, then reconciled by the refresh. The input is cleared
-       only on success — losing what someone typed because the send failed is
-       the worst outcome here. */
-    setLocal((prev) => [...prev, {
-      id: `local-${Date.now()}`, sender_party: me, body: trimmed,
-      created_at: new Date().toISOString(),
-    }])
+
+    /* Appended with the REAL id from the insert, and registered as known, so
+       realtime's echo of this same row is dropped rather than shown twice. */
+    if (res.data) {
+      knownIdsRef.current.add(res.data.id)
+      setAll((prev) => [...prev, {
+        id: res.data!.id,
+        sender_party: res.data!.sender_party as 'brand' | 'creator',
+        body: res.data!.body,
+        created_at: res.data!.created_at,
+      }])
+    }
     setBody('')
-    router.refresh()
+    setEmojiOpen(false)
   }
 
   // Day dividers are inserted between messages rather than grouping into
@@ -158,8 +192,34 @@ export default function InboxThreadMobile({
         </div>
       ) : (
         <form className="ithread-m__composer" onSubmit={submit}>
+          {emojiOpen && (
+            <div className="ithread-m__emoji" role="listbox" aria-label="Emoji">
+              {EMOJI_LIST.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => { setBody((b) => b + e); inputRef.current?.focus() }}
+                  aria-label={`Insert ${e}`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="ithread-m__field">
+            <button
+              type="button"
+              className="ithread-m__emojibtn"
+              onClick={() => setEmojiOpen((v) => !v)}
+              aria-expanded={emojiOpen}
+              aria-label="Emoji"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            </button>
             <input
+              ref={inputRef}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Message…"

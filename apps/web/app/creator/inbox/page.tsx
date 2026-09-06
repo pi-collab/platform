@@ -9,6 +9,7 @@ import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
 import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
+import { unreadNotificationCount } from '@/lib/unread'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
@@ -139,6 +140,7 @@ export default async function CreatorInboxPage({ searchParams }: {
      are mounted and CSS decides, except that the desktop view must stay
      visible on mobile once ?deal= is set — hence the conditional class rather
      than a blanket one. */
+  const unreadNotifs = profile?.id ? await unreadNotificationCount(supabase, profile.id) : 0
   const selected = searchParams?.deal ?? null
   const selectedThread = selected ? threads.find((t) => t.dealId === selected) ?? null : null
   const selectedMessages = selected
@@ -159,6 +161,7 @@ export default async function CreatorInboxPage({ searchParams }: {
           unreadByDeal={unread}
           basePath="/creator/inbox"
           notificationsHref="/creator/notifications?from=inbox"
+          unreadNotifications={unreadNotifs}
         />
       )}
       {/* The thread on a phone. Mirrors the desktop rule for a closed thread

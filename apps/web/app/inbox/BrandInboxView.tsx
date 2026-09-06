@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { EMOJI_LIST } from '@/lib/emoji'
 import { sendMessage } from './actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -31,11 +32,6 @@ interface Message {
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 const ACTIVE_STATUSES = ['negotiating', 'agreed', 'delivered', 'revision', 'approved']
 
-const EMOJI_LIST = [
-  '\u{1F60A}', '\u{1F602}', '\u{2764}\u{FE0F}', '\u{1F525}', '\u{1F44D}', '\u{1F44F}', '\u{1F389}', '\u{1F4AF}',
-  '\u{1F64F}', '\u{1F60D}', '\u{1F91D}', '\u{2705}', '\u{1F4B0}', '\u{1F680}', '\u{2B50}', '\u{1F4AA}',
-  '\u{1F440}', '\u{1F60E}', '\u{1F914}', '\u{1F4F8}', '\u{1F3AC}', '\u{1F4E9}', '\u{1F4AC}', '\u{2728}',
-]
 
 type FilterKey = 'all' | 'unread' | 'active' | 'completed'
 const FILTER_DEFS: [FilterKey, string][] = [['all', 'All'], ['unread', 'Unread'], ['active', 'Active'], ['completed', 'Completed']]

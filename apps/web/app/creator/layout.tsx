@@ -161,7 +161,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
             mobile top bar at the same breakpoint, so a creator never sees two
             navigations at once. Desktop keeps the sidebar and never renders
             this. */}
-        <CreatorTabBar initial={creatorName} />
+        <CreatorTabBar initial={creatorName} unreadInbox={unreadInbox} />
       </div>
     </>
   )

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { EMOJI_LIST } from '@/lib/emoji'
 import { sendMessage } from '@/app/inbox/actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -30,11 +31,6 @@ interface Message {
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 const ACTIVE_STATUSES = ['negotiating', 'agreed', 'delivered', 'revision', 'approved']
 
-const EMOJI_LIST = [
-  '😊', '😂', '❤️', '🔥', '👍', '👏', '🎉', '💯',
-  '🙏', '😍', '🤝', '✅', '💰', '🚀', '⭐', '💪',
-  '👀', '😎', '🤔', '📸', '🎬', '📩', '💬', '✨',
-]
 
 type FilterKey = 'all' | 'unread' | 'active' | 'completed'
 const FILTER_DEFS: [FilterKey, string][] = [['all', 'All'], ['unread', 'Unread'], ['active', 'Active'], ['completed', 'Completed']]
