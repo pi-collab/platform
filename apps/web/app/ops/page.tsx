@@ -22,14 +22,6 @@ export default async function OpsIndex() {
           : 'Outreach tools. Pipeline, creator and brand onboarding.'}
       </p>
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <Link href="/ops/playbook" style={cardStyle}>
-          <strong>Playbook</strong>
-          <span style={sub}>What we build, why, and how to pitch it</span>
-        </Link>
-        <Link href="/ops/pipeline" style={cardStyle}>
-          <strong>Pipeline</strong>
-          <span style={sub}>Track brand and creator outreach</span>
-        </Link>
         <Link href="/ops/creators" style={cardStyle}>
           <strong>Creators</strong>
           <span style={sub}>{isAdmin ? 'View, vet, and manage creators' : 'View and vet creators'}</span>
@@ -58,6 +50,14 @@ export default async function OpsIndex() {
             </Link>
           </>
         )}
+        <Link href="/ops/pipeline" style={cardStyle}>
+          <strong>Pipeline</strong>
+          <span style={sub}>Track brand and creator outreach</span>
+        </Link>
+        <Link href="/ops/playbook" style={cardStyle}>
+          <strong>Playbook</strong>
+          <span style={sub}>What we build, why, and how to pitch it</span>
+        </Link>
       </div>
     </div>
   )

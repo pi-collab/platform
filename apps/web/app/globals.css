@@ -3776,12 +3776,45 @@ button.signup-form__cross-link {
     font-family: var(--font-ui); font-size: 13.5px; color: #12151C; height: 36px;
   }
   .ithread-m__field input::placeholder { color: #9AA08C; }
-  .ithread-m__field button {
+  /* Only SEND is neon. The rule used to be `.ithread-m__field button`, which
+     also caught the emoji button and gave two controls the same weight — the
+     one that posts a message and the one that opens a palette. */
+  .ithread-m__send {
     width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: none;
     background: var(--neon); color: #12151C; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  .ithread-m__field button:disabled { opacity: .45; cursor: default; }
+  .ithread-m__send:disabled { opacity: .45; cursor: default; }
+
+  .ithread-m__emojibtn {
+    width: 30px; height: 30px; flex-shrink: 0; border: none; background: none;
+    color: #9AA08C; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    margin-left: -6px;
+  }
+  .ithread-m__emojibtn[aria-expanded="true"] { color: #12151C; }
+
+  /* A GRID, not a line. Eight per row, capped at about four rows with the rest
+     scrolling — an emoji picker that runs off the side of a phone is not a
+     picker. */
+  .ithread-m__emoji {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    margin-bottom: 8px;
+    padding: 10px 8px;
+    max-height: 184px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(18,21,28,.04), 0 10px 24px -16px rgba(18,21,28,.4);
+  }
+  .ithread-m__emoji button {
+    border: none; background: none; cursor: pointer; padding: 0;
+    height: 38px; font-size: 21px; line-height: 1; border-radius: 9px;
+  }
+  .ithread-m__emoji button:active { background: #EDEFEC; }
   .ithread-m__error {
     margin: 8px 4px 0; font-size: 12px; color: #B4454B;
   }

@@ -3394,3 +3394,23 @@ the only thing needed to change the page.
 - [ ] Shipping a significant feature prompts an ASK before any Playbook edit
 - [ ] A minor fix or refactor prompts nothing
 - [ ] Parts 1–12 are never edited without Palak asking explicitly
+
+### Thread crash and emoji (fixed)
+- [ ] **Open any thread on mobile: no "application error / client-side
+      exception".** The cause was a Supabase channel-name collision — the
+      mobile thread and the CSS-hidden desktop view both subscribed to
+      `messages-<dealId>`, and subscribing twice to one channel throws. Each
+      subscriber now has its own channel key
+- [ ] Open several different threads in a row, including an older brand deal
+- [ ] Realtime still delivers on both mobile and desktop after the split
+- [ ] Emoji button is NOT neon — only Send is. Two controls of very different
+      consequence must not carry the same weight
+- [ ] The palette opens as an 8-column GRID that fits the phone, scrolls past
+      four rows, and never runs off the side
+- [ ] Tapping an emoji inserts it and keeps focus in the input
+
+### Ops chrome
+- [ ] Nav order ends: … Offer Links, Pipeline, Playbook
+- [ ] Index cards are in the same order as the nav
+- [ ] The ops header stays pinned while scrolling a long page — check on the
+      Playbook, which is the longest

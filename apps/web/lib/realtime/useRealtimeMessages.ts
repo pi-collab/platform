@@ -19,10 +19,21 @@ interface Message {
  *
  * Returns: nothing. Fires onNewMessage for genuinely new messages only.
  */
+/**
+ * `key` distinguishes two subscribers watching the SAME deal.
+ *
+ * Supabase channels are addressed by name. When the mobile thread and the
+ * desktop split-pane are both mounted — which they are the moment a thread is
+ * open, one of them merely hidden by CSS — both asked for `messages-<dealId>`,
+ * and subscribing twice to one channel instance throws. That surfaced as
+ * "application error: a client-side exception has occurred" on opening a
+ * thread. A distinct key per subscriber keeps them on separate channels.
+ */
 export function useRealtimeMessages(
   dealId: string | null,
   onNewMessage: (msg: Message) => void,
   knownIdsRef: React.RefObject<Set<string>>,
+  key = '',
 ) {
   const callbackRef = useRef(onNewMessage)
   callbackRef.current = onNewMessage
@@ -32,7 +43,7 @@ export function useRealtimeMessages(
 
     const supabase = createClient()
     const channel = supabase
-      .channel(`messages-${dealId}`)
+      .channel(`messages-${dealId}${key ? `-${key}` : ''}`)
       .on(
         'postgres_changes',
         {
@@ -50,11 +61,11 @@ export function useRealtimeMessages(
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log(`[realtime] messages-${dealId}: subscribed`)
+          console.log(`[realtime] messages-${dealId}${key ? `-${key}` : ''}: subscribed`)
         } else if (status === 'CHANNEL_ERROR') {
-          console.error(`[realtime] messages-${dealId}: channel error`)
+          console.error(`[realtime] messages-${dealId}${key ? `-${key}` : ''}: channel error`)
         } else if (status === 'TIMED_OUT') {
-          console.warn(`[realtime] messages-${dealId}: timed out`)
+          console.warn(`[realtime] messages-${dealId}${key ? `-${key}` : ''}: timed out`)
         }
       })
 

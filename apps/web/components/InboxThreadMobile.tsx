@@ -95,6 +95,8 @@ export default function InboxThreadMobile({
       setAll((prev) => [...prev, msg as ThreadMessage])
     },
     knownIdsRef,
+    // Its own channel: the desktop view is mounted too, watching the same deal.
+    'mobile',
   )
 
   // Opening a thread is reading it. The refresh is for the unread badges
@@ -226,7 +228,7 @@ export default function InboxThreadMobile({
               aria-label="Write a message"
               disabled={sending}
             />
-            <button type="submit" disabled={sending || !body.trim()} aria-label="Send">
+            <button type="submit" className="ithread-m__send" disabled={sending || !body.trim()} aria-label="Send">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
             </button>
           </div>
