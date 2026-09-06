@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { unreadByDeal } from '@/lib/unread'
 import InboxListMobile from '@/components/InboxListMobile'
+import { resolveStatus } from '@/lib/deal-stage'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -32,13 +33,13 @@ export default async function CreatorInboxPage({ searchParams }: {
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, brands(name)')
+      .select('id, title, status, is_posted, price_paise, brands(name)')
       .not('status', 'in', '(cancelled,declined)')
       .order('created_at', { ascending: false }),
   ])
 
   const threadMap = new Map<string, {
-    dealId: string; dealTitle: string; dealStatus: string; brandName: string;
+    dealId: string; dealTitle: string; dealStatus: string; dealStage: string; brandName: string;
     brandInitials: string; lastMessage: string; senderParty: string; createdAt: string;
     amountPaise: number;
   }>()
@@ -53,6 +54,7 @@ export default async function CreatorInboxPage({ searchParams }: {
         dealId: msg.deal_id,
         dealTitle: deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
+        dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         brandName,
         brandInitials: getInitials(brandName),
         lastMessage: msg.body || '',
@@ -73,6 +75,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       dealId: deal.id,
       dealTitle: deal.title || 'Untitled deal',
       dealStatus: deal.status || '',
+      dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       brandName,
       brandInitials: getInitials(brandName),
       lastMessage: '',
@@ -142,7 +145,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       {!selected && (
         <InboxListMobile
           threads={threads.map((t) => ({
-            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus,
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus, dealStage: t.dealStage,
             name: t.brandName, initials: t.brandInitials,
             lastMessage: t.lastMessage, createdAt: t.createdAt,
           }))}

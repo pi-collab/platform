@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { STAGE } from '@/lib/deal-stage'
 
 /**
  * Inbox list, mobile — built to "Creator Inbox List - Mobile Standalone".
@@ -33,6 +34,9 @@ export interface InboxThread {
   initials: string
   lastMessage: string
   createdAt: string
+  /** Already resolved by the page (status + is_posted), so the chip here says
+   *  exactly what the deals list says for the same deal. */
+  dealStage?: string
 }
 
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
@@ -165,6 +169,7 @@ export default function InboxListMobile({
         ) : (
           rows.map((t) => {
             const unread = (unreadByDeal[t.dealId] ?? 0) > 0
+            const stage = t.dealStage ? STAGE[t.dealStage] : undefined
             return (
               <Link
                 key={t.dealId}
@@ -184,6 +189,19 @@ export default function InboxListMobile({
                       <p className="inbox-m__preview">{t.lastMessage || 'No messages yet'}</p>
                       {unread && <span className="inbox-m__dot" aria-label="Unread" />}
                     </div>
+                    {/* Where the deal has got to. Not in the mockup, and added
+                        because a message thread means little without it — the
+                        same chip, colour and wording the deals list uses, from
+                        the same map, so one deal never reads as two states. */}
+                    {stage && (
+                      <span
+                        className="inbox-m__stage"
+                        style={{ background: `color-mix(in srgb, ${stage.chipBg} 55%, #fff)` }}
+                      >
+                        <span className="inbox-m__stage-dot" style={{ background: stage.dot }} />
+                        {stage.short}
+                      </span>
+                    )}
                   </div>
                 </div>
               </Link>

@@ -89,7 +89,9 @@ export function createdDate(dateStr: string): string {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function resolveStatus(d: Deal): string {
+/* Takes only the two fields it reads, so the inbox can call it without
+   inventing the rest of a Deal. A full Deal still satisfies this. */
+export function resolveStatus(d: { status: string; is_posted: boolean | null }): string {
   if (d.status === 'declined' || d.status === 'cancelled') return d.status
   if ((d.status === 'approved' || d.status === 'complete' || d.status === 'paid') && d.is_posted === false) return 'awaiting'
   if ((d.status === 'complete' || d.status === 'paid') && d.is_posted === true) return 'posted'

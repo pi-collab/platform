@@ -105,7 +105,12 @@ export default function BrandInboxView({
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mobileChat, setMobileChat] = useState(false)
+  /* Open on arrival when the URL already names a deal.
+     This was hardcoded false and only flipped by a tap INSIDE this view, so
+     coming from the mobile inbox list at ?deal=<id> selected the thread but
+     left the pane translated off-screen — and what you saw was this view's own
+     list, which reads as "the tap sent me back to the list". */
+  const [mobileChat, setMobileChat] = useState(Boolean(initialDealId))
   const [filter, setFilter] = useState<FilterKey>('all')
   const [query, setQuery] = useState('')
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -366,7 +371,7 @@ export default function BrandInboxView({
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                      <button onClick={() => setMobileChat(false)} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
+                      <button onClick={() => { setMobileChat(false); router.push('/inbox') }} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                       </button>
                       {selectedThread.creatorPhoto ? (

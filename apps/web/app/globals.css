@@ -3647,3 +3647,17 @@ button.signup-form__cross-link {
     font-family: var(--font-ui); font-size: 13.5px; color: #565C68; line-height: 1.6;
   }
 }
+
+@media (max-width: 720px) {
+  /* Deal stage on an inbox row. Same map, same colours and same wording as the
+     deals list — a thread and its deal must never read as two different
+     states. Sits under the preview so the name/time and preview/unread rows
+     keep their alignment. */
+  .inbox-m__stage {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    padding: 5px 11px; border-radius: 999px;
+    font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+    white-space: nowrap; color: #3A3D33;
+  }
+  .inbox-m__stage-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+}

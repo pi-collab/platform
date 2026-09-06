@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import InboxListMobile from '@/components/InboxListMobile'
+import { resolveStatus } from '@/lib/deal-stage'
 import { unreadByDeal } from '@/lib/unread'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrandInboxView from './BrandInboxView'
@@ -30,13 +31,13 @@ export default async function BrandInboxPage({ searchParams }: {
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, creators(full_name, profile_photo_url)')
+      .select('id, title, status, is_posted, price_paise, creators(full_name, profile_photo_url)')
       .not('status', 'in', '(cancelled,declined)')
       .order('created_at', { ascending: false }),
   ])
 
   const threadMap = new Map<string, {
-    dealId: string; dealTitle: string; dealStatus: string; creatorName: string;
+    dealId: string; dealTitle: string; dealStatus: string; dealStage: string; creatorName: string;
     creatorPhoto: string | null; creatorInitials: string; lastMessage: string;
     senderParty: string; createdAt: string; amountPaise: number;
   }>()
@@ -51,6 +52,7 @@ export default async function BrandInboxPage({ searchParams }: {
         dealId: msg.deal_id,
         dealTitle: deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
+        dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         creatorName,
         creatorPhoto: creatorObj?.profile_photo_url || null,
         creatorInitials: getInitials(creatorName),
@@ -73,6 +75,7 @@ export default async function BrandInboxPage({ searchParams }: {
       dealId: deal.id,
       dealTitle: deal.title || 'Untitled deal',
       dealStatus: deal.status || '',
+      dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       creatorName,
       creatorPhoto: creatorObj?.profile_photo_url || null,
       creatorInitials: getInitials(creatorName),
@@ -107,7 +110,7 @@ export default async function BrandInboxPage({ searchParams }: {
       {!selected && (
         <InboxListMobile
           threads={threads.map((t) => ({
-            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus,
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus, dealStage: t.dealStage,
             name: t.creatorName, initials: t.creatorInitials,
             lastMessage: t.lastMessage, createdAt: t.createdAt,
           }))}

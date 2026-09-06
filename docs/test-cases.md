@@ -3248,3 +3248,27 @@ screen is its own design we do not have.
 - [ ] Counts on the chips match the rows each produces
 - [ ] Empty results say which case it is: no match for a search, "all caught
       up" for unread, "no conversations yet" otherwise
+
+### Tapping a row must OPEN THE THREAD (bug fixed)
+`mobileChat` in both inbox views was hardcoded false and only flipped by a tap
+inside that view. Arriving from the new list at `?deal=` selected the thread but
+left the pane translated off-screen, so what showed was that view's OWN older
+list — which reads as "the tap sent me back to the list".
+- [ ] Tap a row on mobile: the THREAD opens, not a list
+- [ ] Back from the thread returns to the NEW list (URL drops `?deal=`), not the
+      old in-view list
+- [ ] Deep-linking straight to `/creator/inbox?deal=<id>` on a phone opens the
+      thread
+- [ ] Same on `/inbox` for brands
+- [ ] Desktop is unaffected — both panes still show side by side
+
+### Deal stage on the row
+- [ ] Every row shows the deal's stage as a chip below the preview
+- [ ] The chip matches the DEALS LIST exactly for the same deal — same wording,
+      same colour, same dot. Both read `STAGE` in lib/deal-stage.ts
+- [ ] An `approved` + posted deal reads "Paid"; `approved` + not posted reads
+      "Awaiting post". This is why the query carries `is_posted`: without it
+      `approved` has no entry in the map and the chip would vanish
+- [ ] The chip is mobile-only — the desktop view is unchanged
+- [ ] The Active/Completed filters still use the RAW status, so widening the
+      row display did not change what a filter matches
