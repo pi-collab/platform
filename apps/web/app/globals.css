@@ -3109,7 +3109,7 @@ button.signup-form__cross-link {
   }
   .notif-m__priority-foot {
     display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-    margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDEFEC;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(60,80,30,.08);
   }
   .notif-m__waiting {
     flex: 1; font-family: var(--font-ui); font-size: 11.5px;
@@ -3840,13 +3840,16 @@ button.signup-form__cross-link {
   /* Unread notifications on the header bell. One class for all three mobile
      screens — three copies would drift apart the first time one is nudged. */
   .inbox-m__bell, .cdeals-m__bell, .cpay-m__bell { position: relative; }
+  /* Neon, per the design's unread dot — but keeping the count, which is the
+     more useful half. Ink on neon rather than white on ink: the brand colour
+     is the signal, and it is only legible with dark text on it. */
   .mbell-badge {
-    position: absolute; top: -3px; right: -3px;
+    position: absolute; top: -4px; right: -4px;
     min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
-    background: #12151C; color: #fff;
+    background: #E8FF66; color: #12151C;
     font-family: var(--font-ui); font-size: 9.5px; font-weight: 700;
     line-height: 16px; text-align: center;
-    box-shadow: 0 0 0 2px #F5F7FA;
+    border: 1.5px solid #fff;
   }
 }
 
@@ -3893,18 +3896,22 @@ button.signup-form__cross-link {
 
   .cdash-m__stack { padding: 4px 18px 0; display: flex; flex-direction: column; gap: 36px; }
 
+  /* .mcard from the export. */
   .cdash-m__card {
     background: #fff; border-radius: 20px; padding: 22px;
-    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
   }
   .cdash-m__card--flush { padding: 0; overflow: hidden; }
   .cdash-m__cardhead {
     display: flex; align-items: center; justify-content: space-between;
     padding-bottom: 14px; border-bottom: 1px solid #EDEFEC;
   }
+  /* .t-meta in the export: 9.5px, .14em, and #565C68 — a blue-grey. I had it
+     at 11px/.04em in #9AA08C, which is a different colour family entirely. */
   .cdash-m__meta {
-    font-family: var(--font-ui); font-size: 11px; font-weight: 500;
-    letter-spacing: .04em; text-transform: uppercase; color: #9AA08C;
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 500;
+    line-height: 1.4; letter-spacing: .14em; text-transform: uppercase;
+    color: #565C68;
   }
   .cdash-m__period {
     border: none; outline: none; background: transparent;
@@ -3916,13 +3923,13 @@ button.signup-form__cross-link {
      one panel, which is what a glance wants. */
   .cdash-m__kpis { display: grid; grid-template-columns: 1fr 1fr; margin-top: 8px; }
   .cdash-m__kpi { padding: 14px 0; }
-  .cdash-m__kpi--right { padding-left: 18px; border-left: 1px solid #EDEFEC; }
-  .cdash-m__kpi--top { border-top: 1px solid #EDEFEC; }
+  .cdash-m__kpi--right { padding-left: 18px; border-left: 1px solid rgba(60,80,30,.08); }
+  .cdash-m__kpi--top { border-top: 1px solid rgba(60,80,30,.08); }
   .cdash-m__figure {
     font-family: var(--font-ui); font-weight: 600; letter-spacing: -0.03em;
     font-size: 28px; margin: 8px 0 6px; color: #12151C;
   }
-  .cdash-m .tnum { font-variant-numeric: tabular-nums; }
+  .cdash-m .tnum { font-variant-numeric: tabular-nums; font-family: 'Sora', var(--font-ui), sans-serif; }
 
   .cdash-m__sechead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .cdash-m__sechead--split { justify-content: space-between; }
@@ -3944,7 +3951,7 @@ button.signup-form__cross-link {
     display: flex; align-items: center; gap: 12px; padding: 16px 18px;
     text-decoration: none; color: inherit;
   }
-  .cdash-m__action + .cdash-m__action { border-top: 1px solid #EDEFEC; }
+  .cdash-m__action + .cdash-m__action { border-top: 1px solid rgba(60,80,30,.08); }
   .cdash-m__actiontitle {
     font-family: var(--font-ui); font-weight: 600; font-size: 14px;
     margin-bottom: 4px;
@@ -3959,7 +3966,7 @@ button.signup-form__cross-link {
   .cdash-m__motion { display: flex; flex-direction: column; gap: 12px; }
   .cdash-m__deal {
     display: block; background: #fff; border-radius: 18px; padding: 18px;
-    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
     text-decoration: none; color: inherit;
   }
   .cdash-m__dealtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -3973,7 +3980,7 @@ button.signup-form__cross-link {
   }
   .cdash-m__dealfoot {
     display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    margin-top: 14px; padding-top: 12px; border-top: 1px solid #EDEFEC;
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,80,30,.08);
   }
   .cdash-m__dealtitle {
     font-size: 12.5px; color: #565C68; min-width: 0;
@@ -3990,12 +3997,12 @@ button.signup-form__cross-link {
     background: var(--neon); border-radius: 6px 6px 3px 3px; min-height: 3px;
   }
   .cdash-m__barlabel {
-    font-family: var(--font-ui); font-size: 10px; color: #9AA08C;
+    font-family: var(--font-ui); font-size: 10px; color: #878D99;
     text-align: center; margin-top: 8px;
   }
   .cdash-m__chartfoot {
     display: flex; align-items: baseline; justify-content: space-between;
-    padding-top: 14px; border-top: 1px solid #EDEFEC;
+    padding-top: 14px; border-top: 1px solid rgba(60,80,30,.08);
   }
   .cdash-m__chartpeak {
     font-family: var(--font-ui); font-weight: 700; font-size: 15px;
@@ -4005,7 +4012,7 @@ button.signup-form__cross-link {
 @media (max-width: 720px) {
   .cdash-m__split {
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
-    margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDEFEC;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(60,80,30,.08);
   }
   .cdash-m__splitval {
     font-family: var(--font-ui); font-weight: 600; font-size: 16px;
@@ -4013,10 +4020,10 @@ button.signup-form__cross-link {
   }
   .cdash-m__note {
     margin: 14px 0 0; font-family: var(--font-ui); font-size: 11.5px;
-    color: #9AA08C; line-height: 1.5;
+    color: #878D99; line-height: 1.5;
   }
   .cdash-m__brandrow { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
-  .cdash-m__brandrow + .cdash-m__brandrow { border-top: 1px solid #EDEFEC; }
+  .cdash-m__brandrow + .cdash-m__brandrow { border-top: 1px solid rgba(60,80,30,.08); }
   .cdash-m__brandmark {
     width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
     background: linear-gradient(135deg,#E7F1FC,#F0EAFD);

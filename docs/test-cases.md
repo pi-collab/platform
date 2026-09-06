@@ -3496,3 +3496,22 @@ computes for desktop.
 - [ ] The current section's tab is inked and carries the lime marker; the rest
       are muted. Check Dashboard, Deals, Inbox, Payments and Profile
 - [ ] Opening a deal keeps Deals highlighted (`startsWith`, not equality)
+
+### Colours match the export's own tokens
+I had hardcoded approximations instead of reading the design's variables.
+- [ ] Meta/label text is #565C68 at 9.5px with .14em tracking — NOT #9AA08C at
+      11px. Those are different colour families, and it was the most visible miss
+- [ ] Cards use the export's shadow (a 1px lift plus a soft drop), not a single
+      long shadow
+- [ ] Hairlines are the warm translucent rule rgba(60,80,30,.08), not flat grey
+- [ ] Figures render in Sora (the export's --font-num), tabular
+
+### Guapd green highlights
+- [ ] The active bottom-nav tab is GREEN (#4F6B12) with the neon bar under it,
+      not merely darker ink
+- [ ] It is legible: pure #E8FF66 on white at 10.5px is a highlighter colour
+      and fails contrast, which is why the readable weight of the same green is
+      used for the label and the bright value stays on the bar
+- [ ] The unread notification badge is NEON with ink text, bordered white — the
+      count is kept, since a number is more useful than a plain dot
+- [ ] Zero unread shows no badge at all

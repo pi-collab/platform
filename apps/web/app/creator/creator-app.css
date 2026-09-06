@@ -39,6 +39,7 @@
 
   --card: #ffffff;
   --lime-400: #e8ff66;
+  --lime-700: #4f6b12;
   /* The ink used ON lime. Near-black with a green cast, so a neon button
      does not pair a warm fill with a cold text colour. */
   --lime-950: #161b08;
@@ -183,8 +184,14 @@
 
 /* The active tab is marked twice — colour AND a neon underline. Colour alone
    fails for anyone who cannot separate these two greys. */
+/* Guapd green, in the readable weight of it.
+   The active tab used plain ink, which reads as "slightly darker" rather than
+   as selected. Pure --lime-400 (#E8FF66) is not an option for a 10.5px label
+   on white — it is a highlighter colour and fails contrast badly. The design
+   system already ships the answer: --lime-700 (#4F6B12) is the same green
+   pitched for text. The neon bar underneath carries the bright value. */
 .creator-tab[aria-current='page'] {
-  color: var(--ink);
+  color: var(--lime-700, #4F6B12);
 }
 
 .creator-tab__marker {
