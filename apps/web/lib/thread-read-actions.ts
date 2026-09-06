@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { markThreadRead } from '@/lib/unread'
+import { revalidatePath } from 'next/cache'
 
 /**
  * Mark this deal's thread read for whoever is signed in.
@@ -43,6 +44,12 @@ export async function markDealThreadRead(dealId: string): Promise<void> {
 
   try {
     await markThreadRead(profile.id, dealId)
+    /* Drop the cached inbox. Without this the marker is written but the list a
+       reader navigates back to is served from cache, still wearing the badge
+       for a thread they just read. Both inboxes, because this action is
+       route-neutral and does not know which side called it. */
+    revalidatePath('/creator/inbox')
+    revalidatePath('/inbox')
   } catch (err) {
     // Logged, not silent. A swallowed failure here is invisible: the only
     // symptom is a badge that will not clear, which is exactly what happened.

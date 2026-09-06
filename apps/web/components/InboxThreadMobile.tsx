@@ -71,19 +71,40 @@ export default function InboxThreadMobile({
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  /* The thread owns its messages once mounted. Seeded from the server, then
-     appended to by realtime and by our own sends — never by a route refresh.
-     Refreshing was the duplicate bug: the sent message came back from the
-     server while an optimistic copy of it was still in state. */
+  /* Messages are MERGED BY ID, never replaced and never ignored.
+     The first version ignored the server after mount, to stop a sent message
+     arriving back as a duplicate of its own optimistic copy. That killed the
+     duplicate and created a worse bug: returning to a thread you had already
+     opened served Next's cached payload, the refresh fetched the real one, and
+     because the deal id had not changed the newer messages were dropped on the
+     floor. You saw the thread you left, not the thread as it is.
+     Merging by id solves both — a message we already hold is skipped whatever
+     door it came through. */
   const [all, setAll] = useState<ThreadMessage[]>(messages)
   const knownIdsRef = useRef(new Set(messages.map((m) => m.id)))
 
-  // A different thread means a different conversation, not more of this one.
+  // A different thread is a different conversation, not more of this one.
   useEffect(() => {
     setAll(messages)
     knownIdsRef.current = new Set(messages.map((m) => m.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dealId])
+
+  /* Fold in anything the server has that we do not. Keyed on a signature
+     rather than the array, which is a new object on every render. */
+  const serverSig = `${messages.length}:${messages[messages.length - 1]?.id ?? ''}`
+  useEffect(() => {
+    setAll((prev) => {
+      const held = new Set(prev.map((m) => m.id))
+      const additions = messages.filter((m) => !held.has(m.id))
+      if (additions.length === 0) return prev
+      for (const m of additions) knownIdsRef.current.add(m.id)
+      return [...prev, ...additions].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      )
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverSig])
 
   /* Live. Ids we already hold are ignored, which is how our own send does not
      arrive back as a second copy of itself. */
@@ -93,6 +114,11 @@ export default function InboxThreadMobile({
       if (knownIdsRef.current.has(msg.id)) return
       knownIdsRef.current.add(msg.id)
       setAll((prev) => [...prev, msg as ThreadMessage])
+      /* Arriving while you are looking at it counts as read. Marking only on
+         mount meant a message that landed WHILE the thread was open stayed
+         unread — so leaving and coming back showed a badge for something you
+         had already watched appear. */
+      if (msg.sender_party !== me) void markDealThreadRead(dealId)
     },
     knownIdsRef,
     // Its own channel: the desktop view is mounted too, watching the same deal.
