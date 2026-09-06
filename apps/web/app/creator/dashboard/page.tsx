@@ -192,23 +192,35 @@ export default async function CreatorDashboardPage({
   const emptyHandle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
   const emptyHandleLine = emptyHandle ? `@${emptyHandle}` : 'Finish your profile to get discovered'
 
-  /* Followers beside the handle. Their OWN stated figure — a follower_count if
-     they gave one, otherwise the band they picked. Never derived, never
-     rounded up: this sits on the screen a creator screenshots. */
-  const followersLabel = (() => {
-    const accounts = creatorRow?.social_accounts
-    if (Array.isArray(accounts)) {
-      for (const a of accounts as Record<string, unknown>[]) {
-        const n = a?.follower_count
-        if (typeof n === 'number' && n > 0) {
-          if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
-          if (n >= 1_000) return `${Math.round(n / 1_000)}K`
-          return String(n)
-        }
-      }
-    }
-    return followerRangeOf(accounts)
+  /* Followers beside the handle.
+     PREFER THE VERIFIED COUNT. Instagram's snapshot holds the real number; the
+     follower_range on social_accounts is what the creator picked from a
+     dropdown at signup and can be wrong by orders of magnitude — this very
+     account states "100k – 500k" against a verified 536. Showing a band we
+     know to be false, while holding the true figure, is the worst of both.
+     The range is only a fallback for creators who have not connected.
+     Read with the admin client: the connections table is deny-all under RLS. */
+  const { data: igRow } = await createAdminClient()
+    .from('creator_instagram_connections')
+    .select('snapshot, status')
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  const verifiedFollowers = (() => {
+    if (!igRow || igRow.status !== 'connected') return null
+    const n = (igRow.snapshot as { followersCount?: unknown } | null)?.followersCount
+    return typeof n === 'number' && n >= 0 ? n : null
   })()
+
+  function compactCount(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`
+    return n.toLocaleString('en-IN')
+  }
+
+  const followersLabel = verifiedFollowers !== null
+    ? compactCount(verifiedFollowers)
+    : followerRangeOf(creatorRow?.social_accounts)
 
   // Rendered alongside the real dashboard rather than instead of it. This is a
   // transcription of a MOBILE export; returning it early fired at every width,

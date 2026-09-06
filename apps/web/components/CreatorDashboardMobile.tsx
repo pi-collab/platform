@@ -118,6 +118,9 @@ export default function CreatorDashboardMobile({
 
   return (
     <div className="cdash-m">
+      {/* Only the greeting row pins. The handle and follower line scrolls away
+          with the page — it is context you read once, not a control you reach
+          for, and pinning it costs a third of a phone screen. */}
       <header className="cdash-m__head">
         <div style={{ minWidth: 0 }}>
           <h1 className="cdash-m__hi">
@@ -127,9 +130,6 @@ export default function CreatorDashboardMobile({
               <span className="cdash-m__hi-mark" aria-hidden="true" />
             </span>
           </h1>
-          <div className="cdash-m__handle">
-            {handleLine}{followersLabel && <> &middot; {followersLabel} followers</>}
-          </div>
         </div>
         <div className="cdash-m__headactions">
           {shopfrontSlug && (
@@ -150,6 +150,10 @@ export default function CreatorDashboardMobile({
           </Link>
         </div>
       </header>
+
+      <div className="cdash-m__handle">
+        {handleLine}{followersLabel && <> &middot; {followersLabel} followers</>}
+      </div>
 
       <div className="cdash-m__stack">
         {/* ── Overview ── */}

@@ -3631,3 +3631,20 @@ the same horizontal overflow WITHOUT creating a scroll container.
 - [ ] "Hey, <name>" renders at 34px
 - [ ] A long name truncates with an ellipsis rather than pushing the Shopfront
       pill off the screen
+
+### Followers: the verified count, not the self-declared band
+- [ ] With Instagram connected, the handle line shows the VERIFIED count from
+      the snapshot (e.g. "536 followers"), not the signup range
+- [ ] Staging's palak_pj states "100k – 500k" against a verified 536. Showing
+      the band while holding the true number is the case this fixes
+- [ ] Without a connection it falls back to the stated range
+- [ ] With neither, the line is just the handle — nothing invented
+- [ ] 1,200,000 → 1.2M; 536 → 536; 12,000 → 12K
+- [ ] Read via the admin client — `creator_instagram_connections` is deny-all
+      under RLS, so a session-client read returns nothing and the count would
+      silently fall back to the range
+
+### What is sticky
+- [ ] Pinned: the greeting, Shopfront and the bell
+- [ ] Scrolls away: the handle and follower line
+- [ ] Cards pass cleanly under the pinned row

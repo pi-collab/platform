@@ -4200,10 +4200,11 @@ button.signup-form__cross-link {
   }
   .cdash-desktop { display: none !important; }
 
+  /* Sticky: the greeting, Shopfront and the bell. Nothing else. */
   .cdash-m__head {
     position: sticky; top: 0; z-index: 6; background: #F5F7FA;
-    padding: 22px 18px 18px;
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    padding: 22px 18px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
   }
   .cdash-m__hi {
     font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
@@ -4211,8 +4212,9 @@ button.signup-form__cross-link {
     overflow: hidden; text-overflow: ellipsis;
   }
   .cdash-m__hi-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+  /* Scrolls with the page — see the note in the component. */
   .cdash-m__handle {
-    font-size: 12.5px; color: var(--wg500); margin-top: 6px;
+    font-size: 12.5px; color: var(--wg500); padding: 0 18px 14px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .cdash-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
