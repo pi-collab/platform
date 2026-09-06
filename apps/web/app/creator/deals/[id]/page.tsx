@@ -207,9 +207,9 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
            otherwise the terms line above already says it in full. */
         paymentIn={(() => {
           const t = deal.payment_terms
-          if (typeof t !== 'string') return null
-          const m = /(\d+)\s*(day|d)\b/i.exec(t)
-          return m ? `${m[1]} days` : null
+          const m = typeof t === 'string' ? /(\d+)\s*(day|d)\b/i.exec(t) : null
+          // 30 days is the platform default when the terms do not state one.
+          return m ? `${m[1]} days` : '30 days'
         })()}
         deliverBy={deal.timeline_date
           ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })

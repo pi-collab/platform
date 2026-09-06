@@ -49,11 +49,12 @@
   font-family: var(--font-ui);
   /* The tab bar is fixed, so every screen reserves its height plus the home
      indicator. Without this the last row of content sits under the bar. */
-  /* The tab bar, and nothing more. The banner's extra clearance is added only
-     while the banner is actually up (see below) — reserving it permanently left
-     a half-screen of dead space under every page for the entire life of the
-     account, to solve a problem that exists for one dismissal. */
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  /* The tab bar (~62px) plus room to breathe. At exactly the bar's height the
+     last element finishes flush against it and an expanded section is clipped.
+     The banner's extra clearance is added only while the banner is up (below) —
+     reserving it permanently left half a screen of dead space for the life of
+     the account, to solve a problem that exists for one dismissal. */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
   min-height: 100dvh;
 }
 

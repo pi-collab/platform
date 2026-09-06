@@ -177,8 +177,15 @@ export default function AcceptDecline({
         ? { display: 'flex', flexDirection: 'column-reverse', gap: 14 }
         : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         {/* Left: info text + decline link */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: stacked ? undefined : 380 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+        {/* On a phone the note and the decline are centred under the buttons,
+            as their own line. The info icon is dropped there: an icon beside
+            centred text drags it off-centre for no added meaning. */}
+        <div style={stacked
+          ? { display: 'block', textAlign: 'center' }
+          : { display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 380 }}>
+          {!stacked && (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+          )}
           <div>
             <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
               Accepting locks the terms above. Countering opens a negotiation.
@@ -187,7 +194,9 @@ export default function AcceptDecline({
               onClick={() => setDeclining(true)}
               disabled={loading}
               className="viewlink"
-              style={declineLinkStyle}
+              style={stacked
+                ? { ...declineLinkStyle, display: 'block', width: '100%', textAlign: 'center', marginTop: 12, padding: '10px 0' }
+                : declineLinkStyle}
             >
               Decline this offer
             </button>

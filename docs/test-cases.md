@@ -3691,3 +3691,25 @@ toolbar's worth of scroll at the bottom no matter how little padding it had.
       their last element
 - [ ] The last element still clears the tab bar and the home indicator
 - [ ] Nothing scrolls sideways
+
+### Bottom clearance
+`.creator-app` is the single source. 210px (permanent banner allowance) was
+half a dead screen; 64px equalled the tab bar exactly, so content finished
+flush against it and an expanded fold was clipped. It is 96px + safe area.
+- [ ] Scroll to the bottom of dashboard, deals, payments, inbox: a comfortable
+      gap under the last element, not a dead screen and not a flush edge
+- [ ] On the offer screen, EXPAND "Full terms" at the bottom — the last row is
+      fully readable and clears the tab bar
+- [ ] While the cookie banner is up, content clears the banner too
+- [ ] Dismiss the banner: the extra clearance disappears on the next render
+
+### Offer decision buttons
+- [ ] Accept and Counter are full width, 50px, stacked, Accept on top
+- [ ] The note and "Decline this offer" are CENTRED beneath them, on their own
+      line; the info icon is dropped there (it drags centred text off-centre)
+- [ ] Desktop is unchanged: side-by-side buttons, icon and note on the left
+- [ ] Decline still opens the confirm flow
+
+### Payment window
+- [ ] "Payment in" reads the day count from the agreed terms when they state one
+- [ ] Falls back to "30 days" — the platform default — rather than a dash
