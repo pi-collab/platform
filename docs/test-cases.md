@@ -3596,3 +3596,14 @@ percentage over zero deals is nothing, not 100%.
 - [ ] A snapped card never sits flush against the screen edge
 - [ ] Cards are landscape rectangles, not squares — a short deal title no
       longer collapses the card
+
+### Header followers and bottom spacing
+- [ ] Handle line reads "@handle · 500K followers" when a social account states
+      a follower_count, falling back to the band they picked
+- [ ] A creator who has stated NEITHER sees just the handle — no invented figure
+- [ ] 1,200,000 renders as 1.2M; 500,000 as 500K; 940 as 940
+- [ ] The page stops just below the last card — no dead screen between it and
+      the tab bar
+- [ ] The last card is still fully clear of the tab bar, including on a phone
+      with a home indicator (safe-area inset)
+- [ ] Header stays pinned while scrolling and cards pass cleanly underneath it

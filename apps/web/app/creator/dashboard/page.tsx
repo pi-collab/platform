@@ -4,6 +4,7 @@ import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
 import { unreadNotificationCount } from '@/lib/unread'
 import { computeTrackRecord, formatResponse } from '@/lib/creator-track-record'
+import { followerRangeOf } from '@/lib/follower-range'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
@@ -190,6 +191,24 @@ export default async function CreatorDashboardPage({
   // own dashboard is a number they will immediately know is wrong.
   const emptyHandle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
   const emptyHandleLine = emptyHandle ? `@${emptyHandle}` : 'Finish your profile to get discovered'
+
+  /* Followers beside the handle. Their OWN stated figure — a follower_count if
+     they gave one, otherwise the band they picked. Never derived, never
+     rounded up: this sits on the screen a creator screenshots. */
+  const followersLabel = (() => {
+    const accounts = creatorRow?.social_accounts
+    if (Array.isArray(accounts)) {
+      for (const a of accounts as Record<string, unknown>[]) {
+        const n = a?.follower_count
+        if (typeof n === 'number' && n > 0) {
+          if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
+          if (n >= 1_000) return `${Math.round(n / 1_000)}K`
+          return String(n)
+        }
+      }
+    }
+    return followerRangeOf(accounts)
+  })()
 
   // Rendered alongside the real dashboard rather than instead of it. This is a
   // transcription of a MOBILE export; returning it early fired at every width,
@@ -392,7 +411,7 @@ export default async function CreatorDashboardPage({
       <CreatorDashboardMobile
         firstName={firstName}
         handleLine={emptyHandleLine}
-        followersLabel={null}
+        followersLabel={followersLabel}
         shopfrontSlug={storefront?.is_published ? storefront.slug : null}
         period={period}
         totalEarnedPaise={totalEarned}

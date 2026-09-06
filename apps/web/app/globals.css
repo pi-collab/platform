@@ -4189,7 +4189,7 @@ button.signup-form__cross-link {
 @media (max-width: 720px) {
   .cdash-m {
     display: block; background: #F5F7FA; min-height: 100vh;
-    padding-bottom: 100px; color: #12151C;
+    padding-bottom: calc(74px + env(safe-area-inset-bottom)); color: #12151C;
     --meta: #565C68; --hair: rgba(60,80,30,.08); --line: rgba(60,80,30,.10);
     --amber: #B67C15; --lime700: #4F6B12; --lime950: #161B08;
     --wg500: #565C68; --wg600: #4A505C; --secmid: #E4ECF3;
@@ -4223,7 +4223,7 @@ button.signup-form__cross-link {
     background: #fff; color: #12151C; box-shadow: 0 6px 14px -10px rgba(40,45,25,.3);
   }
 
-  .cdash-m__stack { padding: 4px 18px 0; display: flex; flex-direction: column; gap: 36px; }
+  .cdash-m__stack { padding: 4px 18px 8px; display: flex; flex-direction: column; gap: 36px; }
 
   /* .mcard */
   .cdash-m__card {
