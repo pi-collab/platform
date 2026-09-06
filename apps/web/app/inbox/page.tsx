@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import InboxListMobile from '@/components/InboxListMobile'
+import InboxThreadMobile from '@/components/InboxThreadMobile'
+import { resolveStatus } from '@/lib/deal-stage'
 import { unreadByDeal } from '@/lib/unread'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrandInboxView from './BrandInboxView'
@@ -29,13 +32,13 @@ export default async function BrandInboxPage({ searchParams }: {
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, creators(full_name, profile_photo_url)')
+      .select('id, title, status, is_posted, price_paise, creators(full_name, profile_photo_url)')
       .not('status', 'in', '(cancelled,declined)')
       .order('created_at', { ascending: false }),
   ])
 
   const threadMap = new Map<string, {
-    dealId: string; dealTitle: string; dealStatus: string; creatorName: string;
+    dealId: string; dealTitle: string; dealStatus: string; dealStage: string; creatorName: string;
     creatorPhoto: string | null; creatorInitials: string; lastMessage: string;
     senderParty: string; createdAt: string; amountPaise: number;
   }>()
@@ -50,6 +53,7 @@ export default async function BrandInboxPage({ searchParams }: {
         dealId: msg.deal_id,
         dealTitle: deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
+        dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         creatorName,
         creatorPhoto: creatorObj?.profile_photo_url || null,
         creatorInitials: getInitials(creatorName),
@@ -72,6 +76,7 @@ export default async function BrandInboxPage({ searchParams }: {
       dealId: deal.id,
       dealTitle: deal.title || 'Untitled deal',
       dealStatus: deal.status || '',
+      dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       creatorName,
       creatorPhoto: creatorObj?.profile_photo_url || null,
       creatorInitials: getInitials(creatorName),
@@ -97,7 +102,54 @@ export default async function BrandInboxPage({ searchParams }: {
     created_at: m.created_at,
   }))
 
-  return <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
+  // Same list, same component. Only the counterpart differs: a brand sees the
+  // creator's name where a creator sees the brand's.
+  const selected = searchParams?.deal ?? null
+  const selectedThread = selected ? threads.find((t) => t.dealId === selected) ?? null : null
+  const selectedMessages = selected
+    ? allMessages
+        .filter((m) => m.deal_id === selected)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : []
+
+  return (
+    <>
+      {!selected && (
+        <InboxListMobile
+          threads={threads.map((t) => ({
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus, dealStage: t.dealStage,
+            name: t.creatorName, initials: t.creatorInitials,
+            lastMessage: t.lastMessage, createdAt: t.createdAt,
+          }))}
+          unreadByDeal={unread}
+          basePath="/inbox"
+          notificationsHref="/notifications"
+        />
+      )}
+      {/* The thread on a phone. Mirrors the desktop rule for a closed thread
+          rather than introducing a second one — see the component's note. */}
+      {selectedThread && (
+        <InboxThreadMobile
+          dealId={selectedThread.dealId}
+          name={selectedThread.creatorName}
+          initials={selectedThread.creatorInitials}
+          messages={selectedMessages}
+          me="brand"
+          backHref="/inbox"
+          dealHref={`/deals/${selectedThread.dealId}`}
+          closedNotice={
+            ['complete', 'declined', 'cancelled'].includes(selectedThread.dealStatus)
+              ? `This deal is ${selectedThread.dealStatus}, so messaging is closed.`
+              : null
+          }
+          hasTabBar={false}
+        />
+      )}
+      <div className={selected ? 'inbox-thread-only inbox-hide-mobile' : 'inbox-hide-mobile'}>
+        <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
+      </div>
+    </>
+  )
 }
 
 function getInitials(name: string): string {

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import NotificationFeed from '@/components/NotificationFeed'
+import NotificationsMobile from '@/components/NotificationsMobile'
+import { pendingForCreator } from '@/lib/notification-priority'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState, { BellIcon } from '@/components/creator/CreatorEmptyState'
 import type { Metadata } from 'next'
@@ -21,7 +23,7 @@ function backFrom(from: string | undefined) {
 
 export default async function CreatorNotificationsPage({ searchParams }: { searchParams?: { from?: string } }) {
   const backHref = backFrom(searchParams?.from)
-  await verifyCreator()
+  const { creatorId } = await verifyCreator()
   const supabase = createClient()
 
   const { data: notifications } = await supabase
@@ -33,14 +35,21 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
   const all = notifications ?? []
   const unreadCount = all.filter((n) => !n.read_at).length
 
+  /* Offers still awaiting an answer. Asked of the deals table rather than
+     counted from unread `offer_sent` rows: a notification says something
+     happened, this card claims something is still outstanding, and a creator
+     who already replied elsewhere would otherwise be nagged about finished
+     work. */
+  const priority = await pendingForCreator(supabase, creatorId)
+
   // For creator side, the "other party" is the brand — fetch brand names + prices
   const dealIds = Array.from(new Set(all.map((n) => n.deal_id).filter(Boolean))) as string[]
-  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null }> = {}
+  let creatorMap: Record<string, { name: string; photo: string | null; pricePaise: number | null; title: string | null }> = {}
 
   if (dealIds.length > 0) {
     const { data: deals } = await supabase
       .from('deals')
-      .select('id, price_paise, brands(name)')
+      .select('id, title, price_paise, brands(name)')
       .in('id', dealIds)
 
     if (deals) {
@@ -48,7 +57,7 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
         const raw = d.brands as unknown
         const brand = Array.isArray(raw) ? raw[0] : (raw as { name: string } | null)
         if (brand) {
-          creatorMap[d.id] = { name: brand.name, photo: null, pricePaise: d.price_paise }
+          creatorMap[d.id] = { name: brand.name, photo: null, pricePaise: d.price_paise, title: d.title }
         }
       }
     }
@@ -74,7 +83,20 @@ export default async function CreatorNotificationsPage({ searchParams }: { searc
         />
       </main>
     )}
-    <main className={isEmpty ? 'creator-empty-desktop' : undefined} style={wrapper}>
+    {/* Mobile screen and desktop feed are both mounted; CSS picks one. The
+        empty state above already works this way on this page. */}
+    {!isEmpty && (
+      <NotificationsMobile
+        notifications={all}
+        dealLinkPrefix="/creator/deals"
+        unreadCount={unreadCount}
+        creatorMap={creatorMap}
+        variant="creator"
+        priority={priority}
+        backHref={backHref}
+      />
+    )}
+    <main className={isEmpty ? 'creator-empty-desktop' : 'notif-desktop'} style={wrapper}>
       <NotificationFeed
         notifications={all}
         dealLinkPrefix="/creator/deals"

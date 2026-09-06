@@ -51,6 +51,8 @@ export type OpsCapability =
   // The pipeline board — the ONLY thing this role writes to.
   | 'pipeline.read'
   | 'pipeline.write'
+  // The playbook. Read-only for everyone; it is a document, not a control.
+  | 'playbook.read'
 
 /**
  * Everything the outreach role can do. Anything absent is admin-only.
@@ -78,6 +80,7 @@ const OUTREACH_CAPABILITIES: ReadonlySet<OpsCapability> = new Set<OpsCapability>
   'insights.read',
   'pipeline.read',
   'pipeline.write',
+  'playbook.read',
 ])
 
 function emailSet(raw: string | undefined): Set<string> {

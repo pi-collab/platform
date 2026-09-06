@@ -2,9 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
+import CreatorDealsMobile from '@/components/CreatorDealsMobile'
 import CreatorDealsEmpty from './CreatorDealsEmpty'
 import CreatorDealsEmptyDesktop from './CreatorDealsEmptyDesktop'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import { unreadNotificationCount } from '@/lib/unread'
 
 export const metadata: Metadata = { title: 'My Deals · Guapd Creator' }
 
@@ -49,6 +51,7 @@ export default async function CreatorDealsPage() {
   // Both render when there are no deals; the width decides which is visible.
   // Returning the mobile design early fired at every width, so a creator on a
   // desktop with no deals never reached the deals screen.
+  const unreadNotifs = await unreadNotificationCount(supabase, ctx.profileId)
   const isEmpty = all.length === 0
 
   return (
@@ -67,11 +70,16 @@ export default async function CreatorDealsPage() {
         <CreatorDealsEmptyDesktop />
       </main>
     ) : (
-      <main style={wrapper}>
-        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-          <CreatorDealsTable deals={all} />
-        </div>
-      </main>
+      <>
+        {/* Both mounted; CSS picks one at 720px. The table has no responsive
+            handling of its own, so before this a phone got a desktop table. */}
+        <CreatorDealsMobile deals={all} unreadNotifications={unreadNotifs} />
+        <main className="cdeals-desktop" style={wrapper}>
+          <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+            <CreatorDealsTable deals={all} />
+          </div>
+        </main>
+      </>
     )}
     </>
   )

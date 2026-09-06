@@ -1,0 +1,126 @@
+/* ── The Guapd Playbook ────────────────────────────────────────────────────
+   Styled to the supplied design reference: paper ground, charcoal ink, lime
+   accent. Deliberately its own visual world rather than the ops console's
+   utilitarian grey — this is the document the team reads and quotes from, and
+   it should feel like the deck, not like an admin screen.
+
+   Everything is scoped under .pb so none of it reaches the rest of /ops. */
+
+.pb {
+  --paper:     #F3F0E9;
+  --ink:       #141414;
+  --lime:      #D6F84C;
+  --lime-deep: #8a9e1f;
+  --muted:     #5a5952;
+  --card:      #FBFAF6;
+  --line:      #DAD6CB;
+
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+  /* Out of the ops shell's padded column and across the full width, so the
+     dark header band reaches both edges the way the reference does. */
+  margin: -1rem;
+  padding: 0;
+}
+
+.pb__doc {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 56px 120px;
+  font-family: var(--pb-sans), 'Space Grotesk', system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+/* ── Dark header band ── */
+.pb__header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 64px 56px 56px;
+  margin: 0 -56px 48px;
+}
+.pb__mark { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.pb__dot {
+  width: 38px; height: 38px; border-radius: 11px; background: var(--lime);
+  display: flex; align-items: center; justify-content: center;
+}
+.pb__dot span {
+  color: var(--ink); font-size: 24px; font-weight: 700; line-height: 1;
+  font-family: var(--pb-sans), 'Space Grotesk', system-ui, sans-serif;
+}
+.pb__wm { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+
+.pb__header h1 {
+  color: var(--paper);
+  font-size: 46px; font-weight: 700; letter-spacing: -1.5px;
+  line-height: 1.05; margin: 0 0 8px;
+  text-wrap: balance;
+}
+.pb__lead { color: #B9B7AE; font-size: 17px; margin: 0 0 8px; }
+.pb__lead:last-child { margin-bottom: 0; }
+/* Serif italic for the standfirst — the same accent the product uses for its
+   one moment of warmth, rather than a second sans weight. */
+.pb__lead em {
+  font-family: var(--pb-serif), 'Instrument Serif', Georgia, serif;
+  font-style: italic; color: #8a887f; font-size: 18px;
+}
+
+/* ── Body ── */
+.pb__doc h2 {
+  font-size: 30px; font-weight: 700; letter-spacing: -1px;
+  margin: 64px 0 20px; padding-top: 32px;
+  border-top: 2px solid var(--ink);
+  text-wrap: balance;
+}
+.pb__doc h3 {
+  font-size: 21px; font-weight: 600; letter-spacing: -0.4px;
+  margin: 36px 0 12px; text-wrap: balance;
+}
+.pb__doc h4 {
+  font-size: 16px; font-weight: 600; letter-spacing: 0.3px;
+  margin: 26px 0 10px; color: var(--lime-deep); text-transform: uppercase;
+}
+.pb__doc p { margin: 0 0 18px; }
+.pb__doc strong { font-weight: 600; }
+.pb__doc em {
+  font-style: italic;
+  font-family: var(--pb-serif), 'Instrument Serif', Georgia, serif;
+  font-size: 1.06em;
+}
+/* An italic run that opens a paragraph is an aside in this document, not
+   emphasis inside a sentence. */
+.pb__doc p > em:first-child:last-child { color: var(--muted); font-size: 15px; }
+
+.pb__doc ul, .pb__doc ol { margin: 0 0 20px; padding-left: 0; list-style: none; }
+.pb__doc li { margin: 0 0 12px; padding-left: 26px; position: relative; }
+/* Lime squares, per the reference — not discs, and not the browser default. */
+.pb__doc ul > li::before {
+  content: ''; position: absolute; left: 0; top: 11px;
+  width: 9px; height: 9px; border-radius: 3px; background: var(--lime);
+}
+.pb__doc ol { counter-reset: pb; }
+.pb__doc ol > li { counter-increment: pb; }
+.pb__doc ol > li::before {
+  content: counter(pb); position: absolute; left: 0; top: 1px;
+  font-size: 12px; font-weight: 700; color: var(--lime-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.pb__doc hr { border: none; border-top: 1.5px solid var(--line); margin: 40px 0; }
+
+/* ── Print: the team will send this to a laptop and hit ⌘P ── */
+@media print {
+  .pb { margin: 0; }
+  .pb__header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pb__doc h2 { break-after: avoid; }
+  .pb__doc li, .pb__doc p { break-inside: avoid; }
+}
+
+@media (max-width: 720px) {
+  .pb__doc { padding: 0 20px 80px; font-size: 16px; }
+  .pb__header { padding: 40px 20px 36px; margin: 0 -20px 32px; }
+  .pb__header h1 { font-size: 32px; letter-spacing: -1px; }
+  .pb__doc h2 { font-size: 24px; margin-top: 48px; padding-top: 24px; }
+  .pb__doc h3 { font-size: 19px; }
+}

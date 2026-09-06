@@ -2954,3 +2954,463 @@ control that changes a creator or brand is visible to them, that is a bug.
 - [ ] Insert with no explicit stage -> defaults to 'contacted' and PASSES the
       CHECK (the 0485/0491 default-violates-its-own-constraint trap)
 - [ ] `kind='creator'` with a `brand_id` set is rejected by `pipeline_leads_link_chk`
+
+---
+
+## 19. Notifications — mobile screen (design: "Creator Notifications - Mobile Standalone")
+
+New `NotificationsMobile` renders below 720px on BOTH the creator and brand
+notification pages; `NotificationFeed` still serves desktop. Both are mounted
+and CSS picks one, so check at 719px and 721px.
+
+### Layout
+- [ ] <720px shows the mobile screen; >720px shows the desktop feed. Neither
+      appears twice, and there is no flash of both on load
+- [ ] Header is sticky: scroll a long list, "Mark all read" stays visible
+- [ ] Back arrow appears on the creator screen and honours `?from=profile`;
+      absent on the brand screen (no back affordance there today)
+- [ ] Sections read TODAY / EARLIER; a section with no rows is not rendered
+- [ ] Rows read as a SENTENCE with the name bold: "**abcd** approved your
+      deliverables", "**Bloom Studio**'s product arrived", "New offer from
+      **Nofi**". Never a status label like "Deliverables approved · time to get
+      paid" — that is the desktop feed's vocabulary
+- [ ] Possessives render as "Bloom Studio's product arrived", NOT
+      "Bloom Studio 's product arrived" (the reason these are templates)
+- [ ] An amount sits INSIDE the sentence — "paid you ₹70K" — not as a separate
+      figure on the right
+- [ ] With no price on the deal it reads a bare "paid you", never "paid you ₹0"
+- [ ] Subtitle is `deal title · date` ("Summer Reel · 13 Aug"), not the
+      notification body
+- [ ] **Unread is a 2px neon ring around the avatar**, and there is NO dot at
+      the right-hand edge
+- [ ] Unread avatar fill is #E7EAF0, read is the flatter #EDEFEC — a scanned
+      list recedes without anything being greyed out
+- [ ] Avatars are FLAT, not the desktop feed's gradients
+- [ ] Mark all read removes every ring in one go
+
+### Tapping a notification marks it read
+- [ ] Tap an unread row: the ring clears IMMEDIATELY, before navigation
+- [ ] Come back (back gesture or re-open Notifications): it is still read —
+      the optimistic clear and the database agree
+- [ ] The "N unread" count in the summary drops by one on each tap; the header
+      never contradicts the list under it
+- [ ] Read every unread row one at a time: the summary card disappears once the
+      count hits zero and nothing is pending
+- [ ] A notification with NO deal (no link) still marks read on tap, and is
+      keyboard-reachable (Enter/Space). Otherwise those rows can only ever be
+      cleared by "Mark all read" and they hold the badge up forever
+- [ ] Under the Unread filter, tapping a row clears its ring but does NOT yank
+      the row out of the list mid-tap
+- [ ] Tapping an already-read row does not re-write read_at
+- [ ] Desktop feed is unaffected (it already marked read on click)
+- [ ] Force an RLS failure on notifications UPDATE: the server logs
+      `[notifications] mark read failed` rather than failing silently
+- [ ] Filter chips scroll horizontally without a visible scrollbar
+
+### Summary + priority accordion
+- [ ] Reads "N unread, M needs your reply" (creator) / "needs your review" (brand)
+- [ ] With unread but nothing pending: no chevron, and tapping does nothing
+- [ ] With nothing unread and nothing pending: the whole summary card is absent
+- [ ] Tapping expands; chevron rotates; tapping again collapses
+- [ ] Expanded card shows counterpart initials, title, deliverables, amount
+- [ ] Amount hidden when price_paise is null or 0 (never renders "₹0")
+- [ ] "Review offer" / "Review work" opens the right deal
+
+### Priority is a LIVE QUERY, not a notification count — the point of the design
+- [ ] Creator: a deal in `negotiating` appears in the card
+- [ ] **Accept or counter that offer from the DEAL PAGE, return to notifications:
+      the card is gone even though the `offer_sent` notification is still
+      unread.** If it persists, it is counting notifications and nagging about
+      finished work
+- [ ] A held deal (`held_at` set, brand unapproved) does NOT appear — the
+      creator cannot see it, so it cannot need their reply
+- [ ] Brand: a deal in `delivered` appears; approving it removes the card
+- [ ] Brand card counts per DEAL, not per deliverable item — a creator uploading
+      three files produces ONE card, not three
+
+### The deadline that does not exist
+- [ ] Screen says "Waiting N days" / "Waiting since yesterday" / "Came in today"
+- [ ] **It must NEVER say "Respond in N days".** The mockup shows that, but no
+      offer expiry exists in the schema and nothing expires an offer, so a
+      countdown would be a promise the product does not keep. If a real expiry
+      is added, build it on `waitingSince`
+
+### Shared vocabulary (regression risk from the extraction)
+- [ ] Type descriptions, filters and avatar colours are IDENTICAL on mobile and
+      desktop for the same notification — both now import
+      `lib/notification-format.ts`, and a divergence means one was re-declared
+- [ ] Brand desktop feed is unchanged from before this work
+- [ ] Mark all read on mobile clears the badge and the desktop feed agrees
+
+### RLS
+- [ ] The priority queries use the USER-scoped client, not the admin client:
+      a creator sees only their own pending offers, a brand only its own
+- [ ] Creator A cannot see Creator B's pending offer in the card
+
+---
+
+## 20. Creator deals — mobile screen (design: "Creator Deals - Mobile Standalone")
+
+`CreatorDealsMobile` renders below 720px; `CreatorDealsTable` keeps desktop.
+The table had NO media queries, so before this a phone was served a desktop
+table with columns. Check at 719px and 721px.
+
+### Layout
+- [ ] <720px shows the card list; >720px shows the table. Neither appears twice
+- [ ] Title reads "Deals at *a glance*" with the second half serif italic
+- [ ] Bell top-right opens /creator/notifications
+- [ ] Header is sticky while the list scrolls
+- [ ] KPI hero is three-up: Needs you / Live now / **Total deals** (a COUNT —
+      the desktop's third figure is the VALUE of live deals, a different question)
+- [ ] Deal cards: 48px gradient avatar, brand, `title · deliverables` clamped at
+      two lines, price right, stage chip with coloured dot, chevron
+- [ ] A very long title + deliverables does not push the price or chip out of
+      the card
+
+### Vocabulary is shared with desktop (regression risk from the extraction)
+- [ ] The same deal shows the same stage COLOUR and dot on both screens
+- [ ] Mobile uses the short label ("In production"), desktop the long one
+      ("Agreed · in production") — same stage, two lengths, one map
+- [ ] A deal in every stage renders a chip on both: negotiating, agreed,
+      delivered, revision, awaiting, posted, declined, cancelled
+- [ ] `approved` + `is_posted=false` shows "Awaiting post" on both
+- [ ] `paid`/`complete` + `is_posted=true` shows "Paid" on mobile
+- [ ] Desktop table is otherwise unchanged from before this work
+
+### Details taken straight from the mockup (all were wrong on first pass)
+- [ ] Live deals carry a **2px neon ring on the avatar**; posted and declined
+      do not. The ring count matches the "Live now" KPI exactly
+- [ ] Stage chip fills use the design's own colours (negotiating #E7F1FC,
+      agreed #F0EAFD, delivered #E9F7F0, revision #FCF6E4) — NOT the desktop
+      table's, which differ on those four
+- [ ] Chip ink is a single #3A3D33 on every stage, not a per-stage colour
+- [ ] Selected tab glow is neon-tinted (rgba(232,255,102,.6)); unselected pills
+      carry the two-part lift, not a flat hairline shadow
+- [ ] Tab count is lighter WEIGHT (500) and its own colour, not the label faded
+- [ ] Avatar initials are 13px
+- [ ] Page size is 6 rows
+- [ ] Footer reads "Showing 1–6 of 23 deals", and "0 deals" when empty — not a
+      bare count
+
+### Search placeholder types itself
+- [ ] Cycles "Search brands" → "Search by delivery" → "Search new offers" →
+      "Search completed deals", typing then deleting
+- [ ] Typing in the box STOPS the animation; clearing it starts again
+- [ ] With prefers-reduced-motion set, the placeholder is static
+      ("Search brands, deals or reference") and never animates
+- [ ] Navigating away mid-animation does not leave a timer running (no React
+      state-update warning in the console)
+
+### Filters, search, paging
+- [ ] Seven tabs with live counts; counts match the rows the tab shows
+- [ ] Selected tab is neon; the row scrolls horizontally without a visible bar
+- [ ] Search matches brand, title, deliverables AND deal_ref (the ref is what
+      someone pastes from a message)
+- [ ] Clearing search restores the list and resets to page 1
+- [ ] Changing a filter resets to page 1 — not page 4 of a 2-page result
+- [ ] Rows are ordered needs-you first, then newest
+- [ ] Pager appears only above 8 rows; prev/next disable at the ends
+- [ ] Empty state text is per-filter ("No open offers" under Negotiating), and
+      a search with no hits says so rather than showing the filter's empty copy
+
+### Zero deals
+- [ ] With no deals at all, the existing CreatorDealsEmpty still takes the
+      whole screen on mobile — the new list must not render its KPI card,
+      search and seven tabs around nothing
+
+---
+
+## 21. Creator payments — mobile screen (design: "Creator Payments - Mobile Standalone")
+
+`CreatorPaymentsMobile` below 720px; `PaymentsClient` keeps desktop. NOTE: this
+mockup is STATIC (no bindings), so anything dynamic was a judgement call — the
+checks below record which.
+
+### Taken from the mockup exactly
+- [ ] Hero total sits ON a neon block (padding 2px 12px, radius 10), 42px
+      display, letter-spacing -0.03em — the neon carries the number, it is not
+      beside it
+- [ ] "You've *guapped*" with "guapped" serif italic
+- [ ] Amount is full rupees with Indian grouping (₹4,97,250), NOT ₹4.97L —
+      this screen is a statement, not a summary tile
+- [ ] All figures are tabular (`font-variant-numeric: tabular-nums`) so a
+      column of amounts aligns
+- [ ] Awaiting-payment dot is #E0B75C; the ledger card's shadow is lighter than
+      the two cards above it (.16 vs .2)
+- [ ] Send reminder is the dark pill, View deal the soft one; both 44px, equal width
+- [ ] History rows: 38px avatar #E7EAF0, brand 14px/600, sub 11.5px #9AA08C,
+      amount 15px/600, separated by a top hairline (#EDEFEC)
+- [ ] Pager is round 32px buttons ‹ 1 2 ›, current one filled #12151C
+
+### Judgement calls — verify these are what you want
+- [ ] **Page size is 4.** Derived: the mockup shows 4 rows AND a page 2, which
+      is only consistent if page 1 is full
+- [ ] **One card per pending payout.** The mockup draws exactly one; a creator
+      can have several and a hidden invoice is money nobody chases
+- [ ] **Overdue restyles the card** (red dot, "Overdue", "was due") — not in
+      the mockup, but the data already distinguishes it
+- [ ] **Export builds a real CSV** client-side (no server action exists). It
+      covers ALL paid invoices, not the visible page
+- [ ] CSV opens cleanly in Sheets/Excel; a brand or deal name containing a
+      comma or quote is escaped, not split across columns
+
+### Send reminder must not lie
+- [ ] A successful send flips the button to "Reminder sent" and disables it
+- [ ] **A REFUSED send does NOT say "Reminder sent"** — it shows the reason.
+      The action rate-limits repeat chases and rejects invalid invoice states;
+      both return { status: 'error', message }. An optimistic tick here would
+      tell a creator their brand was nudged when nothing was sent
+- [ ] Chase the same invoice twice: the second attempt shows the rate-limit
+      message rather than silently doing nothing
+
+### Data
+- [ ] Total matches the sum of PAID invoices only
+- [ ] Month headings come from rows on the CURRENT page — no heading appears
+      with all its rows on the next page
+- [ ] An invoice with no paid_at groups under "Earlier" rather than crashing
+- [ ] UPI line shows the saved id, or "No payout method added yet" with the
+      link reading "Add UPI"
+- [ ] upi_id still comes from the ADMIN client — it is withheld from client
+      roles as PII, so a session-client read returns null and the row would
+      wrongly say no payout method
+
+### Ready to invoice (added after a real account looked broken)
+The payments screen is driven entirely by invoices. A creator whose deals were
+approved AND posted with no invoice raised saw "Nothing's landed yet" and no
+hint the next move was theirs. Real staging account: 5 deals, 2 approved +
+posted, 0 invoices.
+- [ ] A deal that is `approved` AND `is_posted` AND has no invoice shows a
+      "Ready to invoice" card with a neon edge and a "Raise invoice" link
+- [ ] That account no longer shows the empty state — `isEmpty` requires no
+      invoices AND nothing ready to invoice
+- [ ] Raising the invoice removes the card and the deal appears under
+      "Awaiting payment"
+- [ ] A deal that is approved but NOT posted does NOT appear (the server
+      refuses with "Mark the content as posted before invoicing")
+- [ ] A deal that already has an invoice does NOT appear twice
+- [ ] The predicate still matches generateInvoice's gate exactly. If that gate
+      moves and this does not, the screen offers an action the server refuses
+
+### UPI payout control (regression fixed)
+`UpiRow` used to exist ONLY inside CreatorPaymentsEmpty. Routing an account away
+from the empty state removed the only way to set a payout id.
+- [ ] Mobile payments hero contains the real UpiRow — tapping it opens the
+      input, saving persists and the row updates
+- [ ] Desktop sidebar "Payout method" contains UpiRow, not a link to
+      /creator/settings (which has NO UPI field and was a dead end)
+- [ ] **Nothing anywhere says the UPI id is "verified".** The mockup draws
+      "UPI · utkarsh@upi · verified"; we do not penny-drop, so the word would be
+      a lie about a creator's money. It must read "not verified yet"
+- [ ] With no UPI saved it reads "No payout method yet"
+- [ ] A creator with ready-to-invoice deals (so NOT the empty state) can still
+      set their UPI — this is the exact path that was broken
+- [ ] Desktop with zero invoices but ready deals does NOT say "All settled" or
+      "Nothing owed"; it says "None invoiced yet" / "Not invoiced yet"
+
+---
+
+## 22. Inbox list — mobile (design: "Creator Inbox List - Mobile Standalone")
+
+`InboxListMobile` is shared by BOTH inboxes — same component, only the
+counterpart's name differs. Renders below 720px and ONLY in list state; once
+`?deal=` is set the existing master-detail view takes over, because the thread
+screen is its own design we do not have.
+
+### Both sides
+- [ ] `/creator/inbox` on mobile shows the list with BRAND names
+- [ ] `/inbox` on mobile shows the same list with CREATOR names
+- [ ] Tapping a row goes to `?deal=<id>`; the list disappears and the thread
+      view shows — on both sides
+- [ ] Above 720px both are unchanged from before this work
+
+### Unread — four things change together, easy to half-implement
+- [ ] Neon **ring on the avatar** (2px)
+- [ ] Name at weight **700** (read rows are 600)
+- [ ] Preview in ink **#12151C at 600** (read rows are #565C68 at 400)
+- [ ] **Neon-deep 7px dot** after the preview
+- [ ] Card shadow deepens (.2 against .16) — subtle, but it is what makes the
+      row read as heavier without a badge or a count
+- [ ] A read row has NONE of the five
+
+### Timestamps
+- [ ] A message from today shows a time ("9:20 am", lowercase)
+- [ ] Within the last week shows a weekday ("Thu")
+- [ ] Older shows a date ("7 Apr"). A bare time on a three-week-old message
+      would read as "just now"
+
+### Search and filters
+- [ ] Search matches counterpart name, message preview and deal title
+- [ ] The round button reveals the filter chips; it highlights when a filter is
+      active so a narrowed list is never silently narrowed
+- [ ] Filters are the SAME four keys as the desktop view (all / unread /
+      active / completed) with the same status sets — a filter must not mean
+      one thing per screen
+- [ ] Counts on the chips match the rows each produces
+- [ ] Empty results say which case it is: no match for a search, "all caught
+      up" for unread, "no conversations yet" otherwise
+
+### Tapping a row must OPEN THE THREAD (bug fixed)
+`mobileChat` in both inbox views was hardcoded false and only flipped by a tap
+inside that view. Arriving from the new list at `?deal=` selected the thread but
+left the pane translated off-screen, so what showed was that view's OWN older
+list — which reads as "the tap sent me back to the list".
+- [ ] Tap a row on mobile: the THREAD opens, not a list
+- [ ] Back from the thread returns to the NEW list (URL drops `?deal=`), not the
+      old in-view list
+- [ ] Deep-linking straight to `/creator/inbox?deal=<id>` on a phone opens the
+      thread
+- [ ] Same on `/inbox` for brands
+- [ ] Desktop is unaffected — both panes still show side by side
+
+### Deal stage on the row
+- [ ] Every row shows the deal's stage as a chip below the preview
+- [ ] The chip matches the DEALS LIST exactly for the same deal — same wording,
+      same colour, same dot. Both read `STAGE` in lib/deal-stage.ts
+- [ ] An `approved` + posted deal reads "Paid"; `approved` + not posted reads
+      "Awaiting post". This is why the query carries `is_posted`: without it
+      `approved` has no entry in the map and the chip would vanish
+- [ ] The chip is mobile-only — the desktop view is unchanged
+- [ ] The Active/Completed filters still use the RAW status, so widening the
+      row display did not change what a filter matches
+
+### Thread state on mobile is structural, not stateful
+The first fix relied on the inbox view's internal `mobileChat` state. That state
+starts closed, and while it is closed the view's OWN older thread list shows —
+indistinguishable from the tap having done nothing. The list is now hidden
+outright whenever the URL names a deal.
+- [ ] Tap a row: the thread fills the screen. The old in-view list is not
+      visible at any point, not even for a frame
+- [ ] Hard-reload on `/creator/inbox?deal=<id>` at 375px: thread, no list
+- [ ] Same for `/inbox?deal=<id>`
+- [ ] Back returns to the new list and the URL drops `?deal=`
+- [ ] Desktop still shows both panes side by side
+
+### Stage chip sits beside the brand name
+- [ ] Chip is immediately right of the name, on the same line, with the
+      timestamp pinned to the far right
+- [ ] With a long brand name the NAME truncates and the chip stays whole — a
+      truncated brand is still recognisable, a truncated status is not
+- [ ] The timestamp never wraps or gets pushed off
+
+---
+
+## 23. Inbox thread — mobile (design: "Creator Inbox Thread - Mobile Standalone")
+
+`InboxThreadMobile` below 720px on both sides. Sending and read-marking use the
+SAME actions as desktop, so a message sent on a phone is identical to one sent
+on a laptop.
+
+### Layout
+- [ ] Header: back arrow, 34px gradient avatar, counterpart name, "View deal"
+- [ ] Back returns to the mobile inbox list
+- [ ] "View deal" opens that deal (`/creator/deals/<id>` or `/deals/<id>`)
+- [ ] Their messages: white bubble, subtle lift, left. Mine: solid ink #12151C,
+      white text, no shadow, right. Max width 76%
+- [ ] Time under each bubble, 10px, aligned to the bubble's side
+- [ ] Day divider pill: TODAY / YESTERDAY / a full date
+- [ ] A very long word or URL wraps inside the bubble rather than widening it
+- [ ] Composer clears the creator tab bar; on the brand side (no tab bar) it
+      sits at the bottom edge
+- [ ] Newest message is in view on open and after sending
+
+### Sending
+- [ ] Send posts the message and it appears immediately
+- [ ] **A failed send keeps the typed text** and shows the reason — losing what
+      someone wrote is the worst outcome here
+- [ ] The send button is disabled while empty and while sending
+- [ ] On a terminal deal the composer is replaced by the closed notice and
+      nothing can be sent
+- [ ] The closed rule MATCHES desktop (terminal statuses). If either changes,
+      change both — `lib/messaging-window.ts` has a better rule that the inbox
+      does not yet use, and one screen adopting it alone would give the same
+      deal two answers
+
+### Unread must not clear by itself (bug fixed)
+The desktop view defaults `selected` to the first thread so its pane is never
+blank. On a phone that view is hidden behind the mobile list, and the default
+was marking the newest conversation read the moment the inbox loaded.
+- [ ] Open the inbox list on mobile with an unread thread: it STAYS unread —
+      ring, bold name, dot all still there after the page settles
+- [ ] Open that thread: it becomes read, and the header badge drops
+- [ ] Go back to the list: the row is now read
+- [ ] Desktop: clicking a thread still marks it read
+- [ ] Desktop: landing on /inbox with no `?deal=` shows the first thread but
+      does NOT mark it read until clicked. Under-marking is deliberate — a
+      lingering badge is a nuisance, a message silently marked read is one
+      nobody ever reads
+
+### Thread: no duplicates, live, emoji
+- [ ] Send a message: it appears ONCE. Not twice
+- [ ] Send several in a row: each appears once, in order
+- [ ] With the thread open on two devices, a message sent on one appears on the
+      other WITHOUT a refresh
+- [ ] Your own sent message does not arrive back as a second copy — the send
+      registers the real row id so realtime drops its own echo
+- [ ] A failed send keeps the typed text and shows the reason
+- [ ] Emoji button opens the palette; tapping one inserts it and returns focus
+      to the input; sending closes the palette
+- [ ] The palette is the SAME set as desktop (both import lib/emoji.ts)
+- [ ] Switching threads replaces the messages rather than appending to them
+
+### Unread badges
+- [ ] Bottom nav Inbox tab shows the unread MESSAGE count; it clears when the
+      threads are read
+- [ ] Header bell on inbox, deals and payments shows the unread NOTIFICATION
+      count — a different number from the inbox badge, and it must not be
+      confused with it
+- [ ] Both cap at "9+"
+- [ ] Zero shows no badge at all, not a "0"
+- [ ] Reading a thread drops the Inbox tab count on the next load
+
+---
+
+## 24. The Guapd Playbook — /ops/playbook
+
+Source of truth is `apps/web/content/playbook.ts`. The page restates none of it,
+including the title and standfirst in the dark band — editing the markdown is
+the only thing needed to change the page.
+
+### Access
+- [ ] Admin can open it
+- [ ] The scoped OUTREACH role can open it — this is their document
+- [ ] Signed out, or signed in without any ops role: redirected
+- [ ] It appears in the ops nav and on the ops index for BOTH roles
+
+### Rendering
+- [ ] Dark header band, full width, with the lime "g" mark and "guapd" wordmark
+- [ ] Title in white; the two standfirst lines in serif italic, muted
+- [ ] `##` headings carry a 2px ink rule above them
+- [ ] Bullets are lime SQUARES (9px, 3px radius) — not browser discs
+- [ ] Ordered lists number in deep lime
+- [ ] `---` renders as a hairline rule
+- [ ] **bold** and *italic* render, and `**x**` never renders as stray asterisks
+      around italics (bold is matched first for exactly this reason)
+- [ ] Every one of Parts 1–13 and the Appendix is present — nothing silently
+      dropped by the parser
+- [ ] Readable on a phone; the band and rules still work at 375px
+- [ ] ⌘P gives a sensible print layout with the band's colour retained
+
+### Maintenance rule (CLAUDE.md)
+- [ ] Shipping a significant feature prompts an ASK before any Playbook edit
+- [ ] A minor fix or refactor prompts nothing
+- [ ] Parts 1–12 are never edited without Palak asking explicitly
+
+### Thread crash and emoji (fixed)
+- [ ] **Open any thread on mobile: no "application error / client-side
+      exception".** The cause was a Supabase channel-name collision — the
+      mobile thread and the CSS-hidden desktop view both subscribed to
+      `messages-<dealId>`, and subscribing twice to one channel throws. Each
+      subscriber now has its own channel key
+- [ ] Open several different threads in a row, including an older brand deal
+- [ ] Realtime still delivers on both mobile and desktop after the split
+- [ ] Emoji button is NOT neon — only Send is. Two controls of very different
+      consequence must not carry the same weight
+- [ ] The palette opens as an 8-column GRID that fits the phone, scrolls past
+      four rows, and never runs off the side
+- [ ] Tapping an emoji inserts it and keeps focus in the input
+
+### Ops chrome
+- [ ] Nav order ends: … Offer Links, Pipeline, Playbook
+- [ ] Index cards are in the same order as the nav
+- [ ] The ops header stays pinned while scrolling a long page — check on the
+      Playbook, which is the longest

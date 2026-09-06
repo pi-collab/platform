@@ -49,7 +49,12 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1280, margin: '0 auto', padding: '1rem' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
+      <header style={{
+        display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap',
+        borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem',
+        position: 'sticky', top: 0, zIndex: 20,
+        background: '#fff', paddingTop: '1rem', marginTop: '-1rem',
+      }}>
         <Link href="/ops" style={{ fontWeight: 700, fontSize: '1.125rem', color: '#111', textDecoration: 'none' }}>
           Ops Console
         </Link>
@@ -57,7 +62,6 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
             gates are what actually enforce this; hiding them just stops the
             outreach team walking into dead ends all day. */}
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
-          <Link href="/ops/pipeline" style={{ color: '#555', textDecoration: 'none' }}>Pipeline</Link>
           <Link href="/ops/creators" style={{ color: '#555', textDecoration: 'none' }}>Creators</Link>
           {isAdmin && <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>}
           <Link href="/ops/brands" style={{ color: '#555', textDecoration: 'none' }}>Brands</Link>
@@ -65,6 +69,8 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           {isAdmin && <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>}
           <Link href="/ops/insights" style={{ color: '#555', textDecoration: 'none' }}>Insights</Link>
           {isAdmin && <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>}
+          <Link href="/ops/pipeline" style={{ color: '#555', textDecoration: 'none' }}>Pipeline</Link>
+          <Link href="/ops/playbook" style={{ color: '#555', textDecoration: 'none' }}>Playbook</Link>
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {!isAdmin && (

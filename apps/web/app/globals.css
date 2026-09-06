@@ -3039,3 +3039,805 @@ button.signup-form__cross-link {
 .dbd-row-total .dbd-label{font-weight:700;}
 .dbd-row-total .dbd-amt{font-size:17px;font-weight:800;}
 .dbd-note-block{margin:10px 0 0;font-family:var(--font-ui);font-size:11.5px;line-height:1.5;color:var(--ink-faint,#878D99);}
+
+/* ── Notifications, mobile ─────────────────────────────────────────────────
+   Built to "Creator Notifications - Mobile Standalone". Shown below 720px and
+   hidden above it, where NotificationFeed keeps the desktop layout. Both are
+   in the DOM and the media query picks one — the same approach the empty state
+   on this screen already uses. */
+
+.notif-m { display: none; }
+.notif-desktop { display: block; }
+
+@media (max-width: 720px) {
+  .notif-m { display: block; background: #F5F7FA; min-height: 100vh; }
+  .notif-desktop { display: none; }
+
+  /* Sticky so "Mark all read" and the priority card stay reachable while the
+     list scrolls under them. */
+  .notif-m__head {
+    position: sticky; top: 0; z-index: 6;
+    background: #F5F7FA; padding: 22px 20px 8px;
+  }
+  .notif-m__head-row { display: flex; align-items: center; justify-content: space-between; }
+  .notif-m__title-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .notif-m__back {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #fff; color: #12151C; flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+  .notif-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C;
+  }
+  .notif-m__markall {
+    font-family: var(--font-ui); font-weight: 600; font-size: 12px;
+    color: #565C68; background: none; border: none; padding: 4px; cursor: pointer;
+  }
+
+  /* Summary + priority accordion */
+  .notif-m__summary {
+    border-radius: 18px; background: #fff; margin-top: 20px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 8px 18px -14px rgba(40,45,25,.3);
+  }
+  .notif-m__summary-row {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 16px 18px; background: none; border: none; text-align: left;
+  }
+  .notif-m__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #D2F04A; flex-shrink: 0;
+  }
+  .notif-m__summary-text {
+    flex: 1; font-family: var(--font-ui); font-size: 13px;
+    color: #565C68; line-height: 1.4;
+  }
+  .notif-m__summary-text strong { color: #12151C; font-weight: 700; }
+
+  .notif-m__priority { padding: 18px 18px 20px; border-top: 1px solid #EDEFEC; }
+  .notif-m__priority-top { display: flex; align-items: flex-start; gap: 14px; }
+  .notif-m__priority-title { font-weight: 500; font-size: 14.5px; line-height: 1.35; color: #12151C; }
+  .notif-m__priority-sub {
+    font-family: var(--font-ui); font-size: 12.5px; color: #565C68;
+    margin-top: 6px; line-height: 1.5;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .notif-m__priority-amount {
+    font-family: var(--font-ui); font-weight: 700; font-size: 16px;
+    color: #12151C; flex-shrink: 0;
+  }
+  .notif-m__priority-foot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDEFEC;
+  }
+  .notif-m__waiting {
+    flex: 1; font-family: var(--font-ui); font-size: 11.5px;
+    font-weight: 600; color: #9AA08C;
+  }
+  .notif-m__cta {
+    padding: 10px 18px; border-radius: 999px; background: var(--neon);
+    font-family: var(--font-ui); font-weight: 700; font-size: 12.5px;
+    color: var(--ink); text-decoration: none; white-space: nowrap;
+  }
+
+  /* Filters — not in the mockup, kept because they are the only way back to an
+     old payment notification once Today/Earlier has buried it. */
+  .notif-m__filters {
+    display: flex; gap: 8px; margin-top: 16px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .notif-m__filters::-webkit-scrollbar { display: none; }
+  .notif-m__chip {
+    flex-shrink: 0; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid transparent; background: #fff; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 12.5px; color: #565C68;
+    box-shadow: 0 1px 2px rgba(24,28,36,.04);
+  }
+  .notif-m__chip.is-on { background: #12151C; color: #fff; }
+
+  .notif-m__body { padding: 0 20px 90px; }
+  .notif-m__group { padding-top: 28px; }
+  .notif-m__group-label {
+    font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: #9AA08C;
+    margin: 0 0 10px;
+  }
+  .notif-m__card {
+    display: flex; flex-direction: column; border-radius: 18px;
+    background: #fff; overflow: hidden;
+    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+  }
+  .notif-m__row {
+    display: flex; gap: 14px; padding: 16px 18px; align-items: flex-start;
+    text-decoration: none; color: inherit;
+  }
+  .notif-m__row + .notif-m__row { border-top: 1px solid #EDEFEC; }
+  /* Flat, not gradient. Unread carries a neon RING on the avatar rather than a
+     dot at the far edge — the state belongs on the face you are scanning, not
+     past the end of the text where it reads as decoration. Read avatars also
+     sit a shade back (#EDEFEC vs #E7EAF0), so a scanned list recedes without
+     anything being greyed out. */
+  .notif-m__avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px;
+    color: #12151C; background: #EDEFEC;
+  }
+  .notif-m__avatar.is-unread {
+    background: #E7EAF0;
+    box-shadow: 0 0 0 2px #D2F04A;
+  }
+  .notif-m__avatar--lg { width: 42px; height: 42px; background: #E7EAF0; }
+  /* The ring needs room, or it clips against the row edge and the neighbour. */
+  .notif-m__row { --ring-gap: 2px; }
+  .notif-m__row-title { font-size: 14.5px; line-height: 1.35; color: #12151C; font-weight: 400; }
+  .notif-m__row-title strong { font-weight: 700; }
+  .notif-m__row-title.is-unread { color: #12151C; }
+  .notif-m__row-sub { font-size: 12.5px; color: #565C68; margin-top: 6px; }
+  .notif-m__empty {
+    padding: 40px 4px; font-family: var(--font-ui); font-size: 13.5px;
+    color: #565C68; line-height: 1.6; text-align: center;
+  }
+}
+
+/* ── Creator deals, mobile ─────────────────────────────────────────────────
+   Built to "Creator Deals - Mobile Standalone". Below 720px only; the desktop
+   table (which had no media queries at all, so phones were getting columns)
+   keeps everything above. */
+
+.cdeals-m { display: none; }
+.cdeals-desktop { display: block; }
+
+@media (max-width: 720px) {
+  .cdeals-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .cdeals-desktop { display: none; }
+
+  .cdeals-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .cdeals-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C; white-space: nowrap;
+  }
+  .cdeals-m__title-em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400;
+  }
+  .cdeals-m__bell {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; color: #12151C;
+    box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+
+  .cdeals-m__top { padding: 0 20px; }
+
+  .cdeals-m__kpis {
+    background: #fff; border-radius: 20px;
+    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+  }
+  .cdeals-m__kpi { padding: 16px 12px; text-align: center; }
+  .cdeals-m__kpi + .cdeals-m__kpi { border-left: 1px solid #EDEFEC; }
+  .cdeals-m__kpi-label {
+    font-family: var(--font-ui); font-size: 8px; font-weight: 500;
+    letter-spacing: .05em; text-transform: uppercase; color: #9AA08C;
+  }
+  .cdeals-m__kpi-value {
+    font-family: 'Sora', var(--font-ui), sans-serif; font-weight: 700;
+    font-size: 14px; letter-spacing: -0.01em; color: #12151C; margin-top: 5px;
+  }
+
+  .cdeals-m__search {
+    display: flex; align-items: center; gap: 12px; height: 54px;
+    padding: 0 10px 0 20px; margin-top: 20px; border-radius: 999px;
+    background: #fff; box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+  }
+  .cdeals-m__search svg { flex-shrink: 0; }
+  .cdeals-m__search input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none;
+    font-family: var(--font-ui); font-size: 14px; color: #12151C;
+  }
+  .cdeals-m__search input::placeholder { color: #9AA08C; }
+  .cdeals-m__search input::-webkit-search-cancel-button { display: none; }
+  .cdeals-m__clear {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: #F2F3EE; color: #565C68; cursor: pointer; flex-shrink: 0;
+  }
+
+  .cdeals-m__tabs {
+    display: flex; gap: 10px; margin-top: 18px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .cdeals-m__tabs::-webkit-scrollbar { display: none; }
+  .cdeals-m__tab {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    padding: 10px 16px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 12.5px;
+    background: #fff; color: #565C68;
+    box-shadow: 0 1px 2px rgba(24,28,36,.03), 0 6px 14px -10px rgba(40,45,25,.22);
+  }
+  .cdeals-m__tab.is-on {
+    background: var(--neon); color: #12151C;
+    box-shadow: 0 6px 16px -6px rgba(232,255,102,.6);
+  }
+  /* Lighter than the label, not just faded: the count is context, and an
+     opacity on the whole pill would dim the label with it. */
+  .cdeals-m__tab-count { font-size: 11px; font-weight: 500; color: #9AA08C; }
+  .cdeals-m__tab.is-on .cdeals-m__tab-count { color: rgba(18,21,28,.55); }
+
+  .cdeals-m__rows {
+    padding: 28px 20px 0; display: flex; flex-direction: column; gap: 16px;
+  }
+  .cdeals-m__row {
+    display: block; background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.2);
+    text-decoration: none; color: inherit;
+  }
+  .cdeals-m__row-top { display: flex; align-items: flex-start; gap: 16px; }
+  .cdeals-m__avatar {
+    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg,#E7F1FC,#F0EAFD);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #12151C;
+  }
+  /* A deal still in motion. Posted and declined deals lose the ring, so a
+     scanned list shows at a glance what is still running. */
+  .cdeals-m__avatar.is-live { box-shadow: 0 0 0 2px var(--neon); }
+  .cdeals-m__brand {
+    font-family: var(--font-ui); font-weight: 600; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Two lines then clip — a long title plus deliverables will not push the
+     price and the stage chip out of the card. */
+  .cdeals-m__sub {
+    font-family: var(--font-ui); font-size: 12px; font-weight: 400;
+    color: #878D99; margin-top: 6px; line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .cdeals-m__price {
+    font-family: 'Sora', var(--font-ui), sans-serif; font-weight: 700;
+    font-size: 15px; letter-spacing: -0.01em; color: #12151C;
+    white-space: nowrap; flex-shrink: 0; padding-top: 2px;
+  }
+  .cdeals-m__row-foot {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 20px; padding-top: 16px; border-top: 1px solid #EDEFEC;
+  }
+  .cdeals-m__stage {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border-radius: 999px;
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 600;
+    white-space: nowrap; color: #3A3D33;
+  }
+  .cdeals-m__stage-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .cdeals-m__empty { padding: 44px 8px; text-align: center; }
+  .cdeals-m__empty h2 {
+    font-family: var(--font-display); font-weight: 600; font-size: 17px;
+    color: #12151C; margin: 0 0 8px;
+  }
+  .cdeals-m__empty p {
+    font-family: var(--font-ui); font-size: 13.5px; color: #565C68;
+    line-height: 1.6; margin: 0; max-width: 280px; margin-inline: auto;
+  }
+
+  .cdeals-m__pager {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 24px 0 8px;
+  }
+  .cdeals-m__pager button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+    background: #fff; color: #12151C;
+    box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+  .cdeals-m__pager button:disabled { opacity: .4; cursor: default; }
+  .cdeals-m__page-label {
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; color: #565C68;
+  }
+  .cdeals-m__result {
+    text-align: center; font-family: var(--font-ui); font-size: 11.5px;
+    color: #9AA08C; margin: 8px 0 0;
+  }
+}
+
+/* ── Creator payments, mobile ──────────────────────────────────────────────
+   Built to "Creator Payments - Mobile Standalone". Below 720px; PaymentsClient
+   keeps desktop. Values taken from the mockup's inline styles rather than
+   inferred from the desktop screen — the mistake made on the deals list. */
+
+.cpay-m { display: none; }
+.cpay-desktop { display: block; }
+
+@media (max-width: 720px) {
+  .cpay-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; color: #12151C; }
+  .cpay-desktop { display: none; }
+
+  .cpay-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .cpay-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C;
+  }
+  .cpay-m__bell {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; color: #12151C; box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+
+  .cpay-m__stack { padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* Hero. The total sits ON the neon, not beside it — the one place on the
+     screen where the brand colour carries the number. */
+  .cpay-m__hero {
+    background: #fff; border-radius: 24px; padding: 26px 24px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.2);
+  }
+  .cpay-m__hero-label {
+    font-family: var(--font-ui); font-weight: 600; font-size: 15px; color: #565C68;
+  }
+  .cpay-m__hero-em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400; color: #12151C;
+  }
+  .cpay-m__hero-amount {
+    display: inline-block; font-family: var(--font-display); font-weight: 700;
+    letter-spacing: -0.03em; font-size: 42px; margin-top: 14px; color: #12151C;
+    background: var(--neon); padding: 2px 12px; border-radius: 10px;
+  }
+  /* Holds UpiRow, which brings its own surface — so this is spacing and a
+     divider only, not a flex row of text and a link. */
+  .cpay-m__payout { margin-top: 22px; padding-top: 20px; border-top: 1px solid #EDEFEC; }
+  /* UpiRow brings its own card. Inside the hero that is a card in a card — a
+     second border and a second set of padding, which is what boxed the row and
+     pushed its input past the hero's edge. Specificity has to beat
+     `.creator-app .msurface`, which is the same weight and loads later. */
+  .creator-app .cpay-m__payout .msurface,
+  .cpay-m .cpay-m__payout .msurface {
+    box-shadow: none;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0 !important;
+  }
+  /* The input is width:100% with border-box; without this the hero's own
+     padding is added on top and the right edge clips. */
+  .cpay-m__payout input { max-width: 100%; }
+  .cpay-m__payout-text {
+    font-size: 13px; color: #565C68;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cpay-m__manage {
+    font-size: 13px; font-weight: 700; color: #12151C;
+    text-decoration: underline; white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Awaiting payment */
+  .cpay-m__pending {
+    background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.2);
+  }
+  .cpay-m__pending-tag {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: #9AA08C;
+  }
+  .cpay-m__pending-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .cpay-m__pending-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-top: 14px;
+  }
+  .cpay-m__pending-brand {
+    font-family: var(--font-ui); font-weight: 600; font-size: 16px; color: #12151C;
+    min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__pending-amount {
+    font-family: 'Sora', var(--font-ui), sans-serif; font-weight: 600; font-size: 18px;
+    color: #12151C; flex-shrink: 0; white-space: nowrap;
+  }
+  .cpay-m__pending-sub { font-size: 12.5px; color: #878D99; margin-top: 5px; }
+  .cpay-m__pending-actions { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+  .cpay-m__btn-dark, .cpay-m__btn-soft {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center;
+    height: 44px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-size: 13px; text-decoration: none;
+  }
+  .cpay-m__btn-dark { background: #12151C; font-weight: 700; color: #fff; }
+  .cpay-m__btn-dark:disabled { opacity: .55; cursor: default; }
+  .cpay-m__btn-soft { background: #F5F7FA; font-weight: 600; color: #12151C; }
+
+  /* Ledger. Slightly lighter shadow than the cards above it — .16, not .2. */
+  .cpay-m__ledger {
+    background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.16);
+  }
+  .cpay-m__ledger-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .cpay-m__ledger-title {
+    font-family: var(--font-display); font-weight: 600; font-size: 19px;
+    margin: 0; color: #12151C;
+  }
+  .cpay-m__export {
+    display: inline-flex; align-items: center; height: 32px; padding: 0 14px;
+    border-radius: 999px; background: #F5F7FA; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 11.5px; color: #12151C;
+  }
+  .cpay-m__month {
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; color: #9AA08C; margin-top: 22px;
+  }
+  .cpay-m__drow {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 0; border-top: 1px solid #EDEFEC;
+    text-decoration: none; color: inherit;
+  }
+  .cpay-m__davatar {
+    width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
+    background: #E7EAF0; color: #12151C;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 11.5px;
+  }
+  .cpay-m__dbrand {
+    font-size: 14px; font-weight: 600; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__dsub {
+    font-size: 11.5px; color: #9AA08C; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cpay-m__damount { font-size: 15px; font-weight: 600; color: #12151C; flex-shrink: 0; }
+
+  .cpay-m__empty {
+    font-family: var(--font-ui); font-size: 13px; color: #565C68;
+    line-height: 1.6; margin: 18px 0 0;
+  }
+
+  .cpay-m__pager {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; margin-top: 24px;
+  }
+  .cpay-m .pgbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 600;
+    background: #F5F7FA; color: #12151C;
+  }
+  .cpay-m .pgbtn.is-on { background: #12151C; color: #fff; }
+  .cpay-m .pgbtn:disabled { opacity: .4; cursor: default; }
+
+  /* Tabular figures, so a column of amounts lines up on the decimal. */
+  .cpay-m .tnum {
+    font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (max-width: 720px) {
+  .cpay-m__remind-error {
+    margin: 12px 0 0; font-family: var(--font-ui); font-size: 12px;
+    color: #B4454B; line-height: 1.45;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Ready-to-invoice is the one card on this screen that is asking the creator
+     to do something, so it gets the neon edge the others do not. */
+  /* No ring. It read as an error outline around the whole section rather than
+     emphasis, and the card already stands out by its label and its button. */
+  .cpay-m__pending--ready { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
+  .cpay-m__pending--ready .cpay-m__btn-dark { flex: 0 1 auto; padding: 0 22px; text-decoration: none; }
+}
+
+/* ── Inbox list, mobile ────────────────────────────────────────────────────
+   "Creator Inbox List - Mobile Standalone". Shared by both inboxes. Shown below
+   720px only when NO thread is selected; once ?deal= is set the existing
+   master-detail view takes over, since the thread screen is its own design. */
+
+.inbox-m { display: none; }
+
+/* ── Thread state on mobile ────────────────────────────────────────────────
+   When the URL names a deal, a phone shows the THREAD and nothing else.
+
+   Relying on the inbox view's own `mobileChat` state was not enough: that state
+   is internal, it starts closed, and when it stays closed the pane sits
+   off-screen while the view's OWN older thread list shows underneath — which is
+   indistinguishable from the tap having done nothing. Hiding that list outright
+   means the failure cannot present as "it took me back to the list", whatever
+   the component's state is doing. */
+@media (max-width: 720px) {
+  .inbox-thread-only .inbox-left { display: none !important; }
+  .inbox-thread-only .inbox-right {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .inbox-hide-mobile { display: none !important; }
+
+  .inbox-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .inbox-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C; white-space: nowrap;
+  }
+  .inbox-m__bell {
+    position: relative; width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #fff; box-shadow: 0 6px 14px -10px rgba(40,45,25,.3);
+  }
+
+  .inbox-m__top { padding: 0 20px; }
+  .inbox-m__searchrow { display: flex; gap: 10px; }
+  .inbox-m__search {
+    flex: 1; display: flex; align-items: center; gap: 12px; height: 54px;
+    padding: 0 10px 0 20px; border-radius: 999px; background: #fff;
+    box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05);
+    min-width: 0;
+  }
+  .inbox-m__search svg { flex-shrink: 0; }
+  .inbox-m__search input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none;
+    font-family: var(--font-ui); font-size: 14px; color: #12151C;
+  }
+  .inbox-m__search input::placeholder { color: #878D99; }
+  .inbox-m__search input::-webkit-search-cancel-button { display: none; }
+  .inbox-m__filterbtn {
+    width: 54px; height: 54px; flex-shrink: 0; border-radius: 999px;
+    background: #fff; box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: #12151C;
+  }
+  .inbox-m__filterbtn.is-on { background: var(--neon); border-color: transparent; }
+
+  .inbox-m__filters {
+    display: flex; gap: 8px; margin-top: 12px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .inbox-m__filters::-webkit-scrollbar { display: none; }
+  .inbox-m__chip {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    padding: 9px 15px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 12.5px;
+    background: #fff; color: #565C68;
+    box-shadow: 0 1px 2px rgba(24,28,36,.03), 0 6px 14px -10px rgba(40,45,25,.22);
+  }
+  .inbox-m__chip.is-on { background: #12151C; color: #fff; }
+  .inbox-m__chip-count { font-size: 11px; font-weight: 500; color: #9AA08C; }
+  .inbox-m__chip.is-on .inbox-m__chip-count { color: rgba(255,255,255,.6); }
+
+  .inbox-m__rows {
+    padding: 16px 20px 0; display: flex; flex-direction: column; gap: 12px;
+  }
+  /* Read rows sit slightly flatter than unread ones (.16 against .2). Small,
+     but it is what makes an unread row read as heavier without a badge. */
+  .inbox-m__row {
+    display: block; background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.16);
+    text-decoration: none; color: inherit;
+  }
+  .inbox-m__row.is-unread { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
+  .inbox-m__row-inner { display: flex; align-items: flex-start; gap: 16px; }
+
+  .inbox-m__avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: #E7EAF0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #12151C;
+  }
+  .inbox-m__avatar.is-unread { box-shadow: 0 0 0 2px var(--neon); }
+
+  .inbox-m__row-top { display: flex; align-items: center; gap: 8px; }
+  .inbox-m__time { margin-left: auto; }
+  /* The name gives way before the chip does — a truncated brand is still
+     recognisable, a truncated status is not. */
+  .inbox-m__name {
+    font-weight: 600; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0; flex-shrink: 1;
+  }
+  .inbox-m__row.is-unread .inbox-m__name { font-weight: 700; }
+  .inbox-m__time { font-size: 11px; color: #878D99; white-space: nowrap; flex-shrink: 0; }
+
+  .inbox-m__preview-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+  .inbox-m__preview {
+    flex: 1; min-width: 0; font-size: 13px; color: #565C68; font-weight: 400;
+    margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .inbox-m__row.is-unread .inbox-m__preview { color: #12151C; font-weight: 600; }
+  .inbox-m__dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--neon-deep, #D2F04A); flex-shrink: 0;
+  }
+
+  .inbox-m__empty {
+    padding: 44px 8px; text-align: center;
+    font-family: var(--font-ui); font-size: 13.5px; color: #565C68; line-height: 1.6;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Deal stage on an inbox row. Same map, same colours and same wording as the
+     deals list — a thread and its deal must never read as two different
+     states. Sits under the preview so the name/time and preview/unread rows
+     keep their alignment. */
+  .inbox-m__stage {
+    display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+    padding: 3px 9px; border-radius: 999px;
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 600;
+    white-space: nowrap; color: #3A3D33;
+  }
+  .inbox-m__stage-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+}
+
+/* ── Inbox thread, mobile ──────────────────────────────────────────────────
+   "Creator Inbox Thread - Mobile Standalone". Below 720px, in place of the
+   desktop split-pane's right side. Fills the viewport: header pinned, messages
+   scrolling between, composer above the tab bar. */
+
+.ithread-m { display: none; }
+
+@media (max-width: 720px) {
+  .ithread-m {
+    display: flex; flex-direction: column;
+    position: fixed; inset: 0; z-index: 40;
+    background: #F5F7FA; color: #12151C;
+    /* The composer clears the creator tab bar; a brand has none. */
+    --composer-gap: 0px;
+  }
+  .ithread-m.has-tabbar { --composer-gap: 62px; }
+
+  .ithread-m__head {
+    flex-shrink: 0;
+    padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px;
+    background: #F5F7FA; border-bottom: 1px solid #EDEFEC;
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  .ithread-m__back {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: #12151C;
+  }
+  .ithread-m__avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg,#EAF3FC,#E7DEF7);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #12151C;
+  }
+  .ithread-m__name {
+    font-weight: 700; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ithread-m__viewdeal {
+    font-size: 11.5px; font-weight: 700; color: #565C68;
+    white-space: nowrap; flex-shrink: 0; text-decoration: none;
+  }
+
+  .ithread-m__scroll {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 18px 16px calc(84px + var(--composer-gap));
+    display: flex; flex-direction: column; gap: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ithread-m__daywrap { display: flex; justify-content: center; }
+  .ithread-m__day {
+    font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: #9AA08C; background: #EDEFEC; padding: 5px 12px; border-radius: 999px;
+  }
+
+  .ithread-m__msg { display: flex; flex-direction: column; gap: 6px; max-width: 76%; }
+  .ithread-m__msg.is-mine { align-self: flex-end; align-items: flex-end; }
+
+  /* Theirs sits on white with a lift; mine is solid ink. The asymmetry is the
+     whole reason a thread is readable at a glance. */
+  .ithread-m__bubble {
+    background: #fff; padding: 11px 14px; border-radius: 20px;
+    font-size: 14px; line-height: 1.5; color: #12151C;
+    box-shadow: 0 4px 10px -8px rgba(40,45,25,.2);
+    overflow-wrap: anywhere;
+  }
+  .ithread-m__msg.is-mine .ithread-m__bubble {
+    background: #12151C; color: #fff; box-shadow: none;
+  }
+  .ithread-m__time { font-size: 10px; color: #9AA08C; margin-left: 4px; }
+  .ithread-m__msg.is-mine .ithread-m__time { margin-left: 0; margin-right: 4px; }
+
+  .ithread-m__empty {
+    margin: auto; text-align: center; font-size: 13.5px; color: #878D99;
+  }
+
+  .ithread-m__composer {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(var(--composer-gap) + env(safe-area-inset-bottom));
+    padding: 0 16px 12px;
+  }
+  .ithread-m__field {
+    border-radius: 14px; padding: 6px 6px 6px 16px;
+    display: flex; align-items: center; gap: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(18,21,28,.04), 0 10px 24px -16px rgba(18,21,28,.4);
+  }
+  .ithread-m__field input {
+    flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+    font-family: var(--font-ui); font-size: 13.5px; color: #12151C; height: 36px;
+  }
+  .ithread-m__field input::placeholder { color: #9AA08C; }
+  /* Only SEND is neon. The rule used to be `.ithread-m__field button`, which
+     also caught the emoji button and gave two controls the same weight — the
+     one that posts a message and the one that opens a palette. */
+  .ithread-m__send {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: none;
+    background: var(--neon); color: #12151C; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ithread-m__send:disabled { opacity: .45; cursor: default; }
+
+  .ithread-m__emojibtn {
+    width: 30px; height: 30px; flex-shrink: 0; border: none; background: none;
+    color: #9AA08C; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    margin-left: -6px;
+  }
+  .ithread-m__emojibtn[aria-expanded="true"] { color: #12151C; }
+
+  /* A GRID, not a line. Eight per row, capped at about four rows with the rest
+     scrolling — an emoji picker that runs off the side of a phone is not a
+     picker. */
+  .ithread-m__emoji {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    margin-bottom: 8px;
+    padding: 10px 8px;
+    max-height: 184px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(18,21,28,.04), 0 10px 24px -16px rgba(18,21,28,.4);
+  }
+  .ithread-m__emoji button {
+    border: none; background: none; cursor: pointer; padding: 0;
+    height: 38px; font-size: 21px; line-height: 1; border-radius: 9px;
+  }
+  .ithread-m__emoji button:active { background: #EDEFEC; }
+  .ithread-m__error {
+    margin: 8px 4px 0; font-size: 12px; color: #B4454B;
+  }
+
+  .ithread-m__closed {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(var(--composer-gap) + env(safe-area-inset-bottom));
+    padding: 16px; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: #F5F7FA; border-top: 1px solid #EDEFEC;
+    font-size: 13px; color: #878D99;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Unread notifications on the header bell. One class for all three mobile
+     screens — three copies would drift apart the first time one is nudged. */
+  .inbox-m__bell, .cdeals-m__bell, .cpay-m__bell { position: relative; }
+  .mbell-badge {
+    position: absolute; top: -3px; right: -3px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: #12151C; color: #fff;
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 700;
+    line-height: 16px; text-align: center;
+    box-shadow: 0 0 0 2px #F5F7FA;
+  }
+}

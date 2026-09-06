@@ -1,11 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { unreadByDeal } from '@/lib/unread'
+import InboxListMobile from '@/components/InboxListMobile'
+import InboxThreadMobile from '@/components/InboxThreadMobile'
+import { resolveStatus } from '@/lib/deal-stage'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
 import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
+import { unreadNotificationCount } from '@/lib/unread'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
@@ -31,13 +35,13 @@ export default async function CreatorInboxPage({ searchParams }: {
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, brands(name)')
+      .select('id, title, status, is_posted, price_paise, brands(name)')
       .not('status', 'in', '(cancelled,declined)')
       .order('created_at', { ascending: false }),
   ])
 
   const threadMap = new Map<string, {
-    dealId: string; dealTitle: string; dealStatus: string; brandName: string;
+    dealId: string; dealTitle: string; dealStatus: string; dealStage: string; brandName: string;
     brandInitials: string; lastMessage: string; senderParty: string; createdAt: string;
     amountPaise: number;
   }>()
@@ -52,6 +56,7 @@ export default async function CreatorInboxPage({ searchParams }: {
         dealId: msg.deal_id,
         dealTitle: deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
+        dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         brandName,
         brandInitials: getInitials(brandName),
         lastMessage: msg.body || '',
@@ -72,6 +77,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       dealId: deal.id,
       dealTitle: deal.title || 'Untitled deal',
       dealStatus: deal.status || '',
+      dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       brandName,
       brandInitials: getInitials(brandName),
       lastMessage: '',
@@ -129,7 +135,59 @@ export default async function CreatorInboxPage({ searchParams }: {
     )
   }
 
-  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
+  /* List state on mobile; the existing master-detail view takes over as soon
+     as a thread is chosen, because the thread screen is its own design. Both
+     are mounted and CSS decides, except that the desktop view must stay
+     visible on mobile once ?deal= is set — hence the conditional class rather
+     than a blanket one. */
+  const unreadNotifs = profile?.id ? await unreadNotificationCount(supabase, profile.id) : 0
+  const selected = searchParams?.deal ?? null
+  const selectedThread = selected ? threads.find((t) => t.dealId === selected) ?? null : null
+  const selectedMessages = selected
+    ? allMessages
+        .filter((m) => m.deal_id === selected)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : []
+
+  return (
+    <>
+      {!selected && (
+        <InboxListMobile
+          threads={threads.map((t) => ({
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus, dealStage: t.dealStage,
+            name: t.brandName, initials: t.brandInitials,
+            lastMessage: t.lastMessage, createdAt: t.createdAt,
+          }))}
+          unreadByDeal={unread}
+          basePath="/creator/inbox"
+          notificationsHref="/creator/notifications?from=inbox"
+          unreadNotifications={unreadNotifs}
+        />
+      )}
+      {/* The thread on a phone. Mirrors the desktop rule for a closed thread
+          rather than introducing a second one — see the component's note. */}
+      {selectedThread && (
+        <InboxThreadMobile
+          dealId={selectedThread.dealId}
+          name={selectedThread.brandName}
+          initials={selectedThread.brandInitials}
+          messages={selectedMessages}
+          me="creator"
+          backHref="/creator/inbox"
+          dealHref={`/creator/deals/${selectedThread.dealId}`}
+          closedNotice={
+            ['complete', 'declined', 'cancelled'].includes(selectedThread.dealStatus)
+              ? `This deal is ${selectedThread.dealStatus}, so messaging is closed.`
+              : null
+          }
+          hasTabBar={true}
+        />
+      )}
+      <div className={selected ? 'inbox-thread-only inbox-hide-mobile' : 'inbox-hide-mobile'}>
+        <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
+      </div>
+    </>
+  )
 }
 
 function getInitials(name: string): string {

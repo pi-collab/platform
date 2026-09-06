@@ -275,3 +275,25 @@
 @media (max-width: 379.98px) {
   .creator-app .sfl-copy-label { display: none; }
 }
+
+/* Unread messages on the Inbox tab. Positioned on the icon, not the label —
+   the label can be two words wide and the count must not shift it. */
+.creator-tab { position: relative; }
+.creator-tab__badge {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  margin-left: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #12151C;
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
+}

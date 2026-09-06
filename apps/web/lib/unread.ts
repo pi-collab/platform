@@ -105,3 +105,23 @@ export async function unreadByDeal(
 
   return out
 }
+
+/**
+ * Unread NOTIFICATIONS for the bell.
+ *
+ * Distinct from unreadMessageCount: that counts messages against
+ * message_reads, this counts notification rows against their own read_at. A
+ * screen showing one number where it means the other is the sort of thing
+ * nobody notices until a badge refuses to clear.
+ */
+export async function unreadNotificationCount(
+  supabase: { from: (t: string) => any },
+  profileId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', profileId)
+    .is('read_at', null)
+  return count ?? 0
+}

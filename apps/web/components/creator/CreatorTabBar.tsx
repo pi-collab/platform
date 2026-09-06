@@ -55,7 +55,7 @@ const TABS = [
   },
 ]
 
-export default function CreatorTabBar({ initial }: { initial?: string | null }) {
+export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: string | null; unreadInbox?: number }) {
   const pathname = usePathname() ?? ''
 
   // startsWith, not equality: /creator/deals/<id> is still the Deals tab, and a
@@ -88,6 +88,14 @@ export default function CreatorTabBar({ initial }: { initial?: string | null }) 
               {tab.icon}
             </svg>
             <span className="creator-tab__label">{tab.label}</span>
+            {/* Waiting messages, on the tab that leads to them. The count was
+                already computed for the sidebar and simply never reached the
+                phone's navigation. */}
+            {tab.label === 'Inbox' && unreadInbox > 0 && (
+              <span className="creator-tab__badge" aria-label={`${unreadInbox} unread`}>
+                {unreadInbox > 9 ? '9+' : unreadInbox}
+              </span>
+            )}
             <span className="creator-tab__marker" aria-hidden="true" />
           </Link>
         )

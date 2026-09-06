@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
+import { EMOJI_LIST } from '@/lib/emoji'
 import { sendMessage } from '@/app/inbox/actions'
 import { useRealtimeMessages } from '@/lib/realtime/useRealtimeMessages'
 import { playGuapSound } from '@/lib/sounds'
@@ -30,11 +31,6 @@ interface Message {
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
 const ACTIVE_STATUSES = ['negotiating', 'agreed', 'delivered', 'revision', 'approved']
 
-const EMOJI_LIST = [
-  '😊', '😂', '❤️', '🔥', '👍', '👏', '🎉', '💯',
-  '🙏', '😍', '🤝', '✅', '💰', '🚀', '⭐', '💪',
-  '👀', '😎', '🤔', '📸', '🎬', '📩', '💬', '✨',
-]
 
 type FilterKey = 'all' | 'unread' | 'active' | 'completed'
 const FILTER_DEFS: [FilterKey, string][] = [['all', 'All'], ['unread', 'Unread'], ['active', 'Active'], ['completed', 'Completed']]
@@ -82,13 +78,21 @@ export default function CreatorInboxView({
   )
   const router = useRouter()
 
-  // Selecting a thread here IS reading it. The inbox marked nothing, so the
-  // header badge survived the one screen whose whole purpose is reading
-  // messages. Refreshed afterwards so the number in the header actually moves.
+  /* Only a thread the reader actually OPENED counts as read.
+     `selected` falls back to the first thread so the desktop pane is never
+     blank — but that is a default, not a decision. On a phone this whole view
+     is hidden behind the mobile list, so the fallback was marking the newest
+     conversation read the moment the inbox loaded, before anyone had seen it.
+     Under-marking is the safe direction here: a badge that lingers is a
+     nuisance, a message silently marked read is one nobody ever reads. */
+  const [openedByUser, setOpenedByUser] = useState(
+    Boolean(initialDealId && threads.some((t) => t.dealId === initialDealId)),
+  )
+
   useEffect(() => {
-    if (!selected) return
+    if (!selected || !openedByUser) return
     void markDealThreadRead(selected).then(() => router.refresh())
-  }, [selected, router])
+  }, [selected, openedByUser, router])
 
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
@@ -104,7 +108,12 @@ export default function CreatorInboxView({
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [mobileChat, setMobileChat] = useState(false)
+  /* Open on arrival when the URL already names a deal.
+     This was hardcoded false and only flipped by a tap INSIDE this view, so
+     coming from the mobile inbox list at ?deal=<id> selected the thread but
+     left the pane translated off-screen — and what you saw was this view's own
+     list, which reads as "the tap sent me back to the list". */
+  const [mobileChat, setMobileChat] = useState(Boolean(initialDealId))
   const [filter, setFilter] = useState<FilterKey>('all')
   const [query, setQuery] = useState('')
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -173,6 +182,8 @@ export default function CreatorInboxView({
 
   function selectThread(dealId: string) {
     setSelected(dealId)
+    // An explicit choice — this one counts as opened, and so as read.
+    setOpenedByUser(true)
     setMobileChat(true)
     setBody('')
     setError(null)
@@ -360,7 +371,7 @@ export default function CreatorInboxView({
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                      <button onClick={() => setMobileChat(false)} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
+                      <button onClick={() => { setMobileChat(false); router.push('/creator/inbox') }} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                       </button>
                       <div style={{

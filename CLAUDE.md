@@ -68,6 +68,26 @@ Monorepo (pnpm workspaces):
 - **RLS policies: `supabase/rls.sql` is the single source of truth.** Every new table's policies MUST go into `rls.sql` at creation time — not only in the migration file. Use `DROP POLICY IF EXISTS` before each `CREATE POLICY` so the file is safely re-runnable. If a migration creates policies inline, consolidate them into `rls.sql` in the same commit. This rule exists because policy drift between migrations and `rls.sql` has caused orphaned/conflicting policies in the live DB (invoices, deal_deliverable_items, creator_products — all had stale migration-named duplicates).
 - Secrets live in `.env` (gitignored), never in this file or any committed file. The Supabase **service-role key bypasses all RLS** — it stays server-side / local only, never in the Expo app or any client bundle.
 
+## The Guapd Playbook (standing rule)
+
+`apps/web/content/playbook.ts` is the source of truth for `/ops/playbook` — the
+document the outreach team pitches from. It has two layers with different rules.
+
+**When shipping a SIGNIFICANT feature — a new brand or creator capability, a
+pricing change, or a major flow — ASK whether to update the Playbook.** If yes,
+update **only** Part 13 ("What's on the platform") and the **Appendix** ("Full
+feature reference"). Keep Part 13 curated and benefit-framed — what it means for
+a brand or a creator — and the Appendix exhaustive.
+
+**Do NOT update the Playbook for minor fixes, refactors, or internal changes.**
+A CSS fix, a bug, a rename or a migration is not a Playbook change.
+
+**Do NOT touch Parts 1–12** (philosophy, pitch, founders, pricing, future).
+Those are strategy, not features, and change only when Palak explicitly asks.
+
+Ask first, every time. Shipping a feature does not by itself authorise an edit
+to a document the team quotes to real brands.
+
 ## Deeper context (imported — these must exist as markdown in `/docs`)
 
 - See @docs/handoff-brief.md for full project state and decision history.
