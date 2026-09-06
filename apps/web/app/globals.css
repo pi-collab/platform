@@ -3849,3 +3849,155 @@ button.signup-form__cross-link {
     box-shadow: 0 0 0 2px #F5F7FA;
   }
 }
+
+/* ── Creator dashboard, mobile ─────────────────────────────────────────────
+   "Creator Dashboard - Mobile Standalone". Below 720px; the desktop dashboard
+   keeps everything above. Presentation only — every figure is computed by the
+   page for desktop, so the two cannot disagree. */
+
+.cdash-m { display: none; }
+
+@media (max-width: 720px) {
+  .cdash-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 100px; color: #12151C; }
+  .cdash-desktop { display: none !important; }
+
+  .cdash-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 18px 18px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  }
+  .cdash-m__hi {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; white-space: nowrap;
+  }
+  .cdash-m__hi-em {
+    font-family: var(--font-serif); font-style: italic; font-weight: 400;
+  }
+  .cdash-m__handle {
+    font-size: 12.5px; color: #878D99; margin-top: 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cdash-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .cdash-m__pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 11px; border-radius: 999px;
+    border: 1.3px solid #E1E5EC; background: #fff;
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 600;
+    color: #12151C; text-decoration: none; white-space: nowrap;
+  }
+  .cdash-m__bell {
+    position: relative; width: 34px; height: 34px; flex-shrink: 0;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #fff; color: #12151C; box-shadow: 0 1px 2px rgba(24,28,36,.05);
+  }
+
+  .cdash-m__stack { padding: 4px 18px 0; display: flex; flex-direction: column; gap: 36px; }
+
+  .cdash-m__card {
+    background: #fff; border-radius: 20px; padding: 22px;
+    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+  }
+  .cdash-m__card--flush { padding: 0; overflow: hidden; }
+  .cdash-m__cardhead {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 14px; border-bottom: 1px solid #EDEFEC;
+  }
+  .cdash-m__meta {
+    font-family: var(--font-ui); font-size: 11px; font-weight: 500;
+    letter-spacing: .04em; text-transform: uppercase; color: #9AA08C;
+  }
+  .cdash-m__period {
+    border: none; outline: none; background: transparent;
+    font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+    color: #12151C; white-space: nowrap; cursor: pointer;
+  }
+
+  /* Two by two, split by hairlines rather than gaps — four figures reading as
+     one panel, which is what a glance wants. */
+  .cdash-m__kpis { display: grid; grid-template-columns: 1fr 1fr; margin-top: 8px; }
+  .cdash-m__kpi { padding: 14px 0; }
+  .cdash-m__kpi--right { padding-left: 18px; border-left: 1px solid #EDEFEC; }
+  .cdash-m__kpi--top { border-top: 1px solid #EDEFEC; }
+  .cdash-m__figure {
+    font-family: var(--font-ui); font-weight: 600; letter-spacing: -0.03em;
+    font-size: 28px; margin: 8px 0 6px; color: #12151C;
+  }
+  .cdash-m .tnum { font-variant-numeric: tabular-nums; }
+
+  .cdash-m__sechead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .cdash-m__sechead--split { justify-content: space-between; }
+  .cdash-m__h2 {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 18px; margin: 0;
+  }
+  .cdash-m__badge {
+    font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    background: var(--neon); color: #3F4A0B; padding: 4px 9px; border-radius: 999px;
+  }
+  .cdash-m__viewall {
+    font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+    color: #565C68; text-decoration: none; white-space: nowrap;
+  }
+
+  .cdash-m__action {
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    text-decoration: none; color: inherit;
+  }
+  .cdash-m__action + .cdash-m__action { border-top: 1px solid #EDEFEC; }
+  .cdash-m__actiontitle {
+    font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+    margin-bottom: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cdash-m__cta {
+    flex-shrink: 0; padding: 8px 15px; border-radius: 999px;
+    background: #12151C; color: #fff;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+  }
+
+  .cdash-m__motion { display: flex; flex-direction: column; gap: 12px; }
+  .cdash-m__deal {
+    display: block; background: #fff; border-radius: 18px; padding: 18px;
+    box-shadow: 0 6px 16px -14px rgba(40,45,25,.2);
+    text-decoration: none; color: inherit;
+  }
+  .cdash-m__dealtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .cdash-m__brand {
+    font-family: var(--font-ui); font-weight: 600; font-size: 14.5px; margin-bottom: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cdash-m__price {
+    font-family: var(--font-ui); font-weight: 700; font-size: 15px;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .cdash-m__dealfoot {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid #EDEFEC;
+  }
+  .cdash-m__dealtitle {
+    font-size: 12.5px; color: #565C68; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Bars, drawn from the same monthly series the desktop chart uses. */
+  .cdash-m__chart {
+    display: flex; align-items: flex-end; gap: 8px;
+    height: 132px; margin-bottom: 14px;
+  }
+  .cdash-m__bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+  .cdash-m__barfill {
+    background: var(--neon); border-radius: 6px 6px 3px 3px; min-height: 3px;
+  }
+  .cdash-m__barlabel {
+    font-family: var(--font-ui); font-size: 10px; color: #9AA08C;
+    text-align: center; margin-top: 8px;
+  }
+  .cdash-m__chartfoot {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-top: 14px; border-top: 1px solid #EDEFEC;
+  }
+  .cdash-m__chartpeak {
+    font-family: var(--font-ui); font-weight: 700; font-size: 15px;
+  }
+}

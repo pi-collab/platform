@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
+import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
+import { unreadNotificationCount } from '@/lib/unread'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
@@ -32,7 +34,7 @@ export default async function CreatorDashboardPage({
 }: {
   searchParams: { period?: string; from?: string; to?: string }
 }) {
-  const { creatorId, creatorName } = await verifyCreator()
+  const { creatorId, creatorName, profileId } = await verifyCreator()
 
   // Newly-vetted creators see the approval screen once before the dashboard.
   // Checked here rather than in the layout: post-approval login lands on this
@@ -212,6 +214,32 @@ export default async function CreatorDashboardPage({
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
 
+  // ── Mobile props, derived from the values above ─────────────────────────
+  const unreadNotifs = await unreadNotificationCount(supabase, profileId)
+  const brandOf = (d: { brands?: unknown }) => {
+    const b = Array.isArray(d.brands) ? d.brands[0] : (d.brands as { name?: string } | null)
+    return b?.name ?? 'Brand'
+  }
+  const mobileActions = [
+    ...offersAwaiting.map((d) => ({ id: `o-${d.id}`, dealId: d.id, title: `New offer from ${brandOf(d)}`, meta: 'Awaiting your reply', cta: 'Review' })),
+    ...deliverablesToDo.map((d) => ({ id: `d-${d.id}`, dealId: d.id, title: `${d.title || 'Deal'} · deliverable to submit`, meta: d.status === 'revision' ? 'Revision requested' : 'In production', cta: 'Submit' })),
+    ...invoicesToIssue.map((d) => ({ id: `i-${d.id}`, dealId: d.id, title: 'Invoice to issue', meta: 'Approved and posted', cta: 'Issue' })),
+  ]
+  const mobileMotion = activeDeals.slice(0, 5).map((d) => ({
+    id: d.id,
+    title: d.title || 'Untitled deal',
+    brandName: brandOf(d),
+    status: d.status === 'negotiating' ? 'New offer'
+      : d.status === 'agreed' ? 'In production'
+      : d.status === 'delivered' ? 'Awaiting approval'
+      : d.status === 'revision' ? 'Revision requested'
+      : d.status === 'approved' ? 'Ready to invoice'
+      : d.status,
+    pricePaise: d.price_paise ?? 0,
+    meta: null as string | null,
+  }))
+  const paidCount = paidInvoices.length
+
   return (
     <>
     {mobileEmpty}
@@ -229,8 +257,27 @@ export default async function CreatorDashboardPage({
         />
       </div>
     )}
+    {!showMobileEmpty && (
+      <CreatorDashboardMobile
+        firstName={firstName}
+        handleLine={emptyHandleLine}
+        followersLabel={null}
+        shopfrontSlug={storefront?.is_published ? storefront.slug : null}
+        period={period}
+        totalEarnedPaise={totalEarned}
+        dealCount={allDeals.length}
+        pendingPaise={pendingAmount}
+        activeCount={activeDeals.length}
+        completedCount={completedDeals.length}
+        paidCount={paidCount}
+        actions={mobileActions}
+        motion={mobileMotion}
+        monthly={monthlyEarnings}
+        unreadNotifications={unreadNotifs}
+      />
+    )}
     <div
-      className={showMobileEmpty ? 'creator-hide-always' : undefined}
+      className={showMobileEmpty ? 'creator-hide-always' : 'cdash-desktop'}
       style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}
     >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>

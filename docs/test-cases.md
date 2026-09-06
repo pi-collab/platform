@@ -3439,3 +3439,41 @@ both unread AND missing.
       read action revalidates both inbox routes; without that the marker is
       written and the cached list still wears the badge
 - [ ] Message order stays chronological after a merge
+
+---
+
+## 25. Creator dashboard — mobile (design: "Creator Dashboard - Mobile Standalone")
+
+`CreatorDashboardMobile` below 720px; the desktop dashboard keeps everything
+above. Presentation only — every figure comes from what the page already
+computes for desktop.
+
+### Numbers must match desktop exactly
+- [ ] Total earned, Pending, Active deals and Completed read the SAME on a
+      phone and a laptop for the same creator and the same period
+- [ ] Changing the period updates all four and the URL carries `?period=`
+- [ ] The chart uses the same monthly series as the desktop chart
+
+### Layout
+- [ ] "Hey, <name>" with the name in serif italic
+- [ ] Handle line shows the handle; a follower count appears ONLY if a social
+      account states one — never invented
+- [ ] Shopfront pill appears only when a storefront is PUBLISHED, and opens the
+      public page in a new tab
+- [ ] Bell carries the unread notification badge
+- [ ] KPI panel is 2×2 split by hairlines, not four separate cards
+- [ ] "Do first" lists offers to review, deliverables to submit and invoices to
+      issue, each linking to its deal
+- [ ] "Deals in motion" shows up to five active deals with brand, stage, value
+- [ ] Section is omitted entirely when it has nothing — no empty headings
+
+### Chart
+- [ ] Drawn only with two or more months. One bar, or none, implies a trend the
+      data cannot support
+- [ ] Bars scale to the peak month; the smallest month is still visible
+- [ ] "Best month" matches the tallest bar
+
+### Deliberately NOT built
+- [ ] There is no "Top posts by views" section. It needs per-post view counts
+      from a connected Instagram account, which is still gated on Meta's App
+      Review — so today it would be an empty ranked list for every creator
