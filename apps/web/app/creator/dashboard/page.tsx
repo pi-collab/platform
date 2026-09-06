@@ -214,6 +214,53 @@ export default async function CreatorDashboardPage({
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
 
+  /* ── Lifetime figures for the mobile screen ───────────────────────────────
+     The design's earnings panel compares this month, the last three months and
+     this year against an all-time total — four windows at once, where every
+     figure above is bounded by the ONE selected period. So this is its own
+     unscoped read rather than a reuse that would quietly report the selected
+     period four times under four different labels. */
+  const { data: lifetimeDeals } = await supabase
+    .from('deals')
+    .select('id, title, status, price_paise, created_at, brands(id, name)')
+    .not('status', 'in', '(cancelled,declined)')
+  const lifetime = lifetimeDeals ?? []
+
+  const { data: lifetimeInvoices } = await supabase
+    .from('invoices')
+    .select('deal_id, status, creator_receives_paise, paid_at')
+    .eq('status', 'paid')
+
+  const nowD = new Date()
+  const startOfMonth = new Date(nowD.getFullYear(), nowD.getMonth(), 1)
+  const start3mo = new Date(nowD.getFullYear(), nowD.getMonth() - 2, 1)
+  const startOfYear = new Date(nowD.getFullYear(), 0, 1)
+  const sumPaidSince = (since: Date | null) =>
+    (lifetimeInvoices ?? []).reduce((sum, inv) => {
+      if (!inv.paid_at) return sum
+      if (since && new Date(inv.paid_at) < since) return sum
+      return sum + (inv.creator_receives_paise ?? 0)
+    }, 0)
+
+  const earnings = {
+    allTimePaise: sumPaidSince(null),
+    thisMonthPaise: sumPaidSince(startOfMonth),
+    last3MoPaise: sumPaidSince(start3mo),
+    thisYearPaise: sumPaidSince(startOfYear),
+  }
+
+  /* Brands come from the page's existing `topBrands`, which already carries
+     deal count, earnings and whether anything is live — a second, thinner
+     aggregation next to it would be two answers to one question. */
+
+  const lifetimeCompleted = lifetime.filter((d) => COMPLETED_STATUSES.has(d.status as string)).length
+  const mobileBrands = topBrands.slice(0, 6).map((b) => ({
+    name: b.name,
+    deals: b.dealCount,
+    valuePaise: b.earnedPaise > 0 ? b.earnedPaise : b.activePaise,
+    active: b.hasActive,
+  }))
+
   // ── Mobile props, derived from the values above ─────────────────────────
   const unreadNotifs = await unreadNotificationCount(supabase, profileId)
   const brandOf = (d: { brands?: unknown }) => {
@@ -273,6 +320,9 @@ export default async function CreatorDashboardPage({
         actions={mobileActions}
         motion={mobileMotion}
         monthly={monthlyEarnings}
+        earnings={earnings}
+        brands={mobileBrands}
+        completedEver={lifetimeCompleted}
         unreadNotifications={unreadNotifs}
       />
     )}

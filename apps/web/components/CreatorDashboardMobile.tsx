@@ -43,6 +43,20 @@ export interface ActionItem {
 
 export interface MonthPoint { label: string; amount: number }
 
+export interface BrandRow {
+  name: string
+  deals: number
+  valuePaise: number
+  active: boolean
+}
+
+export interface Earnings {
+  allTimePaise: number
+  thisMonthPaise: number
+  last3MoPaise: number
+  thisYearPaise: number
+}
+
 function inrShort(paise: number): string {
   const r = Math.round(paise / 100)
   if (r >= 100000) { const v = r / 100000; return `₹${v % 1 === 0 ? v.toFixed(0) : v.toFixed(2).replace(/\.?0+$/, '')}L` }
@@ -53,7 +67,7 @@ function inrShort(paise: number): string {
 export default function CreatorDashboardMobile({
   firstName, handleLine, followersLabel, shopfrontSlug, period,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
-  paidCount, actions, motion, monthly, unreadNotifications = 0,
+  paidCount, actions, motion, monthly, earnings, brands, completedEver, unreadNotifications = 0,
 }: {
   firstName: string
   handleLine: string
@@ -69,6 +83,9 @@ export default function CreatorDashboardMobile({
   actions: ActionItem[]
   motion: MotionDeal[]
   monthly: MonthPoint[]
+  earnings: Earnings
+  brands: BrandRow[]
+  completedEver: number
   unreadNotifications?: number
 }) {
   const router = useRouter()
@@ -217,6 +234,85 @@ export default function CreatorDashboardMobile({
                 <span className="cdash-m__meta">Best month</span>
                 <span className="cdash-m__chartpeak tnum">{inrShort(peak)}</span>
               </div>
+            </div>
+          </section>
+        )}
+        {/* ── Your earnings ──
+            Four windows at once, so these are lifetime figures rather than the
+            selected period wearing four different labels. */}
+        {earnings.allTimePaise > 0 && (
+          <section>
+            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Your earnings</h2></div>
+            <div className="cdash-m__card">
+              <div className="cdash-m__meta">Total earned &middot; all time</div>
+              <div className="cdash-m__figure tnum" style={{ fontSize: 32 }}>{inrShort(earnings.allTimePaise)}</div>
+              <div className="cdash-m__split">
+                <div>
+                  <div className="cdash-m__meta">This month</div>
+                  <div className="cdash-m__splitval tnum">{inrShort(earnings.thisMonthPaise)}</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">Last 3 mo</div>
+                  <div className="cdash-m__splitval tnum">{inrShort(earnings.last3MoPaise)}</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">This year</div>
+                  <div className="cdash-m__splitval tnum">{inrShort(earnings.thisYearPaise)}</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── Your track record ──
+            The count is real. On-time delivery, response time and completion
+            rate are NOT measured anywhere in this codebase — the desktop
+            dashboard prints "100%", "~4h", "100%" as literals. Rather than
+            carry invented numbers onto a second screen, they read as not yet
+            measured. See the note in the commit. */}
+        {completedEver > 0 && (
+          <section>
+            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Your track record</h2></div>
+            <div className="cdash-m__card">
+              <div className="cdash-m__figure tnum" style={{ fontSize: 32, marginTop: 0 }}>{completedEver}</div>
+              <div className="cdash-m__meta">deals completed</div>
+              <div className="cdash-m__split" style={{ marginTop: 18 }}>
+                <div>
+                  <div className="cdash-m__meta">On-time</div>
+                  <div className="cdash-m__splitval">&mdash;</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">Response</div>
+                  <div className="cdash-m__splitval">&mdash;</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">Completion</div>
+                  <div className="cdash-m__splitval">&mdash;</div>
+                </div>
+              </div>
+              <p className="cdash-m__note">Not measured yet. These start once we track delivery dates against agreed timelines.</p>
+            </div>
+          </section>
+        )}
+
+        {/* ── Brands worked with ── */}
+        {brands.length > 0 && (
+          <section>
+            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Brands you&rsquo;ve worked with</h2></div>
+            <div className="cdash-m__card cdash-m__card--flush">
+              {brands.map((b) => (
+                <div key={b.name} className="cdash-m__brandrow">
+                  <span className="cdash-m__brandmark" aria-hidden="true">{b.name.slice(0, 1).toUpperCase()}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="cdash-m__brand">{b.name}</div>
+                    <div className="cdash-m__meta">{b.active ? 'Active' : 'Completed'}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div className="cdash-m__price tnum">{inrShort(b.valuePaise)}</div>
+                    <div className="cdash-m__meta">{b.deals} deal{b.deals === 1 ? '' : 's'}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}

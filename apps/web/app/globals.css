@@ -4001,3 +4001,26 @@ button.signup-form__cross-link {
     font-family: var(--font-ui); font-weight: 700; font-size: 15px;
   }
 }
+
+@media (max-width: 720px) {
+  .cdash-m__split {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDEFEC;
+  }
+  .cdash-m__splitval {
+    font-family: var(--font-ui); font-weight: 600; font-size: 16px;
+    letter-spacing: -0.02em; margin-top: 6px; color: #12151C;
+  }
+  .cdash-m__note {
+    margin: 14px 0 0; font-family: var(--font-ui); font-size: 11.5px;
+    color: #9AA08C; line-height: 1.5;
+  }
+  .cdash-m__brandrow { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
+  .cdash-m__brandrow + .cdash-m__brandrow { border-top: 1px solid #EDEFEC; }
+  .cdash-m__brandmark {
+    width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
+    background: linear-gradient(135deg,#E7F1FC,#F0EAFD);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #12151C;
+  }
+}

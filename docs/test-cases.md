@@ -3477,3 +3477,22 @@ computes for desktop.
 - [ ] There is no "Top posts by views" section. It needs per-post view counts
       from a connected Instagram account, which is still gated on Meta's App
       Review — so today it would be an empty ranked list for every creator
+
+### Updated dashboard: earnings, track record, brands
+- [ ] "Your earnings" shows an all-time total with This month / Last 3 mo /
+      This year beneath it. These are LIFETIME reads, not the selected period
+      relabelled four times — change the period and they must NOT move
+- [ ] The four Overview figures DO move with the period. Both behaviours on one
+      screen is the point
+- [ ] "Brands you've worked with" reuses the page's existing aggregation, so a
+      brand's deal count matches desktop
+- [ ] "Your track record" shows the real completed count
+- [ ] **On-time / Response / Completion read "—", never a number.** Nothing in
+      the codebase measures them. The DESKTOP dashboard prints "100%", "~4h",
+      "100%" as hardcoded literals — see the note below
+- [ ] Every section hides itself when it has nothing
+
+### Navbar highlight
+- [ ] The current section's tab is inked and carries the lime marker; the rest
+      are muted. Check Dashboard, Deals, Inbox, Payments and Profile
+- [ ] Opening a deal keeps Deals highlighted (`startsWith`, not equality)
