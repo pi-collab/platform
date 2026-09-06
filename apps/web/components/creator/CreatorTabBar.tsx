@@ -74,9 +74,10 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
             className="creator-tab"
             aria-current={current ? 'page' : undefined}
           >
-            <svg
-              width="22"
-              height="22"
+            <span className="creator-tab__iconwrap">
+              <svg
+                width="20"
+                height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -86,7 +87,8 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
               aria-hidden="true"
             >
               {tab.icon}
-            </svg>
+              </svg>
+            </span>
             <span className="creator-tab__label">{tab.label}</span>
             {/* Waiting messages, on the tab that leads to them. The count was
                 already computed for the sidebar and simply never reached the
@@ -96,7 +98,6 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
                 {unreadInbox > 9 ? '9+' : unreadInbox}
               </span>
             )}
-            <span className="creator-tab__marker" aria-hidden="true" />
           </Link>
         )
       })}
@@ -110,6 +111,7 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
         className="creator-tab"
         aria-current={isCurrent('/creator/profile') ? 'page' : undefined}
       >
+        <span className="creator-tab__iconwrap">
         <span
           aria-hidden="true"
           style={{
@@ -129,8 +131,8 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
         >
           {initial?.trim()?.charAt(0)?.toUpperCase() || '\u00B7'}
         </span>
+        </span>
         <span className="creator-tab__label">Profile</span>
-        <span className="creator-tab__marker" aria-hidden="true" />
       </Link>
     </nav>
   )

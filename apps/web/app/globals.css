@@ -3853,15 +3853,347 @@ button.signup-form__cross-link {
   }
 }
 
+/* ── Inbox list, mobile ────────────────────────────────────────────────────
+   "Creator Inbox List - Mobile Standalone". Shared by both inboxes. Shown below
+   720px only when NO thread is selected; once ?deal= is set the existing
+   master-detail view takes over, since the thread screen is its own design. */
+
+.inbox-m { display: none; }
+
+/* ── Thread state on mobile ────────────────────────────────────────────────
+   When the URL names a deal, a phone shows the THREAD and nothing else.
+
+   Relying on the inbox view's own `mobileChat` state was not enough: that state
+   is internal, it starts closed, and when it stays closed the pane sits
+   off-screen while the view's OWN older thread list shows underneath — which is
+   indistinguishable from the tap having done nothing. Hiding that list outright
+   means the failure cannot present as "it took me back to the list", whatever
+   the component's state is doing. */
+@media (max-width: 720px) {
+  .inbox-thread-only .inbox-left { display: none !important; }
+  .inbox-thread-only .inbox-right {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .inbox-hide-mobile { display: none !important; }
+
+  .inbox-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .inbox-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C; white-space: nowrap;
+  }
+  .inbox-m__bell {
+    position: relative; width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #fff; box-shadow: 0 6px 14px -10px rgba(40,45,25,.3);
+  }
+
+  .inbox-m__top { padding: 0 20px; }
+  .inbox-m__searchrow { display: flex; gap: 10px; }
+  .inbox-m__search {
+    flex: 1; display: flex; align-items: center; gap: 12px; height: 54px;
+    padding: 0 10px 0 20px; border-radius: 999px; background: #fff;
+    box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05);
+    min-width: 0;
+  }
+  .inbox-m__search svg { flex-shrink: 0; }
+  .inbox-m__search input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none;
+    font-family: var(--font-ui); font-size: 14px; color: #12151C;
+  }
+  .inbox-m__search input::placeholder { color: #878D99; }
+  .inbox-m__search input::-webkit-search-cancel-button { display: none; }
+  .inbox-m__filterbtn {
+    width: 54px; height: 54px; flex-shrink: 0; border-radius: 999px;
+    background: #fff; box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: #12151C;
+  }
+  .inbox-m__filterbtn.is-on { background: var(--neon); border-color: transparent; }
+
+  .inbox-m__filters {
+    display: flex; gap: 8px; margin-top: 12px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .inbox-m__filters::-webkit-scrollbar { display: none; }
+  .inbox-m__chip {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    padding: 9px 15px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 12.5px;
+    background: #fff; color: #565C68;
+    box-shadow: 0 1px 2px rgba(24,28,36,.03), 0 6px 14px -10px rgba(40,45,25,.22);
+  }
+  .inbox-m__chip.is-on { background: #12151C; color: #fff; }
+  .inbox-m__chip-count { font-size: 11px; font-weight: 500; color: #9AA08C; }
+  .inbox-m__chip.is-on .inbox-m__chip-count { color: rgba(255,255,255,.6); }
+
+  .inbox-m__rows {
+    padding: 16px 20px 0; display: flex; flex-direction: column; gap: 12px;
+  }
+  /* Read rows sit slightly flatter than unread ones (.16 against .2). Small,
+     but it is what makes an unread row read as heavier without a badge. */
+  .inbox-m__row {
+    display: block; background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.16);
+    text-decoration: none; color: inherit;
+  }
+  .inbox-m__row.is-unread { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
+  .inbox-m__row-inner { display: flex; align-items: flex-start; gap: 16px; }
+
+  .inbox-m__avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: #E7EAF0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #12151C;
+  }
+  .inbox-m__avatar.is-unread { box-shadow: 0 0 0 2px var(--neon); }
+
+  .inbox-m__row-top { display: flex; align-items: center; gap: 8px; }
+  .inbox-m__time { margin-left: auto; }
+  /* The name gives way before the chip does — a truncated brand is still
+     recognisable, a truncated status is not. */
+  .inbox-m__name {
+    font-weight: 600; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0; flex-shrink: 1;
+  }
+  .inbox-m__row.is-unread .inbox-m__name { font-weight: 700; }
+  .inbox-m__time { font-size: 11px; color: #878D99; white-space: nowrap; flex-shrink: 0; }
+
+  .inbox-m__preview-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+  .inbox-m__preview {
+    flex: 1; min-width: 0; font-size: 13px; color: #565C68; font-weight: 400;
+    margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .inbox-m__row.is-unread .inbox-m__preview { color: #12151C; font-weight: 600; }
+  .inbox-m__dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--neon-deep, #D2F04A); flex-shrink: 0;
+  }
+
+  .inbox-m__empty {
+    padding: 44px 8px; text-align: center;
+    font-family: var(--font-ui); font-size: 13.5px; color: #565C68; line-height: 1.6;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Deal stage on an inbox row. Same map, same colours and same wording as the
+     deals list — a thread and its deal must never read as two different
+     states. Sits under the preview so the name/time and preview/unread rows
+     keep their alignment. */
+  .inbox-m__stage {
+    display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+    padding: 3px 9px; border-radius: 999px;
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 600;
+    white-space: nowrap; color: #3A3D33;
+  }
+  .inbox-m__stage-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+}
+
+/* ── Inbox thread, mobile ──────────────────────────────────────────────────
+   "Creator Inbox Thread - Mobile Standalone". Below 720px, in place of the
+   desktop split-pane's right side. Fills the viewport: header pinned, messages
+   scrolling between, composer above the tab bar. */
+
+.ithread-m { display: none; }
+
+@media (max-width: 720px) {
+  .ithread-m {
+    display: flex; flex-direction: column;
+    position: fixed; inset: 0; z-index: 40;
+    background: #F5F7FA; color: #12151C;
+    /* The composer clears the creator tab bar; a brand has none. */
+    --composer-gap: 0px;
+  }
+  .ithread-m.has-tabbar { --composer-gap: 62px; }
+
+  .ithread-m__head {
+    flex-shrink: 0;
+    padding: 14px 16px 12px; display: flex; align-items: center; gap: 10px;
+    background: #F5F7FA; border-bottom: 1px solid #EDEFEC;
+    padding-top: max(14px, env(safe-area-inset-top));
+  }
+  .ithread-m__back {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; color: #12151C;
+  }
+  .ithread-m__avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg,#EAF3FC,#E7DEF7);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 12px; color: #12151C;
+  }
+  .ithread-m__name {
+    font-weight: 700; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ithread-m__viewdeal {
+    font-size: 11.5px; font-weight: 700; color: #565C68;
+    white-space: nowrap; flex-shrink: 0; text-decoration: none;
+  }
+
+  .ithread-m__scroll {
+    flex: 1; min-height: 0; overflow-y: auto;
+    padding: 18px 16px calc(84px + var(--composer-gap));
+    display: flex; flex-direction: column; gap: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ithread-m__daywrap { display: flex; justify-content: center; }
+  .ithread-m__day {
+    font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: #9AA08C; background: #EDEFEC; padding: 5px 12px; border-radius: 999px;
+  }
+
+  /* align-self is what makes a bubble fit its text.
+     The scroll area is a column flex container, so its children STRETCH to full
+     width by default — which made every incoming bubble the full 76% whether it
+     said "ok" or a paragraph. Only the outgoing side had an align-self, which is
+     why the bug showed on one side only. */
+  .ithread-m__msg {
+    display: flex; flex-direction: column; gap: 6px;
+    max-width: 76%; align-self: flex-start; align-items: flex-start;
+  }
+  .ithread-m__msg.is-mine { align-self: flex-end; align-items: flex-end; }
+
+  /* Theirs sits on white with a lift; mine is solid ink. The asymmetry is the
+     whole reason a thread is readable at a glance. */
+  .ithread-m__bubble {
+    background: #fff; padding: 11px 14px; border-radius: 20px;
+    font-size: 14px; line-height: 1.5; color: #12151C;
+    box-shadow: 0 4px 10px -8px rgba(40,45,25,.2);
+    overflow-wrap: anywhere;
+  }
+  .ithread-m__msg.is-mine .ithread-m__bubble {
+    background: #12151C; color: #fff; box-shadow: none;
+  }
+  .ithread-m__time { font-size: 10px; color: #9AA08C; margin-left: 4px; }
+  .ithread-m__msg.is-mine .ithread-m__time { margin-left: 0; margin-right: 4px; }
+
+  .ithread-m__empty {
+    margin: auto; text-align: center; font-size: 13.5px; color: #878D99;
+  }
+
+  .ithread-m__composer {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(var(--composer-gap) + env(safe-area-inset-bottom));
+    padding: 0 16px 12px;
+  }
+  .ithread-m__field {
+    border-radius: 14px; padding: 6px 6px 6px 16px;
+    display: flex; align-items: center; gap: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(18,21,28,.04), 0 10px 24px -16px rgba(18,21,28,.4);
+  }
+  .ithread-m__field input {
+    flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+    font-family: var(--font-ui); font-size: 13.5px; color: #12151C; height: 36px;
+  }
+  .ithread-m__field input::placeholder { color: #9AA08C; }
+  /* Only SEND is neon. The rule used to be `.ithread-m__field button`, which
+     also caught the emoji button and gave two controls the same weight — the
+     one that posts a message and the one that opens a palette. */
+  .ithread-m__send {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; border: none;
+    background: var(--neon); color: #12151C; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ithread-m__send:disabled { opacity: .45; cursor: default; }
+
+  .ithread-m__emojibtn {
+    width: 30px; height: 30px; flex-shrink: 0; border: none; background: none;
+    color: #9AA08C; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    margin-left: -6px;
+  }
+  .ithread-m__emojibtn[aria-expanded="true"] { color: #12151C; }
+
+  /* A GRID, not a line. Eight per row, capped at about four rows with the rest
+     scrolling — an emoji picker that runs off the side of a phone is not a
+     picker. */
+  .ithread-m__emoji {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    margin-bottom: 8px;
+    padding: 10px 8px;
+    max-height: 184px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(18,21,28,.04), 0 10px 24px -16px rgba(18,21,28,.4);
+  }
+  .ithread-m__emoji button {
+    border: none; background: none; cursor: pointer; padding: 0;
+    height: 38px; font-size: 21px; line-height: 1; border-radius: 9px;
+  }
+  .ithread-m__emoji button:active { background: #EDEFEC; }
+  .ithread-m__error {
+    margin: 8px 4px 0; font-size: 12px; color: #B4454B;
+  }
+
+  .ithread-m__closed {
+    position: absolute; left: 0; right: 0;
+    bottom: calc(var(--composer-gap) + env(safe-area-inset-bottom));
+    padding: 16px; display: flex; align-items: center; justify-content: center; gap: 9px;
+    background: #F5F7FA; border-top: 1px solid #EDEFEC;
+    font-size: 13px; color: #878D99;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Unread notifications on the header bell. One class for all three mobile
+     screens — three copies would drift apart the first time one is nudged. */
+  .inbox-m__bell, .cdeals-m__bell, .cpay-m__bell { position: relative; }
+  /* Neon, per the design's unread dot — but keeping the count, which is the
+     more useful half. Ink on neon rather than white on ink: the brand colour
+     is the signal, and it is only legible with dark text on it. */
+  .mbell-badge {
+    position: absolute; top: -4px; right: -4px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    background: #E8FF66; color: #12151C;
+    font-family: var(--font-ui); font-size: 9.5px; font-weight: 700;
+    line-height: 16px; text-align: center;
+    border: 1.5px solid #fff;
+  }
+}
+
 /* ── Creator dashboard, mobile ─────────────────────────────────────────────
    "Creator Dashboard - Mobile Standalone". Below 720px; the desktop dashboard
    keeps everything above. Presentation only — every figure is computed by the
    page for desktop, so the two cannot disagree. */
 
+
+
+/* ── Creator dashboard, mobile ─────────────────────────────────────────────
+   "Creator Dashboard - Mobile Standalone (1)". Values read from the export's
+   own tokens rather than eyeballed: --meta #565C68, --hair rgba(60,80,30,.08),
+   --line rgba(60,80,30,.10), --amber #B67C15, --lime-700 #4F6B12,
+   --lime-950 #161B08, --sec-mid #E4ECF3, and .mcard's two-part shadow. */
+
 .cdash-m { display: none; }
 
 @media (max-width: 720px) {
-  .cdash-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 100px; color: #12151C; }
+  .cdash-m {
+    display: block; background: #F5F7FA; min-height: 100vh;
+    padding-bottom: 100px; color: #12151C;
+    --meta: #565C68; --hair: rgba(60,80,30,.08); --line: rgba(60,80,30,.10);
+    --amber: #B67C15; --lime700: #4F6B12; --lime950: #161B08;
+    --wg500: #565C68; --wg600: #4A505C; --secmid: #E4ECF3;
+  }
   .cdash-desktop { display: none !important; }
 
   .cdash-m__head {
@@ -3873,161 +4205,181 @@ button.signup-form__cross-link {
     font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
     font-size: 24px; margin: 0; white-space: nowrap;
   }
-  .cdash-m__hi-em {
-    font-family: var(--font-serif); font-style: italic; font-weight: 400;
-  }
+  .cdash-m__hi-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
   .cdash-m__handle {
-    font-size: 12.5px; color: #878D99; margin-top: 6px;
+    font-size: 12.5px; color: var(--wg500); margin-top: 6px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .cdash-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .cdash-m__pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 7px 11px; border-radius: 999px;
-    border: 1.3px solid #E1E5EC; background: #fff;
+    display: inline-flex; align-items: center; gap: 5px; padding: 7px 11px;
+    border-radius: 999px; border: 1.3px solid var(--line); background: #fff;
     font-family: var(--font-ui); font-size: 11.5px; font-weight: 600;
     color: #12151C; text-decoration: none; white-space: nowrap;
   }
   .cdash-m__bell {
-    position: relative; width: 34px; height: 34px; flex-shrink: 0;
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: #fff; color: #12151C; box-shadow: 0 1px 2px rgba(24,28,36,.05);
+    position: relative; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff; color: #12151C; box-shadow: 0 6px 14px -10px rgba(40,45,25,.3);
   }
 
   .cdash-m__stack { padding: 4px 18px 0; display: flex; flex-direction: column; gap: 36px; }
 
-  /* .mcard from the export. */
+  /* .mcard */
   .cdash-m__card {
-    background: #fff; border-radius: 20px; padding: 22px;
+    border-radius: 20px; background: #fff;
     box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
   }
-  .cdash-m__card--flush { padding: 0; overflow: hidden; }
+
+  /* .t-meta */
+  .cdash-m__meta {
+    font-family: var(--font-ui); font-weight: 500; font-size: 9.5px;
+    line-height: 1.4; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--meta);
+  }
+  .cdash-m__meta--plain { text-transform: none; letter-spacing: .04em; }
+
+  /* Every heading carries the short lime rule. It is the one recurring accent
+     on this screen and its absence is why the page read as generic. */
+  .cdash-m__h2 {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 19px; margin: 0; color: #12151C;
+  }
+  .cdash-m__secline { width: 32px; height: 1px; background: #C9EB3C; margin-top: 10px; }
+
+  .cdash-m__up { font-size: 11.5px; font-weight: 700; color: var(--lime700); }
+
+  /* Horizontal, snapping, and bleeding to both edges — the design scrolls
+     these rather than stacking them. */
+  .cdash-m__hscroll {
+    display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 2px 18px 6px; margin: 16px -18px 0;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .cdash-m__hscroll::-webkit-scrollbar { display: none; }
+  .cdash-m__hscroll > * { scroll-snap-align: start; flex-shrink: 0; }
+
+  /* ── Overview ── */
   .cdash-m__cardhead {
     display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 14px; border-bottom: 1px solid #EDEFEC;
-  }
-  /* .t-meta in the export: 9.5px, .14em, and #565C68 — a blue-grey. I had it
-     at 11px/.04em in #9AA08C, which is a different colour family entirely. */
-  .cdash-m__meta {
-    font-family: var(--font-ui); font-size: 9.5px; font-weight: 500;
-    line-height: 1.4; letter-spacing: .14em; text-transform: uppercase;
-    color: #565C68;
+    padding-bottom: 14px; border-bottom: 1px solid var(--hair);
   }
   .cdash-m__period {
     border: none; outline: none; background: transparent;
     font-family: var(--font-ui); font-size: 11px; font-weight: 600;
     color: #12151C; white-space: nowrap; cursor: pointer;
   }
-
-  /* Two by two, split by hairlines rather than gaps — four figures reading as
-     one panel, which is what a glance wants. */
   .cdash-m__kpis { display: grid; grid-template-columns: 1fr 1fr; margin-top: 8px; }
   .cdash-m__kpi { padding: 14px 0; }
-  .cdash-m__kpi--right { padding-left: 18px; border-left: 1px solid rgba(60,80,30,.08); }
-  .cdash-m__kpi--top { border-top: 1px solid rgba(60,80,30,.08); }
+  .cdash-m__kpi--right { padding-left: 18px; border-left: 1px solid var(--hair); }
+  .cdash-m__kpi--top { border-top: 1px solid var(--hair); }
   .cdash-m__figure {
     font-family: var(--font-ui); font-weight: 600; letter-spacing: -0.03em;
     font-size: 28px; margin: 8px 0 6px; color: #12151C;
   }
-  .cdash-m .tnum { font-variant-numeric: tabular-nums; font-family: 'Sora', var(--font-ui), sans-serif; }
-
-  .cdash-m__sechead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .cdash-m__sechead--split { justify-content: space-between; }
-  .cdash-m__h2 {
-    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
-    font-size: 18px; margin: 0;
+  .cdash-m .tnum {
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+    font-family: 'Sora', var(--font-ui), sans-serif;
   }
+
+  /* ── Do first ── */
   .cdash-m__badge {
+    display: inline-block;
     font-family: var(--font-ui); font-size: 10px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase;
-    background: var(--neon); color: #3F4A0B; padding: 4px 9px; border-radius: 999px;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--lime950); background: #E8FF66;
+    border-radius: 999px; padding: 4px 12px;
   }
-  .cdash-m__viewall {
-    font-family: var(--font-ui); font-size: 12px; font-weight: 700;
-    color: #565C68; text-decoration: none; white-space: nowrap;
-  }
-
   .cdash-m__action {
-    display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 12px; padding: 16px 0;
     text-decoration: none; color: inherit;
   }
-  .cdash-m__action + .cdash-m__action { border-top: 1px solid rgba(60,80,30,.08); }
+  .cdash-m__action + .cdash-m__action { border-top: 1px solid var(--hair); }
+  .cdash-m__actionicon {
+    width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+    background: linear-gradient(135deg,#E9F7F0,#E7F1FC);
+    display: flex; align-items: center; justify-content: center;
+  }
   .cdash-m__actiontitle {
-    font-family: var(--font-ui); font-weight: 600; font-size: 14px;
-    margin-bottom: 4px;
+    font-family: var(--font-ui); font-weight: 600; font-size: 13.5px; color: #12151C;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* Amber, not grey. These lines say something is waiting on you. */
+  .cdash-m__actionmeta {
+    font-size: 11.5px; color: var(--amber); font-weight: 600; margin-top: 2px;
+  }
+  /* Outlined, not a filled dark pill — three of these stacked in solid ink
+     would shout, and none of them is more urgent than the others. */
   .cdash-m__cta {
-    flex-shrink: 0; padding: 8px 15px; border-radius: 999px;
-    background: #12151C; color: #fff;
-    font-family: var(--font-ui); font-size: 12px; font-weight: 700;
+    flex-shrink: 0; width: 64px; text-align: center; border-radius: 999px;
+    padding: 8px 0; font-family: var(--font-ui); font-weight: 700; font-size: 11.5px;
+    color: #12151C; background: #fff; border: 1.3px solid var(--line);
   }
 
-  .cdash-m__motion { display: flex; flex-direction: column; gap: 12px; }
-  .cdash-m__deal {
-    display: block; background: #fff; border-radius: 18px; padding: 18px;
-    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
-    text-decoration: none; color: inherit;
+  /* ── Deals in motion ── */
+  .cdash-m__viewall {
+    font-size: 12px; font-weight: 600; color: var(--wg600); text-decoration: none;
   }
-  .cdash-m__dealtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  .cdash-m__brand {
-    font-family: var(--font-ui); font-weight: 600; font-size: 14.5px; margin-bottom: 4px;
+  .cdash-m__deal { width: 220px; padding: 20px; text-decoration: none; color: inherit; }
+  .cdash-m__dealtop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .cdash-m__stagechip {
+    font-size: 10.5px; font-weight: 700; color: #12151C; background: #fff;
+    border-radius: 999px; padding: 3px 9px; white-space: nowrap;
+  }
+  .cdash-m__dealfig {
+    font-family: var(--font-ui); font-weight: 600; letter-spacing: -0.03em;
+    font-size: 28px; margin-top: 12px; color: #12151C;
+  }
+  .cdash-m__dealsub {
+    font-size: 12px; color: var(--wg500); margin-top: 3px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .cdash-m__price {
-    font-family: var(--font-ui); font-weight: 700; font-size: 15px;
-    flex-shrink: 0; white-space: nowrap;
+  /* How far through the pipeline this deal is. Derived from its stage, not
+     decorative. */
+  .cdash-m__track {
+    margin-top: 14px; height: 4px; border-radius: 4px;
+    background: var(--secmid); overflow: hidden;
   }
+  .cdash-m__trackfill { height: 100%; border-radius: 4px; background: #12151C; }
   .cdash-m__dealfoot {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,80,30,.08);
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--hair);
+    font-size: 11.5px; color: var(--wg500);
   }
-  .cdash-m__dealtitle {
-    font-size: 12.5px; color: #565C68; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .cdash-m__dealfoot b { color: #12151C; font-weight: 600; }
 
-  /* Bars, drawn from the same monthly series the desktop chart uses. */
-  .cdash-m__chart {
-    display: flex; align-items: flex-end; gap: 8px;
-    height: 132px; margin-bottom: 14px;
+  /* ── Split stat rows (earnings, track record) ── */
+  .cdash-m__three { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+  .cdash-m__three > div { padding: 14px 0; border-top: 1px solid var(--hair); }
+  .cdash-m__three > div + div { padding-left: 14px; border-left: 1px solid var(--hair); }
+  .cdash-m__threeval {
+    font-family: var(--font-ui); font-weight: 600; font-size: 17px;
+    letter-spacing: -0.02em; margin-top: 8px; color: #12151C;
   }
-  .cdash-m__bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
-  .cdash-m__barfill {
-    background: var(--neon); border-radius: 6px 6px 3px 3px; min-height: 3px;
-  }
-  .cdash-m__barlabel {
-    font-family: var(--font-ui); font-size: 10px; color: #878D99;
-    text-align: center; margin-top: 8px;
-  }
-  .cdash-m__chartfoot {
-    display: flex; align-items: baseline; justify-content: space-between;
-    padding-top: 14px; border-top: 1px solid rgba(60,80,30,.08);
-  }
-  .cdash-m__chartpeak {
-    font-family: var(--font-ui); font-weight: 700; font-size: 15px;
-  }
-}
-
-@media (max-width: 720px) {
-  .cdash-m__split {
-    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
-    margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(60,80,30,.08);
-  }
-  .cdash-m__splitval {
-    font-family: var(--font-ui); font-weight: 600; font-size: 16px;
-    letter-spacing: -0.02em; margin-top: 6px; color: #12151C;
+  .cdash-m__threeval--strong { font-weight: 700; font-size: 19px; }
+  .cdash-m__bigfig {
+    font-family: var(--font-ui); font-weight: 600; font-size: 34px;
+    letter-spacing: -0.03em; color: #12151C;
   }
   .cdash-m__note {
     margin: 14px 0 0; font-family: var(--font-ui); font-size: 11.5px;
     color: #878D99; line-height: 1.5;
   }
-  .cdash-m__brandrow { display: flex; align-items: center; gap: 14px; padding: 16px 18px; }
-  .cdash-m__brandrow + .cdash-m__brandrow { border-top: 1px solid rgba(60,80,30,.08); }
+
+  /* ── Brands ── */
+  .cdash-m__brandrow { display: flex; align-items: center; gap: 14px; padding: 16px 0; }
+  .cdash-m__brandrow + .cdash-m__brandrow { border-top: 1px solid var(--hair); }
   .cdash-m__brandmark {
     width: 38px; height: 38px; flex-shrink: 0; border-radius: 50%;
     background: linear-gradient(135deg,#E7F1FC,#F0EAFD);
     display: flex; align-items: center; justify-content: center;
     font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #12151C;
+  }
+  .cdash-m__brandname {
+    font-family: var(--font-ui); font-weight: 600; font-size: 14.5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cdash-m__price {
+    font-family: 'Sora', var(--font-ui), sans-serif; font-weight: 700; font-size: 15px;
+    white-space: nowrap; flex-shrink: 0;
   }
 }

@@ -3515,3 +3515,29 @@ I had hardcoded approximations instead of reading the design's variables.
 - [ ] The unread notification badge is NEON with ink text, bordered white — the
       count is kept, since a number is more useful than a plain dot
 - [ ] Zero unread shows no badge at all
+
+### Dashboard rebuilt against the export (previous version was approximated)
+- [ ] Every section heading carries the 32×1px lime rule (#C9EB3C) beneath it
+- [ ] "Do first" badge is ink-on-neon (#161B08 on #E8FF66), 10px/.08em
+- [ ] Action rows have a 36px rounded icon tile with the mint→sky gradient
+- [ ] **Action meta lines are AMBER (#B67C15), not grey** — they say something
+      is waiting on you
+- [ ] Action CTAs are OUTLINED pills (white, 1.3px border), fixed 64px wide —
+      not filled dark pills. Three dark pills stacked shout, and none of the
+      three is more urgent than the others
+- [ ] "Deals in motion" scrolls HORIZONTALLY with snap, 220px cards — not a
+      vertical list
+- [ ] Each motion card: brand as a meta label, an outlined stage chip whose
+      border tint comes from the stage, a 28px figure, the deal title, and a
+      4px progress bar filled to the deal's stage
+- [ ] Performance is a LINE chart — gridlines, rupee axis, month labels, and a
+      neon dot on the final point — not bars
+- [ ] Axis labels derive from the creator's own peak, so the line cannot leave
+      the grid for someone earning more than the mockup
+- [ ] Meta text is 9.5px / .14em / #565C68 throughout
+
+### Nav highlight
+- [ ] The active tab's ICON sits in a filled neon disc (34px); the label is ink
+- [ ] Inactive tabs are plain icons in #878D99 with no disc
+- [ ] All five behave the same, Profile included
+- [ ] No 3px bar remains anywhere under the tabs

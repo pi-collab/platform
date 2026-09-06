@@ -184,30 +184,23 @@
 
 /* The active tab is marked twice — colour AND a neon underline. Colour alone
    fails for anyone who cannot separate these two greys. */
-/* Guapd green, in the readable weight of it.
-   The active tab used plain ink, which reads as "slightly darker" rather than
-   as selected. Pure --lime-400 (#E8FF66) is not an option for a 10.5px label
-   on white — it is a highlighter colour and fails contrast badly. The design
-   system already ships the answer: --lime-700 (#4F6B12) is the same green
-   pitched for text. The neon bar underneath carries the bright value. */
+/* The active tab is a filled neon disc behind the icon, with the label in ink.
+   Not a bar underneath, and not tinted text — the export puts the brand colour
+   on the icon itself, which is why the earlier attempt read as unhighlighted. */
 .creator-tab[aria-current='page'] {
-  color: var(--lime-700, #4F6B12);
+  color: var(--ink);
 }
-
-.creator-tab__marker {
-  display: block;
-  width: 18px;
-  height: 3px;
-  margin: 3px auto 0;
-  border-radius: 2px;
+.creator-tab__iconwrap {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
   background: transparent;
+  transition: background .14s ease;
 }
-
-.creator-tab[aria-current='page'] .creator-tab__marker {
+.creator-tab[aria-current='page'] .creator-tab__iconwrap {
   background: var(--lime-400);
 }
 
-/* ── Desktop ──────────────────────────────────────────────────────────────
+.creator-tab[aria-current='page'] /* ── Desktop ──────────────────────────────────────────────────────────────
    The design is drawn for a 390px phone. On a wide screen the content is
    centred at phone width rather than stretched: these layouts assume a single
    column, and a 1400px-wide stat row reads as broken. The tab bar stays, since

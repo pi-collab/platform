@@ -4,33 +4,38 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 /**
- * Creator dashboard, mobile — built to "Creator Dashboard - Mobile Standalone".
+ * Creator dashboard, mobile — built to "Creator Dashboard - Mobile Standalone (1)".
  *
- * Renders below 720px; the existing desktop dashboard keeps everything above.
- * No new logic: every figure here is already computed by the page for desktop,
- * so a creator cannot see one number on a phone and a different one on a
- * laptop.
+ * Renders below 720px; the desktop dashboard keeps everything above. Every
+ * figure is computed by the page for desktop, so a creator cannot read one
+ * number on a phone and another on a laptop.
  *
- * ── Sections the mockup has that this does not ─────────────────────────────
- * TOP POSTS BY VIEWS. It needs per-post view counts, which come from a
- * connected Instagram account — and Instagram connection is still waiting on
- * Meta's App Review, so for every creator today the section would be an empty
- * ranked list. Drawn as nothing rather than as four blank rows.
+ * ── What is NOT here, and why ─────────────────────────────────────────────
+ * TOP POSTS and YOUR REACH need per-post views, follower counts and engagement
+ * from a connected Instagram account. That connection is still waiting on
+ * Meta's App Review, so today the section would be four empty cards above three
+ * dashes. Omitted rather than drawn hollow.
  *
- * FOLLOWER COUNT beside the handle. Shown only when a social account actually
- * states one. The desktop page already refuses to invent this and the reason
- * holds here: a number a creator did not give us is one they will be asked
- * about by a brand.
+ * THE CHANGE ARROWS (▲ 18%). Nothing computes a prior-period comparison. The
+ * arrow is the most quotable thing on the screen and inventing it is worse than
+ * leaving the space quiet.
+ *
+ * ON-TIME / RESPONSE / COMPLETION read "—". Nothing measures them. The desktop
+ * dashboard prints 100% / ~4h / 100% as literals; that is not copied here.
  */
 
 export interface MotionDeal {
   id: string
-  title: string
   brandName: string
-  status: string
+  stageLabel: string
+  /** Border tint for the stage chip, from the deal's own stage colour. */
+  stageBorder: string
+  /** 0–100. Derived from the stage, not decorative. */
+  progress: number
   pricePaise: number
-  /** Already-phrased line under the title, e.g. "Respond by 14 Aug". */
-  meta: string | null
+  title: string
+  footLabel: string | null
+  footValue: string | null
 }
 
 export interface ActionItem {
@@ -42,14 +47,7 @@ export interface ActionItem {
 }
 
 export interface MonthPoint { label: string; amount: number }
-
-export interface BrandRow {
-  name: string
-  deals: number
-  valuePaise: number
-  active: boolean
-}
-
+export interface BrandRow { name: string; deals: number; valuePaise: number; active: boolean }
 export interface Earnings {
   allTimePaise: number
   thisMonthPaise: number
@@ -64,10 +62,22 @@ function inrShort(paise: number): string {
   return `₹${r.toLocaleString('en-IN')}`
 }
 
+/** Every section title carries the short lime rule. Its absence is most of why
+ *  the first attempt read as generic. */
+function Heading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="cdash-m__h2">
+      {children}
+      <div className="cdash-m__secline" aria-hidden="true" />
+    </h2>
+  )
+}
+
 export default function CreatorDashboardMobile({
   firstName, handleLine, followersLabel, shopfrontSlug, period,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
-  paidCount, actions, motion, monthly, earnings, brands, completedEver, unreadNotifications = 0,
+  paidCount, actions, motion, monthly, earnings, brands, completedEver,
+  unreadNotifications = 0,
 }: {
   firstName: string
   handleLine: string
@@ -89,15 +99,12 @@ export default function CreatorDashboardMobile({
   unreadNotifications?: number
 }) {
   const router = useRouter()
-  const peak = Math.max(1, ...monthly.map((m) => m.amount))
 
   return (
     <div className="cdash-m">
       <header className="cdash-m__head">
         <div style={{ minWidth: 0 }}>
-          <h1 className="cdash-m__hi">
-            Hey, <span className="cdash-m__hi-em">{firstName}</span>
-          </h1>
+          <h1 className="cdash-m__hi">Hey, <span className="cdash-m__hi-em">{firstName}</span></h1>
           <div className="cdash-m__handle">
             {handleLine}{followersLabel && <> &middot; {followersLabel} followers</>}
           </div>
@@ -110,7 +117,7 @@ export default function CreatorDashboardMobile({
             </a>
           )}
           <Link href="/creator/notifications?from=dashboard" className="cdash-m__bell" aria-label="Notifications">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             {unreadNotifications > 0 && (
@@ -124,11 +131,9 @@ export default function CreatorDashboardMobile({
 
       <div className="cdash-m__stack">
         {/* ── Overview ── */}
-        <section className="cdash-m__card">
+        <section className="cdash-m__card" style={{ padding: 22 }}>
           <div className="cdash-m__cardhead">
             <span className="cdash-m__meta">Overview</span>
-            {/* The period the whole screen is scoped to. A plain GET-style
-                navigation, so the view is a shareable URL like everywhere else. */}
             <select
               className="cdash-m__period"
               value={period}
@@ -140,7 +145,6 @@ export default function CreatorDashboardMobile({
               <option value="this_year">This year</option>
             </select>
           </div>
-
           <div className="cdash-m__kpis">
             <div className="cdash-m__kpi">
               <div className="cdash-m__meta">Total earned</div>
@@ -170,16 +174,17 @@ export default function CreatorDashboardMobile({
         {/* ── Do first ── */}
         {actions.length > 0 && (
           <section>
-            <div className="cdash-m__sechead">
-              <span className="cdash-m__badge">Do first</span>
-              <h2 className="cdash-m__h2">A few things need you</h2>
-            </div>
-            <div className="cdash-m__card cdash-m__card--flush">
+            <span className="cdash-m__badge">Do first</span>
+            <div style={{ marginTop: 12 }}><Heading>A few things need you</Heading></div>
+            <div className="cdash-m__card" style={{ marginTop: 16, padding: '6px 18px' }}>
               {actions.map((a) => (
                 <Link key={a.id} href={`/creator/deals/${a.dealId}`} className="cdash-m__action">
+                  <span className="cdash-m__actionicon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>
+                  </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="cdash-m__actiontitle">{a.title}</div>
-                    <div className="cdash-m__meta">{a.meta}</div>
+                    <div className="cdash-m__actionmeta">{a.meta}</div>
                   </div>
                   <span className="cdash-m__cta">{a.cta}</span>
                 </Link>
@@ -191,120 +196,104 @@ export default function CreatorDashboardMobile({
         {/* ── Deals in motion ── */}
         {motion.length > 0 && (
           <section>
-            <div className="cdash-m__sechead cdash-m__sechead--split">
-              <h2 className="cdash-m__h2">Deals in motion</h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <Heading>Deals in motion</Heading>
               <Link href="/creator/deals" className="cdash-m__viewall">View all</Link>
             </div>
-            <div className="cdash-m__motion">
+            <div className="cdash-m__hscroll">
               {motion.map((d) => (
-                <Link key={d.id} href={`/creator/deals/${d.id}`} className="cdash-m__deal">
+                <Link key={d.id} href={`/creator/deals/${d.id}`} className="cdash-m__card cdash-m__deal">
                   <div className="cdash-m__dealtop">
-                    <div style={{ minWidth: 0 }}>
-                      <div className="cdash-m__brand">{d.brandName}</div>
-                      <div className="cdash-m__meta">{d.status}</div>
-                    </div>
-                    <span className="cdash-m__price tnum">{inrShort(d.pricePaise)}</span>
+                    <span className="cdash-m__meta">{d.brandName}</span>
+                    <span className="cdash-m__stagechip" style={{ border: `1px solid ${d.stageBorder}` }}>
+                      {d.stageLabel}
+                    </span>
                   </div>
-                  <div className="cdash-m__dealfoot">
-                    <span className="cdash-m__dealtitle">{d.title}</span>
-                    {d.meta && <span className="cdash-m__meta">{d.meta}</span>}
+                  <div className="cdash-m__dealfig tnum">{inrShort(d.pricePaise)}</div>
+                  <div className="cdash-m__dealsub">{d.title}</div>
+                  <div className="cdash-m__track">
+                    <div className="cdash-m__trackfill" style={{ width: `${d.progress}%` }} />
                   </div>
+                  {d.footLabel && (
+                    <div className="cdash-m__dealfoot">{d.footLabel} <b>{d.footValue}</b></div>
+                  )}
                 </Link>
               ))}
             </div>
           </section>
         )}
 
-        {/* ── Performance ──
-            Only drawn once there is something to draw. A chart of one month, or
-            of nothing, is a shape that implies a trend it cannot support. */}
+        {/* ── Performance ── */}
         {monthly.length >= 2 && (
-          <section>
-            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Performance</h2></div>
-            <div className="cdash-m__card">
-              <div className="cdash-m__chart" role="img" aria-label={`Earnings across ${monthly.length} months`}>
-                {monthly.map((m) => (
-                  <div key={m.label} className="cdash-m__bar">
-                    <div className="cdash-m__barfill" style={{ height: `${Math.max(3, (m.amount / peak) * 100)}%` }} />
-                    <span className="cdash-m__barlabel">{m.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="cdash-m__chartfoot">
-                <span className="cdash-m__meta">Best month</span>
-                <span className="cdash-m__chartpeak tnum">{inrShort(peak)}</span>
-              </div>
-            </div>
+          <section className="cdash-m__card" style={{ padding: '20px 22px' }}>
+            <Heading>Performance</Heading>
+            <EarningsLine points={monthly} />
           </section>
         )}
-        {/* ── Your earnings ──
-            Four windows at once, so these are lifetime figures rather than the
-            selected period wearing four different labels. */}
+
+        {/* ── Your earnings ── */}
         {earnings.allTimePaise > 0 && (
           <section>
-            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Your earnings</h2></div>
-            <div className="cdash-m__card">
-              <div className="cdash-m__meta">Total earned &middot; all time</div>
-              <div className="cdash-m__figure tnum" style={{ fontSize: 32 }}>{inrShort(earnings.allTimePaise)}</div>
-              <div className="cdash-m__split">
+            <Heading>Your earnings</Heading>
+            <div className="cdash-m__card" style={{ marginTop: 16, padding: 22 }}>
+              <span className="cdash-m__meta">Total earned &middot; all time</span>
+              <div className="cdash-m__bigfig tnum" style={{ marginTop: 10 }}>{inrShort(earnings.allTimePaise)}</div>
+              <div className="cdash-m__three">
                 <div>
                   <div className="cdash-m__meta">This month</div>
-                  <div className="cdash-m__splitval tnum">{inrShort(earnings.thisMonthPaise)}</div>
+                  <div className="cdash-m__threeval tnum">{inrShort(earnings.thisMonthPaise)}</div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">Last 3 mo</div>
-                  <div className="cdash-m__splitval tnum">{inrShort(earnings.last3MoPaise)}</div>
+                  <div className="cdash-m__threeval tnum">{inrShort(earnings.last3MoPaise)}</div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">This year</div>
-                  <div className="cdash-m__splitval tnum">{inrShort(earnings.thisYearPaise)}</div>
+                  <div className="cdash-m__threeval tnum">{inrShort(earnings.thisYearPaise)}</div>
                 </div>
               </div>
             </div>
           </section>
         )}
 
-        {/* ── Your track record ──
-            The count is real. On-time delivery, response time and completion
-            rate are NOT measured anywhere in this codebase — the desktop
-            dashboard prints "100%", "~4h", "100%" as literals. Rather than
-            carry invented numbers onto a second screen, they read as not yet
-            measured. See the note in the commit. */}
+        {/* ── Track record ── */}
         {completedEver > 0 && (
           <section>
-            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Your track record</h2></div>
-            <div className="cdash-m__card">
-              <div className="cdash-m__figure tnum" style={{ fontSize: 32, marginTop: 0 }}>{completedEver}</div>
-              <div className="cdash-m__meta">deals completed</div>
-              <div className="cdash-m__split" style={{ marginTop: 18 }}>
+            <Heading>Your track record</Heading>
+            <div className="cdash-m__card" style={{ marginTop: 16, padding: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <div className="cdash-m__bigfig tnum" style={{ fontSize: 32 }}>{completedEver}</div>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: '#565C68' }}>deals completed</div>
+              </div>
+              <div className="cdash-m__three">
                 <div>
                   <div className="cdash-m__meta">On-time</div>
-                  <div className="cdash-m__splitval">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">Response</div>
-                  <div className="cdash-m__splitval">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">Completion</div>
-                  <div className="cdash-m__splitval">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
                 </div>
               </div>
-              <p className="cdash-m__note">Not measured yet. These start once we track delivery dates against agreed timelines.</p>
+              <p className="cdash-m__note">Not measured yet. These begin once delivery dates are tracked against agreed timelines.</p>
             </div>
           </section>
         )}
 
-        {/* ── Brands worked with ── */}
+        {/* ── Brands ── */}
         {brands.length > 0 && (
           <section>
-            <div className="cdash-m__sechead"><h2 className="cdash-m__h2">Brands you&rsquo;ve worked with</h2></div>
-            <div className="cdash-m__card cdash-m__card--flush">
+            <Heading>Brands you&rsquo;ve worked with</Heading>
+            <div className="cdash-m__card" style={{ marginTop: 16, padding: '6px 18px' }}>
               {brands.map((b) => (
                 <div key={b.name} className="cdash-m__brandrow">
                   <span className="cdash-m__brandmark" aria-hidden="true">{b.name.slice(0, 1).toUpperCase()}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="cdash-m__brand">{b.name}</div>
+                    <div className="cdash-m__brandname">{b.name}</div>
                     <div className="cdash-m__meta">{b.active ? 'Active' : 'Completed'}</div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -318,5 +307,40 @@ export default function CreatorDashboardMobile({
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * The earnings line, to the export's geometry: three gridlines, rupee labels
+ * down the left, month labels beneath, and a neon dot on the final point.
+ * Axis labels are derived from the peak rather than fixed at ₹0/20K/40K, or
+ * the line would leave the grid on any creator earning more than the mockup.
+ */
+function EarningsLine({ points }: { points: MonthPoint[] }) {
+  const TOP = 14, MID = 56, BOT = 98, L = 26, R = 310
+  const peak = Math.max(1, ...points.map((p) => p.amount))
+  const span = Math.max(1, points.length - 1)
+  const xs = points.map((_, i) => 40 + i * ((300 - 40) / span))
+  const ys = points.map((p) => BOT - (p.amount / peak) * (BOT - TOP))
+  const line = xs.map((x, i) => `${x.toFixed(0)},${ys[i].toFixed(0)}`).join(' ')
+
+  return (
+    <svg viewBox="0 0 320 130" width="100%" style={{ display: 'block', marginTop: 12, overflow: 'visible', fontFamily: 'var(--font-ui)' }} role="img" aria-label="Earnings by month">
+      <g stroke="rgba(26,27,22,.08)" strokeWidth="1">
+        <line x1={L} y1={BOT} x2={R} y2={BOT} />
+        <line x1={L} y1={MID} x2={R} y2={MID} />
+        <line x1={L} y1={TOP} x2={R} y2={TOP} />
+      </g>
+      <g fill="#565C68" fontSize="9" fontWeight="600" textAnchor="end">
+        <text x="22" y="101">₹0</text>
+        <text x="22" y="59">{inrShort(peak / 2)}</text>
+        <text x="22" y="17">{inrShort(peak)}</text>
+      </g>
+      <polyline points={line} fill="none" stroke="#12151C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r="4.5" fill="#E8FF66" stroke="#12151C" strokeWidth="2" />
+      <g fill="#565C68" fontSize="9" fontWeight="600" textAnchor="middle">
+        {points.map((p, i) => <text key={p.label} x={xs[i]} y="115">{p.label}</text>)}
+      </g>
+    </svg>
   )
 }

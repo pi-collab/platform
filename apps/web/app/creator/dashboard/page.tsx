@@ -272,19 +272,31 @@ export default async function CreatorDashboardPage({
     ...deliverablesToDo.map((d) => ({ id: `d-${d.id}`, dealId: d.id, title: `${d.title || 'Deal'} · deliverable to submit`, meta: d.status === 'revision' ? 'Revision requested' : 'In production', cta: 'Submit' })),
     ...invoicesToIssue.map((d) => ({ id: `i-${d.id}`, dealId: d.id, title: 'Invoice to issue', meta: 'Approved and posted', cta: 'Issue' })),
   ]
-  const mobileMotion = activeDeals.slice(0, 5).map((d) => ({
-    id: d.id,
-    title: d.title || 'Untitled deal',
-    brandName: brandOf(d),
-    status: d.status === 'negotiating' ? 'New offer'
-      : d.status === 'agreed' ? 'In production'
-      : d.status === 'delivered' ? 'Awaiting approval'
-      : d.status === 'revision' ? 'Revision requested'
-      : d.status === 'approved' ? 'Ready to invoice'
-      : d.status,
-    pricePaise: d.price_paise ?? 0,
-    meta: null as string | null,
-  }))
+  /* Stage drives the chip's tint AND the progress bar, from one place — the
+     bar is how far through the pipeline a deal is, not decoration. */
+  const MOTION_STAGE: Record<string, { label: string; border: string; progress: number }> = {
+    negotiating: { label: 'New offer',         border: 'rgba(140,100,23,.35)', progress: 4 },
+    agreed:      { label: 'In production',     border: 'rgba(25,118,210,.35)', progress: 35 },
+    delivered:   { label: 'Awaiting approval', border: 'rgba(15,107,74,.35)',  progress: 70 },
+    revision:    { label: 'Revision needed',   border: 'rgba(140,100,23,.35)', progress: 55 },
+    approved:    { label: 'Ready to invoice',  border: 'rgba(15,107,74,.35)',  progress: 90 },
+  }
+  const mobileMotion = activeDeals.slice(0, 6).map((d) => {
+    const st = MOTION_STAGE[d.status] ?? { label: d.status, border: 'rgba(60,80,30,.20)', progress: 50 }
+    return {
+      id: d.id,
+      brandName: brandOf(d),
+      stageLabel: st.label,
+      stageBorder: st.border,
+      progress: st.progress,
+      pricePaise: d.price_paise ?? 0,
+      title: d.title || 'Untitled deal',
+      // Only stated when we actually hold a date. The export's "Respond by
+      // Aug 14" is a real deadline, and we do not have one for every stage.
+      footLabel: null as string | null,
+      footValue: null as string | null,
+    }
+  })
   const paidCount = paidInvoices.length
 
   return (
