@@ -354,7 +354,11 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 }
 /* ── Creator portal (same design system as brand) ── */
 .creator-main {
-  min-height: 100vh;
+  /* dvh, not vh. On a phone 100vh is the LARGE viewport — the height with the
+     browser toolbar hidden — so a 100vh wrapper is always taller than what you
+     can see, and every page keeps a toolbar's worth of scroll at the bottom no
+     matter how little padding it has. */
+  min-height: 100dvh;
   background: #F7F7F4;
   position: relative;
   /* `clip`, NOT `hidden`. overflow-x:hidden makes this a scroll container, and
@@ -3054,7 +3058,7 @@ button.signup-form__cross-link {
 .notif-desktop { display: block; }
 
 @media (max-width: 720px) {
-  .notif-m { display: block; background: #F5F7FA; min-height: 100vh; }
+  .notif-m { display: block; background: #F5F7FA; }
   .notif-desktop { display: none; }
 
   /* Sticky so "Mark all read" and the priority card stay reachable while the
@@ -3194,7 +3198,7 @@ button.signup-form__cross-link {
 .cdeals-desktop { display: block; }
 
 @media (max-width: 720px) {
-  .cdeals-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .cdeals-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   .cdeals-desktop { display: none; }
 
   .cdeals-m__head {
@@ -3359,7 +3363,7 @@ button.signup-form__cross-link {
 .cpay-desktop { display: block; }
 
 @media (max-width: 720px) {
-  .cpay-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; color: #12151C; }
+  .cpay-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); color: #12151C; }
   .cpay-desktop { display: none; }
 
   .cpay-m__head {
@@ -3567,7 +3571,7 @@ button.signup-form__cross-link {
 }
 
 @media (max-width: 720px) {
-  .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .inbox-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   .inbox-hide-mobile { display: none !important; }
 
   .inbox-m__head {
@@ -3885,7 +3889,7 @@ button.signup-form__cross-link {
 }
 
 @media (max-width: 720px) {
-  .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .inbox-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   .inbox-hide-mobile { display: none !important; }
 
   .inbox-m__head {
@@ -4192,8 +4196,8 @@ button.signup-form__cross-link {
 
 @media (max-width: 720px) {
   .cdash-m {
-    display: block; background: #F5F7FA; min-height: 100dvh;
-    padding-bottom: calc(70px + env(safe-area-inset-bottom)); color: #12151C;
+    display: block; background: #F5F7FA;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom)); color: #12151C;
     --meta: #565C68; --hair: rgba(60,80,30,.08); --line: rgba(60,80,30,.10);
     --amber: #B67C15; --lime700: #4F6B12; --lime950: #161B08;
     --wg500: #565C68; --wg600: #4A505C; --secmid: #E4ECF3;
@@ -4460,5 +4464,162 @@ button.signup-form__cross-link {
   .cdash-m__posttitle {
     font-family: var(--font-ui); font-weight: 600; font-size: 12px; color: #12151C;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
+  }
+}
+
+/* ── Creator offer received, mobile ────────────────────────────────────────
+   "Creator Deal Detail - Offer Received Mobile Standalone". Below 720px and
+   only while a deal is negotiating; the existing page keeps every other state. */
+
+.offer-m { display: none; }
+
+@media (max-width: 720px) {
+  .offer-m {
+    display: block; background: #F5F7FA; color: #12151C;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  .offer-desktop { display: none !important; }
+
+  .offer-m__head {
+    position: sticky; top: 0; z-index: 6;
+    background: #fff; margin: 0 16px; border-radius: 18px;
+    padding: 16px 18px; margin-top: 14px;
+    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
+  }
+  .offer-m__headrow { display: flex; align-items: center; gap: 10px; }
+  .offer-m__back { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #12151C; }
+  .offer-m__title {
+    flex: 1; min-width: 0; font-family: var(--font-display); font-size: 19px;
+    font-weight: 700; letter-spacing: -0.02em; margin: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .offer-m__brand { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+  .offer-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .offer-m__icon {
+    position: relative; width: 34px; height: 34px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: #F5F7FA; color: #12151C;
+  }
+  .offer-m__status {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,80,30,.10);
+    flex-wrap: wrap;
+  }
+  .offer-m__statuslabel {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-weight: 700; font-size: 12.5px; color: #12151C;
+  }
+  .offer-m__dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #D89A2E;
+    box-shadow: 0 0 0 3px rgba(216,154,46,.18);
+  }
+  .offer-m__waiting { font-size: 11px; color: #565C68; }
+
+  .offer-m__body { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 14px; }
+  .offer-m__deal {
+    font-family: var(--font-display); font-size: 15px; font-weight: 600;
+    letter-spacing: -0.01em; padding: 0 4px;
+  }
+
+  .offer-m__progresswrap { padding: 0 4px; }
+  .offer-m__progresshead { display: flex; align-items: baseline; justify-content: space-between; }
+  .offer-m__stage { font-family: var(--font-display); font-size: 14px; font-weight: 700; }
+  .offer-m__next { font-size: 10.5px; color: #878D99; }
+  .offer-m__progress { display: flex; gap: 3px; margin-top: 8px; }
+  .offer-m__progress span {
+    flex: 1; height: 4px; border-radius: 4px; background: rgba(60,80,30,.12);
+  }
+  .offer-m__progress span.is-on { background: #D2F04A; }
+
+  .offer-m__card {
+    background: #fff; border-radius: 18px; padding: 20px;
+    box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
+  }
+  .offer-m__label {
+    font-size: 10px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: #878D99;
+  }
+  .offer-m__amount {
+    font-family: var(--font-display); font-size: 40px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1; margin-top: 7px;
+    font-variant-numeric: tabular-nums;
+  }
+  .offer-m__terms { font-size: 11.5px; color: #565C68; margin-top: 10px; }
+  .offer-m__split {
+    display: flex; gap: 20px; margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid rgba(60,80,30,.10);
+  }
+  .offer-m__splitval {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-top: 5px;
+  }
+
+  .offer-m__items {
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(60,80,30,.10);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .offer-m__deliv > summary {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    cursor: pointer; list-style: none;
+  }
+  .offer-m__deliv > summary::-webkit-details-marker { display: none; }
+  .offer-m__delivicon {
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
+    background: #fff; border: 1px solid rgba(60,80,30,.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .offer-m__delivname { flex: 1; font-size: 13.5px; font-weight: 700; min-width: 0; }
+  .offer-m__delivprice { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .offer-m__chev { transition: transform .16s ease; flex-shrink: 0; }
+  .offer-m__deliv[open] .offer-m__chev { transform: rotate(180deg); }
+  .offer-m__delivbody {
+    padding: 2px 0 10px 40px; font-size: 12px; line-height: 1.5; color: #565C68;
+  }
+
+  .offer-m__feerow {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,80,30,.10);
+    font-size: 12px; color: #565C68;
+  }
+  .offer-m__decision { margin-top: 16px; }
+
+  /* Folds */
+  .offer-m__fold > summary {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; list-style: none;
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+  }
+  .offer-m__fold > summary::-webkit-details-marker { display: none; }
+  .offer-m__fold[open] > summary svg { transform: rotate(180deg); }
+  .offer-m__fold > summary svg { transition: transform .16s ease; }
+  .offer-m__prose { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: #565C68; }
+  .offer-m__files { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .offer-m__file {
+    display: block; padding: 10px 12px; border-radius: 10px;
+    background: #F5F7FA; font-size: 12.5px; font-weight: 600;
+    color: #12151C; text-decoration: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .offer-m__terms-list {
+    display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 14px 0 0;
+  }
+  .offer-m__terms-list dt { font-size: 12px; color: #878D99; }
+  .offer-m__terms-list dd { margin: 0; font-size: 12.5px; font-weight: 600; text-align: right; }
+
+  .offer-m__guides { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .offer-m__guides li { display: flex; gap: 10px; font-size: 12.5px; line-height: 1.5; color: #565C68; }
+  .offer-m__guides li span {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 6px;
+    background: #E8FF66; color: #161B08;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+  .offer-m__avoid { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .offer-m__avoid li {
+    position: relative; padding-left: 18px; font-size: 12.5px; color: #565C68; line-height: 1.5;
+  }
+  .offer-m__avoid li::before {
+    content: '×'; position: absolute; left: 2px; top: -1px;
+    color: #C25640; font-weight: 700;
   }
 }

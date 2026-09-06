@@ -3648,3 +3648,46 @@ the same horizontal overflow WITHOUT creating a scroll container.
 - [ ] Pinned: the greeting, Shopfront and the bell
 - [ ] Scrolls away: the handle and follower line
 - [ ] Cards pass cleanly under the pinned row
+
+---
+
+## 26. Creator offer received — mobile
+
+`CreatorOfferMobile` below 720px, and ONLY while a deal is `negotiating`. Every
+other state keeps the existing page, because only this one was designed.
+- [ ] A negotiating deal on a phone shows the new screen; agreed / delivered /
+      approved / paid still show the existing page
+- [ ] Accept, Counter and Decline are the EXISTING AcceptDecline component —
+      the terms a creator agrees to on a phone go through the same code as
+      desktop. Countering still opens line-item prices and a note
+- [ ] Sticky card: back, "Offer from <brand>", message and bell
+- [ ] "You receive" is the post-fee figure and matches desktop for the same deal
+- [ ] Deliverables expand on tap; the chevron flips
+- [ ] Brief, attachments, terms and guidelines each fold; attachments open via
+      the SIGNED url the page already generates
+- [ ] Sections with no data do not render at all
+
+### Three things this screen deliberately does NOT show
+- [ ] No "Respond by <date>" — no offer expiry exists in the schema. It says
+      how long the offer has waited instead. This is the FOURTH design to ask
+      for that date
+- [ ] No "Live window" — the deal carries one delivery date, shown as Deliver by
+- [ ] No "Exclusivity" — no such field. A term a creator would be held to must
+      not be invented
+
+## 27. Profile photo
+- [ ] The bottom-nav Profile tab shows the creator's photo when they have one,
+      and their initial when they do not
+- [ ] The photo fills the circle without distorting (object-fit: cover)
+- [ ] The profile screen's first block shows the photo, and drops the dashed
+      border — the dash means "no photo yet" and a real photo needs no apology
+- [ ] Both fall back to the initial cleanly
+
+## 28. Overscroll, everywhere
+`.creator-main` used `min-height: 100vh`. On a phone 100vh is the LARGE
+viewport — the height with the toolbar hidden — so every creator screen kept a
+toolbar's worth of scroll at the bottom no matter how little padding it had.
+- [ ] Dashboard, deals, payments, inbox and notifications all stop just below
+      their last element
+- [ ] The last element still clears the tab bar and the home indicator
+- [ ] Nothing scrolls sideways

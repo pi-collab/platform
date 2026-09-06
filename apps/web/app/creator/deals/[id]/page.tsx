@@ -7,6 +7,8 @@ import OpenDealChat from '@/components/OpenDealChat'
 import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
+import CreatorOfferMobile from '@/components/CreatorOfferMobile'
+import { unreadNotificationCount } from '@/lib/unread'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
@@ -73,7 +75,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 }) {
   // Pass the deal path so a logged-out creator arriving from a WhatsApp
   // notification returns to THIS deal after signing in, not the deals list.
-  await verifyCreator(`/creator/deals/${params.id}`)
+  const { profileId } = await verifyCreator(`/creator/deals/${params.id}`)
   const supabase = createClient()
 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
@@ -182,8 +184,59 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     })
   }
 
+  /* The offer state has its own phone screen. Every other state keeps the
+     existing page on mobile, because only this one was designed. */
+  const offerUnread = isNegotiating ? await unreadNotificationCount(supabase, profileId) : 0
+  const splitLines = (v: unknown): string[] =>
+    typeof v === 'string'
+      ? v.split('\n').map((l) => l.replace(/^\s*[-•\d.)]+\s*/, '').trim()).filter(Boolean)
+      : []
   return (
-    <main style={wrapper}>
+    <>
+    {isNegotiating && (
+      <CreatorOfferMobile
+        brandName={brand}
+        dealTitle={deal.title ?? 'Untitled deal'}
+        receivesPaise={creatorReceives}
+        totalPaise={deal.price_paise ?? null}
+        feePaise={fee?.fee_paise ?? null}
+        feePercent={deal.fee_percent ?? null}
+        paymentTerms={deal.payment_terms ?? null}
+        deliverBy={deal.timeline_date
+          ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : null}
+        waitingLabel={(() => {
+          const days = Math.floor((Date.now() - new Date(deal.created_at).getTime()) / 86_400_000)
+          return days <= 0 ? 'Received today' : days === 1 ? 'Received yesterday' : `Waiting ${days} days`
+        })()}
+        items={(items ?? []).map((i) => ({
+          id: i.id,
+          label: i.label,
+          pricePaise: i.price_paise ?? 0,
+          detail: null,
+        }))}
+        briefPitch={pitch}
+        guidelines={splitLines(guidelines)}
+        avoid={splitLines(avoid)}
+        attachments={briefAttachments.map((a) => ({
+          name: a.name,
+          // Signed, and already fetched above for the desktop list.
+          url: attachmentUrls[a.storage_path] ?? null,
+        }))}
+        usageRights={deal.usage_rights ?? null}
+        revisionLimit={deal.revision_limit ?? null}
+        extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}
+        requiresShipment={Boolean(deal.requires_shipment)}
+        unreadNotifications={offerUnread}
+        decision={
+          <AcceptDecline
+            dealId={deal.id}
+            items={(items ?? []).map((i) => ({ id: i.id, label: i.label, price_paise: i.price_paise ?? 0 }))}
+          />
+        }
+      />
+    )}
+    <main className={isNegotiating ? 'offer-desktop' : undefined} style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
       <style>{`
         .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
@@ -1074,6 +1127,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
       />
 
     </main>
+    </>
   )
 }
 

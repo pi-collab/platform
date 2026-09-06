@@ -55,7 +55,7 @@ const TABS = [
   },
 ]
 
-export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: string | null; unreadInbox?: number }) {
+export default function CreatorTabBar({ initial, photoUrl = null, unreadInbox = 0 }: { initial?: string | null; photoUrl?: string | null; unreadInbox?: number }) {
   const pathname = usePathname() ?? ''
 
   // startsWith, not equality: /creator/deals/<id> is still the Deals tab, and a
@@ -120,6 +120,7 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
             borderRadius: '50%',
             flexShrink: 0,
             background: 'var(--sec-2)',
+            overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -129,7 +130,11 @@ export default function CreatorTabBar({ initial, unreadInbox = 0 }: { initial?: 
             color: 'var(--ink)',
           }}
         >
-          {initial?.trim()?.charAt(0)?.toUpperCase() || '\u00B7'}
+          {/* The photo when there is one. An initial is a placeholder for a
+              face, and this tab is the creator's own account. */}
+          {photoUrl
+            ? <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            : (initial?.trim()?.charAt(0)?.toUpperCase() || '\u00B7')}
         </span>
         </span>
         <span className="creator-tab__label">Profile</span>

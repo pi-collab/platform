@@ -22,8 +22,10 @@ export default function CreatorProfileMobile({
   paidThisYearPaise,
   hasStorefront,
   shopfrontSlug,
+  photoUrl = null,
 }: {
   fullName: string
+  photoUrl?: string | null
   handle: string | null
   dealsDone: number
   paidThisYearPaise: number
@@ -63,12 +65,16 @@ export default function CreatorProfileMobile({
             fontSize: 22,
             color: 'var(--sec-ink)',
             background: 'var(--sec-2)',
-            // Dashed, not solid: the border says "no photo yet" rather than
-            // presenting an initial as a finished avatar.
-            border: '1.5px dashed var(--sec-mid)',
+            overflow: 'hidden',
+            // Dashed ONLY while there is no photo: the border says "no photo
+            // yet" rather than presenting an initial as a finished avatar. A
+            // real photo needs no such apology.
+            border: photoUrl ? 'none' : '1.5px dashed var(--sec-mid)',
           }}
         >
-          {initial}
+          {photoUrl
+            ? <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initial}
         </div>
 
         <div

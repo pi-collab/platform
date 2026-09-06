@@ -16,7 +16,7 @@ export default async function CreatorProfilePage() {
 
   const [{ data: creator }, { data: deals }, { data: invoices }, { data: storefront }] =
     await Promise.all([
-      admin.from('creators').select('handle').eq('id', ctx.creatorId).maybeSingle(),
+      admin.from('creators').select('handle, profile_photo_url').eq('id', ctx.creatorId).maybeSingle(),
       supabase.from('deals').select('id, status').eq('status', 'complete'),
       supabase.from('invoices').select('creator_receives_paise, paid_at').not('paid_at', 'is', null),
       supabase.from('creator_storefronts').select('id, slug, is_published').maybeSingle(),
@@ -33,6 +33,7 @@ export default async function CreatorProfilePage() {
       <CreatorProfileMobile
         fullName={ctx.creatorName ?? ''}
         handle={creator?.handle ?? null}
+        photoUrl={creator?.profile_photo_url ?? null}
         dealsDone={(deals ?? []).length}
         paidThisYearPaise={paidThisYearPaise}
         hasStorefront={Boolean(storefront)}
