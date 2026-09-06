@@ -3607,3 +3607,27 @@ percentage over zero deals is nothing, not 100%.
 - [ ] The last card is still fully clear of the tab bar, including on a phone
       with a home indicator (safe-area inset)
 - [ ] Header stays pinned while scrolling and cards pass cleanly underneath it
+
+### Sticky headers actually stick (root cause fixed)
+`.creator-main` carried `overflow-x: hidden`, which makes it a scroll container
+— and a scroll container is what `position: sticky` sticks to. Every sticky
+header on every creator mobile screen was pinning to that element instead of
+the viewport, so none of them stuck. Changed to `overflow-x: clip`, which cuts
+the same horizontal overflow WITHOUT creating a scroll container.
+- [ ] Dashboard header stays pinned while the page scrolls
+- [ ] Same on deals, payments, inbox and notifications — all four were broken
+      by the same rule and all four are fixed by the same change
+- [ ] Nothing scrolls sideways anywhere; `clip` still cuts the overflow
+- [ ] **If anyone changes this back to `hidden`, every sticky header dies
+      silently.** There is a comment on the rule saying so
+
+### Phantom scroll after the last section
+- [ ] The page ends just below the last card. `min-height` uses `100dvh`, not
+      `100vh` — on a phone `100vh` is the LARGE viewport, taller than what is
+      visible, so the page always had somewhere left to go
+- [ ] The last card still clears the tab bar and the home indicator
+
+### Greeting
+- [ ] "Hey, <name>" renders at 34px
+- [ ] A long name truncates with an ellipsis rather than pushing the Shopfront
+      pill off the screen

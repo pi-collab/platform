@@ -357,7 +357,11 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   min-height: 100vh;
   background: #F7F7F4;
   position: relative;
-  overflow-x: hidden;
+  /* `clip`, NOT `hidden`. overflow-x:hidden makes this a scroll container, and
+     a scroll container is why every `position: sticky` header inside it stuck
+     to nothing. `clip` cuts the same horizontal overflow without creating one.
+     If this ever goes back to `hidden`, the sticky headers die with it. */
+  overflow-x: clip;
 
   /* Design-system tokens (shared with brand portal) */
   --ink: #1A1B16;
@@ -4188,8 +4192,8 @@ button.signup-form__cross-link {
 
 @media (max-width: 720px) {
   .cdash-m {
-    display: block; background: #F5F7FA; min-height: 100vh;
-    padding-bottom: calc(74px + env(safe-area-inset-bottom)); color: #12151C;
+    display: block; background: #F5F7FA; min-height: 100dvh;
+    padding-bottom: calc(70px + env(safe-area-inset-bottom)); color: #12151C;
     --meta: #565C68; --hair: rgba(60,80,30,.08); --line: rgba(60,80,30,.10);
     --amber: #B67C15; --lime700: #4F6B12; --lime950: #161B08;
     --wg500: #565C68; --wg600: #4A505C; --secmid: #E4ECF3;
@@ -4203,7 +4207,8 @@ button.signup-form__cross-link {
   }
   .cdash-m__hi {
     font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
-    font-size: 24px; margin: 0; white-space: nowrap;
+    font-size: 34px; margin: 0; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
   }
   .cdash-m__hi-em { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
   .cdash-m__handle {
