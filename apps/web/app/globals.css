@@ -3534,3 +3534,116 @@ button.signup-form__cross-link {
   .cpay-m__pending--ready { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
   .cpay-m__pending--ready .cpay-m__btn-dark { flex: 0 1 auto; padding: 0 22px; text-decoration: none; }
 }
+
+/* ── Inbox list, mobile ────────────────────────────────────────────────────
+   "Creator Inbox List - Mobile Standalone". Shared by both inboxes. Shown below
+   720px only when NO thread is selected; once ?deal= is set the existing
+   master-detail view takes over, since the thread screen is its own design. */
+
+.inbox-m { display: none; }
+
+@media (max-width: 720px) {
+  .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
+  .inbox-hide-mobile { display: none !important; }
+
+  .inbox-m__head {
+    position: sticky; top: 0; z-index: 6; background: #F5F7FA;
+    padding: 22px 20px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .inbox-m__title {
+    font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em;
+    font-size: 24px; margin: 0; color: #12151C; white-space: nowrap;
+  }
+  .inbox-m__bell {
+    position: relative; width: 36px; height: 36px; flex-shrink: 0;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #fff; box-shadow: 0 6px 14px -10px rgba(40,45,25,.3);
+  }
+
+  .inbox-m__top { padding: 0 20px; }
+  .inbox-m__searchrow { display: flex; gap: 10px; }
+  .inbox-m__search {
+    flex: 1; display: flex; align-items: center; gap: 12px; height: 54px;
+    padding: 0 10px 0 20px; border-radius: 999px; background: #fff;
+    box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05);
+    min-width: 0;
+  }
+  .inbox-m__search svg { flex-shrink: 0; }
+  .inbox-m__search input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none;
+    font-family: var(--font-ui); font-size: 14px; color: #12151C;
+  }
+  .inbox-m__search input::placeholder { color: #878D99; }
+  .inbox-m__search input::-webkit-search-cancel-button { display: none; }
+  .inbox-m__filterbtn {
+    width: 54px; height: 54px; flex-shrink: 0; border-radius: 999px;
+    background: #fff; box-shadow: 0 4px 10px -10px rgba(40,45,25,.15);
+    border: 1px solid rgba(24,28,36,.05); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: #12151C;
+  }
+  .inbox-m__filterbtn.is-on { background: var(--neon); border-color: transparent; }
+
+  .inbox-m__filters {
+    display: flex; gap: 8px; margin-top: 12px; padding-bottom: 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .inbox-m__filters::-webkit-scrollbar { display: none; }
+  .inbox-m__chip {
+    display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto;
+    padding: 9px 15px; border-radius: 999px; border: none; cursor: pointer;
+    font-family: var(--font-ui); font-weight: 600; font-size: 12.5px;
+    background: #fff; color: #565C68;
+    box-shadow: 0 1px 2px rgba(24,28,36,.03), 0 6px 14px -10px rgba(40,45,25,.22);
+  }
+  .inbox-m__chip.is-on { background: #12151C; color: #fff; }
+  .inbox-m__chip-count { font-size: 11px; font-weight: 500; color: #9AA08C; }
+  .inbox-m__chip.is-on .inbox-m__chip-count { color: rgba(255,255,255,.6); }
+
+  .inbox-m__rows {
+    padding: 16px 20px 0; display: flex; flex-direction: column; gap: 12px;
+  }
+  /* Read rows sit slightly flatter than unread ones (.16 against .2). Small,
+     but it is what makes an unread row read as heavier without a badge. */
+  .inbox-m__row {
+    display: block; background: #fff; border-radius: 22px; padding: 22px;
+    box-shadow: 0 10px 24px -18px rgba(40,45,25,.16);
+    text-decoration: none; color: inherit;
+  }
+  .inbox-m__row.is-unread { box-shadow: 0 10px 24px -18px rgba(40,45,25,.2); }
+  .inbox-m__row-inner { display: flex; align-items: flex-start; gap: 16px; }
+
+  .inbox-m__avatar {
+    width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+    background: #E7EAF0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 13px; color: #12151C;
+  }
+  .inbox-m__avatar.is-unread { box-shadow: 0 0 0 2px var(--neon); }
+
+  .inbox-m__row-top {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  }
+  .inbox-m__name {
+    font-weight: 600; font-size: 14.5px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .inbox-m__row.is-unread .inbox-m__name { font-weight: 700; }
+  .inbox-m__time { font-size: 11px; color: #878D99; white-space: nowrap; flex-shrink: 0; }
+
+  .inbox-m__preview-row { display: flex; align-items: center; gap: 7px; margin-top: 6px; }
+  .inbox-m__preview {
+    flex: 1; min-width: 0; font-size: 13px; color: #565C68; font-weight: 400;
+    margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .inbox-m__row.is-unread .inbox-m__preview { color: #12151C; font-weight: 600; }
+  .inbox-m__dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--neon-deep, #D2F04A); flex-shrink: 0;
+  }
+
+  .inbox-m__empty {
+    padding: 44px 8px; text-align: center;
+    font-family: var(--font-ui); font-size: 13.5px; color: #565C68; line-height: 1.6;
+  }
+}

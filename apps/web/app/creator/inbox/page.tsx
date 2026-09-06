@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { unreadByDeal } from '@/lib/unread'
+import InboxListMobile from '@/components/InboxListMobile'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -129,7 +130,32 @@ export default async function CreatorInboxPage({ searchParams }: {
     )
   }
 
-  return <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
+  /* List state on mobile; the existing master-detail view takes over as soon
+     as a thread is chosen, because the thread screen is its own design. Both
+     are mounted and CSS decides, except that the desktop view must stay
+     visible on mobile once ?deal= is set — hence the conditional class rather
+     than a blanket one. */
+  const selected = searchParams?.deal ?? null
+
+  return (
+    <>
+      {!selected && (
+        <InboxListMobile
+          threads={threads.map((t) => ({
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus,
+            name: t.brandName, initials: t.brandInitials,
+            lastMessage: t.lastMessage, createdAt: t.createdAt,
+          }))}
+          unreadByDeal={unread}
+          basePath="/creator/inbox"
+          notificationsHref="/creator/notifications?from=inbox"
+        />
+      )}
+      <div className={selected ? undefined : 'inbox-hide-mobile'}>
+        <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
+      </div>
+    </>
+  )
 }
 
 function getInitials(name: string): string {

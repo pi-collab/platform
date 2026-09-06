@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import InboxListMobile from '@/components/InboxListMobile'
 import { unreadByDeal } from '@/lib/unread'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrandInboxView from './BrandInboxView'
@@ -97,7 +98,29 @@ export default async function BrandInboxPage({ searchParams }: {
     created_at: m.created_at,
   }))
 
-  return <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={searchParams?.deal ?? null} unreadByDeal={unread} />
+  // Same list, same component. Only the counterpart differs: a brand sees the
+  // creator's name where a creator sees the brand's.
+  const selected = searchParams?.deal ?? null
+
+  return (
+    <>
+      {!selected && (
+        <InboxListMobile
+          threads={threads.map((t) => ({
+            dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus,
+            name: t.creatorName, initials: t.creatorInitials,
+            lastMessage: t.lastMessage, createdAt: t.createdAt,
+          }))}
+          unreadByDeal={unread}
+          basePath="/inbox"
+          notificationsHref="/notifications"
+        />
+      )}
+      <div className={selected ? undefined : 'inbox-hide-mobile'}>
+        <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
+      </div>
+    </>
+  )
 }
 
 function getInitials(name: string): string {

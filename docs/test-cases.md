@@ -3206,3 +3206,45 @@ from the empty state removed the only way to set a payout id.
       set their UPI — this is the exact path that was broken
 - [ ] Desktop with zero invoices but ready deals does NOT say "All settled" or
       "Nothing owed"; it says "None invoiced yet" / "Not invoiced yet"
+
+---
+
+## 22. Inbox list — mobile (design: "Creator Inbox List - Mobile Standalone")
+
+`InboxListMobile` is shared by BOTH inboxes — same component, only the
+counterpart's name differs. Renders below 720px and ONLY in list state; once
+`?deal=` is set the existing master-detail view takes over, because the thread
+screen is its own design we do not have.
+
+### Both sides
+- [ ] `/creator/inbox` on mobile shows the list with BRAND names
+- [ ] `/inbox` on mobile shows the same list with CREATOR names
+- [ ] Tapping a row goes to `?deal=<id>`; the list disappears and the thread
+      view shows — on both sides
+- [ ] Above 720px both are unchanged from before this work
+
+### Unread — four things change together, easy to half-implement
+- [ ] Neon **ring on the avatar** (2px)
+- [ ] Name at weight **700** (read rows are 600)
+- [ ] Preview in ink **#12151C at 600** (read rows are #565C68 at 400)
+- [ ] **Neon-deep 7px dot** after the preview
+- [ ] Card shadow deepens (.2 against .16) — subtle, but it is what makes the
+      row read as heavier without a badge or a count
+- [ ] A read row has NONE of the five
+
+### Timestamps
+- [ ] A message from today shows a time ("9:20 am", lowercase)
+- [ ] Within the last week shows a weekday ("Thu")
+- [ ] Older shows a date ("7 Apr"). A bare time on a three-week-old message
+      would read as "just now"
+
+### Search and filters
+- [ ] Search matches counterpart name, message preview and deal title
+- [ ] The round button reveals the filter chips; it highlights when a filter is
+      active so a narrowed list is never silently narrowed
+- [ ] Filters are the SAME four keys as the desktop view (all / unread /
+      active / completed) with the same status sets — a filter must not mean
+      one thing per screen
+- [ ] Counts on the chips match the rows each produces
+- [ ] Empty results say which case it is: no match for a search, "all caught
+      up" for unread, "no conversations yet" otherwise
