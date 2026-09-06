@@ -183,25 +183,25 @@ export default function InboxListMobile({
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
                     <div className="inbox-m__row-top">
                       <span className="inbox-m__name">{t.name}</span>
+                      {/* Beside the name, not under the preview: the stage
+                          belongs to the brand you are looking at, and reading
+                          it costs nothing there. */}
+                      {stage && (
+                        <span
+                          className="inbox-m__stage"
+                          style={{ background: `color-mix(in srgb, ${stage.chipBg} 55%, #fff)` }}
+                        >
+                          <span className="inbox-m__stage-dot" style={{ background: stage.dot }} />
+                          {stage.short}
+                        </span>
+                      )}
                       <span className="inbox-m__time">{stamp(t.createdAt)}</span>
                     </div>
                     <div className="inbox-m__preview-row">
                       <p className="inbox-m__preview">{t.lastMessage || 'No messages yet'}</p>
                       {unread && <span className="inbox-m__dot" aria-label="Unread" />}
                     </div>
-                    {/* Where the deal has got to. Not in the mockup, and added
-                        because a message thread means little without it — the
-                        same chip, colour and wording the deals list uses, from
-                        the same map, so one deal never reads as two states. */}
-                    {stage && (
-                      <span
-                        className="inbox-m__stage"
-                        style={{ background: `color-mix(in srgb, ${stage.chipBg} 55%, #fff)` }}
-                      >
-                        <span className="inbox-m__stage-dot" style={{ background: stage.dot }} />
-                        {stage.short}
-                      </span>
-                    )}
+
                   </div>
                 </div>
               </Link>

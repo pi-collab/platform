@@ -3542,6 +3542,26 @@ button.signup-form__cross-link {
 
 .inbox-m { display: none; }
 
+/* ── Thread state on mobile ────────────────────────────────────────────────
+   When the URL names a deal, a phone shows the THREAD and nothing else.
+
+   Relying on the inbox view's own `mobileChat` state was not enough: that state
+   is internal, it starts closed, and when it stays closed the pane sits
+   off-screen while the view's OWN older thread list shows underneath — which is
+   indistinguishable from the tap having done nothing. Hiding that list outright
+   means the failure cannot present as "it took me back to the list", whatever
+   the component's state is doing. */
+@media (max-width: 720px) {
+  .inbox-thread-only .inbox-left { display: none !important; }
+  .inbox-thread-only .inbox-right {
+    display: flex !important;
+    position: static !important;
+    transform: none !important;
+    inset: auto !important;
+    width: 100% !important;
+  }
+}
+
 @media (max-width: 720px) {
   .inbox-m { display: block; background: #F5F7FA; min-height: 100vh; padding-bottom: 90px; }
   .inbox-hide-mobile { display: none !important; }
@@ -3621,12 +3641,14 @@ button.signup-form__cross-link {
   }
   .inbox-m__avatar.is-unread { box-shadow: 0 0 0 2px var(--neon); }
 
-  .inbox-m__row-top {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-  }
+  .inbox-m__row-top { display: flex; align-items: center; gap: 8px; }
+  .inbox-m__time { margin-left: auto; }
+  /* The name gives way before the chip does — a truncated brand is still
+     recognisable, a truncated status is not. */
   .inbox-m__name {
     font-weight: 600; font-size: 14.5px; color: #12151C;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0; flex-shrink: 1;
   }
   .inbox-m__row.is-unread .inbox-m__name { font-weight: 700; }
   .inbox-m__time { font-size: 11px; color: #878D99; white-space: nowrap; flex-shrink: 0; }
@@ -3654,9 +3676,9 @@ button.signup-form__cross-link {
      states. Sits under the preview so the name/time and preview/unread rows
      keep their alignment. */
   .inbox-m__stage {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
-    padding: 5px 11px; border-radius: 999px;
-    font-family: var(--font-ui); font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+    padding: 3px 9px; border-radius: 999px;
+    font-family: var(--font-ui); font-size: 10.5px; font-weight: 600;
     white-space: nowrap; color: #3A3D33;
   }
   .inbox-m__stage-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }

@@ -119,7 +119,7 @@ export default async function BrandInboxPage({ searchParams }: {
           notificationsHref="/notifications"
         />
       )}
-      <div className={selected ? undefined : 'inbox-hide-mobile'}>
+      <div className={selected ? 'inbox-thread-only' : 'inbox-hide-mobile'}>
         <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
       </div>
     </>

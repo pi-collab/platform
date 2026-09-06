@@ -154,7 +154,7 @@ export default async function CreatorInboxPage({ searchParams }: {
           notificationsHref="/creator/notifications?from=inbox"
         />
       )}
-      <div className={selected ? undefined : 'inbox-hide-mobile'}>
+      <div className={selected ? 'inbox-thread-only' : 'inbox-hide-mobile'}>
         <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
       </div>
     </>

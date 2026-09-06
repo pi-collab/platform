@@ -3272,3 +3272,22 @@ list — which reads as "the tap sent me back to the list".
 - [ ] The chip is mobile-only — the desktop view is unchanged
 - [ ] The Active/Completed filters still use the RAW status, so widening the
       row display did not change what a filter matches
+
+### Thread state on mobile is structural, not stateful
+The first fix relied on the inbox view's internal `mobileChat` state. That state
+starts closed, and while it is closed the view's OWN older thread list shows —
+indistinguishable from the tap having done nothing. The list is now hidden
+outright whenever the URL names a deal.
+- [ ] Tap a row: the thread fills the screen. The old in-view list is not
+      visible at any point, not even for a frame
+- [ ] Hard-reload on `/creator/inbox?deal=<id>` at 375px: thread, no list
+- [ ] Same for `/inbox?deal=<id>`
+- [ ] Back returns to the new list and the URL drops `?deal=`
+- [ ] Desktop still shows both panes side by side
+
+### Stage chip sits beside the brand name
+- [ ] Chip is immediately right of the name, on the same line, with the
+      timestamp pinned to the far right
+- [ ] With a long brand name the NAME truncates and the chip stays whole — a
+      truncated brand is still recognisable, a truncated status is not
+- [ ] The timestamp never wraps or gets pushed off
