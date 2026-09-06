@@ -3414,3 +3414,11 @@ the only thing needed to change the page.
 - [ ] Index cards are in the same order as the nav
 - [ ] The ops header stays pinned while scrolling a long page — check on the
       Playbook, which is the longest
+
+### Bubble width follows the text (fixed)
+- [ ] A one-word message ("ok") is a small bubble; a long one grows to 76% and
+      wraps. Both sides
+- [ ] Incoming bubbles were full-width for every message: the scroll area is a
+      column flex container, whose children STRETCH by default, and only the
+      outgoing side had an `align-self`. That is why the bug appeared on one
+      side only
