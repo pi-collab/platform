@@ -3739,7 +3739,15 @@ button.signup-form__cross-link {
     color: #9AA08C; background: #EDEFEC; padding: 5px 12px; border-radius: 999px;
   }
 
-  .ithread-m__msg { display: flex; flex-direction: column; gap: 6px; max-width: 76%; }
+  /* align-self is what makes a bubble fit its text.
+     The scroll area is a column flex container, so its children STRETCH to full
+     width by default — which made every incoming bubble the full 76% whether it
+     said "ok" or a paragraph. Only the outgoing side had an align-self, which is
+     why the bug showed on one side only. */
+  .ithread-m__msg {
+    display: flex; flex-direction: column; gap: 6px;
+    max-width: 76%; align-self: flex-start; align-items: flex-start;
+  }
   .ithread-m__msg.is-mine { align-self: flex-end; align-items: flex-end; }
 
   /* Theirs sits on white with a lift; mine is solid ink. The asymmetry is the

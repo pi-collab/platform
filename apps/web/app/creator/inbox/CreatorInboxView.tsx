@@ -131,6 +131,11 @@ export default function CreatorInboxView({
         ...prev,
         [msg.deal_id]: [...(prev[msg.deal_id] ?? []), msg],
       }))
+      // Watching it arrive is reading it. Marking only on selection meant a
+      // message that landed while the thread was open stayed unread.
+      if (msg.sender_party !== 'creator' && msg.deal_id === selected) {
+        void markDealThreadRead(msg.deal_id)
+      }
       playGuapSound()
     },
     knownIdsRef,

@@ -3414,3 +3414,28 @@ the only thing needed to change the page.
 - [ ] Index cards are in the same order as the nav
 - [ ] The ops header stays pinned while scrolling a long page — check on the
       Playbook, which is the longest
+
+### Bubble width follows the text (fixed)
+- [ ] A one-word message ("ok") is a small bubble; a long one grows to 76% and
+      wraps. Both sides
+- [ ] Incoming bubbles were full-width for every message: the scroll area is a
+      column flex container, whose children STRETCH by default, and only the
+      outgoing side had an `align-self`. That is why the bug appeared on one
+      side only
+
+### A message that arrives while you are watching (fixed)
+Two separate bugs with one story: read it live, leave, come back, and it was
+both unread AND missing.
+- [ ] Sit on a thread. Have the other side send. It appears live
+- [ ] Go back to the inbox: that row is READ. Marking happened on arrival, not
+      only on open, so a message watched arriving is not still waiting
+- [ ] Open the thread again: the message IS there, with no manual refresh.
+      Server messages now MERGE BY ID rather than being ignored after mount —
+      ignoring them was what dropped a newer server payload on the floor and
+      showed the thread as you left it
+- [ ] Send from the phone: still exactly one bubble, no duplicate
+- [ ] Repeat on desktop — same rule both sides, so they cannot diverge
+- [ ] Read a thread, go to the inbox: the badge is gone WITHOUT a reload. The
+      read action revalidates both inbox routes; without that the marker is
+      written and the cached list still wears the badge
+- [ ] Message order stays chronological after a merge
