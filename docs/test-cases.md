@@ -3291,3 +3291,50 @@ outright whenever the URL names a deal.
 - [ ] With a long brand name the NAME truncates and the chip stays whole — a
       truncated brand is still recognisable, a truncated status is not
 - [ ] The timestamp never wraps or gets pushed off
+
+---
+
+## 23. Inbox thread — mobile (design: "Creator Inbox Thread - Mobile Standalone")
+
+`InboxThreadMobile` below 720px on both sides. Sending and read-marking use the
+SAME actions as desktop, so a message sent on a phone is identical to one sent
+on a laptop.
+
+### Layout
+- [ ] Header: back arrow, 34px gradient avatar, counterpart name, "View deal"
+- [ ] Back returns to the mobile inbox list
+- [ ] "View deal" opens that deal (`/creator/deals/<id>` or `/deals/<id>`)
+- [ ] Their messages: white bubble, subtle lift, left. Mine: solid ink #12151C,
+      white text, no shadow, right. Max width 76%
+- [ ] Time under each bubble, 10px, aligned to the bubble's side
+- [ ] Day divider pill: TODAY / YESTERDAY / a full date
+- [ ] A very long word or URL wraps inside the bubble rather than widening it
+- [ ] Composer clears the creator tab bar; on the brand side (no tab bar) it
+      sits at the bottom edge
+- [ ] Newest message is in view on open and after sending
+
+### Sending
+- [ ] Send posts the message and it appears immediately
+- [ ] **A failed send keeps the typed text** and shows the reason — losing what
+      someone wrote is the worst outcome here
+- [ ] The send button is disabled while empty and while sending
+- [ ] On a terminal deal the composer is replaced by the closed notice and
+      nothing can be sent
+- [ ] The closed rule MATCHES desktop (terminal statuses). If either changes,
+      change both — `lib/messaging-window.ts` has a better rule that the inbox
+      does not yet use, and one screen adopting it alone would give the same
+      deal two answers
+
+### Unread must not clear by itself (bug fixed)
+The desktop view defaults `selected` to the first thread so its pane is never
+blank. On a phone that view is hidden behind the mobile list, and the default
+was marking the newest conversation read the moment the inbox loaded.
+- [ ] Open the inbox list on mobile with an unread thread: it STAYS unread —
+      ring, bold name, dot all still there after the page settles
+- [ ] Open that thread: it becomes read, and the header badge drops
+- [ ] Go back to the list: the row is now read
+- [ ] Desktop: clicking a thread still marks it read
+- [ ] Desktop: landing on /inbox with no `?deal=` shows the first thread but
+      does NOT mark it read until clicked. Under-marking is deliberate — a
+      lingering badge is a nuisance, a message silently marked read is one
+      nobody ever reads

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { unreadByDeal } from '@/lib/unread'
 import InboxListMobile from '@/components/InboxListMobile'
+import InboxThreadMobile from '@/components/InboxThreadMobile'
 import { resolveStatus } from '@/lib/deal-stage'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
@@ -139,6 +140,12 @@ export default async function CreatorInboxPage({ searchParams }: {
      visible on mobile once ?deal= is set — hence the conditional class rather
      than a blanket one. */
   const selected = searchParams?.deal ?? null
+  const selectedThread = selected ? threads.find((t) => t.dealId === selected) ?? null : null
+  const selectedMessages = selected
+    ? allMessages
+        .filter((m) => m.deal_id === selected)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : []
 
   return (
     <>
@@ -154,7 +161,26 @@ export default async function CreatorInboxPage({ searchParams }: {
           notificationsHref="/creator/notifications?from=inbox"
         />
       )}
-      <div className={selected ? 'inbox-thread-only' : 'inbox-hide-mobile'}>
+      {/* The thread on a phone. Mirrors the desktop rule for a closed thread
+          rather than introducing a second one — see the component's note. */}
+      {selectedThread && (
+        <InboxThreadMobile
+          dealId={selectedThread.dealId}
+          name={selectedThread.brandName}
+          initials={selectedThread.brandInitials}
+          messages={selectedMessages}
+          me="creator"
+          backHref="/creator/inbox"
+          dealHref={`/creator/deals/${selectedThread.dealId}`}
+          closedNotice={
+            ['complete', 'declined', 'cancelled'].includes(selectedThread.dealStatus)
+              ? `This deal is ${selectedThread.dealStatus}, so messaging is closed.`
+              : null
+          }
+          hasTabBar={true}
+        />
+      )}
+      <div className={selected ? 'inbox-thread-only inbox-hide-mobile' : 'inbox-hide-mobile'}>
         <CreatorInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
       </div>
     </>

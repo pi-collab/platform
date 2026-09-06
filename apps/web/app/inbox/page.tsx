@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import InboxListMobile from '@/components/InboxListMobile'
+import InboxThreadMobile from '@/components/InboxThreadMobile'
 import { resolveStatus } from '@/lib/deal-stage'
 import { unreadByDeal } from '@/lib/unread'
 import { verifyBrand } from '@/lib/brand-auth'
@@ -104,6 +105,12 @@ export default async function BrandInboxPage({ searchParams }: {
   // Same list, same component. Only the counterpart differs: a brand sees the
   // creator's name where a creator sees the brand's.
   const selected = searchParams?.deal ?? null
+  const selectedThread = selected ? threads.find((t) => t.dealId === selected) ?? null : null
+  const selectedMessages = selected
+    ? allMessages
+        .filter((m) => m.deal_id === selected)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    : []
 
   return (
     <>
@@ -119,7 +126,26 @@ export default async function BrandInboxPage({ searchParams }: {
           notificationsHref="/notifications"
         />
       )}
-      <div className={selected ? 'inbox-thread-only' : 'inbox-hide-mobile'}>
+      {/* The thread on a phone. Mirrors the desktop rule for a closed thread
+          rather than introducing a second one — see the component's note. */}
+      {selectedThread && (
+        <InboxThreadMobile
+          dealId={selectedThread.dealId}
+          name={selectedThread.creatorName}
+          initials={selectedThread.creatorInitials}
+          messages={selectedMessages}
+          me="brand"
+          backHref="/inbox"
+          dealHref={`/deals/${selectedThread.dealId}`}
+          closedNotice={
+            ['complete', 'declined', 'cancelled'].includes(selectedThread.dealStatus)
+              ? `This deal is ${selectedThread.dealStatus}, so messaging is closed.`
+              : null
+          }
+          hasTabBar={false}
+        />
+      )}
+      <div className={selected ? 'inbox-thread-only inbox-hide-mobile' : 'inbox-hide-mobile'}>
         <BrandInboxView threads={threads} allMessages={allMessages} initialDealId={selected} unreadByDeal={unread} />
       </div>
     </>

@@ -83,13 +83,21 @@ export default function BrandInboxView({
   )
   const router = useRouter()
 
-  // Selecting a thread here IS reading it. The inbox marked nothing, so the
-  // header badge survived the one screen whose whole purpose is reading
-  // messages. Refreshed afterwards so the number in the header actually moves.
+  /* Only a thread the reader actually OPENED counts as read.
+     `selected` falls back to the first thread so the desktop pane is never
+     blank — but that is a default, not a decision. On a phone this whole view
+     is hidden behind the mobile list, so the fallback was marking the newest
+     conversation read the moment the inbox loaded, before anyone had seen it.
+     Under-marking is the safe direction here: a badge that lingers is a
+     nuisance, a message silently marked read is one nobody ever reads. */
+  const [openedByUser, setOpenedByUser] = useState(
+    Boolean(initialDealId && threads.some((t) => t.dealId === initialDealId)),
+  )
+
   useEffect(() => {
-    if (!selected) return
+    if (!selected || !openedByUser) return
     void markDealThreadRead(selected).then(() => router.refresh())
-  }, [selected, router])
+  }, [selected, openedByUser, router])
 
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
@@ -177,6 +185,8 @@ export default function BrandInboxView({
 
   function selectThread(dealId: string) {
     setSelected(dealId)
+    // An explicit choice — this one counts as opened, and so as read.
+    setOpenedByUser(true)
     setMobileChat(true)
     setBody('')
     setError(null)
