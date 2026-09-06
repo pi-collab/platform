@@ -63,6 +63,17 @@ export default function CookieConsent() {
     }
   }
 
+  /* Tell the layout the banner is up. Every creator screen used to reserve
+     210px unconditionally so this banner could never cover the last control —
+     correct on a first visit, and a dead half-screen on every visit after,
+     since the banner is dismissed once. */
+  useEffect(() => {
+    const root = document.documentElement
+    if (visible) root.classList.add('has-cookie-banner')
+    else root.classList.remove('has-cookie-banner')
+    return () => root.classList.remove('has-cookie-banner')
+  }, [visible])
+
   if (!visible) return null
 
   return (

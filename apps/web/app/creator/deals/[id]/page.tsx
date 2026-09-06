@@ -202,6 +202,15 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         feePaise={fee?.fee_paise ?? null}
         feePercent={deal.fee_percent ?? null}
         paymentTerms={deal.payment_terms ?? null}
+        /* "Payment in 30 days" from the agreed terms. Terms are free text, so
+           a day count is only stated when one is actually written there —
+           otherwise the terms line above already says it in full. */
+        paymentIn={(() => {
+          const t = deal.payment_terms
+          if (typeof t !== 'string') return null
+          const m = /(\d+)\s*(day|d)\b/i.exec(t)
+          return m ? `${m[1]} days` : null
+        })()}
         deliverBy={deal.timeline_date
           ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
           : null}
@@ -230,6 +239,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         unreadNotifications={offerUnread}
         decision={
           <AcceptDecline
+            stacked
             dealId={deal.id}
             items={(items ?? []).map((i) => ({ id: i.id, label: i.label, price_paise: i.price_paise ?? 0 }))}
           />

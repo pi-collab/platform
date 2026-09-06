@@ -54,7 +54,7 @@ function shortDate(iso: string | null): string | null {
 
 export default function CreatorOfferMobile({
   brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent,
-  paymentTerms, deliverBy, waitingLabel, items, briefPitch, guidelines,
+  paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
 }: {
@@ -65,6 +65,8 @@ export default function CreatorOfferMobile({
   feePaise: number | null
   feePercent: number | null
   paymentTerms: string | null
+  /** e.g. "30 days", derived from the agreed payment terms. */
+  paymentIn: string | null
   deliverBy: string | null
   waitingLabel: string
   items: OfferItem[]
@@ -86,7 +88,7 @@ export default function CreatorOfferMobile({
       <div className="offer-m__head">
         <div className="offer-m__headrow">
           <Link href="/creator/deals" className="offer-m__back" aria-label="Back to deals">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
           <h1 className="offer-m__title">
             Offer from <span className="offer-m__brand">{brandName}</span>
@@ -103,18 +105,18 @@ export default function CreatorOfferMobile({
             </Link>
           </div>
         </div>
+        {/* The DEAL's own name beside the status dot — what this offer is for.
+            The stage ("Offer received") belongs to the progress block below;
+            putting it here left the deal unnamed on its own screen. */}
         <div className="offer-m__status">
           <span className="offer-m__statuslabel">
-            <span className="offer-m__dot" aria-hidden="true" />Offer received
+            <span className="offer-m__dot" aria-hidden="true" />{dealTitle}
           </span>
-          {/* Not "Respond by" — see the note at the top of this file. */}
           <span className="offer-m__waiting">{waitingLabel}</span>
         </div>
       </div>
 
       <div className="offer-m__body">
-        <div className="offer-m__deal">{dealTitle}</div>
-
         {/* Where this sits in the pipeline. */}
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
@@ -132,11 +134,18 @@ export default function CreatorOfferMobile({
           <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '—'}</div>
           {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
 
-          {deliverBy && (
+          {(deliverBy || paymentIn) && (
             <div className="offer-m__split">
-              <div>
+              <div style={{ flex: 1 }}>
                 <div className="offer-m__label">Deliver by</div>
-                <div className="offer-m__splitval">{deliverBy}</div>
+                <div className="offer-m__splitval">{deliverBy ?? '—'}</div>
+              </div>
+              {/* The export's second column is a "Live window", which has no
+                  field. This is the payment window, which the agreed terms
+                  actually state. */}
+              <div style={{ flex: 1 }}>
+                <div className="offer-m__label">Payment in</div>
+                <div className="offer-m__splitval">{paymentIn ?? '—'}</div>
               </div>
             </div>
           )}

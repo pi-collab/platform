@@ -3198,7 +3198,7 @@ button.signup-form__cross-link {
 .cdeals-desktop { display: block; }
 
 @media (max-width: 720px) {
-  .cdeals-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .cdeals-m { display: block; background: #F5F7FA; }
   .cdeals-desktop { display: none; }
 
   .cdeals-m__head {
@@ -3363,7 +3363,7 @@ button.signup-form__cross-link {
 .cpay-desktop { display: block; }
 
 @media (max-width: 720px) {
-  .cpay-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); color: #12151C; }
+  .cpay-m { display: block; background: #F5F7FA; color: #12151C; }
   .cpay-desktop { display: none; }
 
   .cpay-m__head {
@@ -3571,7 +3571,7 @@ button.signup-form__cross-link {
 }
 
 @media (max-width: 720px) {
-  .inbox-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .inbox-m { display: block; background: #F5F7FA; }
   .inbox-hide-mobile { display: none !important; }
 
   .inbox-m__head {
@@ -3889,7 +3889,7 @@ button.signup-form__cross-link {
 }
 
 @media (max-width: 720px) {
-  .inbox-m { display: block; background: #F5F7FA; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .inbox-m { display: block; background: #F5F7FA; }
   .inbox-hide-mobile { display: none !important; }
 
   .inbox-m__head {
@@ -4196,8 +4196,10 @@ button.signup-form__cross-link {
 
 @media (max-width: 720px) {
   .cdash-m {
-    display: block; background: #F5F7FA;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom)); color: #12151C;
+    /* No bottom padding of its own — .creator-app already clears the tab bar,
+       and two paddings stacked is what put half a screen of nothing under the
+       last card. */
+    display: block; background: #F5F7FA; color: #12151C;
     --meta: #565C68; --hair: rgba(60,80,30,.08); --line: rgba(60,80,30,.10);
     --amber: #B67C15; --lime700: #4F6B12; --lime950: #161B08;
     --wg500: #565C68; --wg600: #4A505C; --secmid: #E4ECF3;
@@ -4476,14 +4478,13 @@ button.signup-form__cross-link {
 @media (max-width: 720px) {
   .offer-m {
     display: block; background: #F5F7FA; color: #12151C;
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
   .offer-desktop { display: none !important; }
 
   .offer-m__head {
     position: sticky; top: 0; z-index: 6;
-    background: #fff; margin: 0 16px; border-radius: 18px;
-    padding: 16px 18px; margin-top: 14px;
+    background: #fff; margin: 10px 16px 0; border-radius: 18px;
+    padding: 18px 20px;
     box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
   }
   .offer-m__headrow { display: flex; align-items: center; gap: 10px; }
@@ -4495,10 +4496,11 @@ button.signup-form__cross-link {
   }
   .offer-m__brand { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
   .offer-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  /* White with a hairline, per the export — not a filled grey chip. */
   .offer-m__icon {
     position: relative; width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    background: #F5F7FA; color: #12151C;
+    background: #fff; border: 1px solid #E5E8EE; color: #12151C;
   }
   .offer-m__status {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -4506,8 +4508,9 @@ button.signup-form__cross-link {
     flex-wrap: wrap;
   }
   .offer-m__statuslabel {
-    display: inline-flex; align-items: center; gap: 7px;
+    display: inline-flex; align-items: center; gap: 7px; min-width: 0;
     font-weight: 700; font-size: 12.5px; color: #12151C;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .offer-m__dot {
     width: 8px; height: 8px; border-radius: 50%; background: #D89A2E;
@@ -4516,6 +4519,7 @@ button.signup-form__cross-link {
   .offer-m__waiting { font-size: 11px; color: #565C68; }
 
   .offer-m__body { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 14px; }
+  .offer-m__split > div + div { border-left: 1px solid rgba(60,80,30,.10); padding-left: 20px; }
   .offer-m__deal {
     font-family: var(--font-display); font-size: 15px; font-weight: 600;
     letter-spacing: -0.01em; padding: 0 4px;

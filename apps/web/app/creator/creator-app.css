@@ -49,13 +49,12 @@
   font-family: var(--font-ui);
   /* The tab bar is fixed, so every screen reserves its height plus the home
      indicator. Without this the last row of content sits under the bar. */
-  /* Clears the fixed tab bar AND the cookie banner. The banner is ~150px on a
-     phone and sits above the bar, so reserving only the bar's height leaves the
-     last control on the page unreachable — which is exactly what happened to
-     the Add UPI ID button. The banner is dismissed once, so this is generous
-     for a session and correct for the first one. */
-  padding-bottom: calc(210px + env(safe-area-inset-bottom));
-  min-height: 100vh;
+  /* The tab bar, and nothing more. The banner's extra clearance is added only
+     while the banner is actually up (see below) — reserving it permanently left
+     a half-screen of dead space under every page for the entire life of the
+     account, to solve a problem that exists for one dismissal. */
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────
@@ -200,6 +199,16 @@
   background: var(--lime-400);
 }
 
+/* Profile holds a face, not a line icon. A filled disc behind a photo reads as
+   a thick collar; a thin ring says "selected" without competing with the
+   picture. */
+.creator-tab__iconwrap--photo { background: transparent !important; }
+/* The ring hugs the photo, not the 34px slot it sits in — a ring with a gap
+   inside it reads as a stray circle rather than a selected avatar. */
+.creator-tab[aria-current='page'] .creator-tab__photo {
+  box-shadow: 0 0 0 2px var(--lime-400);
+}
+
 .creator-tab[aria-current='page'] /* ── Desktop ──────────────────────────────────────────────────────────────
    The design is drawn for a 390px phone. On a wide screen the content is
    centred at phone width rather than stretched: these layouts assume a single
@@ -296,4 +305,12 @@
   line-height: 16px;
   text-align: center;
   box-shadow: 0 0 0 2px #fff;
+}
+
+
+/* While the cookie banner is up it sits above the tab bar and would cover the
+   last control on the page — which is exactly what happened to the Add UPI ID
+   button. CookieConsent adds this class for as long as it is showing. */
+.has-cookie-banner .creator-app {
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
 }

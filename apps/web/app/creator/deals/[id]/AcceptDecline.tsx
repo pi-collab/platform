@@ -11,12 +11,19 @@ interface ItemForCounter {
   price_paise: number
 }
 
+/* `stacked` is the phone arrangement: Accept and Counter full width, one above
+   the other, with the decline link and the explainer beneath. Desktop keeps its
+   side-by-side row. A variant rather than a CSS override, because the buttons
+   carry inline styles and overriding those from a stylesheet means !important
+   on every property — which is how a layout stops being editable. */
 export default function AcceptDecline({
   dealId,
   items,
+  stacked = false,
 }: {
   dealId: string
   items?: ItemForCounter[]
+  stacked?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const [declining, setDeclining] = useState(false)
@@ -166,9 +173,11 @@ export default function AcceptDecline({
         <p style={{ ...errorStyle, marginBottom: 16 }}>{error}</p>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div style={stacked
+        ? { display: 'flex', flexDirection: 'column-reverse', gap: 14 }
+        : { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         {/* Left: info text + decline link */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 380 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: stacked ? undefined : 380 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
           <div>
             <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)' }}>
@@ -186,12 +195,18 @@ export default function AcceptDecline({
         </div>
 
         {/* Right: Accept + Counter buttons */}
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={stacked
+          ? { display: 'flex', flexDirection: 'column', gap: 10 }
+          : { display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             onClick={handleAccept}
             disabled={loading}
             className="neonbtn"
-            style={{ ...neonBtn, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+            style={{
+              ...neonBtn,
+              ...(stacked ? { width: '100%', height: 50, borderRadius: 14, fontSize: 14.5, fontWeight: 800 } : null),
+              opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer',
+            }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
             {loading ? 'Accepting...' : 'Accept offer'}
@@ -201,7 +216,9 @@ export default function AcceptDecline({
               onClick={() => { setCounterOpen(true); setError(null) }}
               disabled={loading}
               className="pill-hover"
-              style={secondaryBtn}
+              style={stacked
+                ? { ...secondaryBtn, width: '100%', height: 50, borderRadius: 14, fontSize: 13.5 }
+                : secondaryBtn}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
               Counter

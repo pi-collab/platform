@@ -111,12 +111,13 @@ export default function CreatorTabBar({ initial, photoUrl = null, unreadInbox = 
         className="creator-tab"
         aria-current={isCurrent('/creator/profile') ? 'page' : undefined}
       >
-        <span className="creator-tab__iconwrap">
+        <span className={`creator-tab__iconwrap${photoUrl ? ' creator-tab__iconwrap--photo' : ''}`}>
         <span
           aria-hidden="true"
+          className="creator-tab__photo"
           style={{
-            width: 22,
-            height: 22,
+            width: 26,
+            height: 26,
             borderRadius: '50%',
             flexShrink: 0,
             background: 'var(--sec-2)',
