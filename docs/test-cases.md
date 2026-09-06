@@ -3361,3 +3361,36 @@ was marking the newest conversation read the moment the inbox loaded.
 - [ ] Both cap at "9+"
 - [ ] Zero shows no badge at all, not a "0"
 - [ ] Reading a thread drops the Inbox tab count on the next load
+
+---
+
+## 24. The Guapd Playbook — /ops/playbook
+
+Source of truth is `apps/web/content/playbook.ts`. The page restates none of it,
+including the title and standfirst in the dark band — editing the markdown is
+the only thing needed to change the page.
+
+### Access
+- [ ] Admin can open it
+- [ ] The scoped OUTREACH role can open it — this is their document
+- [ ] Signed out, or signed in without any ops role: redirected
+- [ ] It appears in the ops nav and on the ops index for BOTH roles
+
+### Rendering
+- [ ] Dark header band, full width, with the lime "g" mark and "guapd" wordmark
+- [ ] Title in white; the two standfirst lines in serif italic, muted
+- [ ] `##` headings carry a 2px ink rule above them
+- [ ] Bullets are lime SQUARES (9px, 3px radius) — not browser discs
+- [ ] Ordered lists number in deep lime
+- [ ] `---` renders as a hairline rule
+- [ ] **bold** and *italic* render, and `**x**` never renders as stray asterisks
+      around italics (bold is matched first for exactly this reason)
+- [ ] Every one of Parts 1–13 and the Appendix is present — nothing silently
+      dropped by the parser
+- [ ] Readable on a phone; the band and rules still work at 375px
+- [ ] ⌘P gives a sensible print layout with the band's colour retained
+
+### Maintenance rule (CLAUDE.md)
+- [ ] Shipping a significant feature prompts an ASK before any Playbook edit
+- [ ] A minor fix or refactor prompts nothing
+- [ ] Parts 1–12 are never edited without Palak asking explicitly

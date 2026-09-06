@@ -57,6 +57,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
             gates are what actually enforce this; hiding them just stops the
             outreach team walking into dead ends all day. */}
         <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
+          <Link href="/ops/playbook" style={{ color: '#555', textDecoration: 'none' }}>Playbook</Link>
           <Link href="/ops/pipeline" style={{ color: '#555', textDecoration: 'none' }}>Pipeline</Link>
           <Link href="/ops/creators" style={{ color: '#555', textDecoration: 'none' }}>Creators</Link>
           {isAdmin && <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>}
