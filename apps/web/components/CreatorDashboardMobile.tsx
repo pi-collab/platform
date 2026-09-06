@@ -48,6 +48,14 @@ export interface ActionItem {
 
 export interface MonthPoint { label: string; amount: number }
 export interface BrandRow { name: string; deals: number; posts: number; valuePaise: number; active: boolean }
+export interface ReachPost { id: string; title: string; views: string; thumbUrl: string | null }
+export interface Reach {
+  followers: string
+  engagement: string
+  avgViews: string
+  topPosts: ReachPost[]
+}
+
 export interface Earnings {
   allTimePaise: number
   thisMonthPaise: number
@@ -76,7 +84,7 @@ function Heading({ children }: { children: React.ReactNode }) {
 export default function CreatorDashboardMobile({
   firstName, handleLine, followersLabel, shopfrontSlug, period,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
-  paidCount, actions, motion, monthly, earnings, brands, completedEver, track,
+  paidCount, actions, motion, monthly, earnings, brands, reach, completedEver, track,
   changePct, unreadNotifications = 0,
 }: {
   firstName: string
@@ -95,6 +103,8 @@ export default function CreatorDashboardMobile({
   monthly: MonthPoint[]
   earnings: Earnings
   brands: BrandRow[]
+  /** Null until Instagram is connected. Never stubbed with sample numbers. */
+  reach: Reach | null
   completedEver: number
   /** Computed, never asserted. A dash means no basis yet, not zero. */
   track: { onTimePct: number | null; responseLabel: string; completionPct: number | null }
@@ -240,13 +250,64 @@ export default function CreatorDashboardMobile({
           </section>
         )}
 
-        {/* ── Performance ── */}
-        {monthly.length >= 2 && (
-          <section className="cdash-m__card" style={{ padding: '20px 22px' }}>
-            <Heading>Performance</Heading>
-            <EarningsLine points={monthly} />
-          </section>
-        )}
+        {/* ── Performance ──
+            Always present, so the screen keeps its shape for a new creator.
+            With fewer than two months there is no trend to draw, and a single
+            point stretched across a grid implies one. */}
+        <section className="cdash-m__card" style={{ padding: '20px 22px' }}>
+          <Heading>Performance</Heading>
+          {monthly.length >= 2
+            ? <EarningsLine points={monthly} />
+            : <p className="cdash-m__empty">Your earnings chart appears once you have been paid in two different months.</p>}
+        </section>
+
+        {/* ── Your reach ──
+            Structure now, numbers when Instagram connects. Nothing here is
+            invented: a follower count a creator did not give us is one they
+            would screenshot and be asked about. */}
+        <section className="cdash-m__card" style={{ padding: '20px 22px' }}>
+          <Heading>Your reach</Heading>
+          {reach ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 18 }}>
+                <span className="cdash-m__meta">Top posts</span>
+                <span style={{ fontSize: 11.5, color: '#565C68' }}>by views</span>
+              </div>
+              <div className="cdash-m__hscroll">
+                {reach.topPosts.map((post) => (
+                  <div key={post.id} className="cdash-m__post">
+                    <div className="cdash-m__postthumb">
+                      {post.thumbUrl && <img src={post.thumbUrl} alt="" loading="lazy" />}
+                    </div>
+                    <div className="cdash-m__postbody">
+                      <div className="cdash-m__posttitle">{post.title}</div>
+                      <div className="cdash-m__meta">{post.views} views</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="cdash-m__three">
+                <div>
+                  <div className="cdash-m__meta">Followers</div>
+                  <div className="cdash-m__threeval">{reach.followers}</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">Engagement</div>
+                  <div className="cdash-m__threeval">{reach.engagement}</div>
+                </div>
+                <div>
+                  <div className="cdash-m__meta">Avg views</div>
+                  <div className="cdash-m__threeval">{reach.avgViews}</div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="cdash-m__empty">
+              Connect Instagram and your verified reach appears here &mdash; followers,
+              engagement, average views and your best-performing posts.
+            </p>
+          )}
+        </section>
 
         {/* ── Your earnings ── */}
         {earnings.allTimePaise > 0 && (

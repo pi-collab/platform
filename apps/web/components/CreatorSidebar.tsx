@@ -355,17 +355,18 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
         </nav>
       </header>
 
-      {/* ── Mobile top bar ────────────────────────────── */}
-      <header className="creator-topbar-mobile">
-        <button onClick={() => setDrawerOpen(!drawerOpen)} style={hamburgerBtn} aria-label="Menu">
-          <span style={hamLine} /><span style={{ ...hamLine, marginTop: 4 }} /><span style={{ ...hamLine, marginTop: 4 }} />
-        </button>
-        <Link href="/creator/dashboard" style={{ ...logoTextMobile, textDecoration: 'none' }}>guapd</Link>
-        <Link href="/creator/notifications" style={{ position: 'relative', padding: 4, color: 'var(--ink)' }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
-          {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-        </Link>
-      </header>
+      {/* ── Mobile top bar: REMOVED ──────────────────────
+          A hamburger, a wordmark and a bell, stacked above every mobile screen
+          that now carries its own header — two headers and a duplicate bell.
+          A CSS rule had been hiding it (creator-app.css, !important) and was
+          evidently not winning in the field, so it is gone at the source
+          rather than suppressed.
+
+          Navigation is the bottom tab bar, which reaches Dashboard, Deals,
+          Inbox, Payments and Profile; the drawer's remaining links (settings,
+          sign out) live under Profile. The drawer markup below is now
+          unreachable on a phone — `drawerOpen` has nothing to set it — and is
+          left in place because the same component still serves desktop. */}
 
       {/* ── Mobile drawer ─────────────────────────────── */}
       {drawerOpen && (

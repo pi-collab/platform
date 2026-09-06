@@ -3572,3 +3572,27 @@ percentage over zero deals is nothing, not 100%.
 - [ ] Brands are horizontal CARDS (196px) with a status line — a lime dot and
       ACTIVE, or COMPLETED — a divider, the value and "N deals · N posts"
 - [ ] Both rails align their first card with the section heading
+
+### One header on mobile (duplicate removed)
+- [ ] No hamburger + wordmark + bell bar above the page on ANY creator mobile
+      screen. Each screen's own header is the only one
+- [ ] Desktop is unchanged: sidebar and top nav both still render
+- [ ] The tab bar still reaches everything; settings and sign out live under
+      Profile, which is where the drawer's links went
+
+### Performance and Reach always render
+- [ ] Performance shows the line once two months have earnings, and otherwise
+      explains what unlocks it — the section never disappears
+- [ ] Your reach renders with a line about connecting Instagram until real data
+      exists. **No sample followers, engagement or view counts.** A creator can
+      screenshot their own dashboard, and an invented follower count is the one
+      number a brand will check
+- [ ] Once Instagram lands, `reach` is passed non-null and the section fills in
+      with top posts and the three figures — no layout change needed
+
+### Rails and card shape
+- [ ] First card in Deals in motion and Brands lines up with its heading; the
+      last clears the right edge
+- [ ] A snapped card never sits flush against the screen edge
+- [ ] Cards are landscape rectangles, not squares — a short deal title no
+      longer collapses the card

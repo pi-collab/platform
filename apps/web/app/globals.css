@@ -4251,9 +4251,13 @@ button.signup-form__cross-link {
 
   /* Horizontal, snapping, and bleeding to both edges — the design scrolls
      these rather than stacking them. */
+  /* The rail bleeds to both screen edges, then pads itself back so the first
+     card lines up with the heading above it and the last clears the right
+     edge. scroll-padding keeps a snapped card off the bezel. */
   .cdash-m__hscroll {
     display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory;
     padding: 2px 18px 6px; margin: 16px -18px 0;
+    scroll-padding-left: 18px;
     -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .cdash-m__hscroll::-webkit-scrollbar { display: none; }
@@ -4416,5 +4420,38 @@ button.signup-form__cross-link {
   .cdash-m__brandvalue {
     font-family: var(--font-ui); font-weight: 600; font-size: 17px;
     letter-spacing: -0.02em; color: #12151C;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Rails: the first card lines up with the heading above it, the last one
+     clears the right edge, and snapping respects both. Without scroll-padding
+     a snapped card sits flush against the bezel. */
+  /* Landscape cards, not squares. Content alone left them near-square on a
+     short deal title; the design's proportions are wider than tall. */
+  .cdash-m__deal { min-height: 176px; display: flex; flex-direction: column; }
+  .cdash-m__deal .cdash-m__dealfoot { margin-top: auto; }
+  .cdash-m__brandcard { min-height: 148px; display: flex; flex-direction: column; }
+  .cdash-m__brandcard .cdash-m__brandfoot { margin-top: auto; }
+
+  .cdash-m__empty {
+    margin: 16px 0 0; font-family: var(--font-ui); font-size: 13px;
+    color: #565C68; line-height: 1.55;
+  }
+
+  /* Top posts */
+  .cdash-m__post {
+    width: 132px; border-radius: 12px; border: 1px solid rgba(60,80,30,.10);
+    overflow: hidden; background: #fff;
+  }
+  .cdash-m__postthumb {
+    position: relative; aspect-ratio: 4 / 3;
+    background: linear-gradient(150deg,#F4F8FC 0%,#F7F4FB 55%,#FAFAF8 100%);
+  }
+  .cdash-m__postthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cdash-m__postbody { padding: 10px 12px 12px; }
+  .cdash-m__posttitle {
+    font-family: var(--font-ui); font-weight: 600; font-size: 12px; color: #12151C;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px;
   }
 }

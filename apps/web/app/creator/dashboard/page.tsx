@@ -406,6 +406,7 @@ export default async function CreatorDashboardPage({
         monthly={monthlyEarnings}
         earnings={earnings}
         brands={mobileBrands}
+        reach={null}
         completedEver={lifetimeCompleted}
         changePct={changePct}
         track={{
