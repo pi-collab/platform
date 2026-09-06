@@ -47,7 +47,7 @@ export interface ActionItem {
 }
 
 export interface MonthPoint { label: string; amount: number }
-export interface BrandRow { name: string; deals: number; valuePaise: number; active: boolean }
+export interface BrandRow { name: string; deals: number; posts: number; valuePaise: number; active: boolean }
 export interface Earnings {
   allTimePaise: number
   thisMonthPaise: number
@@ -76,8 +76,8 @@ function Heading({ children }: { children: React.ReactNode }) {
 export default function CreatorDashboardMobile({
   firstName, handleLine, followersLabel, shopfrontSlug, period,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
-  paidCount, actions, motion, monthly, earnings, brands, completedEver,
-  unreadNotifications = 0,
+  paidCount, actions, motion, monthly, earnings, brands, completedEver, track,
+  changePct, unreadNotifications = 0,
 }: {
   firstName: string
   handleLine: string
@@ -96,6 +96,12 @@ export default function CreatorDashboardMobile({
   earnings: Earnings
   brands: BrandRow[]
   completedEver: number
+  /** Computed, never asserted. A dash means no basis yet, not zero. */
+  track: { onTimePct: number | null; responseLabel: string; completionPct: number | null }
+  /** Percent change against the previous window of the same length. Null when
+   *  there is nothing to compare against — an arrow off a zero base is
+   *  meaningless, and this is the most quotable number on the screen. */
+  changePct: number | null
   unreadNotifications?: number
 }) {
   const router = useRouter()
@@ -104,7 +110,13 @@ export default function CreatorDashboardMobile({
     <div className="cdash-m">
       <header className="cdash-m__head">
         <div style={{ minWidth: 0 }}>
-          <h1 className="cdash-m__hi">Hey, <span className="cdash-m__hi-em">{firstName}</span></h1>
+          <h1 className="cdash-m__hi">
+            Hey,{' '}
+            <span className="cdash-m__hi-em">
+              {firstName}
+              <span className="cdash-m__hi-mark" aria-hidden="true" />
+            </span>
+          </h1>
           <div className="cdash-m__handle">
             {handleLine}{followersLabel && <> &middot; {followersLabel} followers</>}
           </div>
@@ -149,7 +161,12 @@ export default function CreatorDashboardMobile({
             <div className="cdash-m__kpi">
               <div className="cdash-m__meta">Total earned</div>
               <div className="cdash-m__figure tnum">{inrShort(totalEarnedPaise)}</div>
-              <div className="cdash-m__meta">{dealCount} deal{dealCount === 1 ? '' : 's'}</div>
+              <div className="cdash-m__meta">
+                {dealCount} deal{dealCount === 1 ? '' : 's'}
+                {changePct !== null && (
+                  <> &middot; <span className="cdash-m__up">{changePct >= 0 ? '▲' : '▼'} {Math.abs(changePct)}%</span></>
+                )}
+              </div>
             </div>
             <div className="cdash-m__kpi cdash-m__kpi--right">
               <div className="cdash-m__meta">Pending</div>
@@ -268,18 +285,21 @@ export default function CreatorDashboardMobile({
               <div className="cdash-m__three">
                 <div>
                   <div className="cdash-m__meta">On-time</div>
-                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">
+                    {track.onTimePct === null ? '—' : `${track.onTimePct}%`}
+                  </div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">Response</div>
-                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">{track.responseLabel}</div>
                 </div>
                 <div>
                   <div className="cdash-m__meta">Completion</div>
-                  <div className="cdash-m__threeval cdash-m__threeval--strong">&mdash;</div>
+                  <div className="cdash-m__threeval cdash-m__threeval--strong">
+                    {track.completionPct === null ? '—' : `${track.completionPct}%`}
+                  </div>
                 </div>
               </div>
-              <p className="cdash-m__note">Not measured yet. These begin once delivery dates are tracked against agreed timelines.</p>
             </div>
           </section>
         )}
@@ -288,17 +308,28 @@ export default function CreatorDashboardMobile({
         {brands.length > 0 && (
           <section>
             <Heading>Brands you&rsquo;ve worked with</Heading>
-            <div className="cdash-m__card" style={{ marginTop: 16, padding: '6px 18px' }}>
+            <div className="cdash-m__hscroll">
               {brands.map((b) => (
-                <div key={b.name} className="cdash-m__brandrow">
-                  <span className="cdash-m__brandmark" aria-hidden="true">{b.name.slice(0, 1).toUpperCase()}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="cdash-m__brandname">{b.name}</div>
-                    <div className="cdash-m__meta">{b.active ? 'Active' : 'Completed'}</div>
+                <div key={b.name} className="cdash-m__card cdash-m__brandcard">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="cdash-m__brandmark" aria-hidden="true">{b.name.slice(0, 1).toUpperCase()}</span>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="cdash-m__brandname">{b.name}</div>
+                      {b.active ? (
+                        <span className="cdash-m__brandstate cdash-m__brandstate--active">
+                          <span className="cdash-m__brandstate-dot" aria-hidden="true" />Active
+                        </span>
+                      ) : (
+                        <span className="cdash-m__brandstate">Completed</span>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div className="cdash-m__price tnum">{inrShort(b.valuePaise)}</div>
-                    <div className="cdash-m__meta">{b.deals} deal{b.deals === 1 ? '' : 's'}</div>
+                  <div className="cdash-m__brandfoot">
+                    <div className="cdash-m__brandvalue tnum">{inrShort(b.valuePaise)}</div>
+                    <div className="cdash-m__meta">
+                      {b.deals} deal{b.deals === 1 ? '' : 's'}
+                      {b.posts > 0 && <> &middot; {b.posts} post{b.posts === 1 ? '' : 's'}</>}
+                    </div>
                   </div>
                 </div>
               ))}

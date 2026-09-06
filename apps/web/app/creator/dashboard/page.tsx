@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
 import { unreadNotificationCount } from '@/lib/unread'
+import { computeTrackRecord, formatResponse } from '@/lib/creator-track-record'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
@@ -68,7 +69,7 @@ export default async function CreatorDashboardPage({
   const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
+      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, brands(id, name)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .gte('created_at', periodFromISO)
@@ -222,7 +223,7 @@ export default async function CreatorDashboardPage({
      period four times under four different labels. */
   const { data: lifetimeDeals } = await supabase
     .from('deals')
-    .select('id, title, status, price_paise, created_at, brands(id, name)')
+    .select('id, title, status, price_paise, created_at, timeline_date, brands(id, name)')
     .not('status', 'in', '(cancelled,declined)')
   const lifetime = lifetimeDeals ?? []
 
@@ -254,9 +255,41 @@ export default async function CreatorDashboardPage({
      aggregation next to it would be two answers to one question. */
 
   const lifetimeCompleted = lifetime.filter((d) => COMPLETED_STATUSES.has(d.status as string)).length
+
+  /* Posts per brand, and the inputs for the track record. All three read from
+     tables we already own; nothing here is asserted. */
+  const lifetimeIds = lifetime.map((d) => d.id as string)
+  const [{ data: trackItems }, { data: trackMessages }] = await Promise.all([
+    lifetimeIds.length
+      ? supabase.from('deal_deliverable_items').select('deal_id, submitted_at, posted_at').in('deal_id', lifetimeIds)
+      : Promise.resolve({ data: [] as { deal_id: string; submitted_at: string | null; posted_at?: string | null }[] }),
+    lifetimeIds.length
+      ? supabase.from('messages').select('deal_id, sender_party, created_at').in('deal_id', lifetimeIds)
+      : Promise.resolve({ data: [] as { deal_id: string; sender_party: string; created_at: string }[] }),
+  ])
+
+  const postsByDeal = new Map<string, number>()
+  for (const it of (trackItems ?? []) as { deal_id: string; posted_at?: string | null }[]) {
+    if (!it.posted_at) continue
+    postsByDeal.set(it.deal_id, (postsByDeal.get(it.deal_id) ?? 0) + 1)
+  }
+
+  const track = computeTrackRecord(
+    lifetime.map((d) => ({ id: d.id as string, status: d.status as string, timeline_date: (d as { timeline_date?: string | null }).timeline_date ?? null })),
+    (trackItems ?? []) as { deal_id: string; submitted_at: string | null }[],
+    (trackMessages ?? []) as { deal_id: string; sender_party: string; created_at: string }[],
+  )
+  const postsByBrand = new Map<string, number>()
+  for (const d of lifetime) {
+    const raw = (d as { brands?: unknown }).brands
+    const bo = Array.isArray(raw) ? raw[0] : (raw as { name?: string } | null)
+    if (!bo?.name) continue
+    postsByBrand.set(bo.name, (postsByBrand.get(bo.name) ?? 0) + (postsByDeal.get(d.id as string) ?? 0))
+  }
   const mobileBrands = topBrands.slice(0, 6).map((b) => ({
     name: b.name,
     deals: b.dealCount,
+    posts: postsByBrand.get(b.name) ?? 0,
     valuePaise: b.earnedPaise > 0 ? b.earnedPaise : b.activePaise,
     active: b.hasActive,
   }))
@@ -274,6 +307,32 @@ export default async function CreatorDashboardPage({
   ]
   /* Stage drives the chip's tint AND the progress bar, from one place — the
      bar is how far through the pipeline a deal is, not decoration. */
+  /* The card's footer line.
+     The export reads "Respond by Aug 14" on an offer — but no offer expiry
+     exists anywhere in this schema, so that deadline cannot be stated
+     truthfully. An offer instead says how long it has been waiting, which is
+     true and carries the same urgency. Everything past acceptance uses the
+     agreed delivery date, which is real. */
+  function dealFoot(d: { status: string; timeline_date?: string | null; created_at: string }) {
+    if (d.status === 'negotiating') {
+      const days = Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86_400_000)
+      return {
+        footLabel: 'Received' as string | null,
+        footValue: (days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`) as string | null,
+      }
+    }
+    if (!d.timeline_date) return { footLabel: null as string | null, footValue: null as string | null }
+    const due = new Date(d.timeline_date + 'T00:00:00')
+    const days = Math.ceil((due.getTime() - Date.now()) / 86_400_000)
+    if (days < 0) return { footLabel: 'Overdue by' as string | null, footValue: `${Math.abs(days)} days` as string | null }
+    if (days === 0) return { footLabel: 'Due' as string | null, footValue: 'today' as string | null }
+    if (days <= 7) return { footLabel: 'Due' as string | null, footValue: `in ${days} days` as string | null }
+    return {
+      footLabel: 'Due' as string | null,
+      footValue: due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) as string | null,
+    }
+  }
+
   const MOTION_STAGE: Record<string, { label: string; border: string; progress: number }> = {
     negotiating: { label: 'New offer',         border: 'rgba(140,100,23,.35)', progress: 4 },
     agreed:      { label: 'In production',     border: 'rgba(25,118,210,.35)', progress: 35 },
@@ -291,13 +350,26 @@ export default async function CreatorDashboardPage({
       progress: st.progress,
       pricePaise: d.price_paise ?? 0,
       title: d.title || 'Untitled deal',
-      // Only stated when we actually hold a date. The export's "Respond by
-      // Aug 14" is a real deadline, and we do not have one for every stage.
-      footLabel: null as string | null,
-      footValue: null as string | null,
+      ...dealFoot(d as { status: string; timeline_date?: string | null; created_at: string }),
     }
   })
   const paidCount = paidInvoices.length
+
+  /* Change against the PREVIOUS window of the same length — real arithmetic on
+     the invoices we already hold, not a guess. Null when the previous window
+     earned nothing: a percentage off a zero base is not a number, and this is
+     the most quotable figure on the screen. */
+  const spanMs = periodTo.getTime() - periodFrom.getTime()
+  const prevFrom = new Date(periodFrom.getTime() - spanMs)
+  const prevEarned = (lifetimeInvoices ?? []).reduce((sum, inv) => {
+    if (!inv.paid_at) return sum
+    const t = new Date(inv.paid_at).getTime()
+    if (t < prevFrom.getTime() || t >= periodFrom.getTime()) return sum
+    return sum + (inv.creator_receives_paise ?? 0)
+  }, 0)
+  const changePct = prevEarned > 0
+    ? Math.round(((totalEarned - prevEarned) / prevEarned) * 100)
+    : null
 
   return (
     <>
@@ -335,6 +407,12 @@ export default async function CreatorDashboardPage({
         earnings={earnings}
         brands={mobileBrands}
         completedEver={lifetimeCompleted}
+        changePct={changePct}
+        track={{
+          onTimePct: track.onTimePct,
+          responseLabel: formatResponse(track.responseHours),
+          completionPct: track.completionPct,
+        }}
         unreadNotifications={unreadNotifs}
       />
     )}

@@ -4383,3 +4383,38 @@ button.signup-form__cross-link {
     white-space: nowrap; flex-shrink: 0;
   }
 }
+
+@media (max-width: 720px) {
+  /* The greeting's name sits ON the neon, not beside it — a highlighter stroke
+     behind the glyphs, inset horizontally so it hugs the italic. */
+  .cdash-m__hi-em { position: relative; }
+  .cdash-m__hi-mark {
+    position: absolute; left: -3px; right: -3px; top: 2px; bottom: 2px;
+    background: #E8FF66; z-index: -1;
+  }
+  /* Down is not a failure, but it should not wear the up colour. */
+  .cdash-m__up.is-down { color: #B67C15; }
+}
+
+@media (max-width: 720px) {
+  /* Brands are cards in the same horizontal rail as deals, not a stacked list. */
+  .cdash-m__brandcard { width: 196px; padding: 18px; display: block; color: #12151C; text-decoration: none; }
+  .cdash-m__brandmark {
+    width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%;
+    background: #F7F4FB; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 600; font-size: 13px; color: #12151C;
+  }
+  .cdash-m__brandname { font-family: var(--font-display); font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cdash-m__brandstate {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: #565C68; margin-top: 2px;
+  }
+  .cdash-m__brandstate--active { color: #4F6B12; }
+  .cdash-m__brandstate-dot { width: 5px; height: 5px; border-radius: 50%; background: #C9EB3C; }
+  .cdash-m__brandfoot { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(60,80,30,.08); }
+  .cdash-m__brandvalue {
+    font-family: var(--font-ui); font-weight: 600; font-size: 17px;
+    letter-spacing: -0.02em; color: #12151C;
+  }
+}

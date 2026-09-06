@@ -3541,3 +3541,34 @@ I had hardcoded approximations instead of reading the design's variables.
 - [ ] Inactive tabs are plain icons in #878D99 with no disc
 - [ ] All five behave the same, Profile included
 - [ ] No 3px bar remains anywhere under the tabs
+
+### Track record is COMPUTED (was hardcoded on desktop, dashes on mobile)
+`lib/creator-track-record.ts`. Every figure returns null with no basis — a
+percentage over zero deals is nothing, not 100%.
+- [ ] On-time counts the LAST submission per deal against `timeline_date` at
+      end of day. A deal submitted early, sent back, and returned late is LATE
+- [ ] Deals with no due date, or no submission, are excluded from the ratio
+- [ ] Response is the MEDIAN gap from a brand message to the creator's reply.
+      One holiday must not move it — that is why it is not a mean
+- [ ] Consecutive brand messages start the clock ONCE. A brand sending four in
+      a row has not asked four times
+- [ ] Completion counts finished ÷ accepted. Declined offers and live
+      negotiations are excluded — nobody failed to finish a deal that never began
+- [ ] A creator with no completed deals sees "—" everywhere, never 100%
+- [ ] Response formats as ~4h under a day, ~2d beyond
+
+### Overview change %
+- [ ] Compares the selected period against the PREVIOUS window of equal length
+- [ ] Hidden entirely when the previous window earned nothing — a percentage
+      off a zero base is not a number
+- [ ] Down shows ▼ and does not wear the up colour
+
+### Design corrections
+- [ ] The greeting's name sits ON a neon block (highlighter behind the glyphs),
+      not beside it
+- [ ] Motion cards show a real footer: "Received 2 days ago" for an offer,
+      "Due in 3 days" / "Overdue by N days" once a delivery date exists.
+      NEVER "Respond by <date>" — no offer expiry exists in the schema
+- [ ] Brands are horizontal CARDS (196px) with a status line — a lime dot and
+      ACTIVE, or COMPLETED — a divider, the value and "N deals · N posts"
+- [ ] Both rails align their first card with the section heading
