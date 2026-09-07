@@ -3713,3 +3713,31 @@ flush against it and an expanded fold was clipped. It is 96px + safe area.
 ### Payment window
 - [ ] "Payment in" reads the day count from the agreed terms when they state one
 - [ ] Falls back to "30 days" — the platform default — rather than a dash
+
+---
+
+## 29. Platform fee: deducted by default, 0% on a storefront's first deal
+
+### The mode
+- [ ] A NEW deal defaults to `fee_mode = 'deducted'` — brand pays the agreed
+      price, creator receives price minus fee
+- [ ] Brand side no longer says "Platform fee (15%), paid by you"
+- [ ] Creator side shows the fee DEDUCTED from what they receive
+- [ ] **Existing deals are unchanged.** Each snapshots its own fee_percent and
+      fee_mode at creation and an invoice snapshots them again — nothing
+      already agreed moves price
+- [ ] FinLeap stays on its negotiated terms; the migration pins it by id, not
+      by rate, so a future brand set to 10% does not inherit the exemption
+
+### The 0% rule
+- [ ] Brand arrives via Creator A's storefront → first deal with A is 0%
+- [ ] Second deal with A is 15%
+- [ ] First deal with Creator B is 15% — B introduced nobody
+- [ ] An offer that is DECLINED or CANCELLED does not consume the exemption:
+      the next offer from that brand to that creator is still 0%
+- [ ] An ops pair rate WINS over the exemption — a human decision about this
+      pair is already made
+- [ ] The same result whether the deal is created from /deals/new or from a
+      campaign. Both call resolveDealFee; resolving by route would give the
+      same creator 0% or 15% depending on which door the brand used
+- [ ] The creator sees "0% · first deal from your storefront", not a bare zero

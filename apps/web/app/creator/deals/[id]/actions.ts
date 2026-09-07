@@ -510,7 +510,7 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
     return { status: 'error', message: 'Invoice already exists for this deal.' }
   }
 
-  const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+  const fee = calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
   /* No agreed terms means no overage, whatever the count. The arithmetic
      already produced zero here, but stating it keeps the invoice and the
      screens reading from one definition. */

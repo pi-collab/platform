@@ -103,7 +103,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   let dealsBrandPaise = 0
   for (const d of nonCancelled) {
     if (d.price_paise != null && d.price_paise > 0) {
-      const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+      const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
       dealsBrandPaise += fee.brand_pays_paise
     }
   }
@@ -139,7 +139,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     const creator = (Array.isArray(raw) ? raw[0] : raw) as { id: string; full_name: string; profile_photo_url: string | null } | null
     const inv = invoiceMap.get(d.id)
     const derived = deriveDisplayStatus(d.status, inv?.status ?? null, inv?.due_date ?? null)
-    const fee = d.price_paise > 0 ? calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top') : null
+    const fee = d.price_paise > 0 ? calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'deducted') : null
     const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
     const overage = extra * (d.price_per_extra_revision_paise ?? 0)
     return {

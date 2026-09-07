@@ -65,7 +65,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     .single()
 
   const brandFeePercent = brandRow?.platform_fee_percent ?? 0
-  const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
 
   // Fetch pair rates for all these creators (service-role needed — RLS denies all)
   const admin = createAdminClient()
@@ -77,13 +77,24 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
 
   const pairRateMap = new Map((pairRates ?? []).map((pr) => [pr.creator_id, pr.fee_pct]))
 
+  /* The storefront first-deal exemption applies here too. A campaign is just
+     another door onto the same deal; resolving the fee differently by route
+     would mean the same creator pays 0% or 15% depending on how the brand
+     happened to start it. */
+  const { resolveDealFee } = await import('@/lib/deal-fee')
+  const resolvedFees = new Map<string, number>()
+  for (const cid of creatorIds) {
+    const r = await resolveDealFee(admin, brand.brandId, cid, brandFeePercent, feeMode)
+    resolvedFees.set(cid, r.feePercent)
+  }
+
   // Insert drafts — skip duplicates (ON CONFLICT DO NOTHING via upsert)
   const rows = creatorIds.map((creatorId) => ({
     campaign_id: campaignId,
     creator_id: creatorId,
     placements: [] as DraftPlacement[],
     total_price_paise: 0,
-    fee_percent: pairRateMap.get(creatorId) ?? brandFeePercent,
+    fee_percent: resolvedFees.get(creatorId) ?? pairRateMap.get(creatorId) ?? brandFeePercent,
     fee_mode: feeMode,
     total_brand_paise: 0,
   }))
@@ -129,7 +140,7 @@ export async function updateCampaignDraft(
     .single()
 
   const brandFeePercent = brandRow?.platform_fee_percent ?? 0
-  const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
 
   // Check for a pair rate for this draft's creator
   const { data: draftRow } = await supabase

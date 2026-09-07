@@ -139,7 +139,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const isCompleted = invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))
 
   // Fee calculation
-  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
 
   // Deliverable rows in the shape the shared breakdown reads.
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]

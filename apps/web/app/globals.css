@@ -4627,3 +4627,8 @@ button.signup-form__cross-link {
     color: #C25640; font-weight: 700;
   }
 }
+
+@media (max-width: 720px) {
+  /* A waived fee is good news; it should not read like a missing value. */
+  .offer-m__feerow--free { color: #4F6B12; font-weight: 600; }
+}

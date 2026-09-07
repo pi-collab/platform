@@ -237,7 +237,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           creator={creator}
           products={activeProducts}
           platformFeePercent={effectiveFeePercent}
-          feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'}
+          feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'}
           prefill={prefill}
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
           storefrontSelections={storefrontSelections}

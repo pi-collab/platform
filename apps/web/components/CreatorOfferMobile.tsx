@@ -168,12 +168,19 @@ export default function CreatorOfferMobile({
             </div>
           )}
 
-          {feePaise !== null && feePaise > 0 && (
+          {/* A zero fee is explained, not just shown. Otherwise a creator
+              reads it as a bug, or expects it on the next deal too. */}
+          {feePercent === 0 ? (
+            <div className="offer-m__feerow offer-m__feerow--free">
+              <span>Platform fee</span>
+              <span>0% &middot; first deal from your storefront</span>
+            </div>
+          ) : feePaise !== null && feePaise > 0 ? (
             <div className="offer-m__feerow">
               <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
               <span>&minus;{inr(feePaise)}</span>
             </div>
-          )}
+          ) : null}
 
           <div className="offer-m__decision">{decision}</div>
         </section>

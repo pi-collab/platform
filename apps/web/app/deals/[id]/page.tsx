@@ -159,7 +159,7 @@ export default async function DealPage({ params, searchParams }: {
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
   const feeInfo = deal.price_paise != null && deal.price_paise > 0
-    ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+    ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
     : null
   const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
   const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
@@ -733,7 +733,7 @@ export default async function DealPage({ params, searchParams }: {
               dealTotal={deal.price_paise}
               feePaise={feeInfo?.fee_paise ?? 0}
               feePercent={feeInfo?.fee_percent ?? 0}
-              feeMode={(deal.fee_mode as string) ?? 'on_top'}
+              feeMode={(deal.fee_mode as string) ?? 'deducted'}
               overage={overage}
               extraRevisions={extra}
             />

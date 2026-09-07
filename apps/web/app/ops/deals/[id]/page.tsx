@@ -48,7 +48,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const extraRevisions = Math.max(0, (deal.revisions_used ?? 0) - (deal.revision_limit ?? 0))
   const overage = extraRevisions * (deal.price_per_extra_revision_paise ?? 0)
   const feePercent = deal.fee_percent ?? 0
-  const feeMode = (deal.fee_mode ?? 'on_top') as string
+  const feeMode = (deal.fee_mode ?? 'deducted') as string
   const feePaise = deal.price_paise ? Math.round(deal.price_paise * feePercent / 100) : 0
   const brandPays = deal.price_paise ? (feeMode === 'on_top' ? deal.price_paise + feePaise : deal.price_paise) + overage : 0
   const creatorReceives = deal.price_paise ? (feeMode === 'deducted' ? deal.price_paise - feePaise : deal.price_paise) + overage : 0

@@ -120,22 +120,28 @@ export async function createDeal(input: CreateDealInput) {
     .eq('id', brand.brandId)
     .single()
 
-  // Resolve fee (in order): per-deal override → brand-creator pair rate → brand standard rate
+  /* Resolve fee: per-deal override → ops pair rate → storefront first deal →
+     brand standard. See lib/deal-fee.ts for why the exemption sits below the
+     ops override and what consumes it. Snapshotted onto the row below, never
+     re-resolved. */
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { resolveDealFee } = await import('@/lib/deal-fee')
+
   let resolvedFeePercent: number
+  let storefrontFirstDeal = false
   if (fee_pct_override != null) {
     resolvedFeePercent = fee_pct_override
   } else {
-    // Check for a brand-creator pair rate (service-role needed — RLS denies all)
-    const { createAdminClient } = await import('@/lib/supabase/admin')
-    const admin = createAdminClient()
-    const { data: pairRate } = await admin
-      .from('brand_creator_rates')
-      .select('fee_pct')
-      .eq('brand_id', brand.brandId)
-      .eq('creator_id', creator_id)
-      .maybeSingle()
-
-    resolvedFeePercent = pairRate?.fee_pct ?? brandFee?.platform_fee_percent ?? 0
+    const resolved = await resolveDealFee(
+      admin,
+      brand.brandId,
+      creator_id,
+      brandFee?.platform_fee_percent ?? 0,
+      (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+    )
+    resolvedFeePercent = resolved.feePercent
+    storefrontFirstDeal = resolved.storefrontFirstDeal
   }
 
   // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
@@ -156,7 +162,7 @@ export async function createDeal(input: CreateDealInput) {
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
       fee_percent: resolvedFeePercent,
-      fee_mode: brandFee?.fee_mode ?? 'on_top',
+      fee_mode: brandFee?.fee_mode ?? 'deducted',
       fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,
@@ -222,7 +228,7 @@ export async function createDeal(input: CreateDealInput) {
   // Notify creator: new offer (in-app + WhatsApp).
   // The creator sees what they will RECEIVE, net of any deducted fee — the
   // same number as the accept-page, not the gross price.
-  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
   const { creator_receives_paise } = calculateFee(price_paise, resolvedFeePercent, feeMode)
 
   await notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {

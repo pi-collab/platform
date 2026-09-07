@@ -101,7 +101,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
           revision_limit: deal.revision_limit,
           price_per_extra_revision_paise: deal.price_per_extra_revision_paise ?? 0,
           fee_percent: deal.fee_percent ?? 0,
-          fee_mode: (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top',
+          fee_mode: (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
           usage_rights: deal.usage_rights,
           payment_terms: deal.payment_terms,
           // What the brief CONTAINS, never the brief itself. A brief carries a
