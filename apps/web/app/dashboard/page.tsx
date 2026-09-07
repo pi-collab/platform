@@ -208,8 +208,22 @@ export default async function DashboardPage({
   const totalCampaignSpent = campaignsWithBudget.reduce((s, c) => s + c.spentPaise, 0)
   const budgetPct = totalCampaignBudget > 0 ? Math.round((totalCampaignSpent / totalCampaignBudget) * 100) : 0
 
-  // ── EMPTY STATE
-  if (totalDeals === 0) {
+  /* ── EMPTY STATE ──────────────────────────────────────────────────────────
+     Counted WITHOUT the period filter. `deals` above is bounded by the selected
+     range, so a brand with a year of history that picks "This week" was being
+     told it had never run a deal and shown the first-run screen it finished
+     months ago. The empty state is about the ACCOUNT, not the period — an empty
+     week is a quiet week, not a new brand.
+
+     The creator dashboard already carried this fix and the same comment; the
+     brand side had the identical bug. */
+  const { count: dealsEverCount } = await supabase
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .neq('status', 'cancelled')
+    .neq('status', 'declined')
+
+  if ((dealsEverCount ?? 0) === 0) {
     return (
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
         <div style={{ maxWidth: 1080, margin: '0 auto' }}>

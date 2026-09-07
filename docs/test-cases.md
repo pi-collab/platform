@@ -3741,3 +3741,16 @@ flush against it and an expanded fold was clipped. It is 96px + safe area.
       campaign. Both call resolveDealFee; resolving by route would give the
       same creator 0% or 15% depending on which door the brand used
 - [ ] The creator sees "0% · first deal from your storefront", not a bare zero
+
+### Period selector must not summon the first-run screen
+The brand dashboard's empty state keyed on deals created INSIDE the selected
+period, so an established brand picking "This week" was shown the new-brand
+screen it finished months ago. Now keyed on the account.
+- [ ] Brand with history, period "This week", no deals created this week:
+      the DASHBOARD renders, with zeros — not BrandDashboardEmpty
+- [ ] Same for This month and This quarter on a quiet period
+- [ ] A genuinely new brand (no deals ever) still gets the empty state on
+      every period
+- [ ] Cancelled and declined deals do not count as history, matching the
+      period query
+- [ ] Creator dashboard unchanged — it already had this guard
