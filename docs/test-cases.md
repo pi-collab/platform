@@ -3876,15 +3876,15 @@ Every field change must land on desktop AND mobile. Check go live on:
 
 ---
 
-## 31. Payment terms: days after approval
+## 31. Payment terms: days after posting
 
 No migration. `payment_terms` stays a TEXT column; the structure is in the UI.
 
 ### The field (offer builder)
 - [ ] One row: a day dropdown (7 / 15 / 30 / 45 / 60 / 90 / Custom) followed by
-      the fixed words "after approval". Custom reveals a number input (1-365)
+      the fixed words "after posting". Custom reveals a number input (1-365)
 - [ ] Default is 30 days
-- [ ] Stored exactly as `N days after approval`
+- [ ] Stored exactly as `N days after posting`
 - [ ] There is NO advance or 50/50 option. Both were built and pulled before
       shipping: they describe money moving in a way v1 cannot execute, since
       the platform tracks payment rather than holding or splitting it, and the
@@ -3892,11 +3892,19 @@ No migration. `payment_terms` stays a TEXT column; the structure is in the UI.
       payment rails can honour them
 
 ### The wording is load-bearing — do not paraphrase it
-`lib/invoice.ts::parsePaymentTermsDays` reads the due-day count out of this
-text and checks "on approval" BEFORE the day regex. "N days AFTER approval"
-survives that check and reaches the regex; "N days ON approval" would return 0
-and silently make every invoice due the day it was raised.
+`lib/invoice.ts::parsePaymentTermsDays` checks "on approval" and "advance"
+BEFORE the day regex — legacy branches that must keep working. "N days after
+posting" carries neither word, so it falls through to the regex and returns N.
+A wording that reintroduced either would return 0 and silently make every
+invoice due the day it was raised.
 - [ ] 7/15/30/45/60/90 and a custom 21 each parse to that number of days
+
+### Posting, not approval, is what the code measures
+- [ ] `createInvoice` refuses to raise an invoice until `deal.is_posted`, and
+      computes the due date at that moment from these terms. The clock has
+      always started at posting; "after approval" named an earlier event than
+      the one being counted from and told creators the money was due sooner
+      than it was
 
 ### Legacy deals still read correctly
 - [ ] Deals agreed under the old presets ("100% advance", "100% on approval",

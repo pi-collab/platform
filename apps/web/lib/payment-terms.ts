@@ -1,5 +1,5 @@
 /**
- * Payment terms: how many days after approval the creator is paid.
+ * Payment terms: how many days after POSTING the creator is paid.
  *
  * ── Why this is the only structure ─────────────────────────────────────────
  * "100% advance" and "50% advance, 50% after approval" were built and then
@@ -9,13 +9,21 @@
  * invoice would still have issued one full amount. Add them back when the
  * payment rails can actually honour them.
  *
+ * ── Why posting, and not approval ─────────────────────────────────────────
+ * This is what the code has always measured. createInvoice refuses to raise an
+ * invoice until deal.is_posted, and the due date is computed at that moment
+ * from these terms. So the clock has always started when the content went
+ * live; "after approval" named an earlier event than the one being counted
+ * from, and told a creator the money was due sooner than it was.
+ *
  * ── The stored value is a STRING, and its wording is load-bearing ──────────
  * payment_terms stays a text column: lib/invoice.ts reads a due-day count out
  * of this text and every screen already renders it. netTerms() is worded to
  * survive that parser, which checks "on approval" BEFORE it checks for a day
- * count. "N days AFTER approval" reaches the day regex and returns N.
- * "N days ON approval" would return 0 and silently make every invoice due the
- * day it was raised. Re-read parsePaymentTermsDays before rewording this.
+ * count — a legacy branch that must keep working for deals already agreed.
+ * "N days after posting" carries neither "approval" nor "advance", so it falls
+ * straight through to the day regex and returns N. Re-read
+ * parsePaymentTermsDays before rewording this.
  */
 
 /** Day counts offered in the builder. Any positive integer is storable. */
@@ -23,7 +31,7 @@ export const PAYMENT_DAY_OPTIONS = [7, 15, 30, 45, 60, 90] as const
 
 /** The exact string stored on the deal. */
 export function netTerms(days: number): string {
-  return `${days} days after approval`
+  return `${days} days after posting`
 }
 
 /**
@@ -47,7 +55,9 @@ export function paymentWhenLabel(terms: string | null | undefined): string | nul
   if (t.includes('advance') && t.includes('approval')) return 'Half upfront'
 
   const m = /(\d+)\s*days?/.exec(t)
-  if (m) return `${m[1]} days after approval`
+  /* Legacy deals say "after approval" and are rendered from their own stored
+     string elsewhere; this slot only needs the count and the current rule. */
+  if (m) return `${m[1]} days after posting`
 
   // Custom or legacy wording with no day count ("100% on approval"). Show
   // nothing rather than invent a number — the full terms line beside this slot

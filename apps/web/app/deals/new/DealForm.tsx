@@ -161,7 +161,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
      per-item delivery dates above: handing work over and publishing it are
      different commitments, and a brand plans a campaign around this one. */
   const [goLiveDate, setGoLiveDate] = useState('')
-  /* Days after approval is the only structure. Advance and 50/50 were built
+  /* Days after posting is the only structure. Advance and 50/50 were built
      and pulled: both describe money moving in a way v1 cannot execute. See
      lib/payment-terms.ts, and the wording note on netTerms. */
   const [payDays, setPayDays] = useState<string>('30')
@@ -1063,7 +1063,7 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                     style={{ width: 110 }}
                   />
                 )}
-                <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>after approval</span>
+                <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>after posting</span>
               </div>
             </div>
             <div>
