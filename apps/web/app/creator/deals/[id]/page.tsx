@@ -12,6 +12,7 @@ import { unreadNotificationCount } from '@/lib/unread'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
+import { paymentWhenLabel } from '@/lib/payment-terms'
 import { zeroFeeNote, feeBearerNote } from '@/lib/fee-copy'
 import { revisionTerms, revisionLabel } from '@/lib/revisions'
 import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
@@ -209,12 +210,12 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         /* "Payment in 30 days" from the agreed terms. Terms are free text, so
            a day count is only stated when one is actually written there —
            otherwise the terms line above already says it in full. */
-        paymentIn={(() => {
-          const t = deal.payment_terms
-          const m = typeof t === 'string' ? /(\d+)\s*(day|d)\b/i.exec(t) : null
-          // 30 days is the platform default when the terms do not state one.
-          return m ? `${m[1]} days` : '30 days'
-        })()}
+        /* Was: regex a day count out of the terms, else assume 30 days. That
+           told a creator on a 100% ADVANCE deal - paid up front - to expect the
+           money in 30 days. Structures with no day count are not 30-day
+           structures, and paymentWhenLabel returns null rather than inventing
+           one; the full terms line beside this already says it. */
+        paymentIn={paymentWhenLabel(deal.payment_terms)}
         deliverBy={deal.timeline_date
           ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
           : null}

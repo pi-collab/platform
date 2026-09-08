@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { PAYMENT_DAY_OPTIONS, netTerms, FULL_ADVANCE_TERMS, HALF_HALF_TERMS } from '@/lib/payment-terms'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { createDeal } from '../actions'
 import { uploadBriefAttachment, removeBriefAttachment } from './upload-actions'
@@ -49,11 +50,7 @@ interface Creator {
   price_per_extra_revision_paise?: number | null
 }
 
-const PAYMENT_PRESETS = [
-  '50% advance, 50% on approval',
-  '100% on approval',
-  '100% advance',
-] as const
+
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -156,13 +153,6 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     }
   }, [prefillResult.dropped])
 
-  function resolvePreset(value: string | null | undefined, presets: readonly string[]): { select: string; custom: string } {
-    if (!value) return { select: '', custom: '' }
-    if (presets.includes(value as any)) return { select: value, custom: '' }
-    return { select: 'Custom', custom: value }
-  }
-
-  const prefillPayment = resolvePreset(prefill?.payment_terms, PAYMENT_PRESETS)
 
   const [title, setTitle] = useState(prefill?.title || `Deal with ${creator.full_name}`)
   const [revisionLimit, setRevisionLimit] = useState(prefill ? String(prefill.revision_limit) : '1')
@@ -171,8 +161,13 @@ export default function DealForm({ creator, products, addonRates = [], platformF
      per-item delivery dates above: handing work over and publishing it are
      different commitments, and a brand plans a campaign around this one. */
   const [goLiveDate, setGoLiveDate] = useState('')
-  const [paymentTerms, setPaymentTerms] = useState(prefillPayment.select)
-  const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
+  /* Three structures, not a free-text preset list. `net` carries a day count;
+     the other two are complete on their own. See lib/payment-terms.ts for why
+     the stored value stays a string and which exact wording the invoice
+     parser depends on. */
+  const [payStructure, setPayStructure] = useState<'net' | 'full_advance' | 'half_half'>('net')
+  const [payDays, setPayDays] = useState<string>('30')
+  const [payDaysCustom, setPayDaysCustom] = useState('')
   const [message, setMessage] = useState('')
   const [briefPitch, setBriefPitch] = useState(prefill?.brief_pitch ?? '')
   const [briefGuidelines, setBriefGuidelines] = useState(prefill?.brief_guidelines ?? '')
@@ -387,7 +382,12 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
     setLoading(true)
 
-    const resolvedPayment = paymentTerms === 'Custom' ? customPayment : paymentTerms
+    const effectiveDays = payDays === 'Custom' ? parseInt(payDaysCustom, 10) : parseInt(payDays, 10)
+    const resolvedPayment =
+      payStructure === 'full_advance' ? FULL_ADVANCE_TERMS
+      : payStructure === 'half_half' ? HALF_HALF_TERMS
+      : Number.isFinite(effectiveDays) && effectiveDays > 0 ? netTerms(effectiveDays)
+      : ''
 
     const items: { label: string; platform: string; handle: string; price_paise: number; reel_type?: 'collab' | 'non_collab'; boosting_rights?: boolean; boosting_duration_months?: number }[] = []
     for (const p of products) {
@@ -1051,14 +1051,49 @@ export default function DealForm({ creator, products, addonRates = [], platformF
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Payment terms</div>
-              <select className="dinput" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} style={{ width: '100%' }}>
-                <option value="">Select...</option>
-                {PAYMENT_PRESETS.map((p) => <option key={p} value={p}>{p}</option>)}
-                <option value="Custom">Custom</option>
+              <select
+                className="dinput"
+                value={payStructure}
+                onChange={(e) => setPayStructure(e.target.value as 'net' | 'full_advance' | 'half_half')}
+                style={{ width: '100%' }}
+              >
+                <option value="net">Days after approval</option>
+                <option value="full_advance">100% advance</option>
+                <option value="half_half">50% advance, 50% after approval</option>
               </select>
-              {paymentTerms === 'Custom' && (
-                <input className="dinput" value={customPayment} onChange={(e) => setCustomPayment(e.target.value)} placeholder="Describe payment terms..." style={{ marginTop: 8, width: '100%' }} />
+
+              {/* The day count belongs to the net structure only. Advance and
+                  50/50 are complete terms on their own, and offering a day
+                  count beside them would invite a number nothing reads. */}
+              {payStructure === 'net' && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <select className="dinput" value={payDays} onChange={(e) => setPayDays(e.target.value)} style={{ flex: 1 }}>
+                    {PAYMENT_DAY_OPTIONS.map((d) => <option key={d} value={String(d)}>{d} days</option>)}
+                    <option value="Custom">Custom</option>
+                  </select>
+                  {payDays === 'Custom' && (
+                    <input
+                      className="dinput"
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={payDaysCustom}
+                      onChange={(e) => setPayDaysCustom(e.target.value)}
+                      placeholder="Days"
+                      style={{ width: 110 }}
+                    />
+                  )}
+                </div>
               )}
+
+              <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                {payStructure === 'half_half'
+                  /* Said plainly because the platform does not split the
+                     invoice. The terms are on the record; the money is not
+                     executed by us. */
+                  ? 'Recorded on the deal. The invoice is still issued as one amount.'
+                  : 'When the creator is paid.'}
+              </div>
             </div>
             <div>
               <button
