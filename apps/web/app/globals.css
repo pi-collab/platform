@@ -1231,6 +1231,43 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   background-position: right 16px center;
 }
 
+/* The dial code is a select nested INSIDE the phone field, not a field in its
+   own right, so it must carry none of .onboard-select's box. It had no rule at
+   all and fell through to the browser's default select chrome, drawing a grey
+   rounded rect inside the pill. Typography follows .onboard-prefix, but in
+   --ink rather than --ink-faint: this one is a control the user operates, not
+   a static affordance like the @ on the handle field.
+
+   The hairline divider is the same colour as .fld-box's border, so the code
+   reads as separate from the number it sits against. Drop the border-right and
+   the two are one run of digits.
+
+   No focus ring of its own: .fld-box:focus-within already lights the whole
+   field, the same way .onboard-input relies on it. */
+.onboard-dial {
+  flex: 0 0 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  border-right: 1.5px solid rgba(24, 28, 36, .14);
+  border-radius: 0;
+  outline: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235C5E52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  background-size: 13px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+  height: 24px;
+  line-height: 24px;
+  padding: 0 24px 0 0;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
 .onboard-input {
   flex: 1;
   min-width: 0;
@@ -2684,6 +2721,7 @@ button.signup-form__cross-link {
   }
 
   .onboard-input { font-size: 15px; }
+  .onboard-dial  { font-size: 15px; }
 
   .onboard-cta {
     height: 52px;
