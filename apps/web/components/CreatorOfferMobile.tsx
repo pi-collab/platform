@@ -53,7 +53,7 @@ function shortDate(iso: string | null): string | null {
 }
 
 export default function CreatorOfferMobile({
-  brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent,
+  brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
@@ -64,6 +64,9 @@ export default function CreatorOfferMobile({
   totalPaise: number | null
   feePaise: number | null
   feePercent: number | null
+  /** deals.fee_basis. NULL on deals created before 0500 — treated as unknown,
+      which downgrades the copy to a plain statement rather than a wrong one. */
+  feeBasis: string | null
   paymentTerms: string | null
   /** e.g. "30 days", derived from the agreed payment terms. */
   paymentIn: string | null
@@ -169,11 +172,21 @@ export default function CreatorOfferMobile({
           )}
 
           {/* A zero fee is explained, not just shown. Otherwise a creator
-              reads it as a bug, or expects it on the next deal too. */}
+              reads it as a bug, or expects it on the next deal too.
+
+              The REASON comes from feeBasis, never from the number being zero.
+              An ops pair rate, a per-deal override and a brand on 0% all land
+              here too, and telling one of those creators their free deal came
+              from a storefront referral is a specific false claim about how
+              they were found — and about whether the next one is charged. */}
           {feePercent === 0 ? (
             <div className="offer-m__feerow offer-m__feerow--free">
               <span>Platform fee</span>
-              <span>0% &middot; first deal from your storefront</span>
+              <span>
+                {feeBasis === 'storefront_first_deal'
+                  ? '0% · first deal from your storefront'
+                  : 'No fee on this deal'}
+              </span>
             </div>
           ) : feePaise !== null && feePaise > 0 ? (
             <div className="offer-m__feerow">

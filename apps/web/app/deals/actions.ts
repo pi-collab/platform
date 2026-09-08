@@ -10,6 +10,9 @@ import { collabCharge, boostingCharge } from '@/lib/addons'
 import { formatAmountForMessage } from '@/lib/money'
 import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
 import { ensurePairOrigin } from '@/lib/attribution'
+/* Type-only: the value import stays dynamic below, so deal-fee's `server-only`
+   guard is not pulled into this module's static graph. */
+import type { FeeBasis } from '@/lib/deal-fee'
 
 /**
  * Recompute each add-on from the rate that came with it, and store the result.
@@ -129,9 +132,15 @@ export async function createDeal(input: CreateDealInput) {
   const { resolveDealFee } = await import('@/lib/deal-fee')
 
   let resolvedFeePercent: number
+  /* Snapshotted next to the percent, because the percent alone cannot explain
+     itself. A creator shown a bare 0% reads it as a bug, and a screen that
+     guesses the reason from the number tells an ops-rated or overridden deal
+     it came from a storefront referral. See migration 0500. */
+  let feeBasis: FeeBasis
   let storefrontFirstDeal = false
   if (fee_pct_override != null) {
     resolvedFeePercent = fee_pct_override
+    feeBasis = 'deal_override'
   } else {
     const resolved = await resolveDealFee(
       admin,
@@ -141,6 +150,7 @@ export async function createDeal(input: CreateDealInput) {
       (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
     )
     resolvedFeePercent = resolved.feePercent
+    feeBasis = resolved.basis
     storefrontFirstDeal = resolved.storefrontFirstDeal
   }
 
@@ -163,6 +173,7 @@ export async function createDeal(input: CreateDealInput) {
       last_offer_by: 'brand',
       fee_percent: resolvedFeePercent,
       fee_mode: brandFee?.fee_mode ?? 'deducted',
+      fee_basis: feeBasis,
       fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,

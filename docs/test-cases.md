@@ -3718,6 +3718,35 @@ flush against it and an expanded fold was clipped. It is 96px + safe area.
 
 ## 29. Platform fee: deducted by default, 0% on a storefront's first deal
 
+### BEFORE TESTING — two preconditions, neither optional
+
+**1. Run `0499` and `0500` in the Supabase SQL editor, per environment.**
+Until 0499 runs, every brand is still `on_top` and NOTHING in this section is
+testable — the screens will keep rendering the old mode correctly. 0499 prints
+NOTICEs saying which brand it exempted and how many it moved; read them.
+
+**2. Seed a storefront-origin pair, or the 0% rule fires for nobody.**
+`brand_creator_origin` is written in exactly one place: `captureSignupOrigin`,
+called only from brand signup (`onboarding/actions.ts`), off the
+`guapd_ref_slug` cookie that `middleware.ts` sets on `/c/<slug>`. So the only
+UI route to a storefront pair is **a brand that does not exist yet signing up
+through a creator's storefront link**. An existing brand can never acquire one,
+however it reaches the creator.
+
+Do the full signup flow ONCE to prove the capture works. For every other case
+below, seed the row directly instead of re-registering a brand:
+
+```sql
+-- Pick a pair with NO non-declined deal, or the count check in deal-fee.ts
+-- has already consumed the exemption and you will test nothing.
+insert into brand_creator_origin (brand_id, creator_id, origin, source_detail)
+values ('<brand_id>', '<creator_id>', 'storefront', '{"slug":"<slug>"}')
+on conflict (brand_id, creator_id) do update set origin = 'storefront';
+```
+
+To reset between runs: delete the deals you created for the pair (or decline
+them — declined does not consume), and re-run the insert.
+
 ### The mode
 - [ ] A NEW deal defaults to `fee_mode = 'deducted'` — brand pays the agreed
       price, creator receives price minus fee
@@ -3726,8 +3755,12 @@ flush against it and an expanded fold was clipped. It is 96px + safe area.
 - [ ] **Existing deals are unchanged.** Each snapshots its own fee_percent and
       fee_mode at creation and an invoice snapshots them again — nothing
       already agreed moves price
-- [ ] FinLeap stays on its negotiated terms; the migration pins it by id, not
-      by rate, so a future brand set to 10% does not inherit the exemption
+- [ ] FinLeap stays on its negotiated terms. 0499 resolves the name to a single
+      row and exempts THAT row, never `platform_fee_percent = 10` — a future
+      brand set to 10% must not inherit an exemption nobody granted it
+- [ ] 0499 RAISEs rather than guessing if two brands share the name. Test by
+      temporarily renaming a second brand to `FinLeap` and re-running: the
+      migration must abort, not silently flip the negotiated brand to deducted
 
 ### The 0% rule
 - [ ] Brand arrives via Creator A's storefront → first deal with A is 0%
@@ -3740,7 +3773,27 @@ flush against it and an expanded fold was clipped. It is 96px + safe area.
 - [ ] The same result whether the deal is created from /deals/new or from a
       campaign. Both call resolveDealFee; resolving by route would give the
       same creator 0% or 15% depending on which door the brand used
-- [ ] The creator sees "0% · first deal from your storefront", not a bare zero
+- [ ] **The campaign PREVIEW matches the deal.** Add a storefront-exempt
+      creator to a campaign (draft shows 0%), then edit their placements to
+      price them. The draft must STILL show 0%. `updateCampaignDraft` used to
+      recompute brand-standard → pair-rate only, skipping the exemption, so the
+      draft jumped to 15% on the first edit while the sent deal still charged
+      0% — a campaign quoting one number and the deal charging another
+
+### The reason for a zero, not just the zero
+`deals.fee_basis` (0500) records which rung of the ladder decided the fee. The
+creator's offer screen reads THAT, never the number being zero.
+- [ ] Storefront exemption → "0% · first deal from your storefront"
+- [ ] An ops pair rate of 0%, a `fee_pct_override` of 0, or a brand on 0% →
+      "No fee on this deal". It must NOT claim a storefront referral: that is a
+      false statement about how the creator was found, and it implies the next
+      deal is charged when the reason it was free may still apply
+- [ ] A deal created BEFORE 0500 has `fee_basis = NULL` and falls to the
+      neutral copy rather than asserting a reason nobody recorded
+- [ ] `fee_basis` is written on both creation paths and matches `fee_percent`
+- [ ] The column is nullable with NO default and the CHECK admits NULL. A
+      backfill plus a NOT NULL CHECK is the shape that passes its own run and
+      then rejects every future INSERT that omits the column — see 0491/0485
 
 ### Period selector must not summon the first-run screen
 The brand dashboard's empty state keyed on deals created INSIDE the selected

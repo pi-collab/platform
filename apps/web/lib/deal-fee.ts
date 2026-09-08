@@ -30,9 +30,21 @@ import 'server-only'
  * mean a deal's fee could change after both sides agreed it.
  */
 
+/**
+ * Which rung decided the fee. Snapshotted onto deals.fee_basis so a screen can
+ * explain a number instead of inferring a reason from its size — a zero is not
+ * self-explanatory, and guessing gets it wrong for ops rates and overrides.
+ */
+export type FeeBasis =
+  | 'brand_standard'
+  | 'ops_pair_rate'
+  | 'storefront_first_deal'
+  | 'deal_override'
+
 export interface ResolvedFee {
   feePercent: number
   feeMode: 'on_top' | 'deducted'
+  basis: FeeBasis
   /** Set when the storefront exemption applied, for the UI to explain itself. */
   storefrontFirstDeal: boolean
   /** Set when an ops override decided it. */
@@ -59,7 +71,13 @@ export async function resolveDealFee(
     .maybeSingle()
 
   if (pairRate && typeof pairRate.fee_pct === 'number') {
-    return { feePercent: pairRate.fee_pct, feeMode: brandFeeMode, storefrontFirstDeal: false, opsOverride: true }
+    return {
+      feePercent: pairRate.fee_pct,
+      feeMode: brandFeeMode,
+      basis: 'ops_pair_rate',
+      storefrontFirstDeal: false,
+      opsOverride: true,
+    }
   }
 
   // 2. The storefront exemption, for this pair's first real deal.
@@ -79,10 +97,22 @@ export async function resolveDealFee(
       .not('status', 'in', `(${NOT_A_DEAL.join(',')})`)
 
     if ((count ?? 0) === 0) {
-      return { feePercent: 0, feeMode: brandFeeMode, storefrontFirstDeal: true, opsOverride: false }
+      return {
+        feePercent: 0,
+        feeMode: brandFeeMode,
+        basis: 'storefront_first_deal',
+        storefrontFirstDeal: true,
+        opsOverride: false,
+      }
     }
   }
 
   // 3. The brand's standard rate.
-  return { feePercent: brandFeePercent, feeMode: brandFeeMode, storefrontFirstDeal: false, opsOverride: false }
+  return {
+    feePercent: brandFeePercent,
+    feeMode: brandFeeMode,
+    basis: 'brand_standard',
+    storefrontFirstDeal: false,
+    opsOverride: false,
+  }
 }

@@ -81,7 +81,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -201,6 +201,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         totalPaise={deal.price_paise ?? null}
         feePaise={fee?.fee_paise ?? null}
         feePercent={deal.fee_percent ?? null}
+        feeBasis={(deal as Record<string, unknown>).fee_basis as string | null ?? null}
         paymentTerms={deal.payment_terms ?? null}
         /* "Payment in 30 days" from the agreed terms. Terms are free text, so
            a day count is only stated when one is actually written there —
