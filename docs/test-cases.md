@@ -3789,6 +3789,24 @@ them — declined does not consume), and re-run the insert.
       draft jumped to 15% on the first edit while the sent deal still charged
       0% — a campaign quoting one number and the deal charging another
 
+### Every surface, not just the mobile one
+A zero fee renders no row on ANY screen: each one guards on `fee_paise > 0`.
+All of them now carry an explicit note instead of a gap. Check a 0% deal on:
+- [ ] Creator deal page, DESKTOP — main breakdown
+- [ ] Creator deal page, DESKTOP — "Full terms" toggle
+- [ ] Creator deal page, MOBILE (<720px, negotiating only)
+- [ ] Brand deal page — main breakdown, "Full terms", and "Agreed terms"
+- [ ] Brand offer builder (/deals/new) before the deal exists
+- [ ] Wording comes from `zeroFeeNote()` in lib/fee-copy.ts on every one of
+      them, so the six screens cannot drift apart
+
+### The creator's "Full terms" said the brand pays
+- [ ] On a `deducted` deal the creator's Full terms panel must NOT say "paid by
+      the brand". It was hardcoded regardless of fee_mode, so after 0499 made
+      deducted the rule it told every creator the brand was paying a fee that
+      comes out of their own side. Now via `feeBearerNote()`
+- [ ] On an `on_top` deal (FinLeap) it still reads "paid by the brand"
+
 ### The reason for a zero, not just the zero
 `deals.fee_basis` (0500) records which rung of the ladder decided the fee. The
 creator's offer screen reads THAT, never the number being zero.

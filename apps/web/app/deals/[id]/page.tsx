@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { zeroFeeNote } from '@/lib/fee-copy'
 import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -82,7 +83,7 @@ export default async function DealPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, held_at, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, held_at, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -157,6 +158,13 @@ export default async function DealPage({ params, searchParams }: {
      page's item type is inferred from its select string, which now carries the
      add-on columns. */
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
+
+  /* fee_basis is not in the generated types yet, same cast pattern the brief
+     fields use. Read, never re-derived: it is a fact about the moment the deal
+     was created, and the inputs behind it move. */
+  const dealFeeBasis = (deal as Record<string, unknown>).fee_basis as string | null ?? null
+  const brandCreatorFirstName =
+    ((deal as Record<string, unknown>).creators as { full_name?: string } | null)?.full_name?.split(' ')[0] ?? null
 
   const feeInfo = deal.price_paise != null && deal.price_paise > 0
     ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
@@ -807,6 +815,14 @@ export default async function DealPage({ params, searchParams }: {
                     <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
                   </div>
                 )}
+                {/* A zero fee renders nothing above. Say why, rather than leaving a
+                    gap the brand has to interpret. */}
+                {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName) && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName)}</b>
+                  </div>
+                )}
                 {deal.timeline_date && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                     <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Delivery date</span>
@@ -936,6 +952,14 @@ export default async function DealPage({ params, searchParams }: {
                     <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
                   </div>
                 )}
+                {/* A zero fee renders nothing above. Say why, rather than leaving a
+                    gap the brand has to interpret. */}
+                {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName) && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName)}</b>
+                  </div>
+                )}
                 {deal.timeline_date && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                     <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Delivery date</span>
@@ -985,6 +1009,14 @@ export default async function DealPage({ params, searchParams }: {
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({feeInfo.fee_percent}%)</span>
                   <b style={{ fontSize: 14, fontWeight: 700 }}>{feeInfo.fee_mode === 'deducted' ? `\u2212${formatRupees(feeInfo.fee_paise)}` : `+${formatRupees(feeInfo.fee_paise)}`}</b>
+                </div>
+              )}
+              {/* A zero fee renders nothing above. Say why, rather than leaving a
+                  gap the brand has to interpret. */}
+              {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName) && (
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'brand', brandCreatorFirstName)}</b>
                 </div>
               )}
               {deal.timeline_date && (

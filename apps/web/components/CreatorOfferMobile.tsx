@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { zeroFeeNote } from '@/lib/fee-copy'
 
 /**
  * Creator deal detail — the OFFER RECEIVED state, mobile.
@@ -179,14 +180,10 @@ export default function CreatorOfferMobile({
               here too, and telling one of those creators their free deal came
               from a storefront referral is a specific false claim about how
               they were found — and about whether the next one is charged. */}
-          {feePercent === 0 ? (
+          {zeroFeeNote(feePercent, feeBasis, 'creator') ? (
             <div className="offer-m__feerow offer-m__feerow--free">
               <span>Platform fee</span>
-              <span>
-                {feeBasis === 'storefront_first_deal'
-                  ? '0% · first deal from your storefront'
-                  : 'No fee on this deal'}
-              </span>
+              <span>{zeroFeeNote(feePercent, feeBasis, 'creator')}</span>
             </div>
           ) : feePaise !== null && feePaise > 0 ? (
             <div className="offer-m__feerow">

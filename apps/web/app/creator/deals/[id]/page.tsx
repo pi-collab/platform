@@ -12,6 +12,7 @@ import { unreadNotificationCount } from '@/lib/unread'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
+import { zeroFeeNote, feeBearerNote } from '@/lib/fee-copy'
 import { revisionTerms, revisionLabel } from '@/lib/revisions'
 import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
 import NegotiationHistory from '@/components/NegotiationHistory'
@@ -144,6 +145,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   // Deliverable rows in the shape the shared breakdown reads.
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
+  const dealFeeBasis = (deal as Record<string, unknown>).fee_basis as string | null ?? null
   const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
   const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
   const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
@@ -526,6 +528,15 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                       <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
                     </div>
                   )}
+                  {/* A zero fee renders neither row above, so without this the
+                      line simply disappears and the creator is left to guess.
+                      Reason comes from fee_basis, never from the amount. */}
+                  {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator') && (
+                    <div style={termRow}>
+                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Platform fee</span>
+                      <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator')}</b>
+                    </div>
+                  )}
                   {deal.price_paise != null && (
                     <div style={{ ...termRow, borderBottom: 'none' }}>
                       <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Deal total</span>
@@ -680,8 +691,18 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                           )}
                           {fee && fee.fee_paise > 0 && (
                             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%), paid by the brand</span>
+                              {/* Was hardcoded ", paid by the brand" regardless of
+                                  fee_mode. Since 0499 made 'deducted' the rule, that
+                                  told every creator the brand was paying a fee that
+                                  actually comes out of their own side. */}
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%){feeBearerNote(feeMode, 'creator')}</span>
                               <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
+                            </div>
+                          )}
+                          {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator') && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator')}</b>
                             </div>
                           )}
                           {deal.usage_rights && (
