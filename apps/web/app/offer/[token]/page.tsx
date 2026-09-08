@@ -32,7 +32,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
   const [{ data: deal }, { data: items }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, title, deliverables, price_paise, currency, timeline_date, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, usage_rights, payment_terms, status, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name), creators(full_name)')
+      .select('id, title, deliverables, price_paise, currency, timeline_date, go_live_date, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, usage_rights, payment_terms, status, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name), creators(full_name)')
       .eq('id', parsed.dealId)
       .single(),
     admin
@@ -103,6 +103,7 @@ export default async function OfferPage({ params }: { params: { token: string } 
           fee_percent: deal.fee_percent ?? 0,
           fee_mode: (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
           usage_rights: deal.usage_rights,
+          go_live_date: (deal as Record<string, unknown>).go_live_date as string | null ?? null,
           payment_terms: deal.payment_terms,
           // What the brief CONTAINS, never the brief itself. A brief carries a
           // brand's unreleased campaign, and this link is forwardable — anyone

@@ -25,7 +25,7 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
   const [{ data: deal }, { data: events }, { data: messages }] = await Promise.all([
     admin
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_pct_override, brand_id, currency, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name, platform_fee_percent), creators(id, full_name, handle)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_pct_override, brand_id, currency, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, brands(name, platform_fee_percent), creators(id, full_name, handle)')
       .eq('id', params.id)
       .single(),
     admin
@@ -114,6 +114,8 @@ export default async function OpsDealDetailPage({ params }: { params: { id: stri
                 </p>
               </div>
             )}
+            <Field label="Go live" value={(deal as Record<string, unknown>).go_live_date as string | null} />
+            {/* Legacy: only deals agreed before 0501 carry this. */}
             <Field label="Usage rights" value={deal.usage_rights} />
             <Field label="Payment terms" value={deal.payment_terms} />
             <Field label="Last offer by" value={deal.last_offer_by} />

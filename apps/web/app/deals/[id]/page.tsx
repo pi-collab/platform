@@ -83,7 +83,7 @@ export default async function DealPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: events }, { data: messages }, { data: items }, { data: invoice }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, held_at, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, held_at, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, last_offer_by, created_at, updated_at, agreed_at, completed_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, campaign_id, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, creators(id, full_name, handle, profile_photo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -163,6 +163,7 @@ export default async function DealPage({ params, searchParams }: {
      fields use. Read, never re-derived: it is a fact about the moment the deal
      was created, and the inputs behind it move. */
   const dealFeeBasis = (deal as Record<string, unknown>).fee_basis as string | null ?? null
+  const goLiveDate = (deal as Record<string, unknown>).go_live_date as string | null ?? null
   const brandCreatorFirstName =
     ((deal as Record<string, unknown>).creators as { full_name?: string } | null)?.full_name?.split(' ')[0] ?? null
 
@@ -749,7 +750,7 @@ export default async function DealPage({ params, searchParams }: {
         )}
 
         {/* ── Brief details ── */}
-        {(briefPitch || briefGuidelines || briefAvoid || briefAttachments.length > 0 || deal.usage_rights || deal.payment_terms || deal.timeline_date || deal.revision_limit != null) && (
+        {(briefPitch || briefGuidelines || briefAvoid || briefAttachments.length > 0 || deal.usage_rights || (deal as Record<string, unknown>).go_live_date || deal.payment_terms || deal.timeline_date || deal.revision_limit != null) && (
           ['negotiating', 'agreed'].includes(deal.status) ? (
           <div className="surface" style={{ padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
@@ -829,6 +830,13 @@ export default async function DealPage({ params, searchParams }: {
                     <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
                   </div>
                 )}
+                {goLiveDate && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Go live</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(goLiveDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                  </div>
+                )}
+                {/* Legacy: only deals agreed before 0501 carry usage rights. */}
                 {deal.usage_rights && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                     <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
@@ -966,6 +974,13 @@ export default async function DealPage({ params, searchParams }: {
                     <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
                   </div>
                 )}
+                {goLiveDate && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Go live</span>
+                    <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(goLiveDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                  </div>
+                )}
+                {/* Legacy: only deals agreed before 0501 carry usage rights. */}
                 {deal.usage_rights && (
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                     <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
@@ -1025,6 +1040,13 @@ export default async function DealPage({ params, searchParams }: {
                   <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</b>
                 </div>
               )}
+              {goLiveDate && (
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Go live</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{new Date(goLiveDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                </div>
+              )}
+              {/* Legacy: only deals agreed before 0501 carry usage rights. */}
               {deal.usage_rights && (
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
                   <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>

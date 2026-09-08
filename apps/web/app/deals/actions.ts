@@ -81,7 +81,13 @@ interface CreateDealInput {
   timeline_date?: string
   revision_limit: number
   price_per_extra_revision_paise?: number
+  /* LEGACY as of 0501: no longer sent by the offer builder. The parameter
+     stays so the campaign path and any caller that still supplies it keeps
+     working, and so existing deals are unaffected. New deals write NULL and
+     every read site already guards on the value being present. */
   usage_rights?: string
+  /** The agreed date the content goes live. See migration 0501. */
+  go_live_date?: string
   payment_terms?: string
   message?: string // stored later when send/notification is built
   items?: DeliverableItem[]
@@ -101,7 +107,7 @@ interface CreateDealInput {
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, go_live_date, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -169,6 +175,7 @@ export async function createDeal(input: CreateDealInput) {
       revision_limit,
       price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
       usage_rights: usage_rights?.trim() || null,
+      go_live_date: go_live_date || null,
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
       fee_percent: resolvedFeePercent,

@@ -3834,3 +3834,42 @@ screen it finished months ago. Now keyed on the account.
 - [ ] Cancelled and declined deals do not count as history, matching the
       period query
 - [ ] Creator dashboard unchanged — it already had this guard
+
+---
+
+## 30. Go live date replaces usage rights (migration 0501)
+
+Run **0501** before deploying: the offer builder writes `go_live_date` on every
+deal, so an unmigrated DB fails every send.
+
+### The new field
+- [ ] The offer builder collects "Go live date" where "Usage rights" used to be
+- [ ] It is OPTIONAL — leaving it blank sends the offer and stores NULL, because
+      a date still being negotiated has no honest value
+- [ ] A go-live date earlier than the derived delivery date shows the note, and
+      still sends. Delivery before publication is a real arrangement; refusing
+      the offer over it would be wrong
+- [ ] Stored as `deals.go_live_date`, distinct from `timeline_date` (hand-over)
+      and `posted_at` (when it actually went live)
+
+### Usage rights: retained, not collected
+- [ ] New deals no longer collect usage rights, or a usage-rights end date
+- [ ] Deals agreed BEFORE 0501 still display theirs. The column is kept for
+      exactly this reason: those terms are what two parties agreed, and this is
+      the only place either can still read them
+- [ ] The offer accept-page no longer says "Usage rights — To be agreed". It
+      asserted a commitment to negotiate something nobody had raised
+
+### BOTH RENDERINGS — mobile is a separate component
+Every field change must land on desktop AND mobile. Check go live on:
+- [ ] Creator deal page, desktop — main terms panel and the TermRow list
+- [ ] Creator deal page, MOBILE (`CreatorOfferMobile`, <720px, negotiating)
+- [ ] Brand deal page — main breakdown, "Full terms", "Agreed terms" (3 places)
+- [ ] Offer accept-page (`/offer/[token]`)
+- [ ] Ops deal page
+- [ ] The brand deal pages and offer builder have NO mobile twin — single
+      responsive renderings, so one change covers them
+
+### NOT changed
+- [ ] `payment_terms` is untouched, on every surface. The new payment structure
+      is still to be specified

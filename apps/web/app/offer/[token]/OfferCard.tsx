@@ -21,6 +21,7 @@ interface Deal {
   fee_percent: number
   fee_mode: 'on_top' | 'deducted'
   usage_rights: string | null
+  go_live_date: string | null
   payment_terms: string | null
   brand_name: string
   creator_name: string
@@ -152,7 +153,11 @@ export default function OfferCard({ deal, token, items = [] }: { deal: Deal; tok
     ['Deliverables', deal.deliverables || items.map((i) => i.label).join(', ') || '-'],
     ['Timeline', formatDate(deal.timeline_date)],
     ['Revisions', revisionLabel(revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise))],
-    ['Usage rights', deal.usage_rights || 'To be agreed'],
+    /* Go live replaces usage rights as of 0501. "To be agreed" is gone with
+       it: it stated a commitment to negotiate something nobody had raised.
+       A date that has not been agreed is simply not listed. */
+    ...(deal.go_live_date ? [['Go live', formatDate(deal.go_live_date)] as [string, string]] : []),
+    ...(deal.usage_rights ? [['Usage rights', deal.usage_rights] as [string, string]] : []),
     ['Payment', deal.payment_terms || 'To be agreed'],
   ]
 

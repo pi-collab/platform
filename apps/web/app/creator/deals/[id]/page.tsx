@@ -82,7 +82,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -146,6 +146,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
   const dealFeeBasis = (deal as Record<string, unknown>).fee_basis as string | null ?? null
+  const goLiveDateStr = (deal as Record<string, unknown>).go_live_date as string | null ?? null
   const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
   const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
   const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
@@ -236,6 +237,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           url: attachmentUrls[a.storage_path] ?? null,
         }))}
         usageRights={deal.usage_rights ?? null}
+        goLiveDate={goLiveDateStr ? formatDate(goLiveDateStr) : null}
         revisionLimit={deal.revision_limit ?? null}
         extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}
         requiresShipment={Boolean(deal.requires_shipment)}
@@ -547,6 +549,13 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
               )}
 
               {/* Usage rights + extra terms */}
+              {goLiveDateStr && (
+                <div style={termRow}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Go live</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{formatDate(goLiveDateStr)}</b>
+                </div>
+              )}
+              {/* Legacy: only deals agreed before 0501 carry usage rights. */}
               {(deal.usage_rights || deal.usage_rights_end_date) && (
                 <div style={{ paddingTop: 8 }}>
                   {deal.usage_rights && (
@@ -578,6 +587,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
             <div className="surface" style={{ padding: '22px 24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {deal.deliverables && <TermRow label="Deliverables" value={deal.deliverables} />}
+                {goLiveDateStr && <TermRow label="Go live" value={formatDate(goLiveDateStr)} />}
+                {/* Legacy: only deals agreed before 0501 carry usage rights. */}
                 {deal.usage_rights && <TermRow label="Usage rights" value={deal.usage_rights} />}
                 {deal.usage_rights_end_date && <TermRow label="Usage rights expire" value={formatDate(deal.usage_rights_end_date + 'T00:00:00')} />}
                 {deal.rights_confirmed_at && <TermRow label="Rights confirmed" value={formatDateLong(deal.rights_confirmed_at)} />}

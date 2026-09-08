@@ -49,12 +49,6 @@ interface Creator {
   price_per_extra_revision_paise?: number | null
 }
 
-const USAGE_PRESETS = [
-  'One-time social post',
-  '6 months, all platforms',
-  'Perpetual, all media',
-] as const
-
 const PAYMENT_PRESETS = [
   '50% advance, 50% on approval',
   '100% on approval',
@@ -168,14 +162,15 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     return { select: 'Custom', custom: value }
   }
 
-  const prefillUsage = resolvePreset(prefill?.usage_rights, USAGE_PRESETS)
   const prefillPayment = resolvePreset(prefill?.payment_terms, PAYMENT_PRESETS)
 
   const [title, setTitle] = useState(prefill?.title || `Deal with ${creator.full_name}`)
   const [revisionLimit, setRevisionLimit] = useState(prefill ? String(prefill.revision_limit) : '1')
   const [pricePerExtraRevision, setPricePerExtraRevision] = useState(prefill ? String(prefill.price_per_extra_revision_paise / 100) : '0')
-  const [usageRights, setUsageRights] = useState(prefillUsage.select)
-  const [customUsage, setCustomUsage] = useState(prefillUsage.custom)
+  /* The date both sides agree the content goes live. Not derived from the
+     per-item delivery dates above: handing work over and publishing it are
+     different commitments, and a brand plans a campaign around this one. */
+  const [goLiveDate, setGoLiveDate] = useState('')
   const [paymentTerms, setPaymentTerms] = useState(prefillPayment.select)
   const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
   const [message, setMessage] = useState('')
@@ -187,7 +182,6 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const [priceOverride, setPriceOverride] = useState('')
   const [requiresShipment, setRequiresShipment] = useState(false)
   const [campaignId, setCampaignId] = useState('')
-  const [usageRightsEndDate, setUsageRightsEndDate] = useState(prefill?.usage_rights_end_date ?? '')
 
   // Per-item delivery dates: productId → date string
   const [itemDeliveryDates, setItemDeliveryDates] = useState<Record<string, string>>({})
@@ -393,7 +387,6 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
     setLoading(true)
 
-    const resolvedUsage = usageRights === 'Custom' ? customUsage : usageRights
     const resolvedPayment = paymentTerms === 'Custom' ? customPayment : paymentTerms
 
     const items: { label: string; platform: string; handle: string; price_paise: number; reel_type?: 'collab' | 'non_collab'; boosting_rights?: boolean; boosting_duration_months?: number }[] = []
@@ -445,13 +438,12 @@ export default function DealForm({ creator, products, addonRates = [], platformF
       timeline_date: derivedTimelineDate || undefined,
       revision_limit: parseInt(revisionLimit, 10) || 0,
       price_per_extra_revision_paise: isNaN(extraRevPaise) ? 0 : extraRevPaise,
-      usage_rights: resolvedUsage || undefined,
+      go_live_date: goLiveDate || undefined,
       payment_terms: resolvedPayment || undefined,
       message: message || undefined,
       items,
       reengaged_from: prefill?.reengaged_from,
       requires_shipment: requiresShipment,
-      usage_rights_end_date: usageRightsEndDate || undefined,
       campaign_id: campaignId || undefined,
       brief_pitch: briefPitch || undefined,
       brief_guidelines: briefGuidelines || undefined,
@@ -1040,15 +1032,22 @@ export default function DealForm({ creator, products, addonRates = [], platformF
               })()}
             </div>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Usage rights</div>
-              <select className="dinput" value={usageRights} onChange={(e) => setUsageRights(e.target.value)} style={{ width: '100%' }}>
-                <option value="">Select...</option>
-                {USAGE_PRESETS.map((u) => <option key={u} value={u}>{u}{usageRightsEndDate ? ` \u00B7 to ${new Date(usageRightsEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</option>)}
-                <option value="Custom">Custom</option>
-              </select>
-              {usageRights === 'Custom' && (
-                <input className="dinput" value={customUsage} onChange={(e) => setCustomUsage(e.target.value)} placeholder="Describe usage rights..." style={{ marginTop: 8, width: '100%' }} />
-              )}
+              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Go live date</div>
+              <input
+                type="date"
+                className="dinput"
+                value={goLiveDate}
+                onChange={(e) => setGoLiveDate(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {/* Delivery is not publication. Flagged rather than blocked: a
+                  brand may genuinely want the work in hand well before it runs,
+                  and refusing to send the offer over it would be wrong. */}
+              <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                {goLiveDate && derivedTimelineDate && goLiveDate < derivedTimelineDate
+                  ? 'This is before the delivery date above.'
+                  : 'When the content goes live. Leave blank if it is still being agreed.'}
+              </div>
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Payment terms</div>
