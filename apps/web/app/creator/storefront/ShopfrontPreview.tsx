@@ -62,7 +62,10 @@ function fmtCount(n: number): string {
   return String(n)
 }
 
-function isSafeUrl(raw?: string): boolean {
+/* Exported so the mobile rendering links brand reels through the SAME check.
+   A second opinion about what counts as a safe href is how one of two renderings
+   of the same creator-entered URL ends up permitting a scheme the other blocks. */
+export function isSafeUrl(raw?: string): boolean {
   if (!raw) return false
   try {
     const u = new URL(raw.trim())
