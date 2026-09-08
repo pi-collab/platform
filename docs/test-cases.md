@@ -3876,40 +3876,37 @@ Every field change must land on desktop AND mobile. Check go live on:
 
 ---
 
-## 31. Payment terms: three structures, not free text
+## 31. Payment terms: days after approval
 
-No migration. `payment_terms` stays a TEXT column holding one of three exact
-strings; the structure is in the UI, not the schema.
+No migration. `payment_terms` stays a TEXT column; the structure is in the UI.
 
 ### The field (offer builder)
-- [ ] "Days after approval" (default) reveals a day dropdown: 7 / 15 / 30 / 45
-      / 60 / 90 / Custom. Custom reveals a number input (1-365)
-- [ ] "100% advance" and "50% advance, 50% after approval" show NO day
-      dropdown — they are complete terms on their own, and a day count beside
-      them would be a number nothing reads
-- [ ] Stored exactly as `N days after approval`, `100% advance`, or
-      `50% advance, 50% after approval`
+- [ ] One row: a day dropdown (7 / 15 / 30 / 45 / 60 / 90 / Custom) followed by
+      the fixed words "after approval". Custom reveals a number input (1-365)
+- [ ] Default is 30 days
+- [ ] Stored exactly as `N days after approval`
+- [ ] There is NO advance or 50/50 option. Both were built and pulled before
+      shipping: they describe money moving in a way v1 cannot execute, since
+      the platform tracks payment rather than holding or splitting it, and the
+      invoice would still have issued one full amount. Add them back when the
+      payment rails can honour them
 
 ### The wording is load-bearing — do not paraphrase it
 `lib/invoice.ts::parsePaymentTermsDays` reads the due-day count out of this
-text, and checks "on approval" BEFORE the day regex. "N days AFTER approval"
+text and checks "on approval" BEFORE the day regex. "N days AFTER approval"
 survives that check and reaches the regex; "N days ON approval" would return 0
-and silently make every invoice due today. Verified:
-- [ ] 7/15/30/45/60/90 and a custom 21 → that number of days
-- [ ] `100% advance` → 0 (due immediately)
-- [ ] `50% advance, 50% after approval` → 0
+and silently make every invoice due the day it was raised.
+- [ ] 7/15/30/45/60/90 and a custom 21 each parse to that number of days
 
-### Recorded, not enforced
-- [ ] A 50/50 deal still issues ONE invoice for the full amount. Split
-      invoicing does not exist. The builder says so under the field rather than
-      implying the platform will execute the split
+### Legacy deals still read correctly
+- [ ] Deals agreed under the old presets ("100% advance", "100% on approval",
+      "50% advance, 50% on approval") still render their stored string
+      unchanged. Nothing writes those any more; the parser and
+      `paymentWhenLabel` still understand them
 
 ### "Payment in ___" no longer invents 30 days
-- [ ] A 100% ADVANCE deal must NOT say "Payment in 30 days" on the mobile offer
-      screen. It regexed a day count out of the terms and fell back to 30
-      whenever it found none, so an upfront deal told the creator to wait a
-      month. Now `paymentWhenLabel()`: "Upfront" / "Half upfront" /
-      "N days after approval", and null for custom or legacy wording rather
-      than a made-up number
-- [ ] Legacy deals with old preset wording ("100% on approval", "50% advance,
-      50% on approval") still render their stored string unchanged
+- [ ] The mobile offer screen regexed a day count out of the terms and fell
+      back to 30 whenever it found none, so terms carrying no number told the
+      creator to wait a month regardless of what was agreed. Now
+      `paymentWhenLabel()`, which returns null rather than a made-up number
+- [ ] A legacy 100% advance deal reads "Upfront", not "30 days"
