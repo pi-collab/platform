@@ -3773,6 +3773,15 @@ them — declined does not consume), and re-run the insert.
 - [ ] The same result whether the deal is created from /deals/new or from a
       campaign. Both call resolveDealFee; resolving by route would give the
       same creator 0% or 15% depending on which door the brand used
+- [ ] **The OFFER BUILDER preview matches the deal.** Open /deals/new for a
+      storefront-exempt creator: the summary must show no platform fee and
+      "No platform fee · first deal from <name>'s storefront", not "receives
+      after our 15% fee". deals/new/page.tsx used to read pair rate -> brand
+      standard, skipping the exemption, so the builder quoted 15% and
+      42,500 while the created deal resolved 0% and paid 50,000. This is the
+      number a brand commits to a price on
+- [ ] At 0% the builder renders NO feeInfo, so without the explicit line the
+      fee row vanishes silently and the brand is left to infer why
 - [ ] **The campaign PREVIEW matches the deal.** Add a storefront-exempt
       creator to a campaign (draft shows 0%), then edit their placements to
       price them. The draft must STILL show 0%. `updateCampaignDraft` used to

@@ -90,7 +90,7 @@ interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
+export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -840,6 +840,21 @@ export default function DealForm({ creator, products, addonRates = [], platformF
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
                 <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({platformFeePercent}%)</span>
                 <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
+              </div>
+            )}
+            {/* A 0% deal renders no feeInfo at all, so without this the fee row
+                simply disappears and the brand is left to infer why. Say it:
+                this creator's storefront brought them here and the first deal
+                between them is free. It also sets the expectation that the
+                next one is not - which a silently missing line does not. */}
+            {storefrontFirstDeal && finalPaise > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
+                  No platform fee &middot; first deal from {creator.full_name?.split(' ')[0] ?? 'this creator'}&rsquo;s storefront
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                  {formatRupees(finalPaise)}
+                </span>
               </div>
             )}
             {feeInfo && feeMode === 'deducted' && (

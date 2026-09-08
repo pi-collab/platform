@@ -105,16 +105,25 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
 
   if (error || !creator) notFound()
 
-  // Resolve effective fee: pair rate (if exists) overrides brand standard rate
+  /* The SAME ladder createDeal will snapshot, not a partial copy of it.
+     This used to read pair rate then brand standard, which skipped the
+     storefront first-deal exemption: the builder quoted 15% and "creator
+     receives 42,500" while the deal it created resolved 0% and paid 50,000.
+     A brand reads this number at the moment it commits to a price, so a
+     preview on a different ladder than the write is the one mismatch this
+     screen cannot afford. resolveDealFee is the single definition; every
+     door - here, campaigns, and createDeal itself - goes through it. */
   const admin = createAdminClient()
-  const { data: pairRate } = await admin
-    .from('brand_creator_rates')
-    .select('fee_pct')
-    .eq('brand_id', brand.brandId)
-    .eq('creator_id', creatorId)
-    .maybeSingle()
+  const { resolveDealFee } = await import('@/lib/deal-fee')
+  const resolvedFee = await resolveDealFee(
+    admin,
+    brand.brandId,
+    creatorId,
+    brandRow?.platform_fee_percent ?? 0,
+    (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+  )
 
-  const effectiveFeePercent = pairRate?.fee_pct ?? brandRow?.platform_fee_percent ?? 0
+  const effectiveFeePercent = resolvedFee.feePercent
   // Per-channel collab / boosting rates, so the offer builder can price the
   // add-ons before a deal exists. Read through the admin client like the rest
   // of this page; the RLS policy would allow it anyway for a vetted creator.
@@ -237,6 +246,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           creator={creator}
           products={activeProducts}
           platformFeePercent={effectiveFeePercent}
+          storefrontFirstDeal={resolvedFee.storefrontFirstDeal}
           feeMode={(brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'}
           prefill={prefill}
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
