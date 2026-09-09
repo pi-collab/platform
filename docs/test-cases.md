@@ -4040,3 +4040,35 @@ lands on both from one change.
 - [ ] GD-1068 (`b733b40b…`) is the countered case
 - [ ] The events query is skipped entirely when a creator has no negotiating
       deals
+
+---
+
+## 35. The brand can answer a counter (NegotiationCard was never rendered)
+
+`NegotiationCard.tsx` had existed since before the em-dash sweep and NOTHING
+imported it. Its only caller relationship ran the other way: `acceptCounterOffer`
+is called from that component alone, so with it unmounted a brand could not
+accept a counter through the UI at all. The counter reached them solely as a
+chat message posted beside the event — which is why counters looked like chat.
+
+- [ ] A deal where the creator countered shows the counter card ABOVE the hero,
+      with the brand's offer, the creator's counter and the note
+- [ ] **Accept** applies the counter's prices and moves the deal to agreed.
+      `acceptCounterOffer` reads the latest `deal.counter_offer` and writes
+      `price_paise` from `counter_total_paise` (deal-actions.ts:29-46)
+- [ ] **Counter back** writes `deal.brand_counter` and the card disappears —
+      it is the creator's move again
+- [ ] The card does NOT show once the brand has countered back: it is gated on
+      the creator's counter being NEWER than the brand's
+- [ ] The status line reads "<creator> countered, your response is needed",
+      not "Awaiting <creator>'s response". It told the brand to wait on a
+      creator who had already answered
+- [ ] GD-1068 (`b733b40b…`) is the case — one creator counter, no brand reply
+
+### Still open
+- [ ] `counterOffer` still posts the counter into the thread as a message.
+      Left in deliberately until the card is confirmed working, so the brand is
+      not left with neither. Remove the message insert, keep the event and the
+      notification, once this is verified
+- [ ] Staging has ZERO `deal.brand_counter` events — not because brands chose
+      not to counter, but because they could not
