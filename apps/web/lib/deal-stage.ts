@@ -21,6 +21,9 @@ export interface Deal {
   price_paise: number | null
   status: string
   is_posted: boolean | null
+  /** Creator has countered and the brand has not answered. Derived from the
+      counter events, since deals.status cannot express whose move it is. */
+  awaiting_brand?: boolean | null
   created_at: string
   brand: string | null
 }
@@ -41,6 +44,12 @@ export const STAGE: Record<string, { i: number; label: string; short: string; do
   revision:    { i: 2, label: 'Revision requested', short: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', chipBg: '#FCF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
   awaiting:    { i: 3, label: 'Approved \u00B7 post it', short: 'Awaiting post',     dot: '#8FAF1F', bg: '#F4FBDC', chipBg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
   posted:      { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  /* The creator has countered and it is the BRAND's move. Shown as its own
+     stage because 'negotiating' renders "Offer to review" with a "Review
+     offer" action and hot:true - it puts the deal in Needs you and tells the
+     creator to review an offer they have already answered. Neutral tone and
+     hot:false: nothing is wrong and nothing is theirs to do. */
+  countered:   { i: 0, label: 'Countered \u00B7 with brand', short: 'Waiting on brand', dot: '#8B90A0', bg: '#F2F4F7', chipBg: '#EEF1F5', fg: '#5B6070', action: 'View deal',   hot: false },
   declined:    { i: -1, label: 'Declined', short: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', chipBg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
   complete:    { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
   paid:        { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
@@ -91,8 +100,11 @@ export function createdDate(dateStr: string): string {
 
 /* Takes only the two fields it reads, so the inbox can call it without
    inventing the rest of a Deal. A full Deal still satisfies this. */
-export function resolveStatus(d: { status: string; is_posted: boolean | null }): string {
+export function resolveStatus(d: { status: string; is_posted: boolean | null; awaiting_brand?: boolean | null }): string {
   if (d.status === 'declined' || d.status === 'cancelled') return d.status
+  /* Still 'negotiating' in the database - the distinction is whose move it is,
+     which lives in the counter events, not in the status column. */
+  if (d.status === 'negotiating' && d.awaiting_brand) return 'countered'
   if ((d.status === 'approved' || d.status === 'complete' || d.status === 'paid') && d.is_posted === false) return 'awaiting'
   if ((d.status === 'complete' || d.status === 'paid') && d.is_posted === true) return 'posted'
   if (d.status === 'approved' && d.is_posted === true) return 'posted'
@@ -111,6 +123,8 @@ export function matchFilter(st: string, filter: string): boolean {
   if (filter === 'all') return true
   if (filter === 'action') return needsAction(st)
   if (filter === 'review') return st === 'delivered' || st === 'revision' || st === 'awaiting'
+  // Still a negotiation, just not the creator's turn.
+  if (filter === 'negotiating') return st === 'negotiating' || st === 'countered'
   return st === filter
 }
 

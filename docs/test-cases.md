@@ -4016,3 +4016,27 @@ screen becomes a negotiation.
 ### Multiple rounds
 - [ ] After several rounds, "Their counter" and "You asked" both show the
       LATEST of each, and the date is the most recent negotiation event
+
+---
+
+## 34. Deals list: a countered deal is not "Offer to review"
+
+`lib/deal-stage.ts` is shared by the mobile and desktop creator lists, so this
+lands on both from one change.
+
+- [ ] A negotiating deal the CREATOR countered shows **"Countered · with
+      brand"** / short **"Waiting on brand"**, not "Offer to review"
+- [ ] Its action reads **View deal**, not "Review offer" — there is no offer
+      waiting on them
+- [ ] It is NOT in **Needs you** (`hot: false`). It was telling a creator to act
+      on a deal they had already answered
+- [ ] It IS still under the **Negotiating** tab. `matchFilter` compares
+      `st === filter`, so the new stage had to be admitted explicitly or the
+      deal would have vanished from the tab it belongs to
+- [ ] Desktop sort: it sits just below negotiating. Without a PRIORITY entry it
+      fell to the `?? 99` default and sank below declined deals
+- [ ] A deal where the BRAND countered last still reads "Offer to review" and
+      stays in Needs you — that one IS the creator's move
+- [ ] GD-1068 (`b733b40b…`) is the countered case
+- [ ] The events query is skipped entirely when a creator has no negotiating
+      deals
