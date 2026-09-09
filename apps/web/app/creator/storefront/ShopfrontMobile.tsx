@@ -2,7 +2,7 @@
 
 import React from 'react'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
-import { ContentMedia } from './ShopfrontPreview'
+import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import './shopfront-mobile.css'
@@ -247,12 +247,19 @@ export default function ShopfrontMobile({
     url: !editing ? (c.embedUrl ?? '') : '',
   }))
 
+  /* logoUrl and reelUrl were both dropped here: slot was hardcoded '' so every
+     brand fell back to its initial letter, and the reel link was never carried
+     across at all. The creator uploads a logo and pastes a reel link, sees both
+     on desktop, and saw neither on the phone most brands open the page on.
+     editing mirrors the content-item rule above - no navigating away from a
+     card you are in the middle of editing. */
   const brandItems = data.brandCollabs.map((b: BrandCollab) => ({
     name: b.name,
     content: b.type ?? '',
     views: b.views ?? '',
     engagement: b.engagement ?? '',
-    slot: '',
+    slot: b.logoUrl ?? '',
+    url: !editing && isSafeUrl(b.reelUrl) ? (b.reelUrl as string) : '',
   }))
 
   const igShow = activePlatform === 'instagram'
@@ -567,11 +574,27 @@ export default function ShopfrontMobile({
                 <div className="t-meta" style={{color: 'var(--meta)', marginTop: '16px', letterSpacing: '.06em'}}>{`${data.brandCollabs.length} brand${data.brandCollabs.length === 1 ? "" : "s"} booked on Guapd`}</div>
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {brandItems.map((brand, brandIdx) => (<React.Fragment key={brandIdx}>
-                    <div className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 68%', padding: '18px'}}>
-                      <Slot url={brand.slot} alt={brand.name} initial={brand.name.trim().charAt(0).toUpperCase()} style={{width: '100%', height: '110px', display: 'block', background: '#F1F4FA', borderRadius: '12px', color: '#79809C'}} />
+                    <a href={brand.url || undefined} target={brand.url ? "_blank" : undefined} rel="noopener noreferrer nofollow" className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 68%', padding: '18px', display: 'block', textDecoration: 'none', color: 'inherit'}}>
+                      {/* The tinted band is the WRAPPER, and the logo is capped inside
+                          it. Letting Slot be the band made the logo as tall as the
+                          band itself - on a card about 230px wide that reads as a
+                          banner rather than a mark. Desktop sits its logo at roughly
+                          45% of its box height and this matches that, so the same
+                          brand looks like the same brand on either device. */}
+                      <div style={{width: '100%', height: '110px', borderRadius: '12px', background: '#F1F4FA', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px', boxSizing: 'border-box'}}>
+                        <Slot
+                          url={brand.slot}
+                          alt={brand.name}
+                          initial={brand.name.trim().charAt(0).toUpperCase()}
+                          /* contain, never cover: the auto-fetched marks are often
+                             32px favicons and filling the box with one turns a
+                             brand's logo into a smudge. */
+                          style={{maxWidth: '68%', maxHeight: '54px', width: 'auto', height: 'auto', display: 'block', background: 'transparent', color: '#79809C', objectFit: 'contain'}}
+                        />
+                      </div>
                       <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '8px', marginTop: '16px'}}><span style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '15px', color: 'var(--ink)'}}>{brand.name}</span><span className="t-meta" style={{color: 'var(--meta)'}}>{brand.content}</span></div>
                       <div style={{fontSize: '12px', color: 'var(--wg-500)', marginTop: '8px'}}><b className="tnum" style={{color: 'var(--ink)'}}>{brand.views}</b> views · <b className="tnum" style={{color: 'var(--ink)'}}>{brand.engagement}</b> eng.</div>
-                    </div>
+                    </a>
                   </React.Fragment>))}
                 </div>
               </div>

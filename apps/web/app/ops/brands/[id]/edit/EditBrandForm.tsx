@@ -34,7 +34,7 @@ export default function EditBrandForm({ brand }: { brand: Brand }) {
       : ''
   )
   const [feePercent, setFeePercent] = useState(String(brand.platform_fee_percent ?? 15))
-  const [feeMode, setFeeMode] = useState(brand.fee_mode ?? 'on_top')
+  const [feeMode, setFeeMode] = useState(brand.fee_mode ?? 'deducted')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

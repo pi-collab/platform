@@ -39,6 +39,7 @@
 
   --card: #ffffff;
   --lime-400: #e8ff66;
+  --lime-700: #4f6b12;
   /* The ink used ON lime. Near-black with a green cast, so a neon button
      does not pair a warm fill with a cold text colour. */
   --lime-950: #161b08;
@@ -48,13 +49,13 @@
   font-family: var(--font-ui);
   /* The tab bar is fixed, so every screen reserves its height plus the home
      indicator. Without this the last row of content sits under the bar. */
-  /* Clears the fixed tab bar AND the cookie banner. The banner is ~150px on a
-     phone and sits above the bar, so reserving only the bar's height leaves the
-     last control on the page unreachable — which is exactly what happened to
-     the Add UPI ID button. The banner is dismissed once, so this is generous
-     for a session and correct for the first one. */
-  padding-bottom: calc(210px + env(safe-area-inset-bottom));
-  min-height: 100vh;
+  /* The tab bar (~62px) plus room to breathe. At exactly the bar's height the
+     last element finishes flush against it and an expanded section is clipped.
+     The banner's extra clearance is added only while the banner is up (below) —
+     reserving it permanently left half a screen of dead space for the life of
+     the account, to solve a problem that exists for one dismissal. */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  min-height: 100dvh;
 }
 
 /* ── Surfaces ─────────────────────────────────────────────────────────────
@@ -183,24 +184,33 @@
 
 /* The active tab is marked twice — colour AND a neon underline. Colour alone
    fails for anyone who cannot separate these two greys. */
+/* The active tab is a filled neon disc behind the icon, with the label in ink.
+   Not a bar underneath, and not tinted text — the export puts the brand colour
+   on the icon itself, which is why the earlier attempt read as unhighlighted. */
 .creator-tab[aria-current='page'] {
   color: var(--ink);
 }
-
-.creator-tab__marker {
-  display: block;
-  width: 18px;
-  height: 3px;
-  margin: 3px auto 0;
-  border-radius: 2px;
+.creator-tab__iconwrap {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
   background: transparent;
+  transition: background .14s ease;
 }
-
-.creator-tab[aria-current='page'] .creator-tab__marker {
+.creator-tab[aria-current='page'] .creator-tab__iconwrap {
   background: var(--lime-400);
 }
 
-/* ── Desktop ──────────────────────────────────────────────────────────────
+/* Profile holds a face, not a line icon. A filled disc behind a photo reads as
+   a thick collar; a thin ring says "selected" without competing with the
+   picture. */
+.creator-tab__iconwrap--photo { background: transparent !important; }
+/* The ring hugs the photo, not the 34px slot it sits in — a ring with a gap
+   inside it reads as a stray circle rather than a selected avatar. */
+.creator-tab[aria-current='page'] .creator-tab__photo {
+  box-shadow: 0 0 0 2px var(--lime-400);
+}
+
+.creator-tab[aria-current='page'] /* ── Desktop ──────────────────────────────────────────────────────────────
    The design is drawn for a 390px phone. On a wide screen the content is
    centred at phone width rather than stretched: these layouts assume a single
    column, and a 1400px-wide stat row reads as broken. The tab bar stays, since
@@ -296,4 +306,12 @@
   line-height: 16px;
   text-align: center;
   box-shadow: 0 0 0 2px #fff;
+}
+
+
+/* While the cookie banner is up it sits above the tab bar and would cover the
+   last control on the page — which is exactly what happened to the Add UPI ID
+   button. CookieConsent adds this class for as long as it is showing. */
+.has-cookie-banner .creator-app {
+  padding-bottom: calc(210px + env(safe-area-inset-bottom));
 }

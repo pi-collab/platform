@@ -3439,3 +3439,482 @@ both unread AND missing.
       read action revalidates both inbox routes; without that the marker is
       written and the cached list still wears the badge
 - [ ] Message order stays chronological after a merge
+
+---
+
+## 25. Creator dashboard — mobile (design: "Creator Dashboard - Mobile Standalone")
+
+`CreatorDashboardMobile` below 720px; the desktop dashboard keeps everything
+above. Presentation only — every figure comes from what the page already
+computes for desktop.
+
+### Numbers must match desktop exactly
+- [ ] Total earned, Pending, Active deals and Completed read the SAME on a
+      phone and a laptop for the same creator and the same period
+- [ ] Changing the period updates all four and the URL carries `?period=`
+- [ ] The chart uses the same monthly series as the desktop chart
+
+### Layout
+- [ ] "Hey, <name>" with the name in serif italic
+- [ ] Handle line shows the handle; a follower count appears ONLY if a social
+      account states one — never invented
+- [ ] Shopfront pill appears only when a storefront is PUBLISHED, and opens the
+      public page in a new tab
+- [ ] Bell carries the unread notification badge
+- [ ] KPI panel is 2×2 split by hairlines, not four separate cards
+- [ ] "Do first" lists offers to review, deliverables to submit and invoices to
+      issue, each linking to its deal
+- [ ] "Deals in motion" shows up to five active deals with brand, stage, value
+- [ ] Section is omitted entirely when it has nothing — no empty headings
+
+### Chart
+- [ ] Drawn only with two or more months. One bar, or none, implies a trend the
+      data cannot support
+- [ ] Bars scale to the peak month; the smallest month is still visible
+- [ ] "Best month" matches the tallest bar
+
+### Deliberately NOT built
+- [ ] There is no "Top posts by views" section. It needs per-post view counts
+      from a connected Instagram account, which is still gated on Meta's App
+      Review — so today it would be an empty ranked list for every creator
+
+### Updated dashboard: earnings, track record, brands
+- [ ] "Your earnings" shows an all-time total with This month / Last 3 mo /
+      This year beneath it. These are LIFETIME reads, not the selected period
+      relabelled four times — change the period and they must NOT move
+- [ ] The four Overview figures DO move with the period. Both behaviours on one
+      screen is the point
+- [ ] "Brands you've worked with" reuses the page's existing aggregation, so a
+      brand's deal count matches desktop
+- [ ] "Your track record" shows the real completed count
+- [ ] **On-time / Response / Completion read "—", never a number.** Nothing in
+      the codebase measures them. The DESKTOP dashboard prints "100%", "~4h",
+      "100%" as hardcoded literals — see the note below
+- [ ] Every section hides itself when it has nothing
+
+### Navbar highlight
+- [ ] The current section's tab is inked and carries the lime marker; the rest
+      are muted. Check Dashboard, Deals, Inbox, Payments and Profile
+- [ ] Opening a deal keeps Deals highlighted (`startsWith`, not equality)
+
+### Colours match the export's own tokens
+I had hardcoded approximations instead of reading the design's variables.
+- [ ] Meta/label text is #565C68 at 9.5px with .14em tracking — NOT #9AA08C at
+      11px. Those are different colour families, and it was the most visible miss
+- [ ] Cards use the export's shadow (a 1px lift plus a soft drop), not a single
+      long shadow
+- [ ] Hairlines are the warm translucent rule rgba(60,80,30,.08), not flat grey
+- [ ] Figures render in Sora (the export's --font-num), tabular
+
+### Guapd green highlights
+- [ ] The active bottom-nav tab is GREEN (#4F6B12) with the neon bar under it,
+      not merely darker ink
+- [ ] It is legible: pure #E8FF66 on white at 10.5px is a highlighter colour
+      and fails contrast, which is why the readable weight of the same green is
+      used for the label and the bright value stays on the bar
+- [ ] The unread notification badge is NEON with ink text, bordered white — the
+      count is kept, since a number is more useful than a plain dot
+- [ ] Zero unread shows no badge at all
+
+### Dashboard rebuilt against the export (previous version was approximated)
+- [ ] Every section heading carries the 32×1px lime rule (#C9EB3C) beneath it
+- [ ] "Do first" badge is ink-on-neon (#161B08 on #E8FF66), 10px/.08em
+- [ ] Action rows have a 36px rounded icon tile with the mint→sky gradient
+- [ ] **Action meta lines are AMBER (#B67C15), not grey** — they say something
+      is waiting on you
+- [ ] Action CTAs are OUTLINED pills (white, 1.3px border), fixed 64px wide —
+      not filled dark pills. Three dark pills stacked shout, and none of the
+      three is more urgent than the others
+- [ ] "Deals in motion" scrolls HORIZONTALLY with snap, 220px cards — not a
+      vertical list
+- [ ] Each motion card: brand as a meta label, an outlined stage chip whose
+      border tint comes from the stage, a 28px figure, the deal title, and a
+      4px progress bar filled to the deal's stage
+- [ ] Performance is a LINE chart — gridlines, rupee axis, month labels, and a
+      neon dot on the final point — not bars
+- [ ] Axis labels derive from the creator's own peak, so the line cannot leave
+      the grid for someone earning more than the mockup
+- [ ] Meta text is 9.5px / .14em / #565C68 throughout
+
+### Nav highlight
+- [ ] The active tab's ICON sits in a filled neon disc (34px); the label is ink
+- [ ] Inactive tabs are plain icons in #878D99 with no disc
+- [ ] All five behave the same, Profile included
+- [ ] No 3px bar remains anywhere under the tabs
+
+### Track record is COMPUTED (was hardcoded on desktop, dashes on mobile)
+`lib/creator-track-record.ts`. Every figure returns null with no basis — a
+percentage over zero deals is nothing, not 100%.
+- [ ] On-time counts the LAST submission per deal against `timeline_date` at
+      end of day. A deal submitted early, sent back, and returned late is LATE
+- [ ] Deals with no due date, or no submission, are excluded from the ratio
+- [ ] Response is the MEDIAN gap from a brand message to the creator's reply.
+      One holiday must not move it — that is why it is not a mean
+- [ ] Consecutive brand messages start the clock ONCE. A brand sending four in
+      a row has not asked four times
+- [ ] Completion counts finished ÷ accepted. Declined offers and live
+      negotiations are excluded — nobody failed to finish a deal that never began
+- [ ] A creator with no completed deals sees "—" everywhere, never 100%
+- [ ] Response formats as ~4h under a day, ~2d beyond
+
+### Overview change %
+- [ ] Compares the selected period against the PREVIOUS window of equal length
+- [ ] Hidden entirely when the previous window earned nothing — a percentage
+      off a zero base is not a number
+- [ ] Down shows ▼ and does not wear the up colour
+
+### Design corrections
+- [ ] The greeting's name sits ON a neon block (highlighter behind the glyphs),
+      not beside it
+- [ ] Motion cards show a real footer: "Received 2 days ago" for an offer,
+      "Due in 3 days" / "Overdue by N days" once a delivery date exists.
+      NEVER "Respond by <date>" — no offer expiry exists in the schema
+- [ ] Brands are horizontal CARDS (196px) with a status line — a lime dot and
+      ACTIVE, or COMPLETED — a divider, the value and "N deals · N posts"
+- [ ] Both rails align their first card with the section heading
+
+### One header on mobile (duplicate removed)
+- [ ] No hamburger + wordmark + bell bar above the page on ANY creator mobile
+      screen. Each screen's own header is the only one
+- [ ] Desktop is unchanged: sidebar and top nav both still render
+- [ ] The tab bar still reaches everything; settings and sign out live under
+      Profile, which is where the drawer's links went
+
+### Performance and Reach always render
+- [ ] Performance shows the line once two months have earnings, and otherwise
+      explains what unlocks it — the section never disappears
+- [ ] Your reach renders with a line about connecting Instagram until real data
+      exists. **No sample followers, engagement or view counts.** A creator can
+      screenshot their own dashboard, and an invented follower count is the one
+      number a brand will check
+- [ ] Once Instagram lands, `reach` is passed non-null and the section fills in
+      with top posts and the three figures — no layout change needed
+
+### Rails and card shape
+- [ ] First card in Deals in motion and Brands lines up with its heading; the
+      last clears the right edge
+- [ ] A snapped card never sits flush against the screen edge
+- [ ] Cards are landscape rectangles, not squares — a short deal title no
+      longer collapses the card
+
+### Header followers and bottom spacing
+- [ ] Handle line reads "@handle · 500K followers" when a social account states
+      a follower_count, falling back to the band they picked
+- [ ] A creator who has stated NEITHER sees just the handle — no invented figure
+- [ ] 1,200,000 renders as 1.2M; 500,000 as 500K; 940 as 940
+- [ ] The page stops just below the last card — no dead screen between it and
+      the tab bar
+- [ ] The last card is still fully clear of the tab bar, including on a phone
+      with a home indicator (safe-area inset)
+- [ ] Header stays pinned while scrolling and cards pass cleanly underneath it
+
+### Sticky headers actually stick (root cause fixed)
+`.creator-main` carried `overflow-x: hidden`, which makes it a scroll container
+— and a scroll container is what `position: sticky` sticks to. Every sticky
+header on every creator mobile screen was pinning to that element instead of
+the viewport, so none of them stuck. Changed to `overflow-x: clip`, which cuts
+the same horizontal overflow WITHOUT creating a scroll container.
+- [ ] Dashboard header stays pinned while the page scrolls
+- [ ] Same on deals, payments, inbox and notifications — all four were broken
+      by the same rule and all four are fixed by the same change
+- [ ] Nothing scrolls sideways anywhere; `clip` still cuts the overflow
+- [ ] **If anyone changes this back to `hidden`, every sticky header dies
+      silently.** There is a comment on the rule saying so
+
+### Phantom scroll after the last section
+- [ ] The page ends just below the last card. `min-height` uses `100dvh`, not
+      `100vh` — on a phone `100vh` is the LARGE viewport, taller than what is
+      visible, so the page always had somewhere left to go
+- [ ] The last card still clears the tab bar and the home indicator
+
+### Greeting
+- [ ] "Hey, <name>" renders at 34px
+- [ ] A long name truncates with an ellipsis rather than pushing the Shopfront
+      pill off the screen
+
+### Followers: the verified count, not the self-declared band
+- [ ] With Instagram connected, the handle line shows the VERIFIED count from
+      the snapshot (e.g. "536 followers"), not the signup range
+- [ ] Staging's palak_pj states "100k – 500k" against a verified 536. Showing
+      the band while holding the true number is the case this fixes
+- [ ] Without a connection it falls back to the stated range
+- [ ] With neither, the line is just the handle — nothing invented
+- [ ] 1,200,000 → 1.2M; 536 → 536; 12,000 → 12K
+- [ ] Read via the admin client — `creator_instagram_connections` is deny-all
+      under RLS, so a session-client read returns nothing and the count would
+      silently fall back to the range
+
+### What is sticky
+- [ ] Pinned: the greeting, Shopfront and the bell
+- [ ] Scrolls away: the handle and follower line
+- [ ] Cards pass cleanly under the pinned row
+
+---
+
+## 26. Creator offer received — mobile
+
+`CreatorOfferMobile` below 720px, and ONLY while a deal is `negotiating`. Every
+other state keeps the existing page, because only this one was designed.
+- [ ] A negotiating deal on a phone shows the new screen; agreed / delivered /
+      approved / paid still show the existing page
+- [ ] Accept, Counter and Decline are the EXISTING AcceptDecline component —
+      the terms a creator agrees to on a phone go through the same code as
+      desktop. Countering still opens line-item prices and a note
+- [ ] Sticky card: back, "Offer from <brand>", message and bell
+- [ ] "You receive" is the post-fee figure and matches desktop for the same deal
+- [ ] Deliverables expand on tap; the chevron flips
+- [ ] Brief, attachments, terms and guidelines each fold; attachments open via
+      the SIGNED url the page already generates
+- [ ] Sections with no data do not render at all
+
+### Three things this screen deliberately does NOT show
+- [ ] No "Respond by <date>" — no offer expiry exists in the schema. It says
+      how long the offer has waited instead. This is the FOURTH design to ask
+      for that date
+- [ ] No "Live window" — the deal carries one delivery date, shown as Deliver by
+- [ ] No "Exclusivity" — no such field. A term a creator would be held to must
+      not be invented
+
+## 27. Profile photo
+- [ ] The bottom-nav Profile tab shows the creator's photo when they have one,
+      and their initial when they do not
+- [ ] The photo fills the circle without distorting (object-fit: cover)
+- [ ] The profile screen's first block shows the photo, and drops the dashed
+      border — the dash means "no photo yet" and a real photo needs no apology
+- [ ] Both fall back to the initial cleanly
+
+## 28. Overscroll, everywhere
+`.creator-main` used `min-height: 100vh`. On a phone 100vh is the LARGE
+viewport — the height with the toolbar hidden — so every creator screen kept a
+toolbar's worth of scroll at the bottom no matter how little padding it had.
+- [ ] Dashboard, deals, payments, inbox and notifications all stop just below
+      their last element
+- [ ] The last element still clears the tab bar and the home indicator
+- [ ] Nothing scrolls sideways
+
+### Bottom clearance
+`.creator-app` is the single source. 210px (permanent banner allowance) was
+half a dead screen; 64px equalled the tab bar exactly, so content finished
+flush against it and an expanded fold was clipped. It is 96px + safe area.
+- [ ] Scroll to the bottom of dashboard, deals, payments, inbox: a comfortable
+      gap under the last element, not a dead screen and not a flush edge
+- [ ] On the offer screen, EXPAND "Full terms" at the bottom — the last row is
+      fully readable and clears the tab bar
+- [ ] While the cookie banner is up, content clears the banner too
+- [ ] Dismiss the banner: the extra clearance disappears on the next render
+
+### Offer decision buttons
+- [ ] Accept and Counter are full width, 50px, stacked, Accept on top
+- [ ] The note and "Decline this offer" are CENTRED beneath them, on their own
+      line; the info icon is dropped there (it drags centred text off-centre)
+- [ ] Desktop is unchanged: side-by-side buttons, icon and note on the left
+- [ ] Decline still opens the confirm flow
+
+### Payment window
+- [ ] "Payment in" reads the day count from the agreed terms when they state one
+- [ ] Falls back to "30 days" — the platform default — rather than a dash
+
+---
+
+## 29. Platform fee: deducted by default, 0% on a storefront's first deal
+
+### BEFORE TESTING — two preconditions, neither optional
+
+**1. Run `0499` and `0500` in the Supabase SQL editor, per environment.**
+Until 0499 runs, every brand is still `on_top` and NOTHING in this section is
+testable — the screens will keep rendering the old mode correctly. 0499 prints
+NOTICEs saying which brand it exempted and how many it moved; read them.
+
+**2. Seed a storefront-origin pair, or the 0% rule fires for nobody.**
+`brand_creator_origin` is written in exactly one place: `captureSignupOrigin`,
+called only from brand signup (`onboarding/actions.ts`), off the
+`guapd_ref_slug` cookie that `middleware.ts` sets on `/c/<slug>`. So the only
+UI route to a storefront pair is **a brand that does not exist yet signing up
+through a creator's storefront link**. An existing brand can never acquire one,
+however it reaches the creator.
+
+Do the full signup flow ONCE to prove the capture works. For every other case
+below, seed the row directly instead of re-registering a brand:
+
+```sql
+-- Pick a pair with NO non-declined deal, or the count check in deal-fee.ts
+-- has already consumed the exemption and you will test nothing.
+insert into brand_creator_origin (brand_id, creator_id, origin, source_detail)
+values ('<brand_id>', '<creator_id>', 'storefront', '{"slug":"<slug>"}')
+on conflict (brand_id, creator_id) do update set origin = 'storefront';
+```
+
+To reset between runs: delete the deals you created for the pair (or decline
+them — declined does not consume), and re-run the insert.
+
+### The mode
+- [ ] A NEW deal defaults to `fee_mode = 'deducted'` — brand pays the agreed
+      price, creator receives price minus fee
+- [ ] Brand side no longer says "Platform fee (15%), paid by you"
+- [ ] Creator side shows the fee DEDUCTED from what they receive
+- [ ] **Existing deals are unchanged.** Each snapshots its own fee_percent and
+      fee_mode at creation and an invoice snapshots them again — nothing
+      already agreed moves price
+- [ ] FinLeap stays on its negotiated terms. 0499 resolves the name to a single
+      row and exempts THAT row, never `platform_fee_percent = 10` — a future
+      brand set to 10% must not inherit an exemption nobody granted it
+- [ ] 0499 RAISEs rather than guessing if two brands share the name. Test by
+      temporarily renaming a second brand to `FinLeap` and re-running: the
+      migration must abort, not silently flip the negotiated brand to deducted
+
+### The 0% rule
+- [ ] Brand arrives via Creator A's storefront → first deal with A is 0%
+- [ ] Second deal with A is 15%
+- [ ] First deal with Creator B is 15% — B introduced nobody
+- [ ] An offer that is DECLINED or CANCELLED does not consume the exemption:
+      the next offer from that brand to that creator is still 0%
+- [ ] An ops pair rate WINS over the exemption — a human decision about this
+      pair is already made
+- [ ] The same result whether the deal is created from /deals/new or from a
+      campaign. Both call resolveDealFee; resolving by route would give the
+      same creator 0% or 15% depending on which door the brand used
+- [ ] **The OFFER BUILDER preview matches the deal.** Open /deals/new for a
+      storefront-exempt creator: the summary must show no platform fee and
+      "No platform fee · first deal from <name>'s storefront", not "receives
+      after our 15% fee". deals/new/page.tsx used to read pair rate -> brand
+      standard, skipping the exemption, so the builder quoted 15% and
+      42,500 while the created deal resolved 0% and paid 50,000. This is the
+      number a brand commits to a price on
+- [ ] At 0% the builder renders NO feeInfo, so without the explicit line the
+      fee row vanishes silently and the brand is left to infer why
+- [ ] **The campaign PREVIEW matches the deal.** Add a storefront-exempt
+      creator to a campaign (draft shows 0%), then edit their placements to
+      price them. The draft must STILL show 0%. `updateCampaignDraft` used to
+      recompute brand-standard → pair-rate only, skipping the exemption, so the
+      draft jumped to 15% on the first edit while the sent deal still charged
+      0% — a campaign quoting one number and the deal charging another
+
+### Every surface, not just the mobile one
+A zero fee renders no row on ANY screen: each one guards on `fee_paise > 0`.
+All of them now carry an explicit note instead of a gap. Check a 0% deal on:
+- [ ] Creator deal page, DESKTOP — main breakdown
+- [ ] Creator deal page, DESKTOP — "Full terms" toggle
+- [ ] Creator deal page, MOBILE (<720px, negotiating only)
+- [ ] Brand deal page — main breakdown, "Full terms", and "Agreed terms"
+- [ ] Brand offer builder (/deals/new) before the deal exists
+- [ ] Wording comes from `zeroFeeNote()` in lib/fee-copy.ts on every one of
+      them, so the six screens cannot drift apart
+
+### The creator's "Full terms" said the brand pays
+- [ ] On a `deducted` deal the creator's Full terms panel must NOT say "paid by
+      the brand". It was hardcoded regardless of fee_mode, so after 0499 made
+      deducted the rule it told every creator the brand was paying a fee that
+      comes out of their own side. Now via `feeBearerNote()`
+- [ ] On an `on_top` deal (FinLeap) it still reads "paid by the brand"
+
+### The reason for a zero, not just the zero
+`deals.fee_basis` (0500) records which rung of the ladder decided the fee. The
+creator's offer screen reads THAT, never the number being zero.
+- [ ] Storefront exemption → "0% · first deal from your storefront"
+- [ ] An ops pair rate of 0%, a `fee_pct_override` of 0, or a brand on 0% →
+      "No fee on this deal". It must NOT claim a storefront referral: that is a
+      false statement about how the creator was found, and it implies the next
+      deal is charged when the reason it was free may still apply
+- [ ] A deal created BEFORE 0500 has `fee_basis = NULL` and falls to the
+      neutral copy rather than asserting a reason nobody recorded
+- [ ] `fee_basis` is written on both creation paths and matches `fee_percent`
+- [ ] The column is nullable with NO default and the CHECK admits NULL. A
+      backfill plus a NOT NULL CHECK is the shape that passes its own run and
+      then rejects every future INSERT that omits the column — see 0491/0485
+
+### Period selector must not summon the first-run screen
+The brand dashboard's empty state keyed on deals created INSIDE the selected
+period, so an established brand picking "This week" was shown the new-brand
+screen it finished months ago. Now keyed on the account.
+- [ ] Brand with history, period "This week", no deals created this week:
+      the DASHBOARD renders, with zeros — not BrandDashboardEmpty
+- [ ] Same for This month and This quarter on a quiet period
+- [ ] A genuinely new brand (no deals ever) still gets the empty state on
+      every period
+- [ ] Cancelled and declined deals do not count as history, matching the
+      period query
+- [ ] Creator dashboard unchanged — it already had this guard
+
+---
+
+## 30. Go live date replaces usage rights (migration 0501)
+
+Run **0501** before deploying: the offer builder writes `go_live_date` on every
+deal, so an unmigrated DB fails every send.
+
+### The new field
+- [ ] The offer builder collects "Go live date" where "Usage rights" used to be
+- [ ] It is OPTIONAL — leaving it blank sends the offer and stores NULL, because
+      a date still being negotiated has no honest value
+- [ ] A go-live date earlier than the derived delivery date shows the note, and
+      still sends. Delivery before publication is a real arrangement; refusing
+      the offer over it would be wrong
+- [ ] Stored as `deals.go_live_date`, distinct from `timeline_date` (hand-over)
+      and `posted_at` (when it actually went live)
+
+### Usage rights: retained, not collected
+- [ ] New deals no longer collect usage rights, or a usage-rights end date
+- [ ] Deals agreed BEFORE 0501 still display theirs. The column is kept for
+      exactly this reason: those terms are what two parties agreed, and this is
+      the only place either can still read them
+- [ ] The offer accept-page no longer says "Usage rights — To be agreed". It
+      asserted a commitment to negotiate something nobody had raised
+
+### BOTH RENDERINGS — mobile is a separate component
+Every field change must land on desktop AND mobile. Check go live on:
+- [ ] Creator deal page, desktop — main terms panel and the TermRow list
+- [ ] Creator deal page, MOBILE (`CreatorOfferMobile`, <720px, negotiating)
+- [ ] Brand deal page — main breakdown, "Full terms", "Agreed terms" (3 places)
+- [ ] Offer accept-page (`/offer/[token]`)
+- [ ] Ops deal page
+- [ ] The brand deal pages and offer builder have NO mobile twin — single
+      responsive renderings, so one change covers them
+
+### NOT changed
+- [ ] `payment_terms` is untouched, on every surface. The new payment structure
+      is still to be specified
+
+---
+
+## 31. Payment terms: days after posting
+
+No migration. `payment_terms` stays a TEXT column; the structure is in the UI.
+
+### The field (offer builder)
+- [ ] One row: a day dropdown (7 / 15 / 30 / 45 / 60 / 90 / Custom) followed by
+      the fixed words "after posting". Custom reveals a number input (1-365)
+- [ ] Default is 30 days
+- [ ] Stored exactly as `N days after posting`
+- [ ] There is NO advance or 50/50 option. Both were built and pulled before
+      shipping: they describe money moving in a way v1 cannot execute, since
+      the platform tracks payment rather than holding or splitting it, and the
+      invoice would still have issued one full amount. Add them back when the
+      payment rails can honour them
+
+### The wording is load-bearing — do not paraphrase it
+`lib/invoice.ts::parsePaymentTermsDays` checks "on approval" and "advance"
+BEFORE the day regex — legacy branches that must keep working. "N days after
+posting" carries neither word, so it falls through to the regex and returns N.
+A wording that reintroduced either would return 0 and silently make every
+invoice due the day it was raised.
+- [ ] 7/15/30/45/60/90 and a custom 21 each parse to that number of days
+
+### Posting, not approval, is what the code measures
+- [ ] `createInvoice` refuses to raise an invoice until `deal.is_posted`, and
+      computes the due date at that moment from these terms. The clock has
+      always started at posting; "after approval" named an earlier event than
+      the one being counted from and told creators the money was due sooner
+      than it was
+
+### Legacy deals still read correctly
+- [ ] Deals agreed under the old presets ("100% advance", "100% on approval",
+      "50% advance, 50% on approval") still render their stored string
+      unchanged. Nothing writes those any more; the parser and
+      `paymentWhenLabel` still understand them
+
+### "Payment in ___" no longer invents 30 days
+- [ ] The mobile offer screen regexed a day count out of the terms and fell
+      back to 30 whenever it found none, so terms carrying no number told the
+      creator to wait a month regardless of what was agreed. Now
+      `paymentWhenLabel()`, which returns null rather than a made-up number
+- [ ] A legacy 100% advance deal reads "Upfront", not "30 days"

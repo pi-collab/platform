@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
+import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
+import { unreadNotificationCount } from '@/lib/unread'
+import { computeTrackRecord, formatResponse } from '@/lib/creator-track-record'
+import { followerRangeOf } from '@/lib/follower-range'
 import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
@@ -32,7 +36,7 @@ export default async function CreatorDashboardPage({
 }: {
   searchParams: { period?: string; from?: string; to?: string }
 }) {
-  const { creatorId, creatorName } = await verifyCreator()
+  const { creatorId, creatorName, profileId } = await verifyCreator()
 
   // Newly-vetted creators see the approval screen once before the dashboard.
   // Checked here rather than in the layout: post-approval login lands on this
@@ -66,7 +70,7 @@ export default async function CreatorDashboardPage({
   const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, last_offer_by, created_at, brands(id, name)')
+      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, brands(id, name)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .gte('created_at', periodFromISO)
@@ -188,6 +192,36 @@ export default async function CreatorDashboardPage({
   const emptyHandle = (creatorRow?.handle ?? '').trim().replace(/^@/, '')
   const emptyHandleLine = emptyHandle ? `@${emptyHandle}` : 'Finish your profile to get discovered'
 
+  /* Followers beside the handle.
+     PREFER THE VERIFIED COUNT. Instagram's snapshot holds the real number; the
+     follower_range on social_accounts is what the creator picked from a
+     dropdown at signup and can be wrong by orders of magnitude — this very
+     account states "100k – 500k" against a verified 536. Showing a band we
+     know to be false, while holding the true figure, is the worst of both.
+     The range is only a fallback for creators who have not connected.
+     Read with the admin client: the connections table is deny-all under RLS. */
+  const { data: igRow } = await createAdminClient()
+    .from('creator_instagram_connections')
+    .select('snapshot, status')
+    .eq('creator_id', creatorId)
+    .maybeSingle()
+
+  const verifiedFollowers = (() => {
+    if (!igRow || igRow.status !== 'connected') return null
+    const n = (igRow.snapshot as { followersCount?: unknown } | null)?.followersCount
+    return typeof n === 'number' && n >= 0 ? n : null
+  })()
+
+  function compactCount(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K`
+    return n.toLocaleString('en-IN')
+  }
+
+  const followersLabel = verifiedFollowers !== null
+    ? compactCount(verifiedFollowers)
+    : followerRangeOf(creatorRow?.social_accounts)
+
   // Rendered alongside the real dashboard rather than instead of it. This is a
   // transcription of a MOBILE export; returning it early fired at every width,
   // so a creator on a desktop with no deals never saw the desktop dashboard.
@@ -212,6 +246,162 @@ export default async function CreatorDashboardPage({
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
 
+  /* ── Lifetime figures for the mobile screen ───────────────────────────────
+     The design's earnings panel compares this month, the last three months and
+     this year against an all-time total — four windows at once, where every
+     figure above is bounded by the ONE selected period. So this is its own
+     unscoped read rather than a reuse that would quietly report the selected
+     period four times under four different labels. */
+  const { data: lifetimeDeals } = await supabase
+    .from('deals')
+    .select('id, title, status, price_paise, created_at, timeline_date, brands(id, name)')
+    .not('status', 'in', '(cancelled,declined)')
+  const lifetime = lifetimeDeals ?? []
+
+  const { data: lifetimeInvoices } = await supabase
+    .from('invoices')
+    .select('deal_id, status, creator_receives_paise, paid_at')
+    .eq('status', 'paid')
+
+  const nowD = new Date()
+  const startOfMonth = new Date(nowD.getFullYear(), nowD.getMonth(), 1)
+  const start3mo = new Date(nowD.getFullYear(), nowD.getMonth() - 2, 1)
+  const startOfYear = new Date(nowD.getFullYear(), 0, 1)
+  const sumPaidSince = (since: Date | null) =>
+    (lifetimeInvoices ?? []).reduce((sum, inv) => {
+      if (!inv.paid_at) return sum
+      if (since && new Date(inv.paid_at) < since) return sum
+      return sum + (inv.creator_receives_paise ?? 0)
+    }, 0)
+
+  const earnings = {
+    allTimePaise: sumPaidSince(null),
+    thisMonthPaise: sumPaidSince(startOfMonth),
+    last3MoPaise: sumPaidSince(start3mo),
+    thisYearPaise: sumPaidSince(startOfYear),
+  }
+
+  /* Brands come from the page's existing `topBrands`, which already carries
+     deal count, earnings and whether anything is live — a second, thinner
+     aggregation next to it would be two answers to one question. */
+
+  const lifetimeCompleted = lifetime.filter((d) => COMPLETED_STATUSES.has(d.status as string)).length
+
+  /* Posts per brand, and the inputs for the track record. All three read from
+     tables we already own; nothing here is asserted. */
+  const lifetimeIds = lifetime.map((d) => d.id as string)
+  const [{ data: trackItems }, { data: trackMessages }] = await Promise.all([
+    lifetimeIds.length
+      ? supabase.from('deal_deliverable_items').select('deal_id, submitted_at, posted_at').in('deal_id', lifetimeIds)
+      : Promise.resolve({ data: [] as { deal_id: string; submitted_at: string | null; posted_at?: string | null }[] }),
+    lifetimeIds.length
+      ? supabase.from('messages').select('deal_id, sender_party, created_at').in('deal_id', lifetimeIds)
+      : Promise.resolve({ data: [] as { deal_id: string; sender_party: string; created_at: string }[] }),
+  ])
+
+  const postsByDeal = new Map<string, number>()
+  for (const it of (trackItems ?? []) as { deal_id: string; posted_at?: string | null }[]) {
+    if (!it.posted_at) continue
+    postsByDeal.set(it.deal_id, (postsByDeal.get(it.deal_id) ?? 0) + 1)
+  }
+
+  const track = computeTrackRecord(
+    lifetime.map((d) => ({ id: d.id as string, status: d.status as string, timeline_date: (d as { timeline_date?: string | null }).timeline_date ?? null })),
+    (trackItems ?? []) as { deal_id: string; submitted_at: string | null }[],
+    (trackMessages ?? []) as { deal_id: string; sender_party: string; created_at: string }[],
+  )
+  const postsByBrand = new Map<string, number>()
+  for (const d of lifetime) {
+    const raw = (d as { brands?: unknown }).brands
+    const bo = Array.isArray(raw) ? raw[0] : (raw as { name?: string } | null)
+    if (!bo?.name) continue
+    postsByBrand.set(bo.name, (postsByBrand.get(bo.name) ?? 0) + (postsByDeal.get(d.id as string) ?? 0))
+  }
+  const mobileBrands = topBrands.slice(0, 6).map((b) => ({
+    name: b.name,
+    deals: b.dealCount,
+    posts: postsByBrand.get(b.name) ?? 0,
+    valuePaise: b.earnedPaise > 0 ? b.earnedPaise : b.activePaise,
+    active: b.hasActive,
+  }))
+
+  // ── Mobile props, derived from the values above ─────────────────────────
+  const unreadNotifs = await unreadNotificationCount(supabase, profileId)
+  const brandOf = (d: { brands?: unknown }) => {
+    const b = Array.isArray(d.brands) ? d.brands[0] : (d.brands as { name?: string } | null)
+    return b?.name ?? 'Brand'
+  }
+  const mobileActions = [
+    ...offersAwaiting.map((d) => ({ id: `o-${d.id}`, dealId: d.id, title: `New offer from ${brandOf(d)}`, meta: 'Awaiting your reply', cta: 'Review' })),
+    ...deliverablesToDo.map((d) => ({ id: `d-${d.id}`, dealId: d.id, title: `${d.title || 'Deal'} · deliverable to submit`, meta: d.status === 'revision' ? 'Revision requested' : 'In production', cta: 'Submit' })),
+    ...invoicesToIssue.map((d) => ({ id: `i-${d.id}`, dealId: d.id, title: 'Invoice to issue', meta: 'Approved and posted', cta: 'Issue' })),
+  ]
+  /* Stage drives the chip's tint AND the progress bar, from one place — the
+     bar is how far through the pipeline a deal is, not decoration. */
+  /* The card's footer line.
+     The export reads "Respond by Aug 14" on an offer — but no offer expiry
+     exists anywhere in this schema, so that deadline cannot be stated
+     truthfully. An offer instead says how long it has been waiting, which is
+     true and carries the same urgency. Everything past acceptance uses the
+     agreed delivery date, which is real. */
+  function dealFoot(d: { status: string; timeline_date?: string | null; created_at: string }) {
+    if (d.status === 'negotiating') {
+      const days = Math.floor((Date.now() - new Date(d.created_at).getTime()) / 86_400_000)
+      return {
+        footLabel: 'Received' as string | null,
+        footValue: (days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`) as string | null,
+      }
+    }
+    if (!d.timeline_date) return { footLabel: null as string | null, footValue: null as string | null }
+    const due = new Date(d.timeline_date + 'T00:00:00')
+    const days = Math.ceil((due.getTime() - Date.now()) / 86_400_000)
+    if (days < 0) return { footLabel: 'Overdue by' as string | null, footValue: `${Math.abs(days)} days` as string | null }
+    if (days === 0) return { footLabel: 'Due' as string | null, footValue: 'today' as string | null }
+    if (days <= 7) return { footLabel: 'Due' as string | null, footValue: `in ${days} days` as string | null }
+    return {
+      footLabel: 'Due' as string | null,
+      footValue: due.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) as string | null,
+    }
+  }
+
+  const MOTION_STAGE: Record<string, { label: string; border: string; progress: number }> = {
+    negotiating: { label: 'New offer',         border: 'rgba(140,100,23,.35)', progress: 4 },
+    agreed:      { label: 'In production',     border: 'rgba(25,118,210,.35)', progress: 35 },
+    delivered:   { label: 'Awaiting approval', border: 'rgba(15,107,74,.35)',  progress: 70 },
+    revision:    { label: 'Revision needed',   border: 'rgba(140,100,23,.35)', progress: 55 },
+    approved:    { label: 'Ready to invoice',  border: 'rgba(15,107,74,.35)',  progress: 90 },
+  }
+  const mobileMotion = activeDeals.slice(0, 6).map((d) => {
+    const st = MOTION_STAGE[d.status] ?? { label: d.status, border: 'rgba(60,80,30,.20)', progress: 50 }
+    return {
+      id: d.id,
+      brandName: brandOf(d),
+      stageLabel: st.label,
+      stageBorder: st.border,
+      progress: st.progress,
+      pricePaise: d.price_paise ?? 0,
+      title: d.title || 'Untitled deal',
+      ...dealFoot(d as { status: string; timeline_date?: string | null; created_at: string }),
+    }
+  })
+  const paidCount = paidInvoices.length
+
+  /* Change against the PREVIOUS window of the same length — real arithmetic on
+     the invoices we already hold, not a guess. Null when the previous window
+     earned nothing: a percentage off a zero base is not a number, and this is
+     the most quotable figure on the screen. */
+  const spanMs = periodTo.getTime() - periodFrom.getTime()
+  const prevFrom = new Date(periodFrom.getTime() - spanMs)
+  const prevEarned = (lifetimeInvoices ?? []).reduce((sum, inv) => {
+    if (!inv.paid_at) return sum
+    const t = new Date(inv.paid_at).getTime()
+    if (t < prevFrom.getTime() || t >= periodFrom.getTime()) return sum
+    return sum + (inv.creator_receives_paise ?? 0)
+  }, 0)
+  const changePct = prevEarned > 0
+    ? Math.round(((totalEarned - prevEarned) / prevEarned) * 100)
+    : null
+
   return (
     <>
     {mobileEmpty}
@@ -229,8 +419,37 @@ export default async function CreatorDashboardPage({
         />
       </div>
     )}
+    {!showMobileEmpty && (
+      <CreatorDashboardMobile
+        firstName={firstName}
+        handleLine={emptyHandleLine}
+        followersLabel={followersLabel}
+        shopfrontSlug={storefront?.is_published ? storefront.slug : null}
+        period={period}
+        totalEarnedPaise={totalEarned}
+        dealCount={allDeals.length}
+        pendingPaise={pendingAmount}
+        activeCount={activeDeals.length}
+        completedCount={completedDeals.length}
+        paidCount={paidCount}
+        actions={mobileActions}
+        motion={mobileMotion}
+        monthly={monthlyEarnings}
+        earnings={earnings}
+        brands={mobileBrands}
+        reach={null}
+        completedEver={lifetimeCompleted}
+        changePct={changePct}
+        track={{
+          onTimePct: track.onTimePct,
+          responseLabel: formatResponse(track.responseHours),
+          completionPct: track.completionPct,
+        }}
+        unreadNotifications={unreadNotifs}
+      />
+    )}
     <div
-      className={showMobileEmpty ? 'creator-hide-always' : undefined}
+      className={showMobileEmpty ? 'creator-hide-always' : 'cdash-desktop'}
       style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}
     >
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>

@@ -23,7 +23,7 @@ function validStatus(s: string | null | undefined): string | null {
 
 function brandTotal(d: { price_paise: number | null; fee_percent: number | null; fee_mode: string | null; price_per_extra_revision_paise: number | null; revisions_used: number | null; revision_limit: number | null }): number | null {
   if (d.price_paise == null || d.price_paise <= 0) return null
-  const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'on_top')
+  const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
   const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
   const overage = extra * (d.price_per_extra_revision_paise ?? 0)
   return fee.brand_pays_paise + overage

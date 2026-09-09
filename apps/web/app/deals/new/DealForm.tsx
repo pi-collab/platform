@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { PAYMENT_DAY_OPTIONS, netTerms } from '@/lib/payment-terms'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { createDeal } from '../actions'
 import { uploadBriefAttachment, removeBriefAttachment } from './upload-actions'
@@ -49,17 +50,7 @@ interface Creator {
   price_per_extra_revision_paise?: number | null
 }
 
-const USAGE_PRESETS = [
-  'One-time social post',
-  '6 months, all platforms',
-  'Perpetual, all media',
-] as const
 
-const PAYMENT_PRESETS = [
-  '50% advance, 50% on approval',
-  '100% on approval',
-  '100% advance',
-] as const
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -90,7 +81,7 @@ interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
+export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -162,22 +153,19 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     }
   }, [prefillResult.dropped])
 
-  function resolvePreset(value: string | null | undefined, presets: readonly string[]): { select: string; custom: string } {
-    if (!value) return { select: '', custom: '' }
-    if (presets.includes(value as any)) return { select: value, custom: '' }
-    return { select: 'Custom', custom: value }
-  }
-
-  const prefillUsage = resolvePreset(prefill?.usage_rights, USAGE_PRESETS)
-  const prefillPayment = resolvePreset(prefill?.payment_terms, PAYMENT_PRESETS)
 
   const [title, setTitle] = useState(prefill?.title || `Deal with ${creator.full_name}`)
   const [revisionLimit, setRevisionLimit] = useState(prefill ? String(prefill.revision_limit) : '1')
   const [pricePerExtraRevision, setPricePerExtraRevision] = useState(prefill ? String(prefill.price_per_extra_revision_paise / 100) : '0')
-  const [usageRights, setUsageRights] = useState(prefillUsage.select)
-  const [customUsage, setCustomUsage] = useState(prefillUsage.custom)
-  const [paymentTerms, setPaymentTerms] = useState(prefillPayment.select)
-  const [customPayment, setCustomPayment] = useState(prefillPayment.custom)
+  /* The date both sides agree the content goes live. Not derived from the
+     per-item delivery dates above: handing work over and publishing it are
+     different commitments, and a brand plans a campaign around this one. */
+  const [goLiveDate, setGoLiveDate] = useState('')
+  /* Days after posting is the only structure. Advance and 50/50 were built
+     and pulled: both describe money moving in a way v1 cannot execute. See
+     lib/payment-terms.ts, and the wording note on netTerms. */
+  const [payDays, setPayDays] = useState<string>('30')
+  const [payDaysCustom, setPayDaysCustom] = useState('')
   const [message, setMessage] = useState('')
   const [briefPitch, setBriefPitch] = useState(prefill?.brief_pitch ?? '')
   const [briefGuidelines, setBriefGuidelines] = useState(prefill?.brief_guidelines ?? '')
@@ -187,7 +175,6 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const [priceOverride, setPriceOverride] = useState('')
   const [requiresShipment, setRequiresShipment] = useState(false)
   const [campaignId, setCampaignId] = useState('')
-  const [usageRightsEndDate, setUsageRightsEndDate] = useState(prefill?.usage_rights_end_date ?? '')
 
   // Per-item delivery dates: productId → date string
   const [itemDeliveryDates, setItemDeliveryDates] = useState<Record<string, string>>({})
@@ -393,8 +380,9 @@ export default function DealForm({ creator, products, addonRates = [], platformF
 
     setLoading(true)
 
-    const resolvedUsage = usageRights === 'Custom' ? customUsage : usageRights
-    const resolvedPayment = paymentTerms === 'Custom' ? customPayment : paymentTerms
+    const effectiveDays = payDays === 'Custom' ? parseInt(payDaysCustom, 10) : parseInt(payDays, 10)
+    const resolvedPayment =
+      Number.isFinite(effectiveDays) && effectiveDays > 0 ? netTerms(effectiveDays) : ''
 
     const items: { label: string; platform: string; handle: string; price_paise: number; reel_type?: 'collab' | 'non_collab'; boosting_rights?: boolean; boosting_duration_months?: number }[] = []
     for (const p of products) {
@@ -445,13 +433,12 @@ export default function DealForm({ creator, products, addonRates = [], platformF
       timeline_date: derivedTimelineDate || undefined,
       revision_limit: parseInt(revisionLimit, 10) || 0,
       price_per_extra_revision_paise: isNaN(extraRevPaise) ? 0 : extraRevPaise,
-      usage_rights: resolvedUsage || undefined,
+      go_live_date: goLiveDate || undefined,
       payment_terms: resolvedPayment || undefined,
       message: message || undefined,
       items,
       reengaged_from: prefill?.reengaged_from,
       requires_shipment: requiresShipment,
-      usage_rights_end_date: usageRightsEndDate || undefined,
       campaign_id: campaignId || undefined,
       brief_pitch: briefPitch || undefined,
       brief_guidelines: briefGuidelines || undefined,
@@ -842,6 +829,21 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                 <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(feeInfo.fee_paise)}</b>
               </div>
             )}
+            {/* A 0% deal renders no feeInfo at all, so without this the fee row
+                simply disappears and the brand is left to infer why. Say it:
+                this creator's storefront brought them here and the first deal
+                between them is free. It also sets the expectation that the
+                next one is not - which a silently missing line does not. */}
+            {storefrontFirstDeal && finalPaise > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+                <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
+                  No platform fee &middot; first deal from {creator.full_name?.split(' ')[0] ?? 'this creator'}&rsquo;s storefront
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                  {formatRupees(finalPaise)}
+                </span>
+              </div>
+            )}
             {feeInfo && feeMode === 'deducted' && (
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
                 <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
@@ -1025,26 +1027,44 @@ export default function DealForm({ creator, products, addonRates = [], platformF
               })()}
             </div>
             <div>
-              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Usage rights</div>
-              <select className="dinput" value={usageRights} onChange={(e) => setUsageRights(e.target.value)} style={{ width: '100%' }}>
-                <option value="">Select...</option>
-                {USAGE_PRESETS.map((u) => <option key={u} value={u}>{u}{usageRightsEndDate ? ` \u00B7 to ${new Date(usageRightsEndDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</option>)}
-                <option value="Custom">Custom</option>
-              </select>
-              {usageRights === 'Custom' && (
-                <input className="dinput" value={customUsage} onChange={(e) => setCustomUsage(e.target.value)} placeholder="Describe usage rights..." style={{ marginTop: 8, width: '100%' }} />
-              )}
+              <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Go live date</div>
+              <input
+                type="date"
+                className="dinput"
+                value={goLiveDate}
+                onChange={(e) => setGoLiveDate(e.target.value)}
+                style={{ width: '100%' }}
+              />
+              {/* Delivery is not publication. Flagged rather than blocked: a
+                  brand may genuinely want the work in hand well before it runs,
+                  and refusing to send the offer over it would be wrong. */}
+              <div style={{ marginTop: 7, fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                {goLiveDate && derivedTimelineDate && goLiveDate < derivedTimelineDate
+                  ? 'This is before the delivery date above.'
+                  : 'When the content goes live. Leave blank if it is still being agreed.'}
+              </div>
             </div>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 9 }}>Payment terms</div>
-              <select className="dinput" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} style={{ width: '100%' }}>
-                <option value="">Select...</option>
-                {PAYMENT_PRESETS.map((p) => <option key={p} value={p}>{p}</option>)}
-                <option value="Custom">Custom</option>
-              </select>
-              {paymentTerms === 'Custom' && (
-                <input className="dinput" value={customPayment} onChange={(e) => setCustomPayment(e.target.value)} placeholder="Describe payment terms..." style={{ marginTop: 8, width: '100%' }} />
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select className="dinput" value={payDays} onChange={(e) => setPayDays(e.target.value)} style={{ flex: 1 }}>
+                  {PAYMENT_DAY_OPTIONS.map((d) => <option key={d} value={String(d)}>{d} days</option>)}
+                  <option value="Custom">Custom</option>
+                </select>
+                {payDays === 'Custom' && (
+                  <input
+                    className="dinput"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={payDaysCustom}
+                    onChange={(e) => setPayDaysCustom(e.target.value)}
+                    placeholder="Days"
+                    style={{ width: 110 }}
+                  />
+                )}
+                <span style={{ fontSize: 12.5, color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>after posting</span>
+              </div>
             </div>
             <div>
               <button

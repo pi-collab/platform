@@ -261,7 +261,7 @@ export async function notifyDealParty(
 
   // Apply the deal's fee snapshot. Defined once so "brand pays gross" is a
   // single rule rather than an assumption repeated at every call site.
-  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
   const brandPaysFor = (basePaise: number) =>
     calculateFee(basePaise ?? 0, deal.fee_percent ?? 0, feeMode).brand_pays_paise
 

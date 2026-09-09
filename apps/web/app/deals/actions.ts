@@ -10,6 +10,9 @@ import { collabCharge, boostingCharge } from '@/lib/addons'
 import { formatAmountForMessage } from '@/lib/money'
 import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
 import { ensurePairOrigin } from '@/lib/attribution'
+/* Type-only: the value import stays dynamic below, so deal-fee's `server-only`
+   guard is not pulled into this module's static graph. */
+import type { FeeBasis } from '@/lib/deal-fee'
 
 /**
  * Recompute each add-on from the rate that came with it, and store the result.
@@ -78,7 +81,13 @@ interface CreateDealInput {
   timeline_date?: string
   revision_limit: number
   price_per_extra_revision_paise?: number
+  /* LEGACY as of 0501: no longer sent by the offer builder. The parameter
+     stays so the campaign path and any caller that still supplies it keeps
+     working, and so existing deals are unaffected. New deals write NULL and
+     every read site already guards on the value being present. */
   usage_rights?: string
+  /** The agreed date the content goes live. See migration 0501. */
+  go_live_date?: string
   payment_terms?: string
   message?: string // stored later when send/notification is built
   items?: DeliverableItem[]
@@ -98,7 +107,7 @@ interface CreateDealInput {
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, go_live_date, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -120,22 +129,35 @@ export async function createDeal(input: CreateDealInput) {
     .eq('id', brand.brandId)
     .single()
 
-  // Resolve fee (in order): per-deal override → brand-creator pair rate → brand standard rate
+  /* Resolve fee: per-deal override → ops pair rate → storefront first deal →
+     brand standard. See lib/deal-fee.ts for why the exemption sits below the
+     ops override and what consumes it. Snapshotted onto the row below, never
+     re-resolved. */
+  const { createAdminClient } = await import('@/lib/supabase/admin')
+  const admin = createAdminClient()
+  const { resolveDealFee } = await import('@/lib/deal-fee')
+
   let resolvedFeePercent: number
+  /* Snapshotted next to the percent, because the percent alone cannot explain
+     itself. A creator shown a bare 0% reads it as a bug, and a screen that
+     guesses the reason from the number tells an ops-rated or overridden deal
+     it came from a storefront referral. See migration 0500. */
+  let feeBasis: FeeBasis
+  let storefrontFirstDeal = false
   if (fee_pct_override != null) {
     resolvedFeePercent = fee_pct_override
+    feeBasis = 'deal_override'
   } else {
-    // Check for a brand-creator pair rate (service-role needed — RLS denies all)
-    const { createAdminClient } = await import('@/lib/supabase/admin')
-    const admin = createAdminClient()
-    const { data: pairRate } = await admin
-      .from('brand_creator_rates')
-      .select('fee_pct')
-      .eq('brand_id', brand.brandId)
-      .eq('creator_id', creator_id)
-      .maybeSingle()
-
-    resolvedFeePercent = pairRate?.fee_pct ?? brandFee?.platform_fee_percent ?? 0
+    const resolved = await resolveDealFee(
+      admin,
+      brand.brandId,
+      creator_id,
+      brandFee?.platform_fee_percent ?? 0,
+      (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+    )
+    resolvedFeePercent = resolved.feePercent
+    feeBasis = resolved.basis
+    storefrontFirstDeal = resolved.storefrontFirstDeal
   }
 
   // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
@@ -153,10 +175,12 @@ export async function createDeal(input: CreateDealInput) {
       revision_limit,
       price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
       usage_rights: usage_rights?.trim() || null,
+      go_live_date: go_live_date || null,
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
       fee_percent: resolvedFeePercent,
-      fee_mode: brandFee?.fee_mode ?? 'on_top',
+      fee_mode: brandFee?.fee_mode ?? 'deducted',
+      fee_basis: feeBasis,
       fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,
@@ -222,7 +246,7 @@ export async function createDeal(input: CreateDealInput) {
   // Notify creator: new offer (in-app + WhatsApp).
   // The creator sees what they will RECEIVE, net of any deducted fee — the
   // same number as the accept-page, not the gross price.
-  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
   const { creator_receives_paise } = calculateFee(price_paise, resolvedFeePercent, feeMode)
 
   await notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {

@@ -7,9 +7,13 @@ import OpenDealChat from '@/components/OpenDealChat'
 import DeliverableItems from './DeliverableItems'
 import SubmitDeliverable from './SubmitDeliverable'
 import AcceptDecline from './AcceptDecline'
+import CreatorOfferMobile from '@/components/CreatorOfferMobile'
+import { unreadNotificationCount } from '@/lib/unread'
 import InvoiceCard from './InvoiceCard'
 import PostedCard from './PostedCard'
 import { calculateFee } from '@/lib/fee'
+import { paymentWhenLabel } from '@/lib/payment-terms'
+import { zeroFeeNote, feeBearerNote } from '@/lib/fee-copy'
 import { revisionTerms, revisionLabel } from '@/lib/revisions'
 import DealBreakdown, { hasAddons, type BreakdownItem } from '@/components/DealBreakdown'
 import NegotiationHistory from '@/components/NegotiationHistory'
@@ -73,13 +77,13 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 }) {
   // Pass the deal path so a logged-out creator arriving from a WhatsApp
   // notification returns to THIS deal after signing in, not the deals list.
-  await verifyCreator(`/creator/deals/${params.id}`)
+  const { profileId } = await verifyCreator(`/creator/deals/${params.id}`)
   const supabase = createClient()
 
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, status, timeline_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -137,11 +141,13 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const isCompleted = invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))
 
   // Fee calculation
-  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top'
+  const feeMode = (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
 
   // Deliverable rows in the shape the shared breakdown reads.
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
+  const dealFeeBasis = (deal as Record<string, unknown>).fee_basis as string | null ?? null
+  const goLiveDateStr = (deal as Record<string, unknown>).go_live_date as string | null ?? null
   const fee = deal.price_paise != null ? calculateFee(deal.price_paise, deal.fee_percent ?? 0, feeMode) : null
   const revTerms = revisionTerms(deal.revision_limit, deal.price_per_extra_revision_paise)
   const extra = revTerms.unlimited ? 0 : Math.max(0, (deal.revisions_used ?? 0) - revTerms.limit)
@@ -182,8 +188,71 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     })
   }
 
+  /* The offer state has its own phone screen. Every other state keeps the
+     existing page on mobile, because only this one was designed. */
+  const offerUnread = isNegotiating ? await unreadNotificationCount(supabase, profileId) : 0
+  const splitLines = (v: unknown): string[] =>
+    typeof v === 'string'
+      ? v.split('\n').map((l) => l.replace(/^\s*[-•\d.)]+\s*/, '').trim()).filter(Boolean)
+      : []
   return (
-    <main style={wrapper}>
+    <>
+    {isNegotiating && (
+      <CreatorOfferMobile
+        brandName={brand}
+        dealTitle={deal.title ?? 'Untitled deal'}
+        receivesPaise={creatorReceives}
+        totalPaise={deal.price_paise ?? null}
+        feePaise={fee?.fee_paise ?? null}
+        feePercent={deal.fee_percent ?? null}
+        feeBasis={(deal as Record<string, unknown>).fee_basis as string | null ?? null}
+        paymentTerms={deal.payment_terms ?? null}
+        /* "Payment in 30 days" from the agreed terms. Terms are free text, so
+           a day count is only stated when one is actually written there —
+           otherwise the terms line above already says it in full. */
+        /* Was: regex a day count out of the terms, else assume 30 days. That
+           told a creator on a 100% ADVANCE deal - paid up front - to expect the
+           money in 30 days. Structures with no day count are not 30-day
+           structures, and paymentWhenLabel returns null rather than inventing
+           one; the full terms line beside this already says it. */
+        paymentIn={paymentWhenLabel(deal.payment_terms)}
+        deliverBy={deal.timeline_date
+          ? new Date(deal.timeline_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : null}
+        waitingLabel={(() => {
+          const days = Math.floor((Date.now() - new Date(deal.created_at).getTime()) / 86_400_000)
+          return days <= 0 ? 'Received today' : days === 1 ? 'Received yesterday' : `Waiting ${days} days`
+        })()}
+        items={(items ?? []).map((i) => ({
+          id: i.id,
+          label: i.label,
+          pricePaise: i.price_paise ?? 0,
+          detail: null,
+        }))}
+        briefPitch={pitch}
+        guidelines={splitLines(guidelines)}
+        avoid={splitLines(avoid)}
+        attachments={briefAttachments.map((a) => ({
+          name: a.name,
+          // Signed, and already fetched above for the desktop list.
+          url: attachmentUrls[a.storage_path] ?? null,
+        }))}
+        usageRights={deal.usage_rights ?? null}
+        goLiveDate={goLiveDateStr ? formatDate(goLiveDateStr) : null}
+        revisionLimit={deal.revision_limit ?? null}
+        extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}
+        requiresShipment={Boolean(deal.requires_shipment)}
+        unreadNotifications={offerUnread}
+        decision={
+          <AcceptDecline
+            stacked
+            dealId={deal.id}
+            items={(items ?? []).map((i) => ({ id: i.id, label: i.label, price_paise: i.price_paise ?? 0 }))}
+          />
+        }
+      />
+    )}
+    <main className={isNegotiating ? 'offer-desktop' : undefined} style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
       <style>{`
         .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
@@ -462,6 +531,15 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                       <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
                     </div>
                   )}
+                  {/* A zero fee renders neither row above, so without this the
+                      line simply disappears and the creator is left to guess.
+                      Reason comes from fee_basis, never from the amount. */}
+                  {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator') && (
+                    <div style={termRow}>
+                      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Platform fee</span>
+                      <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator')}</b>
+                    </div>
+                  )}
                   {deal.price_paise != null && (
                     <div style={{ ...termRow, borderBottom: 'none' }}>
                       <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Deal total</span>
@@ -472,6 +550,13 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
               )}
 
               {/* Usage rights + extra terms */}
+              {goLiveDateStr && (
+                <div style={termRow}>
+                  <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Go live</span>
+                  <b style={{ fontSize: 14, fontWeight: 700 }}>{formatDate(goLiveDateStr)}</b>
+                </div>
+              )}
+              {/* Legacy: only deals agreed before 0501 carry usage rights. */}
               {(deal.usage_rights || deal.usage_rights_end_date) && (
                 <div style={{ paddingTop: 8 }}>
                   {deal.usage_rights && (
@@ -503,6 +588,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
             <div className="surface" style={{ padding: '22px 24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {deal.deliverables && <TermRow label="Deliverables" value={deal.deliverables} />}
+                {goLiveDateStr && <TermRow label="Go live" value={formatDate(goLiveDateStr)} />}
+                {/* Legacy: only deals agreed before 0501 carry usage rights. */}
                 {deal.usage_rights && <TermRow label="Usage rights" value={deal.usage_rights} />}
                 {deal.usage_rights_end_date && <TermRow label="Usage rights expire" value={formatDate(deal.usage_rights_end_date + 'T00:00:00')} />}
                 {deal.rights_confirmed_at && <TermRow label="Rights confirmed" value={formatDateLong(deal.rights_confirmed_at)} />}
@@ -616,8 +703,18 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                           )}
                           {fee && fee.fee_paise > 0 && (
                             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%), paid by the brand</span>
+                              {/* Was hardcoded ", paid by the brand" regardless of
+                                  fee_mode. Since 0499 made 'deducted' the rule, that
+                                  told every creator the brand was paying a fee that
+                                  actually comes out of their own side. */}
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%){feeBearerNote(feeMode, 'creator')}</span>
                               <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
+                            </div>
+                          )}
+                          {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator') && (
+                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
+                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
+                              <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator')}</b>
                             </div>
                           )}
                           {deal.usage_rights && (
@@ -1074,6 +1171,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
       />
 
     </main>
+    </>
   )
 }
 

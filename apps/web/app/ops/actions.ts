@@ -483,7 +483,7 @@ async function releaseHeldDeals(brandId: string, actor: string): Promise<number>
     const { creator_receives_paise } = calculateFee(
       deal.price_paise ?? 0,
       deal.fee_percent ?? 0,
-      (deal.fee_mode as 'on_top' | 'deducted') ?? 'on_top',
+      (deal.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
     )
 
     await notifyDealParty(deal.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {
