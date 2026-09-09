@@ -1284,6 +1284,12 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   color: var(--ink-faint);
   margin-top: 6px;
 }
+/* Waiting on the brand. Warm rather than neutral: nothing is wrong, the
+   creator has done their part and the ball is not in their court. */
+.offer-m__counterpill--sent {
+  color: #8A6A1F;
+  background: rgba(216,154,46,.14);
+}
 
 .onboard-dial {
   flex: 0 0 auto;

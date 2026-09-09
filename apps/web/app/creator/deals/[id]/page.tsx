@@ -183,8 +183,25 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
   const lastNegotiationAt = negotiationEvents.at(-1)?.created_at ?? null
 
+  /* WHO MOVED LAST decides which of the two negotiating screens the creator
+     sees, and it has to come from the events. deals.last_offer_by looks like
+     the field for this and is not: createDeal writes 'brand' and neither
+     counter action ever updates it, so on GD-1068 - a deal the creator
+     countered - it still reads 'brand'. Trusting it would show a creator the
+     respond-now screen for their own ask.
+
+     Compare the newest counter from each side instead. That is a fact neither
+     action can forget to write, because writing the event IS the counter. */
+  const lastCreatorCounterAt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.counter_offer').at(-1)?.created_at ?? null
+  const lastBrandCounterAt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.brand_counter').at(-1)?.created_at ?? null
+
   const counterState = isNegotiating && negotiationEvents.length > 0
     ? {
+        lastBy: (lastBrandCounterAt ?? '') > (lastCreatorCounterAt ?? '')
+          ? ('brand' as const)
+          : ('creator' as const),
         theirPaise: brandCounterDetail?.counter_total_paise ?? deal.price_paise ?? null,
         youAskedPaise: creatorCounterDetail?.counter_total_paise ?? null,
         at: lastNegotiationAt ? formatDate(lastNegotiationAt) : null,

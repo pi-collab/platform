@@ -3957,13 +3957,43 @@ invoice due the day it was raised.
 
 ---
 
-## 33. Negotiating state on the mobile offer screen
+## 33. Negotiating: TWO states, creator mobile only
+
+Desktop is unchanged and correct as it is. This is mobile, creator side only.
+
+### Which state — read the events, never last_offer_by
+- [ ] `deals.last_offer_by` looks like the field for this and is NOT: createDeal
+      writes 'brand' and neither counter action updates it. On GD-1068, a deal
+      the CREATOR countered, it still reads 'brand'. Trusting it shows a creator
+      the respond-now screen for their own ask
+- [ ] The state comes from comparing the newest `deal.brand_counter` against
+      the newest `deal.counter_offer`. Writing that event IS the counter, so it
+      cannot be forgotten
+
+### A. Brand countered — the creator's move
+- [ ] Headline is **Their counter**, showing the brand's number
+- [ ] The **"You receive" block is gone.** It was derived from the old price
+      and read as a competing offer next to the number actually on the table
+- [ ] "You asked ₹X" remains as the quiet line, when they had countered before
+- [ ] Accept / Counter / Decline all still shown
+
+### B. Creator countered — waiting on the brand
+- [ ] Headline is **Your ask**, showing the creator's number
+- [ ] A **"Sent · waiting for <brand>"** pill states where it stands
+- [ ] "Their offer ₹X" shows underneath as the quiet line
+- [ ] **Accept / Counter / Decline are gone.** There is nothing here to accept:
+      a creator cannot agree with their own ask, and leaving Accept up would
+      offer them the brand's superseded price
+- [ ] GD-1068 (`b733b40b…`) is this state — one creator counter of ₹55,555
+      against a ₹50,000 offer, nothing back yet
+
+### Unchanged in both
+
 
 Both states are `status = 'negotiating'`. What separates them is whether anyone
 has countered: one `deal.counter_offer` or `deal.brand_counter` event and the
 screen becomes a negotiation.
 
-### Only the top changes
 - [ ] Stage reads **Negotiating**, not "Offer received"
 - [ ] The status line reads **"Countered <date>"** instead of the waiting label
 - [ ] Everything below the counter block is byte-for-byte the offer-received

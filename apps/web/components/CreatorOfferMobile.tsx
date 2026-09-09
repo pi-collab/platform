@@ -81,7 +81,13 @@ export default function CreatorOfferMobile({
   usageRights: string | null
   /* Set once anyone has countered. Both states are status 'negotiating'; this
      is what tells them apart. Null on a fresh offer. */
-  counter: { theirPaise: number | null; youAskedPaise: number | null; at: string | null } | null
+  counter: {
+    /** Who moved last. Decides which of the two negotiating screens this is. */
+    lastBy: 'brand' | 'creator'
+    theirPaise: number | null
+    youAskedPaise: number | null
+    at: string | null
+  } | null
   revisionLimit: number | null
   extraRevisionPaise: number | null
   requiresShipment: boolean
@@ -137,8 +143,31 @@ export default function CreatorOfferMobile({
 
         {/* The money and the decision — the one job of this screen. */}
         <section className="offer-m__card">
-          <div className="offer-m__label">You receive</div>
-          <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '—'}</div>
+          {/* THE HEADLINE IS WHATEVER THE CREATOR HAS TO ACT ON.
+              No counter: what they take home, which is the offer.
+              Brand countered: THEIR number, because that is the thing on the
+              table to accept - "You receive" alongside it was a figure derived
+              from the old price and read as a competing offer.
+              Creator countered: their own ask, because nothing is theirs to
+              decide until the brand answers. */}
+          {!counter && (
+            <>
+              <div className="offer-m__label">You receive</div>
+              <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+            </>
+          )}
+          {counter?.lastBy === 'brand' && (
+            <>
+              <div className="offer-m__label">Their counter</div>
+              <div className="offer-m__amount">{counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}</div>
+            </>
+          )}
+          {counter?.lastBy === 'creator' && (
+            <>
+              <div className="offer-m__label">Your ask</div>
+              <div className="offer-m__amount">{counter.youAskedPaise !== null ? inr(counter.youAskedPaise) : '\u2014'}</div>
+            </>
+          )}
           {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
 
           {/* WHAT IS ACTUALLY ON THE TABLE. Only the brand's number is a term
@@ -148,20 +177,35 @@ export default function CreatorOfferMobile({
               Everything below this block stays exactly as the offer-received
               screen draws it — same layout, same order — so moving from one
               state to the other does not feel like a different page. */}
-          {counter && (
+          {counter?.lastBy === 'brand' && counter.youAskedPaise !== null && (
             <div className="offer-m__counter">
               <div className="offer-m__counterhead">
                 <div>
-                  <span className="offer-m__label">Their counter</span>
-                  <div className="offer-m__counterval">
+                  <span className="offer-m__label">On the table</span>
+                  <div className="offer-m__counterasked">You asked {inr(counter.youAskedPaise)}</div>
+                </div>
+                <span className="offer-m__counterpill">Their move answered</span>
+              </div>
+            </div>
+          )}
+
+          {/* WAITING ON THE BRAND. The controls are gone because there is
+              nothing here for the creator to accept - their own ask is not a
+              term they can agree with themselves. Leaving Accept on screen
+              would offer them the brand's superseded price. */}
+          {counter?.lastBy === 'creator' && (
+            <div className="offer-m__counter">
+              <div className="offer-m__counterhead">
+                <div>
+                  <span className="offer-m__label">Their offer</span>
+                  <div className="offer-m__counterasked">
                     {counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}
                   </div>
                 </div>
-                <span className="offer-m__counterpill">On the table</span>
+                <span className="offer-m__counterpill offer-m__counterpill--sent">
+                  Sent &middot; waiting for {brandName}
+                </span>
               </div>
-              {counter.youAskedPaise !== null && (
-                <div className="offer-m__counterasked">You asked {inr(counter.youAskedPaise)}</div>
-              )}
             </div>
           )}
 
@@ -219,7 +263,7 @@ export default function CreatorOfferMobile({
             </div>
           ) : null}
 
-          <div className="offer-m__decision">{decision}</div>
+          {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
         </section>
 
         {/* Brief */}
