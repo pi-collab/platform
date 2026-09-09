@@ -4072,3 +4072,41 @@ chat message posted beside the event — which is why counters looked like chat.
       notification, once this is verified
 - [ ] Staging has ZERO `deal.brand_counter` events — not because brands chose
       not to counter, but because they could not
+
+---
+
+## 36. Agreed state, creator mobile
+
+Built from "Creator Deal Detail - Agreed Mobile". Shares CreatorOfferMobile
+rather than getting its own file: per the exports everything from "Brief &
+attachments" down is identical on both screens, and two copies of that markup
+would drift the moment either is touched.
+
+### Header and stage
+- [ ] Title reads **"Deal with <brand>"**, not "Offer from"
+- [ ] Stage reads **Agreed**, next step **"Next: submit work"**
+- [ ] The status line reads **"Agreed on <date>"**
+- [ ] The progress bar lights two segments, not one
+
+### The card
+- [ ] **You receive** is the headline, with the payment terms under it
+- [ ] Deliverables list as on the offer screen
+- [ ] Settled numbers: Deal total, Platform fee, Usage rights (legacy deals
+      only), Revisions "N rounds included", Rights confirmed with the time
+- [ ] **No Accept / Counter / Decline.** Terms are agreed; what the screen asks
+      for now is the work
+
+### Submit deliverables
+- [ ] The existing `DeliverableItems` is passed through WHOLE — it owns
+      uploads, versions, per-item status and the review handoff. None of that
+      is reimplemented for the phone
+- [ ] Per-item rows, their statuses and the submit action all work on mobile
+- [ ] A deal with no structured items renders no submit block rather than an
+      empty one
+
+### Isolation
+- [ ] `.offer-m` is `display:none` outside the mobile media query, so desktop
+      is untouched by any of this
+- [ ] Every other status (delivered, revision, approved, paid, complete) still
+      falls through to the existing page on mobile — only offer, negotiating
+      and agreed have designed screens

@@ -1284,6 +1284,18 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   color: var(--ink-faint);
   margin-top: 6px;
 }
+/* The agreed card's settled numbers: same list styling as Full terms, with a
+   rule above it so it reads as a summary of the deliverables listed rather
+   than another section. */
+.offer-m__agreedterms {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+}
+/* DeliverableItems brings its own layout; the card supplies the surface and
+   the padding it expects, nothing more. */
+.offer-m__submit { padding: 18px; }
+
 /* Waiting on the brand. Warm rather than neutral: nothing is wrong, the
    creator has done their part and the ball is not in their court. */
 .offer-m__counterpill--sent {

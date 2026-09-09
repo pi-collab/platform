@@ -58,6 +58,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode,
 }: {
   brandName: string
   dealTitle: string
@@ -94,6 +95,16 @@ export default function CreatorOfferMobile({
   unreadNotifications: number
   /** The existing AcceptDecline, passed through rather than rebuilt. */
   decision: React.ReactNode
+  /* AGREED shares this component rather than getting its own file. Per the
+     exports, everything from "Brief & attachments" down is identical on both
+     screens - two copies of that markup would drift the moment either is
+     touched. Only the header, the stage line and the card body differ. */
+  stage?: 'offer' | 'agreed'
+  agreedAt?: string | null
+  rightsConfirmedAt?: string | null
+  /** DeliverableItems, passed through: it owns uploads, versions and per-item
+      status, none of which should exist twice. */
+  submitNode?: React.ReactNode
 }) {
   return (
     <div className="offer-m">
@@ -104,7 +115,8 @@ export default function CreatorOfferMobile({
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
           <h1 className="offer-m__title">
-            Offer from <span className="offer-m__brand">{brandName}</span>
+            {stage === 'agreed' ? 'Deal with ' : 'Offer from '}
+            <span className="offer-m__brand">{brandName}</span>
           </h1>
           <div className="offer-m__headactions">
             <Link href="/creator/inbox" className="offer-m__icon" aria-label="Message brand">
@@ -125,7 +137,11 @@ export default function CreatorOfferMobile({
           <span className="offer-m__statuslabel">
             <span className="offer-m__dot" aria-hidden="true" />{dealTitle}
           </span>
-          <span className="offer-m__waiting">{counter?.at ? `Countered ${counter.at}` : waitingLabel}</span>
+          <span className="offer-m__waiting">
+            {stage === 'agreed'
+              ? (agreedAt ? `Agreed on ${agreedAt}` : 'Agreed')
+              : counter?.at ? `Countered ${counter.at}` : waitingLabel}
+          </span>
         </div>
       </div>
 
@@ -133,11 +149,18 @@ export default function CreatorOfferMobile({
         {/* Where this sits in the pipeline. */}
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
-            <span className="offer-m__stage">{counter ? 'Negotiating' : 'Offer received'}</span>
-            <span className="offer-m__next">Next: agree terms</span>
+            <span className="offer-m__stage">
+              {stage === 'agreed' ? 'Agreed' : counter ? 'Negotiating' : 'Offer received'}
+            </span>
+            <span className="offer-m__next">
+              {stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
+            </span>
           </div>
           <div className="offer-m__progress" aria-hidden="true">
-            <span className="is-on" />{Array.from({ length: 5 }, (_, i) => <span key={i} />)}
+            {/* One lit segment per stage reached, so the bar moves forward. */}
+            {Array.from({ length: 6 }, (_, i) => (
+              <span key={i} className={i <= (stage === 'agreed' ? 1 : 0) ? 'is-on' : undefined} />
+            ))}
           </div>
         </div>
 
@@ -150,19 +173,19 @@ export default function CreatorOfferMobile({
               from the old price and read as a competing offer.
               Creator countered: their own ask, because nothing is theirs to
               decide until the brand answers. */}
-          {!counter && (
+          {(stage === 'agreed' || !counter) && (
             <>
               <div className="offer-m__label">You receive</div>
               <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
             </>
           )}
-          {counter?.lastBy === 'brand' && (
+          {stage !== 'agreed' && counter?.lastBy === 'brand' && (
             <>
               <div className="offer-m__label">Their counter</div>
               <div className="offer-m__amount">{counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}</div>
             </>
           )}
-          {counter?.lastBy === 'creator' && (
+          {stage !== 'agreed' && counter?.lastBy === 'creator' && (
             <>
               <div className="offer-m__label">Your ask</div>
               <div className="offer-m__amount">{counter.youAskedPaise !== null ? inr(counter.youAskedPaise) : '\u2014'}</div>
@@ -243,6 +266,23 @@ export default function CreatorOfferMobile({
             </div>
           )}
 
+          {/* AGREED: the settled numbers, as the export lists them. No decision
+              controls - the terms are agreed, and what the screen asks for now
+              is the work. */}
+          {stage === 'agreed' && (
+            <dl className="offer-m__terms-list offer-m__agreedterms">
+              {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
+              {feePaise !== null && feePaise > 0 && (
+                <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
+              )}
+              {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
+              {revisionLimit !== null && (
+                <><dt>Revisions</dt><dd>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</dd></>
+              )}
+              {rightsConfirmedAt && <><dt>Rights confirmed</dt><dd>{rightsConfirmedAt}</dd></>}
+            </dl>
+          )}
+
           {/* A zero fee is explained, not just shown. Otherwise a creator
               reads it as a bug, or expects it on the next deal too.
 
@@ -263,8 +303,19 @@ export default function CreatorOfferMobile({
             </div>
           ) : null}
 
-          {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
+          {stage !== 'agreed' && counter?.lastBy !== 'creator' && (
+            <div className="offer-m__decision">{decision}</div>
+          )}
         </section>
+
+        {/* SUBMIT DELIVERABLES. DeliverableItems is passed through whole: it
+            owns uploads, versions, per-item status and the review handoff, and
+            a phone-shaped copy of that logic is the last thing this needs. */}
+        {stage === 'agreed' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            {submitNode}
+          </section>
+        )}
 
         {/* Brief */}
         {(briefPitch || attachments.length > 0 || requiresShipment) && (

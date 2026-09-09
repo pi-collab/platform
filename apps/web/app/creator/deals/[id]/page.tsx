@@ -229,17 +229,27 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     })
   }
 
-  /* The offer state has its own phone screen. Every other state keeps the
-     existing page on mobile, because only this one was designed. */
-  const offerUnread = isNegotiating ? await unreadNotificationCount(supabase, profileId) : 0
+  /* The offer and AGREED states have phone screens. Every other state keeps
+     the existing page on mobile, because only these were designed. */
+  const isAgreedMobile = deal.status === 'agreed'
+  const showMobileScreen = isNegotiating || isAgreedMobile
+  const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
     typeof v === 'string'
       ? v.split('\n').map((l) => l.replace(/^\s*[-•\d.)]+\s*/, '').trim()).filter(Boolean)
       : []
   return (
     <>
-    {isNegotiating && (
+    {showMobileScreen && (
       <CreatorOfferMobile
+        stage={isAgreedMobile ? 'agreed' : 'offer'}
+        agreedAt={deal.agreed_at ? formatDate(deal.agreed_at) : null}
+        rightsConfirmedAt={deal.rights_confirmed_at
+          ? `${formatDate(deal.rights_confirmed_at)}, ${new Date(deal.rights_confirmed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+          : null}
+        submitNode={isAgreedMobile && items && items.length > 0 ? (
+          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
+        ) : null}
         brandName={brand}
         dealTitle={deal.title ?? 'Untitled deal'}
         receivesPaise={creatorReceives}
