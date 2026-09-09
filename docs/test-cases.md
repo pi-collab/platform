@@ -4077,36 +4077,45 @@ chat message posted beside the event — which is why counters looked like chat.
 
 ## 36. Agreed state, creator mobile
 
-Built from "Creator Deal Detail - Agreed Mobile". Shares CreatorOfferMobile
-rather than getting its own file: per the exports everything from "Brief &
-attachments" down is identical on both screens, and two copies of that markup
-would drift the moment either is touched.
+Built from "Creator Deal Detail - Agreed Mobile", checked against the export's
+DOM and not just its text. The two screens differ STRUCTURALLY, not only in
+wording, and the first attempt missed all of it.
 
 ### Header and stage
 - [ ] Title reads **"Deal with <brand>"**, not "Offer from"
-- [ ] Stage reads **Agreed**, next step **"Next: submit work"**
-- [ ] The status line reads **"Agreed on <date>"**
-- [ ] The progress bar lights two segments, not one
+- [ ] The header's right-hand line is **"Deliver by <date>"**. The agreed date
+      belongs in the card summary, not up here
+- [ ] Stage **Agreed**, next step **"Next: submit work"**, two lit segments
 
-### The card
-- [ ] **You receive** is the headline, with the payment terms under it
-- [ ] Deliverables list as on the offer screen
-- [ ] Settled numbers: Deal total, Platform fee, Usage rights (legacy deals
-      only), Revisions "N rounds included", Rights confirmed with the time
-- [ ] **No Accept / Counter / Decline.** Terms are agreed; what the screen asks
-      for now is the work
+### The money card is COLLAPSED, and folds
+- [ ] It is a `<details>` that starts **closed**. The export has no `open`
+      attribute here, unlike the offer screen where the money IS the decision
+- [ ] Its summary shows three things: **"AGREED ON <date>"**, **You receive**
+      with the amount, and the payment terms
+- [ ] Opening it reveals: each deliverable as a plain row with its price, then
+      Deal total, Platform fee, Usage rights (legacy only), Revisions
+      "N rounds included", and Rights confirmed with the time
+- [ ] The deliverables here are **flat rows, not the expandable cards** the
+      offer screen uses. Nothing is left to weigh up, so nothing opens
+- [ ] The chevron rotates when open
+- [ ] There is **no Deliver by / Payment in split row** on this screen
+- [ ] **No Accept / Counter / Decline**, and no "Decline this offer" footer
 
-### Submit deliverables
-- [ ] The existing `DeliverableItems` is passed through WHOLE — it owns
-      uploads, versions, per-item status and the review handoff. None of that
-      is reimplemented for the phone
-- [ ] Per-item rows, their statuses and the submit action all work on mobile
-- [ ] A deal with no structured items renders no submit block rather than an
-      empty one
+### Submit deliverables - its own always-open surface
+- [ ] A separate surface, NOT an accordion, headed **"Submit deliverables"**
+      with the count **"0 of 2"** on the right
+- [ ] The count is submitted items over total items
+- [ ] The existing `DeliverableItems` is passed through WHOLE - uploads,
+      versions, per-item status and the review handoff are not reimplemented
+- [ ] A deal with no structured items renders no submit block
+
+### Known deviations on the OFFER screen (pre-existing, not changed here)
+- [ ] The export collapses "Brief & attachments" by default; ours opens it
+- [ ] The export has ONE "Full terms & guidelines" fold; ours splits Full terms
+      and Creative guidelines into two
 
 ### Isolation
-- [ ] `.offer-m` is `display:none` outside the mobile media query, so desktop
-      is untouched by any of this
-- [ ] Every other status (delivered, revision, approved, paid, complete) still
-      falls through to the existing page on mobile — only offer, negotiating
-      and agreed have designed screens
+- [ ] `.offer-m` is `display:none` outside the mobile query, so desktop is
+      untouched
+- [ ] delivered / revision / approved / paid still fall through to the existing
+      page on mobile
