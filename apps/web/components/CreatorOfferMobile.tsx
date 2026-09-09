@@ -56,7 +56,7 @@ function shortDate(iso: string | null): string | null {
 export default function CreatorOfferMobile({
   brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
-  avoid, attachments, usageRights, revisionLimit, extraRevisionPaise,
+  avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
 }: {
   brandName: string
@@ -79,6 +79,9 @@ export default function CreatorOfferMobile({
   avoid: string[]
   attachments: OfferAttachment[]
   usageRights: string | null
+  /* Set once anyone has countered. Both states are status 'negotiating'; this
+     is what tells them apart. Null on a fresh offer. */
+  counter: { theirPaise: number | null; youAskedPaise: number | null; at: string | null } | null
   revisionLimit: number | null
   extraRevisionPaise: number | null
   requiresShipment: boolean
@@ -116,7 +119,7 @@ export default function CreatorOfferMobile({
           <span className="offer-m__statuslabel">
             <span className="offer-m__dot" aria-hidden="true" />{dealTitle}
           </span>
-          <span className="offer-m__waiting">{waitingLabel}</span>
+          <span className="offer-m__waiting">{counter?.at ? `Countered ${counter.at}` : waitingLabel}</span>
         </div>
       </div>
 
@@ -124,7 +127,7 @@ export default function CreatorOfferMobile({
         {/* Where this sits in the pipeline. */}
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
-            <span className="offer-m__stage">Offer received</span>
+            <span className="offer-m__stage">{counter ? 'Negotiating' : 'Offer received'}</span>
             <span className="offer-m__next">Next: agree terms</span>
           </div>
           <div className="offer-m__progress" aria-hidden="true">
@@ -137,6 +140,30 @@ export default function CreatorOfferMobile({
           <div className="offer-m__label">You receive</div>
           <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '—'}</div>
           {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
+
+          {/* WHAT IS ACTUALLY ON THE TABLE. Only the brand's number is a term
+              the creator can accept; their own ask is not binding until the
+              brand takes it. Showing both, labelled, is the difference between
+              a negotiation you can read and two numbers you have to remember.
+              Everything below this block stays exactly as the offer-received
+              screen draws it — same layout, same order — so moving from one
+              state to the other does not feel like a different page. */}
+          {counter && (
+            <div className="offer-m__counter">
+              <div className="offer-m__counterhead">
+                <div>
+                  <span className="offer-m__label">Their counter</span>
+                  <div className="offer-m__counterval">
+                    {counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}
+                  </div>
+                </div>
+                <span className="offer-m__counterpill">On the table</span>
+              </div>
+              {counter.youAskedPaise !== null && (
+                <div className="offer-m__counterasked">You asked {inr(counter.youAskedPaise)}</div>
+              )}
+            </div>
+          )}
 
           {(deliverBy || paymentIn) && (
             <div className="offer-m__split">

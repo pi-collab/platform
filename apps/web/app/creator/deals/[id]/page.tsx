@@ -167,6 +167,30 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const brandCounterDetail = brandCounterEvent?.detail as { counter_items: { id: string; label: string; price_paise: number }[]; counter_total_paise: number; note?: string | null } | undefined
   const hasBrandCounter = isNegotiating && !!brandCounterDetail
 
+  /* NEGOTIATING vs OFFER RECEIVED. Both are status 'negotiating' — what
+     separates them is whether anyone has countered yet. One counter event and
+     the screen is a negotiation, so it says so and shows the two numbers on
+     the table instead of only the brand's.
+
+     "Their counter" is the brand's CURRENT number: their own counter if they
+     have made one, otherwise the price still standing on the deal. A creator's
+     counter deliberately does not move deal.price_paise — the brand accepting
+     it is what does that (deals/[id]/deal-actions.ts) — so reading the price
+     here would show the creator their own ask as the brand's offer. */
+  const creatorCounterDetail = (events ?? [])
+    .filter((e) => e.event_type === 'deal.counter_offer')
+    .at(-1)?.detail as { counter_total_paise?: number } | undefined
+
+  const lastNegotiationAt = negotiationEvents.at(-1)?.created_at ?? null
+
+  const counterState = isNegotiating && negotiationEvents.length > 0
+    ? {
+        theirPaise: brandCounterDetail?.counter_total_paise ?? deal.price_paise ?? null,
+        youAskedPaise: creatorCounterDetail?.counter_total_paise ?? null,
+        at: lastNegotiationAt ? formatDate(lastNegotiationAt) : null,
+      }
+    : null
+
   // Brief data
   const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
   const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
@@ -237,6 +261,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           // Signed, and already fetched above for the desktop list.
           url: attachmentUrls[a.storage_path] ?? null,
         }))}
+        counter={counterState}
         usageRights={deal.usage_rights ?? null}
         revisionLimit={deal.revision_limit ?? null}
         extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}

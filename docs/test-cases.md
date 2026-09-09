@@ -3954,3 +3954,35 @@ invoice due the day it was raised.
       be held to
 - [ ] "Platform: Instagram, in-feed" in full terms — per-item platform exists
       in the data but is not surfaced in this list. Still open
+
+---
+
+## 33. Negotiating state on the mobile offer screen
+
+Both states are `status = 'negotiating'`. What separates them is whether anyone
+has countered: one `deal.counter_offer` or `deal.brand_counter` event and the
+screen becomes a negotiation.
+
+### Only the top changes
+- [ ] Stage reads **Negotiating**, not "Offer received"
+- [ ] The status line reads **"Countered <date>"** instead of the waiting label
+- [ ] Everything below the counter block is byte-for-byte the offer-received
+      layout — same order, same rows — so moving between the two states does
+      not read as a different page
+
+### The two numbers on the table
+- [ ] **Their counter** shows the BRAND's current number: their own counter if
+      they have made one, otherwise the price still standing on the deal
+- [ ] It must NOT show the creator's own ask. A creator's counter deliberately
+      does not move `deal.price_paise` — the brand accepting it is what does
+      (`deals/[id]/deal-actions.ts:46`) — so reading the price after a brand
+      counter is the only way to get the brand's real position
+- [ ] **"On the table"** is a pill to the right of the amount, per the export
+- [ ] **"You asked ₹X"** sits under both as a quiet line, and is omitted when
+      the creator has not countered. Quiet on purpose: their ask is not a term
+      anyone can accept yet, and equal weight would read as two live offers
+- [ ] A fresh offer with no counter shows none of this block
+
+### Multiple rounds
+- [ ] After several rounds, "Their counter" and "You asked" both show the
+      LATEST of each, and the date is the most recent negotiation event
