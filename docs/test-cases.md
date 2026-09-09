@@ -3918,3 +3918,39 @@ invoice due the day it was raised.
       creator to wait a month regardless of what was agreed. Now
       `paymentWhenLabel()`, which returns null rather than a made-up number
 - [ ] A legacy 100% advance deal reads "Upfront", not "30 days"
+
+---
+
+## 32. Offer received (mobile): payment in, and terms are mandatory
+
+### The screen
+- [ ] Full terms shows **Payment in** where Go live used to be. A creator
+      judging an offer needs the payment window; the publish date is already
+      the thing they are agreeing to deliver
+- [ ] The raw terms string no longer appears TWICE in full terms. It renders
+      under the amount (as the export draws it) and as "Payment in"
+- [ ] Go live is unaffected on every other surface - it was only removed here
+
+### Payment terms are now required
+- [ ] The offer builder blocks a send when Custom is chosen and the day box is
+      empty or out of 1-365. The presets always resolve, so that is the only
+      way to reach it
+- [ ] `createDeal` rejects a missing payment_terms SERVER-side. A server action
+      is directly callable, so the form check is not the boundary
+- [ ] **Campaign bulk-send still works.** It calls createDeal and passed no
+      payment terms at all, so requiring them would have failed every campaign
+      send. It now passes the platform standard explicitly, stated at the call
+      site rather than defaulted inside createDeal, so the missing campaign
+      field stays visible as a gap
+- [ ] Campaign deals carry "30 days after posting" instead of the NULL they
+      used to carry silently
+
+### Known differences from the export (deliberate, no field exists)
+- [ ] "Respond by 19 Jul" — nothing expires an offer; the screen says how long
+      it has been waiting instead
+- [ ] "Live window 22-28 Jul" — no live-window range; this slot is Payment in
+- [ ] "Exclusivity: Beauty, 14 days" — no exclusivity field. Omitted rather
+      than filled with a plausible default, since it is a term a creator would
+      be held to
+- [ ] "Platform: Instagram, in-feed" in full terms — per-item platform exists
+      in the data but is not surfaced in this list. Still open

@@ -238,7 +238,6 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           url: attachmentUrls[a.storage_path] ?? null,
         }))}
         usageRights={deal.usage_rights ?? null}
-        goLiveDate={goLiveDateStr ? formatDate(goLiveDateStr) : null}
         revisionLimit={deal.revision_limit ?? null}
         extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}
         requiresShipment={Boolean(deal.requires_shipment)}

@@ -56,7 +56,7 @@ function shortDate(iso: string | null): string | null {
 export default function CreatorOfferMobile({
   brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
-  avoid, attachments, usageRights, goLiveDate, revisionLimit, extraRevisionPaise,
+  avoid, attachments, usageRights, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
 }: {
   brandName: string
@@ -79,8 +79,6 @@ export default function CreatorOfferMobile({
   avoid: string[]
   attachments: OfferAttachment[]
   usageRights: string | null
-  /** Agreed go-live date, already formatted. Null when not agreed. */
-  goLiveDate: string | null
   revisionLimit: number | null
   extraRevisionPaise: number | null
   requiresShipment: boolean
@@ -243,7 +241,11 @@ export default function CreatorOfferMobile({
               <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
             )}
             {receivesPaise !== null && <><dt>You receive</dt><dd>{inr(receivesPaise)}</dd></>}
-            {goLiveDate && <><dt>Go live</dt><dd>{goLiveDate}</dd></>}
+            {/* WHEN THEY GET PAID, not when the post runs. This row was the
+                go-live date; a creator reading an offer needs the payment
+                window more than the publish date, and the publish date is
+                already the thing they are agreeing to deliver. */}
+            {paymentIn && <><dt>Payment in</dt><dd>{paymentIn}</dd></>}
             {/* Legacy: only on deals agreed before 0501. */}
             {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
             {revisionLimit !== null && (
@@ -255,7 +257,7 @@ export default function CreatorOfferMobile({
                 </dd>
               </>
             )}
-            {paymentTerms && <><dt>Payment</dt><dd>{paymentTerms}</dd></>}
+
           </dl>
         </details>
 

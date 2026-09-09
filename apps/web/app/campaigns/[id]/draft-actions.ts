@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { createDeal } from '@/app/deals/actions'
+import { netTerms } from '@/lib/payment-terms'
 
 export interface DraftPlacement {
   label: string
@@ -382,6 +383,14 @@ export async function bulkSendCampaignDrafts(
       campaign_id: campaignId,
       message: message?.trim() || undefined,
       internal_note: (draft as Record<string, unknown>).note as string | undefined,
+      /* Campaigns have no payment-terms field yet, and createDeal now REQUIRES
+         one - a creator should never be sent an offer that does not say when
+         they are paid. Until the campaign builder collects it, every campaign
+         deal carries the platform standard explicitly, rather than the null it
+         used to carry silently. Stated here, not defaulted inside createDeal,
+         so this stays visible as a gap to close and not a rule that quietly
+         applies everywhere. */
+      payment_terms: netTerms(30),
     })
 
     if (dealResult.error || !dealResult.dealId) {
