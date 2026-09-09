@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { zeroFeeNote } from '@/lib/fee-copy'
 
@@ -58,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitProgress,
 }: {
   brandName: string
   dealTitle: string
@@ -105,6 +106,8 @@ export default function CreatorOfferMobile({
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
       status, none of which should exist twice. */
   submitNode?: React.ReactNode
+  /** "0 of 2" — the count the export puts beside Submit deliverables. */
+  submitProgress?: string | null
 }) {
   return (
     <div className="offer-m">
@@ -139,7 +142,9 @@ export default function CreatorOfferMobile({
           </span>
           <span className="offer-m__waiting">
             {stage === 'agreed'
-              ? (agreedAt ? `Agreed on ${agreedAt}` : 'Agreed')
+              /* The export puts the delivery date on the header line and the
+                 agreed date in the card's summary, not the other way round. */
+              ? (deliverBy ? `Deliver by ${deliverBy}` : 'Agreed')
               : counter?.at ? `Countered ${counter.at}` : waitingLabel}
           </span>
         </div>
@@ -164,7 +169,48 @@ export default function CreatorOfferMobile({
           </div>
         </div>
 
+        {/* AGREED: a COLLAPSED accordion, per the export. The summary carries
+            the three things worth seeing at a glance - when it was agreed, what
+            the creator takes home, and when they are paid. Everything else
+            (the deliverables, the totals, the rights stamp) is folded away,
+            because at this stage the screen's job is to get the work submitted,
+            not to re-read terms already agreed.
+
+            Deliberately NOT `open`: the export has no open attribute here,
+            unlike the offer screen where the money IS the decision. */}
+        {stage === 'agreed' && (
+          <details className="offer-m__card offer-m__fold offer-m__agreedcard">
+            <summary className="offer-m__agreedsum">
+              <div className="offer-m__agreedon">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</div>
+              <div className="offer-m__label">You receive</div>
+              <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+              {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
+              <span className="offer-m__agreedchev" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
+            </summary>
+            <dl className="offer-m__terms-list">
+              {/* Plain rows here, not the expandable deliverable cards the
+                  offer screen uses - nothing left to weigh up, so nothing to
+                  open. */}
+              {items.map((it) => (
+                <React.Fragment key={it.id}>
+                  <dt>{it.label}</dt><dd>{inr(it.pricePaise)}</dd>
+                </React.Fragment>
+              ))}
+              {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
+              {feePaise !== null && feePaise > 0 && (
+                <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
+              )}
+              {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
+              {revisionLimit !== null && (
+                <><dt>Revisions</dt><dd>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</dd></>
+              )}
+              {rightsConfirmedAt && <><dt>Rights confirmed</dt><dd>{rightsConfirmedAt}</dd></>}
+            </dl>
+          </details>
+        )}
+
         {/* The money and the decision — the one job of this screen. */}
+        {stage !== 'agreed' && (
         <section className="offer-m__card">
           {/* THE HEADLINE IS WHATEVER THE CREATOR HAS TO ACT ON.
               No counter: what they take home, which is the offer.
@@ -173,19 +219,19 @@ export default function CreatorOfferMobile({
               from the old price and read as a competing offer.
               Creator countered: their own ask, because nothing is theirs to
               decide until the brand answers. */}
-          {(stage === 'agreed' || !counter) && (
+          {!counter && (
             <>
               <div className="offer-m__label">You receive</div>
               <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
             </>
           )}
-          {stage !== 'agreed' && counter?.lastBy === 'brand' && (
+          {counter?.lastBy === 'brand' && (
             <>
               <div className="offer-m__label">Their counter</div>
               <div className="offer-m__amount">{counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}</div>
             </>
           )}
-          {stage !== 'agreed' && counter?.lastBy === 'creator' && (
+          {counter?.lastBy === 'creator' && (
             <>
               <div className="offer-m__label">Your ask</div>
               <div className="offer-m__amount">{counter.youAskedPaise !== null ? inr(counter.youAskedPaise) : '\u2014'}</div>
@@ -266,23 +312,6 @@ export default function CreatorOfferMobile({
             </div>
           )}
 
-          {/* AGREED: the settled numbers, as the export lists them. No decision
-              controls - the terms are agreed, and what the screen asks for now
-              is the work. */}
-          {stage === 'agreed' && (
-            <dl className="offer-m__terms-list offer-m__agreedterms">
-              {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
-              {feePaise !== null && feePaise > 0 && (
-                <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
-              )}
-              {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
-              {revisionLimit !== null && (
-                <><dt>Revisions</dt><dd>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</dd></>
-              )}
-              {rightsConfirmedAt && <><dt>Rights confirmed</dt><dd>{rightsConfirmedAt}</dd></>}
-            </dl>
-          )}
-
           {/* A zero fee is explained, not just shown. Otherwise a creator
               reads it as a bug, or expects it on the next deal too.
 
@@ -303,16 +332,19 @@ export default function CreatorOfferMobile({
             </div>
           ) : null}
 
-          {stage !== 'agreed' && counter?.lastBy !== 'creator' && (
-            <div className="offer-m__decision">{decision}</div>
-          )}
+          {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
         </section>
+        )}
 
         {/* SUBMIT DELIVERABLES. DeliverableItems is passed through whole: it
             owns uploads, versions, per-item status and the review handoff, and
             a phone-shaped copy of that logic is the last thing this needs. */}
         {stage === 'agreed' && submitNode && (
           <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Submit deliverables</h2>
+              {submitProgress && <span className="offer-m__submitcount">{submitProgress}</span>}
+            </div>
             {submitNode}
           </section>
         )}

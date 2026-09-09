@@ -1284,17 +1284,42 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   color: var(--ink-faint);
   margin-top: 6px;
 }
-/* The agreed card's settled numbers: same list styling as Full terms, with a
-   rule above it so it reads as a summary of the deliverables listed rather
-   than another section. */
-.offer-m__agreedterms {
-  margin-top: 16px;
-  padding-top: 14px;
+/* The agreed money card is a COLLAPSED accordion. Its summary is a stack, not
+   the single title row the other folds use, so it needs its own rules. */
+.offer-m__agreedcard { padding: 22px; position: relative; }
+.offer-m__agreedsum {
+  display: block; cursor: pointer; list-style: none;
+}
+.offer-m__agreedsum::-webkit-details-marker { display: none; }
+.offer-m__agreedon {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px;
+}
+/* Rotates with the fold, so a collapsed card looks openable. */
+.offer-m__agreedchev {
+  position: absolute; top: 22px; right: 22px;
+  display: flex; transition: transform .18s ease;
+}
+.offer-m__agreedcard[open] .offer-m__agreedchev { transform: rotate(180deg); }
+.offer-m__agreedcard .offer-m__terms-list {
+  margin-top: 16px; padding-top: 14px;
   border-top: 1px solid var(--border-hairline);
 }
-/* DeliverableItems brings its own layout; the card supplies the surface and
-   the padding it expects, nothing more. */
+
+/* DeliverableItems brings its own layout; the card supplies the surface, the
+   heading and the count, nothing more. */
 .offer-m__submit { padding: 18px; }
+.offer-m__submithead {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.offer-m__submittitle {
+  font-family: var(--font-display); font-size: 16px; font-weight: 700;
+  letter-spacing: -0.01em; margin: 0; color: var(--ink);
+}
+.offer-m__submitcount {
+  font-size: 11.5px; font-weight: 600; color: var(--ink-faint); white-space: nowrap;
+}
 
 /* Waiting on the brand. Warm rather than neutral: nothing is wrong, the
    creator has done their part and the ball is not in their court. */

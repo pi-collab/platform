@@ -247,6 +247,9 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         rightsConfirmedAt={deal.rights_confirmed_at
           ? `${formatDate(deal.rights_confirmed_at)}, ${new Date(deal.rights_confirmed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
           : null}
+        submitProgress={isAgreedMobile && items && items.length > 0
+          ? `${items.filter((i) => i.submitted_at != null).length} of ${items.length}`
+          : null}
         submitNode={isAgreedMobile && items && items.length > 0 ? (
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
         ) : null}
