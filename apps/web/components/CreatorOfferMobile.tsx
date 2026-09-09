@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitProgress,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0,
 }: {
   brandName: string
   dealTitle: string
@@ -106,8 +106,10 @@ export default function CreatorOfferMobile({
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
       status, none of which should exist twice. */
   submitNode?: React.ReactNode
-  /** "0 of 2" — the count the export puts beside Submit deliverables. */
-  submitProgress?: string | null
+  /** Items submitted, and how many there are. Drives both the "0 of 2" count
+      and the segment bar the export puts under the heading. */
+  submitDone?: number
+  submitTotal?: number
 }) {
   return (
     <div className="offer-m">
@@ -138,7 +140,7 @@ export default function CreatorOfferMobile({
             putting it here left the deal unnamed on its own screen. */}
         <div className="offer-m__status">
           <span className="offer-m__statuslabel">
-            <span className="offer-m__dot" aria-hidden="true" />{dealTitle}
+            <span className={`offer-m__dot${stage === 'agreed' ? ' offer-m__dot--agreed' : ''}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
             {stage === 'agreed'
@@ -178,38 +180,67 @@ export default function CreatorOfferMobile({
 
             Deliberately NOT `open`: the export has no open attribute here,
             unlike the offer screen where the money IS the decision. */}
+        {/* AGREED: a COLLAPSED accordion, per the export - no `open` attribute,
+            unlike the offer screen where the money IS the decision. Two rows in
+            the summary: the agreed stamp with the fold control, then the amount
+            with the payment window beside it. Everything else folds away,
+            because at this stage the screen's job is the work, not re-reading
+            terms already agreed. */}
         {stage === 'agreed' && (
-          <details className="offer-m__card offer-m__fold offer-m__agreedcard">
+          <details className="offer-m__card offer-m__agreedcard">
             <summary className="offer-m__agreedsum">
-              <div className="offer-m__agreedon">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</div>
-              <div className="offer-m__label">You receive</div>
-              <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
-              {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
-              <span className="offer-m__agreedchev" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
+              <div className="offer-m__agreedtop">
+                <span className="offer-m__agreedstamp">
+                  <span className="offer-m__agreeddot" aria-hidden="true" />
+                  <span className="offer-m__label">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</span>
+                </span>
+                <span className="offer-m__agreedchev" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
+              </div>
+              {/* Amount and payment window share a baseline - the export does
+                  not stack them, and at 20px this is a reference figure, not
+                  the headline it is on the offer screen. */}
+              <div className="offer-m__agreedmoney">
+                <div>
+                  <div className="offer-m__label">You receive</div>
+                  <div className="offer-m__agreedamount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+                </div>
+                {paymentTerms && <span className="offer-m__agreedterms-note">{paymentTerms}</span>}
+              </div>
             </summary>
-            <dl className="offer-m__terms-list">
-              {/* Plain rows here, not the expandable deliverable cards the
-                  offer screen uses - nothing left to weigh up, so nothing to
-                  open. */}
+
+            <div className="offer-m__termrows">
+              {/* Flat rows, not the expandable deliverable cards the offer
+                  screen uses. Nothing left to weigh up, so nothing opens. */}
               {items.map((it) => (
-                <React.Fragment key={it.id}>
-                  <dt>{it.label}</dt><dd>{inr(it.pricePaise)}</dd>
-                </React.Fragment>
+                <div className="offer-m__termrow" key={it.id}>
+                  <span>{it.label}</span><span>{inr(it.pricePaise)}</span>
+                </div>
               ))}
-              {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
+              {totalPaise !== null && (
+                <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
+              )}
               {feePaise !== null && feePaise > 0 && (
-                <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
+                <div className="offer-m__termrow">
+                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
+                  <span>&minus;{inr(feePaise)}</span>
+                </div>
               )}
-              {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
+              {usageRights && (
+                <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
+              )}
               {revisionLimit !== null && (
-                <><dt>Revisions</dt><dd>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</dd></>
+                <div className="offer-m__termrow">
+                  <span>Revisions</span>
+                  <span>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</span>
+                </div>
               )}
-              {rightsConfirmedAt && <><dt>Rights confirmed</dt><dd>{rightsConfirmedAt}</dd></>}
-            </dl>
+              {rightsConfirmedAt && (
+                <div className="offer-m__termrow"><span>Rights confirmed</span><span>{rightsConfirmedAt}</span></div>
+              )}
+            </div>
           </details>
         )}
 
-        {/* The money and the decision — the one job of this screen. */}
         {stage !== 'agreed' && (
         <section className="offer-m__card">
           {/* THE HEADLINE IS WHATEVER THE CREATOR HAS TO ACT ON.
@@ -343,9 +374,18 @@ export default function CreatorOfferMobile({
           <section className="offer-m__card offer-m__submit">
             <div className="offer-m__submithead">
               <h2 className="offer-m__submittitle">Submit deliverables</h2>
-              {submitProgress && <span className="offer-m__submitcount">{submitProgress}</span>}
+              <span className="offer-m__submitcount">{submitDone} of {submitTotal}</span>
             </div>
-            {submitNode}
+            {/* One segment per deliverable, filled as each is submitted. The
+                export has this under the heading and I had missed it. */}
+            {submitTotal > 0 && (
+              <div className="offer-m__submitbar" aria-hidden="true">
+                {Array.from({ length: submitTotal }, (_, i) => (
+                  <span key={i} className={i < submitDone ? 'is-on' : undefined} />
+                ))}
+              </div>
+            )}
+            <div className="offer-m__submitbody">{submitNode}</div>
           </section>
         )}
 

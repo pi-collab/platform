@@ -247,9 +247,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         rightsConfirmedAt={deal.rights_confirmed_at
           ? `${formatDate(deal.rights_confirmed_at)}, ${new Date(deal.rights_confirmed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
           : null}
-        submitProgress={isAgreedMobile && items && items.length > 0
-          ? `${items.filter((i) => i.submitted_at != null).length} of ${items.length}`
-          : null}
+        submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
+        submitTotal={items ? items.length : 0}
         submitNode={isAgreedMobile && items && items.length > 0 ? (
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
         ) : null}
@@ -306,7 +305,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         }
       />
     )}
-    <main className={isNegotiating ? 'offer-desktop' : undefined} style={wrapper}>
+    {/* Hidden on mobile for EVERY state that has a phone screen. This said
+        isNegotiating, so when the agreed screen was added the desktop page
+        stopped being hidden for agreed deals and rendered underneath it - the
+        whole page again, below the fold. */}
+    <main className={showMobileScreen ? 'offer-desktop' : undefined} style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
       <style>{`
         .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
