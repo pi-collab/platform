@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt,
 }: {
   brandName: string
   dealTitle: string
@@ -100,7 +100,7 @@ export default function CreatorOfferMobile({
      exports, everything from "Brief & attachments" down is identical on both
      screens - two copies of that markup would drift the moment either is
      touched. Only the header, the stage line and the card body differ. */
-  stage?: 'offer' | 'agreed'
+  stage?: 'offer' | 'agreed' | 'submitted'
   agreedAt?: string | null
   rightsConfirmedAt?: string | null
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
@@ -110,6 +110,8 @@ export default function CreatorOfferMobile({
       and the segment bar the export puts under the heading. */
   submitDone?: number
   submitTotal?: number
+  /** When the work was submitted, formatted. Drives the header line. */
+  submittedAt?: string | null
 }) {
   return (
     <div className="offer-m">
@@ -120,7 +122,7 @@ export default function CreatorOfferMobile({
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
           <h1 className="offer-m__title">
-            {stage === 'agreed' ? 'Deal with ' : 'Offer from '}
+            {stage === 'offer' ? 'Offer from ' : 'Deal with '}
             <span className="offer-m__brand">{brandName}</span>
           </h1>
           <div className="offer-m__headactions">
@@ -143,7 +145,9 @@ export default function CreatorOfferMobile({
             <span className={`offer-m__dot${stage === 'agreed' ? ' offer-m__dot--agreed' : ''}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
-            {stage === 'agreed'
+            {stage === 'submitted'
+              ? (submittedAt ? `Submitted ${submittedAt}` : 'Submitted')
+              : stage === 'agreed'
               /* The export puts the delivery date on the header line and the
                  agreed date in the card's summary, not the other way round. */
               ? (deliverBy ? `Deliver by ${deliverBy}` : 'Agreed')
@@ -157,16 +161,19 @@ export default function CreatorOfferMobile({
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
             <span className="offer-m__stage">
-              {stage === 'agreed' ? 'Agreed' : counter ? 'Negotiating' : 'Offer received'}
+              {stage === 'submitted' ? 'Submitted'
+                : stage === 'agreed' ? 'Agreed'
+                : counter ? 'Negotiating' : 'Offer received'}
             </span>
             <span className="offer-m__next">
-              {stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
+              {stage === 'submitted' ? 'Next: brand review'
+                : stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
             </span>
           </div>
           <div className="offer-m__progress" aria-hidden="true">
             {/* One lit segment per stage reached, so the bar moves forward. */}
             {Array.from({ length: 6 }, (_, i) => (
-              <span key={i} className={i <= (stage === 'agreed' ? 1 : 0) ? 'is-on' : undefined} />
+              <span key={i} className={i <= (stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : undefined} />
             ))}
           </div>
         </div>
@@ -186,7 +193,35 @@ export default function CreatorOfferMobile({
             with the payment window beside it. Everything else folds away,
             because at this stage the screen's job is the work, not re-reading
             terms already agreed. */}
-        {stage === 'agreed' && (
+        {/* Where the deal stands, stated plainly. The export makes this an
+            anchor pointing at the Revision mockup - that is navigation between
+            design files, not a destination in the product, so it is a notice
+            here and not a link. */}
+        {stage === 'submitted' && (
+          <div className="offer-m__card offer-m__notice">
+            <span className="offer-m__noticeicon" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A3D33" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            <div>
+              <div className="offer-m__noticetitle">Submitted for review</div>
+              <div className="offer-m__noticebody">The brand has been notified and is reviewing your deliverables.</div>
+            </div>
+          </div>
+        )}
+
+        {/* The submitted work, folded: it has been sent, so it is a record
+            rather than a task. */}
+        {stage === 'submitted' && submitNode && (
+          <details className="offer-m__card offer-m__fold offer-m__delivfold">
+            <summary className="offer-m__foldhead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            </summary>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </details>
+        )}
+
+        {(stage === 'agreed' || stage === 'submitted') && (
           <details className="offer-m__card offer-m__agreedcard">
             <summary className="offer-m__agreedsum">
               <div className="offer-m__agreedtop">

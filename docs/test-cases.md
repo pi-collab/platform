@@ -4119,3 +4119,46 @@ wording, and the first attempt missed all of it.
       untouched
 - [ ] delivered / revision / approved / paid still fall through to the existing
       page on mobile
+
+---
+
+## 37. Submitted state, creator mobile
+
+Maps to `status = 'delivered'` — the creator has sent the work and the brand is
+reviewing. `revision` is a different screen and is deliberately NOT folded in.
+
+### Header and stage
+- [ ] Title "Deal with <brand>"; right-hand line **"Submitted <date>"**, taken
+      from the latest item's `submitted_at`
+- [ ] Stage **Submitted**, next **"Next: brand review"**
+- [ ] **Three** progress segments lit (the export has 3 of 6)
+
+### The notice
+- [ ] An icon circle, **"Submitted for review"**, and the line "The brand has
+      been notified and is reviewing your deliverables."
+- [ ] It is NOT a link. The export makes it an anchor pointing at
+      "Creator Deal Detail - Revision Mobile.dc.html" — navigation between
+      design files, not a destination in the product
+
+### Sections, in the export's order
+- [ ] **Deliverables** — a COLLAPSED accordion, heading as a 10px uppercase
+      eyebrow. Folded because the work has been sent: a record, not a task
+- [ ] **Brief & attachments** — collapsed
+- [ ] The agreed money block (Agreed on, You receive, terms, the `.term` rows)
+      appears after Brief, as on the agreed screen
+- [ ] **Full terms & guidelines** — collapsed
+- [ ] No submit block, no decision controls, no "Decline this offer"
+
+### Worth confirming with the designer
+- [ ] In the export, the money block sits INSIDE the "Brief & attachments"
+      accordion rather than in its own. Verified by walking back from
+      "Agreed on 15 Jul" to its enclosing `<details>`, whose summary reads
+      "Brief & attachments". It is rendered as its own fold here, which is what
+      the agreed screen does — flagged rather than silently copied, because a
+      terms block hidden inside "Brief & attachments" is easy to miss
+
+### Still not matched
+- [ ] The rows inside Deliverables are `DeliverableItems` as it exists, so they
+      keep the desktop design rather than the export's filename + "View file"
+      rows. That component owns signed URLs and version history; restyling it
+      is its own change

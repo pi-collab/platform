@@ -1330,6 +1330,20 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   box-shadow: 0 0 0 3px rgba(210,240,74,.28);
 }
 
+/* Where the deal stands after submission: icon, title, one line of plain
+   explanation. Not a link - the export's href points at another design file. */
+.offer-m__notice { padding: 20px; display: flex; align-items: center; gap: 12px; }
+.offer-m__noticeicon {
+  width: 36px; height: 36px; border-radius: 50%; flex: none;
+  background: var(--card); border: 1px solid var(--frost-edge);
+  display: flex; align-items: center; justify-content: center;
+}
+.offer-m__noticetitle { font-weight: 700; font-size: 14px; color: var(--ink); }
+.offer-m__noticebody { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+/* The submitted work, folded. Same surface as the other accordions. */
+.offer-m__delivfold { padding: 20px; }
+
 /* ── Submit deliverables ──────────────────────────────────────────────────
    Its own surface, never an accordion: the one thing here that must not be
    hidden. DeliverableItems supplies the rows. */

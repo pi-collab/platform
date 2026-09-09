@@ -232,7 +232,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   /* The offer and AGREED states have phone screens. Every other state keeps
      the existing page on mobile, because only these were designed. */
   const isAgreedMobile = deal.status === 'agreed'
-  const showMobileScreen = isNegotiating || isAgreedMobile
+  /* 'delivered' is what the export calls Submitted: the creator has sent the
+     work and the brand is reviewing. 'revision' is a different screen and is
+     deliberately not folded in here. */
+  const isSubmittedMobile = deal.status === 'delivered'
+  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile
   const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
     typeof v === 'string'
@@ -242,14 +246,18 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     <>
     {showMobileScreen && (
       <CreatorOfferMobile
-        stage={isAgreedMobile ? 'agreed' : 'offer'}
+        stage={isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
+        submittedAt={(() => {
+          const ts = (items ?? []).map((i) => i.submitted_at).filter(Boolean).sort().at(-1)
+          return ts ? formatDate(ts as string) : null
+        })()}
         agreedAt={deal.agreed_at ? formatDate(deal.agreed_at) : null}
         rightsConfirmedAt={deal.rights_confirmed_at
           ? `${formatDate(deal.rights_confirmed_at)}, ${new Date(deal.rights_confirmed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
           : null}
         submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
         submitTotal={items ? items.length : 0}
-        submitNode={isAgreedMobile && items && items.length > 0 ? (
+        submitNode={(isAgreedMobile || isSubmittedMobile) && items && items.length > 0 ? (
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} />
         ) : null}
         brandName={brand}
