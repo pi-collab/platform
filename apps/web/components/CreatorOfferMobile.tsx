@@ -195,6 +195,26 @@ export default function CreatorOfferMobile({
             with the payment window beside it. Everything else folds away,
             because at this stage the screen's job is the work, not re-reading
             terms already agreed. */}
+        {/* The export's own notice, restored. I removed this when the purple
+            banner was called out, having read "the purple one is not required"
+            as "no notice is required" - they are two different blocks and only
+            DeliverableItems' one was the duplicate.
+
+            Not a link: the export makes it an anchor pointing at
+            "Creator Deal Detail - Revision Mobile.dc.html", which is navigation
+            between design files, not a destination in the product. */}
+        {stage === 'submitted' && (
+          <div className="offer-m__card offer-m__notice">
+            <span className="offer-m__noticeicon" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+            </span>
+            <div>
+              <div className="offer-m__noticetitle">Submitted for review</div>
+              <div className="offer-m__noticebody">The brand has been notified and is reviewing your deliverables.</div>
+            </div>
+          </div>
+        )}
+
         {/* The submitted work, folded: it has been sent, so it is a record
             rather than a task. */}
         {stage === 'submitted' && submitNode && (

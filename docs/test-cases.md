@@ -4138,15 +4138,19 @@ reviewing. `revision` is a different screen and is deliberately NOT folded in.
       Accept / Counter / Decline card below the fold, on work already sent
 - [ ] **Three** progress segments lit (the export has 3 of 6)
 
-### No "Submitted for review" banner anywhere on this screen
-The header already says "Submitted <date>". The export's notice card and
-DeliverableItems' own purple banner both repeat it, which put the same sentence
-on screen twice.
-- [ ] The export's notice card is NOT built
-- [ ] `DeliverableItems` is passed `hideStatusBanner` on the phone screen, so
-      its purple banner does not render there
-- [ ] DESKTOP still shows that banner — it has no such header, and the prop is
-      off by default
+### The notice card — kept; the purple banner — removed
+Two different blocks said the same thing. Only one goes.
+- [ ] The export's **white notice card IS built**: a send icon in a circle,
+      "Submitted for review", and "The brand has been notified and is reviewing
+      your deliverables." Icon is the paper plane from the export, not a tick
+- [ ] It sits above the Deliverables fold
+- [ ] It is NOT a link. The export makes it an anchor pointing at
+      "Creator Deal Detail - Revision Mobile.dc.html" — navigation between
+      design files, not a destination in the product
+- [ ] `DeliverableItems`' **purple banner does NOT render** on the phone
+      screen (`hideStatusBanner`). That was the duplicate
+- [ ] DESKTOP still shows the purple banner — it has no such header, and the
+      prop is off by default
 
 ### Sections, in the export's order
 - [ ] **Deliverables** — a COLLAPSED accordion, heading as a 10px uppercase
