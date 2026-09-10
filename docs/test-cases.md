@@ -4266,8 +4266,12 @@ and version history stay one implementation; only presentation branches.
 - [ ] A URL field: 46px, 12px radius, hairline border, 16px padding
 - [ ] **Mark as posted**: 50px, 15px radius, 12px above the field, `--card`
       background with ink text, turning `--neon` once posted
-- [ ] The button is **dimmed to 0.4 and inert** until a URL is entered — the
-      export's own script does exactly this, rather than hiding it
+- [ ] **Empty field**: the button is dimmed to 0.4, card-coloured and inert
+- [ ] **Link typed**: it becomes enabled and turns **filled ink with white
+      text**. The export only changes opacity here, which makes enabled and
+      disabled the same button at two strengths; filled is unmistakably the
+      thing to press
+- [ ] **Posted**: neon with ink text, reading "Posted ✓"
 - [ ] Once posted the field is replaced by the live link, and the button reads
       "Posted ✓"
 - [ ] It calls the existing `markItemPosted`; per-item posting already existed

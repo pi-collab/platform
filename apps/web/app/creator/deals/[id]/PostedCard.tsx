@@ -166,15 +166,23 @@ function ItemPostRow({ dealId, item, compact = false, index, total }: { dealId: 
           type="button"
           onClick={handleSubmit}
           disabled={posted || loading || !ready}
+          /* Three states, and the middle one is the point: the button only
+             becomes actionable once there is a URL to submit, so it should
+             LOOK actionable then. The export leaves it card-coloured and only
+             dims it, which makes "enabled" and "disabled" the same button at
+             two opacities. Filled ink with white text is unmistakably the
+             thing to press. */
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: '100%', height: 50, marginTop: 12, borderRadius: 15,
-            background: posted ? 'var(--neon)' : 'var(--card)',
-            color: 'var(--ink)', border: '1px solid var(--border-hairline, #EAEAE3)',
+            background: posted ? 'var(--neon)' : ready ? 'var(--ink)' : 'var(--card)',
+            color: posted ? 'var(--ink)' : ready ? '#fff' : 'var(--ink)',
+            border: ready && !posted ? '1px solid var(--ink)' : '1px solid var(--border-hairline, #EAEAE3)',
             fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14,
             opacity: posted || ready ? 1 : 0.4,
             pointerEvents: posted || ready ? 'auto' : 'none',
             cursor: posted ? 'default' : 'pointer',
+            transition: 'background .16s ease, color .16s ease, opacity .16s ease',
           }}
         >
           {loading ? 'Saving\u2026' : posted ? 'Posted \u2713' : 'Mark as posted'}
