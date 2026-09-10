@@ -307,6 +307,24 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           box-shadow: 0 0 0 2px var(--neon), 0 20px 46px -34px rgba(40,45,25,.34);
           transform: translateY(-2px);
         }
+        /* The select tick is quiet until it is reached for. A checkbox on every
+           card at rest reads as a form to fill in; browsing is the common case
+           and picking several is the occasional one. It stays reserved in the
+           layout, so nothing shifts when it appears. */
+        .card-tick {
+          opacity: 0;
+          transition: opacity .15s ease;
+        }
+        .creator-card:hover .card-tick,
+        .card-tick:focus-visible,
+        .card-tick.is-picked {
+          opacity: 1;
+        }
+        /* Nothing hovers on a touch screen, and a control that never appears is
+           a control that does not exist. */
+        @media (hover: none) {
+          .card-tick { opacity: 1; }
+        }
       `}</style>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
@@ -395,81 +413,12 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             </div>
           </div>
 
-          {/* The heading line doubles as the selection line. The action for
-              what you have ticked belongs beside the thing you ticked it in,
-              not in a bar further down the page that the list can scroll away
-              from. Nothing is there until something is selected. */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', margin: '18px 0 0' }}>
-            <h1 style={{
-              fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600,
-              letterSpacing: '-0.02em', margin: 0,
-            }}>
-              Browse <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 36 }}>creators</span>
-            </h1>
-
-            {pickedIds.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>
-                  {pickedIds.length} selected
-                </span>
-                {/* One creator is a deal; several are a campaign. The word
-                    follows the count, because "Start a campaign" over a single
-                    creator is heavier than the thing it does. */}
-                {pickedIds.length === 1 ? (
-                  <Link
-                    href={`/deals/new?creator=${pickedIds[0]}`}
-                    style={{
-                      height: 38, padding: '0 20px', borderRadius: 11,
-                      backgroundColor: 'var(--neon)', border: 'none',
-                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13,
-                      color: 'var(--ink)', textDecoration: 'none', whiteSpace: 'nowrap',
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      boxShadow: '0 12px 24px -14px rgba(180,210,60,.9)',
-                    }}
-                  >
-                    Start deal
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                  </Link>
-                ) : (
-                  <button
-                    disabled={startingCampaign}
-                    onClick={async () => {
-                      const name = window.prompt('Name this campaign')
-                      if (!name?.trim()) return
-                      setStartingCampaign(true)
-                      const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
-                      const res = await startCampaignWithCreators(name, pickedIds)
-                      setStartingCampaign(false)
-                      if ('error' in res && res.error) { window.alert(res.error); return }
-                      router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
-                    }}
-                    style={{
-                      height: 38, padding: '0 20px', borderRadius: 11,
-                      background: 'var(--neon)', border: 'none',
-                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13,
-                      color: 'var(--ink)', cursor: startingCampaign ? 'wait' : 'pointer',
-                      opacity: startingCampaign ? 0.6 : 1, whiteSpace: 'nowrap',
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      boxShadow: '0 12px 24px -14px rgba(180,210,60,.9)',
-                    }}
-                  >
-                    {startingCampaign ? 'Starting...' : 'Start campaign'}
-                    {!startingCampaign && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
-                  </button>
-                )}
-                <button
-                  onClick={() => setPicked({})}
-                  style={{
-                    background: 'none', border: 'none', padding: 0,
-                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
-                    color: 'var(--ink-faint)', cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-            )}
-          </div>
+          <h1 style={{
+            fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 600,
+            letterSpacing: '-0.02em', margin: '18px 0 0',
+          }}>
+            Browse <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 36 }}>creators</span>
+          </h1>
 
           {/* ── Filter bar ── */}
           <div style={{
@@ -705,9 +654,83 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </>
         )}
 
-        {/* The selection action lives on the heading line, beside "Browse
-            creators". A bar down here restated a count the list already shows
-            with ticks, and the list can scroll it off the screen. */}
+        {/* ══════ SELECTION BAR ══════
+            A pill over the foot of the page, always in reach however far down
+            the list a brand has got. Beside the heading it sat at the top of a
+            long scroll, which is the one place they are not looking once they
+            start picking.
+
+            One creator is a deal; several are a campaign. The word follows the
+            count, because "Start a campaign" over a single creator is heavier
+            than the thing it does. */}
+        {pickedIds.length > 0 && (
+          <div style={{
+            position: 'fixed', bottom: 18, left: 0, right: 0, zIndex: 40,
+            display: 'flex', justifyContent: 'center', padding: '0 20px', pointerEvents: 'none',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+              padding: '12px 14px 12px 20px', borderRadius: 'var(--radius-pill)',
+              background: 'var(--ink)', boxShadow: '0 22px 50px -20px rgba(40,45,25,.6)',
+              pointerEvents: 'auto',
+            }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap' }}>
+                {pickedIds.length} selected
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {pickedIds.length === 1 ? (
+                  <Link
+                    href={`/deals/new?creator=${pickedIds[0]}`}
+                    style={{
+                      padding: '9px 18px', borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'var(--neon)', border: 'none',
+                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                      color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
+                    }}
+                  >
+                    Start a deal
+                  </Link>
+                ) : (
+                  <button
+                    disabled={startingCampaign}
+                    onClick={async () => {
+                      const name = window.prompt('Name this campaign')
+                      if (!name?.trim()) return
+                      setStartingCampaign(true)
+                      const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
+                      const res = await startCampaignWithCreators(name, pickedIds)
+                      setStartingCampaign(false)
+                      if ('error' in res && res.error) { window.alert(res.error); return }
+                      router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
+                    }}
+                    style={{
+                      padding: '9px 18px', borderRadius: 'var(--radius-pill)',
+                      background: 'var(--neon)', border: 'none',
+                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                      color: 'var(--ink)', whiteSpace: 'nowrap',
+                      cursor: startingCampaign ? 'wait' : 'pointer',
+                      opacity: startingCampaign ? 0.6 : 1,
+                    }}
+                  >
+                    {startingCampaign ? 'Starting...' : 'Start a campaign'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setPicked({})}
+                  style={{
+                    padding: '9px 14px', borderRadius: 'var(--radius-pill)',
+                    background: 'none', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+                    color: 'rgba(255,255,255,.6)', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {toast && <Toast key={toast.seq} message={toast.msg} duration={2600} />}
 
@@ -926,6 +949,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         {onTogglePick && (
           <span
+            className={`card-tick${isPicked ? ' is-picked' : ''}`}
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) }}
             role="checkbox"
             aria-checked={!!isPicked}

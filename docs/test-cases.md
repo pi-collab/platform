@@ -1056,18 +1056,24 @@ a time; rows are for running down twenty and ticking the ones you want.
 - [ ] The bookmark is on the row too, so switching to list is not a downgrade for saving
 
 #### Selecting, in BOTH views
-- [ ] Grid cards carry a tick in the same place a list row does: ahead of the photo, top-left
+- [ ] A grid card at rest shows NO tick. Browsing is the common case; picking several is the occasional one
+- [ ] Hovering a card reveals its tick, in the same place a list row puts it: ahead of the photo
+- [ ] Nothing shifts when the tick appears. The space is reserved, not inserted
+- [ ] A picked card keeps its tick visible after the pointer leaves
+- [ ] Tabbing to the tick reveals it (it is reachable without a mouse)
+- [ ] On a touch screen the tick is always visible. Nothing hovers there, and a control that never appears does not exist
+- [ ] List rows still show their checkbox at all times: that view exists to be ticked down
 - [ ] A ticked card takes a neon border; a ticked row takes a neon left rail
 - [ ] "Start deal" STAYS on the grid card. One creator is still a deal; the tick is for gathering several
 - [ ] The tick does not open the creator, and the card still does
 - [ ] Keyboard: Enter or Space on a focused tick selects, without opening the creator or scrolling
 - [ ] A selection made in one view survives switching to the other
 
-#### The action, beside the heading
-- [ ] Selecting anything puts the count and the action to the RIGHT of "Browse creators", not in a bar further down that the list can scroll away
+#### The action, in a pill at the foot
+- [ ] Selecting anything raises the dark pill over the foot of the page, in reach however far down the list you have scrolled
 - [ ] It reads "1 selected" / "3 selected"
-- [ ] ONE selected offers <b>Start deal</b> and opens the builder for that creator
-- [ ] TWO OR MORE offer <b>Start campaign</b>, which creates one campaign over them and opens it
+- [ ] ONE selected offers <b>Start a deal</b> and opens the builder for that creator
+- [ ] TWO OR MORE offer <b>Start a campaign</b>, which creates one campaign over them and opens it
 - [ ] Clear empties the selection and the action goes
 - [ ] Nothing is shown there when nothing is selected
 - [ ] In the SAVED view a card still does NOT offer "Start deal". A shortlist of six offering six separate deals is the opposite of what the saved list is for
