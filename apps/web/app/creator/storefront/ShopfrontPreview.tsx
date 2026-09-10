@@ -571,6 +571,10 @@ export default function ShopfrontPreview({
      a decision, and sending it would pin the builder's price override to a
      number nobody typed. */
   const chosenTotalPaise = typedPaise > computedTotalPaise ? offerTotalPaise : undefined
+  /* The CTA is live only with something selected AND an amount that is at
+     least the creator's floor. Below it, the offer would be one they have
+     already said they will not take. */
+  const offerReady = rateTotal > 0 && !offerBelowFloor
   const rateHasOnRequest = data.rateCardItems.some(
     (item) => (qty[item.key] || 0) > 0 && item.countsToward === false,
   )
@@ -1028,20 +1032,20 @@ export default function ShopfrontPreview({
                     )}
                     {rateTotalIsFloor && (
                       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: offerBelowFloor ? '#B4262A' : 'var(--ink-faint)', marginTop: 5 }}>
-                        Minimum {formatINR(computedTotalPaise)}
+                        {offerBelowFloor ? `Enter at least ${formatINR(computedTotalPaise)}` : `Minimum ${formatINR(computedTotalPaise)}`}
                       </div>
                     )}
                   </div>
                 )}
                 {!showDealCta ? null : onDealClick ? (
-                  <button onClick={() => onDealClick(qty, addonSelections, chosenTotalPaise)} style={{
+                  <button onClick={() => onDealClick(qty, addonSelections, chosenTotalPaise)} disabled={!offerReady} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
                     color: 'var(--lime-950)', background: 'var(--neon)',
                     borderRadius: 999, padding: '13px 24px',
                     boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
-                    opacity: rateTotal > 0 ? 1 : 0.45,
-                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
+                    opacity: offerReady ? 1 : 0.45,
+                    pointerEvents: offerReady ? 'auto' : 'none',
                     transition: 'opacity .2s',
                   }}>
                     Proceed to create deal
@@ -1054,8 +1058,8 @@ export default function ShopfrontPreview({
                     color: 'var(--lime-950)', background: 'var(--neon)',
                     borderRadius: 999, padding: '13px 24px',
                     boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
-                    opacity: rateTotal > 0 ? 1 : 0.45,
-                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
+                    opacity: offerReady ? 1 : 0.45,
+                    pointerEvents: offerReady ? 'auto' : 'none',
                     transition: 'opacity .2s',
                   }}>
                     Proceed to create deal

@@ -389,6 +389,14 @@ export default function ShopfrontMobile({
   const shareLabel = linkCopied ? 'Copied' : 'Share'
   const copyShopfrontLink = copyLink
 
+  /* Nothing chosen, or a typed amount under the creator's floor. The floor is
+     the creator's rate: an offer below it is not a lower offer, it is one they
+     have already said they will not take, so the button does not go anywhere
+     until the number is at least the minimum shown beside it. */
+  const rateCtaBlocked = selectedCount === 0 || offerBelowFloor
+  const rateCtaOpacity = rateCtaBlocked ? 0.45 : 1
+  const rateCtaPointer = rateCtaBlocked ? 'none' : 'auto'
+
   /* In the editor a tap must not throw a creator off the page they are editing.
      Otherwise it carries the CURRENT SELECTION, not an empty one: the rate card
      is what a brand has just been building, and handing the deal builder {}
@@ -398,10 +406,12 @@ export default function ShopfrontMobile({
     /* Add-ons travel too. The phone passed qty alone, so a brand who ticked a
        collab and 30 days of boosting here arrived at the builder with both
        switched off and the price back down to the bare rate. */
+    /* Guarded here as well as by pointer-events: a link is still reachable by
+       keyboard, and this one would otherwise carry an amount the creator has
+       said they will not take. */
+    if (rateCtaBlocked) return
     if (!editing) onDealClick?.(qty, addonSelections, chosenTotalPaise)
   }
-  const rateCtaOpacity = selectedCount === 0 ? 0.45 : 1
-  const rateCtaPointer = selectedCount === 0 ? 'none' : 'auto'
   /* The design sets a MONEY TOTAL at 24px here. Ours is a count of items, and
      "Nothing selected yet" at 24px reads as the loudest thing on the card while
      saying the least. */
@@ -671,7 +681,7 @@ export default function ShopfrontMobile({
                           )}
                           {rateTotalIsFloor && (
                             <div style={{fontSize: '11.5px', color: offerBelowFloor ? '#B4262A' : 'var(--wg-500)', marginTop: '5px'}}>
-                              {`Minimum ${formatINR(computedTotalPaise)}`}
+                              {offerBelowFloor ? `Enter at least ${formatINR(computedTotalPaise)}` : `Minimum ${formatINR(computedTotalPaise)}`}
                             </div>
                           )}
                         </div>
@@ -680,7 +690,7 @@ export default function ShopfrontMobile({
                     {rateHasOnRequest && (
                       <div style={{fontSize: '12px', color: 'var(--wg-500)', marginTop: '10px'}}>Plus items priced on request.</div>
                     )}
-                    {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', width: '100%', marginTop: '18px', fontSize: '14px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '15px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
+                    {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', width: '100%', marginTop: '18px', fontSize: '14px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '15px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer, cursor: rateCtaBlocked ? 'not-allowed' : 'pointer'}} aria-disabled={rateCtaBlocked}>Create an offer<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
                   </div>
                 </div>
               </div>

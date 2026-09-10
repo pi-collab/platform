@@ -1004,7 +1004,9 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] A selection of exact-price packages only shows "Total" and a plain figure, not an input
 - [ ] Typing an amount ABOVE the floor carries it to /deals/new as &total=<paise>
 - [ ] That amount lands in the builder's whole-deal price override, so the offer opens on the number the brand typed
-- [ ] Typing an amount BELOW the floor shows the minimum in red and still hands over the floor, never the lower number
+- [ ] Typing an amount BELOW the floor DISABLES "Create an offer" and says "Enter at least Rs.X" in red. It does not quietly hand over the floor instead: an offer under the creator's rate is one they have already said they will not take
+- [ ] Raising the amount back to the floor or above re-enables the button
+- [ ] The button is unreachable by KEYBOARD too while below the floor, not only unclickable (pointer-events alone does not stop Enter on a link)
 - [ ] Leaving the amount untouched sends NO total param, and the builder prices from line items as before
 - [ ] Adding another item after typing an amount still cannot produce an offer below the new floor
 
