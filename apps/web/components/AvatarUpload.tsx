@@ -88,7 +88,7 @@ export default function AvatarUpload({ currentUrl, name }: AvatarUploadProps) {
         </div>
         {error && <p role="alert" style={{ fontSize: 12, color: '#B4262A', margin: 0 }}>{error}</p>}
         <p style={{ fontSize: 11.5, color: 'var(--ink-faint, #999)', margin: 0 }}>
-          JPEG, PNG, WebP, or GIF. Max 5 MB.
+          JPEG, PNG, WebP, or GIF. Max 50 MB.
         </p>
       </div>
       <input
