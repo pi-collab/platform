@@ -350,11 +350,18 @@ export default function DeliverableItems({
                 )}
 
                 {/* Previous submission pill for revision items */}
-                {/* Compact also shows this for an APPROVED item: the export's
-                    revision screen lists the approved asset with its file and a
-                    View file link, which is the only place a creator can still
-                    reach work already signed off. */}
-                {((item.item_status === 'revision' || (compact && item.item_status === 'approved')) && (item.external_url || item.storage_path)) && (
+                {/* THE PREVIOUS SUBMISSION, desktop only. This is the file
+                    that was handed back, kept there as context while the
+                    creator prepares a new one.
+
+                    Not on mobile, for two reasons. It rendered for approved
+                    items as well - I had added that so an approved asset would
+                    show its file - and the saved row below already does that,
+                    so every approved deliverable listed its file TWICE. And a
+                    superseded file next to the current one on a phone reads as
+                    two deliverables rather than two versions of one. The phone
+                    shows the current file only. */}
+                {!compact && item.item_status === 'revision' && (item.external_url || item.storage_path) && (
                   <div style={compact ? {
                     display: 'flex', alignItems: 'center', gap: 10,
                     marginTop: 10, padding: '11px 13px', borderRadius: 12,

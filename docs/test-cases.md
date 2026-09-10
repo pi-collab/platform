@@ -4311,3 +4311,14 @@ and version history stay one implementation; only presentation branches.
 - [ ] Pull-to-refresh is therefore off on creator pages. Intended for an
       app-like screen with a fixed bottom bar
 - [ ] Marketing and brand pages keep pull-to-refresh
+
+### One file per deliverable on mobile, never two
+- [ ] An APPROVED item lists its file exactly ONCE. Two rows were rendering:
+      the "previous submission" row, which I had opened up to approved items,
+      and the saved row, which already covered them
+- [ ] The "previous submission" row is DESKTOP ONLY now. A superseded file
+      beside the current one on a phone reads as two deliverables rather than
+      two versions of one
+- [ ] During a revision the phone shows no old file — only the field to attach
+      the new one. Desktop still shows what was handed back, as context
+- [ ] Submitted and approved show the current file; pending shows none
