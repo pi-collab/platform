@@ -4819,6 +4819,10 @@ and its cases travel together.
 
 ### Saved creators are a shortlist, not six separate deals
 - [ ] Saving a creator adds them to Saved and raises NO bar over the grid. Saving is keeping someone, not the start of a deal
+- [ ] Saving shows a toast naming the creator: "Vikram Singh added to your saved list."
+- [ ] Un-saving says so too, rather than the bookmark silently emptying
+- [ ] Saving a SECOND creator re-announces itself. It is not swallowed by the first toast's dismissal timer
+- [ ] Only one toast is shown per tap (the announcement is made outside the setState updater, which React may run twice)
 - [ ] The only place a count of saved creators appears is the Saved tab's own chip
 - [ ] In the Saved view, ticking creators DOES raise a bar, and its action is "Start a campaign" over the ticked ones
 - [ ] The saved list supports selecting several creators at once

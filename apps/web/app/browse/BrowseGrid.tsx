@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import Toast from '@/components/Toast'
 import { useRouter } from 'next/navigation'
 import FilterDropdown from '@/components/FilterDropdown'
 import Link from 'next/link'
@@ -170,11 +171,30 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
   const savedCount = Object.values(saved).filter(Boolean).length
 
+  /* Say what just happened.
+   *
+   * The bookmark filling in is the only feedback a save had, and it is a 20px
+   * icon under the thumb that just covered it. `seq` remounts the toast so a
+   * second save re-announces itself rather than being swallowed by the first
+   * one's dismissal timer. */
+  const [toast, setToast] = useState<{ msg: string; seq: number } | null>(null)
+  const toastSeq = useRef(0)
+
   const toggleSave = useCallback((id: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setSaved((prev) => ({ ...prev, [id]: !prev[id] }))
-  }, [])
+    /* Read outside the updater. A setState updater has to be pure - React is
+       free to run it twice - and announcing from inside one gives two toasts in
+       development and a double-counted seq. */
+    const next = !saved[id]
+    setSaved((prev) => ({ ...prev, [id]: next }))
+    const name = creators.find((c) => c.id === id)?.full_name ?? 'Creator'
+    toastSeq.current += 1
+    setToast({
+      msg: next ? `${name} added to your saved list.` : `${name} removed from your saved list.`,
+      seq: toastSeq.current,
+    })
+  }, [creators, saved])
 
   const filtered = useMemo(() => {
     let list = creators
@@ -598,6 +618,8 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             </div>
           </div>
         )}
+
+        {toast && <Toast key={toast.seq} message={toast.msg} duration={2600} />}
 
         {/* No bar over the browse grid.
             Saving used to raise a "N shortlisted / Review / Clear / Start a
