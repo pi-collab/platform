@@ -142,7 +142,9 @@ export default function CreatorOfferMobile({
             putting it here left the deal unnamed on its own screen. */}
         <div className="offer-m__status">
           <span className="offer-m__statuslabel">
-            <span className={`offer-m__dot${stage === 'agreed' ? ' offer-m__dot--agreed' : ''}`} aria-hidden="true" />{dealTitle}
+            {/* Green once the deal is past the decision - both exports use
+                neon-deep here. Amber belongs to an offer still to answer. */}
+            <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
             {stage === 'submitted'
@@ -193,22 +195,6 @@ export default function CreatorOfferMobile({
             with the payment window beside it. Everything else folds away,
             because at this stage the screen's job is the work, not re-reading
             terms already agreed. */}
-        {/* Where the deal stands, stated plainly. The export makes this an
-            anchor pointing at the Revision mockup - that is navigation between
-            design files, not a destination in the product, so it is a notice
-            here and not a link. */}
-        {stage === 'submitted' && (
-          <div className="offer-m__card offer-m__notice">
-            <span className="offer-m__noticeicon" aria-hidden="true">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#3A3D33" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            </span>
-            <div>
-              <div className="offer-m__noticetitle">Submitted for review</div>
-              <div className="offer-m__noticebody">The brand has been notified and is reviewing your deliverables.</div>
-            </div>
-          </div>
-        )}
-
         {/* The submitted work, folded: it has been sent, so it is a record
             rather than a task. */}
         {stage === 'submitted' && submitNode && (
@@ -276,7 +262,11 @@ export default function CreatorOfferMobile({
           </details>
         )}
 
-        {stage !== 'agreed' && (
+        {/* OFFER ONLY. This said `stage !== 'agreed'`, which is true for
+            'submitted' too - so a deal the creator had already delivered
+            rendered the whole offer card underneath, Accept, Counter and
+            Decline included, on work that was already sent. */}
+        {stage === 'offer' && (
         <section className="offer-m__card">
           {/* THE HEADLINE IS WHATEVER THE CREATOR HAS TO ACT ON.
               No counter: what they take home, which is the offer.

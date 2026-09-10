@@ -4131,14 +4131,22 @@ reviewing. `revision` is a different screen and is deliberately NOT folded in.
 - [ ] Title "Deal with <brand>"; right-hand line **"Submitted <date>"**, taken
       from the latest item's `submitted_at`
 - [ ] Stage **Submitted**, next **"Next: brand review"**
+- [ ] The header dot is GREEN (neon-deep). Amber belongs to an offer still to
+      be answered; both post-decision exports use neon-deep
+- [ ] **No offer card.** The offer card was gated on `stage !== 'agreed'`,
+      which is true for submitted too, so a delivered deal rendered the whole
+      Accept / Counter / Decline card below the fold, on work already sent
 - [ ] **Three** progress segments lit (the export has 3 of 6)
 
-### The notice
-- [ ] An icon circle, **"Submitted for review"**, and the line "The brand has
-      been notified and is reviewing your deliverables."
-- [ ] It is NOT a link. The export makes it an anchor pointing at
-      "Creator Deal Detail - Revision Mobile.dc.html" — navigation between
-      design files, not a destination in the product
+### No "Submitted for review" banner anywhere on this screen
+The header already says "Submitted <date>". The export's notice card and
+DeliverableItems' own purple banner both repeat it, which put the same sentence
+on screen twice.
+- [ ] The export's notice card is NOT built
+- [ ] `DeliverableItems` is passed `hideStatusBanner` on the phone screen, so
+      its purple banner does not render there
+- [ ] DESKTOP still shows that banner — it has no such header, and the prop is
+      off by default
 
 ### Sections, in the export's order
 - [ ] **Deliverables** — a COLLAPSED accordion, heading as a 10px uppercase
