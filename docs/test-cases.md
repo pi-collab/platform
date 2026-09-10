@@ -1057,8 +1057,10 @@ a time; rows are for running down twenty and ticking the ones you want.
 
 #### Selecting, in BOTH views
 - [ ] A grid card at rest shows NO tick. Browsing is the common case; picking several is the occasional one
-- [ ] Hovering a card reveals its tick, in the same place a list row puts it: ahead of the photo
-- [ ] Nothing shifts when the tick appears. The space is reserved, not inserted
+- [ ] A card at rest is EXACTLY the card it was before selection existed. No reserved gap, and the photo sits on the grid's left edge where it always did
+- [ ] Hovering reveals the tick OVER the photo's top-left corner, not beside it
+- [ ] Nothing shifts when it appears: the tick is positioned, not laid out
+- [ ] The tick reads against a photo as well as against the placeholder (it carries a white ring)
 - [ ] A picked card keeps its tick visible after the pointer leaves
 - [ ] Tabbing to the tick reveals it (it is reachable without a mouse)
 - [ ] On a touch screen the tick is always visible. Nothing hovers there, and a control that never appears does not exist

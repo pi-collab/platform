@@ -307,13 +307,19 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           box-shadow: 0 0 0 2px var(--neon), 0 20px 46px -34px rgba(40,45,25,.34);
           transform: translateY(-2px);
         }
-        /* The select tick is quiet until it is reached for. A checkbox on every
-           card at rest reads as a form to fill in; browsing is the common case
-           and picking several is the occasional one. It stays reserved in the
-           layout, so nothing shifts when it appears. */
+        /* The select tick is quiet until it is reached for, and it takes no
+           space in the card's layout - it is positioned over the photo rather
+           than sitting beside it. Reserving a slot left a gap on every card at
+           rest and pushed the photo off the grid's left edge, which is worse
+           than the checkbox it was reserving room for. */
         .card-tick {
+          position: absolute;
+          top: 14px;
+          left: 14px;
+          z-index: 2;
           opacity: 0;
           transition: opacity .15s ease;
+          box-shadow: 0 0 0 2px var(--card), 0 4px 10px -4px rgba(40,45,25,.5);
         }
         .creator-card:hover .card-tick,
         .card-tick:focus-visible,
@@ -941,32 +947,34 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
         textDecoration: 'none',
       }}
     >
-      {/* Top: Select + Avatar + Name + Bookmark.
-          The tick leads, exactly as it does on a list row, so switching views
-          does not move the control a brand is reaching for. "Start deal" stays
-          on the card: one creator is still a deal, and the tick is for
+      {/* The select tick, over the photo's top-left corner.
+          Out of the layout entirely, so a card at rest is the card it always
+          was and the photo keeps its place on the grid's left edge. "Start
+          deal" stays below: one creator is still a deal, and the tick is for
           gathering several into a campaign. */}
+      {onTogglePick && (
+        <span
+          className={`card-tick${isPicked ? ' is-picked' : ''}`}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) }}
+          role="checkbox"
+          aria-checked={!!isPicked}
+          aria-label={`Select ${c.full_name}`}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) } }}
+          style={{
+            width: 22, height: 22, borderRadius: 7, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `1.5px solid ${isPicked ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
+            background: isPicked ? 'var(--neon)' : 'var(--card)',
+            color: isPicked ? 'var(--ink)' : 'transparent',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        </span>
+      )}
+
+      {/* Top: Avatar + Name + Bookmark */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        {onTogglePick && (
-          <span
-            className={`card-tick${isPicked ? ' is-picked' : ''}`}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) }}
-            role="checkbox"
-            aria-checked={!!isPicked}
-            aria-label={`Select ${c.full_name}`}
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) } }}
-            style={{
-              width: 22, height: 22, borderRadius: 7, flexShrink: 0, marginTop: 12, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: `1.5px solid ${isPicked ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
-              background: isPicked ? 'var(--neon)' : 'var(--card)',
-              color: isPicked ? 'var(--ink)' : 'transparent',
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-          </span>
-        )}
         <div style={{
           width: 46, height: 46, borderRadius: 14, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
