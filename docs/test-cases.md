@@ -4503,3 +4503,28 @@ record rather than a set of instructions.
       and NO button or status row: the note line says it all
 - [ ] Brief & attachments and Full terms & guidelines remain folds. Those are
       the only two `<details>` on this screen in the export
+
+### The complete hero's footer
+- [ ] The two links sit FLUSH to the card's edges, and the divider between them
+      runs the full height of the row
+- [ ] Each is 50px tall with a 14px icon and 7px gap: a document for Payments,
+      a rising chart for Analytics
+- [ ] `.offer-m__done { padding: 0 }` must sit INSIDE the mobile media query and
+      AFTER `.offer-m__card`. Above it, at equal specificity, `.offer-m__card
+      { padding: 20px }` won on source order — the card kept 20px all round, so
+      the footer was inset and the divider could not reach top or bottom. Third
+      time this ordering has bitten; `.is-warn` was the same shape
+
+## 45. Payments page (verified, not rebuilt)
+- [ ] All past payments load: the invoices query carries no `.limit()`, and
+      history is every paid invoice
+- [ ] Mobile paginates at **4 per page**; the busiest creator on staging has 26
+      paid invoices, so 7 pages
+- [ ] Month headings come from the rows on the current page
+- [ ] CSV export covers ALL paid invoices, not just the visible page
+
+### Two data notes worth knowing
+- [ ] 2 of 35 paid invoices on staging have no `paid_at`, so their date renders
+      blank. Not a code bug; the rows predate the column being set
+- [ ] History is ordered by `issued_at`, not `paid_at`. For a payment history
+      the paid date is the more natural sort, and the two can differ
