@@ -59,6 +59,10 @@ export const STAGE: Record<string, { i: number; label: string; short: string; do
   /* ISSUED, NOT PAID. Now it genuinely is awaiting payment, and the wait is
      the brand's - so not hot: there is nothing for the creator to do. */
   awaiting_payment: { i: 4, label: 'Invoiced \u00B7 awaiting payment', short: 'Awaiting payment', dot: '#8B90A0', bg: '#F2F4F7', chipBg: '#EEF1F5', fg: '#5B6070', action: 'View deal', hot: false },
+  /* ACCEPTED, NOT PAID. The brand has agreed the bill, which is further along
+     than merely having received it, so it reads differently and carries the
+     green dot desktop already gives this status. */
+  invoice_accepted: { i: 4, label: 'Accepted \u00B7 awaiting payment', short: 'Accepted', dot: '#8FAF1F', bg: '#F4FBDC', chipBg: '#F4FBDC', fg: '#5C6F14', action: 'View deal', hot: false },
   countered:   { i: 0, label: 'Countered \u00B7 with brand', short: 'Waiting on brand', dot: '#8B90A0', bg: '#F2F4F7', chipBg: '#EEF1F5', fg: '#5B6070', action: 'View deal',   hot: false },
   declined:    { i: -1, label: 'Declined', short: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', chipBg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
   complete:    { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
@@ -130,8 +134,14 @@ export function resolveStatus(d: { status: string; is_posted: boolean | null; aw
     if (!d.is_posted) return 'awaiting'
     /* An invoice that exists but is still a draft has not been sent, so it is
        no different from not having raised one. */
-    const raised = d.invoice_status === 'issued' || d.invoice_status === 'accepted'
-    return raised ? 'awaiting_payment' : 'invoice_due'
+    /* A paid invoice outranks the deal's own status. The deal moves to paid or
+       complete when payment lands, but if that lags, the invoice is the newer
+       fact and "invoice due" for money already received is the worst of the
+       readings available. */
+    if (d.invoice_status === 'paid') return 'posted'
+    if (d.invoice_status === 'accepted') return 'invoice_accepted'
+    if (d.invoice_status === 'issued') return 'awaiting_payment'
+    return 'invoice_due'
   }
 
   return d.status
@@ -158,7 +168,7 @@ export function matchFilter(st: string, filter: string): boolean {
   // Still a negotiation, just not the creator's turn.
   if (filter === 'negotiating') return st === 'negotiating' || st === 'countered'
   // Posted covers both, paid or not: the tab is about the content being live.
-  if (filter === 'posted') return st === 'posted' || st === 'invoice_due' || st === 'awaiting_payment'
+  if (filter === 'posted') return st === 'posted' || st === 'invoice_due' || st === 'awaiting_payment' || st === 'invoice_accepted'
   return st === filter
 }
 

@@ -268,6 +268,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
             dealRef={deal.deal_ref}
             hasDraft={!!invoice}
             issued={invoiceIssued}
+            accepted={invoice?.status === 'accepted'}
+            acceptedAt={invoice?.accepted_at ? formatDate(invoice.accepted_at) : null}
             issuedAt={invoice?.issued_at ? formatDate(invoice.issued_at) : null}
             dueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
             dueUrgent={formatDueStatus(invoice?.due_date ?? null)?.urgent ?? false}

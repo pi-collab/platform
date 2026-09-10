@@ -16,14 +16,20 @@ import { generateInvoice, issueInvoice } from './actions'
  * if a previous attempt failed halfway.
  */
 export default function MobileInvoiceCard({
-  dealId, dealRef, hasDraft, issued, issuedAt, dueLabel, dueUrgent,
+  dealId, dealRef, hasDraft, issued, accepted, issuedAt, acceptedAt, dueLabel, dueUrgent,
   basePaise, feePaise, feePercent, receivesPaise,
 }: {
   dealId: string
   dealRef: string | null
   hasDraft: boolean
   issued: boolean
+  /* The brand has agreed the invoice but the money has not arrived. Desktop
+     already separates this from "sent, awaiting payment"; without it a creator
+     cannot tell a brand that has acknowledged the bill from one that has not
+     opened it. */
+  accepted: boolean
   issuedAt: string | null
+  acceptedAt: string | null
   dueLabel: string | null
   dueUrgent: boolean
   basePaise: number | null
@@ -78,14 +84,22 @@ export default function MobileInvoiceCard({
       </div>
 
       <div className="offer-m__invnote">
-        Per agreed terms &middot; {issued ? `issued ${issuedAt ?? ''}`.trim() : 'not yet sent'}
+        Per agreed terms &middot;{' '}
+        {accepted && acceptedAt ? `accepted ${acceptedAt}`
+          : issued ? `issued ${issuedAt ?? ''}`.trim()
+          : 'not yet sent'}
       </div>
 
       {issued ? (
         <div className="offer-m__invoicestate">
-          <span className="offer-m__invoicedot" aria-hidden="true" />
+          {/* Amber while it is merely sent; green once the brand has accepted
+              it. Same two colours desktop uses for these statuses. */}
+          <span
+            className={`offer-m__invoicedot${accepted ? ' offer-m__invoicedot--done' : ''}`}
+            aria-hidden="true"
+          />
           <span className="offer-m__label">
-            Awaiting payment
+            {accepted ? 'Accepted, awaiting payment' : 'Sent, awaiting payment'}
             {dueLabel && (
               <> &middot; <span className={dueUrgent ? 'offer-m__invdue' : undefined}>{dueLabel}</span></>
             )}

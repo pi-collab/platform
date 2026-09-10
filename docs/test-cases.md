@@ -4388,7 +4388,12 @@ data, not against the ones the code seemed to expect.
 - [ ] agreed → Agreed · in production · View deal
 - [ ] approved, not posted → Approved · post it · Upload post · **Needs you**
 - [ ] approved, posted, no/draft invoice → Posted · invoice due · Invoice · **Needs you**
-- [ ] approved, posted, issued/accepted → Invoiced · awaiting payment · View deal
+- [ ] approved, posted, issued → Invoiced · awaiting payment · View deal
+- [ ] approved, posted, accepted → Accepted · awaiting payment · View deal
+- [ ] approved, posted, invoice PAID → Posted · paid. A paid invoice outranks
+      the deal's own status: the deal moves to paid/complete when payment
+      lands, and if that lags, "invoice due" for money already received is the
+      worst reading available
 - [ ] delivered → Submitted · in review · Track review
 - [ ] revision → Revision requested · Resubmit · **Needs you**
 - [ ] negotiating → Offer to review · Review offer · **Needs you**
@@ -4445,11 +4450,16 @@ the real card.
 - [ ] `generateInvoice` requires status approved; `issueInvoice` requires
       is_posted. Both still enforce that server-side
 
-### After issuing
+### After issuing — two states, as desktop has
 - [ ] Stage becomes **Invoiced**, next **"Next: paid"**, 5 of 6 segments
-- [ ] **"Per agreed terms · issued <date>"**
-- [ ] A warning dot with **Awaiting payment**, and the due text in danger red
-      when overdue or due today
+- [ ] **Sent, not yet accepted**: "Per agreed terms · issued <date>", an amber
+      dot, and **"Sent, awaiting payment"**
+- [ ] **Accepted, not paid**: "Per agreed terms · accepted <date>", a
+      **neon-deep** dot, and **"Accepted, awaiting payment"**
+- [ ] Those are desktop's own two labels and dot colours (`STATUS_DOTS`:
+      issued amber, accepted neon-deep) — a creator can tell a brand that has
+      agreed the bill from one that has merely received it
+- [ ] The due text is danger red when overdue or due today, in both states
 - [ ] The Issue button is gone
 
 ### Not built, and why

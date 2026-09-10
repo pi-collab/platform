@@ -91,7 +91,7 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
     /* countered sorts just below negotiating: still the live negotiation, but
        the creator is waiting rather than being waited on. Without an entry it
        fell to the ?? 99 default and sank below declined deals. */
-    const PRIORITY: Record<string, number> = { negotiating: 0, countered: 1, revision: 2, awaiting: 3, invoice_due: 4, delivered: 5, agreed: 6, awaiting_payment: 7, posted: 8, declined: 9 }
+    const PRIORITY: Record<string, number> = { negotiating: 0, countered: 1, revision: 2, awaiting: 3, invoice_due: 4, delivered: 5, agreed: 6, awaiting_payment: 7, invoice_accepted: 8, posted: 9, declined: 10 }
     list = list.slice().sort((a, b) => {
       if (sortKey === 'price') return (b.price_paise ?? 0) - (a.price_paise ?? 0)
       if (sortKey === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
