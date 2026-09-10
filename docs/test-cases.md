@@ -4276,8 +4276,11 @@ and version history stay one implementation; only presentation branches.
       (`deal_deliverable_items.posted_url`, migration 0390)
 
 ### Invoice card
-- [ ] Eyebrow **"Invoice"**, then "Your invoice will be created automatically
-      once content is posted."
+- [ ] Eyebrow **"Invoice"**, then "You can create and share your invoice once
+      content is posted."
+- [ ] It must NOT say the invoice is created automatically. The export's copy
+      does; our invoicing is gated on `is_posted` and the CREATOR raises it, so
+      that wording would leave them waiting for something nobody does
 - [ ] A `--warning` dot with **"Waiting on posted content"**, turning
       `--neon-deep` / "Ready to invoice" once every item is posted
 
@@ -4295,3 +4298,16 @@ and version history stay one implementation; only presentation branches.
 - [ ] The rows are defined ONCE (`agreedTermRows`) and referenced from both
       placements, so the two cannot drift
 - [ ] On submitted/approved there is no separate money card anywhere
+
+### The tab bar rides up when you scroll past the top
+- [ ] Overscrolling at the top of a creator page must not drag the bottom
+      navigation with it
+- [ ] `.creator-tabbar` is already `position: fixed` and no ancestor creates a
+      containing block — the movement is iOS rubber-band, which drags fixed
+      elements during the bounce
+- [ ] `overscroll-behavior-y: none` is set on `body:has(.creator-main)`. It has
+      to be on the scrolling element, which is the document; `:has` keeps it to
+      creator pages instead of the whole site
+- [ ] Pull-to-refresh is therefore off on creator pages. Intended for an
+      app-like screen with a fixed bottom bar
+- [ ] Marketing and brand pages keep pull-to-refresh

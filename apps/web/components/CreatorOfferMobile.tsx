@@ -264,8 +264,12 @@ export default function CreatorOfferMobile({
         {stage === 'approved' && (
           <section className="offer-m__card offer-m__invoice">
             <h2 className="offer-m__submittitle">Invoice</h2>
+            {/* The export says the invoice is created automatically. It is
+                not: invoicing is gated on is_posted and the creator raises it
+                themselves. Telling them it happens on its own would have them
+                waiting for something nobody was going to do. */}
             <p className="offer-m__invoicebody">
-              Your invoice will be created automatically once content is posted.
+              You can create and share your invoice once content is posted.
             </p>
             <div className="offer-m__invoicestate">
               <span className={`offer-m__invoicedot${allPosted ? ' offer-m__invoicedot--done' : ''}`} aria-hidden="true" />
