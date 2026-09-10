@@ -1027,6 +1027,31 @@ One component (`components/BrandMark.tsx`) decides between the two.
 
 ---
 
+### Campaign placements, and campaign brief files
+
+#### Set terms uses the offer builder's row
+- [ ] Opening "Set terms" on a campaign roster row draws the SAME row the offer builder draws: neon tick, name at 15.5/700, "description . Rs.X each" beneath, stepper and line total on the right
+- [ ] Reel type (Instagram only) and Boosting rights are the offer builder's pills, not a bare select and 0.6rem buttons
+- [ ] Boosting is asked in DAYS and still stored as months, rounded up. An existing draft opens on the preset it was saved with
+- [ ] The channel heads its group as an eyebrow: "YOUTUBE . @vikramwealth"
+- [ ] There is deliberately NO "Deliver by" here: a draft placement has nowhere to keep a date, and a pill that discarded it would be worse than none
+- [ ] The pills are one component shared with the offer builder, so the two cannot drift
+
+#### Campaign brief attachments
+- [ ] Uploading a file to a campaign brief SUCCEEDS. It failed with "new row violates row-level security policy": the upload went through the RLS client, and storage policies on deal-files are written around a deal, which a campaign-briefs/ key belongs to none of
+- [ ] A brand cannot upload into another brand's campaign (the admin client bypasses RLS, so ownership is checked in the action)
+- [ ] Over 50 MB is refused with the file's actual size
+- [ ] A file with spaces or non-ASCII in its name uploads, and its real name still shows in the list
+- [ ] Removing an attachment DELETES it from the bucket, not just from the list
+- [ ] A remove cannot be aimed at a path outside that campaign's folder
+
+#### The creator sees a View button
+- [ ] Each brief attachment shows an explicit View, the same word a deliverable's file uses, on desktop AND mobile
+- [ ] The file name truncates rather than pushing View off the row
+- [ ] The whole row still opens the file; View names what it does
+
+---
+
 ### Browse creators: list view and multi-select
 
 Built from "Browse Creators (standalone)". Cards are for weighing one creator at
