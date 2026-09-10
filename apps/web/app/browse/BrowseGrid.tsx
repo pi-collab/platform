@@ -599,59 +599,14 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </div>
         )}
 
-        {/* ══════ SHORTLIST BAR ══════ */}
-        {savedCount > 0 && !savedView && (
-          <div style={{
-            position: 'fixed', bottom: 18, left: 0, right: 0, zIndex: 40,
-            display: 'flex', justifyContent: 'center', padding: '0 20px', pointerEvents: 'none',
-          }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-              padding: '12px 14px 12px 20px', borderRadius: 'var(--radius-pill)',
-              background: 'var(--ink)', boxShadow: '0 22px 50px -20px rgba(40,45,25,.6)',
-              pointerEvents: 'auto',
-            }}>
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap' }}>
-                {savedCount} shortlisted
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  onClick={() => setSavedView(true)}
-                  style={{
-                    padding: '9px 16px', borderRadius: 'var(--radius-pill)',
-                    background: 'rgba(255,255,255,.12)', border: 'none',
-                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
-                    color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}
-                >
-                  Review
-                </button>
-                <button
-                  onClick={() => setSaved({})}
-                  style={{
-                    padding: '9px 14px', borderRadius: 'var(--radius-pill)',
-                    background: 'none', border: 'none',
-                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
-                    color: 'rgba(255,255,255,.6)', cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}
-                >
-                  Clear
-                </button>
-                <Link
-                  href="/deals/new"
-                  style={{
-                    padding: '9px 18px', borderRadius: 'var(--radius-pill)',
-                    backgroundColor: 'var(--neon)', border: 'none',
-                    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
-                    color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
-                  }}
-                >
-                  Start a deal
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* No bar over the browse grid.
+            Saving used to raise a "N shortlisted / Review / Clear / Start a
+            deal" bar, which put a campaign-shaped action on an act that is not
+            one: saving a creator is keeping them, nothing more. Its "Start a
+            deal" went to an empty /deals/new, dropping the shortlist it was
+            sitting on top of. The count already lives on the Saved tab, and the
+            campaign is started from there, where the brand has ticked who is in
+            it. See the CAMPAIGN BAR above. */}
       </div>
     </section>
   )

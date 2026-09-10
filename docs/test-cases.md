@@ -4818,7 +4818,9 @@ and its cases travel together.
       payments list the brand then has to search
 
 ### Saved creators are a shortlist, not six separate deals
-- [ ] Saving a creator adds them to Saved and does NOT offer "Start deal"
+- [ ] Saving a creator adds them to Saved and raises NO bar over the grid. Saving is keeping someone, not the start of a deal
+- [ ] The only place a count of saved creators appears is the Saved tab's own chip
+- [ ] In the Saved view, ticking creators DOES raise a bar, and its action is "Start a campaign" over the ticked ones
 - [ ] The saved list supports selecting several creators at once
 - [ ] Selecting several and continuing starts ONE campaign covering them, rather
       than making the brand open six separate deal builders
