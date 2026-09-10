@@ -108,17 +108,25 @@ function useAnimatedPlaceholder() {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {} }: {
+export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {}, startingRates = {} }: {
   creators: BrowseCreator[]
   storefrontSlugs?: Record<string, string>
   /** creatorId -> followers from a connected Instagram account. */
   verifiedFollowers?: Record<string, number>
+  /** creatorId -> lowest published package price, in paise. */
+  startingRates?: Record<string, number>
 }) {
   // Verified first, typed second. Connecting Instagram does not write into
   // social_accounts, so a connected creator's typed count is usually absent and
   // reading it alone showed them as 0 and sorted them last.
   const followersOf = (c: BrowseCreator) =>
     verifiedFollowers[c.id] ?? bestFollowers(c.social_accounts)
+
+  /* Packages first, rate_card second. The storefront editor writes packages;
+     rate_card is the older store and nothing keeps the two in step, so reading
+     it alone showed "-" for creators who had priced everything. */
+  const rateOf = (c: BrowseCreator): number | null =>
+    startingRates[c.id] ?? lowestRate(c.rate_card)
 
   const [search, setSearch] = useState('')
   // An array, empty meaning no niche filter. A creator's storefront can carry
@@ -245,7 +253,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     // Rate
     if (rateFilter !== 'any') {
       list = list.filter((c) => {
-        const low = lowestRate(c.rate_card)
+        const low = rateOf(c)
         if (low === null) return false
         const rupees = low / 100
         if (rateFilter === 'lt50') return rupees < 50_000
@@ -258,12 +266,12 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     // Sort
     list = [...list].sort((a, b) => {
       if (sort === 'followers') return followersOf(b) - followersOf(a)
-      if (sort === 'rateLow') return (lowestRate(a.rate_card) ?? 0) - (lowestRate(b.rate_card) ?? 0)
+      if (sort === 'rateLow') return (rateOf(a) ?? 0) - (rateOf(b) ?? 0)
       return a.full_name.localeCompare(b.full_name)
     })
 
     return list
-  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved])
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates])
 
   const pageList = filtered.slice(0, shown)
   const hasMore = shown < filtered.length
@@ -651,6 +659,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                     key={c.id}
                     creator={c}
                     verifiedFollowers={verifiedFollowers[c.id]}
+                    startingRate={rateOf(c)}
                     isPicked={!!picked[c.id]}
                     onTogglePick={(id) => setPicked((prev) => ({ ...prev, [id]: !prev[id] }))}
                     isSaved={!!saved[c.id]}
@@ -668,6 +677,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                     onToggleSave={toggleSave}
                     storefrontSlug={storefrontSlugs[c.id] ?? null}
                     verifiedFollowers={verifiedFollowers[c.id]}
+                    startingRate={rateOf(c)}
                     hideDealCta={savedView}
                     isPicked={!!picked[c.id]}
                     onTogglePick={(id) => setPicked((prev) => ({ ...prev, [id]: !prev[id] }))}
@@ -723,9 +733,11 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
    The checkbox is the point of this view. Twenty cards is a wall to compare
    against; twenty rows is a list to tick down, which is what putting several
    creators into one campaign actually is. */
-function CreatorRow({ creator: c, verifiedFollowers, isPicked, onTogglePick, isSaved, onToggleSave }: {
+function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onTogglePick, isSaved, onToggleSave }: {
   creator: BrowseCreator
   verifiedFollowers?: number
+  /** Lowest published package price, in paise. Null when nothing is priced. */
+  startingRate: number | null
   isPicked: boolean
   onTogglePick: (id: string) => void
   isSaved: boolean
@@ -734,7 +746,7 @@ function CreatorRow({ creator: c, verifiedFollowers, isPicked, onTogglePick, isS
   const router = useRouter()
   const primary = primarySocial(c.social_accounts)
   const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
-  const low = lowestRate(c.rate_card)
+  const low = startingRate
   const niches = (c.niches ?? []).filter(Boolean)
   const brands = c.worked_with?.length ?? 0
 
@@ -868,7 +880,7 @@ const chipStyle: React.CSSProperties = {
   color: 'var(--ink)', whiteSpace: 'nowrap',
 }
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, hideDealCta, isPicked, onTogglePick }: {
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, startingRate, hideDealCta, isPicked, onTogglePick }: {
   creator: BrowseCreator
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
@@ -879,6 +891,8 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
   hideDealCta?: boolean
   isPicked?: boolean
   onTogglePick?: (id: string) => void
+  /** Lowest published package price, in paise. Null when nothing is priced. */
+  startingRate: number | null
   /** From a connected Instagram account, when there is one. */
   verifiedFollowers?: number
 }) {
@@ -886,7 +900,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
   // Verified first. The typed figure is usually absent for a connected creator,
   // which is how a real 535 rendered as 0.
   const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
-  const low = lowestRate(c.rate_card)
+  const low = startingRate
   const niches = (c.niches ?? []).filter(Boolean)
 
   const router = useRouter()

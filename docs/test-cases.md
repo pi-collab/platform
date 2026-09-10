@@ -1032,6 +1032,15 @@ One component (`components/BrandMark.tsx`) decides between the two.
 Built from "Browse Creators (standalone)". Cards are for weighing one creator at
 a time; rows are for running down twenty and ticking the ones you want.
 
+#### Starting rate comes from published packages
+- [ ] A creator whose packages are set up in the storefront editor shows a Starting rate on the card AND on the list row. It read "-" because the page took creators.rate_card, a different store that nothing keeps in step with creator_products
+- [ ] The rate FILTER includes that creator. A null rate failed every band, so priced creators were being dropped from the results entirely
+- [ ] "Rate: low to high" sorts them in the right place
+- [ ] The figure is the lowest ACTIVE package price
+- [ ] An on-request package is excluded, not counted as zero. A starting rate of zero is a quote nobody gave
+- [ ] A package hidden with display_price = false is excluded too (the legacy form of on-request)
+- [ ] A creator with no packages but a legacy rate_card still shows that figure
+
 #### The view toggle
 - [ ] A list/grid control sits in the header beside the All creators / Saved tabs
 - [ ] Grid is still the default. It is what this page has always opened as
