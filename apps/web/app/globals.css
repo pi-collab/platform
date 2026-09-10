@@ -1341,6 +1341,17 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .offer-m__noticetitle { font-weight: 700; font-size: 14px; color: var(--ink); }
 .offer-m__noticebody { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 
+/* The agreed figures folded into Brief & attachments on submitted and
+   approved. A section inside the fold, not a card: it sits under the
+   attachments with the same rule above it the other sections use. */
+.offer-m__briefterms {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-hairline);
+}
+.offer-m__briefterms .offer-m__agreedmoney { margin-top: 12px; }
+.offer-m__briefterms .offer-m__termrows { margin-top: 12px; padding-top: 0; }
+
 /* Approved: one card per deliverable to post, then the invoice state. Both
    sit above the folds because they are what is left to do. */
 .offer-m__postcard { padding: 20px; }

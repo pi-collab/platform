@@ -4286,9 +4286,12 @@ and version history stay one implementation; only presentation branches.
 - [ ] Brief & attachments, collapsed
 - [ ] Full terms & guidelines, collapsed
 
-### Known mismatch, not yet done
-- [ ] The submitted AND approved exports both place the agreed money block
-      INSIDE "Brief & attachments", after the attachments. Ours still renders
-      it as its own collapsible card. Two exports agreeing settles that it is
-      the design rather than an artefact — this is the one section of the
-      approved screen that does not match, and it is outstanding
+### Where the agreed figures live, by stage
+- [ ] **Agreed and revision**: their own collapsible card, summary showing the
+      agreed stamp, You receive and the payment window
+- [ ] **Submitted and approved**: folded INSIDE "Brief & attachments", after
+      the attachments, as a plain section — no summary, no chevron. Both of
+      those exports do this; two screens agreeing is what settled it
+- [ ] The rows are defined ONCE (`agreedTermRows`) and referenced from both
+      placements, so the two cannot drift
+- [ ] On submitted/approved there is no separate money card anywhere

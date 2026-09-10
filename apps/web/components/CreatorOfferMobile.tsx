@@ -121,6 +121,44 @@ export default function CreatorOfferMobile({
   /** Whether every deliverable has a live URL yet. */
   allPosted?: boolean
 }) {
+  /* The agreed figures, defined once. Agreed and revision show them in their
+     own collapsible card; submitted and approved fold them into "Brief &
+     attachments" after the attachments, which is what BOTH of those exports
+     do. Two screens agreeing is what settled it - one could have been an
+     export artefact. */
+  const agreedTermRows = (
+            <div className="offer-m__termrows">
+              {/* Flat rows, not the expandable deliverable cards the offer
+                  screen uses. Nothing left to weigh up, so nothing opens. */}
+              {items.map((it) => (
+                <div className="offer-m__termrow" key={it.id}>
+                  <span>{it.label}</span><span>{inr(it.pricePaise)}</span>
+                </div>
+              ))}
+              {totalPaise !== null && (
+                <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
+              )}
+              {feePaise !== null && feePaise > 0 && (
+                <div className="offer-m__termrow">
+                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
+                  <span>&minus;{inr(feePaise)}</span>
+                </div>
+              )}
+              {usageRights && (
+                <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
+              )}
+              {revisionLimit !== null && (
+                <div className="offer-m__termrow">
+                  <span>Revisions</span>
+                  <span>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</span>
+                </div>
+              )}
+              {rightsConfirmedAt && (
+                <div className="offer-m__termrow"><span>Rights confirmed</span><span>{rightsConfirmedAt}</span></div>
+              )}
+            </div>
+  )
+
   return (
     <div className="offer-m">
       {/* Sticky: who it is from and how to reach them. */}
@@ -282,7 +320,7 @@ export default function CreatorOfferMobile({
           </details>
         )}
 
-        {stage !== 'offer' && (
+        {(stage === 'agreed' || stage === 'revision') && (
           <details className="offer-m__card offer-m__agreedcard">
             <summary className="offer-m__agreedsum">
               <div className="offer-m__agreedtop">
@@ -304,36 +342,7 @@ export default function CreatorOfferMobile({
               </div>
             </summary>
 
-            <div className="offer-m__termrows">
-              {/* Flat rows, not the expandable deliverable cards the offer
-                  screen uses. Nothing left to weigh up, so nothing opens. */}
-              {items.map((it) => (
-                <div className="offer-m__termrow" key={it.id}>
-                  <span>{it.label}</span><span>{inr(it.pricePaise)}</span>
-                </div>
-              ))}
-              {totalPaise !== null && (
-                <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
-              )}
-              {feePaise !== null && feePaise > 0 && (
-                <div className="offer-m__termrow">
-                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
-                  <span>&minus;{inr(feePaise)}</span>
-                </div>
-              )}
-              {usageRights && (
-                <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
-              )}
-              {revisionLimit !== null && (
-                <div className="offer-m__termrow">
-                  <span>Revisions</span>
-                  <span>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</span>
-                </div>
-              )}
-              {rightsConfirmedAt && (
-                <div className="offer-m__termrow"><span>Rights confirmed</span><span>{rightsConfirmedAt}</span></div>
-              )}
-            </div>
+            {agreedTermRows}
           </details>
         )}
 
@@ -519,6 +528,22 @@ export default function CreatorOfferMobile({
                 <div className="offer-m__label" style={{ marginTop: 16 }}>Product kit</div>
                 <p className="offer-m__prose">The brand will ship product to you for this deal.</p>
               </>
+            )}
+            {(stage === 'submitted' || stage === 'approved') && (
+              <div className="offer-m__briefterms">
+                <div className="offer-m__agreedstamp">
+                  <span className="offer-m__agreeddot" aria-hidden="true" />
+                  <span className="offer-m__label">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</span>
+                </div>
+                <div className="offer-m__agreedmoney">
+                  <div>
+                    <div className="offer-m__label">You receive</div>
+                    <div className="offer-m__agreedamount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+                  </div>
+                  {paymentTerms && <span className="offer-m__agreedterms-note">{paymentTerms}</span>}
+                </div>
+                {agreedTermRows}
+              </div>
             )}
           </details>
         )}
