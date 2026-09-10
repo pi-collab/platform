@@ -958,6 +958,39 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 
 ---
 
+### Storefront rate card: total, "from" pricing, and the deal hand-off
+
+#### Layout (mobile AND desktop)
+- [ ] "Selected" and the item count sit on the LEFT, the total on the RIGHT
+- [ ] The total is ONE figure. No "From X (A + B extras)" breakdown, on either rendering
+- [ ] "Create an offer" is a full-width button BELOW the selected row on mobile
+- [ ] What each add-on costs still shows on that add-on's own row
+- [ ] Items priced on request are noted separately and are still excluded from the total
+
+#### Non-collab / None as the leading default
+- [ ] The collab control reads "Non-collab" then "Collab post", left to right
+- [ ] "Non-collab" is selected when nothing has been touched, and costs nothing
+- [ ] The boosting control still reads "None" first and defaults to it
+- [ ] Both controls read the same way: nothing extra on the left, the paid option to its right
+
+#### A "from" total is a minimum the brand can raise
+- [ ] A selection containing an approximate ("from") package shows "From" and a TYPEABLE amount
+- [ ] A selection of exact-price packages only shows "Total" and a plain figure, not an input
+- [ ] Typing an amount ABOVE the floor carries it to /deals/new as &total=<paise>
+- [ ] That amount lands in the builder's whole-deal price override, so the offer opens on the number the brand typed
+- [ ] Typing an amount BELOW the floor shows the minimum in red and still hands over the floor, never the lower number
+- [ ] Leaving the amount untouched sends NO total param, and the builder prices from line items as before
+- [ ] Adding another item after typing an amount still cannot produce an offer below the new floor
+
+#### Add-ons survive the hand-off
+- [ ] Ticking a collab on MOBILE and pressing "Create an offer" opens the builder with collab on
+- [ ] Choosing boosting days on mobile carries those days into the builder
+- [ ] Same from /browse/[id] (this path sent id:qty only and dropped both)
+- [ ] Same from the public /c/[slug] page
+- [ ] An older /deals/new?items=id:qty link with no add-on fields still parses
+
+---
+
 ### Brand Logo (Settings > Profile)
 
 Before this, the settings Profile tab drew a 72px initials square with an "Upload photo"

@@ -30,7 +30,7 @@ export interface DealPrefill {
 
 const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
 
-export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string } }) {
+export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string; total?: string } }) {
   const brand = await verifyBrand()
   const supabase = createClient()
 
@@ -159,6 +159,15 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     if (Object.keys(storefrontAddons).length === 0) storefrontAddons = undefined
   }
 
+  /* The amount the brand typed against a "from" total on the storefront.
+     Only sent when they raised it above the creator's floor, so its absence
+     means "price this the usual way" rather than "price it at zero". */
+  let storefrontTotalPaise: number | undefined
+  if (!prefill && searchParams.total) {
+    const n = parseInt(searchParams.total, 10)
+    if (Number.isFinite(n) && n > 0) storefrontTotalPaise = n
+  }
+
   return (
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -264,6 +273,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
           storefrontSelections={storefrontSelections}
           storefrontAddons={storefrontAddons}
+          storefrontTotalPaise={storefrontTotalPaise}
           addonRates={(addonRates ?? []) as never}
         />
       </div>

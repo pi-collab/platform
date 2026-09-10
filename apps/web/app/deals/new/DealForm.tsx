@@ -81,11 +81,14 @@ interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections, storefrontAddons }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number>;
+export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections, storefrontAddons, storefrontTotalPaise }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number>;
   /* What the brand ticked on the storefront. Applied as the initial state so
      the builder opens on the configuration they priced there, rather than
      resetting it and quoting a different number two screens later. */
-  storefrontAddons?: Record<string, { collab: boolean; boostDays: number }> }) {
+  storefrontAddons?: Record<string, { collab: boolean; boostDays: number }>;
+  /* What the brand typed against a "from" total on the storefront. Seeds the
+     whole-deal override, which is the same thing by another name. */
+  storefrontTotalPaise?: number }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -176,7 +179,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const [briefAvoid, setBriefAvoid] = useState('')
   const [briefAttachments, setBriefAttachments] = useState<{ name: string; storage_path: string; size_bytes: number; content_type: string }[]>([])
   const [uploadingFile, setUploadingFile] = useState(false)
-  const [priceOverride, setPriceOverride] = useState('')
+  /* Seeded from the storefront when the brand raised a "from" total there.
+     Empty otherwise, which leaves the deal priced from its line items. */
+  const [priceOverride, setPriceOverride] = useState(
+    storefrontTotalPaise && storefrontTotalPaise > 0 ? String(storefrontTotalPaise / 100) : '',
+  )
   const [requiresShipment, setRequiresShipment] = useState(false)
   const [campaignId, setCampaignId] = useState('')
 

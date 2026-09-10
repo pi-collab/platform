@@ -450,9 +450,13 @@ export default function ShopfrontPreview({
   /** When set, CTA buttons call this with selected rate card quantities instead of navigating */
   /* Quantities AND the add-ons chosen against each line, so the builder opens
      on what the brand configured here rather than resetting it. */
+  /* The third argument is the amount the brand actually intends to offer.
+     Sent ONLY when they raised it above the computed floor, so an untouched
+     selection still lets the builder price itself. */
   onDealClick?: (
     selectedQty: Record<string, number>,
     addons?: Record<string, { collab: boolean; boostDays: number }>,
+    offerTotalPaise?: number,
   ) => void
   /**
    * Show the phone header (back / "Shopfront" / copy link).
@@ -543,6 +547,30 @@ export default function ShopfrontPreview({
   const rateTotalIsFloor = data.rateCardItems.some(
     (item) => (qty[item.key] || 0) > 0 && item.approximate === true,
   )
+
+  /* A "from" price is a floor, not a quote.
+   *
+   * The card said "From Rs.65,000" and then handed the builder a line at
+   * exactly Rs.65,000, so a brand willing to pay more had to discover in the
+   * builder that the number had been a minimum all along. When the total is a
+   * floor it is editable here, and what they type is what the offer opens on.
+   *
+   * Held as typed rather than as paise: clamping mid-keystroke fights the
+   * person typing, so the floor is enforced once, on the way out. */
+  const [offerAmount, setOfferAmount] = useState('')
+  const computedTotalPaise = rateTotal + addonsTotal
+  const typedPaise = (() => {
+    const n = parseFloat(offerAmount.replace(/[^0-9.]/g, ''))
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0
+  })()
+  const offerTotalPaise = Math.max(typedPaise, computedTotalPaise)
+  /* Below the floor while they are still typing. Worth saying, and not worth
+     blocking on: the handoff clamps either way. */
+  const offerBelowFloor = typedPaise > 0 && typedPaise < computedTotalPaise
+  /* Only an amount the brand actually chose travels. An untouched floor is not
+     a decision, and sending it would pin the builder's price override to a
+     number nobody typed. */
+  const chosenTotalPaise = typedPaise > computedTotalPaise ? offerTotalPaise : undefined
   const rateHasOnRequest = data.rateCardItems.some(
     (item) => (qty[item.key] || 0) > 0 && item.countsToward === false,
   )
@@ -965,35 +993,48 @@ export default function ShopfrontPreview({
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, fontSize: 17, color: 'var(--ink)', marginTop: 5 }}>
                     {rateCount === 0 ? 'None yet' : `${rateCount} deliverable${rateCount !== 1 ? 's' : ''} selected`}
                   </div>
-                  {rateCount > 0 && (
-                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>
-                      {/* Stated as a floor whenever a selected line is a minimum
-                          or a range, and flagged when one carries no price at
-                          all. A total that reads exact when it is not is a quote
-                          a brand would hold the creator to. */}
-                      {rateTotal > 0 && (
-                        <>
-                          {rateTotalIsFloor ? 'From ' : ''}
-                          <strong style={{ color: 'var(--ink)' }}>{formatINR(rateTotal + addonsTotal)}</strong>
-                          {/* Broken out rather than folded in silently: a brand
-                              that ticked a collab should see what it cost. */}
-                          {addonsTotal > 0 && (
-                            <span style={{ color: 'var(--ink-faint)' }}>
-                              {' '}({formatINR(rateTotal)} + {formatINR(addonsTotal)} extras)
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {rateHasOnRequest && (
-                        <span style={{ color: 'var(--ink-faint)' }}>
-                          {rateTotal > 0 ? ' + items priced on request' : 'Priced on request'}
-                        </span>
-                      )}
+                  {rateCount > 0 && rateHasOnRequest && (
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 6 }}>
+                      {rateTotal > 0 ? 'Plus items priced on request' : 'Priced on request'}
                     </div>
                   )}
                 </div>
+
+                {/* THE TOTAL, on its own on the right.
+                    One number, not an arithmetic trail: the breakdown that used
+                    to sit here read "From Rs.65,000 (Rs.50,000 + Rs.15,000
+                    extras)", which is three figures for one decision. What each
+                    add-on costs is already on its own row above. */}
+                {rateCount > 0 && rateTotal > 0 && (
+                  <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+                    <span className="t-meta" style={{ color: 'var(--ink-faint)' }}>{rateTotalIsFloor ? 'From' : 'Total'}</span>
+                    {rateTotalIsFloor ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 4 }}>
+                        <span style={desktopAmount}>&#8377;</span>
+                        <input
+                          value={offerAmount}
+                          onChange={(e) => setOfferAmount(e.target.value)}
+                          inputMode="numeric"
+                          aria-label="Amount you want to offer"
+                          placeholder={String(Math.round(computedTotalPaise / 100))}
+                          style={{
+                            ...desktopAmount, width: 130, textAlign: 'right', padding: '2px 6px',
+                            border: '1px solid var(--hairline)', borderRadius: 10, background: 'var(--card)',
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ ...desktopAmount, marginTop: 4 }}>{formatINR(computedTotalPaise)}</div>
+                    )}
+                    {rateTotalIsFloor && (
+                      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: offerBelowFloor ? '#B4262A' : 'var(--ink-faint)', marginTop: 5 }}>
+                        Minimum {formatINR(computedTotalPaise)}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {!showDealCta ? null : onDealClick ? (
-                  <button onClick={() => onDealClick(qty, addonSelections)} style={{
+                  <button onClick={() => onDealClick(qty, addonSelections, chosenTotalPaise)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
                     color: 'var(--lime-950)', background: 'var(--neon)',
@@ -1682,6 +1723,12 @@ export default function ShopfrontPreview({
           rateTotal={rateTotal}
           addonsTotal={addonsTotal}
           rateTotalIsFloor={rateTotalIsFloor}
+          offerAmount={offerAmount}
+          setOfferAmount={setOfferAmount}
+          computedTotalPaise={computedTotalPaise}
+          offerBelowFloor={offerBelowFloor}
+          chosenTotalPaise={chosenTotalPaise}
+          addonSelections={addonSelections}
           rateHasOnRequest={rateHasOnRequest}
           wantsCollab={wantsCollab}
           setWantsCollab={setWantsCollab}
@@ -1702,4 +1749,11 @@ export default function ShopfrontPreview({
     </div>
     </SectionCtx.Provider>
   )
+}
+
+/* The total, at the size a price deserves. Shared by the "from" input and the
+   plain figure so an editable total is not a different size from a fixed one. */
+const desktopAmount: React.CSSProperties = {
+  fontFamily: 'var(--font-num)', fontWeight: 600, letterSpacing: '-0.02em',
+  fontSize: 22, lineHeight: 1.15, color: 'var(--ink)',
 }

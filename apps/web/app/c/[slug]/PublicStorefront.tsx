@@ -23,6 +23,7 @@ export default function PublicStorefront({ data, slug, creatorId, creatorName }:
   const handleDealClick = useCallback((
     selectedQty: Record<string, number>,
     addons?: Record<string, { collab: boolean; boostDays: number }>,
+    offerTotalPaise?: number,
   ) => {
     trackEvent('pitch_started', { slug })
     const params = new URLSearchParams({ creator: creatorId })
@@ -36,6 +37,8 @@ export default function PublicStorefront({ data, slug, creatorId, creatorName }:
         return `${key}:${q}:${a.collab ? 1 : 0}:${a.boostDays || 0}`
       }).join(','))
     }
+    /* Present only when the brand raised a "from" total above its floor. */
+    if (offerTotalPaise && offerTotalPaise > 0) params.set('total', String(offerTotalPaise))
     router.push(`/deals/new?${params.toString()}`, { scroll: true })
   }, [slug, creatorId, router])
 
