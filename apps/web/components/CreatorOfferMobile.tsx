@@ -627,8 +627,16 @@ export default function CreatorOfferMobile({
                 <div className="offer-m__files">
                   {attachments.map((a) => (
                     a.url
-                      ? <a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" className="offer-m__file">{a.name}</a>
-                      : <span key={a.name} className="offer-m__file">{a.name}</span>
+                      ? (
+                        <a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" className="offer-m__file">
+                          <span className="offer-m__filename">{a.name}</span>
+                          {/* The same word the desktop card and a deliverable's
+                              file use. A row that is quietly a link is only
+                              discoverable by tapping it. */}
+                          <span className="offer-m__fileview">View</span>
+                        </a>
+                      )
+                      : <span key={a.name} className="offer-m__file"><span className="offer-m__filename">{a.name}</span></span>
                   ))}
                 </div>
               </>

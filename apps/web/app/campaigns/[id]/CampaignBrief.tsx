@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { updateCampaignBrief, uploadCampaignBriefAttachment } from './draft-actions'
+import { removeCampaignBriefAttachment, updateCampaignBrief, uploadCampaignBriefAttachment } from './draft-actions'
 import PointsInput from '@/app/deals/new/PointsInput'
 
 interface Attachment {
@@ -76,8 +76,12 @@ export default function CampaignBrief({
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  function removeAttachment(path: string) {
+  async function removeAttachment(path: string) {
+    /* Dropped from the list AND from the bucket. Removing it here only ever
+       forgot about it, leaving the file uploaded for good. */
     setAttachments((prev) => prev.filter((a) => a.storage_path !== path))
+    const res = await removeCampaignBriefAttachment(campaignId, path)
+    if ('error' in res && res.error) setError(res.error)
   }
 
   const hasContent = !!(initialPitch || initialGuidelines || initialAvoid || initialAttachments.length > 0)
