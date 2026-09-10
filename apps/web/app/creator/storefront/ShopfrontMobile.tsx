@@ -49,6 +49,12 @@ export interface ShopfrontMobileProps {
      the parent so the phone and the desktop card are one number, not two. */
   offerAmount: string
   setOfferAmount: (v: string) => void
+  /* The total rests as a figure and opens for typing on request. Owned by the
+     parent with the amount itself, so the two renderings behave alike. */
+  editingAmount: boolean
+  setEditingAmount: (v: boolean) => void
+  startEditingAmount: () => void
+  offerTotalPaise: number
   computedTotalPaise: number
   offerBelowFloor: boolean
   chosenTotalPaise?: number
@@ -241,6 +247,7 @@ export default function ShopfrontMobile({
   data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays,
   rateTotal, addonsTotal, rateTotalIsFloor, rateHasOnRequest, activePlatform, setActivePlatform,
   offerAmount, setOfferAmount, computedTotalPaise, offerBelowFloor, chosenTotalPaise, addonSelections,
+  editingAmount, setEditingAmount, startEditingAmount, offerTotalPaise,
   linkCopied, copyLink, onDealClick, editing, showHeader = false,
 }: ShopfrontMobileProps) {
   /* ── View model ───────────────────────────────────────────────────────────
@@ -513,20 +520,28 @@ export default function ShopfrontMobile({
                         neon TICK, and a neon wash behind the row as well made
                         the tick the quieter of the two signals. 14px rows, as
                         drawn. */}
-                    <div style={{padding: '14px 0', borderTop: '1px solid var(--hair)'}}>
+                    <div style={{padding: '14px 0', borderTop: itemIdx === 0 ? 'none' : '1px solid var(--hair)'}}>
                       {/* THE ROW, as "Brand Deal Detail - Create Offer Mobile"
                           draws it: a 22px tick that fills neon when the line is
                           picked, the name with its unit price beneath, and the
                           stepper on the right of the SAME row. The platform
                           icon is gone - selection is what this row is for, and
                           the name already carries the channel. */}
-                      <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                      {/* The WHOLE row is the target. A 22px tick is a small
+                          thing to hit on a phone, and the name beside it is
+                          what a brand is actually reaching for. The stepper
+                          stops the event so +/- still work on their own. */}
+                      <div
+                        onClick={() => (item.qty > 0 ? item.dec() : item.inc())}
+                        role="checkbox"
+                        aria-checked={item.qty > 0}
+                        aria-label={item.name}
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (item.qty > 0 ? item.dec() : item.inc()) } }}
+                        style={{display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer'}}
+                      >
                         <span
-                          onClick={() => (item.qty > 0 ? item.dec() : item.inc())}
-                          role="checkbox"
-                          aria-checked={item.qty > 0}
-                          tabIndex={0}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') (item.qty > 0 ? item.dec() : item.inc()) }}
+                          aria-hidden="true"
                           style={{
                             width: '22px', height: '22px', flex: 'none', borderRadius: '50%',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -572,9 +587,9 @@ export default function ShopfrontMobile({
                         )}
                         {item.qty > 0 && !item.isPriceOnRequest && (
                           <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0}}>
-                            <button onClick={item.dec} aria-label="Decrease quantity" style={stepBtn}>&minus;</button>
+                            <button onClick={(e) => { e.stopPropagation(); item.dec() }} aria-label="Decrease quantity" style={stepBtn}>&minus;</button>
                             <span className="tnum" style={{minWidth: '16px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{item.qty}</span>
-                            <button onClick={item.inc} aria-label="Increase quantity" style={stepBtn}>+</button>
+                            <button onClick={(e) => { e.stopPropagation(); item.inc() }} aria-label="Increase quantity" style={stepBtn}>+</button>
                           </div>
                         )}
                       </div>
@@ -589,7 +604,7 @@ export default function ShopfrontMobile({
                           with 3px padding, and segments at 11.5/700 that go
                           white with a soft shadow when active. */}
                       {item.qty > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
-                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '34px'}}>
+                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px'}}>
                           {offersCollab(item.rates) && (
                             <div>
                               <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
@@ -634,12 +649,12 @@ export default function ShopfrontMobile({
                           now, and a second stepper under the first was two
                           controls for one number. */}
                       {item.isCustom && (
-                        <div style={{marginTop: '12px', paddingLeft: '34px'}}>
+                        <div style={{marginTop: '12px'}}>
                           <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
                         </div>
                       )}
                       {item.showFromInput ? (<>
-                        <div style={{marginTop: '12px', paddingLeft: '34px'}}>
+                        <div style={{marginTop: '12px'}}>
                           <input value={item.fromAmount} onInput={item.onFromAmount} placeholder="Enter your rate (₹25,000+)" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
                         </div>
                       </>) : null}
@@ -664,17 +679,31 @@ export default function ShopfrontMobile({
                           {/* A floor is a starting price, so it is typeable.
                               A brand who would pay more than the minimum had to
                               reach the builder to find that out. */}
-                          {rateTotalIsFloor ? (
+                          {rateTotalIsFloor && editingAmount ? (
                             <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', marginTop: '4px'}}>
                               <span style={mobileAmount}>&#8377;</span>
                               <input
                                 value={offerAmount}
                                 onChange={(e) => setOfferAmount(e.target.value)}
+                                onBlur={() => setEditingAmount(false)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingAmount(false) }}
                                 inputMode="numeric"
+                                autoFocus
                                 aria-label="Amount you want to offer"
-                                placeholder={String(Math.round(computedTotalPaise / 100))}
                                 style={{...mobileAmount, width: '112px', textAlign: 'right', padding: '3px 8px', border: '1.3px solid var(--line)', borderRadius: '10px', background: '#fff'}}
                               />
+                            </div>
+                          ) : rateTotalIsFloor ? (
+                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px'}}>
+                              <span className="tnum" style={mobileAmount}>{formatINR(offerTotalPaise)}</span>
+                              <button
+                                type="button"
+                                onClick={startEditingAmount}
+                                aria-label="Change the amount you want to offer"
+                                style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '9px', flexShrink: 0, border: '1.3px solid var(--line)', background: '#fff', color: 'var(--wg-500)', cursor: 'pointer', padding: 0}}
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                              </button>
                             </div>
                           ) : (
                             <div className="tnum" style={{...mobileAmount, marginTop: '4px'}}>{formatINR(computedTotalPaise)}</div>

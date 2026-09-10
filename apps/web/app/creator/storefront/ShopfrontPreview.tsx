@@ -558,6 +558,13 @@ export default function ShopfrontPreview({
    * Held as typed rather than as paise: clamping mid-keystroke fights the
    * person typing, so the floor is enforced once, on the way out. */
   const [offerAmount, setOfferAmount] = useState('')
+  /* The total reads as a figure, not as an empty box.
+   *
+   * Drawn as an input from the start, the most important number on the card
+   * was a blank field with the real total greyed out behind it as a
+   * placeholder, which reads as "unfilled" rather than "editable". It rests as
+   * the amount and opens for typing when asked. */
+  const [editingAmount, setEditingAmount] = useState(false)
   const computedTotalPaise = rateTotal + addonsTotal
   const typedPaise = (() => {
     const n = parseFloat(offerAmount.replace(/[^0-9.]/g, ''))
@@ -571,6 +578,12 @@ export default function ShopfrontPreview({
      a decision, and sending it would pin the builder's price override to a
      number nobody typed. */
   const chosenTotalPaise = typedPaise > computedTotalPaise ? offerTotalPaise : undefined
+  /* Opening the field seeds it with the figure already on screen, so raising a
+     price is an edit rather than a retype. */
+  const startEditingAmount = () => {
+    if (!offerAmount.trim()) setOfferAmount(String(Math.round(computedTotalPaise / 100)))
+    setEditingAmount(true)
+  }
   /* The CTA is live only with something selected AND an amount that is at
      least the creator's floor. Below it, the offer would be one they have
      already said they will not take. */
@@ -1012,20 +1025,38 @@ export default function ShopfrontPreview({
                 {rateCount > 0 && rateTotal > 0 && (
                   <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
                     <span className="t-meta" style={{ color: 'var(--ink-faint)' }}>{rateTotalIsFloor ? 'From' : 'Total'}</span>
-                    {rateTotalIsFloor ? (
+                    {rateTotalIsFloor && editingAmount ? (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 4 }}>
                         <span style={desktopAmount}>&#8377;</span>
                         <input
                           value={offerAmount}
                           onChange={(e) => setOfferAmount(e.target.value)}
+                          onBlur={() => setEditingAmount(false)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingAmount(false) }}
                           inputMode="numeric"
+                          autoFocus
                           aria-label="Amount you want to offer"
-                          placeholder={String(Math.round(computedTotalPaise / 100))}
                           style={{
                             ...desktopAmount, width: 130, textAlign: 'right', padding: '2px 6px',
                             border: '1px solid var(--hairline)', borderRadius: 10, background: 'var(--card)',
                           }}
                         />
+                      </div>
+                    ) : rateTotalIsFloor ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+                        <span style={desktopAmount}>{formatINR(offerTotalPaise)}</span>
+                        <button
+                          type="button"
+                          onClick={startEditingAmount}
+                          aria-label="Change the amount you want to offer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 28, height: 28, borderRadius: 9, cursor: 'pointer',
+                            border: '1px solid var(--hairline)', background: 'var(--card)', color: 'var(--ink-soft)',
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                        </button>
                       </div>
                     ) : (
                       <div style={{ ...desktopAmount, marginTop: 4 }}>{formatINR(computedTotalPaise)}</div>
@@ -1729,6 +1760,10 @@ export default function ShopfrontPreview({
           rateTotalIsFloor={rateTotalIsFloor}
           offerAmount={offerAmount}
           setOfferAmount={setOfferAmount}
+          editingAmount={editingAmount}
+          setEditingAmount={setEditingAmount}
+          startEditingAmount={startEditingAmount}
+          offerTotalPaise={offerTotalPaise}
           computedTotalPaise={computedTotalPaise}
           offerBelowFloor={offerBelowFloor}
           chosenTotalPaise={chosenTotalPaise}

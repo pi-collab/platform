@@ -988,6 +988,14 @@ One component (`components/BrandMark.tsx`) decides between the two.
 
 #### Layout (mobile AND desktop)
 - [ ] "Selected" and the item count sit on the LEFT, the total on the RIGHT
+- [ ] The FIRST rate row has no rule above it. The card's own top edge was doubled by a border on every row including the first
+- [ ] The add-on labels ("Reel type", "Boosting rights") and their segmented bars line up with the rest of the card, not indented to the text column
+- [ ] The whole rate row picks the line, not only the 22px tick
+- [ ] The stepper's + and - still work on their own and do NOT toggle the row underneath them
+- [ ] Keyboard: Enter or Space on a focused row picks it, and does not scroll the page
+- [ ] The total RESTS as a figure with an edit control beside it, not as an empty input with the real number greyed out behind it as a placeholder
+- [ ] Pressing edit opens the field already carrying that figure, so raising a price is an edit rather than a retype
+- [ ] Blur, Enter or Escape closes the field back to the figure
 - [ ] The total is ONE figure. No "From X (A + B extras)" breakdown, on either rendering
 - [ ] "Create an offer" is a full-width button BELOW the selected row on mobile
 - [ ] What each add-on costs still shows on that add-on's own row
