@@ -236,7 +236,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
      work and the brand is reviewing. 'revision' is a different screen and is
      deliberately not folded in here. */
   const isSubmittedMobile = deal.status === 'delivered'
-  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile
+  const isRevisionMobile = deal.status === 'revision'
+  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile || isRevisionMobile
   const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
     typeof v === 'string'
@@ -246,7 +247,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     <>
     {showMobileScreen && (
       <CreatorOfferMobile
-        stage={isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
+        stage={isRevisionMobile ? 'revision' : isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
+        reviewedAt={(() => {
+          const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'revision' || x.detail?.new_status === 'revision')).pop()
+          return e ? formatDate(e.created_at) : null
+        })()}
         submittedAt={(() => {
           const ts = (items ?? []).map((i) => i.submitted_at).filter(Boolean).sort().at(-1)
           return ts ? formatDate(ts as string) : null
@@ -257,8 +262,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           : null}
         submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
         submitTotal={items ? items.length : 0}
-        submitNode={(isAgreedMobile || isSubmittedMobile) && items && items.length > 0 ? (
-          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner />
+        submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile) && items && items.length > 0 ? (
+          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact />
         ) : null}
         brandName={brand}
         dealTitle={deal.title ?? 'Untitled deal'}

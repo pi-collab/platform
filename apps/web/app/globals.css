@@ -1362,6 +1362,9 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   flex: 1; height: 4px; border-radius: 4px; background: var(--border-hairline);
 }
 .offer-m__submitbar span.is-on { background: var(--neon-deep); }
+/* Revision: the reached segment turns amber. Progress was made and handed
+   back, which is not the same as progress still standing. */
+.offer-m__progress span.is-warn { background: var(--warning); }
 .offer-m__submitbody {
   margin-top: 18px; padding-top: 16px;
   border-top: 1px solid var(--border-hairline);

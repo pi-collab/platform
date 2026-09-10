@@ -41,6 +41,7 @@ export default function DeliverableItems({
   dealStatus,
   brandName,
   hideStatusBanner = false,
+  compact = false,
 }: {
   dealId: string
   items: Item[]
@@ -51,6 +52,12 @@ export default function DeliverableItems({
      this banner would be the same sentence twice on one phone screen. Off by
      default: desktop has no such header and still needs it. */
   hideStatusBanner?: boolean
+  /* The phone rendering, per "Creator Deal Detail - Revision Mobile": a status
+     circle, the label, and the status in words - no platform icon, price or
+     handle chip, all of which the mobile card already states elsewhere. Logic
+     is untouched; only the presentation branches, so uploads, signed URLs and
+     version history stay one implementation. */
+  compact?: boolean
 }) {
   const [urls, setUrls] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -236,27 +243,50 @@ export default function DeliverableItems({
             : 'var(--warning)'
 
           return (
-            <div key={item.id} style={{ display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}>
+            <div
+              key={item.id}
+              style={compact
+                ? { display: 'block', padding: 0, borderBottom: 'none', marginTop: idx > 0 ? 16 : 0 }
+                : { display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}
+            >
+              {compact && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{
+                    width: 20, height: 20, borderRadius: '50%', flex: 'none',
+                    background: statusDot, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {item.item_status === 'approved' ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    ) : item.item_status === 'revision' ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                    ) : null}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700 }}>{item.label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                    {statusLabel}
+                  </span>
+                </div>
+              )}
               {/* Icon */}
-              <span style={itemIcon}>
+              {!compact && <span style={itemIcon}>
                 {item.platform?.toLowerCase().includes('youtube') ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 )}
-              </span>
+              </span>}
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Title + price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
+                {!compact && <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
                   <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>{item.label}</h4>
                   {item.price_paise != null && item.price_paise > 0 && (
                     <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatINR(item.price_paise)}</span>
                   )}
-                </div>
+                </div>}
 
                 {/* Status chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
+                {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
                   <span style={chipStyle}>
                     {item.platform?.toLowerCase().includes('youtube') ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
@@ -269,16 +299,22 @@ export default function DeliverableItems({
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusDot }} />
                     {statusLabel}
                   </span>
-                </div>
+                </div>}
 
                 {/* Revision feedback card */}
                 {item.item_status === 'revision' && item.revision_note && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
-                    <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                  <div style={compact
+                    /* White with a warning edge, per the export - it is the
+                       instruction to act on, not a muted note. */
+                    ? { display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, borderRadius: 14, marginTop: 12, background: '#fff', border: '1.5px solid var(--warning)' }
+                    : { display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
+                    <span style={compact
+                      ? { width: 28, height: 28, borderRadius: '50%', background: 'var(--card)', border: '1.5px solid var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }
+                      : { width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>{brandName ? `${brandName} requested changes` : 'Changes requested'}</div>
+                      <div style={{ fontSize: compact ? 12.5 : 14.5, fontWeight: 700 }}>{compact ? 'Revision feedback' : (brandName ? `${brandName} requested changes` : 'Changes requested')}</div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, whiteSpace: 'pre-wrap' }}>"{item.revision_note}"</div>
                       {item.updated_at && (
                         <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>{formatDateTime(item.updated_at)}</div>
@@ -288,7 +324,7 @@ export default function DeliverableItems({
                 )}
 
                 {/* Approved card — only shown during revision state (mixed approved/revision) */}
-                {item.item_status === 'approved' && dealStatus === 'revision' && (
+                {!compact && item.item_status === 'approved' && dealStatus === 'revision' && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)' }}>
                     <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
@@ -306,23 +342,44 @@ export default function DeliverableItems({
                 )}
 
                 {/* Previous submission pill for revision items */}
-                {item.item_status === 'revision' && (item.external_url || item.storage_path) && (
-                  <div style={{
+                {/* Compact also shows this for an APPROVED item: the export's
+                    revision screen lists the approved asset with its file and a
+                    View file link, which is the only place a creator can still
+                    reach work already signed off. */}
+                {((item.item_status === 'revision' || (compact && item.item_status === 'approved')) && (item.external_url || item.storage_path)) && (
+                  <div style={compact ? {
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginTop: 10, padding: '11px 13px', borderRadius: 12,
+                    background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                  } : {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
                     padding: '12px 16px', borderRadius: 999,
                     background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
                     marginTop: 14,
                   }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                      {item.storage_path ? (
+                    {compact && (
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 9, flex: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--sec-2)',
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      </span>
+                    )}
+                    <span style={compact
+                      ? { flex: 1, minWidth: 0, display: 'block', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                      : { display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      {compact ? null : item.storage_path ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
                       )}
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                      <span style={compact
+                        ? { fontSize: 12, color: 'var(--ink)' }
+                        : { fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
                         {item.file_name || (item.external_url ? truncateUrl(item.external_url) : '')}
                       </span>
-                      {item.submitted_at && (
+                      {!compact && item.submitted_at && (
                         <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
                       )}
                     </span>
@@ -331,7 +388,9 @@ export default function DeliverableItems({
                       onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
                       disabled={viewingFile === item.id}
                       className="viewlink"
-                      style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                      style={compact
+                        ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                        : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                     >
                       {viewingFile === item.id ? 'Loading…' : 'View file'}
                     </button>

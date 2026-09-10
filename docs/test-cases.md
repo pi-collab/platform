@@ -4174,3 +4174,37 @@ Two different blocks said the same thing. Only one goes.
       keep the desktop design rather than the export's filename + "View file"
       rows. That component owns signed URLs and version history; restyling it
       is its own change
+
+---
+
+## 38. Revision state, creator mobile + the compact deliverable rows
+
+### The revision screen (`status = 'revision'`)
+- [ ] Header line **"Reviewed <date>"**, from the last status-change to revision
+- [ ] Stage **"Changes requested"**, next **"Next: resubmit"**
+- [ ] Three segments lit and the THIRD is amber (`--warning`). Progress was
+      made and handed back, which is not progress still standing
+- [ ] **Deliverables is always open**, not a fold. The brand has handed work
+      back, so what to do about it must not be hidden. Submitted folds it
+      because there the work is a record; here it is the task
+- [ ] Approved items still show their file and a View file link — the only
+      place a creator can reach work already signed off
+- [ ] No offer card, no submit-progress bar, no decision controls
+
+### Compact deliverable rows (mobile, everywhere they appear)
+`DeliverableItems` takes `compact`. Logic is untouched — uploads, signed URLs
+and version history stay one implementation; only presentation branches.
+- [ ] Row header is a **20px status circle** coloured by status (neon-deep
+      approved, warning revision), the label at 13.5px bold, and the status in
+      **10px uppercase** on the right
+- [ ] No platform icon, price or handle chip on mobile — the card states those
+      elsewhere
+- [ ] **Uploaded file row**: 12px radius (not a pill), a 28px `--sec-2` icon
+      square, the filename at 12px truncated with an ellipsis, and **View file**
+      at 11.5px bold ink — not the underlined ink-soft link desktop uses
+- [ ] **Revision feedback** is white with a 1.5px `--warning` border and reads
+      "Revision feedback", not the muted grey card desktop shows
+- [ ] The desktop "Approved as submitted, nothing more to do here" explainer is
+      suppressed on mobile
+- [ ] **DESKTOP IS UNCHANGED** — `compact` is off by default and only the phone
+      screen passes it

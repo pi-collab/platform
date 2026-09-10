@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt,
 }: {
   brandName: string
   dealTitle: string
@@ -100,7 +100,7 @@ export default function CreatorOfferMobile({
      exports, everything from "Brief & attachments" down is identical on both
      screens - two copies of that markup would drift the moment either is
      touched. Only the header, the stage line and the card body differ. */
-  stage?: 'offer' | 'agreed' | 'submitted'
+  stage?: 'offer' | 'agreed' | 'submitted' | 'revision'
   agreedAt?: string | null
   rightsConfirmedAt?: string | null
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
@@ -112,6 +112,8 @@ export default function CreatorOfferMobile({
   submitTotal?: number
   /** When the work was submitted, formatted. Drives the header line. */
   submittedAt?: string | null
+  /** When the brand last reviewed. Header line on the revision screen. */
+  reviewedAt?: string | null
 }) {
   return (
     <div className="offer-m">
@@ -147,7 +149,9 @@ export default function CreatorOfferMobile({
             <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
-            {stage === 'submitted'
+            {stage === 'revision'
+              ? (reviewedAt ? `Reviewed ${reviewedAt}` : 'Reviewed')
+              : stage === 'submitted'
               ? (submittedAt ? `Submitted ${submittedAt}` : 'Submitted')
               : stage === 'agreed'
               /* The export puts the delivery date on the header line and the
@@ -163,19 +167,29 @@ export default function CreatorOfferMobile({
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
             <span className="offer-m__stage">
-              {stage === 'submitted' ? 'Submitted'
+              {stage === 'revision' ? 'Changes requested'
+                : stage === 'submitted' ? 'Submitted'
                 : stage === 'agreed' ? 'Agreed'
                 : counter ? 'Negotiating' : 'Offer received'}
             </span>
             <span className="offer-m__next">
-              {stage === 'submitted' ? 'Next: brand review'
+              {stage === 'revision' ? 'Next: resubmit'
+                : stage === 'submitted' ? 'Next: brand review'
                 : stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
             </span>
           </div>
           <div className="offer-m__progress" aria-hidden="true">
             {/* One lit segment per stage reached, so the bar moves forward. */}
             {Array.from({ length: 6 }, (_, i) => (
-              <span key={i} className={i <= (stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : undefined} />
+              <span
+                key={i}
+                className={[
+                  i <= (stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
+                  /* The export paints the reached segment amber on revision:
+                     progress was made and then handed back. */
+                  stage === 'revision' && i === 2 ? 'is-warn' : '',
+                ].filter(Boolean).join(' ') || undefined}
+              />
             ))}
           </div>
         </div>
@@ -217,6 +231,18 @@ export default function CreatorOfferMobile({
 
         {/* The submitted work, folded: it has been sent, so it is a record
             rather than a task. */}
+        {/* REVISION: always open. The brand has handed work back, so what to
+            do about it must not be behind a fold. Submitted folds it because
+            there the work is a record; here it is the task. */}
+        {stage === 'revision' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+            </div>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </section>
+        )}
+
         {stage === 'submitted' && submitNode && (
           <details className="offer-m__card offer-m__fold offer-m__delivfold">
             <summary className="offer-m__foldhead">
@@ -227,7 +253,7 @@ export default function CreatorOfferMobile({
           </details>
         )}
 
-        {(stage === 'agreed' || stage === 'submitted') && (
+        {stage !== 'offer' && (
           <details className="offer-m__card offer-m__agreedcard">
             <summary className="offer-m__agreedsum">
               <div className="offer-m__agreedtop">
