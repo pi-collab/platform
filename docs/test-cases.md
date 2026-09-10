@@ -1027,6 +1027,35 @@ One component (`components/BrandMark.tsx`) decides between the two.
 
 ---
 
+### Browse creators: list view and multi-select
+
+Built from "Browse Creators (standalone)". Cards are for weighing one creator at
+a time; rows are for running down twenty and ticking the ones you want.
+
+#### The view toggle
+- [ ] A list/grid control sits in the header beside the All creators / Saved tabs
+- [ ] Grid is still the default. It is what this page has always opened as
+- [ ] The choice is remembered across visits (browser-local, like the saved list)
+- [ ] The active half is filled neon; the other is plain
+
+#### The list row
+- [ ] 24px checkbox, 52px round photo, name at 18px with the verified tick, one meta line, the starting rate on the right
+- [ ] The meta line reads niche, handle, followers, N brands, and drops empty parts rather than leaving stray separators
+- [ ] A selected row takes a 4px neon rail down its left edge
+- [ ] Clicking the row opens that creator; clicking the checkbox does NOT open them
+- [ ] Keyboard: Enter or Space on a focused checkbox selects, and does not open the creator or scroll the page
+- [ ] The bookmark is on the row too, so switching to list is not a downgrade for saving
+
+#### The selection bar
+- [ ] Selecting anything raises a bar UNDER the filters, not floating over the grid
+- [ ] It reads "1 creator selected" / "3 creators selected"
+- [ ] ONE selected offers <b>Start deal</b> and opens the builder for that creator
+- [ ] TWO OR MORE offer <b>Start campaign</b>, which creates one campaign over the selected creators and opens it
+- [ ] Clear empties the selection and the bar goes
+- [ ] The saved view uses this same bar. There is no second campaign bar
+
+---
+
 ### Brand Logo (Settings > Profile)
 
 Before this, the settings Profile tab drew a 72px initials square with an "Upload photo"
