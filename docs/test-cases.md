@@ -1046,13 +1046,22 @@ a time; rows are for running down twenty and ticking the ones you want.
 - [ ] Keyboard: Enter or Space on a focused checkbox selects, and does not open the creator or scroll the page
 - [ ] The bookmark is on the row too, so switching to list is not a downgrade for saving
 
-#### The selection bar
-- [ ] Selecting anything raises a bar UNDER the filters, not floating over the grid
-- [ ] It reads "1 creator selected" / "3 creators selected"
+#### Selecting, in BOTH views
+- [ ] Grid cards carry a tick in the same place a list row does: ahead of the photo, top-left
+- [ ] A ticked card takes a neon border; a ticked row takes a neon left rail
+- [ ] "Start deal" STAYS on the grid card. One creator is still a deal; the tick is for gathering several
+- [ ] The tick does not open the creator, and the card still does
+- [ ] Keyboard: Enter or Space on a focused tick selects, without opening the creator or scrolling
+- [ ] A selection made in one view survives switching to the other
+
+#### The action, beside the heading
+- [ ] Selecting anything puts the count and the action to the RIGHT of "Browse creators", not in a bar further down that the list can scroll away
+- [ ] It reads "1 selected" / "3 selected"
 - [ ] ONE selected offers <b>Start deal</b> and opens the builder for that creator
-- [ ] TWO OR MORE offer <b>Start campaign</b>, which creates one campaign over the selected creators and opens it
-- [ ] Clear empties the selection and the bar goes
-- [ ] The saved view uses this same bar. There is no second campaign bar
+- [ ] TWO OR MORE offer <b>Start campaign</b>, which creates one campaign over them and opens it
+- [ ] Clear empties the selection and the action goes
+- [ ] Nothing is shown there when nothing is selected
+- [ ] In the SAVED view a card still does NOT offer "Start deal". A shortlist of six offering six separate deals is the opposite of what the saved list is for
 
 ---
 
