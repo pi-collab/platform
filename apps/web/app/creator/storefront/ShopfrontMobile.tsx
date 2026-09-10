@@ -186,6 +186,22 @@ function useReveal(root: React.RefObject<HTMLElement>) {
   }, [root])
 }
 
+/* Segmented control, from "Brand Deal Detail - Create Offer Mobile". Active is
+   a white pill with a soft shadow; inactive is just ink-soft text on the
+   track. */
+const seg2: React.CSSProperties = {
+  display: 'flex', background: '#F5F7FA', borderRadius: 10, padding: 3, gap: 3,
+}
+function segStyle(active: boolean): React.CSSProperties {
+  return {
+    flex: 1, textAlign: 'center', padding: '7px 0', borderRadius: 8,
+    fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+    ...(active
+      ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(18,21,28,.08)' }
+      : { color: 'var(--wg-500)' }),
+  }
+}
+
 export default function ShopfrontMobile({
   data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays, activePlatform, setActivePlatform,
   linkCopied, copyLink, onDealClick, editing, showHeader = false,
@@ -456,39 +472,46 @@ export default function ShopfrontMobile({
                           <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '4px', lineHeight: '1.4'}}>{item.desc}</div>
                         </div>
                       </div>
-                      {/* ADD-ONS. Same two choices and the same pricing as
-                          desktop, stacked rather than inline: on a phone a
-                          checkbox, a select and two amounts do not share a row.
-                          Only once the line is selected, and only where the
-                          creator offers them. */}
+                      {/* ADD-ONS, drawn as "Brand Deal Detail - Create Offer
+                          Mobile" draws them: a labelled segmented control per
+                          choice rather than a checkbox and a dropdown. Same
+                          shape the brand sees when building the offer, so the
+                          two screens read as one product.
+
+                          Values off that export: a #F5F7FA track at radius 10
+                          with 3px padding, and segments at 11.5/700 that go
+                          white with a soft shadow when active. */}
                       {item.qty > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
-                        <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px', paddingLeft: '54px'}}>
+                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '54px'}}>
                           {offersCollab(item.rates) && (
-                            <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>
-                              <input
-                                type="checkbox"
-                                checked={!!wantsCollab[item.key]}
-                                onChange={(e) => setWantsCollab((w) => ({ ...w, [item.key]: e.target.checked }))}
-                              />
-                              <span style={{flex: '1'}}>Collab post</span>
-                              <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(collabCharge(item.pricePaise, item.rates!))}</span>
-                            </label>
+                            <div>
+                              <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
+                                <span>Reel type</span>
+                                {wantsCollab[item.key] && (
+                                  <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(collabCharge(item.pricePaise, item.rates!))}</span>
+                                )}
+                              </div>
+                              <div style={seg2}>
+                                <span style={segStyle(!!wantsCollab[item.key])} onClick={() => setWantsCollab(w => ({ ...w, [item.key]: true }))}>Collab post</span>
+                                <span style={segStyle(!wantsCollab[item.key])} onClick={() => setWantsCollab(w => ({ ...w, [item.key]: false }))}>Non-collab</span>
+                              </div>
+                            </div>
                           )}
                           {offersBoosting(item.rates) && (
-                            <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>
-                              <span style={{flex: '1'}}>Boosting</span>
-                              <select
-                                value={boostDays[item.key] ?? 0}
-                                onChange={(e) => setBoostDays((b) => ({ ...b, [item.key]: parseInt(e.target.value, 10) }))}
-                                style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', padding: '5px 8px', borderRadius: '9px', border: '1.3px solid var(--line)', background: '#fff'}}
-                              >
-                                <option value={0}>None</option>
-                                {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{d}d</option>)}
-                              </select>
-                              {(boostDays[item.key] ?? 0) > 0 && (
-                                <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(boostingCharge(boostDays[item.key], item.rates!))}</span>
-                              )}
-                            </label>
+                            <div>
+                              <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
+                                <span>Boosting rights</span>
+                                {(boostDays[item.key] ?? 0) > 0 && (
+                                  <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(boostingCharge(boostDays[item.key], item.rates!))}</span>
+                                )}
+                              </div>
+                              <div style={seg2}>
+                                {[7, 30, 90].map(d => (
+                                  <span key={d} style={segStyle((boostDays[item.key] ?? 0) === d)} onClick={() => setBoostDays(b => ({ ...b, [item.key]: d }))}>{d}d</span>
+                                ))}
+                                <span style={segStyle(!(boostDays[item.key] ?? 0))} onClick={() => setBoostDays(b => ({ ...b, [item.key]: 0 }))}>None</span>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}

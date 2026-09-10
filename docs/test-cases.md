@@ -4598,8 +4598,16 @@ brand priced a deal on one number and met a different one after signing in.
       when the rate is one)
 - [ ] **Boosting** as a day picker — 7 / 14 / 30 / 60 / 90 — showing what the
       chosen span adds
-- [ ] Desktop puts them on one line under the row; mobile stacks them, since a
-      checkbox, a select and two amounts do not share a row on a phone
+- [ ] Desktop puts them on one line under the row
+- [ ] **Mobile uses the segmented controls from "Brand Deal Detail - Create
+      Offer Mobile"**, not a checkbox and a dropdown: a small label with the
+      added amount on the right, then a pill track
+- [ ] **Reel type**: Collab post / Non-collab
+- [ ] **Boosting rights**: 7d / 30d / 90d / None
+- [ ] Track is #F5F7FA at radius 10 with 3px padding; segments are 11.5/700 and
+      the active one turns white with a soft shadow
+- [ ] Same shape the brand sees when building the offer, so the storefront and
+      the builder read as one product rather than two takes on it
 
 ### The total
 - [ ] Includes the extras
