@@ -189,6 +189,14 @@ function useReveal(root: React.RefObject<HTMLElement>) {
 /* Segmented control, from "Brand Deal Detail - Create Offer Mobile". Active is
    a white pill with a soft shadow; inactive is just ink-soft text on the
    track. */
+/* .stepbtn from the same export: a 26px rounded square, not a filled circle. */
+const stepBtn: React.CSSProperties = {
+  width: 26, height: 26, borderRadius: 8,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  background: 'var(--card)', border: '1px solid var(--line)', color: 'var(--ink)',
+  flex: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer',
+}
+
 const seg2: React.CSSProperties = {
   display: 'flex', background: '#F5F7FA', borderRadius: 10, padding: 3, gap: 3,
 }
@@ -459,19 +467,52 @@ export default function ShopfrontMobile({
                 <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates, the total updates as you go.`}</p>
                 <div style={{marginTop: '22px', background: '#fff', borderRadius: '22px', padding: '6px 20px', boxShadow: '0 10px 24px -18px rgba(40,45,25,.2)'}}>
                   {rateItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
-                    <div style={{padding: '22px 2px', borderTop: '1px solid var(--hair)', background: item.rowBg}}>
-                      <div style={{display: 'flex', alignItems: 'flex-start', gap: '14px'}}>
-                        <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '12px', background: 'var(--sec-mid)', flexShrink: '0'}}>
-                          {item.isReel ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg></>) : null}
-                          {item.isStory ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg></>) : null}
-                          {item.isYtInt ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9 5 3-5 3z" fill="var(--ink)" /></svg></>) : null}
-                          {item.isYtShort ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="4" /><path d="m10.5 9 4 3-4 3z" fill="var(--ink)" /></svg></>) : null}
+                    {/* No row tint. The export marks a selected line with the
+                        neon TICK, and a neon wash behind the row as well made
+                        the tick the quieter of the two signals. 14px rows, as
+                        drawn. */}
+                    <div style={{padding: '14px 0', borderTop: '1px solid var(--hair)'}}>
+                      {/* THE ROW, as "Brand Deal Detail - Create Offer Mobile"
+                          draws it: a 22px tick that fills neon when the line is
+                          picked, the name with its unit price beneath, and the
+                          stepper on the right of the SAME row. The platform
+                          icon is gone - selection is what this row is for, and
+                          the name already carries the channel. */}
+                      <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                        <span
+                          onClick={() => (item.qty > 0 ? item.dec() : item.inc())}
+                          role="checkbox"
+                          aria-checked={item.qty > 0}
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') (item.qty > 0 ? item.dec() : item.inc()) }}
+                          style={{
+                            width: '22px', height: '22px', flex: 'none', borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                            border: item.qty > 0 ? '1.5px solid var(--neon-deep)' : '1.5px solid var(--line)',
+                            background: item.qty > 0 ? 'var(--neon)' : '#fff',
+                            color: item.qty > 0 ? 'var(--ink)' : 'transparent',
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                         </span>
                         <div style={{minWidth: '0', flex: '1'}}>
-                          <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14px', color: 'var(--ink)'}}>{item.name}</div>
-                          <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '4px', lineHeight: '1.4'}}>{item.desc}</div>
+                          <div style={{fontSize: '13.5px', fontWeight: '700', color: 'var(--ink)'}}>{item.name}</div>
+                          {/* The unit price sits here, not in a column of its
+                              own: "each" is what a stepper above a total needs
+                              to say. */}
+                          <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>
+                            {item.isPriceOnRequest ? 'Rate on request' : `${item.isFromRow ? 'From ' : ''}${item.priceDisplay} each`}
+                          </div>
                         </div>
+                        {item.qty > 0 && !item.isPriceOnRequest && (
+                          <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0}}>
+                            <button onClick={item.dec} aria-label="Decrease quantity" style={stepBtn}>&minus;</button>
+                            <span className="tnum" style={{minWidth: '16px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{item.qty}</span>
+                            <button onClick={item.inc} aria-label="Increase quantity" style={stepBtn}>+</button>
+                          </div>
+                        )}
                       </div>
+
                       {/* ADD-ONS, drawn as "Brand Deal Detail - Create Offer
                           Mobile" draws them: a labelled segmented control per
                           choice rather than a checkbox and a dropdown. Same
@@ -482,7 +523,7 @@ export default function ShopfrontMobile({
                           with 3px padding, and segments at 11.5/700 that go
                           white with a soft shadow when active. */}
                       {item.qty > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
-                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '54px'}}>
+                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '34px'}}>
                           {offersCollab(item.rates) && (
                             <div>
                               <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
@@ -516,24 +557,17 @@ export default function ShopfrontMobile({
                         </div>
                       )}
 
-                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '16px', paddingLeft: '54px'}}>
-                        {item.isCustom ? (<>
-                          <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{flex: '1', minWidth: '0', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
-                        </>) : null}
-                        {item.isPriceOnRequest ? (<>
-                          <div style={{fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-500)'}}>Price on request</div>
-                        </>) : null}
-                        {item.isFromRow ? (<>
-                          <div style={{display: 'flex', alignItems: 'baseline', gap: '5px'}}><span style={{fontSize: '12px', fontWeight: '500', color: 'var(--wg-500)'}}>From</span><span className="tnum" style={{fontSize: item.priceFontSize, fontWeight: '800', letterSpacing: '-0.015em', color: 'var(--ink)'}}>{item.priceDisplay}</span></div>
-                        </>) : null}
-                        <div style={{display: 'inline-flex', alignItems: 'center', gap: '0', background: '#F5F7FA', borderRadius: '999px', padding: '4px', flexShrink: '0'}}>
-                          <button onClick={item.dec} aria-label="Decrease quantity" style={{width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#fff', color: 'var(--ink)', fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px -3px rgba(40,45,25,.3)'}}>−</button>
-                          <span className="tnum" style={{width: '26px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{item.qty}</span>
-                          <button onClick={item.inc} aria-label="Increase quantity" style={{width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--neon)', color: 'var(--ink)', fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>+</button>
+                      {/* EDITOR-ONLY inputs. The price row and the stepper that
+                          used to live here are gone: both are in the row header
+                          now, and a second stepper under the first was two
+                          controls for one number. */}
+                      {item.isCustom && (
+                        <div style={{marginTop: '12px', paddingLeft: '34px'}}>
+                          <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
                         </div>
-                      </div>
+                      )}
                       {item.showFromInput ? (<>
-                        <div style={{marginTop: '12px', paddingLeft: '54px'}}>
+                        <div style={{marginTop: '12px', paddingLeft: '34px'}}>
                           <input value={item.fromAmount} onInput={item.onFromAmount} placeholder="Enter your rate (₹25,000+)" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
                         </div>
                       </>) : null}

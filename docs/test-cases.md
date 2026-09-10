@@ -4628,3 +4628,34 @@ brand priced a deal on one number and met a different one after signing in.
 - [ ] `/deals/new` seeds the collab toggle, the boosting-rights flag and the
       day count from them, so the builder opens on what the brand configured
       rather than resetting it
+
+## 50. Storefront mobile rate rows, redrawn from the offer builder
+
+Taken from "Brand Deal Detail - Create Offer Mobile" element by element, after
+a first pass that kept our own row and only swapped the add-on controls.
+
+### The row
+- [ ] A **22px circular tick** on the left. Unselected: white with a hairline
+      border and no tick. Selected: **`--neon` fill, `--neon-deep` border**, and
+      a 13px tick at stroke 3. Tapping it selects or clears the line
+- [ ] The platform icon square is GONE. The row's job is selection, and the
+      name already carries the channel
+- [ ] Name at **13.5px / 700**, with the unit price beneath at **11px** as
+      "₹60,000 each" — not a price column of its own
+- [ ] The stepper sits on the RIGHT OF THE SAME ROW, and only once selected.
+      26px rounded squares (`--card`, hairline border), not filled circles
+- [ ] Row padding is 14px with a hairline top, and **no background tint**. The
+      neon tick is the selected signal; a neon wash behind the row as well made
+      the tick the quieter of the two
+- [ ] Only one stepper per row — the old price row carried a second
+
+### The add-ons
+- [ ] Segmented tracks, indented to the text column: **Reel type** (Collab post
+      / Non-collab) and **Boosting rights** (7d / 30d / 90d / None)
+- [ ] The added amount sits on the right of each label row
+- [ ] Track #F5F7FA at radius 10, 3px padding; segments 11.5/700, active turns
+      white with a soft shadow
+
+### Editor still works
+- [ ] The creator's own preview keeps its "Add your rate" and "Enter your rate"
+      inputs; only the duplicated price row and stepper were removed
