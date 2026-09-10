@@ -4752,3 +4752,65 @@ a first pass that kept our own row and only swapped the add-on controls.
 ### Editor still works
 - [ ] The creator's own preview keeps its "Add your rate" and "Enter your rate"
       inputs; only the duplicated price row and stepper were removed
+
+---
+
+## 51. Shipped without cases at the time, recorded here
+
+These eight went out on staging before their checks were written down. Written
+up after the fact rather than left undocumented, since the rule is that a change
+and its cases travel together.
+
+### YouTube storefront stats read watch time
+- [ ] The YouTube tab's three headline figures are Watch time, and the other two
+      as before. It said "Interactions", which is an Instagram measure and not
+      what a brand judges a YouTube creator on
+- [ ] Instagram's three are unchanged
+
+### Collab and boosting read as amounts ON TOP
+- [ ] In the creator's own rate editor, a collab rate and a boosting rate are
+      labelled as what a brand ADDS, not as a total that includes the base
+- [ ] Worked example: a Rs.70,000 reel with Rs.20,000 boosting shows Rs.20,000
+      as the add, never Rs.90,000 in the field the creator types into
+
+### Storefront mobile: price on the right until a line is picked
+- [ ] An UNSELECTED rate row shows its price compactly on the right (Rs.50K,
+      Rs.1.2L), so a brand can read the card without tapping anything
+- [ ] Selecting the row moves to the unit price under the name and the stepper
+      on the right, per the offer-builder row
+
+### Storefront mobile: None leads the boosting row
+- [ ] The boosting segmented control reads None first, then the day options
+- [ ] None is the state before anything is touched, and it costs nothing
+
+### Brand deals: "Needs you" counts only what needs them
+- [ ] "Needs you" contains DELIVERED deals (work is in front of the brand)
+- [ ] Plus negotiations where the CREATOR moved last, which status alone cannot
+      express and is derived from the counter events
+- [ ] APPROVED deals are NOT counted. The brand has already approved; what
+      happens next is the creator posting and invoicing
+- [ ] The number on the chip equals the number of rows behind it, on every tab
+- [ ] Counts are computed over the brand's WHOLE set, not the page on screen.
+      With any filter active every other tab used to count zero
+
+### Upload limits and errors, everywhere
+- [ ] Deliverable submission accepts up to 500 MB
+- [ ] Every other upload caps at 50 MB
+- [ ] Over the cap: a plain-language error naming the file's ACTUAL size, not a
+      generic failure
+- [ ] After any failure the control stays live and the same file can be picked
+      again
+- [ ] The careers CV stays at 4 MB on purpose: it is emailed through Resend and
+      base64 inflates it past the provider's limit
+
+### Brand dashboard: Pay opens that deal's payment
+- [ ] The attention row's Pay action goes to the payment for THAT deal, not to a
+      payments list the brand then has to search
+
+### Saved creators are a shortlist, not six separate deals
+- [ ] Saving a creator adds them to Saved and does NOT offer "Start deal"
+- [ ] The saved list supports selecting several creators at once
+- [ ] Selecting several and continuing starts ONE campaign covering them, rather
+      than making the brand open six separate deal builders
+- [ ] KNOWN GAP: saved creators live in localStorage, not a table, so the list
+      does not follow the brand to another device or browser
