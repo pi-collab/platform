@@ -311,7 +311,9 @@ export default function DeliverableItems({
                     <span style={compact
                       ? { width: 28, height: 28, borderRadius: '50%', background: 'var(--card)', border: '1.5px solid var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }
                       : { width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                      {compact
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: compact ? 12.5 : 14.5, fontWeight: 700 }}>{compact ? 'Revision feedback' : (brandName ? `${brandName} requested changes` : 'Changes requested')}</div>
@@ -401,6 +403,74 @@ export default function DeliverableItems({
                 {editable && !isSaved && (
                   <>
                     {/* Segmented toggle */}
+                    {compact ? (
+                      /* ONE field, as the export draws it: paste a link or tap
+                         the clip to attach. The desktop segmented Paste link /
+                         Upload file toggle and the per-item Resubmit button are
+                         both gone - the export has neither, and that per-item
+                         button was the second "Resubmit" on the screen.
+
+                         With no button, the link commits on Enter or on blur.
+                         Same handleSubmitItem either way; only the trigger
+                         differs. */
+                      <div style={{ position: 'relative', marginTop: 10 }}>
+                        <input
+                          type="url"
+                          placeholder="Paste new link or attach a file"
+                          value={urls[item.id] ?? ''}
+                          onChange={(e) => setUrls((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && urls[item.id]?.trim()) {
+                              e.preventDefault()
+                              handleSubmitItem(item.id)
+                            }
+                          }}
+                          onBlur={() => {
+                            const v = urls[item.id]?.trim()
+                            if (v && v !== item.external_url) handleSubmitItem(item.id)
+                          }}
+                          disabled={isLoading}
+                          style={{
+                            width: '100%', boxSizing: 'border-box', height: 46,
+                            borderRadius: 12, border: '1.5px solid var(--sec-ink, #C6D0DD)',
+                            background: 'var(--card)', padding: '0 44px 0 14px',
+                            fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)',
+                            outline: 'none',
+                          }}
+                        />
+                        <input
+                          ref={(el) => { fileInputRefs.current[item.id] = el }}
+                          type="file"
+                          accept={ACCEPTED_TYPES}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(item.id, file)
+                            e.target.value = ''
+                          }}
+                          disabled={isLoading}
+                          style={{ display: 'none' }}
+                        />
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Attach a file"
+                          onClick={() => fileInputRefs.current[item.id]?.click()}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRefs.current[item.id]?.click() }}
+                          style={{
+                            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                            width: 34, height: 34, borderRadius: 9,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                        </span>
+                        {progress != null && (
+                          <div style={{ height: 4, borderRadius: 3, background: 'var(--border-hairline)', overflow: 'hidden', marginTop: 8 }}>
+                            <div style={{ width: `${progress}%`, height: '100%', background: 'var(--neon-deep)', borderRadius: 3, transition: 'width .2s' }} />
+                          </div>
+                        )}
+                      </div>
+                    ) : (<>
                     <div style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 12, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)', width: 'max-content', marginTop: 14 }}>
                       <span
                         onClick={() => setUploadMode((m) => ({ ...m, [item.id]: 'link' }))}
@@ -496,6 +566,7 @@ export default function DeliverableItems({
                         )}
                       </div>
                     )}
+                    </>)}
                   </>
                 )}
 
@@ -578,7 +649,16 @@ export default function DeliverableItems({
               className="neonbtn"
               onClick={handleSubmitForReview}
               disabled={submittingAll || !allReady}
-              style={{
+              style={compact ? {
+                /* Full-width dark bar, per the export: on a phone this is the
+                   one action on the screen, not a chip floated in a row. */
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%', height: 52, marginTop: 20, borderRadius: 16,
+                background: 'var(--ink)', border: 'none',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14.5, color: '#fff',
+                opacity: submittingAll || !allReady ? 0.45 : 1,
+                cursor: submittingAll || !allReady ? 'not-allowed' : 'pointer',
+              } : {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
                 height: 54, padding: '0 30px', borderRadius: 14,
                 background: 'var(--neon)', border: 'none',
@@ -588,7 +668,8 @@ export default function DeliverableItems({
                 cursor: submittingAll || !allReady ? 'not-allowed' : 'pointer',
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>
+              {/* The export's button carries no icon. */}
+              {!compact && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>}
               {submittingAll ? 'Submitting…' : dealStatus === 'revision' ? 'Resubmit for review' : 'Submit for review'}
             </button>
           </div>

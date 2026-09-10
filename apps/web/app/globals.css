@@ -1362,9 +1362,6 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   flex: 1; height: 4px; border-radius: 4px; background: var(--border-hairline);
 }
 .offer-m__submitbar span.is-on { background: var(--neon-deep); }
-/* Revision: the reached segment turns amber. Progress was made and handed
-   back, which is not the same as progress still standing. */
-.offer-m__progress span.is-warn { background: var(--warning); }
 .offer-m__submitbody {
   margin-top: 18px; padding-top: 16px;
   border-top: 1px solid var(--border-hairline);
@@ -4727,6 +4724,10 @@ button.signup-form__cross-link {
     flex: 1; height: 4px; border-radius: 4px; background: rgba(60,80,30,.12);
   }
   .offer-m__progress span.is-on { background: #D2F04A; }
+  /* Revision: the reached segment turns amber. This sat outside the media
+     query and therefore EARLIER in the file, and at equal specificity to
+     .is-on the later rule won - so the revision segment rendered green. */
+  .offer-m__progress span.is-warn { background: var(--warning); }
 
   .offer-m__card {
     background: #fff; border-radius: 18px; padding: 20px;

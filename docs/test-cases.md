@@ -4208,3 +4208,22 @@ and version history stay one implementation; only presentation branches.
       suppressed on mobile
 - [ ] **DESKTOP IS UNCHANGED** — `compact` is off by default and only the phone
       screen passes it
+
+### Revision screen corrections
+- [ ] **Only ONE resubmit.** The per-item "Resubmit reel/post/file" button is
+      gone on mobile; the export has no per-item button. The single action is
+      the full-width "Resubmit for review" at the bottom
+- [ ] With no per-item button, a pasted link commits on **Enter or blur**. Same
+      `handleSubmitItem`; only the trigger differs
+- [ ] **One input, not a toggle.** The desktop "Paste link / Upload file"
+      segmented control is gone. One 46px field, 12px radius, 1.5px `--sec-ink`
+      border, placeholder **"Paste new link or attach a file"**, with a 34px
+      **paperclip** button inside on the right that opens the file picker
+- [ ] Upload progress renders as a thin bar under that field
+- [ ] **Bottom button**: full-width, 52px, 16px radius, `--ink` background,
+      white text, 800 weight, 14.5px, and **no icon**. Desktop keeps its neon
+      chip with the arrow
+- [ ] **Revision feedback icon** is the export's amber alert, not a pencil
+- [ ] **The revision progress segment is AMBER.** The `.is-warn` rule sat
+      outside the mobile media query and therefore earlier in the file; at
+      equal specificity to `.is-on` the later rule won, so it rendered green
