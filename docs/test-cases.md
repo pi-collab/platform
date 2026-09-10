@@ -969,6 +969,8 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] Creator inbox: desktop thread list, desktop chat header, mobile list, mobile thread header
 - [ ] Creator payments: desktop "ready to invoice" row, open payment card, history row; mobile history row
 - [ ] Creator dashboard: deal-in-flight card
+- [ ] Creator dashboard "Brands you've worked with": desktop brand card and the mobile rail card
+- [ ] A brand appearing in more than one of those sections shows the SAME picture in all of them
 - [ ] Creator deal detail: desktop hero (52px mark beside the headline) and the mobile sticky header (28px mark)
 - [ ] Every one of those falls back to the brand's initials when no logo is set
 - [ ] Nothing about any layout moves when a logo appears: the mark fills the same box the initials did

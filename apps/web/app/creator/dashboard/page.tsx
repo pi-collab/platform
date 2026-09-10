@@ -141,10 +141,10 @@ export default async function CreatorDashboardPage({
   const monthlyEarnings = computeMonthlyEarnings(paidInvoices)
 
   // ── BRAND AGGREGATION ────────────────────────────────────
-  const brandAgg = new Map<string, { name: string; dealCount: number; earnedPaise: number; activePaise: number; hasActive: boolean; firstDealDate: string }>()
+  const brandAgg = new Map<string, { name: string; logoUrl: string | null; dealCount: number; earnedPaise: number; activePaise: number; hasActive: boolean; firstDealDate: string }>()
   for (const d of allDeals) {
     const raw = d.brands as unknown
-    const b = Array.isArray(raw) ? raw[0] : (raw as { id: string; name: string } | null)
+    const b = Array.isArray(raw) ? raw[0] : (raw as { id: string; name: string; logo_url?: string | null } | null)
     if (!b) continue
     const inv = invoiceMap.get(d.id)
     const earned = inv?.status === 'paid' ? (inv.creator_receives_paise ?? 0) : 0
@@ -157,6 +157,7 @@ export default async function CreatorDashboardPage({
     } else {
       brandAgg.set(b.id, {
         name: b.name,
+        logoUrl: b.logo_url ?? null,
         dealCount: 1,
         earnedPaise: earned,
         activePaise: isActive ? (d.price_paise ?? 0) : 0,
@@ -320,6 +321,7 @@ export default async function CreatorDashboardPage({
   }
   const mobileBrands = topBrands.slice(0, 6).map((b) => ({
     name: b.name,
+    logoUrl: b.logoUrl,
     deals: b.dealCount,
     posts: postsByBrand.get(b.name) ?? 0,
     valuePaise: b.earnedPaise > 0 ? b.earnedPaise : b.activePaise,
@@ -691,9 +693,12 @@ export default async function CreatorDashboardPage({
                 return (
                   <div key={brand.name} className="brandc" tabIndex={0} style={brandCardStyle}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ position: 'relative', width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--sec-2)' }}>
-                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initial}</span>
-                      </div>
+                      <BrandMark
+                        name={brand.name}
+                        logoUrl={brand.logoUrl}
+                        initials={initial}
+                        style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}
+                      />
                       <div style={{ minWidth: 0, flex: '1 1 0%' }}>
                         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, letterSpacing: 0 }}>{brand.name}</div>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: brand.hasActive ? 'var(--lime-700)' : 'var(--wg-500)', marginTop: 5 }}>
