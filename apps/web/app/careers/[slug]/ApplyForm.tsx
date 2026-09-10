@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { submitApplication } from '@/app/careers/actions'
 import type { ApplicationQuestion } from '@/lib/careers'
 
@@ -19,6 +19,7 @@ export default function ApplyForm({ slug, title, questions = [] }: {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [fileName, setFileName] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   if (done) {
     return (
@@ -99,11 +100,35 @@ export default function ApplyForm({ slug, title, questions = [] }: {
           type="file"
           required
           accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          ref={fileRef}
           onChange={(e) => setFileName(e.target.files?.[0]?.name ?? '')}
           style={{ ...inputStyle, padding: '10px 12px' }}
         />
+        {/* Picking a wrong file left no way back except reloading the page: the
+            native control re-opens the picker but cannot be cleared, so a
+            required field held a file the applicant had changed their mind
+            about. Remove clears the input itself, not just the label. */}
         <span style={hintStyle}>
-          {fileName ? `Selected: ${fileName}` : 'PDF or Word, up to 4 MB.'}
+          {fileName ? (
+            <>
+              Selected: {fileName}
+              {' '}
+              <button
+                type="button"
+                onClick={() => {
+                  if (fileRef.current) fileRef.current.value = ''
+                  setFileName('')
+                }}
+                style={{
+                  background: 'none', border: 'none', padding: 0,
+                  font: 'inherit', color: 'var(--ink-soft, #6A6C5F)',
+                  textDecoration: 'underline', cursor: 'pointer',
+                }}
+              >
+                Remove
+              </button>
+            </>
+          ) : 'PDF or Word, up to 4 MB.'}
         </span>
       </label>
 

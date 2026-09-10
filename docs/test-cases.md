@@ -4528,3 +4528,31 @@ record rather than a set of instructions.
       blank. Not a code bug; the rows predate the column being set
 - [ ] History is ordered by `issued_at`, not `paid_at`. For a payment history
       the paid date is the more natural sort, and the two can differ
+
+## 46. Brief attachments the creator can actually open
+
+- [ ] A brief attachment sent by the brand is a LINK on the creator's side, on
+      desktop and mobile, and opens the file
+- [ ] It was plain text: the page signed the URL with the creator's SESSION
+      client, and storage RLS on `deal-files` refuses a signature to anyone but
+      the uploader. `createSignedUrl` returned nothing, `url` stayed null, and
+      the render falls back to a `<span>`. The brand's own view worked, which
+      is why it looked fine from that side
+- [ ] Signed with the admin client now. Safe because the deal itself was
+      fetched through the creator's own session first, so RLS has already
+      established the deal is theirs, and these are files the brand attached
+      FOR them
+- [ ] Still a one-hour signature, not a permanent link
+
+## 47. Remove and replace, everywhere a file is uploaded
+
+Audited every `type="file"` in the app.
+- [ ] Deal deliverables — Replace (fixed earlier; it was dead in three places)
+- [ ] Brand offer builder brief attachments — `removeBriefAttachment`
+- [ ] Campaign brief attachments — `removeAttachment`
+- [ ] Profile photo — "Change photo" and "Remove"
+- [ ] Storefront portrait and content items — remove buttons
+- [ ] **Careers CV** — was the only one with none. A native file input re-opens
+      the picker but cannot be cleared, so a required field held a file the
+      applicant had changed their mind about, with no way back but a reload.
+      Remove now clears the input itself, not just the label

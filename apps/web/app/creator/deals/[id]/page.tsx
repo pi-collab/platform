@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import MobileInvoiceCard from './MobileInvoiceCard'
 import { formatDueStatus } from '@/lib/invoice'
 import { verifyCreator } from '@/lib/creator-auth'
@@ -216,12 +217,23 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const avoid = (deal as any).brief_avoid as string | null
   const briefAttachments = ((deal as any).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 
-  // Signed URLs for brief attachments
+  /* SIGNED WITH THE ADMIN CLIENT, not the creator's session.
+     The brand uploads these into deal-files, and storage RLS on the object
+     refuses a signature to anyone but the uploader - so createSignedUrl
+     returned nothing for the creator, the url stayed null, and the attachment
+     rendered as plain text with no way to open it. The brand's own view worked,
+     which is why it looked fine from that side.
+
+     Safe here because the deal itself was fetched through the creator's own
+     session a few lines up: RLS has already established that this deal is
+     theirs, and these are the files the brand attached FOR them. Still a
+     one-hour signature rather than a permanent link. */
   const attachmentUrls: Record<string, string> = {}
   if (briefAttachments.length > 0) {
+    const admin = createAdminClient()
     const results = await Promise.all(
       briefAttachments.map((att) =>
-        supabase.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
+        admin.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
       )
     )
     results.forEach((res, i) => {
