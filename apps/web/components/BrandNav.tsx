@@ -9,6 +9,7 @@ export default async function BrandNav() {
 
   let profileId: string | null = null
   let brandName: string | null = null
+  let brandLogoUrl: string | null = null
   let unreadCount = 0
   let unreadInbox = 0
   let recentNotifications: { id: string; deal_id: string | null; type: string; body: string; read_at: string | null; created_at: string }[] = []
@@ -25,11 +26,12 @@ export default async function BrandNav() {
       profileId = profile.id
       const { data: membership } = await supabase
         .from('brand_members')
-        .select('brands(name)')
+        .select('brands(name, logo_url)')
         .eq('user_id', profile.id)
         .maybeSingle()
 
       brandName = (membership as any)?.brands?.name ?? null
+      brandLogoUrl = (membership as any)?.brands?.logo_url ?? null
 
       // Unread notification count
       const { count } = await supabase
@@ -87,7 +89,7 @@ export default async function BrandNav() {
     <>
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profileId && <AnalyticsIdentify userId={profileId} role="brand" />}
-      <BrandSidebar brandName={brandName} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+      <BrandSidebar brandName={brandName} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
     </>
   )
 }

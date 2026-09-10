@@ -958,6 +958,40 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 
 ---
 
+### Brand Logo (Settings > Profile)
+
+Before this, the settings Profile tab drew a 72px initials square with an "Upload photo"
+pill and a "Remove" pill, both inert `<span>`s. Upload only called markDirty(), so it
+dirtied the form and opened no file picker; Remove did nothing. `brands.logo_url` existed,
+was selected by the page, and was never written or rendered anywhere.
+
+#### Upload
+- [ ] Brand clicks "Upload photo" on /settings > Profile → the file picker opens
+- [ ] Brand uploads JPEG, PNG, WebP or SVG → accepted, and the square shows the logo immediately
+- [ ] Upload a non-image (e.g. .pdf, .gif) → rejected in place with "That file type is not supported"
+- [ ] Upload an image over 50 MB → rejected with the file's actual size in the message
+- [ ] After a rejection, picking the SAME file again retries (the input value is cleared, so the change event still fires)
+- [ ] Uploading a second logo of the same type replaces the first ON SCREEN, not just in storage (the `?v=` stamp defeats the CDN and browser cache)
+- [ ] The pill reads "Upload photo" with no logo and "Change photo" once one is set
+- [ ] "Remove" appears only when a logo is set; removing falls back to initials everywhere
+- [ ] Upload saves on pick, WITHOUT pressing "Save changes" (it is not part of the dirty form state)
+
+#### Display consistency (desktop AND mobile, per the standing rule)
+- [ ] Logo renders in the settings Profile square (72px, rounded)
+- [ ] Logo renders on the desktop sidebar avatar button
+- [ ] Logo renders in that button's dropdown header
+- [ ] Logo renders in the mobile drawer header
+- [ ] With no logo, all four fall back to the brand's initials exactly as before
+
+#### Access boundary
+- [ ] The `brands` UPDATE goes through the ADMIN client, matching updateProfile on the same page — the RLS client has no UPDATE policy on brands for a member and would report success on zero rows
+- [ ] Storage path is `brand-logos/{brandId}/` and is re-checked against that prefix after being built
+- [ ] A brand cannot write a logo for another brand (brandId comes from verifyBrand(), never from the request)
+- [ ] Logo URL is a public storage URL (storefronts bucket) — no storage policy change needed
+
+---
+
+
 ## 16. Welcome Email (first signup)
 
 Sent once per account by `lib/welcome-email.ts`. Never blocks signup — every

@@ -69,7 +69,7 @@ interface NotifCreatorMap {
   [dealId: string]: { name: string; photo: string | null }
 }
 
-export default function BrandSidebar({ brandName, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -79,6 +79,17 @@ export default function BrandSidebar({ brandName, userEmail, unreadCount: initia
   const unreadCount = useRealtimeNotifications(initialUnread)
 
   const initials = brandName ? brandName.slice(0, 2).toUpperCase() : 'BR'
+
+  /* The brand's own mark, in the three places the sidebar shows it: the desktop
+     avatar button, its dropdown header, and the mobile drawer. Falls back to
+     initials, which is what every one of them showed before a logo could be
+     uploaded. Each caller keeps its own size and radius. */
+  const brandMark = (style: React.CSSProperties) => (
+    brandLogoUrl
+      // eslint-disable-next-line @next/next/no-img-element
+      ? <img src={brandLogoUrl} alt="" style={{ ...style, objectFit: 'cover', background: 'var(--card)' }} />
+      : <span style={style}>{initials}</span>
+  )
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -274,7 +285,7 @@ export default function BrandSidebar({ brandName, userEmail, unreadCount: initia
             {/* Avatar dropdown */}
             <div ref={avatarRef} style={{ position: 'relative' }}>
               <button onClick={() => setAvatarOpen(!avatarOpen)} style={avatarBtn} aria-label="Account menu">
-                <span style={avatarSquare}>{initials}</span>
+                {brandMark(avatarSquare)}
                 <div style={{ lineHeight: 1.15 }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{brandName || 'Brand'}</div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -288,7 +299,7 @@ export default function BrandSidebar({ brandName, userEmail, unreadCount: initia
                 <div className="pmenu" style={dropdown}>
                   {/* Header */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px 14px' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 13, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' }}>{initials}</div>
+                    {brandMark({ width: 44, height: 44, borderRadius: 13, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' })}
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5 }}>{brandName || 'Brand'}</div>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)', marginTop: 2 }}>
@@ -357,7 +368,7 @@ export default function BrandSidebar({ brandName, userEmail, unreadCount: initia
           <div className="brand-drawer-backdrop" onClick={() => setDrawerOpen(false)} />
           <div className="brand-drawer">
             <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(26,27,22,0.08)' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 999, background: '#1a1b16', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>{initials}</div>
+              {brandMark({ width: 36, height: 36, borderRadius: 999, background: '#1a1b16', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 })}
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1b16', margin: 0 }}>{brandName || 'Brand'}</p>
                 <span style={{ fontSize: 11, color: '#6a6c5f' }}>Brand</span>

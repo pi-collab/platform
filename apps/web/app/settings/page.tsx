@@ -71,6 +71,7 @@ export default async function SettingsPage() {
       brandLocation={(brandRow as any)?.location ?? ''}
       brandContactEmail={brandRow?.contact_email ?? user?.email ?? ''}
       brandSocials={socials}
+      brandLogoUrl={(brandRow as any)?.logo_url ?? null}
       userName={user?.full_name ?? ''}
       userEmail={user?.email ?? ''}
       userPhone={user?.phone ?? ''}
