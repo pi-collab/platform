@@ -4227,3 +4227,25 @@ and version history stay one implementation; only presentation branches.
 - [ ] **The revision progress segment is AMBER.** The `.is-warn` rule sat
       outside the mobile media query and therefore earlier in the file; at
       equal specificity to `.is-on` the later rule won, so it rendered green
+
+### Replacing an attached file
+- [ ] After attaching a link or uploading a file, **Replace** is available and
+      works. It was hidden and would have been refused server-side: the upload
+      writes `item_status = 'submitted'`, `editable` excluded that status, and
+      the actions rejected anything not pending/revision
+- [ ] `isSaved` uses `??` not `||`. With `||` the item_status check overrode
+      the local Replace flag, so the row never returned to the input
+- [ ] Server allows a re-submit while the item is `submitted`. Safe because the
+      DEAL-level guard already limits it to agreed/revision — once the creator
+      hits Submit for review the deal is `delivered` and it refuses
+- [ ] An **approved** item is never replaceable
+- [ ] Replacing bumps the version the same way a revision resubmit does
+
+### The attached-file row is ONE line on mobile
+- [ ] The row does not wrap. `flexWrap: 'wrap'` let the actions drop under a
+      long filename; compact drops it so the name truncates instead
+- [ ] The filename truncates with an ellipsis. The truncation is on the
+      block-level parent — an inline child cannot clip itself
+- [ ] "submitted <date>" is not shown on mobile; it is what pushed the row wide
+- [ ] View file and Replace sit on the same line, 11.5px, no underline, and
+      never shrink

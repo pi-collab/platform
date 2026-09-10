@@ -225,8 +225,14 @@ export default function DeliverableItems({
       {/* Items list */}
       <div style={{ marginTop: 12 }}>
         {items.map((item, idx) => {
-          const editable = canSubmit && (item.item_status === 'pending' || item.item_status === 'revision')
-          const isSaved = savedItems[item.id] || item.item_status === 'submitted' || item.item_status === 'approved'
+          /* 'submitted' is editable too: the file is attached but not yet sent
+             for review, so swapping it is still the creator's to do. Approved
+             never is. */
+          const editable = canSubmit && item.item_status !== 'approved'
+          /* ?? not ||, so Replace actually works. Replace sets this key to
+             false; with || the item_status check overrode it and the row never
+             went back to the input. */
+          const isSaved = savedItems[item.id] ?? (item.item_status === 'submitted' || item.item_status === 'approved')
           const isLoading = loadingItem === item.id
           const progress = uploadProgress[item.id]
           const mode = getMode(item.id)
@@ -572,14 +578,33 @@ export default function DeliverableItems({
 
                 {/* Saved state: show link/file in pill */}
                 {isSaved && (item.external_url || urls[item.id] || item.storage_path) && (
-                  <div style={{
+                  <div style={compact ? {
+                    /* ONE LINE. flexWrap let the actions drop below a long
+                       filename; without it the name truncates instead, which is
+                       what the export draws. */
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginTop: 10, padding: '11px 13px', borderRadius: 12,
+                    background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                  } : {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
                     padding: '12px 16px', borderRadius: 999,
                     background: item.item_status === 'approved' ? 'var(--card)' : 'var(--sec-2, #f5f5f0)',
                     border: item.item_status === 'approved' ? '1px solid var(--border-hairline, #EAEAE3)' : '1px solid var(--sec-mid-2, #e5e5dc)',
                     marginTop: 14,
                   }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                    {compact && (
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 9, flex: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)',
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      </span>
+                    )}
+                    <span style={compact
+                      /* Truncation lives HERE, on the block-level parent - an
+                         inline child cannot clip itself. */
+                      ? { flex: 1, minWidth: 0, display: 'block', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                      : { display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                       {item.storage_path ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                       ) : (
@@ -595,14 +620,16 @@ export default function DeliverableItems({
                         <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
                       )}
                     </span>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 12, flexShrink: 0, alignItems: 'center' }}>
                       {(item.storage_path || item.external_url) && (
                         <button
                           type="button"
                           onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
                           disabled={viewingFile === item.id}
-                          className="viewlink"
-                          style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                          className={compact ? undefined : 'viewlink'}
+                          style={compact
+                            ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                            : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                         >
                           {viewingFile === item.id ? 'Loading…' : 'View file'}
                         </button>
@@ -611,8 +638,10 @@ export default function DeliverableItems({
                         <button
                           type="button"
                           onClick={() => setSavedItems((s) => ({ ...s, [item.id]: false }))}
-                          className="viewlink"
-                          style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                          className={compact ? undefined : 'viewlink'}
+                          style={compact
+                            ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-soft)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                            : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                         >
                           Replace
                         </button>
