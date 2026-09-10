@@ -38,6 +38,13 @@ export interface ShopfrontMobileProps {
   setWantsCollab: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
   boostDays: Record<string, number>
   setBoostDays: React.Dispatch<React.SetStateAction<Record<string, number>>>
+  /* Totals computed ONCE by the parent and handed down, so the figure on the
+     phone is the figure the offer is built from. Recomputing here would be a
+     second implementation of the same arithmetic. */
+  rateTotal: number
+  addonsTotal: number
+  rateTotalIsFloor: boolean
+  rateHasOnRequest: boolean
   setQty: React.Dispatch<React.SetStateAction<Record<string, number>>>
   activePlatform: string
   setActivePlatform: (p: string) => void
@@ -212,7 +219,8 @@ function segStyle(active: boolean): React.CSSProperties {
 }
 
 export default function ShopfrontMobile({
-  data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays, activePlatform, setActivePlatform,
+  data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays,
+  rateTotal, addonsTotal, rateTotalIsFloor, rateHasOnRequest, activePlatform, setActivePlatform,
   linkCopied, copyLink, onDealClick, editing, showHeader = false,
 }: ShopfrontMobileProps) {
   /* ── View model ───────────────────────────────────────────────────────────
@@ -571,11 +579,17 @@ export default function ShopfrontMobile({
                                   <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(boostingCharge(boostDays[item.key], item.rates!))}</span>
                                 )}
                               </div>
+                              {/* None leads. It is where the control starts, and
+                                  a segmented row reads left to right - the
+                                  export trails it, which put the current state
+                                  at the far end of the row. Selecting nothing
+                                  is still the default: a brand is never opted
+                                  into a charge they have not asked for. */}
                               <div style={seg2}>
+                                <span style={segStyle(!(boostDays[item.key] ?? 0))} onClick={() => setBoostDays(b => ({ ...b, [item.key]: 0 }))}>None</span>
                                 {[7, 30, 90].map(d => (
                                   <span key={d} style={segStyle((boostDays[item.key] ?? 0) === d)} onClick={() => setBoostDays(b => ({ ...b, [item.key]: d }))}>{d}d</span>
                                 ))}
-                                <span style={segStyle(!(boostDays[item.key] ?? 0))} onClick={() => setBoostDays(b => ({ ...b, [item.key]: 0 }))}>None</span>
                               </div>
                             </div>
                           )}
@@ -602,6 +616,21 @@ export default function ShopfrontMobile({
                     <div>
                       <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Selected</div>
                       <div style={rateTotalStyle}>{rateTotalLabel}</div>
+                      {/* THE NUMBER, not just the count. A brand about to press
+                          "Create an offer" is deciding on a price, and it was
+                          only visible after signing in. Extras are broken out
+                          so a boost that was ticked can be seen to have cost
+                          something. */}
+                      {selectedCount > 0 && (rateTotal + addonsTotal) > 0 && (
+                        <div style={{marginTop: '6px', fontSize: '12.5px', color: 'var(--wg-500)'}}>
+                          {rateTotalIsFloor ? 'From ' : ''}
+                          <b className="tnum" style={{color: 'var(--ink)', fontSize: '14px'}}>{formatINR(rateTotal + addonsTotal)}</b>
+                          {addonsTotal > 0 && (
+                            <span> · {formatINR(rateTotal)} + {formatINR(addonsTotal)} extras</span>
+                          )}
+                          {rateHasOnRequest && <span> · plus items priced on request</span>}
+                        </div>
+                      )}
                     </div>
                     {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '12px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
                   </div>

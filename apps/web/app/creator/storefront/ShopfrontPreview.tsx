@@ -1679,6 +1679,10 @@ export default function ShopfrontPreview({
 
       <div className="sf-view-mobile">
         <ShopfrontMobile
+          rateTotal={rateTotal}
+          addonsTotal={addonsTotal}
+          rateTotalIsFloor={rateTotalIsFloor}
+          rateHasOnRequest={rateHasOnRequest}
           wantsCollab={wantsCollab}
           setWantsCollab={setWantsCollab}
           boostDays={boostDays}
