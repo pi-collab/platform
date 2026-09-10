@@ -541,7 +541,7 @@ function ContentMediaUpload({ item, onChange }: {
             </button>
           )}
           <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
-            Images up to 5 MB, video up to 50 MB.
+            Images and video up to 50 MB.
           </span>
         </div>
       </div>

@@ -500,7 +500,12 @@ export default function ShopfrontMobile({
                   <div style={{display: ytShow ? 'block' : 'none'}}>
                     <div style={{display: 'flex', gap: '44px', marginTop: '24px', flexWrap: 'wrap'}}>
                       <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt?.followers != null ? compact(yt.followers) : "-"}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Subscribers</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt?.interactions != null ? compact(yt.interactions) : "-"}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Interactions</div></div>
+                      {/* WATCH TIME, not interactions. YouTube's own three headline numbers are
+                          subscribers, watch time and average views - interactions is an
+                          Instagram measure, and Studio does not report it. The editor has
+                          collected watch time all along; this tab just never showed it.
+                          Already a formatted string ("1.2K hours"), so not compacted. */}
+                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt?.watchTime ? yt.watchTime : "-"}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Watch time</div></div>
                       <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{yt?.avgViews != null ? compact(yt.avgViews) : "-"}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
                     </div>
                     <a href={ytProfileUrl} target="_blank" rel="noopener" style={{display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '20px', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', border: '1.3px solid var(--line)', borderRadius: '999px', padding: '9px 15px'}}>View YouTube<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg></a>

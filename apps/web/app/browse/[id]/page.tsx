@@ -105,7 +105,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
   const socials = (creator.social_accounts ?? []) as SocialAccount[]
   const activeProducts = (products ?? []).filter((p: Product) => p.is_active)
   const handle = creator.handle || 'creator'
-  const dealUrl = `/deals/new?creator=${creator.id}`
+  const dealUrl = `/deals/new?creator=${creator.id}&back=storefront`
 
   // ── Storefront view (ShopfrontPreview) ──
   if (storefront) {

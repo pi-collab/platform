@@ -217,9 +217,15 @@ export function AddonRatesEditor({ platform, handle, initial, embedded }: {
 
   const body = (
     <>
+          {/* SAY THAT THESE ARE EXTRA. A creator reading "collab rate" next to
+              a rate card can reasonably read it as the price WITH a collab, and
+              enter the full 90,000 rather than the 20,000 it adds - which
+              charges the brand twice for the deliverable. */}
           <p className="pk-addons-note">
-            Optional extras a brand can add to any deliverable on this channel. Leave blank and the option
-            simply is not offered.
+            Optional extras a brand can add to any deliverable on this channel. Enter what the extra
+            costs, <strong>not</strong> the new total: on a &#8377;70,000 Reel, a &#8377;20,000 boost is
+            entered as &#8377;20,000 and the brand pays &#8377;90,000. Leave blank and the option simply
+            is not offered.
           </p>
 
           <div className="pk-field">
@@ -256,8 +262,8 @@ export function AddonRatesEditor({ platform, handle, initial, embedded }: {
             </div>
             <span className="pk-hint">
               {mode === 'none' ? 'Not offered on this channel'
-                : mode === 'percent' ? 'Percentage of each deliverable\u2019s price'
-                : 'A fixed amount per deliverable'}
+                : mode === 'percent' ? 'A percentage of the deliverable\u2019s price, added on top'
+                : 'A fixed amount added on top of the deliverable'}
             </span>
             {mode !== 'none' && (
               <div className="pk-addons-input">
@@ -271,7 +277,10 @@ export function AddonRatesEditor({ platform, handle, initial, embedded }: {
               </div>
             )}
             {mode === 'percent' && (
-              <span className="pk-hint">Charged on each deliverable&apos;s own price, 10% is &#8377;6,000 on a &#8377;60,000 Reel.</span>
+              <span className="pk-hint">
+                Worked out from each deliverable&apos;s own price and ADDED to it: 10% on a
+                &#8377;60,000 Reel is &#8377;6,000, so the brand pays &#8377;66,000.
+              </span>
             )}
           </div>
 
@@ -288,8 +297,8 @@ export function AddonRatesEditor({ platform, handle, initial, embedded }: {
             </div>
             <span className="pk-hint">
               {perDay != null && perDay > 0
-                ? `About \u20B9${(perDay / 100).toFixed(2)} a day. A brand picks the number of days and is charged for exactly those.`
-                : 'Your rate for 30 days. A brand picks the number of days and is charged pro rata.'}
+                ? `Added on top of the deliverable. About \u20B9${(perDay / 100).toFixed(2)} a day - a brand picks the number of days and is charged for exactly those.`
+                : 'Your rate for 30 days, added on top of the deliverable. A brand picks the number of days and is charged pro rata.'}
             </span>
           </div>
 

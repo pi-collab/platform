@@ -35,3 +35,23 @@ export function formatAmountForMessage(paise: number | null | undefined): string
   if (!paise || paise <= 0) return 'Amount to be discussed'
   return formatPaiseINR(paise)
 }
+
+/**
+ * A rupee amount at a glance: ₹50K, ₹1.2L, ₹2.4Cr.
+ *
+ * Indian units, not K/M. A rate card scanned on a phone is being compared, not
+ * added up, and "₹1,20,000" costs a line of width to say what "₹1.2L" says in
+ * four characters. The exact figure is still what the total and the offer use;
+ * this is only for the glance.
+ *
+ * One decimal, and a trailing ".0" is dropped so a round number reads round:
+ * 1L rather than 1.0L.
+ */
+export function compactINR(paise: number): string {
+  const rupees = Math.round(paise / 100)
+  const trim = (n: number) => String(Number(n.toFixed(1)))
+  if (rupees >= 1_00_00_000) return `\u20B9${trim(rupees / 1_00_00_000)}Cr`
+  if (rupees >= 1_00_000) return `\u20B9${trim(rupees / 1_00_000)}L`
+  if (rupees >= 1_000) return `\u20B9${trim(rupees / 1_000)}K`
+  return `\u20B9${rupees.toLocaleString('en-IN')}`
+}

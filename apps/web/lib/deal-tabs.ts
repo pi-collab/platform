@@ -15,10 +15,23 @@
 /** Statuses that make up each tab. A tab absent from this map matches its own
  *  status exactly. */
 export const TAB_STATUSES: Record<string, string[]> = {
-  // Anything waiting on the BRAND to act.
-  needs_you: ['negotiating', 'delivered', 'approved'],
-  // "In review" covers a first delivery and a re-delivery after revision.
-  delivered: ['delivered', 'revision'],
+  /* Waiting on the BRAND. Only 'delivered' qualifies on status alone: there is
+     work in front of them to review.
+
+     'approved' was here and should not be - the brand has already approved, and
+     what happens next is the creator posting and invoicing. Five of a brand's
+     fifty-seven deals were being counted as their move when there was nothing
+     for them to do.
+
+     'negotiating' was here too, and it depends: an offer the brand sent and is
+     waiting on is not their move, while a counter the creator sent is. Status
+     cannot tell those apart, so it is handled by the awaitingBrand flag in
+     dealMatchesTab rather than by this list. */
+  needs_you: ['delivered'],
+  // "In review" is work sitting with the brand. A revision is with the CREATOR.
+  delivered: ['delivered'],
+  // In production: agreed and being made, or handed back and being remade.
+  agreed: ['agreed', 'revision'],
   // "Posted" is paid or complete — plus anything flagged posted, which is the
   // is_posted clause below and cannot be expressed as a status list.
   paid: ['paid', 'complete'],
@@ -30,11 +43,19 @@ const ALSO_POSTED = new Set(['paid'])
 export interface CountableDeal {
   status: string
   is_posted?: boolean | null
+  /** The creator countered and the brand has not answered. Derived from the
+      counter events, since status cannot express whose move it is. */
+  awaiting_brand?: boolean | null
 }
 
 /** Does this deal belong on that tab? The predicate the counts use. */
 export function dealMatchesTab(deal: CountableDeal, tab: string): boolean {
   if (!tab || tab === 'all') return true
+
+  /* A negotiation is the brand's move only when the creator moved last. */
+  if (tab === 'needs_you' && deal.status === 'negotiating') {
+    return deal.awaiting_brand === true
+  }
 
   const statuses = TAB_STATUSES[tab]
   if (statuses) {

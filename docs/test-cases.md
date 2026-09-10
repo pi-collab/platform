@@ -958,6 +958,203 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 
 ---
 
+### Brand logo on the creator side
+
+Every creator surface drew the brand as initials in a circle. Brands can upload a logo
+now, so the same picture should appear in all of them, with initials as the fallback.
+One component (`components/BrandMark.tsx`) decides between the two.
+
+#### Where it shows (desktop AND mobile, per the standing rule)
+- [ ] Creator deals list: desktop card avatar and the mobile card avatar
+- [ ] Creator inbox: desktop thread list, desktop chat header, mobile list, mobile thread header
+- [ ] Creator payments: desktop "ready to invoice" row, open payment card, history row; mobile history row
+- [ ] Creator dashboard: deal-in-flight card
+- [ ] Creator dashboard "Brands you've worked with": desktop brand card and the mobile rail card
+- [ ] A brand appearing in more than one of those sections shows the SAME picture in all of them
+- [ ] Creator deal detail: the desktop hero carries a 52px mark beside the headline
+- [ ] The MOBILE deal header carries none, deliberately. That row is a back arrow, a title and two icons across a phone, and the title already says "Offer from <brand>"
+- [ ] Every one of those falls back to the brand's initials when no logo is set
+- [ ] Nothing about any layout moves when a logo appears: the mark fills the same box the initials did
+
+#### Data and access
+- [ ] `logo_url` is fetched on the same `brands(...)` join each screen already used, not a second query
+- [ ] No RLS change was needed: `brands_read_via_deal` already grants a creator the whole brands row for a brand they share a deal with
+- [ ] A creator with NO deal with a brand still cannot read that brand's row, logo included
+- [ ] The inbox list and thread are shared with the brand side, where the mark is a CREATOR: those still render the caller's own initials and are unaffected
+
+---
+
+### Storefront rate card: total, "from" pricing, and the deal hand-off
+
+#### Layout (mobile AND desktop)
+- [ ] "Selected" and the item count sit on the LEFT, the total on the RIGHT
+- [ ] The FIRST rate row has no rule above it. The card's own top edge was doubled by a border on every row including the first
+- [ ] The add-on labels ("Reel type", "Boosting rights") and their segmented bars line up with the rest of the card, not indented to the text column
+- [ ] The whole rate row picks the line, not only the 22px tick
+- [ ] The stepper's + and - still work on their own and do NOT toggle the row underneath them
+- [ ] Keyboard: Enter or Space on a focused row picks it, and does not scroll the page
+- [ ] The total RESTS as a figure with an edit control beside it, not as an empty input with the real number greyed out behind it as a placeholder
+- [ ] Pressing edit opens the field already carrying that figure, so raising a price is an edit rather than a retype
+- [ ] Blur, Enter or Escape closes the field back to the figure
+- [ ] The total is ONE figure. No "From X (A + B extras)" breakdown, on either rendering
+- [ ] "Create an offer" is a full-width button BELOW the selected row on mobile
+- [ ] What each add-on costs still shows on that add-on's own row
+- [ ] Items priced on request are noted separately and are still excluded from the total
+
+#### Non-collab / None as the leading default
+- [ ] The collab control reads "Non-collab" then "Collab post", left to right
+- [ ] "Non-collab" is selected when nothing has been touched, and costs nothing
+- [ ] The boosting control still reads "None" first and defaults to it
+- [ ] Both controls read the same way: nothing extra on the left, the paid option to its right
+
+#### A "from" total is a minimum the brand can raise
+- [ ] A selection containing an approximate ("from") package shows "From" and a TYPEABLE amount
+- [ ] A selection of exact-price packages only shows "Total" and a plain figure, not an input
+- [ ] Typing an amount ABOVE the floor carries it to /deals/new as &total=<paise>
+- [ ] That amount lands in the builder's whole-deal price override, so the offer opens on the number the brand typed
+- [ ] Typing an amount BELOW the floor DISABLES "Create an offer" and says "Enter at least Rs.X" in red. It does not quietly hand over the floor instead: an offer under the creator's rate is one they have already said they will not take
+- [ ] Raising the amount back to the floor or above re-enables the button
+- [ ] The button is unreachable by KEYBOARD too while below the floor, not only unclickable (pointer-events alone does not stop Enter on a link)
+- [ ] Leaving the amount untouched sends NO total param, and the builder prices from line items as before
+- [ ] Adding another item after typing an amount still cannot produce an offer below the new floor
+
+#### Add-ons survive the hand-off
+- [ ] Ticking a collab on MOBILE and pressing "Create an offer" opens the builder with collab on
+- [ ] Choosing boosting days on mobile carries those days into the builder
+- [ ] Same from /browse/[id] (this path sent id:qty only and dropped both)
+- [ ] Same from the public /c/[slug] page
+- [ ] An older /deals/new?items=id:qty link with no add-on fields still parses
+
+---
+
+### Campaign placements, and campaign brief files
+
+#### Set terms uses the offer builder's row
+- [ ] Opening "Set terms" on a campaign roster row draws the SAME row the offer builder draws: neon tick, name at 15.5/700, "description . Rs.X each" beneath, stepper and line total on the right
+- [ ] Reel type (Instagram only) and Boosting rights are the offer builder's pills, not a bare select and 0.6rem buttons
+- [ ] Boosting is asked in DAYS and still stored as months, rounded up. An existing draft opens on the preset it was saved with
+- [ ] The channel heads its group as an eyebrow: "YOUTUBE . @vikramwealth"
+- [ ] There is deliberately NO "Deliver by" here: a draft placement has nowhere to keep a date, and a pill that discarded it would be worse than none
+- [ ] The pills are one component shared with the offer builder, so the two cannot drift
+
+#### Campaign brief attachments
+- [ ] Uploading a file to a campaign brief SUCCEEDS. It failed with "new row violates row-level security policy": the upload went through the RLS client, and storage policies on deal-files are written around a deal, which a campaign-briefs/ key belongs to none of
+- [ ] A brand cannot upload into another brand's campaign (the admin client bypasses RLS, so ownership is checked in the action)
+- [ ] Over 50 MB is refused with the file's actual size
+- [ ] A file with spaces or non-ASCII in its name uploads, and its real name still shows in the list
+- [ ] Removing an attachment DELETES it from the bucket, not just from the list
+- [ ] A remove cannot be aimed at a path outside that campaign's folder
+
+#### The creator sees a View button
+- [ ] Each brief attachment shows an explicit View, the same word a deliverable's file uses, on desktop AND mobile
+- [ ] The file name truncates rather than pushing View off the row
+- [ ] The whole row still opens the file; View names what it does
+
+---
+
+### Browse creators: list view and multi-select
+
+Built from "Browse Creators (standalone)". Cards are for weighing one creator at
+a time; rows are for running down twenty and ticking the ones you want.
+
+#### Starting rate comes from published packages
+- [ ] A creator whose packages are set up in the storefront editor shows a Starting rate on the card AND on the list row. It read "-" because the page took creators.rate_card, a different store that nothing keeps in step with creator_products
+- [ ] The rate FILTER includes that creator. A null rate failed every band, so priced creators were being dropped from the results entirely
+- [ ] "Rate: low to high" sorts them in the right place
+- [ ] The figure is the lowest ACTIVE package price
+- [ ] An on-request package is excluded, not counted as zero. A starting rate of zero is a quote nobody gave
+- [ ] A package hidden with display_price = false is excluded too (the legacy form of on-request)
+- [ ] A creator with no packages but a legacy rate_card still shows that figure
+
+#### The view toggle
+- [ ] A list/grid control sits in the header beside the All creators / Saved tabs
+- [ ] Grid is still the default. It is what this page has always opened as
+- [ ] The choice is remembered across visits (browser-local, like the saved list)
+- [ ] The active half is filled neon; the other is plain
+
+#### The list row
+- [ ] 24px checkbox, 52px round photo, name at 18px with the verified tick, one meta line, the starting rate on the right
+- [ ] The meta line reads niche, handle, followers, N brands, and drops empty parts rather than leaving stray separators
+- [ ] A selected row takes a 4px neon rail down its left edge
+- [ ] Clicking the row opens that creator; clicking the checkbox does NOT open them
+- [ ] Keyboard: Enter or Space on a focused checkbox selects, and does not open the creator or scroll the page
+- [ ] The bookmark is on the row too, so switching to list is not a downgrade for saving
+
+#### Selecting, in BOTH views
+- [ ] A grid card at rest shows NO tick. Browsing is the common case; picking several is the occasional one
+- [ ] A card at rest is EXACTLY the card it was before selection existed. No reserved gap, and the photo sits on the grid's left edge where it always did
+- [ ] Hovering reveals the tick OVER the photo's top-left corner, not beside it
+- [ ] Nothing shifts when it appears: the tick is positioned, not laid out
+- [ ] The tick reads against a photo as well as against the placeholder (it carries a white ring)
+- [ ] A picked card keeps its tick visible after the pointer leaves
+- [ ] Tabbing to the tick reveals it (it is reachable without a mouse)
+- [ ] On a touch screen the tick is always visible. Nothing hovers there, and a control that never appears does not exist
+- [ ] List rows still show their checkbox at all times: that view exists to be ticked down
+- [ ] A ticked card takes a neon border; a ticked row takes a neon left rail
+- [ ] "Start deal" STAYS on the grid card. One creator is still a deal; the tick is for gathering several
+- [ ] The tick does not open the creator, and the card still does
+- [ ] Keyboard: Enter or Space on a focused tick selects, without opening the creator or scrolling
+- [ ] A selection made in one view survives switching to the other
+
+#### The action, in a pill at the foot
+- [ ] Selecting anything raises the dark pill over the foot of the page, in reach however far down the list you have scrolled
+- [ ] It reads "1 selected" / "3 selected"
+- [ ] ONE selected offers <b>Start a deal</b> and opens the builder for that creator
+- [ ] TWO OR MORE offer <b>Start a campaign</b>, which opens a New Campaign DIALOG rather than a browser prompt
+- [ ] The dialog collects name, description/brief and budget: the same three fields the campaigns page collects, from one shared component
+- [ ] It names how many creators will be added
+- [ ] Create makes the campaign WITH the description and budget, adds the selected creators, and opens the campaign
+- [ ] Cancel, Escape, or clicking the backdrop closes it and keeps the selection
+- [ ] Neither closes while it is creating
+- [ ] Enter in the name or budget field submits
+- [ ] A bad budget is refused in the dialog, not swallowed
+- [ ] The campaigns page's own New Campaign panel still works and looks unchanged (it uses the same fields now)
+
+#### Back goes where you came from
+- [ ] Start a deal from BROWSE, then the builder's back link reads "Back to browse creators" and returns there, keeping the search and filters
+- [ ] Start a deal from a creator's STOREFRONT, then it reads "Back to storefront" and returns to that creator
+- [ ] Reaching the builder any other way still reads "Back to deals"
+- [ ] The target is an allowlist. A crafted ?back=https://evil.example falls back to the deals list rather than being rendered as the link
+- [ ] Clear empties the selection and the action goes
+- [ ] Nothing is shown there when nothing is selected
+- [ ] In the SAVED view a card still does NOT offer "Start deal". A shortlist of six offering six separate deals is the opposite of what the saved list is for
+
+---
+
+### Brand Logo (Settings > Profile)
+
+Before this, the settings Profile tab drew a 72px initials square with an "Upload photo"
+pill and a "Remove" pill, both inert `<span>`s. Upload only called markDirty(), so it
+dirtied the form and opened no file picker; Remove did nothing. `brands.logo_url` existed,
+was selected by the page, and was never written or rendered anywhere.
+
+#### Upload
+- [ ] Brand clicks "Upload photo" on /settings > Profile → the file picker opens
+- [ ] Brand uploads JPEG, PNG, WebP or SVG → accepted, and the square shows the logo immediately
+- [ ] Upload a non-image (e.g. .pdf, .gif) → rejected in place with "That file type is not supported"
+- [ ] Upload an image over 50 MB → rejected with the file's actual size in the message
+- [ ] After a rejection, picking the SAME file again retries (the input value is cleared, so the change event still fires)
+- [ ] Uploading a second logo of the same type replaces the first ON SCREEN, not just in storage (the `?v=` stamp defeats the CDN and browser cache)
+- [ ] The pill reads "Upload photo" with no logo and "Change photo" once one is set
+- [ ] "Remove" appears only when a logo is set; removing falls back to initials everywhere
+- [ ] Upload saves on pick, WITHOUT pressing "Save changes" (it is not part of the dirty form state)
+
+#### Display consistency (desktop AND mobile, per the standing rule)
+- [ ] Logo renders in the settings Profile square (72px, rounded)
+- [ ] Logo renders on the desktop sidebar avatar button
+- [ ] Logo renders in that button's dropdown header
+- [ ] Logo renders in the mobile drawer header
+- [ ] With no logo, all four fall back to the brand's initials exactly as before
+
+#### Access boundary
+- [ ] The `brands` UPDATE goes through the ADMIN client, matching updateProfile on the same page — the RLS client has no UPDATE policy on brands for a member and would report success on zero rows
+- [ ] Storage path is `brand-logos/{brandId}/` and is re-checked against that prefix after being built
+- [ ] A brand cannot write a logo for another brand (brandId comes from verifyBrand(), never from the request)
+- [ ] Logo URL is a public storage URL (storefronts bucket) — no storage policy change needed
+
+---
+
+
 ## 16. Welcome Email (first signup)
 
 Sent once per account by `lib/welcome-email.ts`. Never blocks signup — every
@@ -4528,3 +4725,202 @@ record rather than a set of instructions.
       blank. Not a code bug; the rows predate the column being set
 - [ ] History is ordered by `issued_at`, not `paid_at`. For a payment history
       the paid date is the more natural sort, and the two can differ
+
+## 46. Brief attachments the creator can actually open
+
+- [ ] A brief attachment sent by the brand is a LINK on the creator's side, on
+      desktop and mobile, and opens the file
+- [ ] It was plain text: the page signed the URL with the creator's SESSION
+      client, and storage RLS on `deal-files` refuses a signature to anyone but
+      the uploader. `createSignedUrl` returned nothing, `url` stayed null, and
+      the render falls back to a `<span>`. The brand's own view worked, which
+      is why it looked fine from that side
+- [ ] Signed with the admin client now. Safe because the deal itself was
+      fetched through the creator's own session first, so RLS has already
+      established the deal is theirs, and these are files the brand attached
+      FOR them
+- [ ] Still a one-hour signature, not a permanent link
+
+## 47. Remove and replace, everywhere a file is uploaded
+
+Audited every `type="file"` in the app.
+- [ ] Deal deliverables — Replace (fixed earlier; it was dead in three places)
+- [ ] Brand offer builder brief attachments — `removeBriefAttachment`
+- [ ] Campaign brief attachments — `removeAttachment`
+- [ ] Profile photo — "Change photo" and "Remove"
+- [ ] Storefront portrait and content items — remove buttons
+- [ ] **Careers CV** — was the only one with none. A native file input re-opens
+      the picker but cannot be cleared, so a required field held a file the
+      applicant had changed their mind about, with no way back but a reload.
+      Remove now clears the input itself, not just the label
+
+## 48. Reels first, and the Sponsored names retired
+
+### Order
+- [ ] The storefront's rate card / build-a-deal list opens with reels. They are
+      what a brand comes for and what most creators price highest, so a card
+      that opens with a story buries its own headline
+- [ ] Everything after keeps the order the creator arranged it in — the sort is
+      stable, so this lifts reels rather than reshuffling the card
+- [ ] Ranked on the NAME containing "reel", so a legacy bare "Reel" ranks with
+      "Instagram Reel" instead of sinking
+
+### The names (migration 0502)
+- [ ] `Sponsored Reel` → `Instagram Reel`
+- [ ] `Sponsored Post` → `Instagram Static/Carousel` (a feed post; there is no
+      plain "Instagram Post" in the current vocabulary)
+- [ ] `Sponsored Story` → `Instagram Story`
+- [ ] 11 rows, all on instagram. New packages have not been able to choose
+      these names for some time; they survived only on older packages
+- [ ] Editing a migrated package still validates — the new names are all in
+      `PRODUCT_TYPES`
+
+### NOT renamed, on purpose
+- [ ] `deal_deliverable_items.label` keeps "Sponsored Reel" / "Sponsored Post"
+      on the 68 rows that have them. Those are not vocabulary, they are the
+      description of work on deals that were agreed, delivered and mostly paid.
+      Renaming them changes what a completed deal says it was for
+- [ ] New deals take the new name from the product they are built from, so this
+      fades without touching the record
+
+## 49. Collab and boosting on the storefront
+
+The brand's builder has offered these for a while; the storefront did not, so a
+brand priced a deal on one number and met a different one after signing in.
+
+### The controls
+- [ ] Appear under a rate-card line ONLY once it is selected, and only where
+      that channel has rates
+- [ ] **Collab post** as a checkbox, showing what it ADDS (and the percentage
+      when the rate is one)
+- [ ] **Boosting** as a day picker — 7 / 14 / 30 / 60 / 90 — showing what the
+      chosen span adds
+- [ ] Desktop puts them on one line under the row
+- [ ] **Mobile uses the segmented controls from "Brand Deal Detail - Create
+      Offer Mobile"**, not a checkbox and a dropdown: a small label with the
+      added amount on the right, then a pill track
+- [ ] **Reel type**: Collab post / Non-collab
+- [ ] **Boosting rights**: 7d / 30d / 90d / None
+- [ ] Track is #F5F7FA at radius 10 with 3px padding; segments are 11.5/700 and
+      the active one turns white with a soft shadow
+- [ ] Same shape the brand sees when building the offer, so the storefront and
+      the builder read as one product rather than two takes on it
+
+### The total
+- [ ] Includes the extras
+- [ ] Breaks them out — "₹1,40,000 + ₹20,000 extras" — rather than folding them
+      in silently. A brand that ticked a collab should see what it cost
+- [ ] "From" still leads when any selected line is a minimum or a range
+
+### One definition of the price
+- [ ] Both storefronts use `lib/addons` — `collabCharge`, `boostingCharge`,
+      `offersCollab`, `offersBoosting` — the same functions the builder and the
+      invoice use. Nothing on the storefront computes a percentage of its own,
+      so the two cannot disagree by a rupee
+
+### Carried into the builder
+- [ ] The deal URL's `items` param becomes `id:qty:collab:days`
+- [ ] The two extra fields are OPTIONAL — an older `id:qty` link still parses,
+      which matters because these URLs get pasted into messages and sat on
+- [ ] `/deals/new` seeds the collab toggle, the boosting-rights flag and the
+      day count from them, so the builder opens on what the brand configured
+      rather than resetting it
+
+## 50. Storefront mobile rate rows, redrawn from the offer builder
+
+Taken from "Brand Deal Detail - Create Offer Mobile" element by element, after
+a first pass that kept our own row and only swapped the add-on controls.
+
+### The row
+- [ ] A **22px circular tick** on the left. Unselected: white with a hairline
+      border and no tick. Selected: **`--neon` fill, `--neon-deep` border**, and
+      a 13px tick at stroke 3. Tapping it selects or clears the line
+- [ ] The platform icon square is GONE. The row's job is selection, and the
+      name already carries the channel
+- [ ] Name at **13.5px / 700**, with the unit price beneath at **11px** as
+      "₹60,000 each" — not a price column of its own
+- [ ] The stepper sits on the RIGHT OF THE SAME ROW, and only once selected.
+      26px rounded squares (`--card`, hairline border), not filled circles
+- [ ] Row padding is 14px with a hairline top, and **no background tint**. The
+      neon tick is the selected signal; a neon wash behind the row as well made
+      the tick the quieter of the two
+- [ ] Only one stepper per row — the old price row carried a second
+
+### The add-ons
+- [ ] Segmented tracks, indented to the text column: **Reel type** (Collab post
+      / Non-collab) and **Boosting rights** (7d / 30d / 90d / None)
+- [ ] The added amount sits on the right of each label row
+- [ ] Track #F5F7FA at radius 10, 3px padding; segments 11.5/700, active turns
+      white with a soft shadow
+
+### Editor still works
+- [ ] The creator's own preview keeps its "Add your rate" and "Enter your rate"
+      inputs; only the duplicated price row and stepper were removed
+
+---
+
+## 51. Shipped without cases at the time, recorded here
+
+These eight went out on staging before their checks were written down. Written
+up after the fact rather than left undocumented, since the rule is that a change
+and its cases travel together.
+
+### YouTube storefront stats read watch time
+- [ ] The YouTube tab's three headline figures are Watch time, and the other two
+      as before. It said "Interactions", which is an Instagram measure and not
+      what a brand judges a YouTube creator on
+- [ ] Instagram's three are unchanged
+
+### Collab and boosting read as amounts ON TOP
+- [ ] In the creator's own rate editor, a collab rate and a boosting rate are
+      labelled as what a brand ADDS, not as a total that includes the base
+- [ ] Worked example: a Rs.70,000 reel with Rs.20,000 boosting shows Rs.20,000
+      as the add, never Rs.90,000 in the field the creator types into
+
+### Storefront mobile: price on the right until a line is picked
+- [ ] An UNSELECTED rate row shows its price compactly on the right (Rs.50K,
+      Rs.1.2L), so a brand can read the card without tapping anything
+- [ ] Selecting the row moves to the unit price under the name and the stepper
+      on the right, per the offer-builder row
+
+### Storefront mobile: None leads the boosting row
+- [ ] The boosting segmented control reads None first, then the day options
+- [ ] None is the state before anything is touched, and it costs nothing
+
+### Brand deals: "Needs you" counts only what needs them
+- [ ] "Needs you" contains DELIVERED deals (work is in front of the brand)
+- [ ] Plus negotiations where the CREATOR moved last, which status alone cannot
+      express and is derived from the counter events
+- [ ] APPROVED deals are NOT counted. The brand has already approved; what
+      happens next is the creator posting and invoicing
+- [ ] The number on the chip equals the number of rows behind it, on every tab
+- [ ] Counts are computed over the brand's WHOLE set, not the page on screen.
+      With any filter active every other tab used to count zero
+
+### Upload limits and errors, everywhere
+- [ ] Deliverable submission accepts up to 500 MB
+- [ ] Every other upload caps at 50 MB
+- [ ] Over the cap: a plain-language error naming the file's ACTUAL size, not a
+      generic failure
+- [ ] After any failure the control stays live and the same file can be picked
+      again
+- [ ] The careers CV stays at 4 MB on purpose: it is emailed through Resend and
+      base64 inflates it past the provider's limit
+
+### Brand dashboard: Pay opens that deal's payment
+- [ ] The attention row's Pay action goes to the payment for THAT deal, not to a
+      payments list the brand then has to search
+
+### Saved creators are a shortlist, not six separate deals
+- [ ] Saving a creator adds them to Saved and raises NO bar over the grid. Saving is keeping someone, not the start of a deal
+- [ ] Saving shows a toast naming the creator: "Vikram Singh added to your saved list."
+- [ ] Un-saving says so too, rather than the bookmark silently emptying
+- [ ] Saving a SECOND creator re-announces itself. It is not swallowed by the first toast's dismissal timer
+- [ ] Only one toast is shown per tap (the announcement is made outside the setState updater, which React may run twice)
+- [ ] The only place a count of saved creators appears is the Saved tab's own chip
+- [ ] In the Saved view, ticking creators DOES raise a bar, and its action is "Start a campaign" over the ticked ones
+- [ ] The saved list supports selecting several creators at once
+- [ ] Selecting several and continuing starts ONE campaign covering them, rather
+      than making the brand open six separate deal builders
+- [ ] KNOWN GAP: saved creators live in localStorage, not a table, so the list
+      does not follow the brand to another device or browser

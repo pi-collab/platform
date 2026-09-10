@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import NewCampaignFields, { parseBudget } from '@/components/NewCampaignFields'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createCampaign } from './actions'
@@ -48,8 +49,9 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
     if (!formName.trim()) { setError('Name is required'); return }
     setCreating(true)
     setError(null)
-    const budgetPaise = formBudget.trim() ? Math.round(parseFloat(formBudget) * 100) : undefined
-    if (formBudget.trim() && (isNaN(budgetPaise!) || budgetPaise! < 0)) { setError('Budget must be a positive number'); setCreating(false); return }
+    const budget = parseBudget(formBudget)
+    if (budget.error) { setError(budget.error); setCreating(false); return }
+    const budgetPaise = budget.paise
     const res = await createCampaign(formName, formDesc || undefined, budgetPaise)
     if (res.error) { setCreating(false); setError(res.error); return }
     setCreateOpen(false)
@@ -129,51 +131,14 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
             New Campaign
           </span>
-          {error && (
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#dc2626', marginTop: 12 }}>{error}</div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-            <div>
-              <div className="t-meta" style={{ marginBottom: 7 }}>Campaign name</div>
-              <input className="ffield" type="text" placeholder="e.g. Winter capsule" value={formName} onChange={(e) => setFormName(e.target.value)} autoFocus />
-            </div>
-            <div>
-              <div className="t-meta" style={{ marginBottom: 7 }}>Description / brief (optional)</div>
-              <textarea className="ffield" rows={3} placeholder="What is this campaign about?" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} />
-            </div>
-            <div style={{ maxWidth: 260 }}>
-              <div className="t-meta" style={{ marginBottom: 7 }}>Budget in ₹ (optional)</div>
-              <input className="ffield" type="text" placeholder="e.g. 150000" value={formBudget} onChange={(e) => setFormBudget(e.target.value)} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-            <button
-              className="neonbtn"
-              onClick={handleCreate}
-              disabled={creating || !formName.trim()}
-              style={{
-                display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 20px',
-                borderRadius: 11, background: 'var(--neon)', border: 'none',
-                boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
-                cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.5 : 1,
-              }}
-            >
-              {creating ? 'Creating...' : 'Create'}
-            </button>
-            <button
-              className="pill"
-              onClick={() => { setCreateOpen(false); setError(null) }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 20px',
-                borderRadius: 11, background: 'var(--card)',
-                border: '1px solid var(--hairline)',
-                fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
+          <NewCampaignFields
+            draft={{ name: formName, description: formDesc, budget: formBudget }}
+            onChange={(d) => { setFormName(d.name); setFormDesc(d.description); setFormBudget(d.budget) }}
+            error={error}
+            busy={creating}
+            onSubmit={handleCreate}
+            onCancel={() => { setCreateOpen(false); setError(null) }}
+          />
         </div>
       )}
 

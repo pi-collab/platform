@@ -65,7 +65,12 @@ export async function submitApplication(formData: FormData): Promise<ApplyResult
     return { status: 'error', message: 'Attach your CV.' }
   }
   if (resume.size > MAX_BYTES) {
-    return { status: 'error', message: 'That file is over 4 MB. Please attach a smaller one.' }
+    /* NOT 50 MB like the rest. This file is emailed through Resend and base64
+       inflates it by a third on the way, so a larger cap would only move the
+       rejection to the send, where the applicant sees nothing and we lose the
+       application. Rejecting it here, with the actual size, is the kinder end
+       of the same limit. */
+    return { status: 'error', message: `That file is ${(resume.size / 1024 / 1024).toFixed(1)} MB. The limit is 4 MB \u2014 please attach a smaller one and try again.` }
   }
   // Type checked by MIME and extension both: a browser can report an empty or
   // wrong type, and an extension alone is trivially renamed.

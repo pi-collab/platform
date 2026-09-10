@@ -16,21 +16,34 @@ interface Props {
 export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDealId }: Props) {
   const router = useRouter()
 
-  const handleDealClick = useCallback((selectedQty: Record<string, number>) => {
-    const params = new URLSearchParams({ creator: creatorId })
+  const handleDealClick = useCallback((
+    selectedQty: Record<string, number>,
+    addons?: Record<string, { collab: boolean; boostDays: number }>,
+    offerTotalPaise?: number,
+  ) => {
+    /* So the builder's back link returns to this storefront rather than to
+       the deals list. */
+    const params = new URLSearchParams({ creator: creatorId, back: 'storefront' })
 
-    // Encode selected items: key:qty pairs for items with qty > 0
     const selected = Object.entries(selectedQty).filter(([, q]) => q > 0)
     if (selected.length > 0) {
-      // Find matching rate card items to pass product IDs + quantities
-      const itemsParam = selected.map(([key, q]) => `${key}:${q}`).join(',')
-      params.set('items', itemsParam)
+      /* id:qty:collab:days, the same encoding the public storefront uses. This
+         side sent id:qty only, so a brand who configured a collab and boosting
+         on the storefront arrived at the builder with neither, and a lower
+         price than the page had just quoted them. */
+      params.set('items', selected.map(([key, q]) => {
+        const a = addons?.[key]
+        if (!a || (!a.collab && !a.boostDays)) return `${key}:${q}`
+        return `${key}:${q}:${a.collab ? 1 : 0}:${a.boostDays || 0}`
+      }).join(','))
     }
+    /* Present only when the brand raised a "from" total above its floor. */
+    if (offerTotalPaise && offerTotalPaise > 0) params.set('total', String(offerTotalPaise))
 
     router.push(`/deals/new?${params.toString()}`, { scroll: true })
   }, [creatorId, router])
 
-  const dealUrl = `/deals/new?creator=${creatorId}`
+  const dealUrl = `/deals/new?creator=${creatorId}&back=storefront`
 
   /* Same rule as the CTAs inside the shopfront: with no published packages
      there is nothing to build an offer from, so every path to the offer

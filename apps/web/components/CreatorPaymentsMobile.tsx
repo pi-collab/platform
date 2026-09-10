@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { sendPaymentReminder } from '@/app/creator/payments/actions'
 import UpiRow from '@/app/creator/payments/UpiRow'
@@ -32,6 +33,8 @@ export interface PendingRow {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
   status: string
   dueDateStr: string | null
@@ -43,6 +46,8 @@ export interface ReadyRow {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
 }
 
@@ -52,6 +57,8 @@ export interface HistoryRow {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
   paidDate: string
   paidAt: string | null
@@ -256,7 +263,7 @@ export default function CreatorPaymentsMobile({
                   <div className="cpay-m__month">{g.label}</div>
                   {g.rows.map((h) => (
                     <Link key={h.id} href={`/creator/deals/${h.dealId}`} className="cpay-m__drow">
-                      <span className="cpay-m__davatar" aria-hidden="true">{h.brandInitials}</span>
+                      <BrandMark name={h.brandName} logoUrl={h.brandLogo} initials={h.brandInitials} className="cpay-m__davatar" />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="cpay-m__dbrand">{h.brandName}</div>
                         <div className="cpay-m__dsub">{h.dealTitle} &middot; {h.paidDate}</div>

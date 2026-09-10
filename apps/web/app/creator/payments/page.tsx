@@ -30,7 +30,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   const { data: invoices, error } = await supabase
     .from('invoices')
     .select(
-      'id, deal_id, status, creator_receives_paise, due_date, issued_at, accepted_at, paid_at, deals(id, title, status, brands(name))'
+      'id, deal_id, status, creator_receives_paise, due_date, issued_at, accepted_at, paid_at, deals(id, title, status, brands(name, logo_url))'
     )
     .order('issued_at', { ascending: false })
 
@@ -77,6 +77,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       dealTitle: deal?.title || 'Untitled deal',
       brandName: brand,
       brandInitials: getInitials(brand),
+      brandLogo: extractBrandLogo(deal),
       amountPaise: inv.creator_receives_paise ?? 0,
       status: statusLabel,
       meta,
@@ -102,6 +103,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       dealTitle: deal?.title || 'Untitled deal',
       brandName: brand,
       brandInitials: getInitials(brand),
+      brandLogo: extractBrandLogo(deal),
       amountPaise: inv.creator_receives_paise ?? 0,
       paidDate,
       paidAt: inv.paid_at,
@@ -122,7 +124,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   const invoicedDealIds = new Set(all.map((inv) => inv.deal_id))
   const { data: readyDeals } = await supabase
     .from('deals')
-    .select('id, title, price_paise, brands(name)')
+    .select('id, title, price_paise, brands(name, logo_url)')
     .eq('creator_id', ctx.creatorId)
     .eq('status', 'approved')
     .eq('is_posted', true)
@@ -136,6 +138,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         dealTitle: (d.title as string) || 'Untitled deal',
         brandName: brand,
         brandInitials: getInitials(brand),
+        brandLogo: extractBrandLogo(d),
         amountPaise: (d.price_paise as number) ?? 0,
       }
     })
@@ -209,6 +212,13 @@ function extractBrand(deal: any): string {
   const brand = deal?.brands
   const obj = Array.isArray(brand) ? brand[0] : brand
   return obj?.name || 'Unknown brand'
+}
+
+/** The brand's logo off the same joined row, when they have uploaded one. */
+function extractBrandLogo(deal: any): string | null {
+  const brand = deal?.brands
+  const obj = Array.isArray(brand) ? brand[0] : brand
+  return obj?.logo_url ?? null
 }
 
 function getInitials(name: string): string {

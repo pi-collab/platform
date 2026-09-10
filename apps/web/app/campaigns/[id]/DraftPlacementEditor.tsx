@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { BoostingPill, OptionPill } from '@/components/DealOptionPills'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
 import { updateCampaignDraft } from './draft-actions'
 import type { DraftPlacement } from './draft-actions'
@@ -83,6 +84,20 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
       if (!p.boosting_duration_months) continue
       const product = products.find((pr) => pr.product_type === p.label && pr.platform === p.platform && pr.handle === p.handle)
       if (product) bd[product.id] = String(p.boosting_duration_months)
+    }
+    return bd
+  })
+
+  /* BoostingPill asks in DAYS, which is what the money is calculated from;
+     this editor has always stored MONTHS on the placement. Seeded from the
+     stored months so an existing draft opens on the right preset, and written
+     back as months, rounded up, when it changes. */
+  const [boostDays, setBoostDays] = useState<Record<string, number>>(() => {
+    const bd: Record<string, number> = {}
+    for (const p of initialPlacements) {
+      if (!p.boosting_duration_months) continue
+      const product = products.find((pr) => pr.product_type === p.label && pr.platform === p.platform && pr.handle === p.handle)
+      if (product) bd[product.id] = p.boosting_duration_months * 30
     }
     return bd
   })
@@ -193,114 +208,143 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
             const [platform, handle] = key.split('::')
             return (
               <div key={key}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
-                  <span style={platformBadge}>{platform}</span>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{handle?.startsWith('@') ? handle : `@${handle}`}</span>
+                {/* The channel this group is for, as an eyebrow rather than a
+                    chip. Same line the offer builder heads its groups with. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{
+                    fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 700,
+                    letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-soft)',
+                  }}>
+                    {platform} &middot; {handle?.startsWith('@') ? handle : `@${handle}`}
+                  </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {prods.map((p) => {
                     const sel = selections[p.id]
                     const qty = sel?.qty ?? 0
+                    const selected = qty > 0
+                    const unitPaise = isFixedPrice(p) ? p.price_paise : (sel?.customPricePaise ?? 0)
+
                     return (
-                      <div key={p.id} style={{ ...productRow, borderColor: qty > 0 ? '#111' : 'var(--color-border, #e5e5e5)' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '0.8125rem', fontWeight: 600, margin: 0 }}>{p.product_type}</p>
-                          {p.description && <p style={{ fontSize: '0.7rem', color: '#888', margin: '0.1rem 0 0' }}>{p.description}</p>}
-                          <p style={{ fontSize: '0.7rem', fontWeight: 600, margin: '0.1rem 0 0', color: formatProductPrice(p) ? '#111' : '#888', fontStyle: p.display_price ? 'normal' : 'italic' }}>
-                            {formatProductPrice(p) ?? 'Price on request'}
-                          </p>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem', flexShrink: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <button type="button" onClick={() => setQty(p.id, Math.max(0, qty - 1))} style={stepperBtn} disabled={qty === 0}>−</button>
-                            <span style={{ fontSize: '0.875rem', fontWeight: 700, minWidth: 20, textAlign: 'center' }}>{qty}</span>
-                            <button type="button" onClick={() => setQty(p.id, qty + 1)} style={stepperBtn}>+</button>
-                          </div>
-                          {/* Reel type — Instagram only */}
-                          {qty > 0 && p.platform.toLowerCase() === 'instagram' && (
-                            <select
-                              value={reelTypes[p.id] ?? ''}
-                              onChange={(e) => setReelTypes((prev) => ({ ...prev, [p.id]: e.target.value as any }))}
-                              style={{ padding: '0.15rem 0.3rem', fontSize: '0.65rem', borderRadius: 4, border: '1px solid #ddd' }}
-                            >
-                              <option value="">Reel type...</option>
-                              <option value="collab">Collab post</option>
-                              <option value="non_collab">Non-collab</option>
-                            </select>
-                          )}
-                          {/* Boosting */}
-                          {qty > 0 && (
-                            <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
-                              {([
-                                [true, 'Boost'],
-                                [false, 'No boost'],
-                              ] as const).map(([val, label]) => {
-                                const checked = itemBoostingRights[p.id] === val
-                                return (
-                                  <button
-                                    key={String(val)}
-                                    type="button"
-                                    onClick={() => {
-                                      setItemBoostingRights((prev) => ({ ...prev, [p.id]: val }))
-                                      if (!val) setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))
-                                    }}
-                                    style={{
-                                      padding: '0.1rem 0.35rem', fontSize: '0.6rem', fontWeight: checked ? 700 : 500,
-                                      borderRadius: 9999,
-                                      border: checked ? '1.5px solid #111' : '1px solid #ddd',
-                                      background: checked ? '#111' : '#fafafa',
-                                      color: checked ? '#fff' : '#888',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {label}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          )}
-                          {qty > 0 && itemBoostingRights[p.id] === true && (
-                            <div style={{ display: 'flex', gap: '0.15rem' }}>
-                              {['1', '3', '6', '12'].map((m) => (
-                                <button
-                                  key={m} type="button"
-                                  onClick={() => setItemBoostingDuration((prev) => ({ ...prev, [p.id]: m }))}
-                                  style={{
-                                    padding: '0.1rem 0.3rem', fontSize: '0.55rem', borderRadius: 9999,
-                                    border: itemBoostingDuration[p.id] === m ? '1.5px solid #111' : '1px solid #ddd',
-                                    background: itemBoostingDuration[p.id] === m ? '#f5f5f0' : '#fafafa',
-                                    fontWeight: itemBoostingDuration[p.id] === m ? 700 : 500,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {m}mo
-                                </button>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))}
-                                style={{
-                                  padding: '0.1rem 0.3rem', fontSize: '0.55rem', borderRadius: 9999,
-                                  border: !itemBoostingDuration[p.id] ? '1.5px solid #111' : '1px solid #ddd',
-                                  background: !itemBoostingDuration[p.id] ? '#f5f5f0' : '#fafafa',
-                                  fontWeight: !itemBoostingDuration[p.id] ? 700 : 500,
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                ∞
+                      /* THE OFFER BUILDER'S ROW. This screen sets the same terms
+                         over several creators at once, and was drawing its own
+                         smaller version of every control: a bare select for reel
+                         type, 0.6rem buttons for boosting, no delivery date at
+                         all. Same row, same pills, one definition. */
+                      <div key={p.id} className="scp0" style={{
+                        border: selected ? '1.5px solid var(--neon-deep, var(--lime-400))' : '1.5px solid var(--hairline, #EAEAE3)',
+                        background: 'var(--card)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setQty(p.id, selected ? 0 : 1)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 14, flex: '1 1 0%', minWidth: 0, padding: 0, background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'var(--font-ui)', color: 'var(--ink)' }}
+                          >
+                            <span style={{
+                              width: 24, height: 24, flex: '0 0 auto', borderRadius: '50%',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              transition: 'background .16s',
+                              border: selected ? '1.5px solid var(--neon-deep)' : '1.5px solid #D3DBE6',
+                              background: selected ? 'var(--neon, var(--lime-400))' : 'var(--card)',
+                              color: selected ? 'var(--ink)' : 'transparent',
+                            }}>
+                              {selected && (
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                              )}
+                            </span>
+                            <span style={{ flex: '1 1 0%', minWidth: 0 }}>
+                              <span style={{ display: 'block', fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.01em' }}>{p.product_type}</span>
+                              <span style={{ display: 'block', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 4 }}>
+                                {p.description ? `${p.description} \u00B7 ` : ''}
+                                {(() => {
+                                  const label = formatProductPrice(p)
+                                  if (label == null) return 'Price on request'
+                                  return isFixedPrice(p) ? `${label} each` : label
+                                })()}
+                              </span>
+                            </span>
+                          </button>
+
+                          {selected && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <button type="button" className="stepbtn" aria-label="Fewer" onClick={() => { if (qty > 1) setQty(p.id, qty - 1) }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                              </button>
+                              <span style={{ minWidth: 18, textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700 }}>{qty}</span>
+                              <button type="button" className="stepbtn" aria-label="More" onClick={() => setQty(p.id, qty + 1)}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
                               </button>
                             </div>
                           )}
-                          {/* Custom price for price-on-request */}
-                          {!isFixedPrice(p) && qty > 0 && (
-                            <input
-                              type="number" min="0" step="1" placeholder="Price (₹)"
-                              value={sel?.customPricePaise != null ? String(sel.customPricePaise / 100) : ''}
-                              onChange={(e) => setCustomPrice(p.id, e.target.value)}
-                              style={{ width: 100, fontSize: '0.7rem', padding: '0.2rem 0.4rem', border: '1px solid #ddd', borderRadius: 4 }}
-                            />
-                          )}
+
+                          <div style={{ textAlign: 'right', minWidth: 104 }}>
+                            <div style={{
+                              fontFamily: 'var(--font-display)', fontSize: 18,
+                              fontWeight: selected ? 800 : 700,
+                              letterSpacing: '-0.02em', lineHeight: 1,
+                              color: selected ? 'var(--ink)' : 'var(--ink-soft)',
+                            }}>
+                              {(() => {
+                                if (isFixedPrice(p)) return formatRupees(unitPaise * (qty || 1))
+                                if (selected && sel?.customPricePaise) return formatRupees(sel.customPricePaise * qty)
+                                const seed = offerPrefillPaise(p)
+                                return seed != null ? formatRupees(seed * (qty || 1)) : '\u2014'
+                              })()}
+                            </div>
+                          </div>
                         </div>
+
+                        {selected && (
+                          <div style={{ padding: '0 18px 14px 52px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {p.platform.toLowerCase() === 'instagram' && (
+                              <OptionPill
+                                label="Reel type"
+                                value={reelTypes[p.id] === 'collab' ? 'Collab post' : reelTypes[p.id] === 'non_collab' ? 'Non-collab' : ''}
+                                options={['Collab post', 'Non-collab']}
+                                onChange={(v) => setReelTypes((prev) => ({ ...prev, [p.id]: v === 'Collab post' ? 'collab' : v === 'Non-collab' ? 'non_collab' : '' }))}
+                              />
+                            )}
+
+                            {/* Boosting, in DAYS, the way the offer builder asks
+                                for it. The months this screen has always stored
+                                are written from the answer, rounded up: half a
+                                month of granted rights is still a month. */}
+                            <BoostingPill
+                              days={boostDays[p.id] ?? null}
+                              included={itemBoostingRights[p.id] ?? null}
+                              onChange={(next) => {
+                                if (next == null) {
+                                  setItemBoostingRights((prev) => ({ ...prev, [p.id]: false }))
+                                  setBoostDays((prev) => ({ ...prev, [p.id]: 0 }))
+                                  setItemBoostingDuration((prev) => ({ ...prev, [p.id]: '' }))
+                                  return
+                                }
+                                setItemBoostingRights((prev) => ({ ...prev, [p.id]: true }))
+                                setBoostDays((prev) => ({ ...prev, [p.id]: next }))
+                                setItemBoostingDuration((prev) => ({ ...prev, [p.id]: next > 0 ? String(Math.max(1, Math.ceil(next / 30))) : '' }))
+                              }}
+                            />
+
+                            {/* No "Deliver by" here, deliberately. A draft
+                                placement has nowhere to keep a date - the offer
+                                builder's dates only derive the deal's own
+                                timeline, and this row becomes a deal later. A
+                                pill that silently discarded what a brand typed
+                                would be worse than not offering it. */}
+
+                            {!isFixedPrice(p) && (
+                              <input
+                                type="number" min="0" step="1"
+                                placeholder="Your price (\u20B9)"
+                                className="dinput"
+                                value={sel?.customPricePaise != null ? String(sel.customPricePaise / 100) : ''}
+                                onChange={(e) => setCustomPrice(p.id, e.target.value)}
+                                style={{ width: 140, height: 27, fontSize: 11.5, padding: '0 10px', borderRadius: 8 }}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     )
                   })}

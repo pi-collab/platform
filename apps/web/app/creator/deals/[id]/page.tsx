@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import BrandMark from '@/components/BrandMark'
+import { createAdminClient } from '@/lib/supabase/admin'
 import MobileInvoiceCard from './MobileInvoiceCard'
 import { formatDueStatus } from '@/lib/invoice'
 import { verifyCreator } from '@/lib/creator-auth'
@@ -85,7 +87,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name, logo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -135,6 +137,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
   const rawBrand = deal.brands as unknown
   const brand = (Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name) ?? 'Unknown brand'
+  const brandLogo = ((Array.isArray(rawBrand) ? rawBrand[0] : rawBrand) as { logo_url?: string | null } | null)?.logo_url ?? null
   const canSubmit = deal.status === 'agreed' || deal.status === 'revision'
   const hasStructuredItems = items && items.length > 0
   const isNegotiating = deal.status === 'negotiating'
@@ -216,12 +219,23 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const avoid = (deal as any).brief_avoid as string | null
   const briefAttachments = ((deal as any).brief_attachments ?? []) as { name: string; storage_path: string; size_bytes: number; content_type: string }[]
 
-  // Signed URLs for brief attachments
+  /* SIGNED WITH THE ADMIN CLIENT, not the creator's session.
+     The brand uploads these into deal-files, and storage RLS on the object
+     refuses a signature to anyone but the uploader - so createSignedUrl
+     returned nothing for the creator, the url stayed null, and the attachment
+     rendered as plain text with no way to open it. The brand's own view worked,
+     which is why it looked fine from that side.
+
+     Safe here because the deal itself was fetched through the creator's own
+     session a few lines up: RLS has already established that this deal is
+     theirs, and these are the files the brand attached FOR them. Still a
+     one-hour signature rather than a permanent link. */
   const attachmentUrls: Record<string, string> = {}
   if (briefAttachments.length > 0) {
+    const admin = createAdminClient()
     const results = await Promise.all(
       briefAttachments.map((att) =>
-        supabase.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
+        admin.storage.from('deal-files').createSignedUrl(att.storage_path, 3600)
       )
     )
     results.forEach((res, i) => {
@@ -403,6 +417,21 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
               Back to deals
             </Link>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+              {/* The brand's own mark beside their name. The headline named
+                  them and showed nothing of them, while every list this page
+                  is reached from - deals, inbox, payments - already draws one. */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, minWidth: 0 }}>
+                <BrandMark
+                  name={brand}
+                  logoUrl={brandLogo}
+                  style={{
+                    width: 52, height: 52, borderRadius: 15, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
+                    color: 'var(--sec-ink)', background: 'var(--sec-2)',
+                    border: '1px solid var(--frost-edge)',
+                  }}
+                />
               <div>
                 <div style={metaLabel}>
                   {deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}
@@ -431,6 +460,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                     : 'Deal with '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
+              </div>
               </div>
               <OpenDealChat className="neonbtn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -787,10 +817,14 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                                   <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                                   </span>
-                                  <span style={{ minWidth: 0 }}>
+                                  <span style={{ flex: 1, minWidth: 0 }}>
                                     <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
                                     <span style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 2 }}>{ext} · {sizeMB} MB</span>
                                   </span>
+                                  {/* Said out loud, the way a deliverable's file
+                                      says it. The whole card was the link, which
+                                      is only discoverable by trying it. */}
+                                  <span style={{ flex: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap' }}>View</span>
                                 </a>
                               )
                             })}

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import NewCampaignFields, { EMPTY_CAMPAIGN_DRAFT, parseBudget, type CampaignDraft } from '@/components/NewCampaignFields'
+import Toast from '@/components/Toast'
 import { useRouter } from 'next/navigation'
 import FilterDropdown from '@/components/FilterDropdown'
 import Link from 'next/link'
@@ -107,17 +109,25 @@ function useAnimatedPlaceholder() {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {} }: {
+export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {}, startingRates = {} }: {
   creators: BrowseCreator[]
   storefrontSlugs?: Record<string, string>
   /** creatorId -> followers from a connected Instagram account. */
   verifiedFollowers?: Record<string, number>
+  /** creatorId -> lowest published package price, in paise. */
+  startingRates?: Record<string, number>
 }) {
   // Verified first, typed second. Connecting Instagram does not write into
   // social_accounts, so a connected creator's typed count is usually absent and
   // reading it alone showed them as 0 and sorted them last.
   const followersOf = (c: BrowseCreator) =>
     verifiedFollowers[c.id] ?? bestFollowers(c.social_accounts)
+
+  /* Packages first, rate_card second. The storefront editor writes packages;
+     rate_card is the older store and nothing keeps the two in step, so reading
+     it alone showed "-" for creators who had priced everything. */
+  const rateOf = (c: BrowseCreator): number | null =>
+    startingRates[c.id] ?? lowestRate(c.rate_card)
 
   const [search, setSearch] = useState('')
   // An array, empty meaning no niche filter. A creator's storefront can carry
@@ -141,18 +151,102 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   const [rateFilter, setRateFilter] = useState('any')
   const [sort, setSort] = useState('followers')
   const [savedView, setSavedView] = useState(false)
+  /* SAVED SURVIVES A RELOAD. It was component state, so a brand who saved six
+     creators and refreshed had saved nothing. Per browser rather than per
+     account: a table would be the right home and would follow them between
+     devices and teammates, but that is a migration and RLS, and losing the list
+     on every reload was the bug in front of us. */
   const [saved, setSaved] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('guapd_saved_creators')
+      if (raw) setSaved(JSON.parse(raw))
+    } catch { /* private mode, cleared storage: start empty rather than break */ }
+  }, [])
+  useEffect(() => {
+    try { window.localStorage.setItem('guapd_saved_creators', JSON.stringify(saved)) } catch { /* ignore */ }
+  }, [saved])
+
+  /* Selection is only for the saved list, and is separate from `saved`:
+     ticking a creator to put in a campaign is not the same act as keeping
+     them. */
+  const [picked, setPicked] = useState<Record<string, boolean>>({})
+  const [startingCampaign, setStartingCampaign] = useState(false)
+  /* The campaign's own details, asked for before it is made rather than after.
+     window.prompt took a name and nothing else, so a campaign started from a
+     shortlist opened missing the brief and budget the campaigns page collects,
+     and looked nothing like the rest of the product while it asked. */
+  const [campaignOpen, setCampaignOpen] = useState(false)
+  const [campaignDraft, setCampaignDraft] = useState<CampaignDraft>(EMPTY_CAMPAIGN_DRAFT)
+  const [campaignError, setCampaignError] = useState<string | null>(null)
+
+  async function createCampaignFromSelection() {
+    if (!campaignDraft.name.trim()) { setCampaignError('Campaign name is required.'); return }
+    const budget = parseBudget(campaignDraft.budget)
+    if (budget.error) { setCampaignError(budget.error); return }
+
+    setCampaignError(null)
+    setStartingCampaign(true)
+    const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
+    const res = await startCampaignWithCreators(
+      campaignDraft.name,
+      pickedIds,
+      campaignDraft.description || undefined,
+      budget.paise,
+    )
+    setStartingCampaign(false)
+
+    if ('error' in res && res.error) { setCampaignError(res.error); return }
+    setCampaignOpen(false)
+    router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
+  }
+  const router = useRouter()
+  const pickedIds = Object.keys(picked).filter((id) => picked[id])
   const [shown, setShown] = useState(PAGE_SIZE)
   const searchRef = useRef<HTMLInputElement>(null)
   const ph = useAnimatedPlaceholder()
 
+  /* Grid or list, remembered. Which way a brand reads a roster is a working
+     preference, not a per-visit choice, and it is a browser-local one for the
+     same reason `saved` is. Grid stays the default: it is what this page has
+     always opened as. */
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('guapd_browse_view')
+      if (raw === 'list' || raw === 'grid') setViewMode(raw)
+    } catch { /* ignore */ }
+  }, [])
+  useEffect(() => {
+    try { window.localStorage.setItem('guapd_browse_view', viewMode) } catch { /* ignore */ }
+  }, [viewMode])
+
   const savedCount = Object.values(saved).filter(Boolean).length
+
+  /* Say what just happened.
+   *
+   * The bookmark filling in is the only feedback a save had, and it is a 20px
+   * icon under the thumb that just covered it. `seq` remounts the toast so a
+   * second save re-announces itself rather than being swallowed by the first
+   * one's dismissal timer. */
+  const [toast, setToast] = useState<{ msg: string; seq: number } | null>(null)
+  const toastSeq = useRef(0)
 
   const toggleSave = useCallback((id: string, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setSaved((prev) => ({ ...prev, [id]: !prev[id] }))
-  }, [])
+    /* Read outside the updater. A setState updater has to be pure - React is
+       free to run it twice - and announcing from inside one gives two toasts in
+       development and a double-counted seq. */
+    const next = !saved[id]
+    setSaved((prev) => ({ ...prev, [id]: next }))
+    const name = creators.find((c) => c.id === id)?.full_name ?? 'Creator'
+    toastSeq.current += 1
+    setToast({
+      msg: next ? `${name} added to your saved list.` : `${name} removed from your saved list.`,
+      seq: toastSeq.current,
+    })
+  }, [creators, saved])
 
   const filtered = useMemo(() => {
     let list = creators
@@ -188,7 +282,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     // Rate
     if (rateFilter !== 'any') {
       list = list.filter((c) => {
-        const low = lowestRate(c.rate_card)
+        const low = rateOf(c)
         if (low === null) return false
         const rupees = low / 100
         if (rateFilter === 'lt50') return rupees < 50_000
@@ -201,12 +295,12 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     // Sort
     list = [...list].sort((a, b) => {
       if (sort === 'followers') return followersOf(b) - followersOf(a)
-      if (sort === 'rateLow') return (lowestRate(a.rate_card) ?? 0) - (lowestRate(b.rate_card) ?? 0)
+      if (sort === 'rateLow') return (rateOf(a) ?? 0) - (rateOf(b) ?? 0)
       return a.full_name.localeCompare(b.full_name)
     })
 
     return list
-  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved])
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates])
 
   const pageList = filtered.slice(0, shown)
   const hasMore = shown < filtered.length
@@ -242,6 +336,30 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           box-shadow: 0 0 0 2px var(--neon), 0 20px 46px -34px rgba(40,45,25,.34);
           transform: translateY(-2px);
         }
+        /* The select tick is quiet until it is reached for, and it takes no
+           space in the card's layout - it is positioned over the photo rather
+           than sitting beside it. Reserving a slot left a gap on every card at
+           rest and pushed the photo off the grid's left edge, which is worse
+           than the checkbox it was reserving room for. */
+        .card-tick {
+          position: absolute;
+          top: 14px;
+          left: 14px;
+          z-index: 2;
+          opacity: 0;
+          transition: opacity .15s ease;
+          box-shadow: 0 0 0 2px var(--card), 0 4px 10px -4px rgba(40,45,25,.5);
+        }
+        .creator-card:hover .card-tick,
+        .card-tick:focus-visible,
+        .card-tick.is-picked {
+          opacity: 1;
+        }
+        /* Nothing hovers on a touch screen, and a control that never appears is
+           a control that does not exist. */
+        @media (hover: none) {
+          .card-tick { opacity: 1; }
+        }
       `}</style>
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 
@@ -260,6 +378,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
               Back to dashboard
             </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
             <div style={{ display: 'flex', gap: 22, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
               <button
                 onClick={() => setSavedView(false)}
@@ -294,6 +413,38 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   {savedCount}
                 </span>
               </button>
+            </div>
+
+            {/* List or grid. Cards are for weighing one creator at a time;
+                rows are for running down twenty and ticking the ones you
+                want, which is why the checkbox lives on the row. */}
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border-hairline)', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                onClick={() => setViewMode('list')}
+                aria-label="List view"
+                aria-pressed={viewMode === 'list'}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 30, border: 'none', cursor: 'pointer',
+                  background: viewMode === 'list' ? 'var(--neon)' : 'transparent',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'list' ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+              </button>
+              <div style={{ width: 1, height: 20, background: 'var(--border-hairline)' }} />
+              <button
+                onClick={() => setViewMode('grid')}
+                aria-label="Grid view"
+                aria-pressed={viewMode === 'grid'}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 30, border: 'none', cursor: 'pointer',
+                  background: viewMode === 'grid' ? 'var(--neon)' : 'transparent',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'grid' ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+              </button>
+            </div>
             </div>
           </div>
 
@@ -485,11 +636,39 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
-              {pageList.map((c) => (
-                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} verifiedFollowers={verifiedFollowers[c.id]} />
-              ))}
-            </div>
+            {viewMode === 'list' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 20 }}>
+                {pageList.map((c) => (
+                  <CreatorRow
+                    key={c.id}
+                    creator={c}
+                    verifiedFollowers={verifiedFollowers[c.id]}
+                    startingRate={rateOf(c)}
+                    isPicked={!!picked[c.id]}
+                    onTogglePick={(id) => setPicked((prev) => ({ ...prev, [id]: !prev[id] }))}
+                    isSaved={!!saved[c.id]}
+                    onToggleSave={toggleSave}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
+                {pageList.map((c) => (
+                  <CreatorCard
+                    key={c.id}
+                    creator={c}
+                    isSaved={!!saved[c.id]}
+                    onToggleSave={toggleSave}
+                    storefrontSlug={storefrontSlugs[c.id] ?? null}
+                    verifiedFollowers={verifiedFollowers[c.id]}
+                    startingRate={rateOf(c)}
+                    hideDealCta={savedView}
+                    isPicked={!!picked[c.id]}
+                    onTogglePick={(id) => setPicked((prev) => ({ ...prev, [id]: !prev[id] }))}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Load more */}
             {hasMore && (
@@ -510,8 +689,16 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </>
         )}
 
-        {/* ══════ SHORTLIST BAR ══════ */}
-        {savedCount > 0 && !savedView && (
+        {/* ══════ SELECTION BAR ══════
+            A pill over the foot of the page, always in reach however far down
+            the list a brand has got. Beside the heading it sat at the top of a
+            long scroll, which is the one place they are not looking once they
+            start picking.
+
+            One creator is a deal; several are a campaign. The word follows the
+            count, because "Start a campaign" over a single creator is heavier
+            than the thing it does. */}
+        {pickedIds.length > 0 && (
           <div style={{
             position: 'fixed', bottom: 18, left: 0, right: 0, zIndex: 40,
             display: 'flex', justifyContent: 'center', padding: '0 20px', pointerEvents: 'none',
@@ -523,22 +710,39 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
               pointerEvents: 'auto',
             }}>
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap' }}>
-                {savedCount} shortlisted
+                {pickedIds.length} selected
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {pickedIds.length === 1 ? (
+                  <Link
+                    href={`/deals/new?creator=${pickedIds[0]}&back=browse`}
+                    style={{
+                      padding: '9px 18px', borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'var(--neon)', border: 'none',
+                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                      color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
+                    }}
+                  >
+                    Start a deal
+                  </Link>
+                ) : (
+                  <button
+                    disabled={startingCampaign}
+                    onClick={() => { setCampaignError(null); setCampaignDraft(EMPTY_CAMPAIGN_DRAFT); setCampaignOpen(true) }}
+                    style={{
+                      padding: '9px 18px', borderRadius: 'var(--radius-pill)',
+                      background: 'var(--neon)', border: 'none',
+                      fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                      color: 'var(--ink)', whiteSpace: 'nowrap',
+                      cursor: startingCampaign ? 'wait' : 'pointer',
+                      opacity: startingCampaign ? 0.6 : 1,
+                    }}
+                  >
+                    Start a campaign
+                  </button>
+                )}
                 <button
-                  onClick={() => setSavedView(true)}
-                  style={{
-                    padding: '9px 16px', borderRadius: 'var(--radius-pill)',
-                    background: 'rgba(255,255,255,.12)', border: 'none',
-                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
-                    color: '#FFFFFF', cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}
-                >
-                  Review
-                </button>
-                <button
-                  onClick={() => setSaved({})}
+                  onClick={() => setPicked({})}
                   style={{
                     padding: '9px 14px', borderRadius: 'var(--radius-pill)',
                     background: 'none', border: 'none',
@@ -548,23 +752,187 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 >
                   Clear
                 </button>
-                <Link
-                  href="/deals/new"
-                  style={{
-                    padding: '9px 18px', borderRadius: 'var(--radius-pill)',
-                    backgroundColor: 'var(--neon)', border: 'none',
-                    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
-                    color: 'var(--ink)', whiteSpace: 'nowrap', textDecoration: 'none',
-                  }}
-                >
-                  Start a deal
-                </Link>
               </div>
             </div>
           </div>
         )}
+
+
+        {/* ══════ NEW CAMPAIGN ══════
+            Over the page rather than pushed into it: the selection behind it is
+            what the campaign is being made from, and a brand should still be
+            able to see the count they picked while they name it. */}
+        {campaignOpen && (
+          <div
+            onClick={() => { if (!startingCampaign) setCampaignOpen(false) }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 60,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+              background: 'rgba(18,21,28,.42)', backdropFilter: 'blur(2px)',
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="New campaign"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === 'Escape' && !startingCampaign) setCampaignOpen(false) }}
+              style={{
+                width: 'min(560px, 100%)', maxHeight: '90vh', overflowY: 'auto',
+                borderRadius: 24, background: 'var(--card)', padding: '30px 32px',
+                boxShadow: '0 40px 90px -30px rgba(18,21,28,.5)',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                New Campaign
+              </span>
+              <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 5 }}>
+                {pickedIds.length} creator{pickedIds.length === 1 ? '' : 's'} will be added to it.
+              </div>
+              <NewCampaignFields
+                draft={campaignDraft}
+                onChange={setCampaignDraft}
+                error={campaignError}
+                busy={startingCampaign}
+                onSubmit={createCampaignFromSelection}
+                onCancel={() => setCampaignOpen(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        {toast && <Toast key={toast.seq} message={toast.msg} duration={2600} />}
+
+        {/* No bar over the browse grid.
+            Saving used to raise a "N shortlisted / Review / Clear / Start a
+            deal" bar, which put a campaign-shaped action on an act that is not
+            one: saving a creator is keeping them, nothing more. Its "Start a
+            deal" went to an empty /deals/new, dropping the shortlist it was
+            sitting on top of. The count already lives on the Saved tab, and the
+            campaign is started from there, where the brand has ticked who is in
+            it. See the SELECTION BAR above. */}
       </div>
     </section>
+  )
+}
+
+/* ── Creator Row (list view) ────────────────────────────────────
+   The compact row from "Browse Creators (standalone)": a 24px checkbox, a
+   52px round photo, the name with its verified tick, one meta line carrying
+   everything the card spreads over four blocks, and the starting rate on the
+   right. A selected row takes a 4px neon rail down its left edge.
+
+   The checkbox is the point of this view. Twenty cards is a wall to compare
+   against; twenty rows is a list to tick down, which is what putting several
+   creators into one campaign actually is. */
+function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onTogglePick, isSaved, onToggleSave }: {
+  creator: BrowseCreator
+  verifiedFollowers?: number
+  /** Lowest published package price, in paise. Null when nothing is priced. */
+  startingRate: number | null
+  isPicked: boolean
+  onTogglePick: (id: string) => void
+  isSaved: boolean
+  onToggleSave: (id: string, e: React.MouseEvent) => void
+}) {
+  const router = useRouter()
+  const primary = primarySocial(c.social_accounts)
+  const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
+  const low = startingRate
+  const niches = (c.niches ?? []).filter(Boolean)
+  const brands = c.worked_with?.length ?? 0
+
+  /* One line, in the order a brand reads it: what they make, where, how big,
+     how proven. Empty parts drop out rather than leaving stray separators. */
+  const meta = [
+    niches[0],
+    primary ? `${primary.handle || c.handle || ''}` : (c.handle || ''),
+    followers ? `${formatFollowers(followers)} followers` : '',
+    brands > 0 ? `${brands} brand${brands === 1 ? '' : 's'}` : '',
+  ].filter(Boolean)
+
+  return (
+    <div
+      onClick={() => router.push(`/browse/${c.id}`)}
+      className="creator-card"
+      style={{
+        position: 'relative', overflow: 'hidden', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 18,
+        borderRadius: 22, background: 'var(--card)',
+        border: '1px solid var(--border-hairline)',
+        boxShadow: '0 10px 22px -18px rgba(40,45,25,.35)',
+        padding: '20px 24px', color: 'var(--ink)',
+      }}
+    >
+      {isPicked && <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: 'var(--neon)' }} />}
+
+      <span
+        onClick={(e) => { e.stopPropagation(); onTogglePick(c.id) }}
+        role="checkbox"
+        aria-checked={isPicked}
+        aria-label={`Select ${c.full_name}`}
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) } }}
+        style={{
+          width: 24, height: 24, borderRadius: 7, flexShrink: 0, marginLeft: 6, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: `1.5px solid ${isPicked ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
+          background: isPicked ? 'var(--neon)' : 'var(--card)',
+          color: isPicked ? 'var(--ink)' : 'transparent',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+      </span>
+
+      <div style={{
+        width: 52, height: 52, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+        color: 'var(--ink-soft)',
+        background: c.profile_photo_url ? 'none' : 'linear-gradient(150deg, #EEF6FD 0%, #F4F0FF 100%)',
+        border: '1px solid var(--frost-edge)',
+      }}>
+        {c.profile_photo_url
+          // eslint-disable-next-line @next/next/no-img-element
+          ? <img src={c.profile_photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : getInitials(c.full_name)}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: '-0.015em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.full_name}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-label="Verified">
+            <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
+            <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, color: 'var(--ink-faint)', marginTop: 4, minWidth: 0 }}>
+          {primary && <PlatformIcon platform={primary.platform} size={13} />}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.join(' \u00B7 ')}</span>
+        </div>
+      </div>
+
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, flexShrink: 0, whiteSpace: 'nowrap' }}>
+        {low ? `${formatRupees(low)}+` : '-'}
+      </div>
+
+      {/* Saving is on the row too. Switching to list to run down a roster is
+          exactly when a brand keeps people, and sending them to the grid to do
+          it would make the view a downgrade. */}
+      <button
+        onClick={(e) => onToggleSave(c.id, e)}
+        aria-label={isSaved ? `Remove ${c.full_name} from saved` : `Save ${c.full_name}`}
+        style={{
+          flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 36, height: 36, borderRadius: 11,
+          background: isSaved ? 'var(--neon)' : 'var(--card)',
+          border: `1px solid ${isSaved ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
+          cursor: 'pointer',
+        }}
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill={isSaved ? 'var(--ink)' : 'none'} stroke={isSaved ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+      </button>
+    </div>
   )
 }
 
@@ -604,11 +972,19 @@ const chipStyle: React.CSSProperties = {
   color: 'var(--ink)', whiteSpace: 'nowrap',
 }
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers }: {
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, startingRate, hideDealCta, isPicked, onTogglePick }: {
   creator: BrowseCreator
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
   storefrontSlug: string | null
+  /* Saved view only. A shortlist of six offering six separate deals is the
+     opposite of what a brand came to the saved list to do, so the card drops
+     the one-creator CTA there and the tick carries the campaign. */
+  hideDealCta?: boolean
+  isPicked?: boolean
+  onTogglePick?: (id: string) => void
+  /** Lowest published package price, in paise. Null when nothing is priced. */
+  startingRate: number | null
   /** From a connected Instagram account, when there is one. */
   verifiedFollowers?: number
 }) {
@@ -616,7 +992,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
   // Verified first. The typed figure is usually absent for a connected creator,
   // which is how a real 535 rendered as 0.
   const followers = verifiedFollowers ?? bestFollowers(c.social_accounts)
-  const low = lowestRate(c.rate_card)
+  const low = startingRate
   const niches = (c.niches ?? []).filter(Boolean)
 
   const router = useRouter()
@@ -626,13 +1002,40 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
       onClick={() => router.push(`/browse/${c.id}`)}
       className="creator-card"
       style={{
-        position: 'relative', cursor: 'pointer', borderRadius: 20,
-        border: '1px solid var(--frost-edge)', background: 'var(--card)',
+        position: 'relative', overflow: 'hidden', cursor: 'pointer', borderRadius: 20,
+        border: `1px solid ${isPicked ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
+        background: 'var(--card)',
         boxShadow: '0 20px 46px -34px rgba(40,45,25,.34)',
         display: 'flex', flexDirection: 'column', padding: 20, color: 'var(--ink)',
         textDecoration: 'none',
       }}
     >
+      {/* The select tick, over the photo's top-left corner.
+          Out of the layout entirely, so a card at rest is the card it always
+          was and the photo keeps its place on the grid's left edge. "Start
+          deal" stays below: one creator is still a deal, and the tick is for
+          gathering several into a campaign. */}
+      {onTogglePick && (
+        <span
+          className={`card-tick${isPicked ? ' is-picked' : ''}`}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) }}
+          role="checkbox"
+          aria-checked={!!isPicked}
+          aria-label={`Select ${c.full_name}`}
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTogglePick(c.id) } }}
+          style={{
+            width: 22, height: 22, borderRadius: 7, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: `1.5px solid ${isPicked ? 'var(--neon-deep)' : 'var(--ink-faint)'}`,
+            background: isPicked ? 'var(--neon)' : 'var(--card)',
+            color: isPicked ? 'var(--ink)' : 'transparent',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+        </span>
+      )}
+
       {/* Top: Avatar + Name + Bookmark */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{
@@ -760,8 +1163,9 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
             View Profile
           </Link>
         )}
+        {hideDealCta ? null : (
         <Link
-          href={`/deals/new?creator=${c.id}`}
+          href={`/deals/new?creator=${c.id}&back=browse`}
           onClick={(e) => e.stopPropagation()}
           style={{
             flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
@@ -775,6 +1179,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
           Start deal
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </Link>
+        )}
       </div>
     </div>
   )

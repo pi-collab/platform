@@ -20,13 +20,25 @@ export default function PublicStorefront({ data, slug, creatorId, creatorName }:
     trackEvent('storefront_viewed', { slug })
   }, [slug])
 
-  const handleDealClick = useCallback((selectedQty: Record<string, number>) => {
+  const handleDealClick = useCallback((
+    selectedQty: Record<string, number>,
+    addons?: Record<string, { collab: boolean; boostDays: number }>,
+    offerTotalPaise?: number,
+  ) => {
     trackEvent('pitch_started', { slug })
     const params = new URLSearchParams({ creator: creatorId })
     const selected = Object.entries(selectedQty).filter(([, q]) => q > 0)
     if (selected.length > 0) {
-      params.set('items', selected.map(([key, q]) => `${key}:${q}`).join(','))
+      /* id:qty:collab:days. The two extra fields are optional and default to
+         off, so an older link with just id:qty still parses. */
+      params.set('items', selected.map(([key, q]) => {
+        const a = addons?.[key]
+        if (!a || (!a.collab && !a.boostDays)) return `${key}:${q}`
+        return `${key}:${q}:${a.collab ? 1 : 0}:${a.boostDays || 0}`
+      }).join(','))
     }
+    /* Present only when the brand raised a "from" total above its floor. */
+    if (offerTotalPaise && offerTotalPaise > 0) params.set('total', String(offerTotalPaise))
     router.push(`/deals/new?${params.toString()}`, { scroll: true })
   }, [slug, creatorId, router])
 

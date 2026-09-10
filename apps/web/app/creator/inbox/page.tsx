@@ -31,18 +31,18 @@ export default async function CreatorInboxPage({ searchParams }: {
   const [{ data: messages }, { data: openDeals }] = await Promise.all([
     supabase
       .from('messages')
-      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name))')
+      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name, logo_url))')
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, is_posted, price_paise, brands(name)')
+      .select('id, title, status, is_posted, price_paise, brands(name, logo_url)')
       .not('status', 'in', '(cancelled,declined)')
       .order('created_at', { ascending: false }),
   ])
 
   const threadMap = new Map<string, {
     dealId: string; dealTitle: string; dealStatus: string; dealStage: string; brandName: string;
-    brandInitials: string; lastMessage: string; senderParty: string; createdAt: string;
+    brandInitials: string; brandLogo: string | null; lastMessage: string; senderParty: string; createdAt: string;
     amountPaise: number;
   }>()
 
@@ -59,6 +59,7 @@ export default async function CreatorInboxPage({ searchParams }: {
         dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         brandName,
         brandInitials: getInitials(brandName),
+        brandLogo: brandObj?.logo_url ?? null,
         lastMessage: msg.body || '',
         senderParty: msg.sender_party,
         createdAt: msg.created_at,
@@ -80,6 +81,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       brandName,
       brandInitials: getInitials(brandName),
+      brandLogo: brandObj?.logo_url ?? null,
       lastMessage: '',
       senderParty: '',
       createdAt: '',
@@ -155,7 +157,7 @@ export default async function CreatorInboxPage({ searchParams }: {
         <InboxListMobile
           threads={threads.map((t) => ({
             dealId: t.dealId, dealTitle: t.dealTitle, dealStatus: t.dealStatus, dealStage: t.dealStage,
-            name: t.brandName, initials: t.brandInitials,
+            name: t.brandName, initials: t.brandInitials, logoUrl: t.brandLogo,
             lastMessage: t.lastMessage, createdAt: t.createdAt,
           }))}
           unreadByDeal={unread}
@@ -171,6 +173,7 @@ export default async function CreatorInboxPage({ searchParams }: {
           dealId={selectedThread.dealId}
           name={selectedThread.brandName}
           initials={selectedThread.brandInitials}
+          logoUrl={selectedThread.brandLogo}
           messages={selectedMessages}
           me="creator"
           /* Back goes where you CAME FROM. Opening a thread from the deal

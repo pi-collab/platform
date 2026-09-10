@@ -179,6 +179,10 @@ export default function CreatorOfferMobile({
           <Link href="/creator/deals" className="offer-m__back" aria-label="Back to deals">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
+          {/* No brand mark here. The desktop hero has room for one; this row is
+              a back arrow, a title and two icons across a phone, and a 28px
+              mark bought nothing the title's own "Offer from <brand>" was not
+              already saying. */}
           <h1 className="offer-m__title">
             {stage === 'offer' ? 'Offer from ' : 'Deal with '}
             <span className="offer-m__brand">{brandName}</span>
@@ -621,8 +625,16 @@ export default function CreatorOfferMobile({
                 <div className="offer-m__files">
                   {attachments.map((a) => (
                     a.url
-                      ? <a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" className="offer-m__file">{a.name}</a>
-                      : <span key={a.name} className="offer-m__file">{a.name}</span>
+                      ? (
+                        <a key={a.name} href={a.url} target="_blank" rel="noopener noreferrer" className="offer-m__file">
+                          <span className="offer-m__filename">{a.name}</span>
+                          {/* The same word the desktop card and a deliverable's
+                              file use. A row that is quietly a link is only
+                              discoverable by tapping it. */}
+                          <span className="offer-m__fileview">View</span>
+                        </a>
+                      )
+                      : <span key={a.name} className="offer-m__file"><span className="offer-m__filename">{a.name}</span></span>
                   ))}
                 </div>
               </>

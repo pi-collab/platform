@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { sendMessage } from '@/app/inbox/actions'
@@ -49,11 +50,13 @@ function timeLabel(iso: string): string {
 }
 
 export default function InboxThreadMobile({
-  dealId, name, initials, messages, me, backHref, dealHref, closedNotice, hasTabBar = false,
+  dealId, name, initials, logoUrl, messages, me, backHref, dealHref, closedNotice, hasTabBar = false,
 }: {
   dealId: string
   name: string
   initials: string
+  /** The brand's logo, when set. Same box, picture instead of letters. */
+  logoUrl?: string | null
   messages: ThreadMessage[]
   /** Which side the viewer is. Their own messages sit right, in ink. */
   me: 'brand' | 'creator'
@@ -197,7 +200,7 @@ export default function InboxThreadMobile({
         <Link href={backHref} className="ithread-m__back" aria-label="Back to messages">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
         </Link>
-        <span className="ithread-m__avatar" aria-hidden="true">{initials}</span>
+        <BrandMark name={name} logoUrl={logoUrl} initials={initials} className="ithread-m__avatar" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="ithread-m__name">{name}</div>
         </div>

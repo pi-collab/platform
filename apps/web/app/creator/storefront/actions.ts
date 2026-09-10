@@ -438,7 +438,7 @@ export async function saveFollowerCounts(
 const CONTENT_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
 const CONTENT_VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime', 'video/webm'])
 
-const MAX_CONTENT_IMAGE = 5 * 1024 * 1024    // 5 MB
+const MAX_CONTENT_IMAGE = 50 * 1024 * 1024   // 50 MB, matching the bucket
 // The bucket allows 50 MB and Supabase's free plan refuses more than that at the
 // platform level regardless. Raising this alone would only move the failure.
 const MAX_CONTENT_VIDEO = 50 * 1024 * 1024   // 50 MB
@@ -524,7 +524,7 @@ export async function syncInstagram(): Promise<{ ok: boolean; message?: string }
    ────────────────────────────────────────────────────────────────────────── */
 
 const LOGO_BUCKET = 'storefronts'
-const MAX_LOGO_BYTES = 2 * 1024 * 1024
+const MAX_LOGO_BYTES = 50 * 1024 * 1024
 
 /** A hostname, or null. Rejects schemes, paths, ports and anything that is not
  *  a plain dotted name — it is interpolated into a URL, so it is validated
@@ -632,7 +632,7 @@ export async function uploadBrandLogo(formData: FormData): Promise<
   if (!['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'].includes(file.type)) {
     return { ok: false, message: 'PNG, JPEG, WebP or SVG only.' }
   }
-  if (file.size > MAX_LOGO_BYTES) return { ok: false, message: 'That file is over 2 MB.' }
+  if (file.size > MAX_LOGO_BYTES) return { ok: false, message: `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 50 MB \u2014 please choose a smaller one and try again.` }
 
   const ext = file.type.includes('png') ? 'png'
     : file.type.includes('svg') ? 'svg'

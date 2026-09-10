@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import BrandMark from '@/components/BrandMark'
 import { useRouter } from 'next/navigation'
 
 /**
@@ -47,7 +48,8 @@ export interface ActionItem {
 }
 
 export interface MonthPoint { label: string; amount: number }
-export interface BrandRow { name: string; deals: number; posts: number; valuePaise: number; active: boolean }
+/** `logoUrl` is the brand's own picture; the initial stays the fallback. */
+export interface BrandRow { name: string; logoUrl?: string | null; deals: number; posts: number; valuePaise: number; active: boolean }
 export interface ReachPost { id: string; title: string; views: string; thumbUrl: string | null }
 export interface Reach {
   followers: string
@@ -377,7 +379,7 @@ export default function CreatorDashboardMobile({
               {brands.map((b) => (
                 <div key={b.name} className="cdash-m__card cdash-m__brandcard">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="cdash-m__brandmark" aria-hidden="true">{b.name.slice(0, 1).toUpperCase()}</span>
+                    <BrandMark name={b.name} logoUrl={b.logoUrl} initials={b.name.slice(0, 1).toUpperCase()} className="cdash-m__brandmark" />
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div className="cdash-m__brandname">{b.name}</div>
                       {b.active ? (

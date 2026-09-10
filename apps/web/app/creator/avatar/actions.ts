@@ -12,7 +12,7 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/gif',
 ])
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB, the limit everywhere but deliverables
 
 const BUCKET = 'storefronts'
 
@@ -30,7 +30,7 @@ export async function uploadAvatar(formData: FormData) {
 
   // Validate size
   if (file.size > MAX_FILE_SIZE) {
-    return { error: 'File too large. Maximum size is 5 MB.' }
+    return { error: `That photo is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 50 MB \u2014 please choose a smaller one and try again.` }
   }
 
   // Build storage path — scoped to avatars/{creatorId}/

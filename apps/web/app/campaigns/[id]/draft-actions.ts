@@ -1,5 +1,7 @@
 'use server'
 
+import { randomUUID } from 'crypto'
+
 import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -453,25 +455,91 @@ export async function updateCampaignBrief(
   return { success: true }
 }
 
+const CAMPAIGN_ATTACHMENT_MAX = 50 * 1024 * 1024 // 50 MB, the limit everywhere but deliverables
+
+/**
+ * A file on a campaign brief.
+ *
+ * ADMIN CLIENT, matching the deal brief upload next door. This went through the
+ * RLS client, and storage policies on deal-files are written around a DEAL: a
+ * key under campaign-briefs/ belongs to no deal, so every upload came back
+ * "new row violates row-level security policy". Authorisation is verifyBrand
+ * plus the campaign ownership check below, not the storage policy.
+ *
+ * The key is a uuid rather than the file's own name. A raw name carrying a
+ * space, a hash or a non-ASCII character makes a key that is awkward at best
+ * and unreachable at worst; the display name is kept on the attachment record
+ * where it belongs.
+ */
 export async function uploadCampaignBriefAttachment(campaignId: string, formData: FormData) {
-  await verifyBrand()
-  const supabase = createClient()
+  const brand = await verifyBrand()
+
   const file = formData.get('file') as File | null
-  if (!file) return { error: 'No file provided' }
+  if (!file) return { error: 'No file provided.' }
 
-  const ext = file.name.split('.').pop() || 'bin'
-  const path = `campaign-briefs/${campaignId}/${Date.now()}_${file.name}`
+  if (file.size > CAMPAIGN_ATTACHMENT_MAX) {
+    return { error: `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 50 MB, so please pick a smaller one and try again.` }
+  }
 
-  const { error: uploadErr } = await supabase.storage.from('deal-files').upload(path, file, { contentType: file.type })
-  if (uploadErr) return { error: uploadErr.message }
+  const admin = createAdminClient()
+
+  /* The admin client bypasses RLS, so the campaign has to be checked here
+     rather than left to a policy: without this, any signed-in brand could
+     write into another brand's campaign folder. */
+  const { data: campaign } = await admin
+    .from('campaigns')
+    .select('id')
+    .eq('id', campaignId)
+    .eq('brand_id', brand.brandId)
+    .maybeSingle()
+  if (!campaign) return { error: 'Campaign not found.' }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'bin'
+  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const storagePath = `campaign-briefs/${campaignId}/${randomUUID()}.${ext}`
+
+  const { error: uploadErr } = await admin.storage
+    .from('deal-files')
+    .upload(storagePath, file, { contentType: file.type })
+
+  if (uploadErr) {
+    console.error('[campaign-brief] Upload failed:', uploadErr.message)
+    return { error: 'That upload did not go through. Please try again.' }
+  }
 
   return {
     attachment: {
-      name: file.name,
-      storage_path: path,
+      name: safeFileName,
+      storage_path: storagePath,
       size_bytes: file.size,
       content_type: file.type,
     },
   }
+}
+
+/**
+ * Remove one.
+ *
+ * The editor dropped the attachment from its list and left the file in the
+ * bucket for good. Deleting the object is the point of removing it.
+ */
+export async function removeCampaignBriefAttachment(campaignId: string, storagePath: string) {
+  const brand = await verifyBrand()
+  const admin = createAdminClient()
+
+  // Same reason as above, and additionally: the path arrives from the client.
+  if (!storagePath.startsWith(`campaign-briefs/${campaignId}/`)) {
+    return { error: 'Invalid attachment.' }
+  }
+  const { data: campaign } = await admin
+    .from('campaigns')
+    .select('id')
+    .eq('id', campaignId)
+    .eq('brand_id', brand.brandId)
+    .maybeSingle()
+  if (!campaign) return { error: 'Campaign not found.' }
+
+  await admin.storage.from('deal-files').remove([storagePath])
+  return { success: true }
 }
 

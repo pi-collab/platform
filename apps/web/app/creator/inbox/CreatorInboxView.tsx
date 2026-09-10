@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
+import BrandMark from '@/components/BrandMark'
 import { useRouter } from 'next/navigation'
 import { markDealThreadRead } from '@/lib/thread-read-actions'
 import { EMOJI_LIST } from '@/lib/emoji'
@@ -14,6 +15,8 @@ interface Thread {
   dealStatus: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   lastMessage: string
   senderParty: string
   createdAt: string
@@ -319,14 +322,17 @@ export default function CreatorInboxView({
                   }}
                 >
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{
-                      width: 44, height: 44, borderRadius: 13, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5,
-                      color: 'var(--sec-ink, #4a5c3a)', background: 'var(--sec-2, #f5f5f0)',
-                    }}>
-                      {t.brandInitials}
-                    </div>
+                    <BrandMark
+                      name={t.brandName}
+                      logoUrl={t.brandLogo}
+                      initials={t.brandInitials}
+                      style={{
+                        width: 44, height: 44, borderRadius: 13, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13.5,
+                        color: 'var(--sec-ink, #4a5c3a)', background: 'var(--sec-2, #f5f5f0)',
+                      }}
+                    />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
@@ -379,14 +385,17 @@ export default function CreatorInboxView({
                       <button onClick={() => { setMobileChat(false); router.push('/creator/inbox') }} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                       </button>
-                      <div style={{
-                        width: 46, height: 46, borderRadius: 13, flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
-                        color: 'var(--sec-ink, #4a5c3a)', background: 'var(--sec-2, #f5f5f0)',
-                      }}>
-                        {selectedThread.brandInitials}
-                      </div>
+                      <BrandMark
+                        name={selectedThread.brandName}
+                        logoUrl={selectedThread.brandLogo}
+                        initials={selectedThread.brandInitials}
+                        style={{
+                          width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+                          color: 'var(--sec-ink, #4a5c3a)', background: 'var(--sec-2, #f5f5f0)',
+                        }}
+                      />
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, lineHeight: 1.2 }}>
                           {selectedThread.brandName}

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import {
   STAGE, TAB_DEFS, EMPTY, resolveStatus, needsAction, isLive, matchFilter,
-  formatRupees, getInitials, type Deal,
+  formatRupees, type Deal,
 } from '@/lib/deal-stage'
 
 /**
@@ -213,12 +214,11 @@ export default function CreatorDealsMobile({ deals, unreadNotifications = 0 }: {
                   {/* Live deals carry a neon ring. Same predicate as the
                       "Live now" count above, so the hero figure and the rings
                       below it always agree. */}
-                  <span
+                  <BrandMark
+                    name={brand}
+                    logoUrl={d.brand_logo}
                     className={`cdeals-m__avatar${isLive(d.st) ? ' is-live' : ''}`}
-                    aria-hidden="true"
-                  >
-                    {getInitials(brand)}
-                  </span>
+                  />
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
                     <div className="cdeals-m__brand">{brand}</div>
                     {sub && <div className="cdeals-m__sub">{sub}</div>}

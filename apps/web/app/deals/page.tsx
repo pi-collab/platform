@@ -70,7 +70,39 @@ export default async function DealsListPage({
   // Built from TAB_STATUSES, the same definition the counts use. They were
   // written out separately here and in the component, which is how a tab could
   // filter on one rule and count on another.
-  if (status === 'paid') {
+  /* WHOSE MOVE a negotiation is. The creator's counter is an event, not a
+     status - deals.last_offer_by looks like the answer and is never updated -
+     so the ids are resolved here and used by BOTH the filter below and the tab
+     counts. Computing it twice is how a tab comes to count one thing and show
+     another, which is the bug this file's own comment describes. */
+  const awaitingBrandIds = new Set<string>()
+  {
+    const { data: negotiating } = await supabase
+      .from('deals').select('id').eq('status', 'negotiating')
+    const ids = (negotiating ?? []).map((d) => d.id)
+    if (ids.length > 0) {
+      const { data: evts } = await supabase
+        .from('events')
+        .select('deal_id, event_type, created_at')
+        .in('deal_id', ids)
+        .in('event_type', ['deal.counter_offer', 'deal.brand_counter'])
+        .order('created_at', { ascending: true })
+      const lastBy = new Map<string, string>()
+      for (const e of evts ?? []) lastBy.set(e.deal_id, e.event_type)
+      for (const [id, type] of Array.from(lastBy.entries())) {
+        if (type === 'deal.counter_offer') awaitingBrandIds.add(id)
+      }
+    }
+  }
+
+  if (status === 'needs_you') {
+    /* Work to review, OR a counter to answer. Expressed as one .or() so the
+       rows match the count exactly. */
+    const ids = Array.from(awaitingBrandIds)
+    query = ids.length > 0
+      ? query.or(`status.in.(${TAB_STATUSES.needs_you.join(',')}),id.in.(${ids.join(',')})`)
+      : query.in('status', TAB_STATUSES.needs_you)
+  } else if (status === 'paid') {
     // The only tab that also matches a flag, so it cannot be a plain .in().
     query = query.or(`status.in.(${TAB_STATUSES.paid.join(',')}),is_posted.eq.true`)
   } else if (status && TAB_STATUSES[status]) {
@@ -98,7 +130,7 @@ export default async function DealsListPage({
     // Every deal, unfiltered and unpaginated, for the tab counts. Separate from
     // the KPI query above because that one excludes cancelled and declined, and
     // the Declined tab needs to count exactly those.
-    supabase.from('deals').select('status, is_posted'),
+    supabase.from('deals').select('id, status, is_posted'),
   ])
 
   if (error) {
@@ -227,8 +259,11 @@ export default async function DealsListPage({
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}
+        /* The census carries the same awaiting_brand flag the filter above
+           used, so the number on a tab is the number of rows behind it. */
         tabCounts={countDealsByTab(
-          (dealCensus ?? []) as { status: string; is_posted?: boolean | null }[],
+          ((dealCensus ?? []) as { id: string; status: string; is_posted?: boolean | null }[])
+            .map((d) => ({ ...d, awaiting_brand: awaitingBrandIds.has(d.id) })),
           ['needs_you', 'negotiating', 'agreed', 'delivered', 'paid', 'declined'],
         )}
       />

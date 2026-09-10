@@ -397,7 +397,7 @@ export default async function DealPage({ params, searchParams }: {
 
         {/* ── Deal complete (paid) ── */}
         {invoice && invoice.status === 'paid' && (
-          <div className="surface" style={{ padding: 24 }}>
+          <div id="invoice" className="surface" style={{ padding: 24 }}>
             <BrandInvoiceCard
               dealId={deal.id}
               dealRef={deal.deal_ref}
@@ -412,7 +412,7 @@ export default async function DealPage({ params, searchParams }: {
 
         {/* ── Invoice (unpaid — expanded) ── */}
         {invoice && invoice.status !== 'paid' && (
-          <div className="surface" style={{ padding: 24 }}>
+          <div id="invoice" className="surface" style={{ padding: 24 }}>
             <BrandInvoiceCard
               dealId={deal.id}
               dealRef={deal.deal_ref}

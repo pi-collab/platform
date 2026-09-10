@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import UpiRow from './UpiRow'
 import { sendPaymentReminder } from './actions'
@@ -12,6 +13,8 @@ interface PendingPayment {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
   status: string
   meta: string
@@ -23,6 +26,8 @@ interface HistoryPayment {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
   paidDate: string
   paidMonthsAgo: number
@@ -33,6 +38,8 @@ interface ReadyToInvoice {
   dealTitle: string
   brandName: string
   brandInitials: string
+  /** The brand's logo, when they have uploaded one. */
+  brandLogo?: string | null
   amountPaise: number
 }
 
@@ -138,9 +145,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {readyToInvoice.map((r) => (
                   <div key={r.dealId} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                    <span style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: '#E7EAF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12 }}>
-                      {r.brandInitials}
-                    </span>
+                    <BrandMark name={r.brandName} logoUrl={r.brandLogo} initials={r.brandInitials} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: '#E7EAF0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14 }}>{r.brandName}</div>
                       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 3 }}>{r.dealTitle}</div>
@@ -179,7 +184,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                       padding: 18, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.85),0 14px 30px -24px rgba(160,120,30,.5)',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-                        <span style={avatar(46)}>{p.brandInitials}</span>
+                        <BrandMark name={p.brandName} logoUrl={p.brandLogo} initials={p.brandInitials} style={avatar(46)} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                             <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15.5 }}>{p.dealTitle}</span>
@@ -312,7 +317,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                       textDecoration: 'none', color: 'inherit',
                     }}
                   >
-                    <span style={avatar(42)}>{h.brandInitials}</span>
+                    <BrandMark name={h.brandName} logoUrl={h.brandLogo} initials={h.brandInitials} style={avatar(42)} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                         <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14.5 }}>{h.dealTitle}</span>

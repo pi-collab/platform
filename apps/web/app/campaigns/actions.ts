@@ -88,3 +88,41 @@ export async function assignDealToCampaign(dealId: string, campaignId: string | 
   if (campaignId) revalidatePath(`/campaigns/${campaignId}`)
   return { success: true }
 }
+
+/**
+ * Start a campaign from a set of creators picked on the browse or saved list.
+ *
+ * Composed from the two actions that already exist rather than a third path
+ * into campaigns: createCampaign writes the row, addCreatorsToCampaign builds
+ * the drafts, and both keep their own brand checks. A creator who is not vetted
+ * or is already on the campaign is rejected there, not here.
+ *
+ * The campaign is created even if adding some creators fails, and the caller is
+ * sent to it either way: a half-populated campaign the brand can see and fix
+ * beats an error with nothing behind it and a name they have to type again.
+ */
+export async function startCampaignWithCreators(
+  name: string,
+  creatorIds: string[],
+  description?: string,
+  budgetPaise?: number,
+) {
+  if (creatorIds.length === 0) return { error: 'Select at least one creator' }
+
+  /* The same three fields the campaigns page collects. Starting a campaign
+     from a shortlist used to take a name alone, so a campaign created that way
+     opened with a brief and a budget the brand then had to go back and fill
+     in. */
+  const created = await createCampaign(name, description, budgetPaise)
+  if ('error' in created && created.error) return { error: created.error }
+  const campaignId = (created as { campaignId: string }).campaignId
+
+  const { addCreatorsToCampaign } = await import('./[id]/draft-actions')
+  const added = await addCreatorsToCampaign(campaignId, creatorIds)
+
+  return {
+    success: true,
+    campaignId,
+    warning: 'error' in added && added.error ? added.error : undefined,
+  }
+}
