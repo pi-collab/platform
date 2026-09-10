@@ -4249,3 +4249,46 @@ and version history stay one implementation; only presentation branches.
 - [ ] "submitted <date>" is not shown on mobile; it is what pushed the row wide
 - [ ] View file and Replace sit on the same line, 11.5px, no underline, and
       never shrink
+
+---
+
+## 39. Approved state, creator mobile
+
+`status = 'approved'` — the brand has signed off and the creator posts.
+
+### Header and stage
+- [ ] Title "Deal with <brand>"; right-hand line **"Approved <date>"**
+- [ ] Stage **Approved**, next **"Next: post content"**
+- [ ] **Four** of six progress segments lit
+
+### One post card per deliverable
+- [ ] Its own white card per item, above the folds
+- [ ] Head: the item label at 16px/800 in the display face, and **"1 of 2"** on
+      the right
+- [ ] A URL field: 46px, 12px radius, hairline border, 16px padding
+- [ ] **Mark as posted**: 50px, 15px radius, 12px above the field, `--card`
+      background with ink text, turning `--neon` once posted
+- [ ] The button is **dimmed to 0.4 and inert** until a URL is entered — the
+      export's own script does exactly this, rather than hiding it
+- [ ] Once posted the field is replaced by the live link, and the button reads
+      "Posted ✓"
+- [ ] It calls the existing `markItemPosted`; per-item posting already existed
+      (`deal_deliverable_items.posted_url`, migration 0390)
+
+### Invoice card
+- [ ] Eyebrow **"Invoice"**, then "Your invoice will be created automatically
+      once content is posted."
+- [ ] A `--warning` dot with **"Waiting on posted content"**, turning
+      `--neon-deep` / "Ready to invoice" once every item is posted
+
+### Folds
+- [ ] Deliverables, collapsed, each item green with **Approved** and its file
+- [ ] Brief & attachments, collapsed
+- [ ] Full terms & guidelines, collapsed
+
+### Known mismatch, not yet done
+- [ ] The submitted AND approved exports both place the agreed money block
+      INSIDE "Brief & attachments", after the attachments. Ours still renders
+      it as its own collapsible card. Two exports agreeing settles that it is
+      the design rather than an artefact — this is the one section of the
+      approved screen that does not match, and it is outstanding

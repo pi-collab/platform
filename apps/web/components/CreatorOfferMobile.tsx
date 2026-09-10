@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false,
 }: {
   brandName: string
   dealTitle: string
@@ -100,7 +100,7 @@ export default function CreatorOfferMobile({
      exports, everything from "Brief & attachments" down is identical on both
      screens - two copies of that markup would drift the moment either is
      touched. Only the header, the stage line and the card body differ. */
-  stage?: 'offer' | 'agreed' | 'submitted' | 'revision'
+  stage?: 'offer' | 'agreed' | 'submitted' | 'revision' | 'approved'
   agreedAt?: string | null
   rightsConfirmedAt?: string | null
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
@@ -114,6 +114,12 @@ export default function CreatorOfferMobile({
   submittedAt?: string | null
   /** When the brand last reviewed. Header line on the revision screen. */
   reviewedAt?: string | null
+  /** When the brand approved. Header line on the approved screen. */
+  approvedAt?: string | null
+  /** PostedCard in compact mode: one card per deliverable. */
+  postNode?: React.ReactNode
+  /** Whether every deliverable has a live URL yet. */
+  allPosted?: boolean
 }) {
   return (
     <div className="offer-m">
@@ -149,7 +155,9 @@ export default function CreatorOfferMobile({
             <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
-            {stage === 'revision'
+            {stage === 'approved'
+              ? (approvedAt ? `Approved ${approvedAt}` : 'Approved')
+              : stage === 'revision'
               ? (reviewedAt ? `Reviewed ${reviewedAt}` : 'Reviewed')
               : stage === 'submitted'
               ? (submittedAt ? `Submitted ${submittedAt}` : 'Submitted')
@@ -167,13 +175,15 @@ export default function CreatorOfferMobile({
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
             <span className="offer-m__stage">
-              {stage === 'revision' ? 'Changes requested'
+              {stage === 'approved' ? 'Approved'
+                : stage === 'revision' ? 'Changes requested'
                 : stage === 'submitted' ? 'Submitted'
                 : stage === 'agreed' ? 'Agreed'
                 : counter ? 'Negotiating' : 'Offer received'}
             </span>
             <span className="offer-m__next">
-              {stage === 'revision' ? 'Next: resubmit'
+              {stage === 'approved' ? 'Next: post content'
+                : stage === 'revision' ? 'Next: resubmit'
                 : stage === 'submitted' ? 'Next: brand review'
                 : stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
             </span>
@@ -184,7 +194,7 @@ export default function CreatorOfferMobile({
               <span
                 key={i}
                 className={[
-                  i <= (stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
+                  i <= (stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
                   /* The export paints the reached segment amber on revision:
                      progress was made and then handed back. */
                   stage === 'revision' && i === 2 ? 'is-warn' : '',
@@ -209,6 +219,25 @@ export default function CreatorOfferMobile({
             with the payment window beside it. Everything else folds away,
             because at this stage the screen's job is the work, not re-reading
             terms already agreed. */}
+        {/* APPROVED: one card per deliverable to post, then the invoice
+            state. Both sit above the folds - they are what is left to do. */}
+        {stage === 'approved' && postNode}
+
+        {stage === 'approved' && (
+          <section className="offer-m__card offer-m__invoice">
+            <h2 className="offer-m__submittitle">Invoice</h2>
+            <p className="offer-m__invoicebody">
+              Your invoice will be created automatically once content is posted.
+            </p>
+            <div className="offer-m__invoicestate">
+              <span className={`offer-m__invoicedot${allPosted ? ' offer-m__invoicedot--done' : ''}`} aria-hidden="true" />
+              <span className="offer-m__label">
+                {allPosted ? 'Ready to invoice' : 'Waiting on posted content'}
+              </span>
+            </div>
+          </section>
+        )}
+
         {/* The export's own notice, restored. I removed this when the purple
             banner was called out, having read "the purple one is not required"
             as "no notice is required" - they are two different blocks and only
@@ -243,7 +272,7 @@ export default function CreatorOfferMobile({
           </section>
         )}
 
-        {stage === 'submitted' && submitNode && (
+        {(stage === 'submitted' || stage === 'approved') && submitNode && (
           <details className="offer-m__card offer-m__fold offer-m__delivfold">
             <summary className="offer-m__foldhead">
               <h2 className="offer-m__submittitle">Deliverables</h2>

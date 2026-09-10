@@ -1341,6 +1341,21 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .offer-m__noticetitle { font-weight: 700; font-size: 14px; color: var(--ink); }
 .offer-m__noticebody { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 
+/* Approved: one card per deliverable to post, then the invoice state. Both
+   sit above the folds because they are what is left to do. */
+.offer-m__postcard { padding: 20px; }
+.offer-m__invoice { padding: 20px; }
+.offer-m__invoicebody {
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft); margin: 6px 0 12px;
+}
+.offer-m__invoicestate { display: flex; align-items: center; gap: 8px; }
+.offer-m__invoicedot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--warning); flex: none;
+}
+.offer-m__invoicedot--done { background: var(--neon-deep); }
+.offer-m__invoicestate .offer-m__label { color: var(--ink-soft); }
+
 /* The submitted work, folded. Same surface as the other accordions. */
 .offer-m__delivfold { padding: 20px; }
 
