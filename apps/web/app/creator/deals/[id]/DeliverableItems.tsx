@@ -634,19 +634,25 @@ export default function DeliverableItems({
 
       {/* Footer: helper text + submit button */}
       {canSubmit && (
-        <div style={{ padding: '20px 0 0', marginTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 440 }}>
+        <div style={compact
+          /* No border, no row: on the phone the footer IS the button. The
+             wrappers below are what stopped width:100% doing anything - the
+             button was 100% of a content-sized flex child inside a
+             space-between row. */
+          ? { display: 'block' }
+          : { padding: '20px 0 0', marginTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          {!compact && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 440 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
             <span style={{ fontSize: 11.5, lineHeight: 1.45, color: allReady ? 'var(--ink)' : 'var(--ink-soft)' }}>
               {allReady
                 ? 'All items are attached, submit when you are ready.'
                 : `${remaining} ${remaining === 1 ? 'item' : 'items'} still ${remaining === 1 ? 'needs' : 'need'} a link or file before you can submit.`}
             </span>
-          </div>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          </div>}
+          <div style={compact ? { display: 'block' } : { display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               type="button"
-              className="neonbtn"
+              className={compact ? undefined : 'neonbtn'}
               onClick={handleSubmitForReview}
               disabled={submittingAll || !allReady}
               style={compact ? {
