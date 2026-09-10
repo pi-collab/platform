@@ -4418,6 +4418,16 @@ Follows the approved screen: once every deliverable is posted there is
 something to invoice for, so the "Waiting on posted content" stub gives way to
 the real card.
 
+### The post cards give way to the invoice
+- [ ] **Nothing posted / partly posted**: post cards shown, plus the "Waiting
+      on posted content" stub. There is still a card left to fill
+- [ ] **Everything posted**: post cards are GONE and the invoice card takes
+      their place. The export's invoice screen has no post section; leaving them
+      up meant a column of "Posted ✓" buttons above the invoice, restating what
+      the Deliverables fold already records
+- [ ] The live URLs stay reachable — each posted item keeps its link in the
+      Deliverables fold
+
 ### Before issuing
 - [ ] Stage stays **Approved**, next reads **"Next: issue invoice"**, 4 of 6
       segments lit — the export's own script does exactly this

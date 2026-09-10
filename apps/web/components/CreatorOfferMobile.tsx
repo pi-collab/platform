@@ -269,7 +269,12 @@ export default function CreatorOfferMobile({
             terms already agreed. */}
         {/* APPROVED: one card per deliverable to post, then the invoice
             state. Both sit above the folds - they are what is left to do. */}
-        {stage === 'approved' && postNode}
+        {/* The post cards are the task, so they go once the task is done. With
+            everything live the export's invoice screen shows no post section at
+            all - leaving them up meant a column of "Posted ✓" buttons above the
+            invoice, restating what the Deliverables fold already records.
+            Partly posted still shows them: there is a card left to fill. */}
+        {stage === 'approved' && !allPosted && postNode}
 
         {/* Once the content is live there is something to invoice FOR, so the
             waiting stub gives way to the real card. Before that it is a state,
