@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import BrandMark from '@/components/BrandMark'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
@@ -70,7 +71,7 @@ export default async function CreatorDashboardPage({
   const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, brands(id, name)')
+      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, brands(id, name, logo_url)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .gte('created_at', periodFromISO)
@@ -254,7 +255,7 @@ export default async function CreatorDashboardPage({
      period four times under four different labels. */
   const { data: lifetimeDeals } = await supabase
     .from('deals')
-    .select('id, title, status, price_paise, created_at, timeline_date, brands(id, name)')
+    .select('id, title, status, price_paise, created_at, timeline_date, brands(id, name, logo_url)')
     .not('status', 'in', '(cancelled,declined)')
   const lifetime = lifetimeDeals ?? []
 
@@ -599,9 +600,12 @@ export default async function CreatorDashboardPage({
                     boxShadow: isFirst ? 'rgba(40,45,25,0.22) 0px 20px 48px -30px' : 'var(--sh-2)',
                   }}>
                     <div style={{ background: 'transparent', padding: '20px 22px 0', display: 'flex', alignItems: 'center', gap: 13 }}>
-                      <div style={{ position: 'relative', width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--sec-2)', flexShrink: 0 }}>
-                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{brandInitial}</span>
-                      </div>
+                      <BrandMark
+                        name={brandName}
+                        logoUrl={(brand as { logo_url?: string | null } | null)?.logo_url}
+                        initials={brandInitial}
+                        style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'var(--sec-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}
+                      />
                       <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>{brandName}</span>
                     </div>
                     <div style={{ padding: '26px 26px 30px' }}>

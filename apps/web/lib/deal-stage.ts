@@ -29,6 +29,8 @@ export interface Deal {
   invoice_status?: string | null
   created_at: string
   brand: string | null
+  /** The brand's logo, when they have uploaded one. Falls back to initials. */
+  brand_logo?: string | null
 }
 
 // ── Stage definitions — from design ──

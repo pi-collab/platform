@@ -16,7 +16,7 @@ export default async function CreatorDealsPage() {
 
   const { data: deals, error } = await supabase
     .from('deals')
-    .select('id, deal_ref, title, deliverables, price_paise, status, is_posted, created_at, brands(name)')
+    .select('id, deal_ref, title, deliverables, price_paise, status, is_posted, created_at, brands(name, logo_url)')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -88,8 +88,9 @@ export default async function CreatorDealsPage() {
 
   const all = (deals ?? []).map((d) => {
     const rawBrand = d.brands as unknown
-    const brand = Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name ?? null
-    return { ...d, brand, awaiting_brand: awaitingBrand.has(d.id), invoice_status: invoiceStatus.get(d.id) ?? null }
+    const brandRow = (Array.isArray(rawBrand) ? rawBrand[0] : rawBrand) as { name?: string; logo_url?: string | null } | null
+    const brand = brandRow?.name ?? null
+    return { ...d, brand, brand_logo: brandRow?.logo_url ?? null, awaiting_brand: awaitingBrand.has(d.id), invoice_status: invoiceStatus.get(d.id) ?? null }
   })
 
   // No deals at all. CreatorDealsTable renders a toolbar, column headers and

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import BrandMark from '@/components/BrandMark'
 import { createAdminClient } from '@/lib/supabase/admin'
 import MobileInvoiceCard from './MobileInvoiceCard'
 import { formatDueStatus } from '@/lib/invoice'
@@ -86,7 +87,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name, logo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -136,6 +137,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
   const rawBrand = deal.brands as unknown
   const brand = (Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name) ?? 'Unknown brand'
+  const brandLogo = ((Array.isArray(rawBrand) ? rawBrand[0] : rawBrand) as { logo_url?: string | null } | null)?.logo_url ?? null
   const canSubmit = deal.status === 'agreed' || deal.status === 'revision'
   const hasStructuredItems = items && items.length > 0
   const isNegotiating = deal.status === 'negotiating'
@@ -334,6 +336,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
         ) : null}
         brandName={brand}
+        brandLogo={brandLogo}
         dealTitle={deal.title ?? 'Untitled deal'}
         receivesPaise={creatorReceives}
         totalPaise={deal.price_paise ?? null}
@@ -415,6 +418,21 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
               Back to deals
             </Link>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+              {/* The brand's own mark beside their name. The headline named
+                  them and showed nothing of them, while every list this page
+                  is reached from - deals, inbox, payments - already draws one. */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, minWidth: 0 }}>
+                <BrandMark
+                  name={brand}
+                  logoUrl={brandLogo}
+                  style={{
+                    width: 52, height: 52, borderRadius: 15, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
+                    color: 'var(--sec-ink)', background: 'var(--sec-2)',
+                    border: '1px solid var(--frost-edge)',
+                  }}
+                />
               <div>
                 <div style={metaLabel}>
                   {deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}
@@ -443,6 +461,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                     : 'Deal with '}
                   <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
                 </h1>
+              </div>
               </div>
               <OpenDealChat className="neonbtn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { STAGE } from '@/lib/deal-stage'
 
@@ -32,6 +33,9 @@ export interface InboxThread {
   dealStatus: string
   name: string
   initials: string
+  /** The brand's logo, when set. Creators see the picture; the initials remain
+      the fallback and the same box. */
+  logoUrl?: string | null
   lastMessage: string
   createdAt: string
   /** Already resolved by the page (status + is_posted), so the chip here says
@@ -183,9 +187,12 @@ export default function InboxListMobile({
                 className={`inbox-m__row${unread ? ' is-unread' : ''}`}
               >
                 <div className="inbox-m__row-inner">
-                  <span className={`inbox-m__avatar${unread ? ' is-unread' : ''}`} aria-hidden="true">
-                    {t.initials}
-                  </span>
+                  <BrandMark
+                    name={t.name}
+                    logoUrl={t.logoUrl}
+                    initials={t.initials}
+                    className={`inbox-m__avatar${unread ? ' is-unread' : ''}`}
+                  />
                   <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
                     <div className="inbox-m__row-top">
                       <span className="inbox-m__name">{t.name}</span>

@@ -958,6 +958,30 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 
 ---
 
+### Brand logo on the creator side
+
+Every creator surface drew the brand as initials in a circle. Brands can upload a logo
+now, so the same picture should appear in all of them, with initials as the fallback.
+One component (`components/BrandMark.tsx`) decides between the two.
+
+#### Where it shows (desktop AND mobile, per the standing rule)
+- [ ] Creator deals list: desktop card avatar and the mobile card avatar
+- [ ] Creator inbox: desktop thread list, desktop chat header, mobile list, mobile thread header
+- [ ] Creator payments: desktop "ready to invoice" row, open payment card, history row; mobile history row
+- [ ] Creator dashboard: deal-in-flight card
+- [ ] Creator deal detail: desktop hero (52px mark beside the headline) and the mobile sticky header (28px mark)
+- [ ] Every one of those falls back to the brand's initials when no logo is set
+- [ ] Nothing about any layout moves when a logo appears: the mark fills the same box the initials did
+- [ ] The mobile deal header's title still ellipsises rather than the mark shrinking
+
+#### Data and access
+- [ ] `logo_url` is fetched on the same `brands(...)` join each screen already used, not a second query
+- [ ] No RLS change was needed: `brands_read_via_deal` already grants a creator the whole brands row for a brand they share a deal with
+- [ ] A creator with NO deal with a brand still cannot read that brand's row, logo included
+- [ ] The inbox list and thread are shared with the brand side, where the mark is a CREATOR: those still render the caller's own initials and are unaffected
+
+---
+
 ### Storefront rate card: total, "from" pricing, and the deal hand-off
 
 #### Layout (mobile AND desktop)

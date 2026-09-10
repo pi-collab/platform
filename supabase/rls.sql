@@ -156,7 +156,7 @@ CREATE POLICY brands_read_own
   ON brands FOR SELECT
   USING (id = my_brand_id());
 
--- Creators can see brands they have deals with (for brand name display)
+-- Creators can see brands they have deals with (for brand name and logo display)
 CREATE POLICY brands_read_via_deal
   ON brands FOR SELECT
   USING (

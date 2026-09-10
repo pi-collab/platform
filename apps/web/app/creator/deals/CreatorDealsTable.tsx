@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 
 import {
   STAGES, STAGE, TAB_DEFS, SORT_OPTIONS, PAGE_SIZE, EMPTY,
   formatINR, formatRupees, createdDate, resolveStatus,
-  needsAction, isLive, matchFilter, trackSteps, nameHash, getInitials,
+  needsAction, isLive, matchFilter, trackSteps, nameHash,
   type Deal,
 } from '@/lib/deal-stage'
 
@@ -315,7 +316,6 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
           const st = STAGE[d.st] ?? STAGE.negotiating
           const hot = st.hot
           const brandName = d.brand || 'Brand'
-          const brandInitials = getInitials(brandName)
           const track = trackSteps(d.st)
 
           return (
@@ -340,13 +340,15 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
                 alignItems: 'center', justifyContent: 'center', gap: 8, padding: '24px 0',
                 background: 'linear-gradient(125deg,#F4F8FC,#F7F4FB)',
               }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 44, height: 44, borderRadius: '50%', background: '#FFFFFF',
-                  color: 'var(--sec-ink)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5,
-                }}>
-                  {brandInitials}
-                </span>
+                <BrandMark
+                  name={brandName}
+                  logoUrl={d.brand_logo}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 44, height: 44, borderRadius: '50%', background: '#FFFFFF',
+                    color: 'var(--sec-ink)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5,
+                  }}
+                />
               </div>
 
               {/* Body */}
