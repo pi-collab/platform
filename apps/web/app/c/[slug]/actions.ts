@@ -85,6 +85,14 @@ export interface RichStorefrontData {
     price_paise: number
     is_active: boolean
   }[]
+  /** Per-channel collab and boosting rates, so the card can price add-ons. */
+  addonRates: {
+    platform: string
+    handle: string | null
+    collab_rate_type: string | null
+    collab_rate_value: number | null
+    boosting_30day_paise: number | null
+  }[]
 }
 
 export async function getRichStorefront(slug: string): Promise<RichStorefrontData | null> {
@@ -103,7 +111,7 @@ export async function getRichStorefront(slug: string): Promise<RichStorefrontDat
 
   if (!sf) return null
 
-  const [{ data: creator }, { data: products }] = await Promise.all([
+  const [{ data: creator }, { data: products }, { data: addonRates }] = await Promise.all([
     admin
       .from('creators')
       .select('id, full_name, handle, bio, niches, profile_photo_url, social_accounts, worked_with, is_vetted')
@@ -114,6 +122,14 @@ export async function getRichStorefront(slug: string): Promise<RichStorefrontDat
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, is_active')
       .eq('creator_id', sf.creator_id)
       .eq('is_active', true),
+    /* Per-channel collab and boosting rates, so the storefront can price the
+       same add-ons the brand's own builder does. Rates only - what a creator
+       charges, which is already the point of this page. Nothing here is
+       identifying and nothing is per-brand. */
+    admin
+      .from('creator_addon_rates')
+      .select('platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
+      .eq('creator_id', sf.creator_id),
   ])
 
   if (!creator) return null
@@ -130,6 +146,7 @@ export async function getRichStorefront(slug: string): Promise<RichStorefrontDat
     },
     creator,
     products: products ?? [],
+    addonRates: addonRates ?? [],
   }
 }
 

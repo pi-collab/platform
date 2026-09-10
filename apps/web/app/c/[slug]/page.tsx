@@ -126,9 +126,26 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const brandCollabs = (stats.brand_collabs ?? workedWith.map((b: string) => ({ name: b, type: 'Reel + Stories', views: '', engagement: '' }))) as BrandCollab[]
 
   // Build rate card items from products
+  /* The channel's add-on rates travel WITH the line, so the card can price a
+     collab or a boost the same way the brand's builder does rather than
+     sending a brand to a number it only discovers after signing in. */
+  const ratesByChannel = new Map(
+    (rich.addonRates ?? []).map((r: any) => [`${r.platform}|${(r.handle ?? '').replace(/^@/, '').toLowerCase()}`, r]),
+  )
+  const rateFor = (p: { platform: string; handle: string }) => {
+    const r: any = ratesByChannel.get(`${p.platform}|${(p.handle ?? '').replace(/^@/, '').toLowerCase()}`)
+    if (!r) return null
+    return {
+      collabRateType: r.collab_rate_type ?? null,
+      collabRateValue: r.collab_rate_value ?? null,
+      boostingThirtyDayPaise: r.boosting_30day_paise ?? null,
+    }
+  }
+
   const rateCardItems = activeProducts.map(p => ({
     key: p.id, name: p.product_type, desc: p.description || '',
     pricePaise: p.price_paise, platform: p.platform, handle: p.handle,
+    rates: rateFor(p),
         // Mode travels with the number so the shopfront can print "From ₹60,000"
         // and keep an on-request line out of the running total.
         priceLabel: formatProductPrice(p),
@@ -137,8 +154,10 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   }))
   if (rateCardItems.length === 0) {
     rateCardItems.push(
-      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 6000000 }), countsToward: true, approximate: false },
-      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle , priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
+      /* Placeholder rows for a card with nothing on it, so rates is null: a
+         made-up line must not offer add-ons priced from a real channel. */
+      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle, rates: null, priceLabel: formatProductPrice({ price_paise: 6000000 }), countsToward: true, approximate: false },
+      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle, rates: null, priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
     )
   }
 
