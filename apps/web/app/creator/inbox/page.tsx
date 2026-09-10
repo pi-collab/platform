@@ -14,7 +14,7 @@ import { unreadNotificationCount } from '@/lib/unread'
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 
 export default async function CreatorInboxPage({ searchParams }: {
-  searchParams: { deal?: string }
+  searchParams: { deal?: string; from?: string }
 }) {
   await verifyCreator()
   const supabase = createClient()
@@ -173,7 +173,10 @@ export default async function CreatorInboxPage({ searchParams }: {
           initials={selectedThread.brandInitials}
           messages={selectedMessages}
           me="creator"
-          backHref="/creator/inbox"
+          /* Back goes where you CAME FROM. Opening a thread from the deal
+             screen and being returned to the inbox list strands you a tap away
+             from a deal you never left. */
+          backHref={searchParams?.from === 'deal' ? `/creator/deals/${selectedThread.dealId}` : '/creator/inbox'}
           dealHref={`/creator/deals/${selectedThread.dealId}`}
           closedNotice={
             ['complete', 'declined', 'cancelled'].includes(selectedThread.dealStatus)

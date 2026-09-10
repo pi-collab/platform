@@ -4350,3 +4350,15 @@ and version history stay one implementation; only presentation branches.
       heading on the same screen
 - [ ] The agreed card's summary is unaffected — it uses `.offer-m__agreedcard`,
       not `.offer-m__fold`, and keeps its own stacked layout
+
+## 41. The message icon opens THIS deal's thread
+
+- [ ] Tapping the message icon on a creator deal screen opens that deal's
+      thread, not the inbox list. It linked to `/creator/inbox`, which dropped
+      the creator on a list and made them find the deal they had just left
+- [ ] The thread's back arrow returns to **the deal**, not to the inbox list
+- [ ] Reached via `/creator/inbox?deal=<id>&from=deal`; the inbox page reads
+      `from` and swaps `backHref` accordingly
+- [ ] Opening the same thread FROM the inbox still goes back to the inbox —
+      `from` is absent, so the default is unchanged
+- [ ] Desktop is unaffected: it already opens the thread in place

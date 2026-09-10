@@ -325,6 +325,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           // Signed, and already fetched above for the desktop list.
           url: attachmentUrls[a.storage_path] ?? null,
         }))}
+        messageHref={`/creator/inbox?deal=${deal.id}&from=deal`}
         counter={counterState}
         usageRights={deal.usage_rights ?? null}
         revisionLimit={deal.revision_limit ?? null}

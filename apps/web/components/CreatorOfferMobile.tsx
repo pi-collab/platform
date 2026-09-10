@@ -58,7 +58,7 @@ export default function CreatorOfferMobile({
   brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
-  requiresShipment, unreadNotifications, decision,
+  requiresShipment, unreadNotifications, decision, messageHref,
   stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false,
 }: {
   brandName: string
@@ -94,6 +94,8 @@ export default function CreatorOfferMobile({
   extraRevisionPaise: number | null
   requiresShipment: boolean
   unreadNotifications: number
+  /** This deal's message thread. */
+  messageHref?: string
   /** The existing AcceptDecline, passed through rather than rebuilt. */
   decision: React.ReactNode
   /* AGREED shares this component rather than getting its own file. Per the
@@ -172,7 +174,9 @@ export default function CreatorOfferMobile({
             <span className="offer-m__brand">{brandName}</span>
           </h1>
           <div className="offer-m__headactions">
-            <Link href="/creator/inbox" className="offer-m__icon" aria-label="Message brand">
+            {/* THIS deal's thread, not the inbox list - and `from=deal` so the
+                thread's back arrow returns here rather than to the list. */}
+            <Link href={messageHref ?? '/creator/inbox'} className="offer-m__icon" aria-label="Message brand">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </Link>
             <Link href="/creator/notifications?from=deals" className="offer-m__icon" aria-label="Notifications">
