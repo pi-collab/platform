@@ -1,6 +1,8 @@
 'use client'
 
 import React from 'react'
+import { collabCharge, boostingCharge, offersCollab, offersBoosting } from '@/lib/addons'
+import { formatINR } from '@/lib/deal-stage'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
 import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
@@ -29,6 +31,12 @@ import './shopfront-mobile.css'
 export interface ShopfrontMobileProps {
   data: ShopfrontData
   qty: Record<string, number>
+  /* Owned by the parent alongside qty, so the totals and the deal hand-off
+     read one set of choices rather than two that can disagree. */
+  wantsCollab: Record<string, boolean>
+  setWantsCollab: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  boostDays: Record<string, number>
+  setBoostDays: React.Dispatch<React.SetStateAction<Record<string, number>>>
   setQty: React.Dispatch<React.SetStateAction<Record<string, number>>>
   activePlatform: string
   setActivePlatform: (p: string) => void
@@ -47,6 +55,10 @@ export interface ShopfrontMobileProps {
 }
 
 interface RateVM {
+  key: string
+  /** The channel's add-on rates, or null when none are offered. */
+  rates?: { collabRateType: 'fixed' | 'percent' | null; collabRateValue: number | null; boostingThirtyDayPaise: number | null } | null
+  pricePaise: number
   name: string
   desc: string
   qty: number
@@ -175,7 +187,7 @@ function useReveal(root: React.RefObject<HTMLElement>) {
 }
 
 export default function ShopfrontMobile({
-  data, qty, setQty, activePlatform, setActivePlatform,
+  data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays, activePlatform, setActivePlatform,
   linkCopied, copyLink, onDealClick, editing, showHeader = false,
 }: ShopfrontMobileProps) {
   /* ── View model ───────────────────────────────────────────────────────────
@@ -191,6 +203,9 @@ export default function ShopfrontMobile({
     const type = item.name.toLowerCase()
     const platformLabel = platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : ''
     return {
+      key: k,
+      rates: item.rates ?? null,
+      pricePaise: item.pricePaise,
       // "Reel" alone is ambiguous once a creator sells on both channels, and
       // the rate card no longer groups by platform on a phone.
       name: platformLabel && !item.name.toLowerCase().startsWith(platform)
@@ -441,6 +456,43 @@ export default function ShopfrontMobile({
                           <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '4px', lineHeight: '1.4'}}>{item.desc}</div>
                         </div>
                       </div>
+                      {/* ADD-ONS. Same two choices and the same pricing as
+                          desktop, stacked rather than inline: on a phone a
+                          checkbox, a select and two amounts do not share a row.
+                          Only once the line is selected, and only where the
+                          creator offers them. */}
+                      {item.qty > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
+                        <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px', paddingLeft: '54px'}}>
+                          {offersCollab(item.rates) && (
+                            <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>
+                              <input
+                                type="checkbox"
+                                checked={!!wantsCollab[item.key]}
+                                onChange={(e) => setWantsCollab((w) => ({ ...w, [item.key]: e.target.checked }))}
+                              />
+                              <span style={{flex: '1'}}>Collab post</span>
+                              <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(collabCharge(item.pricePaise, item.rates!))}</span>
+                            </label>
+                          )}
+                          {offersBoosting(item.rates) && (
+                            <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--wg-500)'}}>
+                              <span style={{flex: '1'}}>Boosting</span>
+                              <select
+                                value={boostDays[item.key] ?? 0}
+                                onChange={(e) => setBoostDays((b) => ({ ...b, [item.key]: parseInt(e.target.value, 10) }))}
+                                style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', padding: '5px 8px', borderRadius: '9px', border: '1.3px solid var(--line)', background: '#fff'}}
+                              >
+                                <option value={0}>None</option>
+                                {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{d}d</option>)}
+                              </select>
+                              {(boostDays[item.key] ?? 0) > 0 && (
+                                <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(boostingCharge(boostDays[item.key], item.rates!))}</span>
+                              )}
+                            </label>
+                          )}
+                        </div>
+                      )}
+
                       <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '16px', paddingLeft: '54px'}}>
                         {item.isCustom ? (<>
                           <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{flex: '1', minWidth: '0', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />

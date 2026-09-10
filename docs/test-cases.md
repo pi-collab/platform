@@ -4585,3 +4585,38 @@ Audited every `type="file"` in the app.
       Renaming them changes what a completed deal says it was for
 - [ ] New deals take the new name from the product they are built from, so this
       fades without touching the record
+
+## 49. Collab and boosting on the storefront
+
+The brand's builder has offered these for a while; the storefront did not, so a
+brand priced a deal on one number and met a different one after signing in.
+
+### The controls
+- [ ] Appear under a rate-card line ONLY once it is selected, and only where
+      that channel has rates
+- [ ] **Collab post** as a checkbox, showing what it ADDS (and the percentage
+      when the rate is one)
+- [ ] **Boosting** as a day picker — 7 / 14 / 30 / 60 / 90 — showing what the
+      chosen span adds
+- [ ] Desktop puts them on one line under the row; mobile stacks them, since a
+      checkbox, a select and two amounts do not share a row on a phone
+
+### The total
+- [ ] Includes the extras
+- [ ] Breaks them out — "₹1,40,000 + ₹20,000 extras" — rather than folding them
+      in silently. A brand that ticked a collab should see what it cost
+- [ ] "From" still leads when any selected line is a minimum or a range
+
+### One definition of the price
+- [ ] Both storefronts use `lib/addons` — `collabCharge`, `boostingCharge`,
+      `offersCollab`, `offersBoosting` — the same functions the builder and the
+      invoice use. Nothing on the storefront computes a percentage of its own,
+      so the two cannot disagree by a rupee
+
+### Carried into the builder
+- [ ] The deal URL's `items` param becomes `id:qty:collab:days`
+- [ ] The two extra fields are OPTIONAL — an older `id:qty` link still parses,
+      which matters because these URLs get pasted into messages and sat on
+- [ ] `/deals/new` seeds the collab toggle, the boosting-rights flag and the
+      day count from them, so the builder opens on what the brand configured
+      rather than resetting it

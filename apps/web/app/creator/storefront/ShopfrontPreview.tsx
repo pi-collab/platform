@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
+import { collabCharge, boostingCharge, offersCollab, offersBoosting, formatBasisPoints } from '@/lib/addons'
 import { timeAgo } from '@/lib/instagram-outcomes'
 
 // Imported here, not by a page: this component is the editor preview, the
@@ -310,6 +311,8 @@ export interface RateCardItem {
   approximate?: boolean
   platform: string
   handle: string
+  /** The channel's add-on rates, or null when it offers none. */
+  rates?: { collabRateType: 'fixed' | 'percent' | null; collabRateValue: number | null; boostingThirtyDayPaise: number | null } | null
 }
 
 export interface ShopfrontData {
@@ -445,7 +448,12 @@ export default function ShopfrontPreview({
   /** When set, CTA buttons link to this URL (e.g. /deals/new?creator=ID) instead of in-page anchors */
   dealUrl?: string
   /** When set, CTA buttons call this with selected rate card quantities instead of navigating */
-  onDealClick?: (selectedQty: Record<string, number>) => void
+  /* Quantities AND the add-ons chosen against each line, so the builder opens
+     on what the brand configured here rather than resetting it. */
+  onDealClick?: (
+    selectedQty: Record<string, number>,
+    addons?: Record<string, { collab: boolean; boostDays: number }>,
+  ) => void
   /**
    * Show the phone header (back / "Shopfront" / copy link).
    *
@@ -469,6 +477,11 @@ export default function ShopfrontPreview({
 
   // Rate card state
   const [qty, setQty] = useState<Record<string, number>>({})
+  /* The same two add-ons the brand's builder offers, priced here so a brand
+     sees the real number before signing in rather than after. Keyed by line,
+     because rates are per channel and a card can span channels. */
+  const [wantsCollab, setWantsCollab] = useState<Record<string, boolean>>({})
+  const [boostDays, setBoostDays] = useState<Record<string, number>>({})
   const setItemQty = (key: string, delta: number) => {
     setQty(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }))
   }
@@ -497,6 +510,29 @@ export default function ShopfrontPreview({
 
   // On-request items are excluded rather than counted as zero: a total that
   // silently omits a priced line is a quote a brand would hold us to.
+  /* One definition of what an add-on costs, shared with the deal builder and
+     the invoice. Nothing here computes a percentage of its own. */
+  const addonsFor = (item: RateCardItem): number => {
+    const r = item.rates
+    if (!r) return 0
+    let extra = 0
+    if (wantsCollab[item.key] && offersCollab(r)) extra += collabCharge(item.pricePaise, r)
+    const days = boostDays[item.key] ?? 0
+    if (days > 0 && offersBoosting(r)) extra += boostingCharge(days, r)
+    return extra
+  }
+
+  const addonSelections = Object.fromEntries(
+    data.rateCardItems
+      .filter((it) => (qty[it.key] || 0) > 0 && (wantsCollab[it.key] || (boostDays[it.key] ?? 0) > 0))
+      .map((it) => [it.key, { collab: !!wantsCollab[it.key], boostDays: boostDays[it.key] ?? 0 }]),
+  )
+
+  const addonsTotal = data.rateCardItems.reduce(
+    (sum, it) => sum + (qty[it.key] ? addonsFor(it) * (qty[it.key] || 0) : 0),
+    0,
+  )
+
   const rateTotal = data.rateCardItems.reduce(
     (s, item) => item.countsToward === false ? s : s + (qty[item.key] || 0) * item.pricePaise,
     0,
@@ -867,6 +903,54 @@ export default function ShopfrontPreview({
                         }}
                       >+</button>
                     </div>
+
+                    {/* ADD-ONS, only once the line is selected and only where
+                        the creator offers them. Spanning the full grid so the
+                        controls sit under the row they belong to rather than
+                        squeezing the price column. Each shows what it ADDS, not
+                        a new total, which is the same wording the rate editor
+                        now uses. */}
+                    {q > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
+                      <div style={{
+                        gridColumn: '2 / -1', display: 'flex', flexWrap: 'wrap',
+                        alignItems: 'center', gap: 14, paddingTop: 12,
+                      }}>
+                        {offersCollab(item.rates) && (
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!wantsCollab[item.key]}
+                              onChange={(e) => setWantsCollab((w) => ({ ...w, [item.key]: e.target.checked }))}
+                            />
+                            Collab post
+                            <span style={{ color: 'var(--ink)', fontWeight: 700 }}>
+                              +{formatINR(collabCharge(item.pricePaise, item.rates!))}
+                            </span>
+                            {item.rates!.collabRateType === 'percent' && item.rates!.collabRateValue != null && (
+                              <span style={{ color: 'var(--ink-faint)' }}>({formatBasisPoints(item.rates!.collabRateValue)})</span>
+                            )}
+                          </label>
+                        )}
+                        {offersBoosting(item.rates) && (
+                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                            Boosting
+                            <select
+                              value={boostDays[item.key] ?? 0}
+                              onChange={(e) => setBoostDays((b) => ({ ...b, [item.key]: parseInt(e.target.value, 10) }))}
+                              style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--hairline)', background: 'var(--card)' }}
+                            >
+                              <option value={0}>No boosting</option>
+                              {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{d} days</option>)}
+                            </select>
+                            {(boostDays[item.key] ?? 0) > 0 && (
+                              <span style={{ color: 'var(--ink)', fontWeight: 700 }}>
+                                +{formatINR(boostingCharge(boostDays[item.key], item.rates!))}
+                              </span>
+                            )}
+                          </label>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -890,7 +974,14 @@ export default function ShopfrontPreview({
                       {rateTotal > 0 && (
                         <>
                           {rateTotalIsFloor ? 'From ' : ''}
-                          <strong style={{ color: 'var(--ink)' }}>{formatINR(rateTotal)}</strong>
+                          <strong style={{ color: 'var(--ink)' }}>{formatINR(rateTotal + addonsTotal)}</strong>
+                          {/* Broken out rather than folded in silently: a brand
+                              that ticked a collab should see what it cost. */}
+                          {addonsTotal > 0 && (
+                            <span style={{ color: 'var(--ink-faint)' }}>
+                              {' '}({formatINR(rateTotal)} + {formatINR(addonsTotal)} extras)
+                            </span>
+                          )}
                         </>
                       )}
                       {rateHasOnRequest && (
@@ -902,7 +993,7 @@ export default function ShopfrontPreview({
                   )}
                 </div>
                 {!showDealCta ? null : onDealClick ? (
-                  <button onClick={() => onDealClick(qty)} style={{
+                  <button onClick={() => onDealClick(qty, addonSelections)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
                     color: 'var(--lime-950)', background: 'var(--neon)',
@@ -1588,6 +1679,10 @@ export default function ShopfrontPreview({
 
       <div className="sf-view-mobile">
         <ShopfrontMobile
+          wantsCollab={wantsCollab}
+          setWantsCollab={setWantsCollab}
+          boostDays={boostDays}
+          setBoostDays={setBoostDays}
           data={data}
           qty={qty}
           setQty={setQty}

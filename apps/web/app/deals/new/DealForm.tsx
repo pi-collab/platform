@@ -81,7 +81,11 @@ interface AddonRateRow {
   boosting_30day_paise: number | null
 }
 
-export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number> }) {
+export default function DealForm({ creator, products, addonRates = [], platformFeePercent = 0, feeMode = 'on_top', storefrontFirstDeal = false, prefill, campaigns = [], storefrontSelections, storefrontAddons }: { creator: Creator; products: Product[]; addonRates?: AddonRateRow[]; platformFeePercent?: number; feeMode?: 'on_top' | 'deducted'; storefrontFirstDeal?: boolean; prefill?: DealPrefill; campaigns?: { id: string; name: string }[]; storefrontSelections?: Record<string, number>;
+  /* What the brand ticked on the storefront. Applied as the initial state so
+     the builder opens on the configuration they priced there, rather than
+     resetting it and quoting a different number two screens later. */
+  storefrontAddons?: Record<string, { collab: boolean; boostDays: number }> }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -180,6 +184,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
   const [itemDeliveryDates, setItemDeliveryDates] = useState<Record<string, string>>({})
 
   const [reelTypes, setReelTypes] = useState<Record<string, 'collab' | 'non_collab' | ''>>(() => {
+    if (storefrontAddons) {
+      const seeded: Record<string, 'collab' | 'non_collab' | ''> = {}
+      for (const [k, a] of Object.entries(storefrontAddons)) if (a.collab) seeded[k] = 'collab'
+      if (Object.keys(seeded).length > 0) return seeded
+    }
     const rt: Record<string, 'collab' | 'non_collab' | ''> = {}
     if (prefill?.items) {
       for (const item of prefill.items) {
@@ -191,6 +200,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     return rt
   })
   const [itemBoostingRights, setItemBoostingRights] = useState<Record<string, boolean | null>>(() => {
+    if (storefrontAddons) {
+      const seeded: Record<string, boolean | null> = {}
+      for (const [k, a] of Object.entries(storefrontAddons)) if (a.boostDays > 0) seeded[k] = true
+      if (Object.keys(seeded).length > 0) return seeded
+    }
     const br: Record<string, boolean | null> = {}
     if (prefill?.items) {
       for (const item of prefill.items) {
@@ -208,7 +222,11 @@ export default function DealForm({ creator, products, addonRates = [], platformF
      That pill offered "7 days / 30 days / 90 days" and stored MONTHS — seven
      and thirty both became '1' — which cannot price a week of boosting. Days
      live here; the months column is still written so nothing reading it breaks. */
-  const [boostDays, setBoostDays] = useState<Record<string, number>>({})
+  const [boostDays, setBoostDays] = useState<Record<string, number>>(() => {
+    const seeded: Record<string, number> = {}
+    for (const [k, a] of Object.entries(storefrontAddons ?? {})) if (a.boostDays > 0) seeded[k] = a.boostDays
+    return seeded
+  })
 
   /** The creator's rates for the channel a product sits on, or null. */
   const ratesFor = useCallback((p: { platform: string; handle: string }): AddonRates | null => {

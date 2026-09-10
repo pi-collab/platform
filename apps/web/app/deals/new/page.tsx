@@ -135,16 +135,28 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
   const activeProducts = (products ?? []).filter((p) => p.is_active)
   const firstName = creator.full_name.split(' ')[0]
 
-  // Parse storefront item selections: "productId:qty,productId:qty"
+  /* Storefront selections: "productId:qty" or "productId:qty:collab:days".
+     The two extra fields arrived later, so they are optional and a link with
+     only id:qty still parses - which matters because these URLs get pasted
+     into messages and sat on for days. */
   let storefrontSelections: Record<string, number> | undefined
+  let storefrontAddons: Record<string, { collab: boolean; boostDays: number }> | undefined
   if (!prefill && searchParams.items) {
     storefrontSelections = {}
+    storefrontAddons = {}
     for (const pair of searchParams.items.split(',')) {
-      const [key, qtyStr] = pair.split(':')
+      const [key, qtyStr, collabStr, daysStr] = pair.split(':')
       const qty = parseInt(qtyStr, 10)
-      if (key && qty > 0) storefrontSelections[key] = qty
+      if (!key || !(qty > 0)) continue
+      storefrontSelections[key] = qty
+      const collab = collabStr === '1'
+      const boostDays = daysStr ? parseInt(daysStr, 10) : 0
+      if (collab || boostDays > 0) {
+        storefrontAddons[key] = { collab, boostDays: Number.isFinite(boostDays) ? boostDays : 0 }
+      }
     }
     if (Object.keys(storefrontSelections).length === 0) storefrontSelections = undefined
+    if (Object.keys(storefrontAddons).length === 0) storefrontAddons = undefined
   }
 
   return (
@@ -251,6 +263,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
           prefill={prefill}
           campaigns={(campaigns ?? []) as { id: string; name: string }[]}
           storefrontSelections={storefrontSelections}
+          storefrontAddons={storefrontAddons}
           addonRates={(addonRates ?? []) as never}
         />
       </div>
