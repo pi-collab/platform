@@ -4335,3 +4335,14 @@ and version history stay one implementation; only presentation branches.
 - [ ] The list is NOT a `<dl>`. A definition list needs the value pulled onto
       its label's line with a negative margin, which assumes every row is one
       line high — untrue once usage rights or revision terms wrap
+
+### Every fold heading is the same eyebrow
+- [ ] **DELIVERABLES**, **BRIEF & ATTACHMENTS** and **FULL TERMS &
+      GUIDELINES** all render as the same 10px uppercase eyebrow: 600 weight,
+      .12em tracking, ink
+- [ ] None of them is the 15px bold display face. `.offer-m__fold > summary`
+      carried that; DELIVERABLES escaped it only because its summary wraps an
+      `.offer-m__submittitle`, so the other two read as a different order of
+      heading on the same screen
+- [ ] The agreed card's summary is unaffected — it uses `.offer-m__agreedcard`,
+      not `.offer-m__fold`, and keeps its own stacked layout

@@ -4807,10 +4807,16 @@ button.signup-form__cross-link {
   .offer-m__decision { margin-top: 16px; }
 
   /* Folds */
+/* Every fold heading is the same 10px uppercase eyebrow the export uses -
+     the one DELIVERABLES already had, because its summary wraps an
+     .offer-m__submittitle and so escaped this rule. Brief and Full terms took
+     the 15px display face below and read as a different order of heading on
+     the same screen. */
   .offer-m__fold > summary {
     display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer; list-style: none;
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    gap: 10px; cursor: pointer; list-style: none;
+    font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
   }
   .offer-m__fold > summary::-webkit-details-marker { display: none; }
   .offer-m__fold[open] > summary svg { transform: rotate(180deg); }
