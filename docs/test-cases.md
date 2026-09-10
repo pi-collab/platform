@@ -1075,7 +1075,21 @@ a time; rows are for running down twenty and ticking the ones you want.
 - [ ] Selecting anything raises the dark pill over the foot of the page, in reach however far down the list you have scrolled
 - [ ] It reads "1 selected" / "3 selected"
 - [ ] ONE selected offers <b>Start a deal</b> and opens the builder for that creator
-- [ ] TWO OR MORE offer <b>Start a campaign</b>, which creates one campaign over them and opens it
+- [ ] TWO OR MORE offer <b>Start a campaign</b>, which opens a New Campaign DIALOG rather than a browser prompt
+- [ ] The dialog collects name, description/brief and budget: the same three fields the campaigns page collects, from one shared component
+- [ ] It names how many creators will be added
+- [ ] Create makes the campaign WITH the description and budget, adds the selected creators, and opens the campaign
+- [ ] Cancel, Escape, or clicking the backdrop closes it and keeps the selection
+- [ ] Neither closes while it is creating
+- [ ] Enter in the name or budget field submits
+- [ ] A bad budget is refused in the dialog, not swallowed
+- [ ] The campaigns page's own New Campaign panel still works and looks unchanged (it uses the same fields now)
+
+#### Back goes where you came from
+- [ ] Start a deal from BROWSE, then the builder's back link reads "Back to browse creators" and returns there, keeping the search and filters
+- [ ] Start a deal from a creator's STOREFRONT, then it reads "Back to storefront" and returns to that creator
+- [ ] Reaching the builder any other way still reads "Back to deals"
+- [ ] The target is an allowlist. A crafted ?back=https://evil.example falls back to the deals list rather than being rendered as the link
 - [ ] Clear empties the selection and the action goes
 - [ ] Nothing is shown there when nothing is selected
 - [ ] In the SAVED view a card still does NOT offer "Start deal". A shortlist of six offering six separate deals is the opposite of what the saved list is for

@@ -21,7 +21,9 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
     addons?: Record<string, { collab: boolean; boostDays: number }>,
     offerTotalPaise?: number,
   ) => {
-    const params = new URLSearchParams({ creator: creatorId })
+    /* So the builder's back link returns to this storefront rather than to
+       the deals list. */
+    const params = new URLSearchParams({ creator: creatorId, back: 'storefront' })
 
     const selected = Object.entries(selectedQty).filter(([, q]) => q > 0)
     if (selected.length > 0) {
@@ -41,7 +43,7 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
     router.push(`/deals/new?${params.toString()}`, { scroll: true })
   }, [creatorId, router])
 
-  const dealUrl = `/deals/new?creator=${creatorId}`
+  const dealUrl = `/deals/new?creator=${creatorId}&back=storefront`
 
   /* Same rule as the CTAs inside the shopfront: with no published packages
      there is nothing to build an offer from, so every path to the offer

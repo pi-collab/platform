@@ -30,7 +30,7 @@ export interface DealPrefill {
 
 const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
 
-export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string; total?: string } }) {
+export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string; total?: string; back?: string } }) {
   const brand = await verifyBrand()
   const supabase = createClient()
 
@@ -168,15 +168,33 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     if (Number.isFinite(n) && n > 0) storefrontTotalPaise = n
   }
 
+  /* Where "back" goes, from a fixed set. `browse` is the creator list and
+     `storefront` is that creator's own page; anything else, including nothing,
+     falls back to the deals list this page has always returned to. */
+  const backTargets: Record<string, { href: string; label: string }> = {
+    browse: { href: '/browse', label: 'Back to browse creators' },
+    storefront: { href: `/browse/${creatorId}`, label: 'Back to storefront' },
+  }
+  const back = searchParams.back ? backTargets[searchParams.back] : undefined
+  const backHref = back?.href ?? '/deals'
+  const backLabel = back?.label ?? 'Back to deals'
+
   return (
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ── Header card ── */}
         <div className="surface" style={{ padding: '28px 30px' }}>
-          <Link href="/deals" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', whiteSpace: 'nowrap', textDecoration: 'none' }}>
+          {/* Back goes where you CAME FROM.
+              A brand who picked a creator on browse and pressed Start a deal
+              was sent to the deals list on the way out, losing the search,
+              filters and selection they had built up to get here. An ALLOWLIST,
+              not a path off the query string: this link is rendered from it,
+              and echoing back whatever a crafted URL supplied would point our
+              own page at someone else's. */}
+          <Link href={backHref} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', whiteSpace: 'nowrap', textDecoration: 'none' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-            Back to deals
+            {backLabel}
           </Link>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>

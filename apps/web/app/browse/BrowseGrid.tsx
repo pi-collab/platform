@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import NewCampaignFields, { EMPTY_CAMPAIGN_DRAFT, parseBudget, type CampaignDraft } from '@/components/NewCampaignFields'
 import Toast from '@/components/Toast'
 import { useRouter } from 'next/navigation'
 import FilterDropdown from '@/components/FilterDropdown'
@@ -171,6 +172,34 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
      them. */
   const [picked, setPicked] = useState<Record<string, boolean>>({})
   const [startingCampaign, setStartingCampaign] = useState(false)
+  /* The campaign's own details, asked for before it is made rather than after.
+     window.prompt took a name and nothing else, so a campaign started from a
+     shortlist opened missing the brief and budget the campaigns page collects,
+     and looked nothing like the rest of the product while it asked. */
+  const [campaignOpen, setCampaignOpen] = useState(false)
+  const [campaignDraft, setCampaignDraft] = useState<CampaignDraft>(EMPTY_CAMPAIGN_DRAFT)
+  const [campaignError, setCampaignError] = useState<string | null>(null)
+
+  async function createCampaignFromSelection() {
+    if (!campaignDraft.name.trim()) { setCampaignError('Campaign name is required.'); return }
+    const budget = parseBudget(campaignDraft.budget)
+    if (budget.error) { setCampaignError(budget.error); return }
+
+    setCampaignError(null)
+    setStartingCampaign(true)
+    const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
+    const res = await startCampaignWithCreators(
+      campaignDraft.name,
+      pickedIds,
+      campaignDraft.description || undefined,
+      budget.paise,
+    )
+    setStartingCampaign(false)
+
+    if ('error' in res && res.error) { setCampaignError(res.error); return }
+    setCampaignOpen(false)
+    router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
+  }
   const router = useRouter()
   const pickedIds = Object.keys(picked).filter((id) => picked[id])
   const [shown, setShown] = useState(PAGE_SIZE)
@@ -686,7 +715,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {pickedIds.length === 1 ? (
                   <Link
-                    href={`/deals/new?creator=${pickedIds[0]}`}
+                    href={`/deals/new?creator=${pickedIds[0]}&back=browse`}
                     style={{
                       padding: '9px 18px', borderRadius: 'var(--radius-pill)',
                       backgroundColor: 'var(--neon)', border: 'none',
@@ -699,16 +728,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 ) : (
                   <button
                     disabled={startingCampaign}
-                    onClick={async () => {
-                      const name = window.prompt('Name this campaign')
-                      if (!name?.trim()) return
-                      setStartingCampaign(true)
-                      const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
-                      const res = await startCampaignWithCreators(name, pickedIds)
-                      setStartingCampaign(false)
-                      if ('error' in res && res.error) { window.alert(res.error); return }
-                      router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
-                    }}
+                    onClick={() => { setCampaignError(null); setCampaignDraft(EMPTY_CAMPAIGN_DRAFT); setCampaignOpen(true) }}
                     style={{
                       padding: '9px 18px', borderRadius: 'var(--radius-pill)',
                       background: 'var(--neon)', border: 'none',
@@ -718,7 +738,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                       opacity: startingCampaign ? 0.6 : 1,
                     }}
                   >
-                    {startingCampaign ? 'Starting...' : 'Start a campaign'}
+                    Start a campaign
                   </button>
                 )}
                 <button
@@ -737,6 +757,49 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </div>
         )}
 
+
+        {/* ══════ NEW CAMPAIGN ══════
+            Over the page rather than pushed into it: the selection behind it is
+            what the campaign is being made from, and a brand should still be
+            able to see the count they picked while they name it. */}
+        {campaignOpen && (
+          <div
+            onClick={() => { if (!startingCampaign) setCampaignOpen(false) }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 60,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+              background: 'rgba(18,21,28,.42)', backdropFilter: 'blur(2px)',
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="New campaign"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => { if (e.key === 'Escape' && !startingCampaign) setCampaignOpen(false) }}
+              style={{
+                width: 'min(560px, 100%)', maxHeight: '90vh', overflowY: 'auto',
+                borderRadius: 24, background: 'var(--card)', padding: '30px 32px',
+                boxShadow: '0 40px 90px -30px rgba(18,21,28,.5)',
+              }}
+            >
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>
+                New Campaign
+              </span>
+              <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 5 }}>
+                {pickedIds.length} creator{pickedIds.length === 1 ? '' : 's'} will be added to it.
+              </div>
+              <NewCampaignFields
+                draft={campaignDraft}
+                onChange={setCampaignDraft}
+                error={campaignError}
+                busy={startingCampaign}
+                onSubmit={createCampaignFromSelection}
+                onCancel={() => setCampaignOpen(false)}
+              />
+            </div>
+          </div>
+        )}
 
         {toast && <Toast key={toast.seq} message={toast.msg} duration={2600} />}
 
@@ -1102,7 +1165,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
         )}
         {hideDealCta ? null : (
         <Link
-          href={`/deals/new?creator=${c.id}`}
+          href={`/deals/new?creator=${c.id}&back=browse`}
           onClick={(e) => e.stopPropagation()}
           style={{
             flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
