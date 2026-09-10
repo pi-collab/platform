@@ -4362,3 +4362,44 @@ and version history stay one implementation; only presentation branches.
 - [ ] Opening the same thread FROM the inbox still goes back to the inbox —
       `from` is absent, so the default is unchanged
 - [ ] Desktop is unaffected: it already opens the thread in place
+
+## 42. Deals list: every status, and the filter chips
+
+Audited against the status × is_posted combinations that actually exist in the
+data, not against the ones the code seemed to expect.
+
+### Two statuses were wrong
+- [ ] **approved + posted** now reads **"Posted · awaiting payment"**, action
+      Invoice. It resolved to 'posted', whose label is "Posted · paid" — so a
+      creator who had just published was told the deal was PAID. Posting is not
+      payment; the invoice comes after, and raising it is their next move
+- [ ] **complete + is_posted false** now reads **"Posted · paid"**. It fell
+      into 'awaiting' — "Approved · post it", hot — so finished deals sat in
+      Needs you asking for a post. Fifteen of them on staging. Complete and
+      paid are terminal; whether posting was recorded is a data question, since
+      deals predating `is_posted` have it false
+
+### Full mapping
+- [ ] agreed → Agreed · in production · View deal
+- [ ] approved, not posted → Approved · post it · Upload post · **Needs you**
+- [ ] approved, posted → Posted · awaiting payment · Invoice · **Needs you**
+- [ ] delivered → Submitted · in review · Track review
+- [ ] revision → Revision requested · Resubmit · **Needs you**
+- [ ] negotiating → Offer to review · Review offer · **Needs you**
+- [ ] negotiating, creator countered → Countered · with brand · Waiting on brand
+- [ ] complete / paid → Posted · paid · View deal
+- [ ] declined → Declined
+
+### Filter chips
+- [ ] **In review** is delivered and revision only. 'awaiting' was in it, and an
+      APPROVED deal waiting to be posted is not in review — nobody is reviewing
+      it. It stays under Needs you
+- [ ] **Posted** covers posted AND posted_unpaid: the chip is about the content
+      being live, not about payment
+- [ ] **Declined** covers cancelled too. Cancelled was reachable from no chip
+      but All
+- [ ] **Negotiating** covers negotiating and countered
+- [ ] Every stage `resolveStatus` can return is reachable from at least one
+      chip besides All
+- [ ] `is_posted` is read for truthiness, not `=== false`, so a null reads as
+      not posted rather than falling through to the raw status
