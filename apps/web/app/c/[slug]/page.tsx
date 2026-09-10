@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { productSortRank } from '@/lib/product-types'
 import { getPublicSnapshot } from '@/lib/instagram-sync'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { notFound } from 'next/navigation'
@@ -74,7 +75,11 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const socials = (creator.social_accounts ?? []) as SocialAccount[]
   const handle = creator.handle || 'creator'
   const stats = (storefront.stats ?? {}) as StorefrontStats
-  const activeProducts = products.filter(p => p.is_active)
+  /* Reels first. Array.prototype.sort is stable, so everything else keeps the
+     order the creator arranged it in. See productSortRank. */
+  const activeProducts = products
+    .filter(p => p.is_active)
+    .sort((a, b) => productSortRank(a.product_type) - productSortRank(b.product_type))
 
   // Per channel, from what the creator actually stated on that channel.
   //

@@ -4556,3 +4556,32 @@ Audited every `type="file"` in the app.
       the picker but cannot be cleared, so a required field held a file the
       applicant had changed their mind about, with no way back but a reload.
       Remove now clears the input itself, not just the label
+
+## 48. Reels first, and the Sponsored names retired
+
+### Order
+- [ ] The storefront's rate card / build-a-deal list opens with reels. They are
+      what a brand comes for and what most creators price highest, so a card
+      that opens with a story buries its own headline
+- [ ] Everything after keeps the order the creator arranged it in — the sort is
+      stable, so this lifts reels rather than reshuffling the card
+- [ ] Ranked on the NAME containing "reel", so a legacy bare "Reel" ranks with
+      "Instagram Reel" instead of sinking
+
+### The names (migration 0502)
+- [ ] `Sponsored Reel` → `Instagram Reel`
+- [ ] `Sponsored Post` → `Instagram Static/Carousel` (a feed post; there is no
+      plain "Instagram Post" in the current vocabulary)
+- [ ] `Sponsored Story` → `Instagram Story`
+- [ ] 11 rows, all on instagram. New packages have not been able to choose
+      these names for some time; they survived only on older packages
+- [ ] Editing a migrated package still validates — the new names are all in
+      `PRODUCT_TYPES`
+
+### NOT renamed, on purpose
+- [ ] `deal_deliverable_items.label` keeps "Sponsored Reel" / "Sponsored Post"
+      on the 68 rows that have them. Those are not vocabulary, they are the
+      description of work on deals that were agreed, delivered and mostly paid.
+      Renaming them changes what a completed deal says it was for
+- [ ] New deals take the new name from the product they are built from, so this
+      fades without touching the record

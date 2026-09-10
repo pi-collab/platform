@@ -69,3 +69,22 @@ export const PRODUCT_TYPES_BY_PLATFORM: Record<string, readonly ProductType[]> =
   linkedin: ['LinkedIn Post', 'Other / Custom'],
   other: PRODUCT_TYPES,
 }
+
+/**
+ * Where a product sits in a rate card.
+ *
+ * Reels lead: they are what a brand comes for and what most creators price
+ * highest, so a card that opens with a story or a carousel buries its own
+ * headline. Everything after that keeps the order the creator gave it -
+ * a stable sort, so this only lifts reels rather than reshuffling the rest.
+ *
+ * Matched on the NAME containing "reel" rather than an exact list, so the
+ * retired bare "Reel" and "Sponsored Reel" rank with "Instagram Reel" instead
+ * of falling to the bottom of an older creator's card.
+ */
+export function productSortRank(productType: string | null | undefined): number {
+  const t = (productType ?? '').toLowerCase()
+  if (t.includes('reel')) return 0
+  if (t.includes('short')) return 1
+  return 2
+}
