@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { zeroFeeNote } from '@/lib/fee-copy'
 
@@ -56,8 +57,9 @@ function shortDate(iso: string | null): string | null {
 export default function CreatorOfferMobile({
   brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
-  avoid, attachments, usageRights, goLiveDate, revisionLimit, extraRevisionPaise,
-  requiresShipment, unreadNotifications, decision,
+  avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
+  requiresShipment, unreadNotifications, decision, messageHref,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
 }: {
   brandName: string
   dealTitle: string
@@ -79,15 +81,96 @@ export default function CreatorOfferMobile({
   avoid: string[]
   attachments: OfferAttachment[]
   usageRights: string | null
-  /** Agreed go-live date, already formatted. Null when not agreed. */
-  goLiveDate: string | null
+  /* Set once anyone has countered. Both states are status 'negotiating'; this
+     is what tells them apart. Null on a fresh offer. */
+  counter: {
+    /** Who moved last. Decides which of the two negotiating screens this is. */
+    lastBy: 'brand' | 'creator'
+    theirPaise: number | null
+    youAskedPaise: number | null
+    at: string | null
+  } | null
   revisionLimit: number | null
   extraRevisionPaise: number | null
   requiresShipment: boolean
   unreadNotifications: number
+  /** This deal's message thread. */
+  messageHref?: string
   /** The existing AcceptDecline, passed through rather than rebuilt. */
   decision: React.ReactNode
+  /* AGREED shares this component rather than getting its own file. Per the
+     exports, everything from "Brief & attachments" down is identical on both
+     screens - two copies of that markup would drift the moment either is
+     touched. Only the header, the stage line and the card body differ. */
+  stage?: 'offer' | 'agreed' | 'submitted' | 'revision' | 'approved' | 'invoiced' | 'complete'
+  agreedAt?: string | null
+  rightsConfirmedAt?: string | null
+  /** DeliverableItems, passed through: it owns uploads, versions and per-item
+      status, none of which should exist twice. */
+  submitNode?: React.ReactNode
+  /** Items submitted, and how many there are. Drives both the "0 of 2" count
+      and the segment bar the export puts under the heading. */
+  submitDone?: number
+  submitTotal?: number
+  /** When the work was submitted, formatted. Drives the header line. */
+  submittedAt?: string | null
+  /** When the brand last reviewed. Header line on the revision screen. */
+  reviewedAt?: string | null
+  /** When the brand approved. Header line on the approved screen. */
+  approvedAt?: string | null
+  /** PostedCard in compact mode: one card per deliverable. */
+  postNode?: React.ReactNode
+  /** Whether every deliverable has a live URL yet. */
+  allPosted?: boolean
+  /** The invoice card, once there is content posted to invoice for. */
+  invoiceNode?: React.ReactNode
+  /** The brand has accepted the invoice and payment has not landed yet. */
+  invoiceAccepted?: boolean
+  /** e.g. "Due in 12 days" / "Overdue by 3 days", already formatted. */
+  invoiceDueLabel?: string | null
+  /** When payment landed, formatted. Header line on the complete screen. */
+  paidAt?: string | null
+  /** This deal's analytics page. */
+  analyticsHref?: string
 }) {
+  /* The agreed figures, defined once. Agreed and revision show them in their
+     own collapsible card; submitted and approved fold them into "Brief &
+     attachments" after the attachments, which is what BOTH of those exports
+     do. Two screens agreeing is what settled it - one could have been an
+     export artefact. */
+  const agreedTermRows = (
+            <div className="offer-m__termrows">
+              {/* Flat rows, not the expandable deliverable cards the offer
+                  screen uses. Nothing left to weigh up, so nothing opens. */}
+              {items.map((it) => (
+                <div className="offer-m__termrow" key={it.id}>
+                  <span>{it.label}</span><span>{inr(it.pricePaise)}</span>
+                </div>
+              ))}
+              {totalPaise !== null && (
+                <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
+              )}
+              {feePaise !== null && feePaise > 0 && (
+                <div className="offer-m__termrow">
+                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
+                  <span>&minus;{inr(feePaise)}</span>
+                </div>
+              )}
+              {usageRights && (
+                <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
+              )}
+              {revisionLimit !== null && (
+                <div className="offer-m__termrow">
+                  <span>Revisions</span>
+                  <span>{revisionLimit} round{revisionLimit === 1 ? '' : 's'} included</span>
+                </div>
+              )}
+              {rightsConfirmedAt && (
+                <div className="offer-m__termrow"><span>Rights confirmed</span><span>{rightsConfirmedAt}</span></div>
+              )}
+            </div>
+  )
+
   return (
     <div className="offer-m">
       {/* Sticky: who it is from and how to reach them. */}
@@ -97,10 +180,13 @@ export default function CreatorOfferMobile({
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
           <h1 className="offer-m__title">
-            Offer from <span className="offer-m__brand">{brandName}</span>
+            {stage === 'offer' ? 'Offer from ' : 'Deal with '}
+            <span className="offer-m__brand">{brandName}</span>
           </h1>
           <div className="offer-m__headactions">
-            <Link href="/creator/inbox" className="offer-m__icon" aria-label="Message brand">
+            {/* THIS deal's thread, not the inbox list - and `from=deal` so the
+                thread's back arrow returns here rather than to the list. */}
+            <Link href={messageHref ?? '/creator/inbox'} className="offer-m__icon" aria-label="Message brand">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </Link>
             <Link href="/creator/notifications?from=deals" className="offer-m__icon" aria-label="Notifications">
@@ -116,9 +202,27 @@ export default function CreatorOfferMobile({
             putting it here left the deal unnamed on its own screen. */}
         <div className="offer-m__status">
           <span className="offer-m__statuslabel">
-            <span className="offer-m__dot" aria-hidden="true" />{dealTitle}
+            {/* Green once the deal is past the decision - both exports use
+                neon-deep here. Amber belongs to an offer still to answer. */}
+            <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
-          <span className="offer-m__waiting">{waitingLabel}</span>
+          <span className="offer-m__waiting">
+            {stage === 'complete'
+              ? (paidAt ? `Paid ${paidAt}` : 'Paid')
+              : stage === 'invoiced'
+              ? 'Invoiced'
+              : stage === 'approved'
+              ? (approvedAt ? `Approved ${approvedAt}` : 'Approved')
+              : stage === 'revision'
+              ? (reviewedAt ? `Reviewed ${reviewedAt}` : 'Reviewed')
+              : stage === 'submitted'
+              ? (submittedAt ? `Submitted ${submittedAt}` : 'Submitted')
+              : stage === 'agreed'
+              /* The export puts the delivery date on the header line and the
+                 agreed date in the card's summary, not the other way round. */
+              ? (deliverBy ? `Deliver by ${deliverBy}` : 'Agreed')
+              : counter?.at ? `Countered ${counter.at}` : waitingLabel}
+          </span>
         </div>
       </div>
 
@@ -126,19 +230,297 @@ export default function CreatorOfferMobile({
         {/* Where this sits in the pipeline. */}
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
-            <span className="offer-m__stage">Offer received</span>
-            <span className="offer-m__next">Next: agree terms</span>
+            <span className="offer-m__stage">
+              {stage === 'complete' ? 'Paid'
+                : stage === 'invoiced' ? 'Invoiced'
+                : stage === 'approved' ? 'Approved'
+                : stage === 'revision' ? 'Changes requested'
+                : stage === 'submitted' ? 'Submitted'
+                : stage === 'agreed' ? 'Agreed'
+                : counter ? 'Negotiating' : 'Offer received'}
+            </span>
+            <span className="offer-m__next">
+              {/* No next step: the export puts "Complete" in this slot. */}
+              {stage === 'complete' ? 'Complete'
+                : stage === 'invoiced' ? 'Next: paid'
+                : stage === 'approved' ? (allPosted ? 'Next: issue invoice' : 'Next: post content')
+                : stage === 'revision' ? 'Next: resubmit'
+                : stage === 'submitted' ? 'Next: brand review'
+                : stage === 'agreed' ? 'Next: submit work' : 'Next: agree terms'}
+            </span>
           </div>
           <div className="offer-m__progress" aria-hidden="true">
-            <span className="is-on" />{Array.from({ length: 5 }, (_, i) => <span key={i} />)}
+            {/* One lit segment per stage reached, so the bar moves forward. */}
+            {Array.from({ length: 6 }, (_, i) => (
+              <span
+                key={i}
+                className={[
+                  i <= (stage === 'complete' ? 5 : stage === 'invoiced' ? 4 : stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
+                  /* The export paints the reached segment amber on revision:
+                     progress was made and then handed back. */
+                  stage === 'revision' && i === 2 ? 'is-warn' : '',
+                ].filter(Boolean).join(' ') || undefined}
+              />
+            ))}
           </div>
         </div>
 
-        {/* The money and the decision — the one job of this screen. */}
+        {/* AGREED: a COLLAPSED accordion, per the export. The summary carries
+            the three things worth seeing at a glance - when it was agreed, what
+            the creator takes home, and when they are paid. Everything else
+            (the deliverables, the totals, the rights stamp) is folded away,
+            because at this stage the screen's job is to get the work submitted,
+            not to re-read terms already agreed.
+
+            Deliberately NOT `open`: the export has no open attribute here,
+            unlike the offer screen where the money IS the decision. */}
+        {/* AGREED: a COLLAPSED accordion, per the export - no `open` attribute,
+            unlike the offer screen where the money IS the decision. Two rows in
+            the summary: the agreed stamp with the fold control, then the amount
+            with the payment window beside it. Everything else folds away,
+            because at this stage the screen's job is the work, not re-reading
+            terms already agreed. */}
+        {/* APPROVED: one card per deliverable to post, then the invoice
+            state. Both sit above the folds - they are what is left to do. */}
+        {/* The post cards are the task, so they go once the task is done. With
+            everything live the export's invoice screen shows no post section at
+            all - leaving them up meant a column of "Posted ✓" buttons above the
+            invoice, restating what the Deliverables fold already records.
+            Partly posted still shows them: there is a card left to fill. */}
+        {stage === 'approved' && !allPosted && postNode}
+
+        {/* PAID. The one screen that celebrates rather than instructs, so it
+            leads with the fact and the figure and then gets out of the way. */}
+        {stage === 'complete' && (
+          <section className="offer-m__card offer-m__done">
+            <div className="offer-m__donebody">
+              <div className="offer-m__donetop">
+                <span className="offer-m__label offer-m__donestamp">
+                  <span className="offer-m__donedot" aria-hidden="true" />
+                  Complete
+                </span>
+                {paidAt && <span className="offer-m__donedate">{paidAt}</span>}
+              </div>
+              <div className="offer-m__doneline">
+                You&rsquo;ve been <span className="offer-m__donebrandword">guapd</span>
+              </div>
+              {receivesPaise !== null && (
+                <div className="offer-m__doneamount">{inr(receivesPaise)}</div>
+              )}
+              <div className="offer-m__donecap">Paid out for {dealTitle} with {brandName}</div>
+            </div>
+            {/* Both carry a 14px icon at 1.9 stroke, per the export: a document
+                for Payments and a rising chart for Analytics. currentColor, so
+                they follow the link's own colour. */}
+            <div className="offer-m__donelinks">
+              <Link href="/creator/payments" className="offer-m__donelink">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                Payments
+              </Link>
+              {analyticsHref && (
+                <Link href={analyticsHref} className="offer-m__donelink">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+                  Analytics
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Open on complete: the export makes it a plain surface there, not a
+            fold - the work is the record of what was paid for. */}
+        {stage === 'complete' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+            </div>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </section>
+        )}
+
+        {/* THE BRAND HAS AGREED THE BILL. Stated at the top, above the invoice
+            itself, because it is the thing that changed since the creator last
+            looked and it is not their move any more: the card below shows the
+            same status, but as one line inside a card about numbers. */}
+        {invoiceAccepted && (
+          <div className="offer-m__card offer-m__notice">
+            <span className="offer-m__noticeicon" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            <div>
+              <div className="offer-m__noticetitle">Invoice accepted</div>
+              <div className="offer-m__noticebody">
+                {brandName} has agreed your invoice.{invoiceDueLabel ? ` ${invoiceDueLabel}.` : ' Payment follows the agreed terms.'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Once the content is live there is something to invoice FOR, so the
+            waiting stub gives way to the real card. Before that it is a state,
+            not an action. */}
+        {(stage === 'complete' || stage === 'invoiced' || (stage === 'approved' && allPosted)) && invoiceNode}
+
+        {stage === 'approved' && !allPosted && (
+          <section className="offer-m__card offer-m__invoice">
+            <h2 className="offer-m__submittitle">Invoice</h2>
+            {/* The export says the invoice is created automatically. It is
+                not: invoicing is gated on is_posted and the creator raises it
+                themselves. Telling them it happens on its own would have them
+                waiting for something nobody was going to do. */}
+            <p className="offer-m__invoicebody">
+              You can create and share your invoice once content is posted.
+            </p>
+            <div className="offer-m__invoicestate">
+              <span className={`offer-m__invoicedot${allPosted ? ' offer-m__invoicedot--done' : ''}`} aria-hidden="true" />
+              <span className="offer-m__label">
+                {allPosted ? 'Ready to invoice' : 'Waiting on posted content'}
+              </span>
+            </div>
+          </section>
+        )}
+
+        {/* The export's own notice, restored. I removed this when the purple
+            banner was called out, having read "the purple one is not required"
+            as "no notice is required" - they are two different blocks and only
+            DeliverableItems' one was the duplicate.
+
+            Not a link: the export makes it an anchor pointing at
+            "Creator Deal Detail - Revision Mobile.dc.html", which is navigation
+            between design files, not a destination in the product. */}
+        {stage === 'submitted' && (
+          <div className="offer-m__card offer-m__notice">
+            <span className="offer-m__noticeicon" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4Z" /></svg>
+            </span>
+            <div>
+              <div className="offer-m__noticetitle">Submitted for review</div>
+              <div className="offer-m__noticebody">The brand has been notified and is reviewing your deliverables.</div>
+            </div>
+          </div>
+        )}
+
+        {/* The submitted work, folded: it has been sent, so it is a record
+            rather than a task. */}
+        {/* REVISION: always open. The brand has handed work back, so what to
+            do about it must not be behind a fold. Submitted folds it because
+            there the work is a record; here it is the task. */}
+        {stage === 'revision' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+            </div>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </section>
+        )}
+
+        {(stage === 'submitted' || stage === 'approved' || stage === 'invoiced') && submitNode && (
+          <details className="offer-m__card offer-m__fold offer-m__delivfold">
+            <summary className="offer-m__foldhead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            </summary>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </details>
+        )}
+
+        {(stage === 'agreed' || stage === 'revision') && (
+          <details className="offer-m__card offer-m__agreedcard">
+            <summary className="offer-m__agreedsum">
+              <div className="offer-m__agreedtop">
+                <span className="offer-m__agreedstamp">
+                  <span className="offer-m__agreeddot" aria-hidden="true" />
+                  <span className="offer-m__label">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</span>
+                </span>
+                <span className="offer-m__agreedchev" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
+              </div>
+              {/* Amount and payment window share a baseline - the export does
+                  not stack them, and at 20px this is a reference figure, not
+                  the headline it is on the offer screen. */}
+              <div className="offer-m__agreedmoney">
+                <div>
+                  <div className="offer-m__label">You receive</div>
+                  <div className="offer-m__agreedamount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+                </div>
+                {paymentTerms && <span className="offer-m__agreedterms-note">{paymentTerms}</span>}
+              </div>
+            </summary>
+
+            {agreedTermRows}
+          </details>
+        )}
+
+        {/* OFFER ONLY. This said `stage !== 'agreed'`, which is true for
+            'submitted' too - so a deal the creator had already delivered
+            rendered the whole offer card underneath, Accept, Counter and
+            Decline included, on work that was already sent. */}
+        {stage === 'offer' && (
         <section className="offer-m__card">
-          <div className="offer-m__label">You receive</div>
-          <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '—'}</div>
+          {/* THE HEADLINE IS WHATEVER THE CREATOR HAS TO ACT ON.
+              No counter: what they take home, which is the offer.
+              Brand countered: THEIR number, because that is the thing on the
+              table to accept - "You receive" alongside it was a figure derived
+              from the old price and read as a competing offer.
+              Creator countered: their own ask, because nothing is theirs to
+              decide until the brand answers. */}
+          {!counter && (
+            <>
+              <div className="offer-m__label">You receive</div>
+              <div className="offer-m__amount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+            </>
+          )}
+          {counter?.lastBy === 'brand' && (
+            <>
+              <div className="offer-m__label">Their counter</div>
+              <div className="offer-m__amount">{counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}</div>
+            </>
+          )}
+          {counter?.lastBy === 'creator' && (
+            <>
+              <div className="offer-m__label">Your ask</div>
+              <div className="offer-m__amount">{counter.youAskedPaise !== null ? inr(counter.youAskedPaise) : '\u2014'}</div>
+            </>
+          )}
           {paymentTerms && <div className="offer-m__terms">{paymentTerms}</div>}
+
+          {/* WHAT IS ACTUALLY ON THE TABLE. Only the brand's number is a term
+              the creator can accept; their own ask is not binding until the
+              brand takes it. Showing both, labelled, is the difference between
+              a negotiation you can read and two numbers you have to remember.
+              Everything below this block stays exactly as the offer-received
+              screen draws it — same layout, same order — so moving from one
+              state to the other does not feel like a different page. */}
+          {counter?.lastBy === 'brand' && counter.youAskedPaise !== null && (
+            <div className="offer-m__counter">
+              <div className="offer-m__counterhead">
+                <div>
+                  <span className="offer-m__label">On the table</span>
+                  <div className="offer-m__counterasked">You asked {inr(counter.youAskedPaise)}</div>
+                </div>
+                <span className="offer-m__counterpill">Their move answered</span>
+              </div>
+            </div>
+          )}
+
+          {/* WAITING ON THE BRAND. The controls are gone because there is
+              nothing here for the creator to accept - their own ask is not a
+              term they can agree with themselves. Leaving Accept on screen
+              would offer them the brand's superseded price. */}
+          {counter?.lastBy === 'creator' && (
+            <div className="offer-m__counter">
+              <div className="offer-m__counterhead">
+                <div>
+                  <span className="offer-m__label">Their offer</span>
+                  <div className="offer-m__counterasked">
+                    {counter.theirPaise !== null ? inr(counter.theirPaise) : '\u2014'}
+                  </div>
+                </div>
+                <span className="offer-m__counterpill offer-m__counterpill--sent">
+                  Sent &middot; waiting for {brandName}
+                </span>
+              </div>
+            </div>
+          )}
 
           {(deliverBy || paymentIn) && (
             <div className="offer-m__split">
@@ -194,8 +576,31 @@ export default function CreatorOfferMobile({
             </div>
           ) : null}
 
-          <div className="offer-m__decision">{decision}</div>
+          {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
         </section>
+        )}
+
+        {/* SUBMIT DELIVERABLES. DeliverableItems is passed through whole: it
+            owns uploads, versions, per-item status and the review handoff, and
+            a phone-shaped copy of that logic is the last thing this needs. */}
+        {stage === 'agreed' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Submit deliverables</h2>
+              <span className="offer-m__submitcount">{submitDone} of {submitTotal}</span>
+            </div>
+            {/* One segment per deliverable, filled as each is submitted. The
+                export has this under the heading and I had missed it. */}
+            {submitTotal > 0 && (
+              <div className="offer-m__submitbar" aria-hidden="true">
+                {Array.from({ length: submitTotal }, (_, i) => (
+                  <span key={i} className={i < submitDone ? 'is-on' : undefined} />
+                ))}
+              </div>
+            )}
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </section>
+        )}
 
         {/* Brief */}
         {(briefPitch || attachments.length > 0 || requiresShipment) && (
@@ -228,59 +633,89 @@ export default function CreatorOfferMobile({
                 <p className="offer-m__prose">The brand will ship product to you for this deal.</p>
               </>
             )}
+            {(stage === 'submitted' || stage === 'approved' || stage === 'invoiced' || stage === 'complete') && (
+              <div className="offer-m__briefterms">
+                <div className="offer-m__agreedstamp">
+                  <span className="offer-m__agreeddot" aria-hidden="true" />
+                  <span className="offer-m__label">{agreedAt ? `Agreed on ${agreedAt}` : 'Agreed'}</span>
+                </div>
+                <div className="offer-m__agreedmoney">
+                  <div>
+                    <div className="offer-m__label">You receive</div>
+                    <div className="offer-m__agreedamount">{receivesPaise !== null ? inr(receivesPaise) : '\u2014'}</div>
+                  </div>
+                  {paymentTerms && <span className="offer-m__agreedterms-note">{paymentTerms}</span>}
+                </div>
+                {agreedTermRows}
+              </div>
+            )}
           </details>
         )}
 
         {/* Terms */}
         <details className="offer-m__card offer-m__fold">
           <summary className="offer-m__foldhead">
-            Full terms
+            Full terms &amp; guidelines
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
           </summary>
-          <dl className="offer-m__terms-list">
-            {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
-            {feePaise !== null && feePaise > 0 && (
-              <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
+          {/* The export labels the list inside the fold as well as the fold. */}
+          <div className="offer-m__label" style={{ marginTop: 14 }}>Full terms</div>
+          {/* Flex rows, matching the agreed block's structure and the export's.
+              A dl needed the value pulled onto its label's line with a negative
+              margin, which assumed every row was one line high - it is not,
+              once usage rights or revision terms wrap. */}
+          <div className="offer-m__terms-list">
+            {totalPaise !== null && (
+              <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
             )}
-            {receivesPaise !== null && <><dt>You receive</dt><dd>{inr(receivesPaise)}</dd></>}
-            {goLiveDate && <><dt>Go live</dt><dd>{goLiveDate}</dd></>}
+            {feePaise !== null && feePaise > 0 && (
+              <div className="offer-m__termrow">
+                <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
+                <span>&minus;{inr(feePaise)}</span>
+              </div>
+            )}
+            {receivesPaise !== null && (
+              <div className="offer-m__termrow"><span>You receive</span><span>{inr(receivesPaise)}</span></div>
+            )}
+            {/* WHEN THEY GET PAID, not when the post runs. This row was the
+                go-live date; a creator reading an offer needs the payment
+                window more than the publish date, and the publish date is
+                already the thing they are agreeing to deliver. */}
+            {paymentIn && (
+              <div className="offer-m__termrow"><span>Payment in</span><span>{paymentIn}</span></div>
+            )}
             {/* Legacy: only on deals agreed before 0501. */}
-            {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
+            {usageRights && (
+              <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
+            )}
             {revisionLimit !== null && (
-              <>
-                <dt>Revisions</dt>
-                <dd>
+              <div className="offer-m__termrow">
+                <span>Revisions</span>
+                <span>
                   {revisionLimit} round{revisionLimit === 1 ? '' : 's'}
                   {extraRevisionPaise ? `, then ${inr(extraRevisionPaise)}` : ''}
-                </dd>
-              </>
+                </span>
+              </div>
             )}
-            {paymentTerms && <><dt>Payment</dt><dd>{paymentTerms}</dd></>}
-          </dl>
-        </details>
-
-        {/* Guidelines */}
-        {(guidelines.length > 0 || avoid.length > 0) && (
-          <details className="offer-m__card offer-m__fold">
-            <summary className="offer-m__foldhead">
-              Creative guidelines
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-            </summary>
+          </div>
             {guidelines.length > 0 && (
-              <ol className="offer-m__guides">
-                {guidelines.map((g, i) => <li key={i}><span>{i + 1}</span>{g}</li>)}
-              </ol>
+              <>
+                <div className="offer-m__label" style={{ marginTop: 18 }}>Creative guidelines</div>
+                <ol className="offer-m__guides">
+                  {guidelines.map((g, i) => <li key={i}><span>{i + 1}</span>{g}</li>)}
+                </ol>
+              </>
             )}
             {avoid.length > 0 && (
               <>
-                <div className="offer-m__label" style={{ marginTop: 16 }}>Please avoid</div>
+                <div className="offer-m__label" style={{ marginTop: 18 }}>Please avoid</div>
                 <ul className="offer-m__avoid">
                   {avoid.map((a, i) => <li key={i}>{a}</li>)}
                 </ul>
               </>
             )}
-          </details>
-        )}
+        </details>
+
       </div>
     </div>
   )

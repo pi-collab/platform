@@ -17,7 +17,24 @@ interface Props {
   timelineDate?: string | null
 }
 
-export default function PostedCard({ dealId, items, timelineDate }: Props) {
+export default function PostedCard({ dealId, items, timelineDate, compact = false }: Props & { compact?: boolean }) {
+  /* COMPACT: the export gives each deliverable its own card - label, "1 of 2",
+     a URL field and a Mark as posted button - with no heading or notice above
+     them. The desktop heading and the "ready for your feed" panel are not in
+     it, so compact returns just the cards. Logic is untouched: the same
+     ItemPostRow, the same markItemPosted. */
+  if (compact && items && items.length > 0) {
+    return (
+      <>
+        {items.map((item, i) => (
+          <section className="offer-m__card offer-m__postcard" key={item.id}>
+            <ItemPostRow dealId={dealId} item={item} compact index={i + 1} total={items.length} />
+          </section>
+        ))}
+      </>
+    )
+  }
+
   // No structured items — legacy single-URL mode
   if (!items || items.length === 0) {
     return <SinglePostCard dealId={dealId} timelineDate={timelineDate} />
@@ -89,7 +106,7 @@ const PLATFORM_PLACEHOLDERS: Record<string, string> = {
   facebook: 'https://facebook.com/…',
 }
 
-function ItemPostRow({ dealId, item }: { dealId: string; item: PostedItem }) {
+function ItemPostRow({ dealId, item, compact = false, index, total }: { dealId: string; item: PostedItem; compact?: boolean; index?: number; total?: number }) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,6 +125,71 @@ function ItemPostRow({ dealId, item }: { dealId: string; item: PostedItem }) {
       setPosted(true)
       setPostedUrl(url.trim())
     }
+  }
+
+  if (compact) {
+    const ready = url.trim().length > 0
+    return (
+      <>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', margin: 0 }}>{item.label}</h3>
+          {index != null && total != null && (
+            <span className="offer-m__label">{index} of {total}</span>
+          )}
+        </div>
+        {posted && postedUrl ? (
+          <a
+            href={postedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'block', marginTop: 7, fontSize: 12, color: 'var(--ink-soft)', wordBreak: 'break-all' }}
+          >
+            {postedUrl.length > 60 ? postedUrl.slice(0, 60) + '\u2026' : postedUrl}
+          </a>
+        ) : (
+          <input
+            style={{
+              marginTop: 7, width: '100%', boxSizing: 'border-box', height: 46,
+              borderRadius: 12, border: '1px solid var(--border-hairline, #EAEAE3)',
+              background: 'var(--card)', padding: '0 16px',
+              fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)', outline: 'none',
+            }}
+            placeholder={PLATFORM_PLACEHOLDERS[item.platform?.toLowerCase() ?? ''] ?? 'https://\u2026'}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            disabled={loading}
+          />
+        )}
+        {/* Dimmed and inert until a URL is entered, exactly as the export's own
+            script does it - not hidden, so the next step is always visible. */}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={posted || loading || !ready}
+          /* Three states, and the middle one is the point: the button only
+             becomes actionable once there is a URL to submit, so it should
+             LOOK actionable then. The export leaves it card-coloured and only
+             dims it, which makes "enabled" and "disabled" the same button at
+             two opacities. Filled ink with white text is unmistakably the
+             thing to press. */
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '100%', height: 50, marginTop: 12, borderRadius: 15,
+            background: posted ? 'var(--neon)' : ready ? 'var(--ink)' : 'var(--card)',
+            color: posted ? 'var(--ink)' : ready ? '#fff' : 'var(--ink)',
+            border: ready && !posted ? '1px solid var(--ink)' : '1px solid var(--border-hairline, #EAEAE3)',
+            fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14,
+            opacity: posted || ready ? 1 : 0.4,
+            pointerEvents: posted || ready ? 'auto' : 'none',
+            cursor: posted ? 'default' : 'pointer',
+            transition: 'background .16s ease, color .16s ease, opacity .16s ease',
+          }}
+        >
+          {loading ? 'Saving\u2026' : posted ? 'Posted \u2713' : 'Mark as posted'}
+        </button>
+        {error && <div style={{ fontSize: 11.5, color: 'var(--danger, #dc2626)', marginTop: 8 }}>{error}</div>}
+      </>
+    )
   }
 
   if (posted && postedUrl) {

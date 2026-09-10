@@ -1244,6 +1244,188 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 
    No focus ring of its own: .fld-box:focus-within already lights the whole
    field, the same way .onboard-input relies on it. */
+/* Negotiating state on the mobile offer screen — the two numbers on the table.
+   Values taken from "Creator Deal Detail - Negotiating Mobile": the amount is
+   the display face at 32px, "On the table" is a pill rather than a second
+   heading, and the creator's own ask sits under both as a quiet line. It is
+   quiet on purpose: their ask is not a term anyone can accept yet, and giving
+   it the same weight as the brand's number would read as two live offers. */
+.offer-m__counter {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+}
+.offer-m__counterhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.offer-m__counterval {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+  color: var(--ink);
+}
+.offer-m__counterpill {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: #F5F7FA;
+  border-radius: 999px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.offer-m__counterasked {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+/* ── Agreed card ──────────────────────────────────────────────────────────
+   Values read off "Creator Deal Detail - Agreed Mobile" element by element,
+   after a first pass that matched its text but not its structure. */
+.offer-m__agreedcard { padding: 20px; }
+.offer-m__agreedsum { display: block; cursor: pointer; list-style: none; }
+.offer-m__agreedsum::-webkit-details-marker { display: none; }
+
+.offer-m__agreedtop {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.offer-m__agreedstamp { display: inline-flex; align-items: center; gap: 7px; }
+/* Flat green dot here — the header's dot carries the halo, this one does not. */
+.offer-m__agreeddot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--neon-deep); flex-shrink: 0;
+}
+.offer-m__agreedstamp .offer-m__label { color: var(--ink-soft); }
+.offer-m__agreedchev { display: flex; transition: transform .2s ease; }
+.offer-m__agreedcard[open] .offer-m__agreedchev { transform: rotate(180deg); }
+
+/* Amount and payment window share a baseline rather than stacking. */
+.offer-m__agreedmoney {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-top: 14px;
+}
+/* 20px, not the offer screen's headline size: here it is a reference figure. */
+.offer-m__agreedamount {
+  font-family: var(--font-display); font-size: 20px; font-weight: 800;
+  letter-spacing: -0.02em; line-height: 1; margin-top: 6px; color: var(--ink);
+}
+.offer-m__agreedterms-note { font-size: 11px; color: var(--ink-soft); }
+
+.offer-m__termrows { margin-top: 16px; padding-top: 6px; }
+.offer-m__termrow {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; padding: 10px 0; border-top: 1px solid var(--border-hairline);
+}
+.offer-m__termrow > span:first-child { font-size: 12px; color: var(--ink-soft); }
+.offer-m__termrow > span:last-child { font-size: 12.5px; color: var(--ink-soft); }
+
+/* Green once the deal is agreed; the amber halo belongs to a pending decision. */
+.offer-m__dot--agreed {
+  background: var(--neon-deep);
+  box-shadow: 0 0 0 3px rgba(210,240,74,.28);
+}
+
+/* Where the deal stands after submission: icon, title, one line of plain
+   explanation. Not a link - the export's href points at another design file. */
+.offer-m__notice { padding: 20px; display: flex; align-items: center; gap: 12px; }
+.offer-m__noticeicon {
+  width: 36px; height: 36px; border-radius: 50%; flex: none;
+  background: var(--card); border: 1px solid var(--frost-edge);
+  display: flex; align-items: center; justify-content: center;
+}
+.offer-m__noticetitle { font-weight: 700; font-size: 14px; color: var(--ink); }
+.offer-m__noticebody { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+
+/* The agreed figures folded into Brief & attachments on submitted and
+   approved. A section inside the fold, not a card: it sits under the
+   attachments with the same rule above it the other sections use. */
+.offer-m__briefterms {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-hairline);
+}
+.offer-m__briefterms .offer-m__agreedmoney { margin-top: 12px; }
+.offer-m__briefterms .offer-m__termrows { margin-top: 12px; padding-top: 0; }
+
+/* Approved: one card per deliverable to post, then the invoice state. Both
+   sit above the folds because they are what is left to do. */
+.offer-m__postcard { padding: 20px; }
+.offer-m__invoice { padding: 20px; }
+.offer-m__invoicebody {
+  font-size: 12px; line-height: 1.5; color: var(--ink-soft); margin: 6px 0 12px;
+}
+.offer-m__invoicestate { display: flex; align-items: center; gap: 8px; }
+.offer-m__invoicedot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--warning); flex: none;
+}
+.offer-m__invoicedot--done { background: var(--neon-deep); }
+.offer-m__invoicestate .offer-m__label { color: var(--ink-soft); }
+
+/* Invoice card. Rows reuse termrow; the total row is the one figure that
+   carries weight, at the export's 19px display face. */
+.offer-m__invrows {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+}
+.offer-m__invrows .offer-m__termrow:first-child { border-top: none; }
+.offer-m__termrow--total > span:first-child {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.offer-m__termrow--total b {
+  font-family: var(--font-display); font-size: 19px; font-weight: 800;
+  letter-spacing: -0.02em; color: var(--ink);
+}
+.offer-m__invnote { margin-top: 12px; font-size: 11px; color: var(--ink-soft); }
+.offer-m__invdue { color: var(--danger, #dc2626); text-transform: none; letter-spacing: 0; font-weight: 600; }
+/* The one action on the card, so it is filled rather than outlined. */
+.offer-m__invbtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 48px; margin-top: 16px; border-radius: 14px;
+  background: var(--ink); color: #fff; border: none;
+  font-family: var(--font-ui); font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.offer-m__invbtn:disabled { opacity: .5; cursor: not-allowed; }
+.offer-m__inverr { margin-top: 10px; font-size: 11.5px; color: var(--danger, #dc2626); }
+
+/* The submitted work, folded. Same surface as the other accordions. */
+.offer-m__delivfold { padding: 20px; }
+
+/* ── Submit deliverables ──────────────────────────────────────────────────
+   Its own surface, never an accordion: the one thing here that must not be
+   hidden. DeliverableItems supplies the rows. */
+.offer-m__submit { padding: 20px; }
+.offer-m__submithead {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+/* A 10px uppercase eyebrow, per the export — not a display heading. */
+.offer-m__submittitle {
+  font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink); margin: 0;
+}
+.offer-m__submitcount { font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
+.offer-m__submitbar { display: flex; gap: 3px; margin-top: 10px; }
+.offer-m__submitbar span {
+  flex: 1; height: 4px; border-radius: 4px; background: var(--border-hairline);
+}
+.offer-m__submitbar span.is-on { background: var(--neon-deep); }
+.offer-m__submitbody {
+  margin-top: 18px; padding-top: 16px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+/* Waiting on the brand. Warm rather than neutral: nothing is wrong, the
+   creator has done their part and the ball is not in their court. */
+.offer-m__counterpill--sent {
+  color: #8A6A1F;
+  background: rgba(216,154,46,.14);
+}
+
 .onboard-dial {
   flex: 0 0 auto;
   appearance: none;
@@ -4519,11 +4701,33 @@ button.signup-form__cross-link {
   }
   .offer-desktop { display: none !important; }
 
+  /* TOP CLEARANCE. The export draws this inside a 390x844 iOS frame and offsets
+     everything by 58px for the status bar: its scroll wrapper is padded
+     58px 16px 0 and the header is sticky at top:58px, with an opaque scrim
+     above. This had margin:10px and top:0, which allowed for none of that, so
+     on a real notched phone the card sat under the status bar and its top edge
+     was cut.
+
+     58px is the design's frame, not a real device measurement, so the browser's
+     own answer is used instead: env(safe-area-inset-top), floored at 10px for
+     devices that report none. Same expression as .ithread-m__head, which had
+     already solved this once.
+
+     The sticky offset must MATCH the top gap. Sticking at 0 while sitting 10px
+     down means the card jumps upward by that gap the moment it sticks. */
   .offer-m__head {
-    position: sticky; top: 0; z-index: 6;
-    background: #fff; margin: 10px 16px 0; border-radius: 18px;
+    position: sticky; top: max(10px, env(safe-area-inset-top)); z-index: 6;
+    background: #fff; border-radius: 18px;
+    margin: max(10px, env(safe-area-inset-top)) 16px 0;
     padding: 18px 20px;
     box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
+  }
+  /* The scrim the export paints above the sticky card, so body content scrolls
+     UNDER the gap rather than showing through it. */
+  .offer-m::before {
+    content: ''; position: fixed; top: 0; left: 0; right: 0;
+    height: max(10px, env(safe-area-inset-top));
+    background: #F5F7FA; z-index: 7; pointer-events: none;
   }
   .offer-m__headrow { display: flex; align-items: center; gap: 10px; }
   .offer-m__back { display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #12151C; }
@@ -4572,11 +4776,52 @@ button.signup-form__cross-link {
     flex: 1; height: 4px; border-radius: 4px; background: rgba(60,80,30,.12);
   }
   .offer-m__progress span.is-on { background: #D2F04A; }
+  /* Revision: the reached segment turns amber. This sat outside the media
+     query and therefore EARLIER in the file, and at equal specificity to
+     .is-on the later rule won - so the revision segment rendered green. */
+  .offer-m__progress span.is-warn { background: var(--warning); }
 
   .offer-m__card {
     background: #fff; border-radius: 18px; padding: 20px;
     box-shadow: 0 1px 2px rgba(24,28,36,.04), 0 10px 18px -12px rgba(24,28,36,.16);
   }
+
+  /* These MUST sit after .offer-m__card and inside this query. They were above
+     it in the file, and `.offer-m__done { padding: 0 }` lost to
+     `.offer-m__card { padding: 20px }` on source order at equal specificity -
+     so the hero kept 20px all round, the footer sat inset from the card edges,
+     and the divider between the two links could not reach top or bottom. */
+  /* ── Complete ─────────────────────────────────────────────────────────────
+     The one screen that reports rather than asks. Padding on the inner block so
+     the footer links can sit flush against the card's edges. */
+  .offer-m__done { padding: 0; overflow: hidden; }
+  .offer-m__donebody { padding: 28px 22px 24px; }
+  .offer-m__donetop { display: flex; align-items: center; justify-content: space-between; }
+  .offer-m__donestamp { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-faint); }
+  .offer-m__donedot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--neon-deep);
+    box-shadow: 0 0 0 3px rgba(210,240,74,.28);
+  }
+  .offer-m__donedate { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+  .offer-m__doneline {
+    font-family: var(--font-display); font-size: 34px; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.05; margin-top: 14px; color: var(--ink);
+  }
+  /* The brand name in the serif italic the wordmark uses elsewhere. */
+  .offer-m__donebrandword { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+  .offer-m__doneamount {
+    font-family: var(--font-display); font-size: 22px; font-weight: 700;
+    letter-spacing: -0.02em; margin-top: 10px; color: var(--ink-soft);
+  }
+  .offer-m__donecap { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+  .offer-m__donelinks { display: flex; border-top: 1px solid var(--border-hairline); }
+  .offer-m__donelink {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+    height: 50px; font-weight: 700; font-size: 12.5px; color: var(--ink);
+    text-decoration: none;
+  }
+  .offer-m__donelink + .offer-m__donelink { border-left: 1px solid var(--border-hairline); }
+
   .offer-m__label {
     font-size: 10px; font-weight: 600; letter-spacing: .12em;
     text-transform: uppercase; color: #878D99;
@@ -4625,10 +4870,16 @@ button.signup-form__cross-link {
   .offer-m__decision { margin-top: 16px; }
 
   /* Folds */
+/* Every fold heading is the same 10px uppercase eyebrow the export uses -
+     the one DELIVERABLES already had, because its summary wraps an
+     .offer-m__submittitle and so escaped this rule. Brief and Full terms took
+     the 15px display face below and read as a different order of heading on
+     the same screen. */
   .offer-m__fold > summary {
     display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer; list-style: none;
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    gap: 10px; cursor: pointer; list-style: none;
+    font-family: var(--font-ui); font-size: 10px; font-weight: 600;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
   }
   .offer-m__fold > summary::-webkit-details-marker { display: none; }
   .offer-m__fold[open] > summary svg { transform: rotate(180deg); }
@@ -4642,11 +4893,16 @@ button.signup-form__cross-link {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  .offer-m__terms-list {
-    display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 14px 0 0;
+  /* The export draws each term as a flex row with a hairline above it, the
+     first row's border removed. The VALUE is bold here at 13/700 while the
+     agreed block's rows are a quiet 12.5 ink-soft - that contrast is
+     deliberate in the design, not an inconsistency. Full terms is the
+     reference you open on purpose; the agreed block is a reminder. */
+  .offer-m__terms-list { display: block; margin: 4px 0 0; }
+  .offer-m__terms-list .offer-m__termrow:first-child { border-top: none; }
+  .offer-m__terms-list .offer-m__termrow > span:last-child {
+    font-size: 13px; font-weight: 700; color: var(--ink);
   }
-  .offer-m__terms-list dt { font-size: 12px; color: #878D99; }
-  .offer-m__terms-list dd { margin: 0; font-size: 12.5px; font-weight: 600; text-align: right; }
 
   .offer-m__guides { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .offer-m__guides li { display: flex; gap: 10px; font-size: 12.5px; line-height: 1.5; color: #565C68; }

@@ -20,6 +20,7 @@ import PaymentBreakup from './PaymentBreakup'
 import CollapsibleSection from './CollapsibleSection'
 import BrandReviewCard from './BrandReviewCard'
 import HeldNotice from '@/components/HeldNotice'
+import NegotiationCard from './NegotiationCard'
 
 function formatRupees(paise: number): string {
   const rupees = paise / 100
@@ -157,6 +158,26 @@ export default async function DealPage({ params, searchParams }: {
   /* Deliverable rows in the shape the shared breakdown reads. Cast because this
      page's item type is inferred from its select string, which now carries the
      add-on columns. */
+  /* THE CREATOR'S COUNTER, and whether it is still the brand's to answer.
+     NegotiationCard has existed since before the em-dash sweep and was never
+     rendered by anything - so acceptCounterOffer, its only caller, was
+     unreachable and a brand could not accept a counter through the UI at all.
+     The counter reached them solely as a chat message posted alongside the
+     event. That is what this mounts. */
+  const creatorCounterEvt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.counter_offer').at(-1)
+  const brandCounterEvt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.brand_counter').at(-1)
+
+  // Answered already if the brand countered back after it.
+  const counterAwaitingBrand =
+    deal.status === 'negotiating' &&
+    !!creatorCounterEvt &&
+    (brandCounterEvt?.created_at ?? '') < (creatorCounterEvt.created_at ?? '')
+
+  const creatorCounterDetail = creatorCounterEvt?.detail as
+    { counter_items: { id: string; label: string; price_paise: number }[]; counter_total_paise: number; note?: string | null } | undefined
+
   const itemsForBreakdown = (items ?? []) as unknown as BreakdownItem[]
 
   /* fee_basis is not in the generated types yet, same cast pattern the brief
@@ -221,6 +242,20 @@ export default async function DealPage({ params, searchParams }: {
             heldCount={1}
             status={brand.brandStatus}
             rejectionReason={brand.rejectionReason}
+          />
+        )}
+
+        {/* The counter the brand has to answer, above the hero: it is the only
+            thing on this page that needs a decision. */}
+        {counterAwaitingBrand && creatorCounterDetail && (
+          <NegotiationCard
+            dealId={deal.id}
+            creatorFirstName={firstName}
+            brandOfferPaise={deal.price_paise ?? 0}
+            brandOfferDate={(brandCounterEvt?.created_at as string | undefined) ?? deal.created_at}
+            counterEvent={creatorCounterDetail}
+            counterDate={creatorCounterEvt!.created_at}
+            items={(items ?? []).map((i) => ({ id: i.id, label: i.label, price_paise: i.price_paise ?? 0 }))}
           />
         )}
 
@@ -313,7 +348,9 @@ export default async function DealPage({ params, searchParams }: {
               {statusLabel}
             </span>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-              {deal.status === 'negotiating' && `Awaiting ${firstName}'s response`}
+              {deal.status === 'negotiating' && (counterAwaitingBrand
+                ? `${firstName} countered, your response is needed`
+                : `Awaiting ${firstName}'s response`)}
               {deal.status === 'agreed' && 'Terms agreed, awaiting deliverable'}
               {deal.status === 'delivered' && 'Deliverable submitted, your review is needed'}
               {deal.status === 'revision' && `Revision requested, ${firstName} is working on changes`}

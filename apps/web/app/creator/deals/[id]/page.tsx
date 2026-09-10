@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import MobileInvoiceCard from './MobileInvoiceCard'
+import { formatDueStatus } from '@/lib/invoice'
 import { verifyCreator } from '@/lib/creator-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -167,6 +169,47 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const brandCounterDetail = brandCounterEvent?.detail as { counter_items: { id: string; label: string; price_paise: number }[]; counter_total_paise: number; note?: string | null } | undefined
   const hasBrandCounter = isNegotiating && !!brandCounterDetail
 
+  /* NEGOTIATING vs OFFER RECEIVED. Both are status 'negotiating' — what
+     separates them is whether anyone has countered yet. One counter event and
+     the screen is a negotiation, so it says so and shows the two numbers on
+     the table instead of only the brand's.
+
+     "Their counter" is the brand's CURRENT number: their own counter if they
+     have made one, otherwise the price still standing on the deal. A creator's
+     counter deliberately does not move deal.price_paise — the brand accepting
+     it is what does that (deals/[id]/deal-actions.ts) — so reading the price
+     here would show the creator their own ask as the brand's offer. */
+  const creatorCounterDetail = (events ?? [])
+    .filter((e) => e.event_type === 'deal.counter_offer')
+    .at(-1)?.detail as { counter_total_paise?: number } | undefined
+
+  const lastNegotiationAt = negotiationEvents.at(-1)?.created_at ?? null
+
+  /* WHO MOVED LAST decides which of the two negotiating screens the creator
+     sees, and it has to come from the events. deals.last_offer_by looks like
+     the field for this and is not: createDeal writes 'brand' and neither
+     counter action ever updates it, so on GD-1068 - a deal the creator
+     countered - it still reads 'brand'. Trusting it would show a creator the
+     respond-now screen for their own ask.
+
+     Compare the newest counter from each side instead. That is a fact neither
+     action can forget to write, because writing the event IS the counter. */
+  const lastCreatorCounterAt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.counter_offer').at(-1)?.created_at ?? null
+  const lastBrandCounterAt = (events ?? [])
+    .filter((e) => e.event_type === 'deal.brand_counter').at(-1)?.created_at ?? null
+
+  const counterState = isNegotiating && negotiationEvents.length > 0
+    ? {
+        lastBy: (lastBrandCounterAt ?? '') > (lastCreatorCounterAt ?? '')
+          ? ('brand' as const)
+          : ('creator' as const),
+        theirPaise: brandCounterDetail?.counter_total_paise ?? deal.price_paise ?? null,
+        youAskedPaise: creatorCounterDetail?.counter_total_paise ?? null,
+        at: lastNegotiationAt ? formatDate(lastNegotiationAt) : null,
+      }
+    : null
+
   // Brief data
   const pitch = campaignBrief?.pitch ?? (deal as any).brief_pitch ?? null
   const guidelines = campaignBrief?.guidelines ?? (deal as any).brief_guidelines ?? null
@@ -188,17 +231,96 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     })
   }
 
-  /* The offer state has its own phone screen. Every other state keeps the
-     existing page on mobile, because only this one was designed. */
-  const offerUnread = isNegotiating ? await unreadNotificationCount(supabase, profileId) : 0
+  /* The offer and AGREED states have phone screens. Every other state keeps
+     the existing page on mobile, because only these were designed. */
+  const isAgreedMobile = deal.status === 'agreed'
+  /* 'delivered' is what the export calls Submitted: the creator has sent the
+     work and the brand is reviewing. 'revision' is a different screen and is
+     deliberately not folded in here. */
+  const isSubmittedMobile = deal.status === 'delivered'
+  const isRevisionMobile = deal.status === 'revision'
+  /* Approved but not yet posted. Once everything is posted the deal moves on to
+     paid/complete, which have no phone design yet. */
+  const isApprovedMobile = deal.status === 'approved'
+  /* Paid or complete. The deal is closed and the screen becomes a record. */
+  const isCompleteMobile = deal.status === 'paid' || deal.status === 'complete'
+  /* Issued means the brand has been asked; a draft has not been sent and is no
+     different from having none. Mirrors the deals list. */
+  const invoiceIssued = !!invoice && (invoice.status === 'issued' || invoice.status === 'accepted')
+  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile
+  const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
     typeof v === 'string'
       ? v.split('\n').map((l) => l.replace(/^\s*[-•\d.)]+\s*/, '').trim()).filter(Boolean)
       : []
   return (
     <>
-    {isNegotiating && (
+    {showMobileScreen && (
       <CreatorOfferMobile
+        stage={isCompleteMobile ? 'complete'
+          : isApprovedMobile && invoiceIssued ? 'invoiced'
+          : isApprovedMobile ? 'approved' : isRevisionMobile ? 'revision' : isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
+        approvedAt={(() => {
+          const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'approved' || x.detail?.new_status === 'approved')).pop()
+          return e ? formatDate(e.created_at) : (deal.agreed_at ? null : null)
+        })()}
+        allPosted={!!items && items.length > 0 && items.every((i) => !!(i as Record<string, unknown>).posted_url)}
+        paidAt={invoice?.paid_at ? formatDate(invoice.paid_at) : (deal.completed_at ? formatDate(deal.completed_at) : null)}
+        analyticsHref={`/creator/deals/${deal.id}/analytics`}
+        invoiceAccepted={invoice?.status === 'accepted'}
+        invoiceDueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
+        invoiceNode={(isApprovedMobile || isCompleteMobile) ? (
+          <MobileInvoiceCard
+            dealId={deal.id}
+            dealRef={deal.deal_ref}
+            hasDraft={!!invoice}
+            issued={invoiceIssued}
+            accepted={invoice?.status === 'accepted'}
+            paid={invoice?.status === 'paid' || isCompleteMobile}
+            paidAt={invoice?.paid_at
+              ? `${formatDate(invoice.paid_at)}, ${new Date(invoice.paid_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+              : null}
+            acceptedAt={invoice?.accepted_at ? formatDate(invoice.accepted_at) : null}
+            issuedAt={invoice?.issued_at ? formatDate(invoice.issued_at) : null}
+            dueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
+            dueUrgent={formatDueStatus(invoice?.due_date ?? null)?.urgent ?? false}
+            basePaise={invoice ? invoice.base_paise : deal.price_paise}
+            feePaise={invoice ? invoice.fee_paise : (fee?.fee_paise ?? null)}
+            feePercent={invoice ? invoice.fee_percent : (deal.fee_percent ?? null)}
+            receivesPaise={invoice ? invoice.creator_receives_paise : creatorReceives}
+          />
+        ) : null}
+        postNode={isApprovedMobile && items && items.length > 0 ? (
+          <PostedCard
+            dealId={deal.id}
+            items={items.map((i) => ({
+              id: i.id,
+              label: i.label,
+              platform: i.platform,
+              posted_url: (i as Record<string, unknown>).posted_url as string | null,
+              posted_at: (i as Record<string, unknown>).posted_at as string | null,
+            }))}
+            timelineDate={deal.timeline_date}
+            compact
+          />
+        ) : null}
+        reviewedAt={(() => {
+          const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'revision' || x.detail?.new_status === 'revision')).pop()
+          return e ? formatDate(e.created_at) : null
+        })()}
+        submittedAt={(() => {
+          const ts = (items ?? []).map((i) => i.submitted_at).filter(Boolean).sort().at(-1)
+          return ts ? formatDate(ts as string) : null
+        })()}
+        agreedAt={deal.agreed_at ? formatDate(deal.agreed_at) : null}
+        rightsConfirmedAt={deal.rights_confirmed_at
+          ? `${formatDate(deal.rights_confirmed_at)}, ${new Date(deal.rights_confirmed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+          : null}
+        submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
+        submitTotal={items ? items.length : 0}
+        submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile) && items && items.length > 0 ? (
+          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
+        ) : null}
         brandName={brand}
         dealTitle={deal.title ?? 'Untitled deal'}
         receivesPaise={creatorReceives}
@@ -237,8 +359,9 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           // Signed, and already fetched above for the desktop list.
           url: attachmentUrls[a.storage_path] ?? null,
         }))}
+        messageHref={`/creator/inbox?deal=${deal.id}&from=deal`}
+        counter={counterState}
         usageRights={deal.usage_rights ?? null}
-        goLiveDate={goLiveDateStr ? formatDate(goLiveDateStr) : null}
         revisionLimit={deal.revision_limit ?? null}
         extraRevisionPaise={deal.price_per_extra_revision_paise ?? null}
         requiresShipment={Boolean(deal.requires_shipment)}
@@ -252,7 +375,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         }
       />
     )}
-    <main className={isNegotiating ? 'offer-desktop' : undefined} style={wrapper}>
+    {/* Hidden on mobile for EVERY state that has a phone screen. This said
+        isNegotiating, so when the agreed screen was added the desktop page
+        stopped being hidden for agreed deals and rendered underneath it - the
+        whole page again, below the fold. */}
+    <main className={showMobileScreen ? 'offer-desktop' : undefined} style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
       <style>{`
         .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }

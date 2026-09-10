@@ -40,12 +40,30 @@ export default function DeliverableItems({
   canSubmit,
   dealStatus,
   brandName,
+  hideStatusBanner = false,
+  compact = false,
+  completed = false,
 }: {
   dealId: string
   items: Item[]
   canSubmit: boolean
   dealStatus?: string
   brandName?: string
+  /* The mobile deal screen states the deal's standing in its own header, so
+     this banner would be the same sentence twice on one phone screen. Off by
+     default: desktop has no such header and still needs it. */
+  hideStatusBanner?: boolean
+  /* The phone rendering, per "Creator Deal Detail - Revision Mobile": a status
+     circle, the label, and the status in words - no platform icon, price or
+     handle chip, all of which the mobile card already states elsewhere. Logic
+     is untouched; only the presentation branches, so uploads, signed URLs and
+     version history stay one implementation. */
+  compact?: boolean
+  /* The settled deal. One row per deliverable: icon, label with its filename
+     under it, and VIEW on the right. The export shows "Approved" there, but on
+     a closed deal that word states something the whole screen already says,
+     while the file itself has no way in. */
+  completed?: boolean
 }) {
   const [urls, setUrls] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -181,7 +199,7 @@ export default function DeliverableItems({
   return (
     <div>
       {/* Status banner — shown after submission (not in revision/paid/complete state) */}
-      {isSubmitted && !canSubmit && dealStatus !== 'revision' && dealStatus !== 'paid' && dealStatus !== 'complete' && (
+      {!hideStatusBanner && isSubmitted && !canSubmit && dealStatus !== 'revision' && dealStatus !== 'paid' && dealStatus !== 'complete' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', padding: 22, borderRadius: 16, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, minWidth: 0 }}>
             <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--card)', border: '1px solid var(--sec-mid-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
@@ -213,8 +231,14 @@ export default function DeliverableItems({
       {/* Items list */}
       <div style={{ marginTop: 12 }}>
         {items.map((item, idx) => {
-          const editable = canSubmit && (item.item_status === 'pending' || item.item_status === 'revision')
-          const isSaved = savedItems[item.id] || item.item_status === 'submitted' || item.item_status === 'approved'
+          /* 'submitted' is editable too: the file is attached but not yet sent
+             for review, so swapping it is still the creator's to do. Approved
+             never is. */
+          const editable = canSubmit && item.item_status !== 'approved'
+          /* ?? not ||, so Replace actually works. Replace sets this key to
+             false; with || the item_status check overrode it and the row never
+             went back to the input. */
+          const isSaved = savedItems[item.id] ?? (item.item_status === 'submitted' || item.item_status === 'approved')
           const isLoading = loadingItem === item.id
           const progress = uploadProgress[item.id]
           const mode = getMode(item.id)
@@ -231,27 +255,86 @@ export default function DeliverableItems({
             : 'var(--warning)'
 
           return (
-            <div key={item.id} style={{ display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}>
+            <div
+              key={item.id}
+              style={compact
+                ? { display: 'block', padding: 0, borderBottom: 'none', marginTop: idx > 0 ? 16 : 0 }
+                : { display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}
+            >
+              {compact && completed && (
+                <div style={{ borderRadius: 14, background: '#F5F7FA', padding: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      width: 32, height: 32, borderRadius: 10, flex: 'none', background: 'var(--card)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)' }}>{item.label}</div>
+                      {(item.file_name || item.external_url) && (
+                        <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.file_name || truncateUrl(item.external_url!)}
+                        </div>
+                      )}
+                    </div>
+                    {(item.storage_path || item.external_url) && (
+                      <button
+                        type="button"
+                        onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
+                        disabled={viewingFile === item.id}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5, flex: 'none',
+                          padding: 0, background: 'none', border: 'none',
+                          fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
+                          color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer',
+                        }}
+                      >
+                        {viewingFile === item.id ? 'Loading…' : 'View'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {compact && !completed && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{
+                    width: 20, height: 20, borderRadius: '50%', flex: 'none',
+                    background: statusDot, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {item.item_status === 'approved' ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    ) : item.item_status === 'revision' ? (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" /></svg>
+                    ) : null}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700 }}>{item.label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink-soft)', whiteSpace: 'nowrap' }}>
+                    {statusLabel}
+                  </span>
+                </div>
+              )}
               {/* Icon */}
-              <span style={itemIcon}>
+              {!compact && !completed && <span style={itemIcon}>
                 {item.platform?.toLowerCase().includes('youtube') ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
                 ) : (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 )}
-              </span>
+              </span>}
 
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {!(compact && completed) && <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Title + price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
+                {!compact && <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
                   <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>{item.label}</h4>
                   {item.price_paise != null && item.price_paise > 0 && (
                     <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatINR(item.price_paise)}</span>
                   )}
-                </div>
+                </div>}
 
                 {/* Status chips */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
+                {!compact && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
                   <span style={chipStyle}>
                     {item.platform?.toLowerCase().includes('youtube') ? (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
@@ -264,16 +347,24 @@ export default function DeliverableItems({
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusDot }} />
                     {statusLabel}
                   </span>
-                </div>
+                </div>}
 
                 {/* Revision feedback card */}
                 {item.item_status === 'revision' && item.revision_note && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
-                    <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                  <div style={compact
+                    /* White with a warning edge, per the export - it is the
+                       instruction to act on, not a muted note. */
+                    ? { display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16, borderRadius: 14, marginTop: 12, background: '#fff', border: '1.5px solid var(--warning)' }
+                    : { display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)' }}>
+                    <span style={compact
+                      ? { width: 28, height: 28, borderRadius: '50%', background: 'var(--card)', border: '1.5px solid var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }
+                      : { width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--sec-mid-2, #e5e5dc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                      {compact
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                        : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>}
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 700 }}>{brandName ? `${brandName} requested changes` : 'Changes requested'}</div>
+                      <div style={{ fontSize: compact ? 12.5 : 14.5, fontWeight: 700 }}>{compact ? 'Revision feedback' : (brandName ? `${brandName} requested changes` : 'Changes requested')}</div>
                       <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--ink-soft)', marginTop: 5, whiteSpace: 'pre-wrap' }}>"{item.revision_note}"</div>
                       {item.updated_at && (
                         <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 9 }}>{formatDateTime(item.updated_at)}</div>
@@ -283,7 +374,7 @@ export default function DeliverableItems({
                 )}
 
                 {/* Approved card — only shown during revision state (mixed approved/revision) */}
-                {item.item_status === 'approved' && dealStatus === 'revision' && (
+                {!compact && item.item_status === 'approved' && dealStatus === 'revision' && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 20, borderRadius: 16, marginTop: 14, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)' }}>
                     <span style={{ width: 36, height: 36, borderRadius: 11, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
@@ -301,23 +392,51 @@ export default function DeliverableItems({
                 )}
 
                 {/* Previous submission pill for revision items */}
-                {item.item_status === 'revision' && (item.external_url || item.storage_path) && (
-                  <div style={{
+                {/* THE PREVIOUS SUBMISSION, desktop only. This is the file
+                    that was handed back, kept there as context while the
+                    creator prepares a new one.
+
+                    Not on mobile, for two reasons. It rendered for approved
+                    items as well - I had added that so an approved asset would
+                    show its file - and the saved row below already does that,
+                    so every approved deliverable listed its file TWICE. And a
+                    superseded file next to the current one on a phone reads as
+                    two deliverables rather than two versions of one. The phone
+                    shows the current file only. */}
+                {!compact && item.item_status === 'revision' && (item.external_url || item.storage_path) && (
+                  <div style={compact ? {
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginTop: 10, padding: '11px 13px', borderRadius: 12,
+                    background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                  } : {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
                     padding: '12px 16px', borderRadius: 999,
                     background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
                     marginTop: 14,
                   }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-                      {item.storage_path ? (
+                    {compact && (
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 9, flex: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--sec-2)',
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      </span>
+                    )}
+                    <span style={compact
+                      ? { flex: 1, minWidth: 0, display: 'block', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                      : { display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                      {compact ? null : item.storage_path ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07L11 5" /><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21l1-1" /></svg>
                       )}
-                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
+                      <span style={compact
+                        ? { fontSize: 12, color: 'var(--ink)' }
+                        : { fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', wordBreak: 'break-all' }}>
                         {item.file_name || (item.external_url ? truncateUrl(item.external_url) : '')}
                       </span>
-                      {item.submitted_at && (
+                      {!compact && item.submitted_at && (
                         <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
                       )}
                     </span>
@@ -326,7 +445,9 @@ export default function DeliverableItems({
                       onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
                       disabled={viewingFile === item.id}
                       className="viewlink"
-                      style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                      style={compact
+                        ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                        : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                     >
                       {viewingFile === item.id ? 'Loading…' : 'View file'}
                     </button>
@@ -337,6 +458,74 @@ export default function DeliverableItems({
                 {editable && !isSaved && (
                   <>
                     {/* Segmented toggle */}
+                    {compact ? (
+                      /* ONE field, as the export draws it: paste a link or tap
+                         the clip to attach. The desktop segmented Paste link /
+                         Upload file toggle and the per-item Resubmit button are
+                         both gone - the export has neither, and that per-item
+                         button was the second "Resubmit" on the screen.
+
+                         With no button, the link commits on Enter or on blur.
+                         Same handleSubmitItem either way; only the trigger
+                         differs. */
+                      <div style={{ position: 'relative', marginTop: 10 }}>
+                        <input
+                          type="url"
+                          placeholder="Paste new link or attach a file"
+                          value={urls[item.id] ?? ''}
+                          onChange={(e) => setUrls((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && urls[item.id]?.trim()) {
+                              e.preventDefault()
+                              handleSubmitItem(item.id)
+                            }
+                          }}
+                          onBlur={() => {
+                            const v = urls[item.id]?.trim()
+                            if (v && v !== item.external_url) handleSubmitItem(item.id)
+                          }}
+                          disabled={isLoading}
+                          style={{
+                            width: '100%', boxSizing: 'border-box', height: 46,
+                            borderRadius: 12, border: '1.5px solid var(--sec-ink, #C6D0DD)',
+                            background: 'var(--card)', padding: '0 44px 0 14px',
+                            fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)',
+                            outline: 'none',
+                          }}
+                        />
+                        <input
+                          ref={(el) => { fileInputRefs.current[item.id] = el }}
+                          type="file"
+                          accept={ACCEPTED_TYPES}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleFileUpload(item.id, file)
+                            e.target.value = ''
+                          }}
+                          disabled={isLoading}
+                          style={{ display: 'none' }}
+                        />
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label="Attach a file"
+                          onClick={() => fileInputRefs.current[item.id]?.click()}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRefs.current[item.id]?.click() }}
+                          style={{
+                            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                            width: 34, height: 34, borderRadius: 9,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+                        </span>
+                        {progress != null && (
+                          <div style={{ height: 4, borderRadius: 3, background: 'var(--border-hairline)', overflow: 'hidden', marginTop: 8 }}>
+                            <div style={{ width: `${progress}%`, height: '100%', background: 'var(--neon-deep)', borderRadius: 3, transition: 'width .2s' }} />
+                          </div>
+                        )}
+                      </div>
+                    ) : (<>
                     <div style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 12, background: 'var(--sec-2, #f5f5f0)', border: '1px solid var(--sec-mid-2, #e5e5dc)', width: 'max-content', marginTop: 14 }}>
                       <span
                         onClick={() => setUploadMode((m) => ({ ...m, [item.id]: 'link' }))}
@@ -432,19 +621,39 @@ export default function DeliverableItems({
                         )}
                       </div>
                     )}
+                    </>)}
                   </>
                 )}
 
                 {/* Saved state: show link/file in pill */}
                 {isSaved && (item.external_url || urls[item.id] || item.storage_path) && (
-                  <div style={{
+                  <div style={compact ? {
+                    /* ONE LINE. flexWrap let the actions drop below a long
+                       filename; without it the name truncates instead, which is
+                       what the export draws. */
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    marginTop: 10, padding: '11px 13px', borderRadius: 12,
+                    background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
+                  } : {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap',
                     padding: '12px 16px', borderRadius: 999,
                     background: item.item_status === 'approved' ? 'var(--card)' : 'var(--sec-2, #f5f5f0)',
                     border: item.item_status === 'approved' ? '1px solid var(--border-hairline, #EAEAE3)' : '1px solid var(--sec-mid-2, #e5e5dc)',
                     marginTop: 14,
                   }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                    {compact && (
+                      <span style={{
+                        width: 28, height: 28, borderRadius: 9, flex: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)',
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                      </span>
+                    )}
+                    <span style={compact
+                      /* Truncation lives HERE, on the block-level parent - an
+                         inline child cannot clip itself. */
+                      ? { flex: 1, minWidth: 0, display: 'block', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                      : { display: 'inline-flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                       {item.storage_path ? (
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
                       ) : (
@@ -460,14 +669,16 @@ export default function DeliverableItems({
                         <span style={{ fontSize: 11, color: 'var(--ink-faint)', whiteSpace: 'nowrap' }}>submitted {formatShortDate(item.submitted_at)}</span>
                       )}
                     </span>
-                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', gap: 12, flexShrink: 0, alignItems: 'center' }}>
                       {(item.storage_path || item.external_url) && (
                         <button
                           type="button"
                           onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
                           disabled={viewingFile === item.id}
-                          className="viewlink"
-                          style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                          className={compact ? undefined : 'viewlink'}
+                          style={compact
+                            ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                            : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                         >
                           {viewingFile === item.id ? 'Loading…' : 'View file'}
                         </button>
@@ -476,8 +687,10 @@ export default function DeliverableItems({
                         <button
                           type="button"
                           onClick={() => setSavedItems((s) => ({ ...s, [item.id]: false }))}
-                          className="viewlink"
-                          style={{ padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
+                          className={compact ? undefined : 'viewlink'}
+                          style={compact
+                            ? { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink-soft)', whiteSpace: 'nowrap', cursor: 'pointer' }
+                            : { padding: 0, background: 'none', border: 'none', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer' }}
                         >
                           Replace
                         </button>
@@ -485,7 +698,7 @@ export default function DeliverableItems({
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           )
         })}
@@ -499,22 +712,37 @@ export default function DeliverableItems({
 
       {/* Footer: helper text + submit button */}
       {canSubmit && (
-        <div style={{ padding: '20px 0 0', marginTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 440 }}>
+        <div style={compact
+          /* No border, no row: on the phone the footer IS the button. The
+             wrappers below are what stopped width:100% doing anything - the
+             button was 100% of a content-sized flex child inside a
+             space-between row. */
+          ? { display: 'block' }
+          : { padding: '20px 0 0', marginTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          {!compact && <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, maxWidth: 440 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
             <span style={{ fontSize: 11.5, lineHeight: 1.45, color: allReady ? 'var(--ink)' : 'var(--ink-soft)' }}>
               {allReady
                 ? 'All items are attached, submit when you are ready.'
                 : `${remaining} ${remaining === 1 ? 'item' : 'items'} still ${remaining === 1 ? 'needs' : 'need'} a link or file before you can submit.`}
             </span>
-          </div>
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          </div>}
+          <div style={compact ? { display: 'block' } : { display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               type="button"
-              className="neonbtn"
+              className={compact ? undefined : 'neonbtn'}
               onClick={handleSubmitForReview}
               disabled={submittingAll || !allReady}
-              style={{
+              style={compact ? {
+                /* Full-width dark bar, per the export: on a phone this is the
+                   one action on the screen, not a chip floated in a row. */
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: '100%', height: 52, marginTop: 20, borderRadius: 16,
+                background: 'var(--ink)', border: 'none',
+                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14.5, color: '#fff',
+                opacity: submittingAll || !allReady ? 0.45 : 1,
+                cursor: submittingAll || !allReady ? 'not-allowed' : 'pointer',
+              } : {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9,
                 height: 54, padding: '0 30px', borderRadius: 14,
                 background: 'var(--neon)', border: 'none',
@@ -524,7 +752,8 @@ export default function DeliverableItems({
                 cursor: submittingAll || !allReady ? 'not-allowed' : 'pointer',
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>
+              {/* The export's button carries no icon. */}
+              {!compact && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m21 15-9-9-9 9" /></svg>}
               {submittingAll ? 'Submitting…' : dealStatus === 'revision' ? 'Resubmit for review' : 'Submit for review'}
             </button>
           </div>

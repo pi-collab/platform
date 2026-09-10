@@ -114,6 +114,10 @@ export async function createDeal(input: CreateDealInput) {
   if (!deliverables.trim()) return { error: 'Deliverables are required (select at least one product)' }
   if (!Number.isInteger(price_paise) || price_paise <= 0) return { error: 'Price must be greater than ₹0' }
   if (!Number.isInteger(revision_limit) || revision_limit < 0) return { error: 'Revision limit must be 0 or more' }
+  /* Payment terms are REQUIRED. A server action is directly callable, so the
+     form's check is not the boundary - and an offer that never states when the
+     creator is paid is the kind of gap this platform exists to close. */
+  if (!payment_terms?.trim()) return { error: 'Payment terms are required' }
 
   // SEND GATE — server-side, before the deal exists and long before any
   // notification. A rejected brand gets nothing written at all.

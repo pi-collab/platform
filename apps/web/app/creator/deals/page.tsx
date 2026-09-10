@@ -39,10 +39,57 @@ export default async function CreatorDealsPage() {
     )
   }
 
+  /* WHOSE MOVE IT IS, for the negotiating rows. deals.status says only that a
+     negotiation is open; it cannot say who moved last, and deals.last_offer_by
+     is not an answer either - createDeal writes 'brand' and neither counter
+     action updates it. The counter events are the only record, so read those.
+
+     Scoped to the negotiating deals and skipped entirely when there are none,
+     so a creator whose deals are all settled pays nothing for this. */
+  const negotiatingIds = (deals ?? []).filter((d) => d.status === 'negotiating').map((d) => d.id)
+
+  const awaitingBrand = new Set<string>()
+  if (negotiatingIds.length > 0) {
+    const { data: counterEvents } = await supabase
+      .from('events')
+      .select('deal_id, event_type, created_at')
+      .in('deal_id', negotiatingIds)
+      .in('event_type', ['deal.counter_offer', 'deal.brand_counter'])
+      .order('created_at', { ascending: true })
+
+    // Last writer per deal wins: ascending order means the final entry for a
+    // deal is its most recent counter, whoever made it.
+    const lastBy = new Map<string, string>()
+    for (const e of counterEvents ?? []) lastBy.set(e.deal_id, e.event_type)
+    // Array.from, not for..of over the Map — this project targets below ES2015
+    // iteration (see the same rule for Set elsewhere).
+    for (const [dealId, type] of Array.from(lastBy.entries())) {
+      if (type === 'deal.counter_offer') awaitingBrand.add(dealId)
+    }
+  }
+
+  /* INVOICE STATUS, for the approved-and-posted rows only. Without it the list
+     cannot tell "you still have to invoice" from "you invoiced and are waiting
+     to be paid", and calling the first one awaiting payment says the brand is
+     late for money it has never been asked for. Scoped and skipped when empty,
+     like the counter lookup above. */
+  const postedIds = (deals ?? [])
+    .filter((d) => d.status === 'approved' && d.is_posted)
+    .map((d) => d.id)
+
+  const invoiceStatus = new Map<string, string>()
+  if (postedIds.length > 0) {
+    const { data: invs } = await supabase
+      .from('invoices')
+      .select('deal_id, status')
+      .in('deal_id', postedIds)
+    for (const inv of invs ?? []) invoiceStatus.set(inv.deal_id, inv.status)
+  }
+
   const all = (deals ?? []).map((d) => {
     const rawBrand = d.brands as unknown
     const brand = Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name ?? null
-    return { ...d, brand }
+    return { ...d, brand, awaiting_brand: awaitingBrand.has(d.id), invoice_status: invoiceStatus.get(d.id) ?? null }
   })
 
   // No deals at all. CreatorDealsTable renders a toolbar, column headers and

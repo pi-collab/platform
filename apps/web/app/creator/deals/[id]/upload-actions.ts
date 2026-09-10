@@ -53,7 +53,11 @@ export async function getUploadPath(dealId: string, itemId: string): Promise<Upl
     .maybeSingle()
 
   if (!item) return { status: 'error', message: 'Item not found.' }
-  if (item.item_status !== 'pending' && item.item_status !== 'revision') {
+  /* 'submitted' is allowed so a creator can swap a file they attached but have
+     not sent yet. The deal-level check above already limits this to a deal in
+     agreed or revision - the moment they hit Submit for review the deal becomes
+     'delivered' and that check refuses. 'approved' is never replaceable. */
+  if (item.item_status !== 'pending' && item.item_status !== 'revision' && item.item_status !== 'submitted') {
     return { status: 'error', message: `Cannot submit an item that is "${item.item_status}".` }
   }
 
@@ -111,7 +115,11 @@ export async function submitItemWithUpload(
     .maybeSingle()
 
   if (!item) return { status: 'error', message: 'Item not found.' }
-  if (item.item_status !== 'pending' && item.item_status !== 'revision') {
+  /* 'submitted' is allowed so a creator can swap a file they attached but have
+     not sent yet. The deal-level check above already limits this to a deal in
+     agreed or revision - the moment they hit Submit for review the deal becomes
+     'delivered' and that check refuses. 'approved' is never replaceable. */
+  if (item.item_status !== 'pending' && item.item_status !== 'revision' && item.item_status !== 'submitted') {
     return { status: 'error', message: `Cannot submit an item that is "${item.item_status}".` }
   }
 

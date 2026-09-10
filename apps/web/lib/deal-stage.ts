@@ -21,6 +21,12 @@ export interface Deal {
   price_paise: number | null
   status: string
   is_posted: boolean | null
+  /** Creator has countered and the brand has not answered. Derived from the
+      counter events, since deals.status cannot express whose move it is. */
+  awaiting_brand?: boolean | null
+  /** The deal's invoice status, if it has one. Separates "you still have to
+      invoice" from "you invoiced and are waiting to be paid". */
+  invoice_status?: string | null
   created_at: string
   brand: string | null
 }
@@ -41,6 +47,23 @@ export const STAGE: Record<string, { i: number; label: string; short: string; do
   revision:    { i: 2, label: 'Revision requested', short: 'Revision requested',     dot: '#C89A3C', bg: '#FFF6E4', chipBg: '#FCF6E4', fg: '#8C6417', action: 'Resubmit',     hot: true },
   awaiting:    { i: 3, label: 'Approved \u00B7 post it', short: 'Awaiting post',     dot: '#8FAF1F', bg: '#F4FBDC', chipBg: '#F4FBDC', fg: '#5C6F14', action: 'Upload post',  hot: true },
   posted:      { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
+  /* The creator has countered and it is the BRAND's move. Shown as its own
+     stage because 'negotiating' renders "Offer to review" with a "Review
+     offer" action and hot:true - it puts the deal in Needs you and tells the
+     creator to review an offer they have already answered. Neutral tone and
+     hot:false: nothing is wrong and nothing is theirs to do. */
+  /* POSTED, INVOICE NOT RAISED YET. The creator's move: nothing is owed until
+     they issue it. Calling this "awaiting payment" would say the brand is late
+     for money it has never been asked for. */
+  invoice_due: { i: 4, label: 'Posted \u00B7 invoice due', short: 'Invoice due', dot: '#C89A3C', bg: '#FFF6E4', chipBg: '#FCF6E4', fg: '#8C6417', action: 'Invoice',   hot: true },
+  /* ISSUED, NOT PAID. Now it genuinely is awaiting payment, and the wait is
+     the brand's - so not hot: there is nothing for the creator to do. */
+  awaiting_payment: { i: 4, label: 'Invoiced \u00B7 awaiting payment', short: 'Awaiting payment', dot: '#8B90A0', bg: '#F2F4F7', chipBg: '#EEF1F5', fg: '#5B6070', action: 'View deal', hot: false },
+  /* ACCEPTED, NOT PAID. The brand has agreed the bill, which is further along
+     than merely having received it, so it reads differently and carries the
+     green dot desktop already gives this status. */
+  invoice_accepted: { i: 4, label: 'Accepted \u00B7 awaiting payment', short: 'Accepted', dot: '#8FAF1F', bg: '#F4FBDC', chipBg: '#F4FBDC', fg: '#5C6F14', action: 'View deal', hot: false },
+  countered:   { i: 0, label: 'Countered \u00B7 with brand', short: 'Waiting on brand', dot: '#8B90A0', bg: '#F2F4F7', chipBg: '#EEF1F5', fg: '#5B6070', action: 'View deal',   hot: false },
   declined:    { i: -1, label: 'Declined', short: 'Declined',              dot: '#C4494F', bg: '#FDF0F0', chipBg: '#FDF0F0', fg: '#9C4147', action: 'View deal',    hot: false },
   complete:    { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
   paid:        { i: 4, label: 'Posted \u00B7 paid', short: 'Paid',          dot: '#9AA08C', bg: '#F2F3EE', chipBg: '#F2F3EE', fg: '#6B7060', action: 'View deal',    hot: false },
@@ -91,11 +114,36 @@ export function createdDate(dateStr: string): string {
 
 /* Takes only the two fields it reads, so the inbox can call it without
    inventing the rest of a Deal. A full Deal still satisfies this. */
-export function resolveStatus(d: { status: string; is_posted: boolean | null }): string {
+export function resolveStatus(d: { status: string; is_posted: boolean | null; awaiting_brand?: boolean | null; invoice_status?: string | null }): string {
   if (d.status === 'declined' || d.status === 'cancelled') return d.status
-  if ((d.status === 'approved' || d.status === 'complete' || d.status === 'paid') && d.is_posted === false) return 'awaiting'
-  if ((d.status === 'complete' || d.status === 'paid') && d.is_posted === true) return 'posted'
-  if (d.status === 'approved' && d.is_posted === true) return 'posted'
+  /* Still 'negotiating' in the database - the distinction is whose move it is,
+     which lives in the counter events, not in the status column. */
+  if (d.status === 'negotiating' && d.awaiting_brand) return 'countered'
+  /* COMPLETE AND PAID ARE TERMINAL. They used to fall into 'awaiting' when
+     is_posted was not set, so fifteen finished deals sat in Needs you telling
+     the creator to upload a post for a deal that had already closed. Whether
+     posting was recorded is a data question, not an outstanding task - deals
+     predating is_posted have it false. */
+  if (d.status === 'complete' || d.status === 'paid') return 'posted'
+
+  /* APPROVED splits on whether the content is live. Not posted: go and post.
+     Posted: it is out, and the money has not arrived - the creator's next move
+     is the invoice. Truthiness rather than === true, so a null reads as not
+     posted instead of falling through to the raw status. */
+  if (d.status === 'approved') {
+    if (!d.is_posted) return 'awaiting'
+    /* An invoice that exists but is still a draft has not been sent, so it is
+       no different from not having raised one. */
+    /* A paid invoice outranks the deal's own status. The deal moves to paid or
+       complete when payment lands, but if that lags, the invoice is the newer
+       fact and "invoice due" for money already received is the worst of the
+       readings available. */
+    if (d.invoice_status === 'paid') return 'posted'
+    if (d.invoice_status === 'accepted') return 'invoice_accepted'
+    if (d.invoice_status === 'issued') return 'awaiting_payment'
+    return 'invoice_due'
+  }
+
   return d.status
 }
 
@@ -110,7 +158,17 @@ export function isLive(st: string): boolean {
 export function matchFilter(st: string, filter: string): boolean {
   if (filter === 'all') return true
   if (filter === 'action') return needsAction(st)
-  if (filter === 'review') return st === 'delivered' || st === 'revision' || st === 'awaiting'
+  /* The review loop: submitted and waiting on the brand, or handed back. NOT
+     'awaiting', which is an APPROVED deal waiting to be posted - nobody is
+     reviewing it. It stays under Needs you, where the creator's next move is. */
+  if (filter === 'review') return st === 'delivered' || st === 'revision'
+  /* Cancelled sits with declined. It is the only other terminal-negative
+     stage, and on its own it was reachable from no chip but All. */
+  if (filter === 'declined') return st === 'declined' || st === 'cancelled'
+  // Still a negotiation, just not the creator's turn.
+  if (filter === 'negotiating') return st === 'negotiating' || st === 'countered'
+  // Posted covers both, paid or not: the tab is about the content being live.
+  if (filter === 'posted') return st === 'posted' || st === 'invoice_due' || st === 'awaiting_payment' || st === 'invoice_accepted'
   return st === filter
 }
 

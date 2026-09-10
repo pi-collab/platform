@@ -357,6 +357,18 @@ export default function DealForm({ creator, products, addonRates = [], platformF
     if (selectedCount === 0) { setError('Select at least one product'); return }
     if (hasMissingPrice) { setError('Enter a price for all "price on request" products'); return }
     if (isNaN(finalPaise) || finalPaise <= 0) { setError('Total price must be greater than ₹0'); return }
+    /* MANDATORY. When the creator gets paid is one of the two or three things
+       an offer is actually judged on, and it was optional - so a brand could
+       send terms-free offers and the creator's screen showed a dash where the
+       payment window goes. Only reachable via Custom with the number left
+       blank; the presets always resolve. */
+    if (payDays === 'Custom') {
+      const d = parseInt(payDaysCustom, 10)
+      if (!Number.isFinite(d) || d < 1 || d > 365) {
+        setError('Enter the number of days for payment terms (1-365)')
+        return
+      }
+    }
 
     // Validate: every selected deliverable needs a delivery date
     const missingDates: string[] = []

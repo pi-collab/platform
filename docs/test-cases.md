@@ -3918,3 +3918,613 @@ invoice due the day it was raised.
       creator to wait a month regardless of what was agreed. Now
       `paymentWhenLabel()`, which returns null rather than a made-up number
 - [ ] A legacy 100% advance deal reads "Upfront", not "30 days"
+
+---
+
+## 32. Offer received (mobile): payment in, and terms are mandatory
+
+### The screen
+- [ ] Full terms shows **Payment in** where Go live used to be. A creator
+      judging an offer needs the payment window; the publish date is already
+      the thing they are agreeing to deliver
+- [ ] The raw terms string no longer appears TWICE in full terms. It renders
+      under the amount (as the export draws it) and as "Payment in"
+- [ ] Go live is unaffected on every other surface - it was only removed here
+
+### Payment terms are now required
+- [ ] The offer builder blocks a send when Custom is chosen and the day box is
+      empty or out of 1-365. The presets always resolve, so that is the only
+      way to reach it
+- [ ] `createDeal` rejects a missing payment_terms SERVER-side. A server action
+      is directly callable, so the form check is not the boundary
+- [ ] **Campaign bulk-send still works.** It calls createDeal and passed no
+      payment terms at all, so requiring them would have failed every campaign
+      send. It now passes the platform standard explicitly, stated at the call
+      site rather than defaulted inside createDeal, so the missing campaign
+      field stays visible as a gap
+- [ ] Campaign deals carry "30 days after posting" instead of the NULL they
+      used to carry silently
+
+### Known differences from the export (deliberate, no field exists)
+- [ ] "Respond by 19 Jul" — nothing expires an offer; the screen says how long
+      it has been waiting instead
+- [ ] "Live window 22-28 Jul" — no live-window range; this slot is Payment in
+- [ ] "Exclusivity: Beauty, 14 days" — no exclusivity field. Omitted rather
+      than filled with a plausible default, since it is a term a creator would
+      be held to
+- [ ] "Platform: Instagram, in-feed" in full terms — per-item platform exists
+      in the data but is not surfaced in this list. Still open
+
+---
+
+## 33. Negotiating: TWO states, creator mobile only
+
+Desktop is unchanged and correct as it is. This is mobile, creator side only.
+
+### Which state — read the events, never last_offer_by
+- [ ] `deals.last_offer_by` looks like the field for this and is NOT: createDeal
+      writes 'brand' and neither counter action updates it. On GD-1068, a deal
+      the CREATOR countered, it still reads 'brand'. Trusting it shows a creator
+      the respond-now screen for their own ask
+- [ ] The state comes from comparing the newest `deal.brand_counter` against
+      the newest `deal.counter_offer`. Writing that event IS the counter, so it
+      cannot be forgotten
+
+### A. Brand countered — the creator's move
+- [ ] Headline is **Their counter**, showing the brand's number
+- [ ] The **"You receive" block is gone.** It was derived from the old price
+      and read as a competing offer next to the number actually on the table
+- [ ] "You asked ₹X" remains as the quiet line, when they had countered before
+- [ ] Accept / Counter / Decline all still shown
+
+### B. Creator countered — waiting on the brand
+- [ ] Headline is **Your ask**, showing the creator's number
+- [ ] A **"Sent · waiting for <brand>"** pill states where it stands
+- [ ] "Their offer ₹X" shows underneath as the quiet line
+- [ ] **Accept / Counter / Decline are gone.** There is nothing here to accept:
+      a creator cannot agree with their own ask, and leaving Accept up would
+      offer them the brand's superseded price
+- [ ] GD-1068 (`b733b40b…`) is this state — one creator counter of ₹55,555
+      against a ₹50,000 offer, nothing back yet
+
+### Unchanged in both
+
+
+Both states are `status = 'negotiating'`. What separates them is whether anyone
+has countered: one `deal.counter_offer` or `deal.brand_counter` event and the
+screen becomes a negotiation.
+
+- [ ] Stage reads **Negotiating**, not "Offer received"
+- [ ] The status line reads **"Countered <date>"** instead of the waiting label
+- [ ] Everything below the counter block is byte-for-byte the offer-received
+      layout — same order, same rows — so moving between the two states does
+      not read as a different page
+
+### The two numbers on the table
+- [ ] **Their counter** shows the BRAND's current number: their own counter if
+      they have made one, otherwise the price still standing on the deal
+- [ ] It must NOT show the creator's own ask. A creator's counter deliberately
+      does not move `deal.price_paise` — the brand accepting it is what does
+      (`deals/[id]/deal-actions.ts:46`) — so reading the price after a brand
+      counter is the only way to get the brand's real position
+- [ ] **"On the table"** is a pill to the right of the amount, per the export
+- [ ] **"You asked ₹X"** sits under both as a quiet line, and is omitted when
+      the creator has not countered. Quiet on purpose: their ask is not a term
+      anyone can accept yet, and equal weight would read as two live offers
+- [ ] A fresh offer with no counter shows none of this block
+
+### Multiple rounds
+- [ ] After several rounds, "Their counter" and "You asked" both show the
+      LATEST of each, and the date is the most recent negotiation event
+
+---
+
+## 34. Deals list: a countered deal is not "Offer to review"
+
+`lib/deal-stage.ts` is shared by the mobile and desktop creator lists, so this
+lands on both from one change.
+
+- [ ] A negotiating deal the CREATOR countered shows **"Countered · with
+      brand"** / short **"Waiting on brand"**, not "Offer to review"
+- [ ] Its action reads **View deal**, not "Review offer" — there is no offer
+      waiting on them
+- [ ] It is NOT in **Needs you** (`hot: false`). It was telling a creator to act
+      on a deal they had already answered
+- [ ] It IS still under the **Negotiating** tab. `matchFilter` compares
+      `st === filter`, so the new stage had to be admitted explicitly or the
+      deal would have vanished from the tab it belongs to
+- [ ] Desktop sort: it sits just below negotiating. Without a PRIORITY entry it
+      fell to the `?? 99` default and sank below declined deals
+- [ ] A deal where the BRAND countered last still reads "Offer to review" and
+      stays in Needs you — that one IS the creator's move
+- [ ] GD-1068 (`b733b40b…`) is the countered case
+- [ ] The events query is skipped entirely when a creator has no negotiating
+      deals
+
+---
+
+## 35. The brand can answer a counter (NegotiationCard was never rendered)
+
+`NegotiationCard.tsx` had existed since before the em-dash sweep and NOTHING
+imported it. Its only caller relationship ran the other way: `acceptCounterOffer`
+is called from that component alone, so with it unmounted a brand could not
+accept a counter through the UI at all. The counter reached them solely as a
+chat message posted beside the event — which is why counters looked like chat.
+
+- [ ] A deal where the creator countered shows the counter card ABOVE the hero,
+      with the brand's offer, the creator's counter and the note
+- [ ] **Accept** applies the counter's prices and moves the deal to agreed.
+      `acceptCounterOffer` reads the latest `deal.counter_offer` and writes
+      `price_paise` from `counter_total_paise` (deal-actions.ts:29-46)
+- [ ] **Counter back** writes `deal.brand_counter` and the card disappears —
+      it is the creator's move again
+- [ ] The card does NOT show once the brand has countered back: it is gated on
+      the creator's counter being NEWER than the brand's
+- [ ] The status line reads "<creator> countered, your response is needed",
+      not "Awaiting <creator>'s response". It told the brand to wait on a
+      creator who had already answered
+- [ ] GD-1068 (`b733b40b…`) is the case — one creator counter, no brand reply
+
+### Still open
+- [ ] `counterOffer` still posts the counter into the thread as a message.
+      Left in deliberately until the card is confirmed working, so the brand is
+      not left with neither. Remove the message insert, keep the event and the
+      notification, once this is verified
+- [ ] Staging has ZERO `deal.brand_counter` events — not because brands chose
+      not to counter, but because they could not
+
+---
+
+## 36. Agreed state, creator mobile
+
+Built from "Creator Deal Detail - Agreed Mobile", checked against the export's
+DOM and not just its text. The two screens differ STRUCTURALLY, not only in
+wording, and the first attempt missed all of it.
+
+### Header and stage
+- [ ] Title reads **"Deal with <brand>"**, not "Offer from"
+- [ ] The header's right-hand line is **"Deliver by <date>"**. The agreed date
+      belongs in the card summary, not up here
+- [ ] Stage **Agreed**, next step **"Next: submit work"**, two lit segments
+
+### The money card is COLLAPSED, and folds
+- [ ] It is a `<details>` that starts **closed**. The export has no `open`
+      attribute here, unlike the offer screen where the money IS the decision
+- [ ] Its summary shows three things: **"AGREED ON <date>"**, **You receive**
+      with the amount, and the payment terms
+- [ ] Opening it reveals: each deliverable as a plain row with its price, then
+      Deal total, Platform fee, Usage rights (legacy only), Revisions
+      "N rounds included", and Rights confirmed with the time
+- [ ] The deliverables here are **flat rows, not the expandable cards** the
+      offer screen uses. Nothing is left to weigh up, so nothing opens
+- [ ] The chevron rotates when open
+- [ ] There is **no Deliver by / Payment in split row** on this screen
+- [ ] **No Accept / Counter / Decline**, and no "Decline this offer" footer
+
+### Submit deliverables - its own always-open surface
+- [ ] A separate surface, NOT an accordion, headed **"Submit deliverables"**
+      with the count **"0 of 2"** on the right
+- [ ] The count is submitted items over total items
+- [ ] The existing `DeliverableItems` is passed through WHOLE - uploads,
+      versions, per-item status and the review handoff are not reimplemented
+- [ ] A deal with no structured items renders no submit block
+
+### Known deviation on the OFFER screen
+- [ ] The export collapses "Brief & attachments" by default; ours opens it
+
+### Isolation
+- [ ] `.offer-m` is `display:none` outside the mobile query, so desktop is
+      untouched
+- [ ] delivered / revision / approved / paid still fall through to the existing
+      page on mobile
+
+---
+
+## 37. Submitted state, creator mobile
+
+Maps to `status = 'delivered'` — the creator has sent the work and the brand is
+reviewing. `revision` is a different screen and is deliberately NOT folded in.
+
+### Header and stage
+- [ ] Title "Deal with <brand>"; right-hand line **"Submitted <date>"**, taken
+      from the latest item's `submitted_at`
+- [ ] Stage **Submitted**, next **"Next: brand review"**
+- [ ] The header dot is GREEN (neon-deep). Amber belongs to an offer still to
+      be answered; both post-decision exports use neon-deep
+- [ ] **No offer card.** The offer card was gated on `stage !== 'agreed'`,
+      which is true for submitted too, so a delivered deal rendered the whole
+      Accept / Counter / Decline card below the fold, on work already sent
+- [ ] **Three** progress segments lit (the export has 3 of 6)
+
+### The notice card — kept; the purple banner — removed
+Two different blocks said the same thing. Only one goes.
+- [ ] The export's **white notice card IS built**: a send icon in a circle,
+      "Submitted for review", and "The brand has been notified and is reviewing
+      your deliverables." Icon is the paper plane from the export, not a tick
+- [ ] It sits above the Deliverables fold
+- [ ] It is NOT a link. The export makes it an anchor pointing at
+      "Creator Deal Detail - Revision Mobile.dc.html" — navigation between
+      design files, not a destination in the product
+- [ ] `DeliverableItems`' **purple banner does NOT render** on the phone
+      screen (`hideStatusBanner`). That was the duplicate
+- [ ] DESKTOP still shows the purple banner — it has no such header, and the
+      prop is off by default
+
+### Sections, in the export's order
+- [ ] **Deliverables** — a COLLAPSED accordion, heading as a 10px uppercase
+      eyebrow. Folded because the work has been sent: a record, not a task
+- [ ] **Brief & attachments** — collapsed
+- [ ] The agreed money block (Agreed on, You receive, terms, the `.term` rows)
+      appears after Brief, as on the agreed screen
+- [ ] **Full terms & guidelines** — collapsed
+- [ ] No submit block, no decision controls, no "Decline this offer"
+
+### Worth confirming with the designer
+- [ ] In the export, the money block sits INSIDE the "Brief & attachments"
+      accordion rather than in its own. Verified by walking back from
+      "Agreed on 15 Jul" to its enclosing `<details>`, whose summary reads
+      "Brief & attachments". It is rendered as its own fold here, which is what
+      the agreed screen does — flagged rather than silently copied, because a
+      terms block hidden inside "Brief & attachments" is easy to miss
+
+### Still not matched
+- [ ] The rows inside Deliverables are `DeliverableItems` as it exists, so they
+      keep the desktop design rather than the export's filename + "View file"
+      rows. That component owns signed URLs and version history; restyling it
+      is its own change
+
+---
+
+## 38. Revision state, creator mobile + the compact deliverable rows
+
+### The revision screen (`status = 'revision'`)
+- [ ] Header line **"Reviewed <date>"**, from the last status-change to revision
+- [ ] Stage **"Changes requested"**, next **"Next: resubmit"**
+- [ ] Three segments lit and the THIRD is amber (`--warning`). Progress was
+      made and handed back, which is not progress still standing
+- [ ] **Deliverables is always open**, not a fold. The brand has handed work
+      back, so what to do about it must not be hidden. Submitted folds it
+      because there the work is a record; here it is the task
+- [ ] Approved items still show their file and a View file link — the only
+      place a creator can reach work already signed off
+- [ ] No offer card, no submit-progress bar, no decision controls
+
+### Compact deliverable rows (mobile, everywhere they appear)
+`DeliverableItems` takes `compact`. Logic is untouched — uploads, signed URLs
+and version history stay one implementation; only presentation branches.
+- [ ] Row header is a **20px status circle** coloured by status (neon-deep
+      approved, warning revision), the label at 13.5px bold, and the status in
+      **10px uppercase** on the right
+- [ ] No platform icon, price or handle chip on mobile — the card states those
+      elsewhere
+- [ ] **Uploaded file row**: 12px radius (not a pill), a 28px `--sec-2` icon
+      square, the filename at 12px truncated with an ellipsis, and **View file**
+      at 11.5px bold ink — not the underlined ink-soft link desktop uses
+- [ ] **Revision feedback** is white with a 1.5px `--warning` border and reads
+      "Revision feedback", not the muted grey card desktop shows
+- [ ] The desktop "Approved as submitted, nothing more to do here" explainer is
+      suppressed on mobile
+- [ ] **DESKTOP IS UNCHANGED** — `compact` is off by default and only the phone
+      screen passes it
+
+### Revision screen corrections
+- [ ] **Only ONE resubmit.** The per-item "Resubmit reel/post/file" button is
+      gone on mobile; the export has no per-item button. The single action is
+      the full-width "Resubmit for review" at the bottom
+- [ ] With no per-item button, a pasted link commits on **Enter or blur**. Same
+      `handleSubmitItem`; only the trigger differs
+- [ ] **One input, not a toggle.** The desktop "Paste link / Upload file"
+      segmented control is gone. One 46px field, 12px radius, 1.5px `--sec-ink`
+      border, placeholder **"Paste new link or attach a file"**, with a 34px
+      **paperclip** button inside on the right that opens the file picker
+- [ ] Upload progress renders as a thin bar under that field
+- [ ] **Bottom button**: full-width, 52px, 16px radius, `--ink` background,
+      white text, 800 weight, 14.5px, and **no icon**. Desktop keeps its neon
+      chip with the arrow
+- [ ] **Revision feedback icon** is the export's amber alert, not a pencil
+- [ ] **The revision progress segment is AMBER.** The `.is-warn` rule sat
+      outside the mobile media query and therefore earlier in the file; at
+      equal specificity to `.is-on` the later rule won, so it rendered green
+
+### Replacing an attached file
+- [ ] After attaching a link or uploading a file, **Replace** is available and
+      works. It was hidden and would have been refused server-side: the upload
+      writes `item_status = 'submitted'`, `editable` excluded that status, and
+      the actions rejected anything not pending/revision
+- [ ] `isSaved` uses `??` not `||`. With `||` the item_status check overrode
+      the local Replace flag, so the row never returned to the input
+- [ ] Server allows a re-submit while the item is `submitted`. Safe because the
+      DEAL-level guard already limits it to agreed/revision — once the creator
+      hits Submit for review the deal is `delivered` and it refuses
+- [ ] An **approved** item is never replaceable
+- [ ] Replacing bumps the version the same way a revision resubmit does
+
+### The attached-file row is ONE line on mobile
+- [ ] The row does not wrap. `flexWrap: 'wrap'` let the actions drop under a
+      long filename; compact drops it so the name truncates instead
+- [ ] The filename truncates with an ellipsis. The truncation is on the
+      block-level parent — an inline child cannot clip itself
+- [ ] "submitted <date>" is not shown on mobile; it is what pushed the row wide
+- [ ] View file and Replace sit on the same line, 11.5px, no underline, and
+      never shrink
+
+---
+
+## 39. Approved state, creator mobile
+
+`status = 'approved'` — the brand has signed off and the creator posts.
+
+### Header and stage
+- [ ] Title "Deal with <brand>"; right-hand line **"Approved <date>"**
+- [ ] Stage **Approved**, next **"Next: post content"**
+- [ ] **Four** of six progress segments lit
+
+### One post card per deliverable
+- [ ] Its own white card per item, above the folds
+- [ ] Head: the item label at 16px/800 in the display face, and **"1 of 2"** on
+      the right
+- [ ] A URL field: 46px, 12px radius, hairline border, 16px padding
+- [ ] **Mark as posted**: 50px, 15px radius, 12px above the field, `--card`
+      background with ink text, turning `--neon` once posted
+- [ ] **Empty field**: the button is dimmed to 0.4, card-coloured and inert
+- [ ] **Link typed**: it becomes enabled and turns **filled ink with white
+      text**. The export only changes opacity here, which makes enabled and
+      disabled the same button at two strengths; filled is unmistakably the
+      thing to press
+- [ ] **Posted**: neon with ink text, reading "Posted ✓"
+- [ ] Once posted the field is replaced by the live link, and the button reads
+      "Posted ✓"
+- [ ] It calls the existing `markItemPosted`; per-item posting already existed
+      (`deal_deliverable_items.posted_url`, migration 0390)
+
+### Invoice card
+- [ ] Eyebrow **"Invoice"**, then "You can create and share your invoice once
+      content is posted."
+- [ ] It must NOT say the invoice is created automatically. The export's copy
+      does; our invoicing is gated on `is_posted` and the CREATOR raises it, so
+      that wording would leave them waiting for something nobody does
+- [ ] A `--warning` dot with **"Waiting on posted content"**, turning
+      `--neon-deep` / "Ready to invoice" once every item is posted
+
+### Folds
+- [ ] Deliverables, collapsed, each item green with **Approved** and its file
+- [ ] Brief & attachments, collapsed
+- [ ] Full terms & guidelines, collapsed
+
+### Where the agreed figures live, by stage
+- [ ] **Agreed and revision**: their own collapsible card, summary showing the
+      agreed stamp, You receive and the payment window
+- [ ] **Submitted and approved**: folded INSIDE "Brief & attachments", after
+      the attachments, as a plain section — no summary, no chevron. Both of
+      those exports do this; two screens agreeing is what settled it
+- [ ] The rows are defined ONCE (`agreedTermRows`) and referenced from both
+      placements, so the two cannot drift
+- [ ] On submitted/approved there is no separate money card anywhere
+
+### The tab bar rides up when you scroll past the top
+- [ ] Overscrolling at the top of a creator page must not drag the bottom
+      navigation with it
+- [ ] `.creator-tabbar` is already `position: fixed` and no ancestor creates a
+      containing block — the movement is iOS rubber-band, which drags fixed
+      elements during the bounce
+- [ ] `overscroll-behavior-y: none` is set on `body:has(.creator-main)`. It has
+      to be on the scrolling element, which is the document; `:has` keeps it to
+      creator pages instead of the whole site
+- [ ] Pull-to-refresh is therefore off on creator pages. Intended for an
+      app-like screen with a fixed bottom bar
+- [ ] Marketing and brand pages keep pull-to-refresh
+
+### One file per deliverable on mobile, never two
+- [ ] An APPROVED item lists its file exactly ONCE. Two rows were rendering:
+      the "previous submission" row, which I had opened up to approved items,
+      and the saved row, which already covered them
+- [ ] The "previous submission" row is DESKTOP ONLY now. A superseded file
+      beside the current one on a phone reads as two deliverables rather than
+      two versions of one
+- [ ] During a revision the phone shows no old file — only the field to attach
+      the new one. Desktop still shows what was handed back, as context
+- [ ] Submitted and approved show the current file; pending shows none
+
+## 40. Full terms: one fold, and the bold is deliberate
+
+- [ ] There is ONE fold titled **"Full terms & guidelines"**. Creative
+      guidelines and Please avoid live inside it, not in a second fold
+- [ ] Inside, a **"Full terms"** label sits above the rows — the export labels
+      the list as well as the fold
+- [ ] Rows are flex with a hairline above each, the first row's border removed
+- [ ] **The value is bold, 13px/700 ink.** The agreed block's rows stay a quiet
+      12.5px ink-soft. That contrast is in the design and is not an
+      inconsistency: Full terms is the reference you open on purpose, the
+      agreed block is a reminder
+- [ ] The list is NOT a `<dl>`. A definition list needs the value pulled onto
+      its label's line with a negative margin, which assumes every row is one
+      line high — untrue once usage rights or revision terms wrap
+
+### Every fold heading is the same eyebrow
+- [ ] **DELIVERABLES**, **BRIEF & ATTACHMENTS** and **FULL TERMS &
+      GUIDELINES** all render as the same 10px uppercase eyebrow: 600 weight,
+      .12em tracking, ink
+- [ ] None of them is the 15px bold display face. `.offer-m__fold > summary`
+      carried that; DELIVERABLES escaped it only because its summary wraps an
+      `.offer-m__submittitle`, so the other two read as a different order of
+      heading on the same screen
+- [ ] The agreed card's summary is unaffected — it uses `.offer-m__agreedcard`,
+      not `.offer-m__fold`, and keeps its own stacked layout
+
+## 41. The message icon opens THIS deal's thread
+
+- [ ] Tapping the message icon on a creator deal screen opens that deal's
+      thread, not the inbox list. It linked to `/creator/inbox`, which dropped
+      the creator on a list and made them find the deal they had just left
+- [ ] The thread's back arrow returns to **the deal**, not to the inbox list
+- [ ] Reached via `/creator/inbox?deal=<id>&from=deal`; the inbox page reads
+      `from` and swaps `backHref` accordingly
+- [ ] Opening the same thread FROM the inbox still goes back to the inbox —
+      `from` is absent, so the default is unchanged
+- [ ] Desktop is unaffected: it already opens the thread in place
+
+## 42. Deals list: every status, and the filter chips
+
+Audited against the status × is_posted combinations that actually exist in the
+data, not against the ones the code seemed to expect.
+
+### Two statuses were wrong
+- [ ] **approved + posted, no invoice raised** reads **"Posted · invoice due"**,
+      action Invoice, in Needs you. It resolved to 'posted' → "Posted · paid",
+      telling a creator who had just published that the deal was PAID
+- [ ] It must NOT say "awaiting payment" before an invoice exists — that says
+      the brand is late for money it has never been asked for
+- [ ] **approved + posted + invoice issued/accepted** reads **"Invoiced ·
+      awaiting payment"**, action View deal, and is NOT in Needs you: the wait
+      is the brand's and there is nothing for the creator to do
+- [ ] A **draft** invoice counts as not raised — it has not been sent
+- [ ] **complete + is_posted false** now reads **"Posted · paid"**. It fell
+      into 'awaiting' — "Approved · post it", hot — so finished deals sat in
+      Needs you asking for a post. Fifteen of them on staging. Complete and
+      paid are terminal; whether posting was recorded is a data question, since
+      deals predating `is_posted` have it false
+
+### Full mapping
+- [ ] agreed → Agreed · in production · View deal
+- [ ] approved, not posted → Approved · post it · Upload post · **Needs you**
+- [ ] approved, posted, no/draft invoice → Posted · invoice due · Invoice · **Needs you**
+- [ ] approved, posted, issued → Invoiced · awaiting payment · View deal
+- [ ] approved, posted, accepted → Accepted · awaiting payment · View deal
+- [ ] approved, posted, invoice PAID → Posted · paid. A paid invoice outranks
+      the deal's own status: the deal moves to paid/complete when payment
+      lands, and if that lags, "invoice due" for money already received is the
+      worst reading available
+- [ ] delivered → Submitted · in review · Track review
+- [ ] revision → Revision requested · Resubmit · **Needs you**
+- [ ] negotiating → Offer to review · Review offer · **Needs you**
+- [ ] negotiating, creator countered → Countered · with brand · Waiting on brand
+- [ ] complete / paid → Posted · paid · View deal
+- [ ] declined → Declined
+
+### Filter chips
+- [ ] **In review** is delivered and revision only. 'awaiting' was in it, and an
+      APPROVED deal waiting to be posted is not in review — nobody is reviewing
+      it. It stays under Needs you
+- [ ] **Posted** covers posted, invoice_due and awaiting_payment: the chip is
+      about the content being live, not about payment
+- [ ] The list fetches invoice status only for approved-and-posted deals, and
+      skips the query when there are none
+- [ ] **Declined** covers cancelled too. Cancelled was reachable from no chip
+      but All
+- [ ] **Negotiating** covers negotiating and countered
+- [ ] Every stage `resolveStatus` can return is reachable from at least one
+      chip besides All
+- [ ] `is_posted` is read for truthiness, not `=== false`, so a null reads as
+      not posted rather than falling through to the raw status
+
+## 43. Invoice screen, creator mobile
+
+Follows the approved screen: once every deliverable is posted there is
+something to invoice for, so the "Waiting on posted content" stub gives way to
+the real card.
+
+### The post cards give way to the invoice
+- [ ] **Nothing posted / partly posted**: post cards shown, plus the "Waiting
+      on posted content" stub. There is still a card left to fill
+- [ ] **Everything posted**: post cards are GONE and the invoice card takes
+      their place. The export's invoice screen has no post section; leaving them
+      up meant a column of "Posted ✓" buttons above the invoice, restating what
+      the Deliverables fold already records
+- [ ] The live URLs stay reachable — each posted item keeps its link in the
+      Deliverables fold
+
+### Before issuing
+- [ ] Stage stays **Approved**, next reads **"Next: issue invoice"**, 4 of 6
+      segments lit — the export's own script does exactly this
+- [ ] Card: eyebrow **Invoice** with **#<deal ref>** on the right
+- [ ] Rows: Deliverables, Platform fee, then **You receive** with the figure at
+      19px in the display face — the one number that carries weight
+- [ ] **"Per agreed terms · not yet sent"**
+- [ ] A filled **Issue to brand** button
+
+### One button, two actions
+- [ ] Ours is `generateInvoice` (writes the draft from the deal's snapshotted
+      fee and terms) then `issueInvoice` (sends it). The button runs both, and
+      only the second when a draft already exists — which is what a half-failed
+      earlier attempt leaves behind
+- [ ] `generateInvoice` requires status approved; `issueInvoice` requires
+      is_posted. Both still enforce that server-side
+
+### After issuing — two states, as desktop has
+- [ ] Stage becomes **Invoiced**, next **"Next: paid"**, 5 of 6 segments
+- [ ] **Sent, not yet accepted**: "Per agreed terms · issued <date>", an amber
+      dot, and **"Sent, awaiting payment"**
+- [ ] **Accepted, not paid**: "Per agreed terms · accepted <date>", a
+      **neon-deep** dot, and **"Accepted, awaiting payment"**
+- [ ] Those are desktop's own two labels and dot colours (`STATUS_DOTS`:
+      issued amber, accepted neon-deep) — a creator can tell a brand that has
+      agreed the bill from one that has merely received it
+- [ ] The due text is danger red when overdue or due today, in both states
+- [ ] The Issue button is gone
+
+### Not built, and why
+- [ ] The export has a **Download invoice** pill in the issued state. There is
+      no invoice document to download — no PDF route, no print view, nothing in
+      InvoiceCard either. It is omitted rather than wired to a dead link.
+      Building it means deciding what the document is
+
+### The accepted notice sits at the top
+- [ ] When the invoice is accepted, a notice card appears ABOVE the invoice
+      card: a tick, **"Invoice accepted"**, and "<brand> has agreed your
+      invoice." followed by the due text when there is one
+- [ ] It is at the top because it is what changed since the creator last
+      looked, and it is no longer their move. The card below carries the same
+      status, but as one line inside a card about numbers
+- [ ] It does NOT appear while the invoice is only issued, or before one exists
+- [ ] No em dash in the copy, per the standing rule
+
+## 44. Complete state, creator mobile
+
+`status = 'paid'` or `'complete'`. The deal is closed and the screen becomes a
+record rather than a set of instructions.
+
+### Header and stage
+- [ ] Header line **"Paid <date>"**, stage **Paid**, and the next slot reads
+      **"Complete"** — there is no next step, and that is what the export puts
+      there rather than a "Next:" label
+- [ ] All **six** progress segments lit
+
+### The hero
+- [ ] A green stamp reading **Complete** with the date on the right
+- [ ] **"You've been _guapd_"** at 34px, the wordmark in serif italic
+- [ ] The amount at 22px in ink-soft, then "Paid out for <deal> with <brand>"
+- [ ] A footer split into **Payments** and **Analytics**, flush to the card's
+      edges, divided by a hairline
+
+### Sections
+- [ ] **Deliverables is OPEN**, not a fold — the export makes it a plain
+      surface here. The work is the record of what was paid for
+- [ ] The invoice card shows, with **"Per agreed terms · paid <date, time>"**
+      and NO button or status row: the note line says it all
+- [ ] Brief & attachments and Full terms & guidelines remain folds. Those are
+      the only two `<details>` on this screen in the export
+
+### The complete hero's footer
+- [ ] The two links sit FLUSH to the card's edges, and the divider between them
+      runs the full height of the row
+- [ ] Each is 50px tall with a 14px icon and 7px gap: a document for Payments,
+      a rising chart for Analytics
+- [ ] `.offer-m__done { padding: 0 }` must sit INSIDE the mobile media query and
+      AFTER `.offer-m__card`. Above it, at equal specificity, `.offer-m__card
+      { padding: 20px }` won on source order — the card kept 20px all round, so
+      the footer was inset and the divider could not reach top or bottom. Third
+      time this ordering has bitten; `.is-warn` was the same shape
+
+## 45. Payments page (verified, not rebuilt)
+- [ ] All past payments load: the invoices query carries no `.limit()`, and
+      history is every paid invoice
+- [ ] Mobile paginates at **4 per page**; the busiest creator on staging has 26
+      paid invoices, so 7 pages
+- [ ] Month headings come from the rows on the current page
+- [ ] CSV export covers ALL paid invoices, not just the visible page
+
+### Two data notes worth knowing
+- [ ] 2 of 35 paid invoices on staging have no `paid_at`, so their date renders
+      blank. Not a code bug; the rows predate the column being set
+- [ ] History is ordered by `issued_at`, not `paid_at`. For a payment history
+      the paid date is the more natural sort, and the two can differ

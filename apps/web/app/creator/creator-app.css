@@ -140,6 +140,19 @@
   background: var(--card);
 }
 
+/* Scrolling PAST THE TOP of the document makes iOS rubber-band the whole page,
+   and during that bounce it drags position:fixed elements with it - so the tab
+   bar rides up with the content. The bar is already fixed and nothing above it
+   creates a containing block; the movement is the overscroll itself.
+
+   overscroll-behavior-y has to sit on the scrolling element, which is the
+   document, so :has scopes it to creator pages rather than the whole site.
+   The trade is pull-to-refresh, which an app-like screen with a fixed bottom
+   bar does not want anyway. */
+body:has(.creator-main) {
+  overscroll-behavior-y: none;
+}
+
 /* ── Tab bar ──────────────────────────────────────────────────────────────
    Fixed to the viewport, not the scroll container: on iOS a bar inside a
    scrolling element drifts during momentum scrolling. */
