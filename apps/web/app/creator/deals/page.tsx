@@ -68,10 +68,28 @@ export default async function CreatorDealsPage() {
     }
   }
 
+  /* INVOICE STATUS, for the approved-and-posted rows only. Without it the list
+     cannot tell "you still have to invoice" from "you invoiced and are waiting
+     to be paid", and calling the first one awaiting payment says the brand is
+     late for money it has never been asked for. Scoped and skipped when empty,
+     like the counter lookup above. */
+  const postedIds = (deals ?? [])
+    .filter((d) => d.status === 'approved' && d.is_posted)
+    .map((d) => d.id)
+
+  const invoiceStatus = new Map<string, string>()
+  if (postedIds.length > 0) {
+    const { data: invs } = await supabase
+      .from('invoices')
+      .select('deal_id, status')
+      .in('deal_id', postedIds)
+    for (const inv of invs ?? []) invoiceStatus.set(inv.deal_id, inv.status)
+  }
+
   const all = (deals ?? []).map((d) => {
     const rawBrand = d.brands as unknown
     const brand = Array.isArray(rawBrand) ? rawBrand[0]?.name : (rawBrand as any)?.name ?? null
-    return { ...d, brand, awaiting_brand: awaitingBrand.has(d.id) }
+    return { ...d, brand, awaiting_brand: awaitingBrand.has(d.id), invoice_status: invoiceStatus.get(d.id) ?? null }
   })
 
   // No deals at all. CreatorDealsTable renders a toolbar, column headers and

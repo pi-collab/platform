@@ -4369,10 +4369,15 @@ Audited against the status × is_posted combinations that actually exist in the
 data, not against the ones the code seemed to expect.
 
 ### Two statuses were wrong
-- [ ] **approved + posted** now reads **"Posted · awaiting payment"**, action
-      Invoice. It resolved to 'posted', whose label is "Posted · paid" — so a
-      creator who had just published was told the deal was PAID. Posting is not
-      payment; the invoice comes after, and raising it is their next move
+- [ ] **approved + posted, no invoice raised** reads **"Posted · invoice due"**,
+      action Invoice, in Needs you. It resolved to 'posted' → "Posted · paid",
+      telling a creator who had just published that the deal was PAID
+- [ ] It must NOT say "awaiting payment" before an invoice exists — that says
+      the brand is late for money it has never been asked for
+- [ ] **approved + posted + invoice issued/accepted** reads **"Invoiced ·
+      awaiting payment"**, action View deal, and is NOT in Needs you: the wait
+      is the brand's and there is nothing for the creator to do
+- [ ] A **draft** invoice counts as not raised — it has not been sent
 - [ ] **complete + is_posted false** now reads **"Posted · paid"**. It fell
       into 'awaiting' — "Approved · post it", hot — so finished deals sat in
       Needs you asking for a post. Fifteen of them on staging. Complete and
@@ -4382,7 +4387,8 @@ data, not against the ones the code seemed to expect.
 ### Full mapping
 - [ ] agreed → Agreed · in production · View deal
 - [ ] approved, not posted → Approved · post it · Upload post · **Needs you**
-- [ ] approved, posted → Posted · awaiting payment · Invoice · **Needs you**
+- [ ] approved, posted, no/draft invoice → Posted · invoice due · Invoice · **Needs you**
+- [ ] approved, posted, issued/accepted → Invoiced · awaiting payment · View deal
 - [ ] delivered → Submitted · in review · Track review
 - [ ] revision → Revision requested · Resubmit · **Needs you**
 - [ ] negotiating → Offer to review · Review offer · **Needs you**
@@ -4394,8 +4400,10 @@ data, not against the ones the code seemed to expect.
 - [ ] **In review** is delivered and revision only. 'awaiting' was in it, and an
       APPROVED deal waiting to be posted is not in review — nobody is reviewing
       it. It stays under Needs you
-- [ ] **Posted** covers posted AND posted_unpaid: the chip is about the content
-      being live, not about payment
+- [ ] **Posted** covers posted, invoice_due and awaiting_payment: the chip is
+      about the content being live, not about payment
+- [ ] The list fetches invoice status only for approved-and-posted deals, and
+      skips the query when there are none
 - [ ] **Declined** covers cancelled too. Cancelled was reachable from no chip
       but All
 - [ ] **Negotiating** covers negotiating and countered
