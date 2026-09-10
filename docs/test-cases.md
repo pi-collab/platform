@@ -4477,3 +4477,29 @@ the real card.
       status, but as one line inside a card about numbers
 - [ ] It does NOT appear while the invoice is only issued, or before one exists
 - [ ] No em dash in the copy, per the standing rule
+
+## 44. Complete state, creator mobile
+
+`status = 'paid'` or `'complete'`. The deal is closed and the screen becomes a
+record rather than a set of instructions.
+
+### Header and stage
+- [ ] Header line **"Paid <date>"**, stage **Paid**, and the next slot reads
+      **"Complete"** — there is no next step, and that is what the export puts
+      there rather than a "Next:" label
+- [ ] All **six** progress segments lit
+
+### The hero
+- [ ] A green stamp reading **Complete** with the date on the right
+- [ ] **"You've been _guapd_"** at 34px, the wordmark in serif italic
+- [ ] The amount at 22px in ink-soft, then "Paid out for <deal> with <brand>"
+- [ ] A footer split into **Payments** and **Analytics**, flush to the card's
+      edges, divided by a hairline
+
+### Sections
+- [ ] **Deliverables is OPEN**, not a fold — the export makes it a plain
+      surface here. The work is the record of what was paid for
+- [ ] The invoice card shows, with **"Per agreed terms · paid <date, time>"**
+      and NO button or status row: the note line says it all
+- [ ] Brief & attachments and Full terms & guidelines remain folds. Those are
+      the only two `<details>` on this screen in the export

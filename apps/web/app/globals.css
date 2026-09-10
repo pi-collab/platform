@@ -1367,6 +1367,37 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .offer-m__invoicedot--done { background: var(--neon-deep); }
 .offer-m__invoicestate .offer-m__label { color: var(--ink-soft); }
 
+/* ── Complete ─────────────────────────────────────────────────────────────
+   The one screen that reports rather than asks. Padding on the inner block so
+   the footer links can sit flush against the card's edges. */
+.offer-m__done { padding: 0; overflow: hidden; }
+.offer-m__donebody { padding: 28px 22px 24px; }
+.offer-m__donetop { display: flex; align-items: center; justify-content: space-between; }
+.offer-m__donestamp { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-faint); }
+.offer-m__donedot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--neon-deep);
+  box-shadow: 0 0 0 3px rgba(210,240,74,.28);
+}
+.offer-m__donedate { font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+.offer-m__doneline {
+  font-family: var(--font-display); font-size: 34px; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.05; margin-top: 14px; color: var(--ink);
+}
+/* The brand name in the serif italic the wordmark uses elsewhere. */
+.offer-m__donebrandword { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+.offer-m__doneamount {
+  font-family: var(--font-display); font-size: 22px; font-weight: 700;
+  letter-spacing: -0.02em; margin-top: 10px; color: var(--ink-soft);
+}
+.offer-m__donecap { font-size: 12.5px; color: var(--ink-soft); margin-top: 6px; }
+.offer-m__donelinks { display: flex; border-top: 1px solid var(--border-hairline); }
+.offer-m__donelink {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px;
+  height: 50px; font-weight: 700; font-size: 12.5px; color: var(--ink);
+  text-decoration: none;
+}
+.offer-m__donelink + .offer-m__donelink { border-left: 1px solid var(--border-hairline); }
+
 /* Invoice card. Rows reuse termrow; the total row is the one figure that
    carries weight, at the export's 19px display face. */
 .offer-m__invrows {

@@ -242,10 +242,12 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   /* Approved but not yet posted. Once everything is posted the deal moves on to
      paid/complete, which have no phone design yet. */
   const isApprovedMobile = deal.status === 'approved'
+  /* Paid or complete. The deal is closed and the screen becomes a record. */
+  const isCompleteMobile = deal.status === 'paid' || deal.status === 'complete'
   /* Issued means the brand has been asked; a draft has not been sent and is no
      different from having none. Mirrors the deals list. */
   const invoiceIssued = !!invoice && (invoice.status === 'issued' || invoice.status === 'accepted')
-  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile
+  const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile
   const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
     typeof v === 'string'
@@ -255,22 +257,29 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     <>
     {showMobileScreen && (
       <CreatorOfferMobile
-        stage={isApprovedMobile && invoiceIssued ? 'invoiced'
+        stage={isCompleteMobile ? 'complete'
+          : isApprovedMobile && invoiceIssued ? 'invoiced'
           : isApprovedMobile ? 'approved' : isRevisionMobile ? 'revision' : isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
         approvedAt={(() => {
           const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'approved' || x.detail?.new_status === 'approved')).pop()
           return e ? formatDate(e.created_at) : (deal.agreed_at ? null : null)
         })()}
         allPosted={!!items && items.length > 0 && items.every((i) => !!(i as Record<string, unknown>).posted_url)}
+        paidAt={invoice?.paid_at ? formatDate(invoice.paid_at) : (deal.completed_at ? formatDate(deal.completed_at) : null)}
+        analyticsHref={`/creator/deals/${deal.id}/analytics`}
         invoiceAccepted={invoice?.status === 'accepted'}
         invoiceDueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
-        invoiceNode={isApprovedMobile ? (
+        invoiceNode={(isApprovedMobile || isCompleteMobile) ? (
           <MobileInvoiceCard
             dealId={deal.id}
             dealRef={deal.deal_ref}
             hasDraft={!!invoice}
             issued={invoiceIssued}
             accepted={invoice?.status === 'accepted'}
+            paid={invoice?.status === 'paid' || isCompleteMobile}
+            paidAt={invoice?.paid_at
+              ? `${formatDate(invoice.paid_at)}, ${new Date(invoice.paid_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+              : null}
             acceptedAt={invoice?.accepted_at ? formatDate(invoice.accepted_at) : null}
             issuedAt={invoice?.issued_at ? formatDate(invoice.issued_at) : null}
             dueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
@@ -309,7 +318,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           : null}
         submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
         submitTotal={items ? items.length : 0}
-        submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile) && items && items.length > 0 ? (
+        submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile) && items && items.length > 0 ? (
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact />
         ) : null}
         brandName={brand}

@@ -16,7 +16,7 @@ import { generateInvoice, issueInvoice } from './actions'
  * if a previous attempt failed halfway.
  */
 export default function MobileInvoiceCard({
-  dealId, dealRef, hasDraft, issued, accepted, issuedAt, acceptedAt, dueLabel, dueUrgent,
+  dealId, dealRef, hasDraft, issued, accepted, paid, issuedAt, acceptedAt, paidAt, dueLabel, dueUrgent,
   basePaise, feePaise, feePercent, receivesPaise,
 }: {
   dealId: string
@@ -28,8 +28,11 @@ export default function MobileInvoiceCard({
      cannot tell a brand that has acknowledged the bill from one that has not
      opened it. */
   accepted: boolean
+  /** Settled. No status row and no button: the note line says it all. */
+  paid: boolean
   issuedAt: string | null
   acceptedAt: string | null
+  paidAt: string | null
   dueLabel: string | null
   dueUrgent: boolean
   basePaise: number | null
@@ -85,12 +88,13 @@ export default function MobileInvoiceCard({
 
       <div className="offer-m__invnote">
         Per agreed terms &middot;{' '}
-        {accepted && acceptedAt ? `accepted ${acceptedAt}`
+        {paid && paidAt ? `paid ${paidAt}`
+          : accepted && acceptedAt ? `accepted ${acceptedAt}`
           : issued ? `issued ${issuedAt ?? ''}`.trim()
           : 'not yet sent'}
       </div>
 
-      {issued ? (
+      {paid ? null : issued ? (
         <div className="offer-m__invoicestate">
           {/* Amber while it is merely sent; green once the brand has accepted
               it. Same two colours desktop uses for these statuses. */}

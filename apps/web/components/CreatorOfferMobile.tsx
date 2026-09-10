@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
 }: {
   brandName: string
   dealTitle: string
@@ -102,7 +102,7 @@ export default function CreatorOfferMobile({
      exports, everything from "Brief & attachments" down is identical on both
      screens - two copies of that markup would drift the moment either is
      touched. Only the header, the stage line and the card body differ. */
-  stage?: 'offer' | 'agreed' | 'submitted' | 'revision' | 'approved' | 'invoiced'
+  stage?: 'offer' | 'agreed' | 'submitted' | 'revision' | 'approved' | 'invoiced' | 'complete'
   agreedAt?: string | null
   rightsConfirmedAt?: string | null
   /** DeliverableItems, passed through: it owns uploads, versions and per-item
@@ -128,6 +128,10 @@ export default function CreatorOfferMobile({
   invoiceAccepted?: boolean
   /** e.g. "Due in 12 days" / "Overdue by 3 days", already formatted. */
   invoiceDueLabel?: string | null
+  /** When payment landed, formatted. Header line on the complete screen. */
+  paidAt?: string | null
+  /** This deal's analytics page. */
+  analyticsHref?: string
 }) {
   /* The agreed figures, defined once. Agreed and revision show them in their
      own collapsible card; submitted and approved fold them into "Brief &
@@ -203,7 +207,9 @@ export default function CreatorOfferMobile({
             <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
-            {stage === 'invoiced'
+            {stage === 'complete'
+              ? (paidAt ? `Paid ${paidAt}` : 'Paid')
+              : stage === 'invoiced'
               ? 'Invoiced'
               : stage === 'approved'
               ? (approvedAt ? `Approved ${approvedAt}` : 'Approved')
@@ -225,7 +231,8 @@ export default function CreatorOfferMobile({
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
             <span className="offer-m__stage">
-              {stage === 'invoiced' ? 'Invoiced'
+              {stage === 'complete' ? 'Paid'
+                : stage === 'invoiced' ? 'Invoiced'
                 : stage === 'approved' ? 'Approved'
                 : stage === 'revision' ? 'Changes requested'
                 : stage === 'submitted' ? 'Submitted'
@@ -233,7 +240,9 @@ export default function CreatorOfferMobile({
                 : counter ? 'Negotiating' : 'Offer received'}
             </span>
             <span className="offer-m__next">
-              {stage === 'invoiced' ? 'Next: paid'
+              {/* No next step: the export puts "Complete" in this slot. */}
+              {stage === 'complete' ? 'Complete'
+                : stage === 'invoiced' ? 'Next: paid'
                 : stage === 'approved' ? (allPosted ? 'Next: issue invoice' : 'Next: post content')
                 : stage === 'revision' ? 'Next: resubmit'
                 : stage === 'submitted' ? 'Next: brand review'
@@ -246,7 +255,7 @@ export default function CreatorOfferMobile({
               <span
                 key={i}
                 className={[
-                  i <= (stage === 'invoiced' ? 4 : stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
+                  i <= (stage === 'complete' ? 5 : stage === 'invoiced' ? 4 : stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
                   /* The export paints the reached segment amber on revision:
                      progress was made and then handed back. */
                   stage === 'revision' && i === 2 ? 'is-warn' : '',
@@ -280,6 +289,35 @@ export default function CreatorOfferMobile({
             Partly posted still shows them: there is a card left to fill. */}
         {stage === 'approved' && !allPosted && postNode}
 
+        {/* PAID. The one screen that celebrates rather than instructs, so it
+            leads with the fact and the figure and then gets out of the way. */}
+        {stage === 'complete' && (
+          <section className="offer-m__card offer-m__done">
+            <div className="offer-m__donebody">
+              <div className="offer-m__donetop">
+                <span className="offer-m__label offer-m__donestamp">
+                  <span className="offer-m__donedot" aria-hidden="true" />
+                  Complete
+                </span>
+                {paidAt && <span className="offer-m__donedate">{paidAt}</span>}
+              </div>
+              <div className="offer-m__doneline">
+                You&rsquo;ve been <span className="offer-m__donebrandword">guapd</span>
+              </div>
+              {receivesPaise !== null && (
+                <div className="offer-m__doneamount">{inr(receivesPaise)}</div>
+              )}
+              <div className="offer-m__donecap">Paid out for {dealTitle} with {brandName}</div>
+            </div>
+            <div className="offer-m__donelinks">
+              <Link href="/creator/payments" className="offer-m__donelink">Payments</Link>
+              {analyticsHref && (
+                <Link href={analyticsHref} className="offer-m__donelink">Analytics</Link>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* THE BRAND HAS AGREED THE BILL. Stated at the top, above the invoice
             itself, because it is the thing that changed since the creator last
             looked and it is not their move any more: the card below shows the
@@ -301,7 +339,7 @@ export default function CreatorOfferMobile({
         {/* Once the content is live there is something to invoice FOR, so the
             waiting stub gives way to the real card. Before that it is a state,
             not an action. */}
-        {(stage === 'invoiced' || (stage === 'approved' && allPosted)) && invoiceNode}
+        {(stage === 'complete' || stage === 'invoiced' || (stage === 'approved' && allPosted)) && invoiceNode}
 
         {stage === 'approved' && !allPosted && (
           <section className="offer-m__card offer-m__invoice">
@@ -348,6 +386,17 @@ export default function CreatorOfferMobile({
             do about it must not be behind a fold. Submitted folds it because
             there the work is a record; here it is the task. */}
         {stage === 'revision' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+            </div>
+            <div className="offer-m__submitbody">{submitNode}</div>
+          </section>
+        )}
+
+        {/* Open on complete: the export makes it a plain surface there, not a
+            fold - the work is the record of what was paid for. */}
+        {stage === 'complete' && submitNode && (
           <section className="offer-m__card offer-m__submit">
             <div className="offer-m__submithead">
               <h2 className="offer-m__submittitle">Deliverables</h2>
@@ -575,7 +624,7 @@ export default function CreatorOfferMobile({
                 <p className="offer-m__prose">The brand will ship product to you for this deal.</p>
               </>
             )}
-            {(stage === 'submitted' || stage === 'approved' || stage === 'invoiced') && (
+            {(stage === 'submitted' || stage === 'approved' || stage === 'invoiced' || stage === 'complete') && (
               <div className="offer-m__briefterms">
                 <div className="offer-m__agreedstamp">
                   <span className="offer-m__agreeddot" aria-hidden="true" />
