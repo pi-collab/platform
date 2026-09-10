@@ -143,6 +143,14 @@ export default async function DashboardPage({
   const submissionsToReview = dealStatuses.filter((ds) => ds.deal.status === 'delivered')
   const awaitingApproval = dealStatuses.filter((ds) => ds.deal.status === 'revision')
 
+  /* ONE DEAL, ONE DESTINATION. Every attention row pointed at /deals, so a
+     brand told "1 payment due" landed on a list and had to find it again. When
+     the row stands for exactly one deal, go to that deal - and for the money
+     rows, to its invoice. More than one and the list is genuinely the right
+     answer, because there is no single thing to open. */
+  const rowHref = (rows: { deal: { id: string } }[], anchor?: string) =>
+    rows.length === 1 ? `/deals/${rows[0].deal.id}${anchor ?? ''}` : '/deals'
+
   const paymentsDueTotal = paymentsDue.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
   const overdueTotal = overdue.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
   const attentionCount = invoicesToAccept.length + paymentsDue.length + overdue.length + submissionsToReview.length + awaitingApproval.length
@@ -347,7 +355,7 @@ export default async function DashboardPage({
                   label={`${formatRupees(overdueTotal)} payment to release`}
                   sublabel={<><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--amber)', fontWeight: 600 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />Overdue by {overdue.length} deal{overdue.length !== 1 ? 's' : ''}</span></>}
                   action="Release"
-                  href="/deals"
+                  href={rowHref(overdue, '#invoice')}
                   first
                 />
               )}
@@ -357,7 +365,7 @@ export default async function DashboardPage({
                   label={`${submissionsToReview.length} submission${submissionsToReview.length !== 1 ? 's' : ''} to review`}
                   sublabel={<><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--amber)', fontWeight: 600 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />Awaiting you</span><span style={{ color: 'rgb(198,200,186)' }}>&middot;</span><span>Creators are waiting on feedback</span></>}
                   action="Review"
-                  href="/deals"
+                  href={rowHref(submissionsToReview)}
                   first={overdue.length === 0}
                 />
               )}
@@ -367,7 +375,7 @@ export default async function DashboardPage({
                   label={`${awaitingApproval.length} deal${awaitingApproval.length !== 1 ? 's' : ''} awaiting approval`}
                   sublabel={<span>Terms are ready for your sign-off</span>}
                   action="Approve"
-                  href="/deals"
+                  href={rowHref(awaitingApproval)}
                   first={overdue.length === 0 && submissionsToReview.length === 0}
                 />
               )}
@@ -377,7 +385,7 @@ export default async function DashboardPage({
                   label={`${formatRupees(paymentsDueTotal)} payment${paymentsDue.length !== 1 ? 's' : ''} due`}
                   sublabel={<span>{paymentsDue.length} deal{paymentsDue.length !== 1 ? 's' : ''}</span>}
                   action="Pay"
-                  href="/deals"
+                  href={rowHref(paymentsDue, '#invoice')}
                   first={overdue.length === 0 && submissionsToReview.length === 0 && awaitingApproval.length === 0}
                 />
               )}
@@ -387,7 +395,7 @@ export default async function DashboardPage({
                   label={`${invoicesToAccept.length} invoice${invoicesToAccept.length !== 1 ? 's' : ''} to review`}
                   sublabel={<span>Review and approve</span>}
                   action="Approve"
-                  href="/deals"
+                  href={rowHref(invoicesToAccept, '#invoice')}
                   first={overdue.length === 0 && submissionsToReview.length === 0 && awaitingApproval.length === 0 && paymentsDue.length === 0}
                 />
               )}
