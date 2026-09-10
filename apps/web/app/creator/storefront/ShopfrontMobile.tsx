@@ -3,6 +3,7 @@
 import React from 'react'
 import { collabCharge, boostingCharge, offersCollab, offersBoosting } from '@/lib/addons'
 import { formatINR } from '@/lib/deal-stage'
+import { compactINR } from '@/lib/money'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
 import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
@@ -500,10 +501,34 @@ export default function ShopfrontMobile({
                           {/* The unit price sits here, not in a column of its
                               own: "each" is what a stepper above a total needs
                               to say. */}
-                          <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>
-                            {item.isPriceOnRequest ? 'Rate on request' : `${item.isFromRow ? 'From ' : ''}${item.priceDisplay} each`}
-                          </div>
+                          {/* Once picked, the unit price belongs under the name:
+                              "each" is what a quantity needs beside it. Before
+                              that the row is being scanned, and the price reads
+                              better on the right. */}
+                          {item.qty > 0 && !item.isPriceOnRequest && (
+                            <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>
+                              {`${item.isFromRow ? 'From ' : ''}${item.priceDisplay} each`}
+                            </div>
+                          )}
+                          {item.qty > 0 && item.isPriceOnRequest && (
+                            <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>Rate on request</div>
+                          )}
                         </div>
+                        {/* UNSELECTED: the price, on the right, short. A rate
+                            card on a phone is being compared rather than added
+                            up, so 1.2L says in four characters what 1,20,000
+                            takes a line to say. The full figure is still what
+                            the total and the offer carry. */}
+                        {item.qty === 0 && (
+                          <span
+                            className="tnum"
+                            style={{flexShrink: 0, fontSize: '13.5px', fontWeight: '700', color: item.isPriceOnRequest ? 'var(--wg-500)' : 'var(--ink)'}}
+                          >
+                            {item.isPriceOnRequest
+                              ? 'On request'
+                              : `${item.isFromRow ? 'From ' : ''}${compactINR(item.pricePaise)}`}
+                          </span>
+                        )}
                         {item.qty > 0 && !item.isPriceOnRequest && (
                           <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0}}>
                             <button onClick={item.dec} aria-label="Decrease quantity" style={stepBtn}>&minus;</button>
