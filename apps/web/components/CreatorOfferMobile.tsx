@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { zeroFeeNote } from '@/lib/fee-copy'
 
@@ -56,15 +55,13 @@ function shortDate(iso: string | null): string | null {
 }
 
 export default function CreatorOfferMobile({
-  brandName, brandLogo, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
+  brandName, dealTitle, receivesPaise, totalPaise, feePaise, feePercent, feeBasis,
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
   stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
 }: {
   brandName: string
-  /** The brand's logo, when they have uploaded one. */
-  brandLogo?: string | null
   dealTitle: string
   receivesPaise: number | null
   totalPaise: number | null
@@ -182,9 +179,10 @@ export default function CreatorOfferMobile({
           <Link href="/creator/deals" className="offer-m__back" aria-label="Back to deals">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </Link>
-          {/* The brand's mark, same as the deals list this screen opens from
-              and the desktop version of this page. */}
-          <BrandMark name={brandName} logoUrl={brandLogo} className="offer-m__mark" />
+          {/* No brand mark here. The desktop hero has room for one; this row is
+              a back arrow, a title and two icons across a phone, and a 28px
+              mark bought nothing the title's own "Offer from <brand>" was not
+              already saying. */}
           <h1 className="offer-m__title">
             {stage === 'offer' ? 'Offer from ' : 'Deal with '}
             <span className="offer-m__brand">{brandName}</span>

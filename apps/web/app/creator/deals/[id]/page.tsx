@@ -336,7 +336,6 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
         ) : null}
         brandName={brand}
-        brandLogo={brandLogo}
         dealTitle={deal.title ?? 'Untitled deal'}
         receivesPaise={creatorReceives}
         totalPaise={deal.price_paise ?? null}

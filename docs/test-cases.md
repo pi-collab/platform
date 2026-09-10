@@ -971,10 +971,10 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] Creator dashboard: deal-in-flight card
 - [ ] Creator dashboard "Brands you've worked with": desktop brand card and the mobile rail card
 - [ ] A brand appearing in more than one of those sections shows the SAME picture in all of them
-- [ ] Creator deal detail: desktop hero (52px mark beside the headline) and the mobile sticky header (28px mark)
+- [ ] Creator deal detail: the desktop hero carries a 52px mark beside the headline
+- [ ] The MOBILE deal header carries none, deliberately. That row is a back arrow, a title and two icons across a phone, and the title already says "Offer from <brand>"
 - [ ] Every one of those falls back to the brand's initials when no logo is set
 - [ ] Nothing about any layout moves when a logo appears: the mark fills the same box the initials did
-- [ ] The mobile deal header's title still ellipsises rather than the mark shrinking
 
 #### Data and access
 - [ ] `logo_url` is fetched on the same `brands(...)` join each screen already used, not a second query

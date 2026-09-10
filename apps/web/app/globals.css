@@ -4737,15 +4737,7 @@ button.signup-form__cross-link {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .offer-m__brand { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
-  /* The brand's picture, or its initials. Fixed and non-shrinking so the title
-     beside it keeps ellipsising rather than the mark collapsing. */
-  .offer-m__mark {
-    width: 28px; height: 28px; border-radius: 9px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: #EEF1F5; border: 1px solid #E5E8EE;
-    font-family: var(--font-display); font-weight: 700; font-size: 11px; color: #565C68;
-    object-fit: cover;
-  }
+
   .offer-m__headactions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   /* White with a hairline, per the export — not a filled grey chip. */
   .offer-m__icon {
