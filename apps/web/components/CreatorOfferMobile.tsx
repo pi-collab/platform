@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
-  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode,
+  stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel,
 }: {
   brandName: string
   dealTitle: string
@@ -124,6 +124,10 @@ export default function CreatorOfferMobile({
   allPosted?: boolean
   /** The invoice card, once there is content posted to invoice for. */
   invoiceNode?: React.ReactNode
+  /** The brand has accepted the invoice and payment has not landed yet. */
+  invoiceAccepted?: boolean
+  /** e.g. "Due in 12 days" / "Overdue by 3 days", already formatted. */
+  invoiceDueLabel?: string | null
 }) {
   /* The agreed figures, defined once. Agreed and revision show them in their
      own collapsible card; submitted and approved fold them into "Brief &
@@ -275,6 +279,24 @@ export default function CreatorOfferMobile({
             invoice, restating what the Deliverables fold already records.
             Partly posted still shows them: there is a card left to fill. */}
         {stage === 'approved' && !allPosted && postNode}
+
+        {/* THE BRAND HAS AGREED THE BILL. Stated at the top, above the invoice
+            itself, because it is the thing that changed since the creator last
+            looked and it is not their move any more: the card below shows the
+            same status, but as one line inside a card about numbers. */}
+        {invoiceAccepted && (
+          <div className="offer-m__card offer-m__notice">
+            <span className="offer-m__noticeicon" aria-hidden="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            <div>
+              <div className="offer-m__noticetitle">Invoice accepted</div>
+              <div className="offer-m__noticebody">
+                {brandName} has agreed your invoice.{invoiceDueLabel ? ` ${invoiceDueLabel}.` : ' Payment follows the agreed terms.'}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Once the content is live there is something to invoice FOR, so the
             waiting stub gives way to the real card. Before that it is a state,

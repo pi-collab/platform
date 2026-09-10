@@ -262,6 +262,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           return e ? formatDate(e.created_at) : (deal.agreed_at ? null : null)
         })()}
         allPosted={!!items && items.length > 0 && items.every((i) => !!(i as Record<string, unknown>).posted_url)}
+        invoiceAccepted={invoice?.status === 'accepted'}
+        invoiceDueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
         invoiceNode={isApprovedMobile ? (
           <MobileInvoiceCard
             dealId={deal.id}

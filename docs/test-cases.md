@@ -4467,3 +4467,13 @@ the real card.
       no invoice document to download — no PDF route, no print view, nothing in
       InvoiceCard either. It is omitted rather than wired to a dead link.
       Building it means deciding what the document is
+
+### The accepted notice sits at the top
+- [ ] When the invoice is accepted, a notice card appears ABOVE the invoice
+      card: a tick, **"Invoice accepted"**, and "<brand> has agreed your
+      invoice." followed by the due text when there is one
+- [ ] It is at the top because it is what changed since the creator last
+      looked, and it is no longer their move. The card below carries the same
+      status, but as one line inside a card about numbers
+- [ ] It does NOT appear while the invoice is only issued, or before one exists
+- [ ] No em dash in the copy, per the standing rule
