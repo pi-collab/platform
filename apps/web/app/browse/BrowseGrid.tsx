@@ -141,7 +141,29 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   const [rateFilter, setRateFilter] = useState('any')
   const [sort, setSort] = useState('followers')
   const [savedView, setSavedView] = useState(false)
+  /* SAVED SURVIVES A RELOAD. It was component state, so a brand who saved six
+     creators and refreshed had saved nothing. Per browser rather than per
+     account: a table would be the right home and would follow them between
+     devices and teammates, but that is a migration and RLS, and losing the list
+     on every reload was the bug in front of us. */
   const [saved, setSaved] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('guapd_saved_creators')
+      if (raw) setSaved(JSON.parse(raw))
+    } catch { /* private mode, cleared storage: start empty rather than break */ }
+  }, [])
+  useEffect(() => {
+    try { window.localStorage.setItem('guapd_saved_creators', JSON.stringify(saved)) } catch { /* ignore */ }
+  }, [saved])
+
+  /* Selection is only for the saved list, and is separate from `saved`:
+     ticking a creator to put in a campaign is not the same act as keeping
+     them. */
+  const [picked, setPicked] = useState<Record<string, boolean>>({})
+  const [startingCampaign, setStartingCampaign] = useState(false)
+  const router = useRouter()
+  const pickedIds = Object.keys(picked).filter((id) => picked[id])
   const [shown, setShown] = useState(PAGE_SIZE)
   const searchRef = useRef<HTMLInputElement>(null)
   const ph = useAnimatedPlaceholder()
@@ -487,7 +509,17 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 20 }}>
               {pageList.map((c) => (
-                <CreatorCard key={c.id} creator={c} isSaved={!!saved[c.id]} onToggleSave={toggleSave} storefrontSlug={storefrontSlugs[c.id] ?? null} verifiedFollowers={verifiedFollowers[c.id]} />
+                <CreatorCard
+                  key={c.id}
+                  creator={c}
+                  isSaved={!!saved[c.id]}
+                  onToggleSave={toggleSave}
+                  storefrontSlug={storefrontSlugs[c.id] ?? null}
+                  verifiedFollowers={verifiedFollowers[c.id]}
+                  selectable={savedView}
+                  isPicked={!!picked[c.id]}
+                  onTogglePick={(id) => setPicked((prev) => ({ ...prev, [id]: !prev[id] }))}
+                />
               ))}
             </div>
 
@@ -508,6 +540,63 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
               </div>
             )}
           </>
+        )}
+
+        {/* ══════ CAMPAIGN BAR ══════
+            In the saved view the question is no longer "who shall I keep" but
+            "who is in this campaign", so the bar counts TICKED creators rather
+            than saved ones and its action is a campaign, not a single deal. */}
+        {savedView && pickedIds.length > 0 && (
+          <div style={{
+            position: 'fixed', bottom: 18, left: 0, right: 0, zIndex: 40,
+            display: 'flex', justifyContent: 'center', padding: '0 20px', pointerEvents: 'none',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+              padding: '12px 14px 12px 20px', borderRadius: 'var(--radius-pill)',
+              background: 'var(--ink)', boxShadow: '0 22px 50px -20px rgba(40,45,25,.6)',
+              pointerEvents: 'auto',
+            }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.72)', whiteSpace: 'nowrap' }}>
+                {pickedIds.length} selected
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  disabled={startingCampaign}
+                  onClick={async () => {
+                    const name = window.prompt('Name this campaign')
+                    if (!name?.trim()) return
+                    setStartingCampaign(true)
+                    const { startCampaignWithCreators } = await import('@/app/campaigns/actions')
+                    const res = await startCampaignWithCreators(name, pickedIds)
+                    setStartingCampaign(false)
+                    if ('error' in res && res.error) { window.alert(res.error); return }
+                    router.push(`/campaigns/${(res as { campaignId: string }).campaignId}`)
+                  }}
+                  style={{
+                    padding: '9px 16px', borderRadius: 'var(--radius-pill)',
+                    background: 'var(--neon)', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                    color: 'var(--ink)', cursor: startingCampaign ? 'wait' : 'pointer', whiteSpace: 'nowrap',
+                    opacity: startingCampaign ? 0.6 : 1,
+                  }}
+                >
+                  {startingCampaign ? 'Starting…' : 'Start a campaign'}
+                </button>
+                <button
+                  onClick={() => setPicked({})}
+                  style={{
+                    padding: '9px 14px', borderRadius: 'var(--radius-pill)',
+                    background: 'none', border: 'none',
+                    fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+                    color: 'rgba(255,255,255,.6)', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* ══════ SHORTLIST BAR ══════ */}
@@ -604,11 +693,16 @@ const chipStyle: React.CSSProperties = {
   color: 'var(--ink)', whiteSpace: 'nowrap',
 }
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers }: {
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, selectable, isPicked, onTogglePick }: {
   creator: BrowseCreator
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
   storefrontSlug: string | null
+  /* Saved view only. There the card is a row in a shortlist being turned into
+     a campaign, so it offers a tick rather than a one-creator deal. */
+  selectable?: boolean
+  isPicked?: boolean
+  onTogglePick?: (id: string) => void
   /** From a connected Instagram account, when there is one. */
   verifiedFollowers?: number
 }) {
@@ -760,6 +854,34 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
             View Profile
           </Link>
         )}
+        {selectable ? (
+          /* SELECT, not "Start deal". Saving a creator is not starting a deal
+             with them, and a shortlist of six offering six separate deals is
+             the opposite of what a brand came to the saved list to do. */
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePick?.(c.id) }}
+            style={{
+              flex: '1 1 0%', minWidth: 0, boxSizing: 'border-box',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              padding: 11, borderRadius: 11,
+              backgroundColor: isPicked ? 'var(--neon)' : 'transparent',
+              border: `1px solid ${isPicked ? 'var(--neon-deep)' : 'var(--frost-edge)'}`,
+              fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12,
+              color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer',
+            }}
+          >
+            <span style={{
+              width: 16, height: 16, borderRadius: '50%', flex: 'none',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              border: `1.5px solid ${isPicked ? 'var(--ink)' : 'var(--frost-edge)'}`,
+              color: isPicked ? 'var(--ink)' : 'transparent',
+            }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+            </span>
+            {isPicked ? 'Selected' : 'Select'}
+          </button>
+        ) : (
         <Link
           href={`/deals/new?creator=${c.id}`}
           onClick={(e) => e.stopPropagation()}
@@ -775,6 +897,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
           Start deal
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </Link>
+        )}
       </div>
     </div>
   )
