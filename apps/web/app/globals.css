@@ -4824,11 +4824,16 @@ button.signup-form__cross-link {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
-  .offer-m__terms-list {
-    display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 14px 0 0;
+  /* The export draws each term as a flex row with a hairline above it, the
+     first row's border removed. The VALUE is bold here at 13/700 while the
+     agreed block's rows are a quiet 12.5 ink-soft - that contrast is
+     deliberate in the design, not an inconsistency. Full terms is the
+     reference you open on purpose; the agreed block is a reminder. */
+  .offer-m__terms-list { display: block; margin: 4px 0 0; }
+  .offer-m__terms-list .offer-m__termrow:first-child { border-top: none; }
+  .offer-m__terms-list .offer-m__termrow > span:last-child {
+    font-size: 13px; font-weight: 700; color: var(--ink);
   }
-  .offer-m__terms-list dt { font-size: 12px; color: #878D99; }
-  .offer-m__terms-list dd { margin: 0; font-size: 12.5px; font-weight: 600; text-align: right; }
 
   .offer-m__guides { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .offer-m__guides li { display: flex; gap: 10px; font-size: 12.5px; line-height: 1.5; color: #565C68; }

@@ -555,57 +555,67 @@ export default function CreatorOfferMobile({
         {/* Terms */}
         <details className="offer-m__card offer-m__fold">
           <summary className="offer-m__foldhead">
-            Full terms
+            Full terms &amp; guidelines
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
           </summary>
-          <dl className="offer-m__terms-list">
-            {totalPaise !== null && <><dt>Deal total</dt><dd>{inr(totalPaise)}</dd></>}
-            {feePaise !== null && feePaise > 0 && (
-              <><dt>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</dt><dd>&minus;{inr(feePaise)}</dd></>
+          {/* The export labels the list inside the fold as well as the fold. */}
+          <div className="offer-m__label" style={{ marginTop: 14 }}>Full terms</div>
+          {/* Flex rows, matching the agreed block's structure and the export's.
+              A dl needed the value pulled onto its label's line with a negative
+              margin, which assumed every row was one line high - it is not,
+              once usage rights or revision terms wrap. */}
+          <div className="offer-m__terms-list">
+            {totalPaise !== null && (
+              <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
             )}
-            {receivesPaise !== null && <><dt>You receive</dt><dd>{inr(receivesPaise)}</dd></>}
+            {feePaise !== null && feePaise > 0 && (
+              <div className="offer-m__termrow">
+                <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
+                <span>&minus;{inr(feePaise)}</span>
+              </div>
+            )}
+            {receivesPaise !== null && (
+              <div className="offer-m__termrow"><span>You receive</span><span>{inr(receivesPaise)}</span></div>
+            )}
             {/* WHEN THEY GET PAID, not when the post runs. This row was the
                 go-live date; a creator reading an offer needs the payment
                 window more than the publish date, and the publish date is
                 already the thing they are agreeing to deliver. */}
-            {paymentIn && <><dt>Payment in</dt><dd>{paymentIn}</dd></>}
+            {paymentIn && (
+              <div className="offer-m__termrow"><span>Payment in</span><span>{paymentIn}</span></div>
+            )}
             {/* Legacy: only on deals agreed before 0501. */}
-            {usageRights && <><dt>Usage rights</dt><dd>{usageRights}</dd></>}
+            {usageRights && (
+              <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
+            )}
             {revisionLimit !== null && (
-              <>
-                <dt>Revisions</dt>
-                <dd>
+              <div className="offer-m__termrow">
+                <span>Revisions</span>
+                <span>
                   {revisionLimit} round{revisionLimit === 1 ? '' : 's'}
                   {extraRevisionPaise ? `, then ${inr(extraRevisionPaise)}` : ''}
-                </dd>
-              </>
+                </span>
+              </div>
             )}
-
-          </dl>
-        </details>
-
-        {/* Guidelines */}
-        {(guidelines.length > 0 || avoid.length > 0) && (
-          <details className="offer-m__card offer-m__fold">
-            <summary className="offer-m__foldhead">
-              Creative guidelines
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-            </summary>
+          </div>
             {guidelines.length > 0 && (
-              <ol className="offer-m__guides">
-                {guidelines.map((g, i) => <li key={i}><span>{i + 1}</span>{g}</li>)}
-              </ol>
+              <>
+                <div className="offer-m__label" style={{ marginTop: 18 }}>Creative guidelines</div>
+                <ol className="offer-m__guides">
+                  {guidelines.map((g, i) => <li key={i}><span>{i + 1}</span>{g}</li>)}
+                </ol>
+              </>
             )}
             {avoid.length > 0 && (
               <>
-                <div className="offer-m__label" style={{ marginTop: 16 }}>Please avoid</div>
+                <div className="offer-m__label" style={{ marginTop: 18 }}>Please avoid</div>
                 <ul className="offer-m__avoid">
                   {avoid.map((a, i) => <li key={i}>{a}</li>)}
                 </ul>
               </>
             )}
-          </details>
-        )}
+        </details>
+
       </div>
     </div>
   )

@@ -4109,10 +4109,8 @@ wording, and the first attempt missed all of it.
       versions, per-item status and the review handoff are not reimplemented
 - [ ] A deal with no structured items renders no submit block
 
-### Known deviations on the OFFER screen (pre-existing, not changed here)
+### Known deviation on the OFFER screen
 - [ ] The export collapses "Brief & attachments" by default; ours opens it
-- [ ] The export has ONE "Full terms & guidelines" fold; ours splits Full terms
-      and Creative guidelines into two
 
 ### Isolation
 - [ ] `.offer-m` is `display:none` outside the mobile query, so desktop is
@@ -4322,3 +4320,18 @@ and version history stay one implementation; only presentation branches.
 - [ ] During a revision the phone shows no old file — only the field to attach
       the new one. Desktop still shows what was handed back, as context
 - [ ] Submitted and approved show the current file; pending shows none
+
+## 40. Full terms: one fold, and the bold is deliberate
+
+- [ ] There is ONE fold titled **"Full terms & guidelines"**. Creative
+      guidelines and Please avoid live inside it, not in a second fold
+- [ ] Inside, a **"Full terms"** label sits above the rows — the export labels
+      the list as well as the fold
+- [ ] Rows are flex with a hairline above each, the first row's border removed
+- [ ] **The value is bold, 13px/700 ink.** The agreed block's rows stay a quiet
+      12.5px ink-soft. That contrast is in the design and is not an
+      inconsistency: Full terms is the reference you open on purpose, the
+      agreed block is a reminder
+- [ ] The list is NOT a `<dl>`. A definition list needs the value pulled onto
+      its label's line with a negative margin, which assumes every row is one
+      line high — untrue once usage rights or revision terms wrap
