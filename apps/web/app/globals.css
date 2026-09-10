@@ -1367,6 +1367,32 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
 .offer-m__invoicedot--done { background: var(--neon-deep); }
 .offer-m__invoicestate .offer-m__label { color: var(--ink-soft); }
 
+/* Invoice card. Rows reuse termrow; the total row is the one figure that
+   carries weight, at the export's 19px display face. */
+.offer-m__invrows {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--border-hairline);
+}
+.offer-m__invrows .offer-m__termrow:first-child { border-top: none; }
+.offer-m__termrow--total > span:first-child {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+}
+.offer-m__termrow--total b {
+  font-family: var(--font-display); font-size: 19px; font-weight: 800;
+  letter-spacing: -0.02em; color: var(--ink);
+}
+.offer-m__invnote { margin-top: 12px; font-size: 11px; color: var(--ink-soft); }
+.offer-m__invdue { color: var(--danger, #dc2626); text-transform: none; letter-spacing: 0; font-weight: 600; }
+/* The one action on the card, so it is filled rather than outlined. */
+.offer-m__invbtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 48px; margin-top: 16px; border-radius: 14px;
+  background: var(--ink); color: #fff; border: none;
+  font-family: var(--font-ui); font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.offer-m__invbtn:disabled { opacity: .5; cursor: not-allowed; }
+.offer-m__inverr { margin-top: 10px; font-size: 11.5px; color: var(--danger, #dc2626); }
+
 /* The submitted work, folded. Same surface as the other accordions. */
 .offer-m__delivfold { padding: 20px; }
 

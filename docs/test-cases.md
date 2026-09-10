@@ -4411,3 +4411,39 @@ data, not against the ones the code seemed to expect.
       chip besides All
 - [ ] `is_posted` is read for truthiness, not `=== false`, so a null reads as
       not posted rather than falling through to the raw status
+
+## 43. Invoice screen, creator mobile
+
+Follows the approved screen: once every deliverable is posted there is
+something to invoice for, so the "Waiting on posted content" stub gives way to
+the real card.
+
+### Before issuing
+- [ ] Stage stays **Approved**, next reads **"Next: issue invoice"**, 4 of 6
+      segments lit — the export's own script does exactly this
+- [ ] Card: eyebrow **Invoice** with **#<deal ref>** on the right
+- [ ] Rows: Deliverables, Platform fee, then **You receive** with the figure at
+      19px in the display face — the one number that carries weight
+- [ ] **"Per agreed terms · not yet sent"**
+- [ ] A filled **Issue to brand** button
+
+### One button, two actions
+- [ ] Ours is `generateInvoice` (writes the draft from the deal's snapshotted
+      fee and terms) then `issueInvoice` (sends it). The button runs both, and
+      only the second when a draft already exists — which is what a half-failed
+      earlier attempt leaves behind
+- [ ] `generateInvoice` requires status approved; `issueInvoice` requires
+      is_posted. Both still enforce that server-side
+
+### After issuing
+- [ ] Stage becomes **Invoiced**, next **"Next: paid"**, 5 of 6 segments
+- [ ] **"Per agreed terms · issued <date>"**
+- [ ] A warning dot with **Awaiting payment**, and the due text in danger red
+      when overdue or due today
+- [ ] The Issue button is gone
+
+### Not built, and why
+- [ ] The export has a **Download invoice** pill in the issued state. There is
+      no invoice document to download — no PDF route, no print view, nothing in
+      InvoiceCard either. It is omitted rather than wired to a dead link.
+      Building it means deciding what the document is

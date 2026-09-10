@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import MobileInvoiceCard from './MobileInvoiceCard'
+import { formatDueStatus } from '@/lib/invoice'
 import { verifyCreator } from '@/lib/creator-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -240,6 +242,9 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   /* Approved but not yet posted. Once everything is posted the deal moves on to
      paid/complete, which have no phone design yet. */
   const isApprovedMobile = deal.status === 'approved'
+  /* Issued means the brand has been asked; a draft has not been sent and is no
+     different from having none. Mirrors the deals list. */
+  const invoiceIssued = !!invoice && (invoice.status === 'issued' || invoice.status === 'accepted')
   const showMobileScreen = isNegotiating || isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile
   const offerUnread = showMobileScreen ? await unreadNotificationCount(supabase, profileId) : 0
   const splitLines = (v: unknown): string[] =>
@@ -250,12 +255,28 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     <>
     {showMobileScreen && (
       <CreatorOfferMobile
-        stage={isApprovedMobile ? 'approved' : isRevisionMobile ? 'revision' : isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
+        stage={isApprovedMobile && invoiceIssued ? 'invoiced'
+          : isApprovedMobile ? 'approved' : isRevisionMobile ? 'revision' : isSubmittedMobile ? 'submitted' : isAgreedMobile ? 'agreed' : 'offer'}
         approvedAt={(() => {
           const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'approved' || x.detail?.new_status === 'approved')).pop()
           return e ? formatDate(e.created_at) : (deal.agreed_at ? null : null)
         })()}
         allPosted={!!items && items.length > 0 && items.every((i) => !!(i as Record<string, unknown>).posted_url)}
+        invoiceNode={isApprovedMobile ? (
+          <MobileInvoiceCard
+            dealId={deal.id}
+            dealRef={deal.deal_ref}
+            hasDraft={!!invoice}
+            issued={invoiceIssued}
+            issuedAt={invoice?.issued_at ? formatDate(invoice.issued_at) : null}
+            dueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
+            dueUrgent={formatDueStatus(invoice?.due_date ?? null)?.urgent ?? false}
+            basePaise={invoice ? invoice.base_paise : deal.price_paise}
+            feePaise={invoice ? invoice.fee_paise : (fee?.fee_paise ?? null)}
+            feePercent={invoice ? invoice.fee_percent : (deal.fee_percent ?? null)}
+            receivesPaise={invoice ? invoice.creator_receives_paise : creatorReceives}
+          />
+        ) : null}
         postNode={isApprovedMobile && items && items.length > 0 ? (
           <PostedCard
             dealId={deal.id}
