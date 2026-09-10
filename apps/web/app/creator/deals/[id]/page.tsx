@@ -319,7 +319,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
         submitTotal={items ? items.length : 0}
         submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile) && items && items.length > 0 ? (
-          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact />
+          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
         ) : null}
         brandName={brand}
         dealTitle={deal.title ?? 'Untitled deal'}

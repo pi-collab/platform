@@ -309,12 +309,32 @@ export default function CreatorOfferMobile({
               )}
               <div className="offer-m__donecap">Paid out for {dealTitle} with {brandName}</div>
             </div>
+            {/* Both carry a 14px icon at 1.9 stroke, per the export: a document
+                for Payments and a rising chart for Analytics. currentColor, so
+                they follow the link's own colour. */}
             <div className="offer-m__donelinks">
-              <Link href="/creator/payments" className="offer-m__donelink">Payments</Link>
+              <Link href="/creator/payments" className="offer-m__donelink">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                Payments
+              </Link>
               {analyticsHref && (
-                <Link href={analyticsHref} className="offer-m__donelink">Analytics</Link>
+                <Link href={analyticsHref} className="offer-m__donelink">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+                  Analytics
+                </Link>
               )}
             </div>
+          </section>
+        )}
+
+        {/* Open on complete: the export makes it a plain surface there, not a
+            fold - the work is the record of what was paid for. */}
+        {stage === 'complete' && submitNode && (
+          <section className="offer-m__card offer-m__submit">
+            <div className="offer-m__submithead">
+              <h2 className="offer-m__submittitle">Deliverables</h2>
+            </div>
+            <div className="offer-m__submitbody">{submitNode}</div>
           </section>
         )}
 
@@ -386,17 +406,6 @@ export default function CreatorOfferMobile({
             do about it must not be behind a fold. Submitted folds it because
             there the work is a record; here it is the task. */}
         {stage === 'revision' && submitNode && (
-          <section className="offer-m__card offer-m__submit">
-            <div className="offer-m__submithead">
-              <h2 className="offer-m__submittitle">Deliverables</h2>
-            </div>
-            <div className="offer-m__submitbody">{submitNode}</div>
-          </section>
-        )}
-
-        {/* Open on complete: the export makes it a plain surface there, not a
-            fold - the work is the record of what was paid for. */}
-        {stage === 'complete' && submitNode && (
           <section className="offer-m__card offer-m__submit">
             <div className="offer-m__submithead">
               <h2 className="offer-m__submittitle">Deliverables</h2>

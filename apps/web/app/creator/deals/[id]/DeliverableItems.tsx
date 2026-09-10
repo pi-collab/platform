@@ -42,6 +42,7 @@ export default function DeliverableItems({
   brandName,
   hideStatusBanner = false,
   compact = false,
+  completed = false,
 }: {
   dealId: string
   items: Item[]
@@ -58,6 +59,11 @@ export default function DeliverableItems({
      is untouched; only the presentation branches, so uploads, signed URLs and
      version history stay one implementation. */
   compact?: boolean
+  /* The settled deal. One row per deliverable: icon, label with its filename
+     under it, and VIEW on the right. The export shows "Approved" there, but on
+     a closed deal that word states something the whole screen already says,
+     while the file itself has no way in. */
+  completed?: boolean
 }) {
   const [urls, setUrls] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {}
@@ -255,7 +261,43 @@ export default function DeliverableItems({
                 ? { display: 'block', padding: 0, borderBottom: 'none', marginTop: idx > 0 ? 16 : 0 }
                 : { display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}
             >
-              {compact && (
+              {compact && completed && (
+                <div style={{ borderRadius: 14, background: '#F5F7FA', padding: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      width: 32, height: 32, borderRadius: 10, flex: 'none', background: 'var(--card)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)' }}>{item.label}</div>
+                      {(item.file_name || item.external_url) && (
+                        <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.file_name || truncateUrl(item.external_url!)}
+                        </div>
+                      )}
+                    </div>
+                    {(item.storage_path || item.external_url) && (
+                      <button
+                        type="button"
+                        onClick={() => item.storage_path ? handleViewFile(item.id) : window.open(item.external_url!, '_blank')}
+                        disabled={viewingFile === item.id}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5, flex: 'none',
+                          padding: 0, background: 'none', border: 'none',
+                          fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
+                          color: 'var(--ink)', whiteSpace: 'nowrap', cursor: 'pointer',
+                        }}
+                      >
+                        {viewingFile === item.id ? 'Loading…' : 'View'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {compact && !completed && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{
                     width: 20, height: 20, borderRadius: '50%', flex: 'none',
@@ -274,7 +316,7 @@ export default function DeliverableItems({
                 </div>
               )}
               {/* Icon */}
-              {!compact && <span style={itemIcon}>
+              {!compact && !completed && <span style={itemIcon}>
                 {item.platform?.toLowerCase().includes('youtube') ? (
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
                 ) : (
@@ -282,7 +324,7 @@ export default function DeliverableItems({
                 )}
               </span>}
 
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {!(compact && completed) && <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Title + price */}
                 {!compact && <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
                   <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>{item.label}</h4>
@@ -656,7 +698,7 @@ export default function DeliverableItems({
                     </div>
                   </div>
                 )}
-              </div>
+              </div>}
             </div>
           )
         })}
