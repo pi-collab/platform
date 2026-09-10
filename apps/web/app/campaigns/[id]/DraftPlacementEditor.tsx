@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { BoostingPill, OptionPill } from '@/components/DealOptionPills'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
+import { collabCharge, boostingCharge, offersCollab, offersBoosting, type AddonRates } from '@/lib/addons'
 import { updateCampaignDraft } from './draft-actions'
 import type { DraftPlacement } from './draft-actions'
 import { calculateFee } from '@/lib/fee'
@@ -19,10 +20,21 @@ interface Product {
   is_active: boolean
 }
 
+interface AddonRateRow {
+  platform: string
+  handle: string
+  collab_rate_type: 'fixed' | 'percent' | null
+  collab_rate_value: number | null
+  boosting_30day_paise: number | null
+}
+
 interface Props {
   draftId: string
   creatorName: string
   products: Product[]
+  /** What the creator charges per channel for collab and boosting. Absent
+      means the channel offers neither, and the controls stay hidden. */
+  addonRates?: AddonRateRow[]
   initialPlacements: DraftPlacement[]
   feePercent: number
   feeMode: 'on_top' | 'deducted'
@@ -36,7 +48,7 @@ function formatRupees(paise: number): string {
   return `₹${rupees.toLocaleString('en-IN')}`
 }
 
-export default function DraftPlacementEditor({ draftId, creatorName, products, initialPlacements, feePercent, feeMode, onClose }: Props) {
+export default function DraftPlacementEditor({ draftId, creatorName, products, addonRates = [], initialPlacements, feePercent, feeMode, onClose }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -88,6 +100,38 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
     return bd
   })
 
+  /* Matched on channel, punctuation-insensitively, the same way the offer
+     builder matches them: a handle stored with a leading @ on one side and
+     without on the other is the same channel. */
+  const ratesFor = (p: { platform: string; handle: string }): AddonRates | null => {
+    const row = addonRates.find(
+      (r) => String(r.platform ?? '').trim().toLowerCase() === String(p.platform ?? '').trim().toLowerCase()
+        && String(r.handle ?? '').replace(/^@/, '').toLowerCase() === String(p.handle ?? '').replace(/^@/, '').toLowerCase(),
+    )
+    if (!row) return null
+    return {
+      collabRateType: row.collab_rate_type,
+      collabRateValue: row.collab_rate_value,
+      boostingThirtyDayPaise: row.boosting_30day_paise,
+    }
+  }
+
+  /* What the add-ons add to ONE unit of this line.
+   *
+   * Ticking collab or boosting changed nothing on the total, and the placement
+   * was saved with the choice but no money against it - so the campaign quoted
+   * the bare rate and the deal it became charged the same, silently dropping
+   * what the brand had asked for. lib/addons is the one definition of these
+   * numbers, shared with the storefront and the offer builder. */
+  const addonsFor = (p: Product, unitPaise: number): { collab: number; boosting: number } => {
+    const rates = ratesFor(p)
+    if (!rates) return { collab: 0, boosting: 0 }
+    const collab = reelTypes[p.id] === 'collab' && offersCollab(rates) ? collabCharge(unitPaise, rates) : 0
+    const days = boostDays[p.id] ?? 0
+    const boosting = days > 0 && offersBoosting(rates) ? boostingCharge(days, rates) : 0
+    return { collab, boosting }
+  }
+
   /* BoostingPill asks in DAYS, which is what the money is calculated from;
      this editor has always stored MONTHS on the placement. Seeded from the
      stored months so an existing draft opens on the right preset, and written
@@ -128,13 +172,15 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
       if (!sel || sel.qty <= 0) continue
       count += sel.qty
       const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
-      total += unitPaise * sel.qty
+      const add = addonsFor(p, unitPaise)
+      total += (unitPaise + add.collab + add.boosting) * sel.qty
       if (!isFixedPrice(p) && (!sel.customPricePaise || sel.customPricePaise <= 0)) {
         missingPrice = true
       }
     }
     return { totalPaise: total, selectedCount: count, hasMissingPrice: missingPrice }
-  }, [products, selections])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, selections, reelTypes, boostDays, addonRates])
 
   const fee = calculateFee(totalPaise, feePercent, feeMode)
 
@@ -166,6 +212,16 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
       const rt = reelTypes[p.id]
       const br = itemBoostingRights[p.id]
       const bd = itemBoostingDuration[p.id]
+      /* The MONEY, not only the choice. These columns were never written, so a
+         placement carried "boosting_rights: true" with no charge against it and
+         draft-actions summed a total that ignored it - the campaign quoted the
+         bare rate for something the brand had asked to pay extra for. The rates
+         travel too, so the figure stays explainable after the creator changes
+         their card. */
+      const rates = ratesFor(p)
+      const add = addonsFor(p, unitPaise)
+      const days = boostDays[p.id] ?? 0
+
       for (let i = 0; i < sel.qty; i++) {
         placements.push({
           label: p.product_type,
@@ -176,6 +232,20 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
           ...(rt ? { reel_type: rt } : {}),
           ...(br != null ? { boosting_rights: br } : {}),
           ...(br && bd ? { boosting_duration_months: parseInt(bd, 10) } : {}),
+          ...(add.collab > 0
+            ? {
+                collab_charge_paise: add.collab,
+                collab_rate_type: rates?.collabRateType ?? null,
+                collab_rate_value: rates?.collabRateValue ?? null,
+              }
+            : {}),
+          ...(add.boosting > 0
+            ? {
+                boosting_days: days,
+                boosting_charge_paise: add.boosting,
+                boosting_30day_paise: rates?.boostingThirtyDayPaise ?? null,
+              }
+            : {}),
         })
       }
     }
@@ -286,18 +356,33 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                               color: selected ? 'var(--ink)' : 'var(--ink-soft)',
                             }}>
                               {(() => {
-                                if (isFixedPrice(p)) return formatRupees(unitPaise * (qty || 1))
-                                if (selected && sel?.customPricePaise) return formatRupees(sel.customPricePaise * qty)
-                                const seed = offerPrefillPaise(p)
-                                return seed != null ? formatRupees(seed * (qty || 1)) : '\u2014'
+                                const base = isFixedPrice(p)
+                                  ? unitPaise
+                                  : (selected && sel?.customPricePaise ? sel.customPricePaise : offerPrefillPaise(p))
+                                if (base == null) return '\u2014'
+                                const add = selected ? addonsFor(p, base) : { collab: 0, boosting: 0 }
+                                return formatRupees((base + add.collab + add.boosting) * (qty || 1))
                               })()}
                             </div>
+                            {selected && (() => {
+                              const base = isFixedPrice(p) ? unitPaise : (sel?.customPricePaise ?? 0)
+                              const add = addonsFor(p, base)
+                              const extra = add.collab + add.boosting
+                              if (extra <= 0) return null
+                              /* Broken out so a boost that was ticked can be
+                                 seen to have cost something. */
+                              return (
+                                <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 4, whiteSpace: 'nowrap' }}>
+                                  incl. {formatRupees(extra * (qty || 1))} extras
+                                </div>
+                              )
+                            })()}
                           </div>
                         </div>
 
                         {selected && (
                           <div style={{ padding: '0 18px 14px 52px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                            {p.platform.toLowerCase() === 'instagram' && (
+                            {p.platform.toLowerCase() === 'instagram' && offersCollab(ratesFor(p)) && (
                               <OptionPill
                                 label="Reel type"
                                 value={reelTypes[p.id] === 'collab' ? 'Collab post' : reelTypes[p.id] === 'non_collab' ? 'Non-collab' : ''}
@@ -310,6 +395,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                                 for it. The months this screen has always stored
                                 are written from the answer, rounded up: half a
                                 month of granted rights is still a month. */}
+                            {offersBoosting(ratesFor(p)) && (
                             <BoostingPill
                               days={boostDays[p.id] ?? null}
                               included={itemBoostingRights[p.id] ?? null}
@@ -325,6 +411,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                                 setItemBoostingDuration((prev) => ({ ...prev, [p.id]: next > 0 ? String(Math.max(1, Math.ceil(next / 30))) : '' }))
                               }}
                             />
+                            )}
 
                             {/* No "Deliver by" here, deliberately. A draft
                                 placement has nowhere to keep a date - the offer
@@ -336,7 +423,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, i
                             {!isFixedPrice(p) && (
                               <input
                                 type="number" min="0" step="1"
-                                placeholder="Your price (\u20B9)"
+                                placeholder="Your price (&#8377;)"
                                 className="dinput"
                                 value={sel?.customPricePaise != null ? String(sel.customPricePaise / 100) : ''}
                                 onChange={(e) => setCustomPrice(p.id, e.target.value)}

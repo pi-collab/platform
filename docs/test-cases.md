@@ -1033,6 +1033,11 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] Opening "Set terms" on a campaign roster row draws the SAME row the offer builder draws: neon tick, name at 15.5/700, "description . Rs.X each" beneath, stepper and line total on the right
 - [ ] Reel type (Instagram only) and Boosting rights are the offer builder's pills, not a bare select and 0.6rem buttons
 - [ ] Boosting is asked in DAYS and still stored as months, rounded up. An existing draft opens on the preset it was saved with
+- [ ] Choosing collab or boosting CHANGES THE MONEY: the line's figure, the "N items" total, the fee and "Brand pays" all move
+- [ ] The line names what the add-ons added ("incl. Rs.20,000 extras")
+- [ ] Reel type and Boosting rights appear only where the creator actually offers them. A control that costs nothing is not shown
+- [ ] Saving writes collab_charge_paise / boosting_charge_paise and the rates behind them, so the deal the draft becomes charges what the campaign quoted
+- [ ] The "price on request" box reads "Your price (Rs.)" and not a literal backslash-u escape
 - [ ] The channel heads its group as an eyebrow: "YOUTUBE . @vikramwealth"
 - [ ] There is deliberately NO "Deliver by" here: a draft placement has nowhere to keep a date, and a pill that discarded it would be worse than none
 - [ ] The pills are one component shared with the offer builder, so the two cannot drift
