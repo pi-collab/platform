@@ -1,9 +1,6 @@
 'use client'
 
 import React from 'react'
-import { collabCharge, boostingCharge, offersCollab, offersBoosting } from '@/lib/addons'
-import { formatINR } from '@/lib/deal-stage'
-import { compactINR } from '@/lib/money'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
 import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
@@ -32,43 +29,12 @@ import './shopfront-mobile.css'
 export interface ShopfrontMobileProps {
   data: ShopfrontData
   qty: Record<string, number>
-  /* Owned by the parent alongside qty, so the totals and the deal hand-off
-     read one set of choices rather than two that can disagree. */
-  wantsCollab: Record<string, boolean>
-  setWantsCollab: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
-  boostDays: Record<string, number>
-  setBoostDays: React.Dispatch<React.SetStateAction<Record<string, number>>>
-  /* Totals computed ONCE by the parent and handed down, so the figure on the
-     phone is the figure the offer is built from. Recomputing here would be a
-     second implementation of the same arithmetic. */
-  rateTotal: number
-  addonsTotal: number
-  rateTotalIsFloor: boolean
-  rateHasOnRequest: boolean
-  /* The amount the brand wants to offer, when the total is a floor. Owned by
-     the parent so the phone and the desktop card are one number, not two. */
-  offerAmount: string
-  setOfferAmount: (v: string) => void
-  /* The total rests as a figure and opens for typing on request. Owned by the
-     parent with the amount itself, so the two renderings behave alike. */
-  editingAmount: boolean
-  setEditingAmount: (v: boolean) => void
-  startEditingAmount: () => void
-  offerTotalPaise: number
-  computedTotalPaise: number
-  offerBelowFloor: boolean
-  chosenTotalPaise?: number
-  addonSelections: Record<string, { collab: boolean; boostDays: number }>
   setQty: React.Dispatch<React.SetStateAction<Record<string, number>>>
   activePlatform: string
   setActivePlatform: (p: string) => void
   linkCopied: boolean
   copyLink: () => void
-  onDealClick?: (
-    selectedQty: Record<string, number>,
-    addons?: Record<string, { collab: boolean; boostDays: number }>,
-    offerTotalPaise?: number,
-  ) => void
+  onDealClick?: (selectedQty: Record<string, number>) => void
   editing?: boolean
   /**
    * The design's sticky page header: back, title, notifications.
@@ -81,10 +47,6 @@ export interface ShopfrontMobileProps {
 }
 
 interface RateVM {
-  key: string
-  /** The channel's add-on rates, or null when none are offered. */
-  rates?: { collabRateType: 'fixed' | 'percent' | null; collabRateValue: number | null; boostingThirtyDayPaise: number | null } | null
-  pricePaise: number
   name: string
   desc: string
   qty: number
@@ -212,42 +174,8 @@ function useReveal(root: React.RefObject<HTMLElement>) {
   }, [root])
 }
 
-/* Segmented control, from "Brand Deal Detail - Create Offer Mobile". Active is
-   a white pill with a soft shadow; inactive is just ink-soft text on the
-   track. */
-/* .stepbtn from the same export: a 26px rounded square, not a filled circle. */
-const stepBtn: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 8,
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--card)', border: '1px solid var(--line)', color: 'var(--ink)',
-  flex: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-}
-
-/* The total, at the size a price deserves. One definition, so the typeable
-   "from" figure is not a different size from a fixed one. */
-const mobileAmount: React.CSSProperties = {
-  fontFamily: 'var(--font-num)', fontWeight: 500, letterSpacing: '-0.02em',
-  fontSize: '22px', lineHeight: '1.15', color: 'var(--ink)',
-}
-
-const seg2: React.CSSProperties = {
-  display: 'flex', background: '#F5F7FA', borderRadius: 10, padding: 3, gap: 3,
-}
-function segStyle(active: boolean): React.CSSProperties {
-  return {
-    flex: 1, textAlign: 'center', padding: '7px 0', borderRadius: 8,
-    fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-    ...(active
-      ? { background: '#fff', color: 'var(--ink)', boxShadow: '0 1px 2px rgba(18,21,28,.08)' }
-      : { color: 'var(--wg-500)' }),
-  }
-}
-
 export default function ShopfrontMobile({
-  data, qty, setQty, wantsCollab, setWantsCollab, boostDays, setBoostDays,
-  rateTotal, addonsTotal, rateTotalIsFloor, rateHasOnRequest, activePlatform, setActivePlatform,
-  offerAmount, setOfferAmount, computedTotalPaise, offerBelowFloor, chosenTotalPaise, addonSelections,
-  editingAmount, setEditingAmount, startEditingAmount, offerTotalPaise,
+  data, qty, setQty, activePlatform, setActivePlatform,
   linkCopied, copyLink, onDealClick, editing, showHeader = false,
 }: ShopfrontMobileProps) {
   /* ── View model ───────────────────────────────────────────────────────────
@@ -263,9 +191,6 @@ export default function ShopfrontMobile({
     const type = item.name.toLowerCase()
     const platformLabel = platform === 'instagram' ? 'Instagram' : platform === 'youtube' ? 'YouTube' : ''
     return {
-      key: k,
-      rates: item.rates ?? null,
-      pricePaise: item.pricePaise,
       // "Reel" alone is ambiguous once a creator sells on both channels, and
       // the rate card no longer groups by platform on a phone.
       name: platformLabel && !item.name.toLowerCase().startsWith(platform)
@@ -396,29 +321,16 @@ export default function ShopfrontMobile({
   const shareLabel = linkCopied ? 'Copied' : 'Share'
   const copyShopfrontLink = copyLink
 
-  /* Nothing chosen, or a typed amount under the creator's floor. The floor is
-     the creator's rate: an offer below it is not a lower offer, it is one they
-     have already said they will not take, so the button does not go anywhere
-     until the number is at least the minimum shown beside it. */
-  const rateCtaBlocked = selectedCount === 0 || offerBelowFloor
-  const rateCtaOpacity = rateCtaBlocked ? 0.45 : 1
-  const rateCtaPointer = rateCtaBlocked ? 'none' : 'auto'
-
   /* In the editor a tap must not throw a creator off the page they are editing.
      Otherwise it carries the CURRENT SELECTION, not an empty one: the rate card
      is what a brand has just been building, and handing the deal builder {}
      makes them choose it all again. */
   const goToCreateOffer = (e: React.MouseEvent) => {
     e.preventDefault()
-    /* Add-ons travel too. The phone passed qty alone, so a brand who ticked a
-       collab and 30 days of boosting here arrived at the builder with both
-       switched off and the price back down to the bare rate. */
-    /* Guarded here as well as by pointer-events: a link is still reachable by
-       keyboard, and this one would otherwise carry an amount the creator has
-       said they will not take. */
-    if (rateCtaBlocked) return
-    if (!editing) onDealClick?.(qty, addonSelections, chosenTotalPaise)
+    if (!editing) onDealClick?.(qty)
   }
+  const rateCtaOpacity = selectedCount === 0 ? 0.45 : 1
+  const rateCtaPointer = selectedCount === 0 ? 'none' : 'auto'
   /* The design sets a MONEY TOTAL at 24px here. Ours is a count of items, and
      "Nothing selected yet" at 24px reads as the loudest thing on the card while
      saying the least. */
@@ -516,210 +428,48 @@ export default function ShopfrontMobile({
                 <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates, the total updates as you go.`}</p>
                 <div style={{marginTop: '22px', background: '#fff', borderRadius: '22px', padding: '6px 20px', boxShadow: '0 10px 24px -18px rgba(40,45,25,.2)'}}>
                   {rateItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
-                    {/* No row tint. The export marks a selected line with the
-                        neon TICK, and a neon wash behind the row as well made
-                        the tick the quieter of the two signals. 14px rows, as
-                        drawn. */}
-                    <div style={{padding: '14px 0', borderTop: itemIdx === 0 ? 'none' : '1px solid var(--hair)'}}>
-                      {/* THE ROW, as "Brand Deal Detail - Create Offer Mobile"
-                          draws it: a 22px tick that fills neon when the line is
-                          picked, the name with its unit price beneath, and the
-                          stepper on the right of the SAME row. The platform
-                          icon is gone - selection is what this row is for, and
-                          the name already carries the channel. */}
-                      {/* The WHOLE row is the target. A 22px tick is a small
-                          thing to hit on a phone, and the name beside it is
-                          what a brand is actually reaching for. The stepper
-                          stops the event so +/- still work on their own. */}
-                      <div
-                        onClick={() => (item.qty > 0 ? item.dec() : item.inc())}
-                        role="checkbox"
-                        aria-checked={item.qty > 0}
-                        aria-label={item.name}
-                        tabIndex={0}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (item.qty > 0 ? item.dec() : item.inc()) } }}
-                        style={{display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer'}}
-                      >
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            width: '22px', height: '22px', flex: 'none', borderRadius: '50%',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                            border: item.qty > 0 ? '1.5px solid var(--neon-deep)' : '1.5px solid var(--line)',
-                            background: item.qty > 0 ? 'var(--neon)' : '#fff',
-                            color: item.qty > 0 ? 'var(--ink)' : 'transparent',
-                          }}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    <div style={{padding: '22px 2px', borderTop: '1px solid var(--hair)', background: item.rowBg}}>
+                      <div style={{display: 'flex', alignItems: 'flex-start', gap: '14px'}}>
+                        <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '12px', background: 'var(--sec-mid)', flexShrink: '0'}}>
+                          {item.isReel ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="4" /><line x1="17.5" y1="6.5" x2="17.5" y2="6.5" /></svg></>) : null}
+                          {item.isStory ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /></svg></>) : null}
+                          {item.isYtInt ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9 5 3-5 3z" fill="var(--ink)" /></svg></>) : null}
+                          {item.isYtShort ? (<><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="4" /><path d="m10.5 9 4 3-4 3z" fill="var(--ink)" /></svg></>) : null}
                         </span>
                         <div style={{minWidth: '0', flex: '1'}}>
-                          <div style={{fontSize: '13.5px', fontWeight: '700', color: 'var(--ink)'}}>{item.name}</div>
-                          {/* The unit price sits here, not in a column of its
-                              own: "each" is what a stepper above a total needs
-                              to say. */}
-                          {/* Once picked, the unit price belongs under the name:
-                              "each" is what a quantity needs beside it. Before
-                              that the row is being scanned, and the price reads
-                              better on the right. */}
-                          {item.qty > 0 && !item.isPriceOnRequest && (
-                            <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>
-                              {`${item.isFromRow ? 'From ' : ''}${item.priceDisplay} each`}
-                            </div>
-                          )}
-                          {item.qty > 0 && item.isPriceOnRequest && (
-                            <div style={{fontSize: '11px', color: 'var(--wg-500)', marginTop: '2px'}}>Rate on request</div>
-                          )}
+                          <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '14px', color: 'var(--ink)'}}>{item.name}</div>
+                          <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '4px', lineHeight: '1.4'}}>{item.desc}</div>
                         </div>
-                        {/* UNSELECTED: the price, on the right, short. A rate
-                            card on a phone is being compared rather than added
-                            up, so 1.2L says in four characters what 1,20,000
-                            takes a line to say. The full figure is still what
-                            the total and the offer carry. */}
-                        {item.qty === 0 && (
-                          <span
-                            className="tnum"
-                            style={{flexShrink: 0, fontSize: '13.5px', fontWeight: '700', color: item.isPriceOnRequest ? 'var(--wg-500)' : 'var(--ink)'}}
-                          >
-                            {item.isPriceOnRequest
-                              ? 'On request'
-                              : `${item.isFromRow ? 'From ' : ''}${compactINR(item.pricePaise)}`}
-                          </span>
-                        )}
-                        {item.qty > 0 && !item.isPriceOnRequest && (
-                          <div style={{display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0}}>
-                            <button onClick={(e) => { e.stopPropagation(); item.dec() }} aria-label="Decrease quantity" style={stepBtn}>&minus;</button>
-                            <span className="tnum" style={{minWidth: '16px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{item.qty}</span>
-                            <button onClick={(e) => { e.stopPropagation(); item.inc() }} aria-label="Increase quantity" style={stepBtn}>+</button>
-                          </div>
-                        )}
                       </div>
-
-                      {/* ADD-ONS, drawn as "Brand Deal Detail - Create Offer
-                          Mobile" draws them: a labelled segmented control per
-                          choice rather than a checkbox and a dropdown. Same
-                          shape the brand sees when building the offer, so the
-                          two screens read as one product.
-
-                          Values off that export: a #F5F7FA track at radius 10
-                          with 3px padding, and segments at 11.5/700 that go
-                          white with a soft shadow when active. */}
-                      {item.qty > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
-                        <div style={{margin: '14px 0 0', paddingTop: '12px', borderTop: '1px solid var(--hair)', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                          {offersCollab(item.rates) && (
-                            <div>
-                              <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
-                                <span>Reel type</span>
-                                {wantsCollab[item.key] && (
-                                  <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(collabCharge(item.pricePaise, item.rates!))}</span>
-                                )}
-                              </div>
-                              <div style={seg2}>
-                                <span style={segStyle(!wantsCollab[item.key])} onClick={() => setWantsCollab(w => ({ ...w, [item.key]: false }))}>Non-collab</span>
-                                <span style={segStyle(!!wantsCollab[item.key])} onClick={() => setWantsCollab(w => ({ ...w, [item.key]: true }))}>Collab post</span>
-                              </div>
-                            </div>
-                          )}
-                          {offersBoosting(item.rates) && (
-                            <div>
-                              <div style={{fontSize: '10px', color: 'var(--wg-500)', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', gap: '8px'}}>
-                                <span>Boosting rights</span>
-                                {(boostDays[item.key] ?? 0) > 0 && (
-                                  <span style={{color: 'var(--ink)', fontWeight: '700'}}>+{formatINR(boostingCharge(boostDays[item.key], item.rates!))}</span>
-                                )}
-                              </div>
-                              {/* None leads. It is where the control starts, and
-                                  a segmented row reads left to right - the
-                                  export trails it, which put the current state
-                                  at the far end of the row. Selecting nothing
-                                  is still the default: a brand is never opted
-                                  into a charge they have not asked for. */}
-                              <div style={seg2}>
-                                <span style={segStyle(!(boostDays[item.key] ?? 0))} onClick={() => setBoostDays(b => ({ ...b, [item.key]: 0 }))}>None</span>
-                                {[7, 30, 90].map(d => (
-                                  <span key={d} style={segStyle((boostDays[item.key] ?? 0) === d)} onClick={() => setBoostDays(b => ({ ...b, [item.key]: d }))}>{d}d</span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginTop: '16px', paddingLeft: '54px'}}>
+                        {item.isCustom ? (<>
+                          <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{flex: '1', minWidth: '0', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
+                        </>) : null}
+                        {item.isPriceOnRequest ? (<>
+                          <div style={{fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: '600', color: 'var(--wg-500)'}}>Price on request</div>
+                        </>) : null}
+                        {item.isFromRow ? (<>
+                          <div style={{display: 'flex', alignItems: 'baseline', gap: '5px'}}><span style={{fontSize: '12px', fontWeight: '500', color: 'var(--wg-500)'}}>From</span><span className="tnum" style={{fontSize: item.priceFontSize, fontWeight: '800', letterSpacing: '-0.015em', color: 'var(--ink)'}}>{item.priceDisplay}</span></div>
+                        </>) : null}
+                        <div style={{display: 'inline-flex', alignItems: 'center', gap: '0', background: '#F5F7FA', borderRadius: '999px', padding: '4px', flexShrink: '0'}}>
+                          <button onClick={item.dec} aria-label="Decrease quantity" style={{width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: '#fff', color: 'var(--ink)', fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px -3px rgba(40,45,25,.3)'}}>−</button>
+                          <span className="tnum" style={{width: '26px', textAlign: 'center', fontWeight: '700', fontSize: '13px', color: 'var(--ink)'}}>{item.qty}</span>
+                          <button onClick={item.inc} aria-label="Increase quantity" style={{width: '28px', height: '28px', borderRadius: '50%', border: 'none', background: 'var(--neon)', color: 'var(--ink)', fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>+</button>
                         </div>
-                      )}
-
-                      {/* EDITOR-ONLY inputs. The price row and the stepper that
-                          used to live here are gone: both are in the row header
-                          now, and a second stepper under the first was two
-                          controls for one number. */}
-                      {item.isCustom && (
-                        <div style={{marginTop: '12px'}}>
-                          <input value={item.customQuote} onInput={item.onCustomQuote} placeholder="Add your rate" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
-                        </div>
-                      )}
+                      </div>
                       {item.showFromInput ? (<>
-                        <div style={{marginTop: '12px'}}>
+                        <div style={{marginTop: '12px', paddingLeft: '54px'}}>
                           <input value={item.fromAmount} onInput={item.onFromAmount} placeholder="Enter your rate (₹25,000+)" style={{width: '100%', height: '36px', padding: '0 14px', borderRadius: '999px', border: '1.3px solid var(--line)', background: '#fff', fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--ink)'}} />
                         </div>
                       </>) : null}
                     </div>
                   </React.Fragment>))}
-                  {/* SELECTED left, TOTAL right, then the button across the
-                      full width beneath both.
-                      The total used to sit under the item count as a sentence
-                      of arithmetic - "From Rs.65,000 · Rs.50,000 + Rs.15,000
-                      extras" - which is three numbers for one decision, at
-                      12.5px, while the button ate the right-hand side. What
-                      each add-on costs is already on its own row above. */}
-                  <div style={{padding: '22px 2px', borderTop: '1px solid var(--hair)'}}>
-                    <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px'}}>
-                      <div style={{minWidth: 0}}>
-                        <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Selected</div>
-                        <div style={rateTotalStyle}>{rateTotalLabel}</div>
-                      </div>
-                      {selectedCount > 0 && (rateTotal + addonsTotal) > 0 && (
-                        <div style={{textAlign: 'right', flex: '0 0 auto'}}>
-                          <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>{rateTotalIsFloor ? 'From' : 'Total'}</div>
-                          {/* A floor is a starting price, so it is typeable.
-                              A brand who would pay more than the minimum had to
-                              reach the builder to find that out. */}
-                          {rateTotalIsFloor && editingAmount ? (
-                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', marginTop: '4px'}}>
-                              <span style={mobileAmount}>&#8377;</span>
-                              <input
-                                value={offerAmount}
-                                onChange={(e) => setOfferAmount(e.target.value)}
-                                onBlur={() => setEditingAmount(false)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingAmount(false) }}
-                                inputMode="numeric"
-                                autoFocus
-                                aria-label="Amount you want to offer"
-                                style={{...mobileAmount, width: '112px', textAlign: 'right', padding: '3px 8px', border: '1.3px solid var(--line)', borderRadius: '10px', background: '#fff'}}
-                              />
-                            </div>
-                          ) : rateTotalIsFloor ? (
-                            <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px'}}>
-                              <span className="tnum" style={mobileAmount}>{formatINR(offerTotalPaise)}</span>
-                              <button
-                                type="button"
-                                onClick={startEditingAmount}
-                                aria-label="Change the amount you want to offer"
-                                style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '9px', flexShrink: 0, border: '1.3px solid var(--line)', background: '#fff', color: 'var(--wg-500)', cursor: 'pointer', padding: 0}}
-                              >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="tnum" style={{...mobileAmount, marginTop: '4px'}}>{formatINR(computedTotalPaise)}</div>
-                          )}
-                          {rateTotalIsFloor && (
-                            <div style={{fontSize: '11.5px', color: offerBelowFloor ? '#B4262A' : 'var(--wg-500)', marginTop: '5px'}}>
-                              {offerBelowFloor ? `Enter at least ${formatINR(computedTotalPaise)}` : `Minimum ${formatINR(computedTotalPaise)}`}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', padding: '22px 2px', borderTop: '1px solid var(--hair)'}}>
+                    <div>
+                      <div className="t-meta" style={{color: 'var(--meta)', letterSpacing: '.08em'}}>Selected</div>
+                      <div style={rateTotalStyle}>{rateTotalLabel}</div>
                     </div>
-                    {rateHasOnRequest && (
-                      <div style={{fontSize: '12px', color: 'var(--wg-500)', marginTop: '10px'}}>Plus items priced on request.</div>
-                    )}
-                    {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', width: '100%', marginTop: '18px', fontSize: '14px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '15px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer, cursor: rateCtaBlocked ? 'not-allowed' : 'pointer'}} aria-disabled={rateCtaBlocked}>Create an offer<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
+                    {data.hideDealCta ? null : (<a href="#" onClick={goToCreateOffer} style={{display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: 'var(--ink)', background: 'var(--neon)', borderRadius: '999px', padding: '12px 20px', opacity: rateCtaOpacity, pointerEvents: rateCtaPointer}}>Create an offer<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></a>)}
                   </div>
                 </div>
               </div>

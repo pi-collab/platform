@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react'
-import { collabCharge, boostingCharge, offersCollab, offersBoosting, formatBasisPoints } from '@/lib/addons'
 import { timeAgo } from '@/lib/instagram-outcomes'
 
 // Imported here, not by a page: this component is the editor preview, the
@@ -311,8 +310,6 @@ export interface RateCardItem {
   approximate?: boolean
   platform: string
   handle: string
-  /** The channel's add-on rates, or null when it offers none. */
-  rates?: { collabRateType: 'fixed' | 'percent' | null; collabRateValue: number | null; boostingThirtyDayPaise: number | null } | null
 }
 
 export interface ShopfrontData {
@@ -448,16 +445,7 @@ export default function ShopfrontPreview({
   /** When set, CTA buttons link to this URL (e.g. /deals/new?creator=ID) instead of in-page anchors */
   dealUrl?: string
   /** When set, CTA buttons call this with selected rate card quantities instead of navigating */
-  /* Quantities AND the add-ons chosen against each line, so the builder opens
-     on what the brand configured here rather than resetting it. */
-  /* The third argument is the amount the brand actually intends to offer.
-     Sent ONLY when they raised it above the computed floor, so an untouched
-     selection still lets the builder price itself. */
-  onDealClick?: (
-    selectedQty: Record<string, number>,
-    addons?: Record<string, { collab: boolean; boostDays: number }>,
-    offerTotalPaise?: number,
-  ) => void
+  onDealClick?: (selectedQty: Record<string, number>) => void
   /**
    * Show the phone header (back / "Shopfront" / copy link).
    *
@@ -481,11 +469,6 @@ export default function ShopfrontPreview({
 
   // Rate card state
   const [qty, setQty] = useState<Record<string, number>>({})
-  /* The same two add-ons the brand's builder offers, priced here so a brand
-     sees the real number before signing in rather than after. Keyed by line,
-     because rates are per channel and a card can span channels. */
-  const [wantsCollab, setWantsCollab] = useState<Record<string, boolean>>({})
-  const [boostDays, setBoostDays] = useState<Record<string, number>>({})
   const setItemQty = (key: string, delta: number) => {
     setQty(prev => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }))
   }
@@ -514,29 +497,6 @@ export default function ShopfrontPreview({
 
   // On-request items are excluded rather than counted as zero: a total that
   // silently omits a priced line is a quote a brand would hold us to.
-  /* One definition of what an add-on costs, shared with the deal builder and
-     the invoice. Nothing here computes a percentage of its own. */
-  const addonsFor = (item: RateCardItem): number => {
-    const r = item.rates
-    if (!r) return 0
-    let extra = 0
-    if (wantsCollab[item.key] && offersCollab(r)) extra += collabCharge(item.pricePaise, r)
-    const days = boostDays[item.key] ?? 0
-    if (days > 0 && offersBoosting(r)) extra += boostingCharge(days, r)
-    return extra
-  }
-
-  const addonSelections = Object.fromEntries(
-    data.rateCardItems
-      .filter((it) => (qty[it.key] || 0) > 0 && (wantsCollab[it.key] || (boostDays[it.key] ?? 0) > 0))
-      .map((it) => [it.key, { collab: !!wantsCollab[it.key], boostDays: boostDays[it.key] ?? 0 }]),
-  )
-
-  const addonsTotal = data.rateCardItems.reduce(
-    (sum, it) => sum + (qty[it.key] ? addonsFor(it) * (qty[it.key] || 0) : 0),
-    0,
-  )
-
   const rateTotal = data.rateCardItems.reduce(
     (s, item) => item.countsToward === false ? s : s + (qty[item.key] || 0) * item.pricePaise,
     0,
@@ -547,47 +507,6 @@ export default function ShopfrontPreview({
   const rateTotalIsFloor = data.rateCardItems.some(
     (item) => (qty[item.key] || 0) > 0 && item.approximate === true,
   )
-
-  /* A "from" price is a floor, not a quote.
-   *
-   * The card said "From Rs.65,000" and then handed the builder a line at
-   * exactly Rs.65,000, so a brand willing to pay more had to discover in the
-   * builder that the number had been a minimum all along. When the total is a
-   * floor it is editable here, and what they type is what the offer opens on.
-   *
-   * Held as typed rather than as paise: clamping mid-keystroke fights the
-   * person typing, so the floor is enforced once, on the way out. */
-  const [offerAmount, setOfferAmount] = useState('')
-  /* The total reads as a figure, not as an empty box.
-   *
-   * Drawn as an input from the start, the most important number on the card
-   * was a blank field with the real total greyed out behind it as a
-   * placeholder, which reads as "unfilled" rather than "editable". It rests as
-   * the amount and opens for typing when asked. */
-  const [editingAmount, setEditingAmount] = useState(false)
-  const computedTotalPaise = rateTotal + addonsTotal
-  const typedPaise = (() => {
-    const n = parseFloat(offerAmount.replace(/[^0-9.]/g, ''))
-    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0
-  })()
-  const offerTotalPaise = Math.max(typedPaise, computedTotalPaise)
-  /* Below the floor while they are still typing. Worth saying, and not worth
-     blocking on: the handoff clamps either way. */
-  const offerBelowFloor = typedPaise > 0 && typedPaise < computedTotalPaise
-  /* Only an amount the brand actually chose travels. An untouched floor is not
-     a decision, and sending it would pin the builder's price override to a
-     number nobody typed. */
-  const chosenTotalPaise = typedPaise > computedTotalPaise ? offerTotalPaise : undefined
-  /* Opening the field seeds it with the figure already on screen, so raising a
-     price is an edit rather than a retype. */
-  const startEditingAmount = () => {
-    if (!offerAmount.trim()) setOfferAmount(String(Math.round(computedTotalPaise / 100)))
-    setEditingAmount(true)
-  }
-  /* The CTA is live only with something selected AND an amount that is at
-     least the creator's floor. Below it, the offer would be one they have
-     already said they will not take. */
-  const offerReady = rateTotal > 0 && !offerBelowFloor
   const rateHasOnRequest = data.rateCardItems.some(
     (item) => (qty[item.key] || 0) > 0 && item.countsToward === false,
   )
@@ -948,54 +867,6 @@ export default function ShopfrontPreview({
                         }}
                       >+</button>
                     </div>
-
-                    {/* ADD-ONS, only once the line is selected and only where
-                        the creator offers them. Spanning the full grid so the
-                        controls sit under the row they belong to rather than
-                        squeezing the price column. Each shows what it ADDS, not
-                        a new total, which is the same wording the rate editor
-                        now uses. */}
-                    {q > 0 && item.rates && (offersCollab(item.rates) || offersBoosting(item.rates)) && (
-                      <div style={{
-                        gridColumn: '2 / -1', display: 'flex', flexWrap: 'wrap',
-                        alignItems: 'center', gap: 14, paddingTop: 12,
-                      }}>
-                        {offersCollab(item.rates) && (
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={!!wantsCollab[item.key]}
-                              onChange={(e) => setWantsCollab((w) => ({ ...w, [item.key]: e.target.checked }))}
-                            />
-                            Collab post
-                            <span style={{ color: 'var(--ink)', fontWeight: 700 }}>
-                              +{formatINR(collabCharge(item.pricePaise, item.rates!))}
-                            </span>
-                            {item.rates!.collabRateType === 'percent' && item.rates!.collabRateValue != null && (
-                              <span style={{ color: 'var(--ink-faint)' }}>({formatBasisPoints(item.rates!.collabRateValue)})</span>
-                            )}
-                          </label>
-                        )}
-                        {offersBoosting(item.rates) && (
-                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
-                            Boosting
-                            <select
-                              value={boostDays[item.key] ?? 0}
-                              onChange={(e) => setBoostDays((b) => ({ ...b, [item.key]: parseInt(e.target.value, 10) }))}
-                              style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--hairline)', background: 'var(--card)' }}
-                            >
-                              <option value={0}>No boosting</option>
-                              {[7, 14, 30, 60, 90].map((d) => <option key={d} value={d}>{d} days</option>)}
-                            </select>
-                            {(boostDays[item.key] ?? 0) > 0 && (
-                              <span style={{ color: 'var(--ink)', fontWeight: 700 }}>
-                                +{formatINR(boostingCharge(boostDays[item.key], item.rates!))}
-                              </span>
-                            )}
-                          </label>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )
               })}
@@ -1010,73 +881,35 @@ export default function ShopfrontPreview({
                   <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2, fontSize: 17, color: 'var(--ink)', marginTop: 5 }}>
                     {rateCount === 0 ? 'None yet' : `${rateCount} deliverable${rateCount !== 1 ? 's' : ''} selected`}
                   </div>
-                  {rateCount > 0 && rateHasOnRequest && (
-                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 6 }}>
-                      {rateTotal > 0 ? 'Plus items priced on request' : 'Priced on request'}
+                  {rateCount > 0 && (
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>
+                      {/* Stated as a floor whenever a selected line is a minimum
+                          or a range, and flagged when one carries no price at
+                          all. A total that reads exact when it is not is a quote
+                          a brand would hold the creator to. */}
+                      {rateTotal > 0 && (
+                        <>
+                          {rateTotalIsFloor ? 'From ' : ''}
+                          <strong style={{ color: 'var(--ink)' }}>{formatINR(rateTotal)}</strong>
+                        </>
+                      )}
+                      {rateHasOnRequest && (
+                        <span style={{ color: 'var(--ink-faint)' }}>
+                          {rateTotal > 0 ? ' + items priced on request' : 'Priced on request'}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {/* THE TOTAL, on its own on the right.
-                    One number, not an arithmetic trail: the breakdown that used
-                    to sit here read "From Rs.65,000 (Rs.50,000 + Rs.15,000
-                    extras)", which is three figures for one decision. What each
-                    add-on costs is already on its own row above. */}
-                {rateCount > 0 && rateTotal > 0 && (
-                  <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
-                    <span className="t-meta" style={{ color: 'var(--ink-faint)' }}>{rateTotalIsFloor ? 'From' : 'Total'}</span>
-                    {rateTotalIsFloor && editingAmount ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 4 }}>
-                        <span style={desktopAmount}>&#8377;</span>
-                        <input
-                          value={offerAmount}
-                          onChange={(e) => setOfferAmount(e.target.value)}
-                          onBlur={() => setEditingAmount(false)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingAmount(false) }}
-                          inputMode="numeric"
-                          autoFocus
-                          aria-label="Amount you want to offer"
-                          style={{
-                            ...desktopAmount, width: 130, textAlign: 'right', padding: '2px 6px',
-                            border: '1px solid var(--hairline)', borderRadius: 10, background: 'var(--card)',
-                          }}
-                        />
-                      </div>
-                    ) : rateTotalIsFloor ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-                        <span style={desktopAmount}>{formatINR(offerTotalPaise)}</span>
-                        <button
-                          type="button"
-                          onClick={startEditingAmount}
-                          aria-label="Change the amount you want to offer"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            width: 28, height: 28, borderRadius: 9, cursor: 'pointer',
-                            border: '1px solid var(--hairline)', background: 'var(--card)', color: 'var(--ink-soft)',
-                          }}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ ...desktopAmount, marginTop: 4 }}>{formatINR(computedTotalPaise)}</div>
-                    )}
-                    {rateTotalIsFloor && (
-                      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: offerBelowFloor ? '#B4262A' : 'var(--ink-faint)', marginTop: 5 }}>
-                        {offerBelowFloor ? `Enter at least ${formatINR(computedTotalPaise)}` : `Minimum ${formatINR(computedTotalPaise)}`}
-                      </div>
-                    )}
-                  </div>
-                )}
                 {!showDealCta ? null : onDealClick ? (
-                  <button onClick={() => onDealClick(qty, addonSelections, chosenTotalPaise)} disabled={!offerReady} style={{
+                  <button onClick={() => onDealClick(qty)} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700,
                     color: 'var(--lime-950)', background: 'var(--neon)',
                     borderRadius: 999, padding: '13px 24px',
                     boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
-                    opacity: offerReady ? 1 : 0.45,
-                    pointerEvents: offerReady ? 'auto' : 'none',
+                    opacity: rateTotal > 0 ? 1 : 0.45,
+                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
                     transition: 'opacity .2s',
                   }}>
                     Proceed to create deal
@@ -1089,8 +922,8 @@ export default function ShopfrontPreview({
                     color: 'var(--lime-950)', background: 'var(--neon)',
                     borderRadius: 999, padding: '13px 24px',
                     boxShadow: '0 10px 24px -10px rgba(180,210,60,.9)',
-                    opacity: offerReady ? 1 : 0.45,
-                    pointerEvents: offerReady ? 'auto' : 'none',
+                    opacity: rateTotal > 0 ? 1 : 0.45,
+                    pointerEvents: rateTotal > 0 ? 'auto' : 'none',
                     transition: 'opacity .2s',
                   }}>
                     Proceed to create deal
@@ -1755,24 +1588,6 @@ export default function ShopfrontPreview({
 
       <div className="sf-view-mobile">
         <ShopfrontMobile
-          rateTotal={rateTotal}
-          addonsTotal={addonsTotal}
-          rateTotalIsFloor={rateTotalIsFloor}
-          offerAmount={offerAmount}
-          setOfferAmount={setOfferAmount}
-          editingAmount={editingAmount}
-          setEditingAmount={setEditingAmount}
-          startEditingAmount={startEditingAmount}
-          offerTotalPaise={offerTotalPaise}
-          computedTotalPaise={computedTotalPaise}
-          offerBelowFloor={offerBelowFloor}
-          chosenTotalPaise={chosenTotalPaise}
-          addonSelections={addonSelections}
-          rateHasOnRequest={rateHasOnRequest}
-          wantsCollab={wantsCollab}
-          setWantsCollab={setWantsCollab}
-          boostDays={boostDays}
-          setBoostDays={setBoostDays}
           data={data}
           qty={qty}
           setQty={setQty}
@@ -1788,11 +1603,4 @@ export default function ShopfrontPreview({
     </div>
     </SectionCtx.Provider>
   )
-}
-
-/* The total, at the size a price deserves. Shared by the "from" input and the
-   plain figure so an editable total is not a different size from a fixed one. */
-const desktopAmount: React.CSSProperties = {
-  fontFamily: 'var(--font-num)', fontWeight: 600, letterSpacing: '-0.02em',
-  fontSize: 22, lineHeight: 1.15, color: 'var(--ink)',
 }
