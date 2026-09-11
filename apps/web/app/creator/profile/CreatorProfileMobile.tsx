@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import ConnectedRow from './ConnectedRow'
+import type { IgConnectionView } from '@/lib/instagram-sync'
 import SignOutButton from '@/components/SignOutButton'
 import ContactLink from '@/components/ContactLink'
 import ShopfrontLinkRow from './ShopfrontLinkRow'
@@ -22,6 +24,7 @@ export default function CreatorProfileMobile({
   paidThisYearPaise,
   hasStorefront,
   shopfrontSlug,
+  instagramConnection,
   photoUrl = null,
 }: {
   fullName: string
@@ -32,6 +35,7 @@ export default function CreatorProfileMobile({
   hasStorefront: boolean
   /** Slug of the published shopfront, when there is one. */
   shopfrontSlug?: string | null
+  instagramConnection: IgConnectionView
 }) {
   const initial = fullName.trim().charAt(0).toUpperCase() || '·'
   // The export prints "First Last" with the surname in serif italic. Split on
@@ -123,6 +127,10 @@ export default function CreatorProfileMobile({
       ) : (
         <ShopfrontLinkRow slug={shopfrontSlug ?? null} />
       )}
+
+      {/* Directly under the shopfront, because that is what it is for: whether
+          the numbers on that page are Instagram's or the ones you typed. */}
+      <ConnectedRow connection={instagramConnection} />
 
       {/* Stats */}
       <div className="sr msurface" style={{ padding: '18px 0', display: 'flex' }}>

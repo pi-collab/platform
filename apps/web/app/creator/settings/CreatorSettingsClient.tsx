@@ -196,7 +196,10 @@ export default function CreatorSettingsClient({
           a creator somewhere they never were. */}
       <div className="set-mobile-head">
         <CreatorPageHeader
-          title={section === 'account' ? 'Settings' : 'Edit profile'}
+          /* Named per section. It answered only 'account' and everything else,
+             so arriving on ?tab=connected - which the phone's profile screen
+             now links to - was headed "Edit profile". */
+          title={section === 'account' ? 'Settings' : section === 'connected' ? 'Connected accounts' : 'Edit profile'}
           backHref="/creator/profile"
         />
       </div>

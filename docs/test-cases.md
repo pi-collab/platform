@@ -1035,7 +1035,9 @@ one vague sentence ("this only reads your Instagram data"), and the privacy
 policy was linked only from the signup forms and the cookie banner.
 
 #### Before authorising
-- [ ] The disclosure appears BEFORE the Connect button, not after it
+- [ ] Pressing Connect opens OUR notice first. It is in the path, not stacked above the button where it buried the button and most people would never read it
+- [ ] The notice offers Continue to Instagram and Cancel. Cancel asks Instagram for nothing
+- [ ] Continue goes to Instagram's own sign-in, then Instagram's permission screen. We cannot and do not insert anything between those two
 - [ ] It names each thing read and why: profile, audience insights, recent reels
 - [ ] It says thumbnails are COPIED to our servers, and why (Instagram's image links expire)
 - [ ] It says audience data is percentages, never anyone's name or contact details
@@ -1043,7 +1045,7 @@ policy was linked only from the signup forms and the cookie banner.
 - [ ] It says this is not a login, and the creator keeps signing in by phone
 - [ ] It says how to disconnect, from here AND from Instagram's own settings, and what that deletes
 - [ ] It links the privacy policy, opening in a new tab
-- [ ] The SAME disclosure shows in the storefront editor's Audience step, which had none at all
+- [ ] The SAME notice shows from the storefront editor's Audience step, which had none at all, and the creator's edits are still saved before the hand-off
 - [ ] Reconnect paths show it too: reconnecting is a fresh authorisation
 
 #### Reaching the policy at all
