@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { BoostingPill, OptionPill } from '@/components/DealOptionPills'
 import { isFixedPrice, offerPrefillPaise, formatProductPrice } from '@/lib/product-price'
-import { collabCharge, boostingCharge, offersCollab, offersBoosting, type AddonRates } from '@/lib/addons'
+import { collabCharge, boostingCharge, offersCollab, offersBoosting, resolveAddons, formatBasisPoints, type AddonRates } from '@/lib/addons'
 import { updateCampaignDraft } from './draft-actions'
 import type { DraftPlacement } from './draft-actions'
 import { calculateFee } from '@/lib/fee'
@@ -41,11 +41,15 @@ interface Props {
   onClose: () => void
 }
 
+/**
+ * The exact figure, the way the offer builder prints it.
+ *
+ * This rounded to Rs.65K / Rs.10K, which is a scanning format: a brand
+ * checking a quote they are about to commit to needs the number, and Rs.5K
+ * standing for 5,250 in a column that is supposed to add up is worse than long.
+ */
 function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100000) return `₹${(rupees / 100000).toFixed(1)}L`
-  if (rupees >= 1000) return `₹${(rupees / 1000).toFixed(0)}K`
-  return `₹${rupees.toLocaleString('en-IN')}`
+  return `\u20B9${Math.round(paise / 100).toLocaleString('en-IN')}`
 }
 
 export default function DraftPlacementEditor({ draftId, creatorName, products, addonRates = [], initialPlacements, feePercent, feeMode, onClose }: Props) {
@@ -181,6 +185,49 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
   }, [products, selections, reelTypes, boostDays, addonRates])
 
   const fee = calculateFee(totalPaise, feePercent, feeMode)
+
+  /* The SAME breakdown the offer builder shows, for the same reason: this is
+     where a brand checks the number they are about to commit to. "1 item,
+     Rs.65K, fee, brand pays" hid what made the 65 - and on a deducted fee it
+     printed the fee as a subtraction from the brand's column, which is not
+     what deducted means: the brand pays the full amount and the CREATOR is the
+     one who nets less. */
+  const summaryLines = useMemo(() => {
+    const lines: { label: string; amount: number }[] = []
+    for (const p of products) {
+      const sel = selections[p.id]
+      if (!sel || sel.qty <= 0) continue
+      const base = baseFor(p, sel)
+      if (base == null || base <= 0) continue
+      lines.push({ label: `${sel.qty} \u00D7 ${p.product_type}`, amount: base * sel.qty })
+
+      const rates = ratesFor(p)
+      if (!rates) continue
+      const charges = resolveAddons({
+        pricePaise: base,
+        rates,
+        wantsCollab: reelTypes[p.id] === 'collab',
+        boostingDays: (boostDays[p.id] ?? 0) > 0 ? boostDays[p.id] : null,
+      })
+      if (charges.collabChargePaise != null) {
+        const rate = charges.collabRateType === 'percent'
+          ? ` (${formatBasisPoints(charges.collabRateValue ?? 0)})`
+          : ''
+        lines.push({
+          label: `${sel.qty} \u00D7 ${p.product_type} \u00B7 Collab${rate}`,
+          amount: charges.collabChargePaise * sel.qty,
+        })
+      }
+      if (charges.boostingChargePaise != null) {
+        lines.push({
+          label: `${sel.qty} \u00D7 ${p.product_type} \u00B7 Boosting (${charges.boostingDays} days)`,
+          amount: charges.boostingChargePaise * sel.qty,
+        })
+      }
+    }
+    return lines
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, selections, reelTypes, boostDays, addonRates])
 
   /**
    * ONE definition of what a line costs before add-ons.
@@ -465,27 +512,54 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
         </div>
       )}
 
-      {/* Totals + fee breakdown */}
+      {/* Totals — the offer builder's breakdown */}
       {selectedCount > 0 && (
-        <div style={{ marginTop: '0.75rem', padding: '0.625rem 0.75rem', background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e5e5' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.2rem' }}>
-            <span style={{ color: '#888' }}>{selectedCount} item{selectedCount !== 1 ? 's' : ''}</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{formatRupees(totalPaise)}</span>
-          </div>
-          {feePercent > 0 && (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#888' }}>
-                <span>Fee ({feePercent}% {feeMode === 'on_top' ? 'on top' : 'deducted'})</span>
-                <span style={{ fontFamily: 'monospace' }}>{feeMode === 'on_top' ? '+' : '−'}{formatRupees(fee.fee_paise)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', fontWeight: 700, borderTop: '1px solid #e5e5e5', paddingTop: '0.25rem', marginTop: '0.25rem' }}>
-                <span>Brand pays</span>
-                <span style={{ fontFamily: 'monospace' }}>{formatRupees(fee.brand_pays_paise)}</span>
-              </div>
-            </>
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border-hairline, #e5e5e5)' }}>
+          {summaryLines.map((line, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{line.label}</span>
+              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(line.amount)}</b>
+            </div>
+          ))}
+
+          {/* On 'on_top' the fee is a real cost to the brand and belongs in the
+              column. On 'deducted' it is not: the brand pays the full amount,
+              and what changes is what the creator nets. Printing it as a
+              subtraction from the brand's side, as this did, made the column
+              fail to add up and read as a charge to them. */}
+          {feePercent > 0 && feeMode === 'on_top' && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({feePercent}%)</span>
+              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatRupees(fee.fee_paise)}</b>
+            </div>
           )}
+          {feePercent > 0 && feeMode === 'deducted' && (
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
+                {creatorName.split(' ')[0] || 'The creator'} receives after our {feePercent}% fee
+              </span>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-faint)' }}>
+                {formatRupees(fee.creator_receives_paise)}
+              </span>
+            </div>
+          )}
+
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+            padding: '16px 20px', marginTop: 16, borderRadius: 14,
+            border: '1.5px solid var(--neon-deep, var(--lime-400))',
+            background: 'color-mix(in oklab, var(--neon, var(--lime-400)) 16%, var(--card))',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+              {selectedCount} deliverable{selectedCount !== 1 ? 's' : ''} &middot; deal total
+            </span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, fontSize: 26, color: 'var(--ink)' }}>
+              {formatRupees(fee.brand_pays_paise)}
+            </span>
+          </div>
+
           {hasMissingPrice && (
-            <p style={{ fontSize: '0.7rem', color: '#dc2626', margin: '0.25rem 0 0' }}>
+            <p style={{ fontSize: 12, color: '#C2402A', margin: '10px 0 0' }}>
               Set a price for all &quot;price on request&quot; items
             </p>
           )}

@@ -1039,6 +1039,16 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] Saving writes collab_charge_paise / boosting_charge_paise and the rates behind them, so the deal the draft becomes charges what the campaign quoted
 - [ ] The "price on request" box reads "Your price (Rs.)" and not a literal backslash-u escape
 
+#### The summary reads like the offer builder's
+- [ ] Each deliverable is its own line: "1 x Instagram Reel  Rs.50,000"
+- [ ] Collab is its own line with the rate named: "1 x Instagram Reel . Collab (10%)  Rs.5,000"
+- [ ] Boosting is its own line with the days named: "1 x Instagram Reel . Boosting (30 days)  Rs.10,000"
+- [ ] On a DEDUCTED fee there is no "Fee ... deducted" row in the brand's column. It reads "<Creator> receives after our 15% fee  Rs.55,250", because the brand pays the full amount and it is the creator who nets less
+- [ ] On an ON TOP fee the platform fee IS a row in the column, because the brand really does pay it
+- [ ] The neon total box reads "N deliverables . deal total" and the figure the brand pays
+- [ ] Figures are exact (Rs.55,250), not rounded to Rs.55K. A column that is supposed to add up cannot round
+- [ ] The lines sum to the total
+
 #### One base per line
 - [ ] Selecting a "from Rs.50,000" package PRE-FILLS the price box with 50,000, the way the offer builder does. It opened empty, so the brand was quoted off zero until they retyped a figure the creator had already given
 - [ ] The line's figure, the "incl. extras" note and the summary total all agree. They used three different fallbacks: the creator's rate, zero, and zero, so one reel read Rs.85K on the row, Rs.30K of extras and Rs.30K in total
