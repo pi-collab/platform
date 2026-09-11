@@ -80,12 +80,25 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   // Fetch products for all drafted creators
   const draftCreatorIds = allDrafts.map((d) => d.creator_id)
   let productsMap: Record<string, { id: string; platform: string; handle: string; product_type: string; description: string | null; price_paise: number; display_price: boolean; is_active: boolean }[]> = {}
+  const addonRatesMap: Record<string, { platform: string; handle: string; collab_rate_type: 'fixed' | 'percent' | null; collab_rate_value: number | null; boosting_30day_paise: number | null }[]> = {}
   if (draftCreatorIds.length > 0) {
     const { data: products } = await supabase
       .from('creator_products')
       .select('id, creator_id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active')
       .in('creator_id', draftCreatorIds)
       .eq('is_active', true)
+
+    /* What each creator charges for collab and boosting, per channel. Without
+       these the placement editor could offer the controls but not price them,
+       so a ticked boost added nothing to the campaign's total. Same table the
+       offer builder reads. */
+    const { data: addonRateRows } = await supabase
+      .from('creator_addon_rates')
+      .select('creator_id, platform, handle, collab_rate_type, collab_rate_value, boosting_30day_paise')
+      .in('creator_id', draftCreatorIds)
+    for (const r of addonRateRows ?? []) {
+      ;(addonRatesMap[r.creator_id] ??= []).push(r)
+    }
     for (const p of products ?? []) {
       if (!productsMap[p.creator_id]) productsMap[p.creator_id] = []
       productsMap[p.creator_id].push(p)
@@ -317,6 +330,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           <CampaignRoster
             drafts={allDrafts}
             productsMap={productsMap}
+            addonRatesMap={addonRatesMap}
             campaignId={campaign.id}
             campaignDeals={campaignDeals}
             briefPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}

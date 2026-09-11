@@ -1027,12 +1027,61 @@ One component (`components/BrandMark.tsx`) decides between the two.
 
 ---
 
+### Instagram consent, and reaching the privacy policy
+
+Meta's Developer Policies ask for informed consent before an authorisation and an
+easily accessible support route. The connect button sat under a benefit line and
+one vague sentence ("this only reads your Instagram data"), and the privacy
+policy was linked only from the signup forms and the cookie banner.
+
+#### Before authorising
+- [ ] Pressing Connect opens OUR notice first. It is in the path, not stacked above the button where it buried the button and most people would never read it
+- [ ] The notice offers Continue to Instagram and Cancel. Cancel asks Instagram for nothing
+- [ ] Continue goes to Instagram's own sign-in, then Instagram's permission screen. We cannot and do not insert anything between those two
+- [ ] It names each thing read and why: profile, audience insights, recent reels
+- [ ] It says thumbnails are COPIED to our servers, and why (Instagram's image links expire)
+- [ ] It says audience data is percentages, never anyone's name or contact details
+- [ ] It says the connection is read-only and that we never ask for permission to post
+- [ ] It says this is not a login, and the creator keeps signing in by phone
+- [ ] It says how to disconnect, from here AND from Instagram's own settings, and what that deletes
+- [ ] It links the privacy policy, opening in a new tab
+- [ ] The SAME notice shows from the storefront editor's Audience step, which had none at all, and the creator's edits are still saved before the hand-off
+- [ ] Reconnect paths show it too: reconnecting is a fresh authorisation
+
+#### Reaching the policy at all
+- [ ] Privacy, Terms and Support are in the account menu of BOTH shells, so they are reachable from every signed-in screen
+- [ ] Support is a working mailto to help@guapd.com
+
+---
+
 ### Campaign placements, and campaign brief files
 
 #### Set terms uses the offer builder's row
 - [ ] Opening "Set terms" on a campaign roster row draws the SAME row the offer builder draws: neon tick, name at 15.5/700, "description . Rs.X each" beneath, stepper and line total on the right
 - [ ] Reel type (Instagram only) and Boosting rights are the offer builder's pills, not a bare select and 0.6rem buttons
 - [ ] Boosting is asked in DAYS and still stored as months, rounded up. An existing draft opens on the preset it was saved with
+- [ ] Choosing collab or boosting CHANGES THE MONEY: the line's figure, the "N items" total, the fee and "Brand pays" all move
+- [ ] The line names what the add-ons added ("incl. Rs.20,000 extras")
+- [ ] Reel type and Boosting rights appear only where the creator actually offers them. A control that costs nothing is not shown
+- [ ] Saving writes collab_charge_paise / boosting_charge_paise and the rates behind them, so the deal the draft becomes charges what the campaign quoted
+- [ ] The "price on request" box reads "Your price (Rs.)" and not a literal backslash-u escape
+
+#### The summary reads like the offer builder's
+- [ ] Each deliverable is its own line: "1 x Instagram Reel  Rs.50,000"
+- [ ] Collab is its own line with the rate named: "1 x Instagram Reel . Collab (10%)  Rs.5,000"
+- [ ] Boosting is its own line with the days named: "1 x Instagram Reel . Boosting (30 days)  Rs.10,000"
+- [ ] On a DEDUCTED fee there is no "Fee ... deducted" row in the brand's column. It reads "<Creator> receives after our 15% fee  Rs.55,250", because the brand pays the full amount and it is the creator who nets less
+- [ ] On an ON TOP fee the platform fee IS a row in the column, because the brand really does pay it
+- [ ] The neon total box reads "N deliverables . deal total" and the figure the brand pays
+- [ ] Figures are exact (Rs.55,250), not rounded to Rs.55K. A column that is supposed to add up cannot round
+- [ ] The lines sum to the total
+
+#### One base per line
+- [ ] Selecting a "from Rs.50,000" package PRE-FILLS the price box with 50,000, the way the offer builder does. It opened empty, so the brand was quoted off zero until they retyped a figure the creator had already given
+- [ ] The line's figure, the "incl. extras" note and the summary total all agree. They used three different fallbacks: the creator's rate, zero, and zero, so one reel read Rs.85K on the row, Rs.30K of extras and Rs.30K in total
+- [ ] A percent-based collab charge is computed off that same base, not off zero
+- [ ] Saving writes the base the screen quoted, not a different one
+- [ ] "Set a price for all price on request items" appears ONLY for genuinely on-request lines, and such a line is excluded from the total rather than counted as zero
 - [ ] The channel heads its group as an eyebrow: "YOUTUBE . @vikramwealth"
 - [ ] There is deliberately NO "Deliver by" here: a draft placement has nowhere to keep a date, and a pill that discarded it would be worse than none
 - [ ] The pills are one component shared with the offer builder, so the two cannot drift

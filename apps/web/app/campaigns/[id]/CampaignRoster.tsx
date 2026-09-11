@@ -94,6 +94,7 @@ const STAGE_DOTS: Record<string, string> = {
 export default function CampaignRoster({
   drafts,
   productsMap,
+  addonRatesMap = {},
   campaignId,
   campaignDeals,
   briefPitch,
@@ -101,6 +102,8 @@ export default function CampaignRoster({
 }: {
   drafts: Draft[]
   productsMap: Record<string, Product[]>
+  /** creatorId -> what they charge for collab and boosting, per channel. */
+  addonRatesMap?: Record<string, { platform: string; handle: string; collab_rate_type: 'fixed' | 'percent' | null; collab_rate_value: number | null; boosting_30day_paise: number | null }[]>
   campaignId: string
   campaignDeals: CampaignDeal[]
   briefPitch: string | null
@@ -590,6 +593,7 @@ export default function CampaignRoster({
                   draftId={d.id}
                   creatorName={d.creator.full_name}
                   products={productsMap[d.creator_id] ?? []}
+                  addonRates={addonRatesMap[d.creator_id] ?? []}
                   initialPlacements={d.placements}
                   feePercent={d.fee_percent}
                   feeMode={d.fee_mode}

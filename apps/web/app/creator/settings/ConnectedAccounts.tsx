@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import InstagramConnectButton from '@/components/InstagramConnectButton'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { disconnectInstagram, resyncInstagram } from './instagram-actions'
 import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
@@ -91,7 +92,13 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
             You&rsquo;ll keep signing in to Guapd with your phone. This only reads your Instagram
             data, and you can disconnect whenever you like.
           </p>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Connect Instagram</a>
+          {/* What we will read is spelled out on the way through, not stacked
+              above the button where it buries it. */}
+          <InstagramConnectButton
+            label="Connect Instagram"
+            href="/api/instagram/connect"
+            className="ca-btn ca-btn--primary"
+          />
         </>
       )}
 
@@ -108,7 +115,7 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
             <li>Choose <strong>Switch to professional account</strong>, then pick Creator or Business</li>
             <li>Come back here and reconnect</li>
           </ol>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Reconnect</a>
+          <InstagramConnectButton label="Reconnect" href="/api/instagram/connect" className="ca-btn ca-btn--primary" />
         </>
       )}
 
@@ -120,7 +127,7 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
               ? 'The connection to Instagram has expired. Your shopfront is showing the numbers you entered yourself until you reconnect.'
               : 'We lost access to your Instagram data. Your shopfront is showing the numbers you entered yourself until you reconnect.'}
           </p>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Reconnect Instagram</a>
+          <InstagramConnectButton label="Reconnect Instagram" href="/api/instagram/connect" className="ca-btn ca-btn--primary" />
         </>
       )}
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import InstagramConnectButton from '@/components/InstagramConnectButton'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -999,11 +1000,16 @@ function InstagramPanel({ connection, outcome, connecting, onConnect, onSync, sy
                 ? 'The connection to Instagram needs renewing. Your shopfront is showing the numbers you entered yourself until you reconnect.'
                 : 'Brands trust a number they can see came from Instagram. Connecting fills these in for you and keeps them current.'}
           </p>
-          <button type="button" className="sf-ig-panel__btn" onClick={onConnect} disabled={connecting}>
-            {connecting
+          {/* Same interstitial settings shows. This entry point had no
+              disclosure at all, and it is the more common way in. */}
+          <InstagramConnectButton
+            className="sf-ig-panel__btn"
+            disabled={connecting}
+            onContinue={onConnect}
+            label={connecting
               ? 'Saving your changes…'
               : s === 'not_connected' ? 'Connect Instagram' : 'Reconnect Instagram'}
-          </button>
+          />
           <p className="sf-ig-panel__hint">
             Your changes are saved first, so nothing is lost while you connect.
           </p>
