@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import InstagramConsent from '@/components/InstagramConsent'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { disconnectInstagram, resyncInstagram } from './instagram-actions'
 import { igOutcome, timeAgo, type OutcomeTone } from '@/lib/instagram-outcomes'
@@ -87,11 +88,9 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
             Brands trust a number they can see came from Instagram. Connecting fills in your
             followers and audience automatically, and keeps them current.
           </p>
-          <p className="ca-note">
-            You&rsquo;ll keep signing in to Guapd with your phone. This only reads your Instagram
-            data, and you can disconnect whenever you like.
-          </p>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Connect Instagram</a>
+          {/* The disclosure goes BEFORE the button, not after it. */}
+          <InstagramConsent />
+          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect" style={{ marginTop: 16 }}>Connect Instagram</a>
         </>
       )}
 
@@ -108,7 +107,8 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
             <li>Choose <strong>Switch to professional account</strong>, then pick Creator or Business</li>
             <li>Come back here and reconnect</li>
           </ol>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Reconnect</a>
+          <InstagramConsent compact />
+          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect" style={{ marginTop: 16 }}>Reconnect</a>
         </>
       )}
 
@@ -120,7 +120,8 @@ export default function ConnectedAccounts({ connection }: { connection: IgConnec
               ? 'The connection to Instagram has expired. Your shopfront is showing the numbers you entered yourself until you reconnect.'
               : 'We lost access to your Instagram data. Your shopfront is showing the numbers you entered yourself until you reconnect.'}
           </p>
-          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect">Reconnect Instagram</a>
+          <InstagramConsent compact />
+          <a className="ca-btn ca-btn--primary" href="/api/instagram/connect" style={{ marginTop: 16 }}>Reconnect Instagram</a>
         </>
       )}
 

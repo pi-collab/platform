@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
+import InstagramConsent from '@/components/InstagramConsent'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import './shopfront.css'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -999,7 +1000,11 @@ function InstagramPanel({ connection, outcome, connecting, onConnect, onSync, sy
                 ? 'The connection to Instagram needs renewing. Your shopfront is showing the numbers you entered yourself until you reconnect.'
                 : 'Brands trust a number they can see came from Instagram. Connecting fills these in for you and keeps them current.'}
           </p>
-          <button type="button" className="sf-ig-panel__btn" onClick={onConnect} disabled={connecting}>
+          {/* The same disclosure settings shows. A creator connecting from the
+              storefront editor was getting none at all, and this is the more
+              common way in. */}
+          <InstagramConsent compact />
+          <button type="button" className="sf-ig-panel__btn" onClick={onConnect} disabled={connecting} style={{ marginTop: 16 }}>
             {connecting
               ? 'Saving your changes…'
               : s === 'not_connected' ? 'Connect Instagram' : 'Reconnect Instagram'}

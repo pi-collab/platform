@@ -1027,6 +1027,31 @@ One component (`components/BrandMark.tsx`) decides between the two.
 
 ---
 
+### Instagram consent, and reaching the privacy policy
+
+Meta's Developer Policies ask for informed consent before an authorisation and an
+easily accessible support route. The connect button sat under a benefit line and
+one vague sentence ("this only reads your Instagram data"), and the privacy
+policy was linked only from the signup forms and the cookie banner.
+
+#### Before authorising
+- [ ] The disclosure appears BEFORE the Connect button, not after it
+- [ ] It names each thing read and why: profile, audience insights, recent reels
+- [ ] It says thumbnails are COPIED to our servers, and why (Instagram's image links expire)
+- [ ] It says audience data is percentages, never anyone's name or contact details
+- [ ] It says the connection is read-only and that we never ask for permission to post
+- [ ] It says this is not a login, and the creator keeps signing in by phone
+- [ ] It says how to disconnect, from here AND from Instagram's own settings, and what that deletes
+- [ ] It links the privacy policy, opening in a new tab
+- [ ] The SAME disclosure shows in the storefront editor's Audience step, which had none at all
+- [ ] Reconnect paths show it too: reconnecting is a fresh authorisation
+
+#### Reaching the policy at all
+- [ ] Privacy, Terms and Support are in the account menu of BOTH shells, so they are reachable from every signed-in screen
+- [ ] Support is a working mailto to help@guapd.com
+
+---
+
 ### Campaign placements, and campaign brief files
 
 #### Set terms uses the offer builder's row

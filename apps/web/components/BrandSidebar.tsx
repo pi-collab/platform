@@ -338,6 +338,21 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
 
                   <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
 
+                  <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
+
+                  {/* Reachable from every signed-in screen.
+                      The privacy policy was linked only from the signup forms
+                      and the cookie banner, so anyone already using the product
+                      had no route to it, and no route to support either - which
+                      Meta's Developer Policies ask for in as many words. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px 10px', fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</a>
+                    <span aria-hidden="true">&middot;</span>
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</a>
+                    <span aria-hidden="true">&middot;</span>
+                    <a href="mailto:help@guapd.com" style={{ color: 'inherit', textDecoration: 'none' }}>Support</a>
+                  </div>
+
                   {/* Sign out */}
                   <button onClick={handleSignOut} className="pmi pmi-danger" style={{ ...pmiStyle, border: 'none', background: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit' }}>
                     <span style={{ ...pmiIconWrap, background: 'rgba(210,84,90,.09)', color: '#d2545a' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg></span>
