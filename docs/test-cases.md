@@ -1038,6 +1038,13 @@ One component (`components/BrandMark.tsx`) decides between the two.
 - [ ] Reel type and Boosting rights appear only where the creator actually offers them. A control that costs nothing is not shown
 - [ ] Saving writes collab_charge_paise / boosting_charge_paise and the rates behind them, so the deal the draft becomes charges what the campaign quoted
 - [ ] The "price on request" box reads "Your price (Rs.)" and not a literal backslash-u escape
+
+#### One base per line
+- [ ] Selecting a "from Rs.50,000" package PRE-FILLS the price box with 50,000, the way the offer builder does. It opened empty, so the brand was quoted off zero until they retyped a figure the creator had already given
+- [ ] The line's figure, the "incl. extras" note and the summary total all agree. They used three different fallbacks: the creator's rate, zero, and zero, so one reel read Rs.85K on the row, Rs.30K of extras and Rs.30K in total
+- [ ] A percent-based collab charge is computed off that same base, not off zero
+- [ ] Saving writes the base the screen quoted, not a different one
+- [ ] "Set a price for all price on request items" appears ONLY for genuinely on-request lines, and such a line is excluded from the total rather than counted as zero
 - [ ] The channel heads its group as an eyebrow: "YOUTUBE . @vikramwealth"
 - [ ] There is deliberately NO "Deliver by" here: a draft placement has nowhere to keep a date, and a pill that discarded it would be worse than none
 - [ ] The pills are one component shared with the offer builder, so the two cannot drift

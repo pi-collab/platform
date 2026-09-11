@@ -171,12 +171,10 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
       count += sel.qty
-      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
-      const add = addonsFor(p, unitPaise)
-      total += (unitPaise + add.collab + add.boosting) * sel.qty
-      if (!isFixedPrice(p) && (!sel.customPricePaise || sel.customPricePaise <= 0)) {
-        missingPrice = true
-      }
+      const base = baseFor(p, sel)
+      if (base == null || base <= 0) { missingPrice = true; continue }
+      const add = addonsFor(p, base)
+      total += (base + add.collab + add.boosting) * sel.qty
     }
     return { totalPaise: total, selectedCount: count, hasMissingPrice: missingPrice }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,10 +182,36 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
 
   const fee = calculateFee(totalPaise, feePercent, feeMode)
 
+  /**
+   * ONE definition of what a line costs before add-ons.
+   *
+   * There were three, and they disagreed. The row's figure fell back to the
+   * creator's own rate, the "extras" note fell back to zero, and the summary
+   * fell back to zero as well - so a "from Rs.50,000" reel with nothing typed
+   * showed Rs.85K on the row (collab priced off 50,000) while calling the
+   * extras Rs.30K (collab priced off 0) and totalling Rs.30K. Three numbers,
+   * three different bases, none of them right.
+   *
+   * null means there is genuinely no figure: on_request, and nothing typed.
+   */
+  function baseFor(p: Product, sel: { customPricePaise: number | null } | undefined): number | null {
+    if (isFixedPrice(p)) return p.price_paise
+    if (sel?.customPricePaise != null) return sel.customPricePaise
+    return offerPrefillPaise(p)
+  }
+
   function setQty(productId: string, qty: number) {
+    /* Seed the editable price from the creator's own rate, the way the offer
+       builder does. A "from Rs.50,000" package left the field empty, so the
+       brand was quoted off zero until they retyped a number the creator had
+       already given them. on_request stays null: there is no figure to seed
+       and inventing one puts a price in front of a brand nobody quoted. */
+    const product = products.find((pr) => pr.id === productId)
+    const seed = product && !isFixedPrice(product) ? offerPrefillPaise(product) : null
+
     setSelections((prev) => ({
       ...prev,
-      [productId]: { qty, customPricePaise: prev[productId]?.customPricePaise ?? null },
+      [productId]: { qty, customPricePaise: prev[productId]?.customPricePaise ?? seed },
     }))
   }
 
@@ -208,7 +232,9 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
     for (const p of products) {
       const sel = selections[p.id]
       if (!sel || sel.qty <= 0) continue
-      const unitPaise = isFixedPrice(p) ? p.price_paise : (sel.customPricePaise ?? 0)
+      /* The same base the screen quoted. Saving off a different one is how a
+         draft ends up charging a number nobody was shown. */
+      const unitPaise = baseFor(p, sel) ?? 0
       const rt = reelTypes[p.id]
       const br = itemBoostingRights[p.id]
       const bd = itemBoostingDuration[p.id]
@@ -293,7 +319,7 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
                     const sel = selections[p.id]
                     const qty = sel?.qty ?? 0
                     const selected = qty > 0
-                    const unitPaise = isFixedPrice(p) ? p.price_paise : (sel?.customPricePaise ?? 0)
+                    const lineBase = baseFor(p, sel)
 
                     return (
                       /* THE OFFER BUILDER'S ROW. This screen sets the same terms
@@ -356,17 +382,14 @@ export default function DraftPlacementEditor({ draftId, creatorName, products, a
                               color: selected ? 'var(--ink)' : 'var(--ink-soft)',
                             }}>
                               {(() => {
-                                const base = isFixedPrice(p)
-                                  ? unitPaise
-                                  : (selected && sel?.customPricePaise ? sel.customPricePaise : offerPrefillPaise(p))
-                                if (base == null) return '\u2014'
-                                const add = selected ? addonsFor(p, base) : { collab: 0, boosting: 0 }
-                                return formatRupees((base + add.collab + add.boosting) * (qty || 1))
+                                if (lineBase == null) return '\u2014'
+                                const add = selected ? addonsFor(p, lineBase) : { collab: 0, boosting: 0 }
+                                return formatRupees((lineBase + add.collab + add.boosting) * (qty || 1))
                               })()}
                             </div>
                             {selected && (() => {
-                              const base = isFixedPrice(p) ? unitPaise : (sel?.customPricePaise ?? 0)
-                              const add = addonsFor(p, base)
+                              if (lineBase == null) return null
+                              const add = addonsFor(p, lineBase)
                               const extra = add.collab + add.boosting
                               if (extra <= 0) return null
                               /* Broken out so a boost that was ticked can be
