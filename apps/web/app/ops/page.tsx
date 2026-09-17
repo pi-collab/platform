@@ -32,7 +32,7 @@ export default async function OpsIndex() {
         </Link>
         <Link href="/ops/insights" style={cardStyle}>
           <strong>Insights</strong>
-          <span style={sub}>Onboarding and growth responses</span>
+          <span style={sub}>Creator and brand onboarding answers</span>
         </Link>
         {isAdmin && (
           <>

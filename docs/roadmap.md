@@ -2,6 +2,31 @@
 
 > Parking lot for **serious, deliberate ideas we intend to build later** — not the v1 defer-list (that's "don't build now" inside CLAUDE.md). Items here are directional, unscheduled, and to be revisited only after v1 proves the manual workflow works and is used.
 
+## Estimated reach range on the offer (NEAR-TERM — PJ wants this soon)
+
+**The idea:** When a brand builds a deal or sets campaign placements, show the reach it can expect from that creator, as a RANGE from 20% below their last numbers up to the exact figure (e.g. "Expect 24,000 to 30,000 reach"). A brand pricing a reel today sees a follower count and nothing about how many people the reel will actually reach.
+
+**Why it earns its place:** reach is what the brand is buying; followers are a proxy for it. We already hold the real number for connected creators, so this is presentation of data we have, not new data collection. It also gives creators a reason to connect Instagram: a connected creator's offer shows expected reach, an unconnected one's does not.
+
+**Basis — use per-reel reach, not account reach:**
+- The snapshot stores recent reels under `media`, each with its own `reach`, `views` and `avgWatchTimeMs`, plus account-level `reachLast30` and `interactionsLast30` (`IgSnapshot` in `apps/web/lib/instagram.ts`).
+- For a reel deliverable, base it on the MEDIAN reach of recent reels, not the mean: one viral reel pulls a mean far above anything the brand should expect. Fall back to `reachLast30` only for account-level framing.
+- Range = 0.8x to 1.0x of that figure. The low end is the honest one; lead with the range, never the top number alone.
+- Read it with the existing `getPublicSnapshot(creatorId)` in `apps/web/lib/instagram-sync.ts`. No new fetch, no new table, no new Meta permission — `instagram_business_manage_insights` already covers it.
+
+**The unconnected case is the common one, and must be designed first.** As of 16 Sep 2026, every one of the 8 signed-up creators from the outreach lists has no Instagram connected. For them there is NO basis for an estimate. Show the absence plainly ("no verified reach yet") and NEVER derive a range from follower count or typed figures — a guessed range presented like a measured one is worse than no range. This is the same rule as the storefront's verified badge: verified means it came from the snapshot.
+
+**Guardrails:**
+- Label it an estimate, from Instagram's own figures, with the "as of" date. Snapshots sync nightly, so a figure can be a day old.
+- It is a sighting aid, NOT a deal term. Keep it off the agreed terms, the offer snapshot and the invoice. A brand must not be able to read it as a guarantee, and a creator must not be exposed to a claim for missing it.
+- Reach is not views, and boosting changes it. If the placement includes boosting, say the estimate is organic only.
+
+**Where it shows:** `apps/web/app/deals/new/DealForm.tsx` (single deal), `apps/web/app/campaigns/[id]/DraftPlacementEditor.tsx` (campaign placements), and `apps/web/app/browse/[id]/page.tsx` (brand viewing a creator). Note no brand-side deal screen reads a snapshot today — only `/c/[slug]` and the creator's own storefront do — so this adds the first brand-side read.
+
+**On build:** test cases into `docs/test-cases.md` in the same commit (connected creator, unconnected creator, creator with too few reels to take a median), and ask about a Playbook Part 13 entry — it is a brand-facing capability.
+
+---
+
 ## Change-order flow for extra revisions (post-v1)
 
 **The idea:** When a brand exceeds the agreed revision limit, the current v1 behavior is warn-but-allow — the brand sees a warning ("this exceeds the agreed revision limit — extra revisions should be renegotiated with the creator") but can still request the revision. The real answer is a **change-order flow**: when the limit is hit, the brand can propose a paid amendment (extra revisions at a renegotiated price), the creator accepts/declines, and only then does the revision proceed. This turns revision overruns from a trust issue into a structured, auditable transaction.

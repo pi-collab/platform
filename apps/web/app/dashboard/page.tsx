@@ -4,6 +4,8 @@ import { verifyBrand } from '@/lib/brand-auth'
 import HeldNotice from '@/components/HeldNotice'
 import ApprovalNotice from '@/components/ApprovalNotice'
 import { shouldShowApprovalNotice } from '@/lib/approval-notice'
+import { shouldAskBrandOnboarding, BRAND_QUESTIONS } from '@/lib/brand-onboarding'
+import BrandWelcomeQuestions from './BrandWelcomeQuestions'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -62,6 +64,14 @@ export default async function DashboardPage({
   const showApproval =
     brand.brandStatus === 'approved' && (await shouldShowApprovalNotice(brand.brandId))
 
+  // The one-time onboarding questions, over whichever dashboard state this is.
+  // Checked here rather than in the layout, so it costs a lookup on the
+  // dashboard only. A brand arriving mid-pitch from a shopfront skips the
+  // dashboard, and is asked on its next visit instead.
+  const askOnboarding = await shouldAskBrandOnboarding(brand.brandId)
+  const onboardingModal = askOnboarding && (
+    <BrandWelcomeQuestions questions={BRAND_QUESTIONS.map(q => ({ ...q, options: [...q.options] }))} />
+  )
 
   // Date range filtering
   const period = (searchParams.period && VALID_PERIODS.has(searchParams.period) ? searchParams.period : 'this_year') as Period
@@ -246,12 +256,14 @@ export default async function DashboardPage({
           />
         </div>
         <BrandDashboardEmpty />
+        {onboardingModal}
       </main>
     )
   }
 
   return (
     <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+      {onboardingModal}
       <RealtimeDashboardListener />
       <div style={{ maxWidth: 1080, margin: '0 auto' }}>
 

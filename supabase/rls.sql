@@ -109,6 +109,7 @@ ALTER TABLE invoices              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_onboarding_responses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_onboarding_responses   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
@@ -483,6 +484,33 @@ CREATE POLICY creator_onboarding_deny_update
 
 CREATE POLICY creator_onboarding_deny_delete
   ON creator_onboarding_responses FOR DELETE
+  USING (false);
+
+-- ── brand_onboarding_responses ──────────────────────────────────────
+-- The one-time questionnaire asked on a brand's first dashboard visit.
+-- One row per brand, shared by its members.
+-- SELECT/INSERT: the member's own brand only. Ops reads via the service role.
+-- No UPDATE, no DELETE: the answers are a point-in-time snapshot.
+
+DROP POLICY IF EXISTS brand_onboarding_select_own  ON brand_onboarding_responses;
+DROP POLICY IF EXISTS brand_onboarding_insert_own  ON brand_onboarding_responses;
+DROP POLICY IF EXISTS brand_onboarding_deny_update ON brand_onboarding_responses;
+DROP POLICY IF EXISTS brand_onboarding_deny_delete ON brand_onboarding_responses;
+
+CREATE POLICY brand_onboarding_select_own
+  ON brand_onboarding_responses FOR SELECT
+  USING (brand_id = my_brand_id());
+
+CREATE POLICY brand_onboarding_insert_own
+  ON brand_onboarding_responses FOR INSERT
+  WITH CHECK (brand_id = my_brand_id());
+
+CREATE POLICY brand_onboarding_deny_update
+  ON brand_onboarding_responses FOR UPDATE
+  USING (false);
+
+CREATE POLICY brand_onboarding_deny_delete
+  ON brand_onboarding_responses FOR DELETE
   USING (false);
 
 -- ── phone_verifications ─────────────────────────────────────────────
