@@ -22,11 +22,16 @@ interface BrandContext {
  * Gate logic:
  *   1. No auth session → /login/brand
  *   2. No users row / no brand_members row → /onboarding (or /ops for founders)
- *   3. brand_status is NOT a gate here. Approval is enforced at FIRST SEND
+ *   3. Rejected → /brand/rejected. A rejected brand sees that screen and
+ *      nothing else, on every brand page and every brand action, because
+ *      they all come through here. Safe for creators: ops cannot reject a
+ *      brand that still has a live deal (rejectBrand refuses), so nobody is
+ *      left mid-deal with a brand that cannot log in.
+ *   4. Otherwise approval is NOT a gate here. It is enforced at FIRST SEND
  *      (lib/send-gate.ts), not on dashboard access — an unreviewed brand may
  *      explore, browse vetted creators and build drafts. brandStatus is
  *      returned so surfaces can label held work.
- *   4. Approved → return context
+ *   5. → return context
  */
 /**
  * Onboarding, remembering where they were going.
@@ -70,6 +75,8 @@ export async function verifyBrand(): Promise<BrandContext> {
 
   const brand = (membership as any)?.brands
   if (!brand) redirect(onboardingWithNext())
+
+  if (brand.brand_status === 'rejected') redirect('/brand/rejected')
 
   return {
     userId: user.id,

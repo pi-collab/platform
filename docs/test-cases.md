@@ -5030,3 +5030,35 @@ and its cases travel together.
 **Environment**
 - [ ] Migration `0503_brand_onboarding_responses.sql` is applied BEFORE the code deploys, in each environment. Unmigrated, the modal still shows (no answer row can be found) but every save fails
 - [ ] Backfilling existing brands is a separate, deliberate step: insert a `brand.onboarding_questions_due` event per brand to ask. Delete fake brands first, so none is marked due
+
+### 75. Rejecting a brand locks it out, with a reason and an email
+
+**Approval, for context (unchanged)**
+- [ ] A new brand is `unreviewed`: it can use the dashboard, browse and build deals. Its FIRST send is held and moves it to `pending_review`
+- [ ] Approve releases every held deal to its creator and emails every brand member. Later sends go straight out
+
+**Reject is refused while a deal is live**
+- [ ] Rejecting a brand with a deal that is NOT held and NOT `complete`, `declined` or `cancelled` fails with "This brand has N live deal(s) with creators. Finish or cancel … before rejecting". Nothing changes: status, reason, email all untouched
+- [ ] A brand whose only deals are HELD can be rejected (no creator has seen them). The held deals stay held and are not deleted
+- [ ] A brand whose deals are all complete, declined or cancelled can be rejected
+
+**The ops control**
+- [ ] Reject no longer uses a browser confirm. It opens an inline box: an optional reason (max 500), a note that the brand is locked out and emailed, Confirm reject, Cancel
+- [ ] Cancel closes the box with no change
+- [ ] The live-deal refusal shows IN the box, in red, not as an alert
+- [ ] The reason is saved to `brands.rejection_reason`, trimmed; an empty box saves NULL
+- [ ] The ops log (`brand.rejected`) records before/after status and the reason
+
+**The brand's side**
+- [ ] Every member of the brand is emailed "<brand> was not approved on Guapd", with the reason when one was given, contact@guapd.com, and a link to the status screen (not the dashboard)
+- [ ] Rejecting an already rejected brand (to change the reason) sends NO second email
+- [ ] A member of a rejected brand who logs in lands on `/brand/rejected`, never the dashboard
+- [ ] EVERY brand page redirects there: `/dashboard`, `/deals`, `/deals/new`, a deal page, `/campaigns`, `/browse`, `/browse/<id>`, `/settings`, `/inbox`. All go through `verifyBrand`
+- [ ] Brand server actions called directly also refuse (they call `verifyBrand` too)
+- [ ] `/brand/rejected` shows "Not approved.", the brand name, the reason (only if one was given), contact@guapd.com and Sign out. Nothing links into the product
+- [ ] `/brand/rejected` for a brand that is NOT rejected redirects to `/dashboard`; logged out, to `/login/brand`; with no brand, to `/onboarding`. It never loops
+- [ ] Approving the brand again restores normal access on the next page load, and releases any held deals
+
+**Unaffected**
+- [ ] Creators with deals from other brands see no change
+- [ ] Unreviewed and pending brands still reach the dashboard (approval is still enforced at first send, not at login)

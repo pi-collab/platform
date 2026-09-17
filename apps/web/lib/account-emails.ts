@@ -101,6 +101,72 @@ export async function notifyBrandApproved(brandId: string): Promise<void> {
   }
 }
 
+/**
+ * Tell a brand its account was not approved.
+ *
+ * Sent to every member, like the approval email. The reason is ops' own words
+ * when given; without one the email says only what is certain. It does not
+ * link to the dashboard, because a rejected brand cannot use it: the link goes
+ * to the screen that explains the decision.
+ */
+export async function notifyBrandRejected(brandId: string, reason: string | null): Promise<void> {
+  try {
+    const admin = createAdminClient()
+
+    const { data: brand } = await admin
+      .from('brands').select('name').eq('id', brandId).maybeSingle()
+
+    const { data: members } = await admin
+      .from('brand_members').select('user_id').eq('brand_id', brandId)
+
+    const userIds = (members ?? []).map((m) => m.user_id)
+    if (userIds.length === 0) {
+      await record('brand.rejected_email_skipped', { brand_id: brandId, reason: 'no_members' })
+      return
+    }
+
+    const { data: users } = await admin
+      .from('users').select('email').in('id', userIds)
+
+    const to = (users ?? []).map((u) => u.email).filter((e): e is string => Boolean(e))
+    if (to.length === 0) {
+      await record('brand.rejected_email_skipped', { brand_id: brandId, reason: 'no_addresses' })
+      return
+    }
+
+    const name = brand?.name ?? 'Your brand'
+    const { html, text } = renderAccountEmail({
+      heading: `${name} was not approved`,
+      body: [
+        `We reviewed your account and were not able to approve it, so it cannot be used to work with creators on ${BRAND_NAME}.`,
+        ...(reason ? [`The reason we gave: ${reason}`] : []),
+        'If you think this is a mistake, reply to this email or write to contact@guapd.com and we will take another look.',
+      ],
+      ctaUrl: `${siteBase()}/brand/rejected`,
+      ctaLabel: 'View your account status',
+      footerNote: `You're receiving this because you're a member of ${name} on ${BRAND_NAME}.`,
+    })
+
+    const res = await sendAccountEmail({
+      to,
+      subject: `${name} was not approved on ${BRAND_NAME}`,
+      html,
+      text,
+      // Brand id alone, like approval: a second send inside the window is a
+      // double-click, not a second decision.
+      idempotencyKey: `brand-rejected-${brandId}`,
+    })
+
+    await record(res.ok ? 'brand.rejected_email_sent' : 'brand.rejected_email_failed', {
+      brand_id: brandId,
+      recipients: to.length,
+      ...(res.ok ? {} : { reason: res.reason }),
+    })
+  } catch (err) {
+    console.error(`[account-email] notifyBrandRejected failed brand=${brandId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 /** Resolve a creator's best contact address, or null. */
 async function creatorEmail(creatorId: string): Promise<{ email: string | null; name: string }> {
   const admin = createAdminClient()

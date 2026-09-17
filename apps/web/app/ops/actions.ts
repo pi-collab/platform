@@ -5,7 +5,7 @@ import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
 import { notifyCreatorStatusChanged } from '@/lib/creator-whatsapp'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { notifyBrandApproved, notifyCreatorApproved, notifyCreatorRejected, notifyCreatorGrowth } from '@/lib/account-emails'
+import { notifyBrandApproved, notifyBrandRejected, notifyCreatorApproved, notifyCreatorRejected, notifyCreatorGrowth } from '@/lib/account-emails'
 import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
 import { logOpsEvent } from '@/lib/ops-audit'
 import { notifyDealParty } from '@/lib/notifications'
@@ -510,25 +510,51 @@ export async function rejectBrand(brandId: string, reason?: string) {
 
   const admin = createAdminClient()
 
+  // A rejected brand is locked out of the whole brand app (verifyBrand), so it
+  // could no longer pay an invoice or approve work. Refused while any deal is
+  // live with a creator, so no creator is left mid-deal with a brand that
+  // cannot log in. Held deals do not count: no creator has seen them.
+  const { count: liveDeals, error: liveErr } = await admin
+    .from('deals')
+    .select('id', { count: 'exact', head: true })
+    .eq('brand_id', brandId)
+    .is('held_at', null)
+    .not('status', 'in', '(complete,declined,cancelled)')
+
+  if (liveErr) return { error: liveErr.message }
+  if ((liveDeals ?? 0) > 0) {
+    return {
+      error: `This brand has ${liveDeals} live deal${liveDeals === 1 ? '' : 's'} with creators. Finish or cancel ${liveDeals === 1 ? 'it' : 'them'} before rejecting, so no creator is left mid-deal.`,
+    }
+  }
+
   const { data: before } = await admin
     .from('brands')
     .select('brand_status')
     .eq('id', brandId)
     .maybeSingle()
 
+  const cleanReason = reason?.trim().slice(0, 500) || null
+
   const { error } = await admin
     .from('brands')
-    .update({ brand_status: 'rejected', rejection_reason: reason?.trim() || null })
+    .update({ brand_status: 'rejected', rejection_reason: cleanReason })
     .eq('id', brandId)
 
   if (error) return { error: error.message }
 
   await logOpsEvent(user, 'brand.rejected', 'brands', brandId, {
     before: { brand_status: before?.brand_status },
-    after: { brand_status: 'rejected' },
+    after: { brand_status: 'rejected', rejection_reason: cleanReason },
   })
 
+  // Only on a real transition, like approval: re-rejecting an already rejected
+  // brand (to change the reason, say) must not email them again.
+  if (before?.brand_status !== 'rejected') await notifyBrandRejected(brandId, cleanReason)
+
   revalidatePath('/ops/brands')
+  revalidatePath('/dashboard')
+  revalidatePath('/brand/rejected')
   return { success: true }
 }
 
