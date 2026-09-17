@@ -7,7 +7,7 @@ import { saveGrowthQuiz } from './actions'
 // Deliberately the Deals flow's stylesheet, not growth.css. These questions ARE
 // that flow, asked of a different creator, and a second set of near-identical
 // styles would drift apart the first time either is touched.
-import '../welcome/welcome.css'
+import '@/components/questions-modal.css'
 import './growth.css'
 
 /**

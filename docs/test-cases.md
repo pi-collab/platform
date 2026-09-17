@@ -4973,3 +4973,60 @@ and its cases travel together.
       than making the brand open six separate deal builders
 - [ ] KNOWN GAP: saved creators live in localStorage, not a table, so the list
       does not follow the brand to another device or browser
+
+### 74. Brand onboarding questionnaire + ops brand insights
+
+**The gate: asked at profile creation, not approval**
+- [ ] `submitOnboarding` (`app/onboarding/actions.ts`) writes a `brand.onboarding_questions_due` event with `detail.brand_id`, AFTER the `brand_members` row exists. A signup that fails halfway must not be marked due
+- [ ] A failure to write that event does NOT fail signup. The brand exists; the cost is one brand not being asked, and it is logged `[brand-onboarding]`
+- [ ] The questionnaire shows on `/dashboard` only when the event exists AND the brand has no response row
+- [ ] It is NOT gated on approval. An `unreviewed` brand that has never sent an offer is asked. Approval only gates first send (`lib/send-gate.ts`), and most brands never send, so an approval trigger would ask almost nobody
+- [ ] Brands created before this shipped have no event, and go straight to the dashboard until ops backfills the event for them
+- [ ] A brand arriving from a shopfront with `?next=` goes back to that pitch, NOT to the dashboard. It is asked on its next dashboard visit instead. Verify the pitch is not interrupted
+- [ ] Shows over BOTH dashboard states: the empty state (no deals yet, which is where a new brand lands) and the populated one
+
+**One answer per BRAND, shared by its team**
+- [ ] Whichever member reaches the dashboard first answers. `answered_by` records who
+- [ ] Once answered, every other member of that brand goes straight to the dashboard and is never asked
+- [ ] Two members (or two tabs) submitting at once: the second insert hits `UNIQUE (brand_id)` (23505), and is treated as SUCCESS. Neither person is locked out of the dashboard
+- [ ] A member leaving the brand does not delete the answer (`answered_by` is `ON DELETE SET NULL`)
+- [ ] Deleting the brand deletes its answer (`ON DELETE CASCADE`)
+
+**The form: the shared modal**
+- [ ] Same modal as the creator questionnaire (`components/QuestionsModal.tsx`): one question per screen, then the optional note, non-dismissable (no close, Escape does nothing, scrim ignores clicks), no auto-advance, Back keeps answers, CTA disabled until answered
+- [ ] Q1 is MULTI-select with square marks; tapping a chosen option again unselects it. "Something else" reveals the optional text box, which is stored only when "other" is among the answers
+- [ ] Q2 and Q3 are single-select
+- [ ] Q3 buckets are 0–1, 2–5, 6–14, 15+. No number belongs to two buckets
+- [ ] Portalled to `<body>` and painted ABOVE the brand nav. Hit-test the CTA on desktop and at 390px
+- [ ] Type matches the brand dashboard (Schibsted Grotesk), and the check mark uses `--lime-950`
+- [ ] After "Start Guapping" the modal closes and the dashboard reloads without it; refreshing does not bring it back
+
+**Regression: the creator questionnaire now uses the same modal**
+- [ ] Re-run section 62 end to end. The creator modal was moved into `components/QuestionsModal.tsx`; `WelcomeQuestions` is now a thin wrapper. Its answers must still save as `biggest_pains`, `deal_handling`, `monthly_deals`, `pain_other`, `anything_else`
+- [ ] The stylesheet moved from `app/creator/welcome/welcome.css` to `components/questions-modal.css`. The Guapd Growth quiz imports it from the new path; open it and confirm it is still styled
+- [ ] The creator tab bar is still hidden while a creator modal is open
+
+**The data**
+- [ ] Answers are stored as CODES (`challenges`, `current_approach`, `monthly_campaigns`), never display strings
+- [ ] `CHECK` constraints reject: an unknown code in `challenges`, an empty `challenges` array, an unknown `current_approach`, and `6_15` as `monthly_campaigns` (23514 each)
+- [ ] The server action validates the same codes first, so a bad code returns a readable message rather than a constraint error
+- [ ] The brand id is taken from the session (`verifyBrand`), never from the client
+
+**SECURITY / RLS (`brand_onboarding_responses`)**
+- [ ] A brand member can SELECT their own brand's row, and gets zero rows for any other brand
+- [ ] A brand member can INSERT only with their own `brand_id`; inserting another brand's id is rejected
+- [ ] UPDATE and DELETE are denied to everyone but the service role, including the brand's own members
+- [ ] A creator session reads zero rows
+- [ ] Policies exist in BOTH migration 0503 and `supabase/rls.sql`
+
+**Ops: `/ops/insights` → Brand insights**
+- [ ] Section appears below the creator and Guapd Growth sections, with its own heading
+- [ ] Each question shows EVERY option with a bar, percentage and count, including options nobody picked (greyed)
+- [ ] Q1 carries the note that it is multi-select and sums past 100%
+- [ ] The response rate is responses out of brands ASKED that still exist. A deleted brand drops out of the denominator
+- [ ] Free-text answers are listed under "In their own words", attributed by brand name
+- [ ] Logged out, `/ops/insights` shows the ops sign-in card and leaks nothing
+
+**Environment**
+- [ ] Migration `0503_brand_onboarding_responses.sql` is applied BEFORE the code deploys, in each environment. Unmigrated, the modal still shows (no answer row can be found) but every save fails
+- [ ] Backfilling existing brands is a separate, deliberate step: insert a `brand.onboarding_questions_due` event per brand to ask. Delete fake brands first, so none is marked due

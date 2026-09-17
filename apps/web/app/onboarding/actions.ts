@@ -10,6 +10,7 @@ import { notifyOpsBrandSignup } from '@/lib/account-emails'
 import { normalizeE164 } from '@/lib/phone'
 import { validateWorkEmail } from '@/lib/work-email'
 import { opsRoutingEmails } from '@/lib/ops-capabilities'
+import { markBrandQuestionsDue } from '@/lib/brand-onboarding'
 
 export type OnboardingState =
   | { status: 'error'; error: string }
@@ -184,6 +185,12 @@ export async function submitOnboarding(
   // result it acts on: the account exists either way, and a failed
   // notification must not fail signup.
   void notifyOpsBrandSignup(brand.id)
+
+  // Due for the onboarding questions, which show on the first dashboard visit.
+  // Here rather than at approval: most brands never send, so never get
+  // approved. Awaited so it lands before the client navigates to the
+  // dashboard that checks for it; it cannot throw.
+  await markBrandQuestionsDue(brand.id)
 
   await admin.from('users').update({
     terms_accepted_at: new Date().toISOString(),

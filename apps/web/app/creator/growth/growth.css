@@ -9,7 +9,7 @@
    that wrapper: for a Growth creator the creator layout returns the children
    bare, deliberately, so no sidebar or tab bar offering Deals ever appears. The
    quiz is portalled to <body> and is outside it for the same reason; the scrim
-   declares the same tokens in welcome.css, where every scrim gets them.
+   declares the same tokens in components/questions-modal.css, where every scrim gets them.
 
    Outside .creator-main they fall back to :root, which is Sora + Inter, so this
    page was set in different type from the rest of the creator app and

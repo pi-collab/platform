@@ -2,8 +2,19 @@ import { requireOps } from '@/lib/ops-capabilities'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { QUESTIONS, labelFor, type QuestionKey } from '@/lib/creator-onboarding'
 import { GROWTH_QUESTIONS } from '@/lib/growth-quiz-labels'
+import { BRAND_QUESTIONS, BRAND_QUESTIONS_DUE_EVENT } from '@/lib/brand-onboarding'
 
-export const metadata = { title: 'Creator insights · Ops' }
+export const metadata = { title: 'Insights · Ops' }
+
+interface BrandResponseRow {
+  brand_id: string
+  challenges: string[]
+  challenge_other: string | null
+  current_approach: string
+  monthly_campaigns: string
+  anything_else: string | null
+  created_at: string
+}
 
 interface GrowthRow {
   creator_id: string
@@ -77,6 +88,33 @@ export default async function OpsInsightsPage() {
 
   const freeText = responses.filter(r => r.pain_other || r.anything_else)
   const growthFreeText = growth.filter(r => r.niche_other || r.anything_else)
+
+  // Brands: the demand side, its own section. The denominator is brands that
+  // were ASKED (the due event) and still exist. Counting every brand would
+  // include ones created before the questions, and counting events alone would
+  // keep deleted brands in the rate forever.
+  const [{ data: brandRows }, { data: dueEvents }] = await Promise.all([
+    admin
+      .from('brand_onboarding_responses')
+      .select('brand_id, challenges, challenge_other, current_approach, monthly_campaigns, anything_else, created_at')
+      .order('created_at', { ascending: false }),
+    admin.from('events').select('detail').eq('event_type', BRAND_QUESTIONS_DUE_EVENT),
+  ])
+  const brandResponses = (brandRows ?? []) as BrandResponseRow[]
+  const dueIds = Array.from(new Set(
+    (dueEvents ?? [])
+      .map(e => (e.detail as { brand_id?: string } | null)?.brand_id)
+      .filter((id): id is string => Boolean(id)),
+  ))
+  const brandNames: Record<string, string> = {}
+  const idsToName = Array.from(new Set([...dueIds, ...brandResponses.map(r => r.brand_id)]))
+  if (idsToName.length > 0) {
+    const { data: brands } = await admin.from('brands').select('id, name').in('id', idsToName)
+    for (const b of brands ?? []) brandNames[b.id] = b.name ?? '-'
+  }
+  const brandsAsked = dueIds.filter(id => id in brandNames).length
+  const brandTotal = brandResponses.length
+  const brandFreeText = brandResponses.filter(r => r.challenge_other || r.anything_else)
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: 980 }}>
@@ -199,6 +237,74 @@ export default async function OpsInsightsPage() {
                         </div>
                         {r.niche_other && (
                           <p style={quoteBody}><span style={quoteTag}>niche</span> {r.niche_other}</p>
+                        )}
+                        {r.anything_else && (
+                          <p style={quoteBody}><span style={quoteTag}>anything else</span> {r.anything_else}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* Brands, its own section: a different cohort answering different
+            questions. This is the demand side, what brands say is hard. */}
+        <section style={{ marginTop: '2.5rem', paddingTop: '1.75rem', borderTop: '2px solid #eee' }}>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>Brand insights</h1>
+          <p style={{ fontSize: '0.8125rem', color: '#666', margin: '0.4rem 0 1.5rem' }}>
+            Answers to the one-time questions asked on a brand&rsquo;s first dashboard visit. One answer per brand.{' '}
+            <strong>{brandTotal}</strong> response{brandTotal === 1 ? '' : 's'}
+            {brandsAsked ? ` of ${brandsAsked} brands asked` : ''}
+            {brandTotal > 0 && brandsAsked ? ` (${Math.round((brandTotal / brandsAsked) * 100)}%)` : ''}.
+          </p>
+
+          {brandTotal === 0 ? (
+            <div style={emptyStyle}>
+              No responses yet. Brands are asked on their first dashboard visit after creating their
+              profile. Brands that existed before the questions are only asked once marked as due.
+            </div>
+          ) : (
+            <>
+              {BRAND_QUESTIONS.map(q => (
+                <Distribution
+                  key={q.key}
+                  title={q.prompt}
+                  note={q.multi ? 'Multi-select, a brand can pick several, so these add to more than 100%.' : undefined}
+                  /* EVERY option, including ones nobody picked: which options
+                     fall flat is half of what the question is asked to find out. */
+                  rows={(() => {
+                    const counts: Record<string, number> = {}
+                    for (const r of brandResponses) {
+                      const raw = (r as unknown as Record<string, unknown>)[q.key]
+                      const codes = Array.isArray(raw) ? raw.map(String) : [String(raw ?? '')]
+                      for (const code of codes) if (code) counts[code] = (counts[code] ?? 0) + 1
+                    }
+                    return q.options
+                      .map(o => {
+                        const c = counts[o.code] ?? 0
+                        return { label: o.label, count: c, pct: brandTotal ? Math.round((c / brandTotal) * 100) : 0 }
+                      })
+                      .sort((a, b) => b.count - a.count)
+                  })()}
+                />
+              ))}
+
+              {brandFreeText.length > 0 && (
+                <section style={{ marginTop: '2rem' }}>
+                  <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '0 0 0.75rem' }}>
+                    In their own words ({brandFreeText.length})
+                  </h2>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {brandFreeText.map(r => (
+                      <div key={r.brand_id} style={quoteStyle}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111' }}>
+                          {brandNames[r.brand_id] ?? '-'}
+                        </div>
+                        {r.challenge_other && (
+                          <p style={quoteBody}><span style={quoteTag}>challenge</span> {r.challenge_other}</p>
                         )}
                         {r.anything_else && (
                           <p style={quoteBody}><span style={quoteTag}>anything else</span> {r.anything_else}</p>
