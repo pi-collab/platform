@@ -91,17 +91,97 @@ Around the Deal sit: verified creator storefronts, a structured offer builder, a
 
 ---
 
-## Part 5 — Pricing (and the philosophy behind it)
+## Part 5 — Pricing and the business model
 
-Our pricing is simple and it's designed to be *fair*, which is itself a selling point in a market full of hidden agency markups.
+Our pricing is designed to be *fair and visible*, which is itself a selling point in a market full of hidden agency markups. The business model has three layers, and we switch them on in order, not all at once.
 
-- **If the creator brings the brand:** **0% on that first deal.** The creator found the brand themselves — we're just giving them a clean, free way to run it. No cut. This is the wedge: "You already have this deal. Run it on Guapd instead of WhatsApp — verified terms, a real contract, on-time payment tracking — and it costs you nothing."
+### Two promises, kept separate
 
-- **If Guapd brings the deal:** **15% from the creator.** We sourced it, so we earn on it. Still far below what an agency takes, and the creator gets a deal they wouldn't have had otherwise.
+These are two different claims. Don't blur them in a pitch.
 
-Why this structure works: it aligns our revenue with the value we actually add. We only take a cut when we genuinely brought something to the table. It rewards creators for bringing their own relationships onto the platform (which builds our moat), and it's dramatically cheaper and more transparent than the agency model it replaces.
+- **To brands: no markup, ever.** The brand always pays the creator's real rate. Our revenue is a transparent commission taken from the creator's side, never a hidden markup added to the brand's price.
+- **To creators: your first brought deal is free.** When a creator brings a brand to Guapd, their first deal with that brand carries 0% commission. It's an incentive to move their own relationships onto Guapd.
 
-*(Note: the platform fee is configurable per-brand and per-deal in the system, so specific arrangements can be set. The 0%/15% is the default philosophy.)*
+### Layer 1: Transaction revenue (commission)
+
+This is how we earn today. Core deal commission is live now. Guapd Growth amplification and bulk campaigns are priced on this same model as they roll out.
+
+#### Core deals (Guapd Deals)
+
+- **The creator's first brought deal: 0%.** The creator found the brand themselves, so that first deal between them costs the creator nothing. The pitch: "You already have this deal. Run it on Guapd instead of WhatsApp, with verified terms, a real contract and payment tracking, and it costs you nothing."
+- **Every deal after that: 15% from the creator.** This covers repeat deals with a brand the creator brought, and deals with any other brand.
+- **Any Guapd-sourced deal: 15% from the creator.** We brought the deal, so we earn on it. Still far below what an agency takes, and the creator gets a deal they wouldn't otherwise have had.
+- **The brand pays the creator's rate, nothing added.** The 15% comes out of the creator's side of the deal, and both sides see the split before they agree.
+
+Note that "first deal" means the first deal between that brand and that creator, not the brand's first deal on Guapd. A brand introduced by one creator pays the standard commission on its first deal with a different creator.
+
+#### Guapd Growth amplification
+
+- **30% commission from the creators.** Each Guapd Growth creator sets their own rate.
+- **The brand sees the itemised package:** each creator, their rate, the total (the sum of the creators' rates) and the combined reach. No hidden brand markup.
+
+#### Bulk Guapd Growth campaigns
+
+- **Two ways to buy:** the brand either picks a package of Guapd Growth creators (for example 7 to 10 creators), or funds a pooled budget with a **₹20,000 minimum**.
+- **No storefront needed.** The brand doesn't have to browse storefronts to run one.
+- **30% platform fee.**
+
+#### What Guapd Growth pays for
+
+Guapd Growth amplification pays only for actions we can verify. This is a hard rule, and it's what makes the reach we sell to brands real.
+
+- **Paid, verified automatically:** a connected creator posting to their own feed or reels. We check it through the creator's connected Instagram account, including checks that the post stays up.
+- **Paid, verified by proof:** stories and comments. The creator submits proof, and their reliability score carries the weight.
+- **Not paid:** likes, saves and DM shares. They can't be reliably verified, so we don't pay for them.
+
+### Layer 2: Recurring revenue (subscriptions)
+
+We layer this in once brands are running repeat volume. It sits on top of commission: commission continues.
+
+#### Brand subscriptions
+
+- **Tiered by access:** Deals only, Guapd Growth only, or Deals and Guapd Growth.
+- **Tiered by volume:** the number of deals or campaigns per month, on a ladder of Starter, Growth, Pro and Scale.
+- **What a subscription unlocks:** access, higher volume caps and tooling. Commission still applies to every deal on top.
+
+#### Guapd Growth+ for creators
+
+- **Joining Guapd Growth is always free.** We never charge a creator to join.
+- **Guapd Growth+ is optional, at about ₹500 a month.** It's for creators who want to actively earn and grow.
+- **What Guapd Growth+ unlocks:** amplification gigs, habit tasks, growth tools, the community, and priority for campaigns.
+
+### Layer 3: AI features (future)
+
+Premium features on both sides. Pitch these as direction, never as live today.
+
+- **For creators:** an AI deal manager, one-button script and content generation, and growth coaching.
+- **For brands:** AI creator matching, campaign setup, brief generation and performance insights.
+- **How we'd charge:** a premium subscription tier or usage-based pricing, priced to cover compute cost plus a margin, with caps and tiers.
+
+### The moat
+
+Each layer strengthens the others:
+
+- Verified creators.
+- The amplification layer.
+- Our own reliability and campaign data.
+- The pipeline of Guapd Growth creators graduating into Guapd Deals.
+- Future AI built on that data, which nobody else has.
+
+### The order we switch it on
+
+Discipline matters more than ambition here. We launch in this order, and we don't launch it all at once:
+
+1. **Deals commission.** Live now.
+2. **Guapd Growth.**
+3. **Subscriptions.**
+4. **AI.**
+
+### Why this structure works
+
+It ties our revenue to the value we actually add. Creators aren't charged for bringing their first deal with a brand onto the platform, which builds our moat. Brands never pay a markup, so the price they see is the creator's real price. And every layer is dramatically cheaper and more transparent than the agency model it replaces.
+
+*(Note: the commission is configurable in the system. Ops can set a standard rate per brand, a rate for a specific brand and creator pair, or an override on a single deal, so specific arrangements can be honoured. The rules above are the default.)*
 
 ---
 
@@ -129,7 +209,7 @@ When someone asks "why you, not an agency or another platform," these are the an
 
 4. **India-native.** Built for how deals actually happen here — UPI payouts, INR, GST-aware invoicing, WhatsApp notifications, and a hand-vetted roster.
 
-5. **Fair to creators.** 0% when they bring the deal. Verified stats that raise their standing. Leverage they've never had. Creators who feel respected bring their best brands with them.
+5. **Fair to creators.** 0% on their first deal with a brand they bring. Verified stats that raise their standing. Leverage they've never had. Creators who feel respected bring their best brands with them.
 
 6. **We live the problem.** A creator-founder means we're building the thing we ourselves needed.
 
@@ -157,7 +237,7 @@ Frame these around *reputation, presence, and leverage* — not just money.
 - **You look professional.** A real storefront at guapd.com/c/your-handle — put it in your bio, send it to a brand. It signals you're a business, not a hobby. That changes how brands treat you and what they'll pay.
 - **You're taken seriously.** Verified stats mean bigger brands trust your numbers. Your presence in the market becomes credible, not something you have to argue for.
 - **You have leverage.** Agreed terms, a revision cap, a real record. No more unlimited "just one more change," no more he-said-she-said. You negotiate from a position of structure.
-- **You keep more.** 0% when you bring the brand. No agency skimming your rate.
+- **You keep more.** 0% on your first deal with a brand you bring. No agency skimming your rate.
 - **You get paid, cleanly.** Invoicing, payment tracking, polite reminders, payment history for your taxes. The chasing ends.
 - **You build a reputation that compounds.** Every deal on Guapd adds to a track record that makes the next deal easier and better-paid.
 
@@ -205,7 +285,7 @@ The pitch in one line: **Guapd Deals gives you the proven creators; Guapd Growth
 
 **On the creator side:** recruit strong (especially larger) creators, and *activate* the ones we have — get their profile and storefront complete, their Instagram connected, and their Guapd link in their bio. A signed-up creator with an empty storefront is not a win; an activated one is.
 
-**The creator pitch that converts:** "Bring your own brand deals onto Guapd — it costs you nothing (0%), and you get a real contract, verified terms, and clean payment instead of WhatsApp chaos." Free to them, and it moves their deals onto our rails.
+**The creator pitch that converts:** "Bring your own brand deals onto Guapd. Your first deal with each brand you bring costs you nothing (0%), and you get a real contract, verified terms, and clean payment instead of WhatsApp chaos." Free on that first deal, and it moves their deals onto our rails.
 
 **Quality bar:** if you wouldn't be proud to show this brand to our creators, or this creator to our brands, don't onboard them. Curate.
 
