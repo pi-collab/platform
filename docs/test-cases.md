@@ -5062,3 +5062,53 @@ and its cases travel together.
 **Unaffected**
 - [ ] Creators with deals from other brands see no change
 - [ ] Unreviewed and pending brands still reach the dashboard (approval is still enforced at first send, not at login)
+
+### 76. AI creator search (brands): parse, rank, and what it admits it cannot do
+
+**Setup / environment**
+- [ ] Migration `0504_ai_search_queries.sql` applied BEFORE deploying, in each environment. Unmigrated, every search fails at the rate-cap read
+- [ ] `ANTHROPIC_API_KEY` set on Vercel for the environment being tested. WITHOUT it the search box does not render at all (`aiSearchConfigured()` is false) and `/browse` behaves exactly as before — verify that first, because it is the state every environment starts in
+- [ ] The dependency `@anthropic-ai/sdk` and `zod` are in `apps/web/package.json`
+
+**The parse (the only model call)**
+- [ ] "fitness creators in Mumbai, 50k+ followers, budget ₹40,000" understands: niche Fitness, location Mumbai, followersMin 50000, budget 40000
+- [ ] "micro creators for a skincare launch" understands followersMax ~100000 and Fashion / Beauty, and puts "launch" in unusedTerms — subjective asks must NOT become silent filters
+- [ ] "finance creators whose audience is mostly women 18-24 in metros" sets audience.genderSkew women, ageBands 18-24, and does NOT set a creator-gender filter (there is none)
+- [ ] "budget of 2 lakh for the campaign" does NOT set budgetRupees (that is a campaign total, not a per-creator rate) and appears in unusedTerms
+- [ ] A query naming a category we do not have ("astrology creators") leaves niches empty and lists the word in unusedTerms rather than forcing a wrong category
+- [ ] Gibberish returns empty filters and every creator, not an error
+- [ ] The model only ever returns niches from `lib/niches.ts`
+
+**Ranking (no model, pure function — `lib/ai-search/score.ts`)**
+- [ ] Follower and budget filters EXCLUDE: a creator below the follower floor, or whose published starting rate is above the budget, does not appear
+- [ ] A creator just outside the follower range (within 20%) still appears, labelled "just outside your range"
+- [ ] Location, category, audience and past brands only RANK while coverage is under 80% — nobody is excluded for a blank field, and each softened filter is named above the results with the real counts ("only 17 of 118 creators have a city on file")
+- [ ] The 80% rule is coverage-driven, not hardcoded: with a test set where every creator has a city, location becomes a hard filter and the softened note disappears. This is what makes it improve as profiles fill in
+- [ ] A creator with no data for a requested field is shown with a gap line ("no city on file"), never silently ranked as if it matched
+- [ ] Every "why matched" item corresponds to a stored value: follower count, category, rate, city, audience split, past brand, completed deals. Nothing is generated prose
+- [ ] Verified follower counts say "verified from Instagram"; typed ones do not claim it
+- [ ] Results are deterministic: the same filters over the same data give the same order
+
+**Cost and limits**
+- [ ] The same query twice inside 24h calls the model ONCE; the second is logged with `cache_hit = true` and null tokens
+- [ ] Removing a chip re-ranks WITHOUT a model call (`rerankWithFilters`), is not logged, and does not count against the cap
+- [ ] The 51st search by one brand in 24h is refused with the message naming the cap; the manual filters still work
+- [ ] Cost per search is visible in ops: input/output tokens per row
+
+**SECURITY / access**
+- [ ] `aiCreatorSearch` is behind `verifyBrand` — a creator session, a logged-out session and a rejected brand cannot call it
+- [ ] Only `is_vetted` creators are ever candidates. The `.eq('is_vetted', true)` in `loadCandidates` is load bearing: the admin client bypasses RLS
+- [ ] No phone, contact_email, upi_id or rate_card ever leaves `loadCandidates` — check the returned payload in the browser devtools, not just the code
+- [ ] RLS on `ai_search_queries`: a brand reads only its own rows; INSERT, UPDATE and DELETE are denied to every client role (a brand must not be able to forge a row and reset its own cap)
+- [ ] One brand cannot see another brand's searches anywhere in the product; ops sees all via the service role
+- [ ] Policies exist in BOTH migration 0504 and `supabase/rls.sql`
+
+**Degrading gracefully (the normal state today)**
+- [ ] With 1 of 118 creators holding verified audience data, a demographics query still returns creators, ranks the verified one first, and says the filter was not applied to the rest
+- [ ] With 0 completed deals, reliability contributes nothing and is never mentioned in a reason
+- [ ] With 0 creators having `worked_with`, a "worked with fintech" query returns creators and names the gap
+- [ ] When the model call fails, the brand sees "Could not read that search just now" and the grid below is unaffected
+
+**Ops**
+- [ ] `/ops/insights` → "What brands search for" lists the last 50 queries as typed, with brand, result count, tokens or "from cache", and date
+- [ ] It says how many of those called the model

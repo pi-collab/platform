@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
+import AiSearch from './AiSearch'
+import { aiSearchConfigured } from '@/lib/ai-search/parse'
 
 interface SocialAccount {
   platform: string
@@ -124,14 +126,22 @@ export default async function BrowsePage() {
   }
 
   return (
-    <BrowseGrid
-      creators={((creators ?? []) as BrowseCreator[]).map((c) => ({
-        ...c,
-        niches: storefrontCategories[c.id] ?? c.niches ?? [],
-      }))}
-      storefrontSlugs={storefrontSlugs}
-      verifiedFollowers={verifiedFollowers}
-      startingRates={startingRates}
-    />
+    <>
+      {/* Above the grid, not instead of it: the manual filters stay the way a
+          brand narrows a list they can already see, and they keep working when
+          the AI is switched off or has nothing to add. */}
+      <div style={{ padding: '24px var(--container-pad) 0' }}>
+        <AiSearch configured={aiSearchConfigured()} />
+      </div>
+      <BrowseGrid
+        creators={((creators ?? []) as BrowseCreator[]).map((c) => ({
+          ...c,
+          niches: storefrontCategories[c.id] ?? c.niches ?? [],
+        }))}
+        storefrontSlugs={storefrontSlugs}
+        verifiedFollowers={verifiedFollowers}
+        startingRates={startingRates}
+      />
+    </>
   )
 }

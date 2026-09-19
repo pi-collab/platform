@@ -110,6 +110,7 @@ ALTER TABLE deal_deliverable_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_products      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creator_onboarding_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brand_onboarding_responses   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_search_queries            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE phone_verifications   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns             ENABLE ROW LEVEL SECURITY;
@@ -511,6 +512,33 @@ CREATE POLICY brand_onboarding_deny_update
 
 CREATE POLICY brand_onboarding_deny_delete
   ON brand_onboarding_responses FOR DELETE
+  USING (false);
+
+-- ── ai_search_queries ───────────────────────────────────────────────
+-- The AI creator search log, parse cache and rate cap.
+-- SELECT: the member's own brand only. What a brand searches for is theirs.
+-- No client writes at all: the row records what the server did, including the
+-- token counts the rate cap reads, so a forged row could reset a brand's cap.
+
+DROP POLICY IF EXISTS ai_search_select_own  ON ai_search_queries;
+DROP POLICY IF EXISTS ai_search_deny_insert ON ai_search_queries;
+DROP POLICY IF EXISTS ai_search_deny_update ON ai_search_queries;
+DROP POLICY IF EXISTS ai_search_deny_delete ON ai_search_queries;
+
+CREATE POLICY ai_search_select_own
+  ON ai_search_queries FOR SELECT
+  USING (brand_id = my_brand_id());
+
+CREATE POLICY ai_search_deny_insert
+  ON ai_search_queries FOR INSERT
+  WITH CHECK (false);
+
+CREATE POLICY ai_search_deny_update
+  ON ai_search_queries FOR UPDATE
+  USING (false);
+
+CREATE POLICY ai_search_deny_delete
+  ON ai_search_queries FOR DELETE
   USING (false);
 
 -- ── phone_verifications ─────────────────────────────────────────────

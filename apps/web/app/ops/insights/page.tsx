@@ -116,6 +116,27 @@ export default async function OpsInsightsPage() {
   const brandTotal = brandResponses.length
   const brandFreeText = brandResponses.filter(r => r.challenge_other || r.anything_else)
 
+  // What brands typed into AI creator search. The most direct statement of
+  // demand we have: not what they answered when asked, but what they went
+  // looking for. Raw text, newest first, with the cost of answering it.
+  const { data: searchRows } = await admin
+    .from('ai_search_queries')
+    .select('id, brand_id, query_raw, result_count, cache_hit, input_tokens, output_tokens, created_at')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  const searches = (searchRows ?? []) as {
+    id: string; brand_id: string; query_raw: string; result_count: number
+    cache_hit: boolean; input_tokens: number | null; output_tokens: number | null; created_at: string
+  }[]
+  if (searches.length > 0) {
+    const missing = Array.from(new Set(searches.map(s => s.brand_id))).filter(id => !(id in brandNames))
+    if (missing.length > 0) {
+      const { data: more } = await admin.from('brands').select('id, name').in('id', missing)
+      for (const b of more ?? []) brandNames[b.id] = b.name ?? '-'
+    }
+  }
+  const searchesPaid = searches.filter(s => !s.cache_hit).length
+
   return (
     <div style={{ padding: '1.5rem', maxWidth: 980 }}>
       <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>Creator insights</h1>
@@ -315,6 +336,43 @@ export default async function OpsInsightsPage() {
                 </section>
               )}
             </>
+          )}
+        </section>
+
+        {/* AI creator search. Kept as raw queries rather than a distribution:
+            the wording is the finding. A brand asking for something we cannot
+            filter on is a gap in the data, not a failed search. */}
+        <section style={{ marginTop: '2.5rem', paddingTop: '1.75rem', borderTop: '2px solid #eee' }}>
+          <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>What brands search for</h1>
+          <p style={{ fontSize: '0.8125rem', color: '#666', margin: '0.4rem 0 1.5rem' }}>
+            The last {searches.length} AI creator searches, newest first.{' '}
+            <strong>{searchesPaid}</strong> of them called the model; the rest were answered from the cache.
+          </p>
+
+          {searches.length === 0 ? (
+            <div style={emptyStyle}>
+              No searches yet. This fills up as brands use the search box on Browse.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {searches.map(s => (
+                <div key={s.id} style={quoteStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111' }}>
+                      {brandNames[s.brand_id] ?? '-'}
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: '#888' }}>
+                      {s.result_count} result{s.result_count === 1 ? '' : 's'}
+                      {s.cache_hit
+                        ? ' · from cache'
+                        : s.input_tokens != null ? ` · ${s.input_tokens}+${s.output_tokens ?? 0} tokens` : ''}
+                      {' · '}{new Date(s.created_at).toLocaleDateString('en-IN')}
+                    </span>
+                  </div>
+                  <p style={quoteBody}>{s.query_raw}</p>
+                </div>
+              ))}
+            </div>
           )}
         </section>
 
