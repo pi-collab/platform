@@ -306,6 +306,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
        never meant to be matched literally against a name. */
     if (aiActive) {
       list = list.filter((c) => aiById.has(c.id))
+    } else if (aiMode) {
+      // Typing a question is not typing a name. Until the search is actually
+      // run the roster stays as it was, rather than emptying itself against a
+      // sentence no creator's name will ever contain.
     } else if (search) {
       const q = search.toLowerCase()
       list = list.filter((c) => {
@@ -354,7 +358,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     })
 
     return list
-  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates, aiActive, aiById])
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates, aiActive, aiMode, aiById])
 
   const pageList = filtered.slice(0, shown)
   const hasMore = shown < filtered.length
@@ -503,10 +507,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 34, height: 30, border: 'none', cursor: 'pointer',
-                  background: viewMode === 'list' ? 'var(--neon)' : 'transparent',
+                  background: viewMode === 'list' ? 'var(--ink)' : 'transparent',
                 }}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'list' ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'list' ? 'var(--card)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
               </button>
               <div style={{ width: 1, height: 20, background: 'var(--border-hairline)' }} />
               <button
@@ -516,10 +520,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 34, height: 30, border: 'none', cursor: 'pointer',
-                  background: viewMode === 'grid' ? 'var(--neon)' : 'transparent',
+                  background: viewMode === 'grid' ? 'var(--ink)' : 'transparent',
                 }}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'grid' ? 'var(--ink)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={viewMode === 'grid' ? 'var(--card)' : 'var(--ink-faint)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
               </button>
             </div>
             </div>
@@ -557,10 +561,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
                     padding: '4px 9px', borderRadius: 999, cursor: 'pointer',
-                    border: `1px solid ${aiMode ? 'transparent' : 'var(--border-hairline)'}`,
-                    background: aiMode ? 'var(--neon)' : 'transparent',
+                    border: `1px solid ${aiMode ? 'var(--ink)' : 'var(--border-hairline)'}`,
+                    background: aiMode ? 'var(--ink)' : 'transparent',
                     fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
-                    color: 'var(--ink)', whiteSpace: 'nowrap',
+                    color: aiMode ? 'var(--card)' : 'var(--ink)', whiteSpace: 'nowrap',
                   }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></svg>
@@ -589,9 +593,9 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   disabled={aiPending || search.trim().length === 0}
                   style={{
                     flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none',
-                    background: search.trim() && !aiPending ? 'var(--neon)' : 'rgba(40,45,25,.08)',
+                    background: search.trim() && !aiPending ? 'var(--ink)' : 'rgba(40,45,25,.08)',
                     fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
-                    color: search.trim() && !aiPending ? 'var(--ink)' : 'var(--ink-faint)',
+                    color: search.trim() && !aiPending ? 'var(--card)' : 'var(--ink-faint)',
                     cursor: search.trim() && !aiPending ? 'pointer' : 'default',
                   }}
                 >
@@ -734,15 +738,15 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '5px 8px 5px 12px', borderRadius: 'var(--radius-pill)',
-                  background: 'var(--neon)', border: '1px solid transparent',
-                  fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700,
+                  background: 'var(--card)', border: '1px solid var(--frost-edge)',
+                  fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600,
                   color: 'var(--ink)', cursor: 'pointer',
                 }}
               >
                 {chip.label}
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 16, height: 16, borderRadius: '50%', background: 'rgba(40,45,25,.12)',
+                  width: 16, height: 16, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
                 }}>
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                 </span>
