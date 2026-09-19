@@ -5109,6 +5109,18 @@ and its cases travel together.
 - [ ] With 0 creators having `worked_with`, a "worked with fintech" query returns creators and names the gap
 - [ ] When the model call fails, the brand sees "Could not read that search just now" and the grid below is unaffected
 
+**The toggle: one search box, two modes**
+- [ ] The AI pill sits INSIDE the existing search box on /browse. Off by default — the box is the plain name/handle search it has always been
+- [ ] With no `ANTHROPIC_API_KEY` the pill does not render at all and the box behaves exactly as before
+- [ ] Turning the toggle on clears the box and swaps the placeholder to the example query; turning it off clears any AI results and restores the plain search
+- [ ] In AI mode, Enter and the Search button both run the search. In plain mode neither calls the model, and typing filters as-you-type as before
+- [ ] Results arrive in the EXISTING list and grid views, in rank order. The view toggle, Saved, niche/platform/rate filters and Show more all still work over them
+- [ ] Ticking creators in AI results raises the same selection bar, and "Start a campaign" carries them through — this is the point of using the existing list rather than a separate panel
+- [ ] Sorting: AI rank wins while results are showing, so a brand cannot lose the ranking by leaving the sort on Followers
+- [ ] The manual filters narrow AI results rather than replacing them (e.g. an AI search plus the Instagram filter)
+- [ ] "Clear AI search" returns the page to the full roster; "Clear all" still clears the manual filters
+- [ ] Each matched creator shows its strength and "why matched" line in BOTH views, with gaps in a lighter tone
+
 **Ops**
 - [ ] `/ops/insights` → "What brands search for" lists the last 50 queries as typed, with brand, result count, tokens or "from cache", and date
 - [ ] It says how many of those called the model

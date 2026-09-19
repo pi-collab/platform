@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, useTransition } from 'react'
+import { aiCreatorSearch, rerankWithFilters } from './ai-search-actions'
+import type { SearchFilters, SearchOutcome } from '@/lib/ai-search/types'
 import NewCampaignFields, { EMPTY_CAMPAIGN_DRAFT, parseBudget, type CampaignDraft } from '@/components/NewCampaignFields'
 import Toast from '@/components/Toast'
 import { useRouter } from 'next/navigation'
@@ -109,9 +111,12 @@ function useAnimatedPlaceholder() {
 
 /* ── Component ──────────────────────────────────────────────────── */
 
-export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {}, startingRates = {} }: {
+export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFollowers = {}, startingRates = {}, aiConfigured = false }: {
   creators: BrowseCreator[]
   storefrontSlugs?: Record<string, string>
+  /** Whether the AI toggle is offered. False with no API key: the box stays a
+   *  plain text search and nothing about this page changes. */
+  aiConfigured?: boolean
   /** creatorId -> followers from a connected Instagram account. */
   verifiedFollowers?: Record<string, number>
   /** creatorId -> lowest published package price, in paise. */
@@ -130,6 +135,16 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     startingRates[c.id] ?? lowestRate(c.rate_card)
 
   const [search, setSearch] = useState('')
+
+  /* ── AI search ──────────────────────────────────────────────────────────
+     The same box, in a different mode. Kept here rather than in a section of
+     its own so results arrive in the list a brand already knows how to work:
+     tick the ones they want, and the campaign bar at the foot is the same bar.
+     A separate AI panel would have meant a second set of results that could
+     not be selected from, which is where the brand was going all along. */
+  const [aiMode, setAiMode] = useState(false)
+  const [aiOutcome, setAiOutcome] = useState<SearchOutcome | null>(null)
+  const [aiPending, startAi] = useTransition()
   // An array, empty meaning no niche filter. A creator's storefront can carry
   // several categories, so filtering on one at a time asked a brand to guess
   // which of them we happened to match on.
@@ -248,14 +263,50 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     })
   }, [creators, saved])
 
+  /** creatorId -> why it matched, for the rows and cards. */
+  const aiById = useMemo(() => {
+    const m = new Map<string, { reasons: string[]; gaps: string[]; strength: string; rank: number }>()
+    if (aiOutcome?.ok) {
+      aiOutcome.results.forEach((r, i) =>
+        m.set(r.candidate.id, { reasons: r.reasons, gaps: r.gaps, strength: r.strength, rank: i }))
+    }
+    return m
+  }, [aiOutcome])
+
+  const aiActive = aiMode && Boolean(aiOutcome?.ok)
+
+  function runAiSearch() {
+    const q = search.trim()
+    if (!q || aiPending) return
+    startAi(async () => setAiOutcome(await aiCreatorSearch(q)))
+  }
+
+  /* Editing an understood filter re-ranks in code: the parse is the only paid
+     step, so correcting the AI must never cost another call. */
+  function dropAiFilter(mutate: (f: SearchFilters) => SearchFilters) {
+    if (!aiOutcome?.ok || aiPending) return
+    const next = mutate(structuredClone(aiOutcome.filters))
+    startAi(async () => setAiOutcome(await rerankWithFilters(next)))
+  }
+
+  function clearAi() {
+    setAiOutcome(null)
+    setAiMode(false)
+    setSearch('')
+  }
+
   const filtered = useMemo(() => {
     let list = creators
 
     // Saved view
     if (savedView) list = list.filter((c) => saved[c.id])
 
-    // Search
-    if (search) {
+    /* In AI mode the result set IS the search: the ranked ids replace the
+       text match rather than narrowing it, because the brand's words were
+       never meant to be matched literally against a name. */
+    if (aiActive) {
+      list = list.filter((c) => aiById.has(c.id))
+    } else if (search) {
       const q = search.toLowerCase()
       list = list.filter((c) => {
         const nameMatch = c.full_name.toLowerCase().includes(q)
@@ -294,23 +345,49 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
     // Sort
     list = [...list].sort((a, b) => {
+      // Rank first while AI results are showing: they are the answer to the
+      // question that was asked, and re-sorting by followers would bury it.
+      if (aiActive) return (aiById.get(a.id)?.rank ?? 0) - (aiById.get(b.id)?.rank ?? 0)
       if (sort === 'followers') return followersOf(b) - followersOf(a)
       if (sort === 'rateLow') return (rateOf(a) ?? 0) - (rateOf(b) ?? 0)
       return a.full_name.localeCompare(b.full_name)
     })
 
     return list
-  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates])
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates, aiActive, aiById])
 
   const pageList = filtered.slice(0, shown)
   const hasMore = shown < filtered.length
+
+  /* What the AI understood, as removable chips. Same shape as the manual
+     filter chips below them, because to a brand they are the same thing: a
+     filter currently applied, which they can take off. */
+  const aiChips: { label: string; onRemove: () => void }[] = []
+  if (aiOutcome?.ok) {
+    const f = aiOutcome.filters
+    for (const n of f.niches) aiChips.push({ label: n, onRemove: () => dropAiFilter(x => ({ ...x, niches: x.niches.filter(v => v !== n) })) })
+    for (const pf of f.platforms) aiChips.push({ label: pf === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => dropAiFilter(x => ({ ...x, platforms: x.platforms.filter(v => v !== pf) })) })
+    for (const l of f.locations) aiChips.push({ label: l, onRemove: () => dropAiFilter(x => ({ ...x, locations: x.locations.filter(v => v !== l) })) })
+    if (f.followersMin !== null || f.followersMax !== null) {
+      const label = f.followersMin && f.followersMax
+        ? `${Math.round(f.followersMin / 1000)}k to ${Math.round(f.followersMax / 1000)}k followers`
+        : f.followersMin ? `${Math.round(f.followersMin / 1000)}k+ followers`
+          : `up to ${Math.round((f.followersMax ?? 0) / 1000)}k followers`
+      aiChips.push({ label, onRemove: () => dropAiFilter(x => ({ ...x, followersMin: null, followersMax: null })) })
+    }
+    if (f.budgetRupees !== null) aiChips.push({ label: `₹${f.budgetRupees.toLocaleString('en-IN')} budget`, onRemove: () => dropAiFilter(x => ({ ...x, budgetRupees: null })) })
+    if (f.audience.genderSkew) aiChips.push({ label: `audience mostly ${f.audience.genderSkew}`, onRemove: () => dropAiFilter(x => ({ ...x, audience: { ...x.audience, genderSkew: null } })) })
+    for (const a of f.audience.ageBands) aiChips.push({ label: `audience ${a}`, onRemove: () => dropAiFilter(x => ({ ...x, audience: { ...x.audience, ageBands: x.audience.ageBands.filter(v => v !== a) } })) })
+    for (const city of f.audience.cities) aiChips.push({ label: `audience in ${city}`, onRemove: () => dropAiFilter(x => ({ ...x, audience: { ...x.audience, cities: x.audience.cities.filter(v => v !== city) } })) })
+    for (const b of f.pastBrandCategories) aiChips.push({ label: `worked with ${b}`, onRemove: () => dropAiFilter(x => ({ ...x, pastBrandCategories: x.pastBrandCategories.filter(v => v !== b) })) })
+  }
 
   // Active filter chips
   const chips: { label: string; onRemove: () => void }[] = []
   if (platformFilter !== 'all') chips.push({ label: platformFilter === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => setPlatformFilter('all') })
   for (const n of nicheFilter) chips.push({ label: n, onRemove: () => setNicheFilter((prev) => prev.filter((x) => x !== n)) })
   if (rateFilter !== 'any') chips.push({ label: RATE_FILTERS.find((r) => r.value === rateFilter)?.label ?? rateFilter, onRemove: () => setRateFilter('any') })
-  const hasChips = chips.length > 0
+  const hasChips = chips.length > 0 || aiChips.length > 0
 
   function clearAll() {
     setSearch('')
@@ -460,21 +537,67 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             display: 'flex', alignItems: 'center', gap: 10, marginTop: 20,
             paddingTop: 18, borderTop: '1px solid var(--border-hairline)', flexWrap: 'nowrap',
           }}>
-            {/* Search */}
+            {/* Search. One box, two modes: type a name, or describe who you
+                want and let the AI read it. The toggle sits inside the box
+                rather than beside it, because it changes what the box means. */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--ink-faint)', flex: '1 1 240px', minWidth: 150 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+              {aiConfigured && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !aiMode
+                    setAiMode(next)
+                    setAiOutcome(null)
+                    setSearch('')
+                    setShown(PAGE_SIZE)
+                    searchRef.current?.focus()
+                  }}
+                  aria-pressed={aiMode}
+                  title={aiMode ? 'Back to searching by name' : 'Describe who you are looking for'}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                    padding: '4px 9px', borderRadius: 999, cursor: 'pointer',
+                    border: `1px solid ${aiMode ? 'transparent' : 'var(--border-hairline)'}`,
+                    background: aiMode ? 'var(--neon)' : 'transparent',
+                    fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
+                    color: 'var(--ink)', whiteSpace: 'nowrap',
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></svg>
+                  AI
+                </button>
+              )}
+              {!aiMode && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
               <input
                 ref={searchRef}
-                type="search"
+                type={aiMode ? 'text' : 'search'}
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setShown(PAGE_SIZE) }}
-                placeholder={ph}
+                onChange={(e) => { setSearch(e.target.value); if (!aiMode) setShown(PAGE_SIZE) }}
+                onKeyDown={(e) => { if (aiMode && e.key === 'Enter') runAiSearch() }}
+                maxLength={aiMode ? 400 : undefined}
+                placeholder={aiMode ? 'Fitness creators in Mumbai, 50k+ followers, budget ₹40,000' : ph}
                 style={{
                   flex: 1, minWidth: 0, border: 'none',
                   fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500,
                   outline: 'none', background: 'none', color: 'var(--ink)',
                 }}
               />
+              {aiMode && (
+                <button
+                  type="button"
+                  onClick={runAiSearch}
+                  disabled={aiPending || search.trim().length === 0}
+                  style={{
+                    flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none',
+                    background: search.trim() && !aiPending ? 'var(--neon)' : 'rgba(40,45,25,.08)',
+                    fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
+                    color: search.trim() && !aiPending ? 'var(--ink)' : 'var(--ink-faint)',
+                    cursor: search.trim() && !aiPending ? 'pointer' : 'default',
+                  }}
+                >
+                  {aiPending ? 'Searching…' : 'Search'}
+                </button>
+              )}
               {search && (
                 <button
                   onClick={() => setSearch('')}
@@ -560,6 +683,40 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
         </div>
 
         {/* ══════ RESULT META + CHIPS ══════ */}
+        {/* What the AI did with the question, said plainly and in the open:
+            a brand cannot check its working, so the page shows it. What was
+            not used, and what was ranked rather than filtered because the
+            data is too thin, both matter more than the ranking itself. */}
+        {aiMode && (aiPending || aiOutcome) && (
+          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {aiPending && (
+              <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>Reading your search…</p>
+            )}
+            {!aiPending && aiOutcome && !aiOutcome.ok && (
+              <p role="status" style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>{aiOutcome.message}</p>
+            )}
+            {!aiPending && aiOutcome?.ok && (
+              <>
+                {aiOutcome.filters.unusedTerms.length > 0 && (
+                  <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                    Not used: {aiOutcome.filters.unusedTerms.join(', ')}. We only match on what creators have filled in or verified.
+                  </p>
+                )}
+                {aiOutcome.softened.map((sf) => (
+                  <p key={sf.label} style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                    <strong style={{ color: 'var(--ink)' }}>{sf.label}:</strong> {sf.reason}.
+                  </p>
+                ))}
+                {aiOutcome.excludedCount > 0 && (
+                  <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
+                    {aiOutcome.excludedCount} creator{aiOutcome.excludedCount === 1 ? '' : 's'} ruled out by your search.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap' }}>
@@ -567,6 +724,30 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             </span>
 
             {hasChips && <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-faint)' }} />}
+
+            {/* What the AI understood, ahead of the manual filters. */}
+            {aiChips.map((chip) => (
+              <button
+                key={`ai-${chip.label}`}
+                onClick={chip.onRemove}
+                title="Remove this filter and re-rank"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 8px 5px 12px', borderRadius: 'var(--radius-pill)',
+                  background: 'var(--neon)', border: '1px solid transparent',
+                  fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700,
+                  color: 'var(--ink)', cursor: 'pointer',
+                }}
+              >
+                {chip.label}
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 16, height: 16, borderRadius: '50%', background: 'rgba(40,45,25,.12)',
+                }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                </span>
+              </button>
+            ))}
 
             {chips.map((chip) => (
               <button
@@ -589,6 +770,19 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 </span>
               </button>
             ))}
+
+            {aiOutcome?.ok && (
+              <button
+                onClick={clearAi}
+                style={{
+                  background: 'none', border: 'none', fontFamily: 'var(--font-ui)',
+                  fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)', cursor: 'pointer',
+                  textDecoration: 'underline', textUnderlineOffset: 2,
+                }}
+              >
+                Clear AI search
+              </button>
+            )}
 
             {hasChips && (
               <button
@@ -642,6 +836,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   <CreatorRow
                     key={c.id}
                     creator={c}
+                    aiMatch={aiById.get(c.id) ?? null}
                     verifiedFollowers={verifiedFollowers[c.id]}
                     startingRate={rateOf(c)}
                     isPicked={!!picked[c.id]}
@@ -657,6 +852,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   <CreatorCard
                     key={c.id}
                     creator={c}
+                    aiMatch={aiById.get(c.id) ?? null}
                     isSaved={!!saved[c.id]}
                     onToggleSave={toggleSave}
                     storefrontSlug={storefrontSlugs[c.id] ?? null}
@@ -825,8 +1021,11 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
    The checkbox is the point of this view. Twenty cards is a wall to compare
    against; twenty rows is a list to tick down, which is what putting several
    creators into one campaign actually is. */
-function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onTogglePick, isSaved, onToggleSave }: {
+function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onTogglePick, isSaved, onToggleSave, aiMatch = null }: {
   creator: BrowseCreator
+  /** Why the AI put this creator here, when a search produced them. Every item
+   *  is a stored value, not generated prose. */
+  aiMatch?: { reasons: string[]; gaps: string[]; strength: string; rank: number } | null
   verifiedFollowers?: number
   /** Lowest published package price, in paise. Null when nothing is priced. */
   startingRate: number | null
@@ -906,6 +1105,26 @@ function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onT
             <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
+        {aiMatch && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+            <span style={{
+              fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700,
+              color: aiMatch.strength === 'strong' ? '#4F6B12' : 'var(--ink-soft)',
+              textTransform: 'uppercase', letterSpacing: '.05em',
+            }}>
+              {aiMatch.strength === 'strong' ? 'Strong match' : aiMatch.strength === 'good' ? 'Good match' : 'Possible match'}
+            </span>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+              {aiMatch.reasons.join(' · ')}
+            </span>
+            {aiMatch.gaps.length > 0 && (
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>
+                · {aiMatch.gaps.join(' · ')}
+              </span>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, color: 'var(--ink-faint)', marginTop: 4, minWidth: 0 }}>
           {primary && <PlatformIcon platform={primary.platform} size={13} />}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.join(' \u00B7 ')}</span>
@@ -972,8 +1191,10 @@ const chipStyle: React.CSSProperties = {
   color: 'var(--ink)', whiteSpace: 'nowrap',
 }
 
-function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, startingRate, hideDealCta, isPicked, onTogglePick }: {
+function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifiedFollowers, startingRate, hideDealCta, isPicked, onTogglePick, aiMatch = null }: {
   creator: BrowseCreator
+  /** Why the AI put this creator here, when a search produced them. */
+  aiMatch?: { reasons: string[]; gaps: string[]; strength: string; rank: number } | null
   isSaved: boolean
   onToggleSave: (id: string, e: React.MouseEvent) => void
   storefrontSlug: string | null
@@ -1094,6 +1315,22 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
       )}
 
       {/* Stats row */}
+      {aiMatch && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{
+            fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 700,
+            letterSpacing: '.05em', textTransform: 'uppercase',
+            color: aiMatch.strength === 'strong' ? '#4F6B12' : 'var(--ink-soft)',
+          }}>
+            {aiMatch.strength === 'strong' ? 'Strong match' : aiMatch.strength === 'good' ? 'Good match' : 'Possible match'}
+          </div>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-soft)', marginTop: 2, lineHeight: 1.45 }}>
+            {aiMatch.reasons.join(' · ')}
+            {aiMatch.gaps.length > 0 && <span style={{ color: 'var(--ink-faint)' }}> · {aiMatch.gaps.join(' · ')}</span>}
+          </div>
+        </div>
+      )}
+
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr', marginTop: 14,
         padding: '12px 14px',
