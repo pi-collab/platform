@@ -181,6 +181,35 @@ function buildShopfrontData(
   igSnap?: IgSnapshot,
 ): ShopfrontData {
   const handle = creator?.handle || 'creator'
+
+  /* Instagram's figures, applied to showcase items exactly as the public page
+     applies them. Without this the preview rendered a pulled-in reel with no
+     thumbnail and no numbers, because the item itself holds neither — only the
+     media id — while the published page looked them up and showed both.
+
+     That made the one screen whose entire job is "this is what a brand will
+     see" the screen showing something else, which is the same fault the
+     verified-stats note above this function describes. Kept deliberately
+     identical to the mapping in app/c/[slug]/page.tsx. */
+  const reelById = new Map((igSnap?.media ?? []).map((m) => [m.id, m]))
+  const showcaseItems: ContentItem[] = edit.contentItems.map((item) => {
+    const reel = item.igMediaId ? reelById.get(item.igMediaId) : undefined
+    if (!reel) return item
+    return {
+      ...item,
+      title: item.title?.trim() || (reel.caption ?? '').split('\n')[0].trim().slice(0, 80),
+      views: reel.views != null ? formatStat(reel.views) : item.views,
+      engagement: reel.reach != null && reel.totalInteractions != null && reel.reach > 0
+        ? `${((reel.totalInteractions / reel.reach) * 100).toFixed(1)}%`
+        : item.engagement,
+      saves: reel.saved != null ? formatStat(reel.saved) : item.saves,
+      thumbnailUrl: reel.thumbnailUrl ?? item.thumbnailUrl,
+      mediaKind: reel.thumbnailUrl ? 'image' : item.mediaKind,
+      embedUrl: reel.permalink || item.embedUrl,
+      verified: reel.views != null || reel.reach != null,
+    }
+  })
+
   const rateCardItems = products.map(p => ({
     key: p.id, name: p.product_type, desc: p.description || '',
     pricePaise: p.price_paise, platform: p.platform, handle: p.handle,
@@ -268,7 +297,7 @@ function buildShopfrontData(
           fetchedAt: igSnap.fetchedAt,
         }
       : undefined,
-    contentItems: edit.contentItems, brandCollabs: edit.brandCollabs,
+    contentItems: showcaseItems, brandCollabs: edit.brandCollabs,
     rateCardItems, sections,
     // The creator is looking at their own shopfront; the offer buttons are for
     // brands on the public page.
