@@ -1421,7 +1421,16 @@ export default function StorefrontManager({
     }
 
     setSaving(false)
-    setSaveMsg({ type: 'ok', text: publish ? 'Published!' : 'Saved!' })
+    /* A reel that did not come back from Instagram leaves a card with no
+       thumbnail and no numbers, and nothing on screen to explain why. The save
+       itself succeeded, so this is not an error — it is the one thing the
+       creator would otherwise have to guess at. */
+    setSaveMsg({
+      type: 'ok',
+      text: ('notice' in result && result.notice)
+        ? result.notice
+        : (publish ? 'Published!' : 'Saved!'),
+    })
     if (publish) setJustPublished(true)
     router.refresh()
     return true

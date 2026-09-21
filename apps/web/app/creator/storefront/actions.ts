@@ -306,13 +306,67 @@ export async function upsertStorefront(input: UpsertInput) {
     return { error: error.message }
   }
 
+  /* ── Resolve newly chosen reels NOW, not tonight ────────────────────────
+     A showcase item pulled in from Instagram holds only the media id. The
+     thumbnail and the figures live in the connection snapshot, and
+     syncFeaturedReels is what puts them there — fetching each reel by id and
+     copying its thumbnail into our own bucket, because Instagram's URLs are
+     signed and expire.
+
+     When the picker owned its own save it called this itself. Folding the
+     reels into the content showcase removed that call and left nothing to
+     replace it, so a newly picked reel had no thumbnail and no numbers until
+     the 03:00 cron happened to run: the creator saved, published, looked at
+     their page and saw a blank card with no explanation.
+
+     Only when the SET has changed. This costs two Instagram calls per reel,
+     and a creator editing their bio should not pay for five of them. */
+  const idsOf = (items: unknown): string[] =>
+    Array.isArray(items)
+      ? (items as Record<string, unknown>[])
+          .map(i => (typeof i?.igMediaId === 'string' ? i.igMediaId : null))
+          .filter((v): v is string => v !== null)
+      : []
+
+  /* Read from `stats`, NOT from `input.content_items`.
+     The editor sends an empty content_items array and puts the real list
+     inside `stats.content_items`; reading the wrong one here found no ids,
+     concluded nothing had changed, and skipped the sync entirely — which is
+     the exact bug this block exists to fix. */
+  const priorIds = idsOf(priorStats.content_items)
+  const nextIds = idsOf((stats as Record<string, unknown>).content_items)
+  const changed = priorIds.length !== nextIds.length || nextIds.some((id, i) => priorIds[i] !== id)
+
+  let reelNotice: string | undefined
+  if (changed && nextIds.length > 0) {
+    await syncFeaturedReels(ctx.creatorId).catch(() => {})
+
+    // Say so rather than leaving a blank card unexplained. A reel can fail to
+    // resolve for reasons the creator cannot see: a rate limit, a thumbnail
+    // that would not copy, a reel deleted on Instagram since it was listed.
+    const { data: after } = await createAdminClient()
+      .from('creator_instagram_connections')
+      .select('snapshot')
+      .eq('creator_id', ctx.creatorId)
+      .maybeSingle()
+    const resolved = new Set(
+      (((after?.snapshot ?? {}) as { media?: { id: string }[] }).media ?? []).map(m => m.id),
+    )
+    const missing = nextIds.filter(id => !resolved.has(id)).length
+    if (missing > 0) {
+      reelNotice = missing === nextIds.length
+        ? 'Saved, but Instagram did not return your reels just now. They will appear after tonight\'s refresh.'
+        : `Saved. ${missing} of your ${nextIds.length} reels did not come back from Instagram and will fill in after tonight's refresh.`
+    }
+  }
+
   revalidatePath('/creator/storefront')
   revalidatePath(`/c/${slug}`)
   // If slug changed on a published storefront, invalidate the old URL's cache
   if (existing && existing.slug && existing.slug !== slug) {
     revalidatePath(`/c/${existing.slug}`)
   }
-  return { success: true }
+  return { success: true, notice: reelNotice }
 }
 
 
