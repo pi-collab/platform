@@ -646,10 +646,34 @@ export async function syncFeaturedReels(creatorId: string): Promise<void> {
       .eq('creator_id', creatorId).maybeSingle(),
   ])
 
+  /* ── The ids come from the content showcase itself ──────────────────────
+     A creator adds Instagram reels in the same panel they add anything else
+     to their showcase, and a pulled-in item carries `igMediaId`. That list IS
+     the featured set; there is no separate selection to keep in step with it.
+
+     This replaced a `featured_reel_ids` key in the same `stats` object. That
+     key was written by the picker and, because the shopfront editor saved
+     `stats` wholesale from its own form state, deleted again the next time
+     the creator pressed Save — the reels stayed on the page and then vanished
+     at the following night's sync. Deriving from content_items removes the
+     second writer rather than guarding it: there is now one list, owned by
+     one screen. `featured_reel_ids` is read once more below only to carry
+     existing picks across. */
   const stats = (sf?.stats ?? {}) as Record<string, unknown>
-  const ids = Array.isArray(stats.featured_reel_ids)
-    ? (stats.featured_reel_ids as string[]).slice(0, MAX_FEATURED_REELS)
+
+  const fromShowcase = Array.isArray(stats.content_items)
+    ? (stats.content_items as Record<string, unknown>[])
+        .map((i) => (typeof i?.igMediaId === 'string' ? i.igMediaId : null))
+        .filter((v): v is string => v !== null)
     : []
+
+  // Legacy picks, from before the showcase carried them. Harmless once every
+  // creator's items have been migrated, and removable then.
+  const legacy = Array.isArray(stats.featured_reel_ids)
+    ? (stats.featured_reel_ids as unknown[]).filter((v): v is string => typeof v === 'string')
+    : []
+
+  const ids = Array.from(new Set([...fromShowcase, ...legacy])).slice(0, MAX_FEATURED_REELS)
 
   if (!conn || conn.status !== 'connected') return
 

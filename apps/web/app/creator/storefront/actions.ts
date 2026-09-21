@@ -74,6 +74,10 @@ function validateContentItems(items: unknown): items is ContentItem[] {
       && typeof i.title === 'string' && i.title.length <= 200
       && (!i.link || (typeof i.link === 'string' && validateUrl(i.link)))
       && (!i.image_path || (typeof i.image_path === 'string' && validateStoragePath(i.image_path)))
+      // Instagram media ids are numeric strings. Checked rather than trusted:
+      // this value is later used to look a reel up in the snapshot and, before
+      // this merge, to address Instagram directly.
+      && (!i.igMediaId || (typeof i.igMediaId === 'string' && /^\d{5,32}$/.test(i.igMediaId)))
   )
 }
 
@@ -736,38 +740,14 @@ export async function listMyReels(): Promise<{ ok: true; reels: ReelCandidate[] 
   }
 }
 
-/**
- * Save the selection.
+/* `saveFeaturedReels` used to live here and has been deleted.
  *
- * Stores IDS only. The reels themselves are resolved by id on every sync, so a
- * featured pick stays current and cannot go stale against a cached copy.
- */
-export async function saveFeaturedReels(ids: string[]): Promise<{ ok: boolean; message?: string }> {
-  const ctx = await verifyCreator()
-  const admin = createAdminClient()
+ * It wrote `featured_reel_ids` into `creator_storefronts.stats` — a second
+ * writer of an object the shopfront form already saved wholesale, so the
+ * form's next Save removed the key and the creator's reels disappeared at the
+ * following night's sync. Instagram reels are now ordinary showcase items
+ * carrying `igMediaId`, saved by the form with everything else, and
+ * syncFeaturedReels reads the ids from those items. One list, one writer.
+ *
+ * Do not reintroduce a second writer of `stats`. */
 
-  const clean = Array.from(new Set(ids.filter(id => /^\d{5,32}$/.test(id)))).slice(0, MAX_FEATURED_REELS)
-
-  const { data: sf } = await admin
-    .from('creator_storefronts')
-    .select('id, slug, stats')
-    .eq('creator_id', ctx.creatorId)
-    .maybeSingle()
-
-  if (!sf) return { ok: false, message: 'Create your shopfront first.' }
-
-  // Merged into stats, never assigned over it: that object carries keys written
-  // by several steps of this editor and replacing it would drop the others.
-  const stats = { ...((sf.stats ?? {}) as Record<string, unknown>), featured_reel_ids: clean }
-
-  const { error } = await admin.from('creator_storefronts').update({ stats }).eq('id', sf.id)
-  if (error) return { ok: false, message: 'Could not save that. Please try again.' }
-
-  // Resolve immediately so the shopfront shows the choice now rather than after
-  // tonight's cron.
-  await syncFeaturedReels(ctx.creatorId).catch(() => {})
-
-  revalidatePath('/creator/storefront')
-  if (sf.slug) revalidatePath(`/c/${sf.slug}`)
-  return { ok: true }
-}

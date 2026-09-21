@@ -122,30 +122,42 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   // restore. That also means there is no per-field provenance to keep in sync —
   // "verified" is exactly "this came from the snapshot".
   const ig = await getPublicSnapshot(creator.id)
-  const contentItems = (stats.content_items ?? []) as ContentItem[]
+  const storedItems = (stats.content_items ?? []) as ContentItem[]
 
-  /* Reels the creator CHOSE, never an automatic strip of their latest posts —
-     see the note in ShopfrontPreview for why that distinction is the whole
-     point. `snapshot.media` only ever holds what they featured, resolved by id
-     on each sync so the numbers stay current, and it is empty until they pick.
+  /* ── Instagram's numbers, read LIVE onto the items that came from it ─────
+     A showcase item pulled in from Instagram stores the reel's id, not a copy
+     of its figures. So the numbers below are whatever the last sync recorded
+     for that reel, not what it had on the day the creator picked it. A reel
+     that went on to do another fifty thousand views says so.
 
-     Thumbnails are our stored copies. A reel whose thumbnail failed to copy is
-     dropped rather than rendered as a broken tile: Instagram's own CDN URL is
-     signed and expires, so there is nothing safe to fall back to. */
-  const featuredReels = (ig?.media ?? [])
-    .filter((m) => m.thumbnailUrl)
-    .map((m) => ({
-      id: m.id,
-      permalink: m.permalink,
-      thumbnailUrl: m.thumbnailUrl,
-      caption: m.caption,
-      views: m.views,
-      reach: m.reach,
-      likes: m.likeCount,
-      comments: m.commentsCount,
-      saved: m.saved,
-      shares: m.shares,
-    }))
+     Everything else on the item stays the creator's: title, brand, date. They
+     own how the work is described; Instagram owns how it performed. `verified`
+     is what lets the card say which is which, and it is set ONLY here, from
+     the snapshot, so it cannot be typed into existence.
+
+     A manual item is untouched and renders exactly as it always has. */
+  const byMediaId = new Map((ig?.media ?? []).map((m) => [m.id, m]))
+
+  const contentItems: ContentItem[] = storedItems.map((item) => {
+    const reel = item.igMediaId ? byMediaId.get(item.igMediaId) : undefined
+    if (!reel) return item
+    return {
+      ...item,
+      // Fall back to what the creator typed when Instagram refuses insights for
+      // that reel — media posted before the account turned professional gets
+      // nothing, and a blank is better than a zero we never measured.
+      views: reel.views != null ? formatStat(reel.views) : item.views,
+      engagement: reel.reach != null && reel.totalInteractions != null && reel.reach > 0
+        ? `${((reel.totalInteractions / reel.reach) * 100).toFixed(1)}%`
+        : item.engagement,
+      saves: reel.saved != null ? formatStat(reel.saved) : item.saves,
+      thumbnailUrl: reel.thumbnailUrl ?? item.thumbnailUrl,
+      mediaKind: reel.thumbnailUrl ? 'image' : item.mediaKind,
+      embedUrl: reel.permalink || item.embedUrl,
+      verified: reel.views != null || reel.reach != null,
+    }
+  })
+
   /* SELF-REPORTED, and the one claim on this page that nothing verifies.
      `brand_collabs` is typed by the creator; the fallback turns their
      `worked_with` list into rows and invents `type: 'Reel + Stories'` for each,
@@ -208,7 +220,6 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     { key: 'ratecard', label: 'Rate Card', enabled: activeProducts.length > 0 },
     { key: 'audience', label: 'Audience', enabled: Boolean(ig?.topLocations || (audience as Record<string, unknown>).top_locations) },
     { key: 'content', label: 'Content Showcase', enabled: contentItems.some(i => i.title?.trim()) },
-    { key: 'reels', label: 'Featured Reels', enabled: featuredReels.length > 0 },
     { key: 'collabs', label: 'Past Collaborations', enabled: brandCollabs.some(c => c.name?.trim()) },
     { key: 'pitch', label: 'Work With Me', enabled: true },
   ]
@@ -272,7 +283,6 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
         }
       : undefined,
     contentItems,
-    recentReels: featuredReels,
     brandCollabs,
     rateCardItems,
     sections,

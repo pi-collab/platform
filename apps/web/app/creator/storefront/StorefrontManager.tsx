@@ -673,6 +673,17 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
               background: '#F4F6F2', border: `1px solid ${BHL}`,
             }}>
               <div style={{ ...metaLabel, marginBottom: 12 }}>Performance</div>
+              {/* An Instagram item's figures are not editable, because they are
+                  not stored on the item: the page reads them from the snapshot
+                  by media id every time it renders. Leaving the inputs enabled
+                  would invite a creator to type numbers that are silently
+                  ignored, which is worse than not offering the field. */}
+              {item.igMediaId ? (
+                <p style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', margin: 0, lineHeight: 1.6 }}>
+                  Views, engagement and saves come straight from Instagram for this
+                  reel, and update on their own. Nothing to fill in.
+                </p>
+              ) : (
               <div className="sf-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
                   <div style={{ ...metaLabel, marginBottom: 5, fontSize: 9 }}>Views</div>
@@ -690,6 +701,7 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
                     placeholder="28K" style={{ ...dinputSmall, background: '#FFFFFF' }} />
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -1135,14 +1147,6 @@ export default function StorefrontManager({
   const router = useRouter()
   const search = useSearchParams()
 
-  /* The saved picks, read from the stats blob the server action writes into.
-     Read once for the initial state: the picker owns it from then on, and a
-     save revalidates this page anyway. */
-  const featuredReelIds = (() => {
-    const raw = (storefront?.stats as Record<string, unknown> | null | undefined)?.featured_reel_ids
-    return Array.isArray(raw) ? (raw as unknown[]).filter((v): v is string => typeof v === 'string') : []
-  })()
-
   // The verified snapshot, and ONLY while the connection is healthy. An expired
   // or broken connection falls back to what the creator typed, which is the same
   // rule the public page applies, so the editor cannot promise a brand something
@@ -1407,6 +1411,36 @@ export default function StorefrontManager({
     const newItems = [...edit.contentItems, newItem]
     set('contentItems', newItems)
     setNewContentIdx(newItems.length - 1)
+  }
+
+  /**
+   * Turn chosen reels into ordinary showcase items.
+   *
+   * The id is what is stored, never a copy of the figures: the public page
+   * reads views and engagement out of the connection snapshot by that id, so a
+   * reel that keeps performing keeps saying so. Title and brand are seeded from
+   * the caption and left entirely editable — the creator describes the work,
+   * Instagram measures it.
+   */
+  function addReelsAsContent(picked: { id: string; permalink: string; caption?: string; timestamp?: string }[]) {
+    const existing = new Set(edit.contentItems.map(i => i.igMediaId).filter(Boolean))
+    const fresh = picked
+      .filter(r => !existing.has(r.id))
+      .map<ContentItem>(r => ({
+        // First line of the caption, which is how creators title a reel anyway.
+        // Blank is fine and common: plenty of reels have no caption at all.
+        title: (r.caption ?? '').split('\n')[0].trim().slice(0, 80),
+        type: 'Reel',
+        brand: '',
+        date: r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '',
+        // Left blank ON PURPOSE. These are filled from the snapshot at render
+        // time; typing them here would freeze a number that should not be.
+        views: '', engagement: '', saves: '',
+        embedUrl: r.permalink,
+        igMediaId: r.id,
+      }))
+    if (fresh.length === 0) return
+    set('contentItems', [...edit.contentItems, ...fresh].slice(0, 8))
   }
 
   function addCollab() {
@@ -1942,7 +1976,21 @@ export default function StorefrontManager({
                   </div>
 
                   <div style={{ marginTop: 14 }}>
-                    <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                      <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
+                      {/* The same list, the other way in. A creator asking
+                          "what work do brands see?" should not have to find two
+                          separate panels to answer it, so pulling a reel in
+                          produces an ordinary showcase item they can then edit
+                          like any other — except the numbers, which stay
+                          Instagram's. */}
+                      <FeaturedReelsPicker
+                        connected={instagramConnection.status === 'connected'}
+                        alreadyPicked={edit.contentItems.map(i => i.igMediaId).filter((v): v is string => !!v)}
+                        remainingSlots={Math.max(0, 8 - edit.contentItems.length)}
+                        onPick={addReelsAsContent}
+                      />
+                    </div>
                   </div>
                   {edit.contentItems.length >= 8 && (
                     <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces. Remove one to add another.</div>
@@ -1952,19 +2000,6 @@ export default function StorefrontManager({
 
               {/* ── Past collabs ───────────────────────────── */}
               <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
-                {/* Instagram reels, chosen by the creator.
-                    Sits next to the Content showcase above because they answer
-                    the same question — what work do brands look at — and apart
-                    from it because one is written and the other is measured.
-                    Merging them would put a typed view count beside one
-                    Instagram reported and give both the same authority. */}
-                <Section forceOpen={wizard} title="Featured reels" subtitle="Pick reels from Instagram. Their real view and reach numbers show on your page" icon={IconFilm}>
-                  <FeaturedReelsPicker
-                    connected={instagramConnection.status === 'connected'}
-                    initialSelected={featuredReelIds}
-                  />
-                </Section>
-
                 <Section forceOpen={wizard} title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
                   <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                     Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.

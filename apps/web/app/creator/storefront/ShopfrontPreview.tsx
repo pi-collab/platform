@@ -280,6 +280,29 @@ export interface ContentItem {
   thumbnailUrl?: string   // uploaded still or clip, shown ON the card
   mediaKind?: 'image' | 'video' // how to render thumbnailUrl
   embedUrl?: string       // where the card GOES when a brand taps it
+  /**
+   * Set when this item was pulled from the creator's connected Instagram.
+   *
+   * The ID, deliberately, and not just the numbers. Copying Instagram's figures
+   * into `views` and `engagement` at the moment of picking would freeze them:
+   * a reel that goes on to do another 50,000 views would still read 3.7K, and
+   * "verified" would quietly come to mean "was measured once, some time ago".
+   *
+   * Holding the id means the page can read the CURRENT figures out of the
+   * connection snapshot, which the nightly sync refreshes by this same id. The
+   * creator still owns the title, brand and date; Instagram owns the numbers.
+   */
+  igMediaId?: string
+  /**
+   * Instagram actually reported figures for this one.
+   *
+   * Set only by the public page, from the snapshot, and never from anything
+   * the creator typed — which is what makes the badge on the card mean
+   * something. An Instagram item whose insights Instagram refuses (media
+   * posted before the account turned professional) is NOT verified: it keeps
+   * whatever the creator wrote, and says nothing it cannot support.
+   */
+  verified?: boolean
 }
 
 export interface BrandCollab {
@@ -1350,6 +1373,27 @@ export default function ShopfrontPreview({
                         background: 'rgba(255,255,255,.92)', color: 'var(--ink)',
                         borderRadius: 999, padding: '3px 9px',
                       }}>{item.type}</span>
+                      {/* Set only from the snapshot, never from anything typed,
+                          which is the whole reason it can sit on the same card
+                          as a hand-entered one and still mean something. An
+                          Instagram item Instagram refuses insights for does not
+                          get it: it keeps what the creator wrote and claims
+                          nothing further. */}
+                      {item.verified && (
+                        <span style={{
+                          position: 'absolute', right: 11, top: 11, zIndex: 3,
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 9.5,
+                          letterSpacing: '.05em', textTransform: 'uppercase',
+                          background: 'rgba(22,23,15,.86)', color: '#E8FF66',
+                          borderRadius: 999, padding: '3px 8px',
+                        }} title="Views and engagement reported by Instagram">
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                          Verified
+                        </span>
+                      )}
                       {/* Decorative, hover-only. A video gets a real control
                           from ContentMedia instead, so the two never stack. */}
                       {!(item.thumbnailUrl && item.mediaKind === 'video') && (
@@ -1396,78 +1440,18 @@ export default function ShopfrontPreview({
         </SectionWrapper>
       )}
 
-      {/* ═══ 5b. FEATURED REELS (chosen, measured) ═════════════
-          RECENT reels are still deliberately not shown, and the fetch for them
-          stays disabled in buildSnapshot. Latest is not best: an automatic
-          strip shows whatever the creator last made, competes with the curated
-          showcase above, and duplicates the collaborations section below,
-          which already carries the reel made for each brand.
+      {/* Instagram reels live IN the Content Showcase above, not in a section
+          of their own. A creator adds work in one place and either uploads it
+          or pulls it in from Instagram; a pulled-in card carries the reel's id
+          and takes its numbers from the snapshot, so it says what Instagram
+          currently reports rather than what was true the day it was picked.
+          The per-card Verified marker is what keeps measured and typed
+          distinguishable now that they share a grid.
 
-          What appears here is the opposite of automatic — reels the creator
-          picked in the editor, resolved by id on every sync so the figures stay
-          current. Its own section rather than folded into Selected work above,
-          because the two make different promises: that one is what they say
-          about their work, this one is what Instagram measured about it. Give
-          them one heading and "verified" stops meaning anything. */}
-      {(data.recentReels?.length ?? 0) > 0 && (
-        <SectionWrapper sectionKey="reels">
-          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
-            <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Verified from Instagram</span>
-              <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Reels {firstName} has featured</h2>
-              <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: '0 0 clamp(20px,2.4vw,30px)' }}>
-                Chosen by {firstName}. Every number below is reported by Instagram, not typed in.
-              </p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 'clamp(10px,1.2vw,16px)' }}>
-                {data.recentReels!.map((reel) => {
-                  // Same rule as the cards above: inside the editor a tap must
-                  // not navigate the creator off what they are editing.
-                  const href = !editing && reel.permalink ? reel.permalink : undefined
-                  const Card = (href ? 'a' : 'div') as React.ElementType
-                  const cardProps = href
-                    ? { href, target: '_blank', rel: 'noopener noreferrer' }
-                    : {}
-                  return (
-                    <Card key={reel.id} {...cardProps} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                      <div style={{ position: 'relative', aspectRatio: '9 / 16', borderRadius: 14, overflow: 'hidden', background: '#EFEFEA' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={reel.thumbnailUrl}
-                          alt={reel.caption?.slice(0, 80) ?? `Reel by ${firstName}`}
-                          loading="lazy"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        />
-                        {/* Views sit ON the tile because it is the one figure a
-                            brand scans for. The rest are underneath, where
-                            they can be read rather than skimmed. */}
-                        {typeof reel.views === 'number' && (
-                          <span style={{
-                            position: 'absolute', left: 0, right: 0, bottom: 0, padding: '18px 10px 8px',
-                            background: 'linear-gradient(to top, rgba(0,0,0,.66), transparent)',
-                            color: '#fff', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700,
-                          }}>{fmtCount(reel.views)} views</span>
-                        )}
-                      </div>
-                      {/* A reel from before the account turned professional has
-                          no insights at all — Instagram refuses them. Showing
-                          the tile with nothing under it is right; a zero would
-                          be a measurement we never took. */}
-                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 8, lineHeight: 1.5 }}>
-                        {[
-                          typeof reel.reach === 'number' ? `${fmtCount(reel.reach)} reach` : null,
-                          typeof reel.likes === 'number' ? `${fmtCount(reel.likes)} likes` : null,
-                          typeof reel.comments === 'number' ? `${fmtCount(reel.comments)} comments` : null,
-                        ].filter(Boolean).join(' · ')}
-                      </div>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-          </section>
-        </SectionWrapper>
-      )}
+          RECENT reels are still deliberately not shown and the fetch stays
+          disabled in buildSnapshot. Latest is not best: an automatic strip
+          shows whatever the creator last made, and duplicates the
+          collaborations section below. What appears is only what was chosen. */}
 
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
       {/* A marquee needs enough tiles to be a marquee. Below five the track was

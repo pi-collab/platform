@@ -562,7 +562,15 @@ export default function ShopfrontMobile({
                     <a href={item.url || undefined} target={item.url ? "_blank" : undefined} rel="noopener noreferrer" className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
                       <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}>{item.raw.mediaKind === 'video'
                           ? <ContentMedia item={item.raw} />
-                          : <Slot url={item.slot} alt={item.name} style={{ width: '100%', height: '100%', display: 'block' }} />}<span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span></div>
+                          : <Slot url={item.slot} alt={item.name} style={{ width: '100%', height: '100%', display: 'block' }} />}<span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span>
+                          {/* Same marker and same rule as desktop: set only
+                              from the snapshot. Layouts differ, meaning does not. */}
+                          {item.raw.verified && (
+                            <span style={{position: 'absolute', right: '10px', top: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(22,23,15,.86)', color: '#E8FF66', borderRadius: '999px', padding: '3px 8px'}}>
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+                              Verified
+                            </span>
+                          )}</div>
                       <div style={{padding: '16px 16px 18px'}}>
                         <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>{item.name}</div>
                         <div className="t-meta" style={{color: 'var(--meta)', marginTop: '5px', letterSpacing: '.06em'}}>{item.brand}</div>
@@ -572,48 +580,6 @@ export default function ShopfrontMobile({
                   </React.Fragment>))}
                 </div>
               </div>
-
-              {/* FEATURED REELS — chosen by the creator, measured by Instagram.
-                  Its own block rather than merged into the showcase above, for
-                  the same reason as on desktop: one is what they say about
-                  their work, the other is what Instagram measured. Same
-                  fields and same meaning as the desktop section; only the
-                  layout differs, because a phone scrolls horizontally here. */}
-              {(data.recentReels?.length ?? 0) > 0 && (
-                <div className="sr">
-                  <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '500', letterSpacing: '-0.015em', fontSize: '22px', lineHeight: '1.25', margin: '0', color: 'var(--ink)'}}>{`Reels ${firstName} has`} <span className="opit">featured</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
-                  <p className="t-meta" style={{color: 'var(--meta)', marginTop: '12px', letterSpacing: '.06em'}}>Verified from Instagram</p>
-                  <div className="snap-track" style={{gap: '12px', margin: '18px -20px 0', padding: '2px 20px 6px'}}>
-                    {data.recentReels!.map((reel) => (
-                      <a
-                        key={reel.id}
-                        href={reel.permalink || undefined}
-                        target={reel.permalink ? '_blank' : undefined}
-                        rel="noopener noreferrer"
-                        className="mcard"
-                        style={{scrollSnapAlign: 'start', flex: '0 0 46%', overflow: 'hidden'}}
-                      >
-                        <div style={{position: 'relative', width: '100%', aspectRatio: '9/16', background: '#EFEFEA'}}>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={reel.thumbnailUrl} alt={reel.caption?.slice(0, 80) ?? 'Reel'} loading="lazy" style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}} />
-                          {typeof reel.views === 'number' && (
-                            <span style={{position: 'absolute', left: '0', right: '0', bottom: '0', padding: '16px 10px 8px', background: 'linear-gradient(to top, rgba(0,0,0,.66), transparent)', color: '#fff', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '11.5px'}}>{fmtCount(reel.views)} views</span>
-                          )}
-                        </div>
-                        {/* Absent, not zero, for a reel posted before the
-                            account turned professional: Instagram refuses
-                            insights for those and a 0 would be a claim. */}
-                        <div className="t-meta" style={{color: 'var(--meta)', padding: '10px 12px 14px', lineHeight: '1.5'}}>
-                          {[
-                            typeof reel.reach === 'number' ? `${fmtCount(reel.reach)} reach` : null,
-                            typeof reel.likes === 'number' ? `${fmtCount(reel.likes)} likes` : null,
-                          ].filter(Boolean).join(' · ')}
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* PAST COLLABORATIONS */}
               <div className="sr">
