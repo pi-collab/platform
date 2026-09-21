@@ -42,7 +42,13 @@ export default function FeaturedReelsPicker({ connected, alreadyPicked, remainin
   const [note, setNote] = useState<string | null>(null)
   const [loading, startLoading] = useTransition()
 
-  if (!connected || remainingSlots === 0) return null
+  /* Hidden ONLY when there is no connected account, because then it can do
+     nothing at all. A full showcase disables it instead of removing it: a
+     control that vanishes when you are at the limit is one a creator cannot
+     find, and cannot learn exists. This one disappeared the moment the
+     showcase filled up, which for anyone with five typed pieces was always. */
+  if (!connected) return null
+  const full = remainingSlots === 0
 
   function begin() {
     setOpen(true); setError(null); setNote(null)
@@ -76,9 +82,22 @@ export default function FeaturedReelsPicker({ connected, alreadyPicked, remainin
 
   if (!open) {
     return (
-      <button type="button" onClick={begin} style={btnQuiet}>
-        Pull from Instagram
-      </button>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={begin}
+          disabled={full}
+          title={full ? 'Remove a piece to pull a reel in' : undefined}
+          style={{ ...btnQuiet, opacity: full ? 0.45 : 1, cursor: full ? 'default' : 'pointer' }}
+        >
+          Pull from Instagram
+        </button>
+        {full && (
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>
+            Showcase is full
+          </span>
+        )}
+      </span>
     )
   }
 

@@ -143,6 +143,11 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     if (!reel) return item
     return {
       ...item,
+      // A title the creator has not written yet falls back to the reel's own
+      // caption, first line only. Blank is the normal state for a freshly
+      // pulled-in item, and "Untitled piece" on a public shopfront is worse
+      // than the creator's own words about the reel.
+      title: item.title?.trim() || (reel.caption ?? '').split('\n')[0].trim().slice(0, 80),
       // Fall back to what the creator typed when Instagram refuses insights for
       // that reel — media posted before the account turned professional gets
       // nothing, and a blank is better than a zero we never measured.
