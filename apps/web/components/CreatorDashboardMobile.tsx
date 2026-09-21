@@ -309,8 +309,15 @@ export default function CreatorDashboardMobile({
             </>
           ) : (
             <p className="cdash-m__empty">
-              Connect Instagram and your verified reach appears here &mdash; followers,
-              engagement, average views and your best-performing posts.
+              {/* The gate is a COMPLETED DEAL, not connecting Instagram. This
+                  panel shows the measured performance of paid work, so telling
+                  a connected creator with no deals yet to go and connect would
+                  send them to a screen that already says they are done. Kept
+                  in step with the desktop wording deliberately: the layouts
+                  differ, what they say does not. */}
+              Complete your first deal to see your verified performance here. Once a
+              post is live, Instagram&rsquo;s own reach and engagement figures for it
+              appear here and on the brand&rsquo;s dashboard.
             </p>
           )}
         </section>

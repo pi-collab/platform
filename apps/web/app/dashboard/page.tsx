@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { compactNumber } from '@/lib/compact-number'
 import BrandDashboardEmpty from './BrandDashboardEmpty'
 import { verifyBrand } from '@/lib/brand-auth'
 import HeldNotice from '@/components/HeldNotice'
@@ -857,12 +858,6 @@ function SpendChart({ data }: { data: { label: string; total: number }[] }) {
 // ── Helpers ─────────────────────────────────────────────────
 
 /** 3615 -> 3.6K. Reach runs large enough that the full digits stop being read. */
-function compactNumber(n: number): string {
-  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
-  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
-  return String(n)
-}
-
 function formatRupees(paise: number): string {
   const rupees = paise / 100
   if (rupees >= 10000000) return `₹${(rupees / 10000000).toFixed(1)}Cr`

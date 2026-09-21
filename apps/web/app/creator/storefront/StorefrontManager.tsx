@@ -13,6 +13,7 @@ import { PackageForm, AddonRatesGroup, RevisionPolicyEditor, type PackageRow, ty
 import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
+import FeaturedReelsPicker from './FeaturedReelsPicker'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 
@@ -1134,6 +1135,14 @@ export default function StorefrontManager({
   const router = useRouter()
   const search = useSearchParams()
 
+  /* The saved picks, read from the stats blob the server action writes into.
+     Read once for the initial state: the picker owns it from then on, and a
+     save revalidates this page anyway. */
+  const featuredReelIds = (() => {
+    const raw = (storefront?.stats as Record<string, unknown> | null | undefined)?.featured_reel_ids
+    return Array.isArray(raw) ? (raw as unknown[]).filter((v): v is string => typeof v === 'string') : []
+  })()
+
   // The verified snapshot, and ONLY while the connection is healthy. An expired
   // or broken connection falls back to what the creator typed, which is the same
   // rule the public page applies, so the editor cannot promise a brand something
@@ -1943,6 +1952,19 @@ export default function StorefrontManager({
 
               {/* ── Past collabs ───────────────────────────── */}
               <div style={{ display: wizard && step !== 5 ? 'none' : undefined }}>
+                {/* Instagram reels, chosen by the creator.
+                    Sits next to the Content showcase above because they answer
+                    the same question — what work do brands look at — and apart
+                    from it because one is written and the other is measured.
+                    Merging them would put a typed view count beside one
+                    Instagram reported and give both the same authority. */}
+                <Section forceOpen={wizard} title="Featured reels" subtitle="Pick reels from Instagram. Their real view and reach numbers show on your page" icon={IconFilm}>
+                  <FeaturedReelsPicker
+                    connected={instagramConnection.status === 'connected'}
+                    initialSelected={featuredReelIds}
+                  />
+                </Section>
+
                 <Section forceOpen={wizard} title="Past collaborations" subtitle="Brands you've delivered for. They scroll as a marquee on your page" icon={IconHandshake}>
                   <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink-soft)', margin: '0 0 16px', lineHeight: 1.6 }}>
                     Add the brands you&apos;ve worked with. Visiting brands see your track record at a glance.

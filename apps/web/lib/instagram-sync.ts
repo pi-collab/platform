@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptToken, encryptToken } from '@/lib/instagram-token'
 import { buildSnapshot, refreshLongLivedToken, fetchReelCandidates, fetchReelById, type IgSnapshot, type IgMediaItem } from '@/lib/instagram'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
+import { MAX_FEATURED_REELS } from '@/lib/featured-reels'
 import { notifyConnectionBroken } from '@/lib/instagram-break-notify'
 
 /**
@@ -588,7 +589,9 @@ export async function syncMediaThumbnails(
 
 /** How many reels a creator may feature. Six fills the row at desktop and keeps
  *  the section a highlight rather than an archive. */
-export const MAX_FEATURED_REELS = 6
+/** Re-exported so existing importers keep working; the constant itself lives
+ *  in `lib/featured-reels.ts`, which the client-side picker can also read. */
+export { MAX_FEATURED_REELS } from '@/lib/featured-reels'
 
 /**
  * The creator's reels, fetched LIVE for the picker.
@@ -662,7 +665,17 @@ export async function syncFeaturedReels(creatorId: string): Promise<void> {
   const snapshot = (conn.snapshot ?? {}) as IgSnapshot
   const held = new Map((snapshot.media ?? []).filter(m => m.thumbnailUrl).map(m => [m.id, m.thumbnailUrl as string]))
 
+  /* An empty id list means the creator has featured nothing, and clearing is
+     then CORRECT: they unfeatured everything and the section should go.
+
+     This is only safe because nothing auto-populates `media` any more. While
+     recent reels were fetched automatically, this same clear ran for every
+     creator who had never opened a picker that did not exist, wiping the
+     fetched reels nightly and pruning their thumbnails to match. The fix for
+     that was to stop fetching, not to stop clearing — see the note in
+     ShopfrontPreview about why an automatic strip is not shown. */
   const resolved: IgMediaItem[] = []
+
   for (const id of ids) {
     const item = await fetchReelById(token, id)
     if (!item) continue

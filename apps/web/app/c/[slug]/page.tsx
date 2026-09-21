@@ -123,6 +123,46 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   // "verified" is exactly "this came from the snapshot".
   const ig = await getPublicSnapshot(creator.id)
   const contentItems = (stats.content_items ?? []) as ContentItem[]
+
+  /* Reels the creator CHOSE, never an automatic strip of their latest posts —
+     see the note in ShopfrontPreview for why that distinction is the whole
+     point. `snapshot.media` only ever holds what they featured, resolved by id
+     on each sync so the numbers stay current, and it is empty until they pick.
+
+     Thumbnails are our stored copies. A reel whose thumbnail failed to copy is
+     dropped rather than rendered as a broken tile: Instagram's own CDN URL is
+     signed and expires, so there is nothing safe to fall back to. */
+  const featuredReels = (ig?.media ?? [])
+    .filter((m) => m.thumbnailUrl)
+    .map((m) => ({
+      id: m.id,
+      permalink: m.permalink,
+      thumbnailUrl: m.thumbnailUrl,
+      caption: m.caption,
+      views: m.views,
+      reach: m.reach,
+      likes: m.likeCount,
+      comments: m.commentsCount,
+      saved: m.saved,
+      shares: m.shares,
+    }))
+  /* SELF-REPORTED, and the one claim on this page that nothing verifies.
+     `brand_collabs` is typed by the creator; the fallback turns their
+     `worked_with` list into rows and invents `type: 'Reel + Stories'` for each,
+     which is a guess presented in the same visual language as the measured
+     figures above.
+
+     ROADMAP: derive this from completed deals. The creator dashboard already
+     does exactly that (`brandAgg` in app/creator/dashboard/page.tsx builds
+     brand, deal count and earnings from real deals), so a creator's own
+     dashboard can disagree with their public storefront about who they have
+     worked with. Deriving it here would make the storefront's collab list as
+     verifiable as its audience numbers, and would let it carry the same
+     "Verified" treatment. Left alone for now because a creator's off-platform
+     work is real work, and deriving it from Guapd deals alone would silently
+     delete their history from before they joined. The fix is probably
+     BOTH: derived rows marked verified, self-reported ones kept and marked
+     as stated. */
   const brandCollabs = (stats.brand_collabs ?? workedWith.map((b: string) => ({ name: b, type: 'Reel + Stories', views: '', engagement: '' }))) as BrandCollab[]
 
   // Build rate card items from products
@@ -168,6 +208,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
     { key: 'ratecard', label: 'Rate Card', enabled: activeProducts.length > 0 },
     { key: 'audience', label: 'Audience', enabled: Boolean(ig?.topLocations || (audience as Record<string, unknown>).top_locations) },
     { key: 'content', label: 'Content Showcase', enabled: contentItems.some(i => i.title?.trim()) },
+    { key: 'reels', label: 'Featured Reels', enabled: featuredReels.length > 0 },
     { key: 'collabs', label: 'Past Collaborations', enabled: brandCollabs.some(c => c.name?.trim()) },
     { key: 'pitch', label: 'Work With Me', enabled: true },
   ]
@@ -231,6 +272,7 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
         }
       : undefined,
     contentItems,
+    recentReels: featuredReels,
     brandCollabs,
     rateCardItems,
     sections,
