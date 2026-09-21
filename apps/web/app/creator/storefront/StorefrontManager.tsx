@@ -1230,6 +1230,9 @@ export default function StorefrontManager({
      before they had added anything, with no explanation beyond "Maximum 5
      pieces". Real work displaces them instead. */
   const realContentCount = edit.contentItems.filter(i => !isSampleItem(i)).length
+  // Manual pieces only. The reel picker works out its own room from this, so
+  // that reels displace reels rather than the creator's uploads.
+  const manualContentCount = edit.contentItems.filter(i => !i.igMediaId && !isSampleItem(i)).length
 
 
   // What the first three age bands leave for the last. Derived per render rather
@@ -1489,45 +1492,45 @@ export default function StorefrontManager({
   }
 
   /**
-   * Turn chosen reels into ordinary showcase items.
+   * Apply the whole Instagram selection.
    *
-   * The id is what is stored, never a copy of the figures: the public page
-   * reads views and engagement out of the connection snapshot by that id, so a
-   * reel that keeps performing keeps saying so. Title and brand are seeded from
-   * the caption and left entirely editable — the creator describes the work,
-   * Instagram measures it.
+   * ── Replaces the reel set, and keeps what the creator wrote ─────────────
+   * This is the selection, not an addition to it: a reel the creator unticked
+   * goes, and one they ticked arrives. The obvious implementation — throw the
+   * old reel items away and build new ones — would also throw away the titles
+   * and brands they had typed onto reels that are still selected. So an
+   * existing item is REUSED whenever its reel survives the edit, and only a
+   * genuinely new pick is built from scratch.
+   *
+   * The id is what is stored, never a copy of the figures: the page reads
+   * views and engagement out of the connection snapshot by that id, so a reel
+   * that keeps performing keeps saying so.
    */
-  function addReelsAsContent(picked: { id: string; permalink: string; caption?: string; timestamp?: string }[]) {
-    const existing = new Set(edit.contentItems.map(i => i.igMediaId).filter(Boolean))
-    const fresh = picked
-      .filter(r => !existing.has(r.id))
-      .map<ContentItem>(r => ({
-        // First line of the caption, which is how creators title a reel anyway.
-        // Blank is fine and common: plenty of reels have no caption at all.
-        title: (r.caption ?? '').split('\n')[0].trim().slice(0, 80),
-        type: 'Reel',
-        brand: '',
-        date: r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '',
-        // Left blank ON PURPOSE. These are filled from the snapshot at render
-        // time; typing them here would freeze a number that should not be.
-        views: '', engagement: '', saves: '',
-        embedUrl: r.permalink,
-        igMediaId: r.id,
-      }))
-    if (fresh.length === 0) return
+  function applyReelSelection(picked: { id: string; permalink: string; caption?: string; timestamp?: string }[]) {
+    const existingByMediaId = new Map(
+      edit.contentItems.filter(i => i.igMediaId).map(i => [i.igMediaId as string, i]),
+    )
 
-    /* Untouched demo rows give way to real work.
-       A first-time shopfront arrives pre-filled to the cap with samples, so
-       appending would be refused and the creator would have to delete five
-       invented rows by hand before they could add one of their own. Their own
-       content is the point; the samples were only ever a placeholder for it.
-       Anything they have edited fails isSampleItem and is kept. */
-    const kept = edit.contentItems.filter(i => !isSampleItem(i))
-    const merged = [...kept, ...fresh].slice(0, MAX_SHOWCASE_ITEMS)
-    // Samples come back only to fill space the real items do not need, so the
-    // showcase never looks emptier than it did before.
-    const stillSample = edit.contentItems.filter(isSampleItem)
-    set('contentItems', [...merged, ...stillSample].slice(0, MAX_SHOWCASE_ITEMS))
+    const reelItems = picked.map<ContentItem>((r) => existingByMediaId.get(r.id) ?? ({
+      // First line of the caption, which is how creators title a reel anyway.
+      // Blank is fine and common: plenty of reels have no caption at all, and
+      // the public page falls back to the caption again at render time.
+      title: (r.caption ?? '').split('\n')[0].trim().slice(0, 80),
+      type: 'Reel',
+      brand: '',
+      date: r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '',
+      // Left blank ON PURPOSE. These are filled from the snapshot at render
+      // time; typing them here would freeze a number that should not be.
+      views: '', engagement: '', saves: '',
+      embedUrl: r.permalink,
+      igMediaId: r.id,
+    }))
+
+    // The creator's own uploads keep their places; untouched samples come back
+    // only to fill room nothing real needs.
+    const manual = edit.contentItems.filter(i => !i.igMediaId && !isSampleItem(i))
+    const samples = edit.contentItems.filter(i => !i.igMediaId && isSampleItem(i))
+    set('contentItems', [...manual, ...reelItems, ...samples].slice(0, MAX_SHOWCASE_ITEMS))
   }
 
   function addCollab() {
@@ -2073,9 +2076,11 @@ export default function StorefrontManager({
                           Instagram's. */}
                       <FeaturedReelsPicker
                         connected={instagramConnection.status === 'connected'}
-                        alreadyPicked={edit.contentItems.map(i => i.igMediaId).filter((v): v is string => !!v)}
-                        remainingSlots={Math.max(0, MAX_SHOWCASE_ITEMS - realContentCount)}
-                        onPick={addReelsAsContent}
+                        selectedIds={edit.contentItems.map(i => i.igMediaId).filter((v): v is string => !!v)}
+                        // The cap, less the creator's own uploads. Their manual
+                        // pieces keep their slots; the reels share what is left.
+                        maxSelectable={Math.max(0, MAX_SHOWCASE_ITEMS - manualContentCount)}
+                        onApply={applyReelSelection}
                       />
                     </div>
                   </div>
