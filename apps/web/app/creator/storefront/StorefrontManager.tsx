@@ -236,10 +236,17 @@ function buildShopfrontData(
         ? `${((reel.totalInteractions / reel.reach) * 100).toFixed(1)}%`
         : item.engagement,
       saves: reel.saved != null ? formatStat(reel.saved) : item.saves,
+      // Survive the insights refusal, so a pre-conversion reel still shows
+      // something Instagram actually reported.
+      likes: reel.likeCount != null ? formatStat(reel.likeCount) : undefined,
+      comments: reel.commentsCount != null ? formatStat(reel.commentsCount) : undefined,
       thumbnailUrl: reel.thumbnailUrl ?? item.thumbnailUrl,
       mediaKind: reel.thumbnailUrl ? 'image' : item.mediaKind,
       embedUrl: reel.permalink || item.embedUrl,
-      verified: reel.views != null || reel.reach != null,
+      // Likes count. They are reported by Instagram just as reach is, and a
+      // reel showing real reported likes is not "unverified" merely because
+      // Instagram declined to serve its insights.
+      verified: reel.views != null || reel.reach != null || reel.likeCount != null,
     }
   })
 

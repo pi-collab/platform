@@ -295,6 +295,18 @@ export interface ContentItem {
    */
   igMediaId?: string
   /**
+   * Likes and comments, which Instagram gives up far more readily than reach.
+   *
+   * Insights — views, reach, interactions — are refused outright for any media
+   * posted before the account turned professional, which on a real roster is
+   * most of it. These two come from the media listing itself and survive that
+   * refusal, so a reel with no view count still has real, reported numbers to
+   * show. Without them such a card rendered with a thumbnail and nothing else,
+   * looking broken rather than partial.
+   */
+  likes?: string
+  comments?: string
+  /**
    * Instagram actually reported figures for this one.
    *
    * Set only by the public page, from the snapshot, and never from anything
@@ -1380,19 +1392,27 @@ export default function ShopfrontPreview({
                           Instagram item Instagram refuses insights for does not
                           get it: it keeps what the creator wrote and claims
                           nothing further. */}
+                      {/* A MARK, not a second announcement. The page already
+                          carries "Verified from Instagram" above, so spelling
+                          it out on every card said the same thing six more
+                          times. It stays per-card because this section mixes
+                          measured work with typed work and a section-level
+                          claim would cover both; it just says it quietly, and
+                          explains itself on hover. */}
                       {item.verified && (
-                        <span style={{
-                          position: 'absolute', right: 11, top: 11, zIndex: 3,
-                          display: 'inline-flex', alignItems: 'center', gap: 4,
-                          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 9.5,
-                          letterSpacing: '.05em', textTransform: 'uppercase',
-                          background: 'rgba(22,23,15,.86)', color: '#E8FF66',
-                          borderRadius: 999, padding: '3px 8px',
-                        }} title="Views and engagement reported by Instagram">
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <span
+                          style={{
+                            position: 'absolute', right: 11, top: 11, zIndex: 3,
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 20, height: 20, borderRadius: 999,
+                            background: 'rgba(22,23,15,.72)', color: '#E8FF66',
+                          }}
+                          title="These numbers are reported by Instagram"
+                          aria-label="Numbers reported by Instagram"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                             <path d="M20 6 9 17l-5-5" />
                           </svg>
-                          Verified
                         </span>
                       )}
                       {/* Decorative, hover-only. A video gets a real control
@@ -1427,6 +1447,21 @@ export default function ShopfrontPreview({
                             <div className="sf-srow">
                               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Saves</span>
                               <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.saves}</b>
+                            </div>
+                          )}
+                          {/* Shown only where the insight rows above are absent,
+                              so a reel Instagram WILL report reach for is not
+                              padded out with its smallest numbers. */}
+                          {!item.views && !item.engagement && item.likes && (
+                            <div className="sf-srow">
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Likes</span>
+                              <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.likes}</b>
+                            </div>
+                          )}
+                          {!item.views && !item.engagement && item.comments && (
+                            <div className="sf-srow">
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)' }}>Comments</span>
+                              <b style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{item.comments}</b>
                             </div>
                           )}
                         </div>

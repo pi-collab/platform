@@ -566,16 +566,48 @@ export default function ShopfrontMobile({
                           : <Slot url={item.slot} alt={item.name} style={{ width: '100%', height: '100%', display: 'block' }} />}<span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span>
                           {/* Same marker and same rule as desktop: set only
                               from the snapshot. Layouts differ, meaning does not. */}
+                          {/* The same quiet mark the desktop card uses, and the
+                              same idea as the neon dot beside verified follower
+                              counts further up this page. The section heading
+                              already says "Verified from Instagram"; repeating
+                              the word on every card said it six more times. */}
                           {item.raw.verified && (
-                            <span style={{position: 'absolute', right: '10px', top: '10px', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(22,23,15,.86)', color: '#E8FF66', borderRadius: '999px', padding: '3px 8px'}}>
-                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
-                              Verified
+                            <span
+                              title="These numbers are reported by Instagram"
+                              aria-label="Numbers reported by Instagram"
+                              style={{position: 'absolute', right: '10px', top: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '999px', background: 'rgba(22,23,15,.72)', color: '#E8FF66'}}
+                            >
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
                             </span>
                           )}</div>
                       <div style={{padding: '16px 16px 18px'}}>
                         <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>{item.name}</div>
                         <div className="t-meta" style={{color: 'var(--meta)', marginTop: '5px', letterSpacing: '.06em'}}>{item.brand}</div>
-                        <div style={{display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px', color: 'var(--wg-500)'}}><span><b className="tnum" style={{color: 'var(--ink)'}}>{item.views}</b> views</span><span><b className="tnum" style={{color: 'var(--ink)'}}>{item.engagement}</b> eng.</span></div>
+                        {/* Only what exists. These were rendered
+                            unconditionally, so a reel whose insights Instagram
+                            refuses — most media posted before an account turned
+                            professional — showed a bare "views" and "eng." with
+                            nothing in front of them. Likes and comments come
+                            from the media listing rather than insights and
+                            survive that refusal, so they stand in. */}
+                        {(() => {
+                          const stats = [
+                            item.views ? { v: item.views, l: 'views' } : null,
+                            item.engagement ? { v: item.engagement, l: 'eng.' } : null,
+                          ].filter(Boolean) as { v: string; l: string }[]
+                          if (stats.length === 0) {
+                            if (item.raw.likes) stats.push({ v: item.raw.likes, l: 'likes' })
+                            if (item.raw.comments) stats.push({ v: item.raw.comments, l: 'comments' })
+                          }
+                          if (stats.length === 0) return null
+                          return (
+                            <div style={{display: 'flex', gap: '16px', marginTop: '12px', fontSize: '12px', color: 'var(--wg-500)'}}>
+                              {stats.map((s) => (
+                                <span key={s.l}><b className="tnum" style={{color: 'var(--ink)'}}>{s.v}</b> {s.l}</span>
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </div>
                     </a>
                   </React.Fragment>))}
