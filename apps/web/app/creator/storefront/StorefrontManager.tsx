@@ -75,6 +75,45 @@ interface EditState {
   brandCollabs: BrandCollab[]
 }
 
+/**
+ * What a brand-new shopfront is pre-filled with.
+ *
+ * Demonstration content, not the creator's: invented titles against invented
+ * figures, there to show what a filled showcase looks like. Five of them,
+ * which is the whole cap — so until this list was recognisable as samples, a
+ * creator setting up for the first time found both "Add content piece" and
+ * "Pull from Instagram" disabled before they had done anything at all.
+ *
+ * `isSampleItem` below compares against this list EXACTLY, so a sample the
+ * creator has edited in any way stops being a sample and is never displaced.
+ * That is the whole reason this is a shared constant rather than an inline
+ * literal: two copies would drift and the comparison would quietly stop
+ * matching, putting the first-run deadlock back.
+ */
+const SAMPLE_CONTENT_ITEMS: ContentItem[] = [
+  { title: 'Product review', type: 'Reel', brand: 'Brand', date: 'Jul 2026', views: '1.2M', engagement: '7.5%', saves: '28K' },
+  { title: 'Day in my life', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '800K', engagement: '6.2%', saves: '15K' },
+  { title: 'Tutorial', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '650K', engagement: '8.1%', saves: '32K' },
+  { title: 'Unboxing', type: 'Story', brand: 'Brand', date: 'May 2026', views: '400K', engagement: '5.8%', saves: '10K' },
+  { title: 'Get ready with me', type: 'Reel', brand: 'Brand', date: 'May 2026', views: '900K', engagement: '7.2%', saves: '22K' },
+]
+
+/**
+ * An untouched demo row, still exactly as it was seeded.
+ *
+ * Compared field by field rather than by title alone: a creator who typed
+ * their own piece and happened to call it "Tutorial" owns that row, and it
+ * must not be treated as disposable. Anything edited fails this check
+ * immediately, which is the safe direction to fail in.
+ */
+function isSampleItem(item: ContentItem): boolean {
+  if (item.igMediaId || item.embedUrl || item.thumbnailUrl) return false
+  return SAMPLE_CONTENT_ITEMS.some(s =>
+    s.title === item.title && s.type === item.type && s.brand === item.brand
+    && s.date === item.date && s.views === item.views
+    && s.engagement === item.engagement && s.saves === item.saves)
+}
+
 function initEditState(creator: Creator | null, storefront: StorefrontRow | null): EditState {
   const stats = (storefront?.stats ?? {}) as Record<string, unknown>
   const workedWith = creator?.worked_with ?? []
@@ -107,13 +146,7 @@ function initEditState(creator: Creator | null, storefront: StorefrontRow | null
       { city: 'Mumbai', pct: 22 }, { city: 'Delhi', pct: 17 },
       { city: 'Bengaluru', pct: 14 }, { city: 'Pune', pct: 11 },
     ],
-    contentItems: storedContent || [
-      { title: 'Product review', type: 'Reel', brand: 'Brand', date: 'Jul 2026', views: '1.2M', engagement: '7.5%', saves: '28K' },
-      { title: 'Day in my life', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '800K', engagement: '6.2%', saves: '15K' },
-      { title: 'Tutorial', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '650K', engagement: '8.1%', saves: '32K' },
-      { title: 'Unboxing', type: 'Story', brand: 'Brand', date: 'May 2026', views: '400K', engagement: '5.8%', saves: '10K' },
-      { title: 'Get ready with me', type: 'Reel', brand: 'Brand', date: 'May 2026', views: '900K', engagement: '7.2%', saves: '22K' },
-    ],
+    contentItems: storedContent || SAMPLE_CONTENT_ITEMS.map(i => ({ ...i })),
     brandCollabs: storedCollabs || workedWith.map(b => ({ name: b, type: 'Reel + Stories', views: '1.2M', engagement: '6.8%' })),
   }
 }
@@ -1191,6 +1224,13 @@ export default function StorefrontManager({
   const [sections, setSections] = useState<ShopfrontSection[]>(DEFAULT_SECTIONS)
   const [edit, setEdit] = useState<EditState>(() => initEditState(creator, storefront))
 
+  /* Untouched demo rows are SPACE, not content.
+     A new shopfront arrives pre-filled to the cap with samples, so counting
+     them made both add controls disabled on a creator's very first visit —
+     before they had added anything, with no explanation beyond "Maximum 5
+     pieces". Real work displaces them instead. */
+  const realContentCount = edit.contentItems.filter(i => !isSampleItem(i)).length
+
 
   // What the first three age bands leave for the last. Derived per render rather
   // than stored, so it cannot drift from the numbers above it. Floored at zero:
@@ -1438,7 +1478,12 @@ export default function StorefrontManager({
 
   function addContentItem() {
     const newItem: ContentItem = { title: '', type: 'Reel', brand: '', date: '', views: '', engagement: '', saves: '', embedUrl: '' }
-    const newItems = [...edit.contentItems, newItem]
+    // Same rule as pulling a reel in: an untouched sample is space for real
+    // work, not something the creator has to clear out first.
+    const base = edit.contentItems.length >= MAX_SHOWCASE_ITEMS
+      ? edit.contentItems.filter(i => !isSampleItem(i))
+      : edit.contentItems
+    const newItems = [...base, newItem]
     set('contentItems', newItems)
     setNewContentIdx(newItems.length - 1)
   }
@@ -1470,7 +1515,19 @@ export default function StorefrontManager({
         igMediaId: r.id,
       }))
     if (fresh.length === 0) return
-    set('contentItems', [...edit.contentItems, ...fresh].slice(0, MAX_SHOWCASE_ITEMS))
+
+    /* Untouched demo rows give way to real work.
+       A first-time shopfront arrives pre-filled to the cap with samples, so
+       appending would be refused and the creator would have to delete five
+       invented rows by hand before they could add one of their own. Their own
+       content is the point; the samples were only ever a placeholder for it.
+       Anything they have edited fails isSampleItem and is kept. */
+    const kept = edit.contentItems.filter(i => !isSampleItem(i))
+    const merged = [...kept, ...fresh].slice(0, MAX_SHOWCASE_ITEMS)
+    // Samples come back only to fill space the real items do not need, so the
+    // showcase never looks emptier than it did before.
+    const stillSample = edit.contentItems.filter(isSampleItem)
+    set('contentItems', [...merged, ...stillSample].slice(0, MAX_SHOWCASE_ITEMS))
   }
 
   function addCollab() {
@@ -2007,7 +2064,7 @@ export default function StorefrontManager({
 
                   <div style={{ marginTop: 14 }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                      <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= MAX_SHOWCASE_ITEMS} />
+                      <AddButton label="Add content piece" onClick={addContentItem} disabled={realContentCount >= MAX_SHOWCASE_ITEMS} />
                       {/* The same list, the other way in. A creator asking
                           "what work do brands see?" should not have to find two
                           separate panels to answer it, so pulling a reel in
@@ -2017,12 +2074,12 @@ export default function StorefrontManager({
                       <FeaturedReelsPicker
                         connected={instagramConnection.status === 'connected'}
                         alreadyPicked={edit.contentItems.map(i => i.igMediaId).filter((v): v is string => !!v)}
-                        remainingSlots={Math.max(0, MAX_SHOWCASE_ITEMS - edit.contentItems.length)}
+                        remainingSlots={Math.max(0, MAX_SHOWCASE_ITEMS - realContentCount)}
                         onPick={addReelsAsContent}
                       />
                     </div>
                   </div>
-                  {edit.contentItems.length >= MAX_SHOWCASE_ITEMS && (
+                  {realContentCount >= MAX_SHOWCASE_ITEMS && (
                     <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum {MAX_SHOWCASE_ITEMS} pieces. Remove one to add another.</div>
                   )}
                 </Section>
