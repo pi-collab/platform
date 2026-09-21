@@ -296,6 +296,7 @@ function buildShopfrontData(
           audience: Boolean(igSnap.ageBreakdown || igSnap.gender || igSnap.topLocations),
           adultsOnly: (igSnap.under18Excluded ?? 0) > 0,
           username: igSnap.username,
+          showcaseReels: showcaseItems.filter(i => i.verified).length,
           fetchedAt: igSnap.fetchedAt,
         }
       : undefined,

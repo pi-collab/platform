@@ -303,6 +303,9 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
           // percentages describe adult followers.
           adultsOnly: (ig.under18Excluded ?? 0) > 0,
           username: ig.username,
+          // Counted from the items actually rendering, so the panel cannot
+          // claim reels a creator removed from their showcase.
+          showcaseReels: contentItems.filter(i => i.verified).length,
         }
       : undefined,
     contentItems,

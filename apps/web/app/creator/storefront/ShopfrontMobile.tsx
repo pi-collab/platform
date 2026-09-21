@@ -2,7 +2,7 @@
 
 import React from 'react'
 import type { ShopfrontData, ContentItem, BrandCollab } from './ShopfrontPreview'
-import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
+import { ContentMedia, isSafeUrl, VerifiedPanel } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
 // Same formatter the desktop section and both dashboards use.
 import { compactNumber as fmtCount } from '@/lib/compact-number'
@@ -397,12 +397,46 @@ export default function ShopfrontMobile({
                   ))}
                 </div>
                 <p style={{fontSize: '13px', lineHeight: '1.55', color: 'var(--ink)', margin: '18px auto 0', maxWidth: '280px'}}>{data.bio}</p>
+                {/* Under the numbers it describes, exactly as on desktop. */}
+                {data.verified && (
+                  <div style={{marginTop: '18px', display: 'flex', justifyContent: 'center'}}>
+                    <VerifiedPanel v={data.verified} />
+                  </div>
+                )}
                 <div style={{display: 'flex', alignItems: 'center', marginTop: '24px'}}>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Followers{data.verified?.followers && (<span title={data.verified.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'} style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}} />)}</div></div>
-                  <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.interactions}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Interactions</div></div>
-                  <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>
-                  <div style={{flex: '1', textAlign: 'center'}}><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>Avg views</div></div>
+                  {/* The SAME three the wide layout shows, chosen the same way:
+                      whatever we actually have, in the same order, blanks
+                      dropped. This strip used to be a fixed Followers /
+                      Interactions / Avg views, so a creator with a verified
+                      post count saw it on desktop and not on their phone, and
+                      one with no avg views got a divider around an empty cell.
+                      Three, because the row has two dividers and a phone. */}
+                  {(() => {
+                    const stats = [
+                      { key: 'followers', value: data.totalFollowers, label: 'Followers', verified: data.verified?.followers },
+                      { key: 'posts', value: data.postsCount ?? '', label: 'Posts', verified: data.verified?.posts },
+                      { key: 'interactions', value: data.interactions, label: 'Interactions', verified: false },
+                      { key: 'avgViews', value: data.avgViews, label: 'Avg views', verified: false },
+                    ].filter(s => s.value !== '' && s.value != null).slice(0, 3)
+
+                    return stats.map((s, i) => (
+                      <React.Fragment key={s.key}>
+                        {i > 0 && <div style={{width: '1px', height: '32px', background: 'var(--hair)'}}></div>}
+                        <div style={{flex: '1', textAlign: 'center'}}>
+                          <div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '20px', color: 'var(--ink)'}}>{s.value}</div>
+                          <div className="t-meta" style={{color: 'var(--meta)', marginTop: '6px', letterSpacing: '.06em'}}>
+                            {s.label}
+                            {s.verified && (
+                              <span
+                                title={data.verified?.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'}
+                                style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </React.Fragment>
+                    ))
+                  })()}
                 </div>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '32px'}}>
                   {data.hideDealCta ? null : (<a href="#packages-mobile" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50px', borderRadius: '999px', background: 'var(--neon)', color: '#12151C', fontWeight: '600', fontSize: '14px', letterSpacing: '.01em'}}>Create an offer</a>)}
@@ -490,9 +524,32 @@ export default function ShopfrontMobile({
 
                   <div style={{display: igShow ? 'block' : 'none'}}>
                     <div style={{display: 'flex', gap: '44px', marginTop: '24px', flexWrap: 'wrap'}}>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.totalFollowers}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Followers{data.verified?.followers && (<span title={data.verified.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'} style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}} />)}</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.interactions}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Interactions</div></div>
-                      <div><div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{data.avgViews}</div><div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>Avg views</div></div>
+                      {/* The same three fields, chosen the same way, as the
+                          hero strip above and the wide layout: whatever we
+                          actually have, blanks dropped. This card was a fixed
+                          Followers / Interactions / Avg views, so a creator
+                          with a verified post count saw Posts at the top of
+                          their page and not in the card that is specifically
+                          about their Instagram. */}
+                      {([
+                        { key: 'followers', value: data.totalFollowers, label: 'Followers', verified: data.verified?.followers },
+                        { key: 'posts', value: data.postsCount ?? '', label: 'Posts', verified: data.verified?.posts },
+                        { key: 'interactions', value: data.interactions, label: 'Interactions', verified: false },
+                        { key: 'avgViews', value: data.avgViews, label: 'Avg views', verified: false },
+                      ].filter(s => s.value !== '' && s.value != null).slice(0, 3)).map((s) => (
+                        <div key={s.key}>
+                          <div className="tnum" style={{fontFamily: 'var(--font-num)', fontWeight: '500', letterSpacing: '-0.02em', fontSize: '25px', lineHeight: '1', color: 'var(--ink)'}}>{s.value}</div>
+                          <div className="t-meta" style={{color: 'var(--meta)', marginTop: '8px', letterSpacing: '.08em'}}>
+                            {s.label}
+                            {s.verified && (
+                              <span
+                                title={data.verified?.username ? `From @${data.verified.username} on Instagram` : 'From Instagram'}
+                                style={{display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: 'var(--neon-deep, #C9EB3C)', marginLeft: '5px', verticalAlign: 'middle'}}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     <a href={igProfileUrl} target="_blank" rel="noopener" style={{display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '20px', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', border: '1.3px solid var(--line)', borderRadius: '999px', padding: '9px 15px'}}>{`View ${ig ? "Instagram" : ""}`}<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8" /></svg></a>
                     <div style={{marginTop: '26px', paddingTop: '22px', borderTop: '1px solid var(--hair)'}}>

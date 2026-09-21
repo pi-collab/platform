@@ -79,13 +79,21 @@ export function isSafeUrl(raw?: string): boolean {
   }
 }
 
-function VerifiedPanel({ v }: { v: VerifiedMarks }) {
+/** Exported because BOTH renderings need it. It lived here unexported, so the
+ *  whole "Verified from Instagram" disclosure — the one place the page says
+ *  which figures it measured and which the creator typed — existed on desktop
+ *  and simply was not on phones, where most brands actually look. */
+export function VerifiedPanel({ v }: { v: VerifiedMarks }) {
   const fetched: string[] = []
   if (v.followers) fetched.push('Followers')
   if (v.posts) fetched.push('Posts')
   if (v.reach) fetched.push('Monthly reach')
   if (v.interactions) fetched.push('Interactions')
   if (v.audience) fetched.push('Audience age, gender and cities')
+  // Listed with the rest because it is the same claim — read from Instagram,
+  // not typed — even though it is optional and often absent.
+  const reels = v.showcaseReels ?? 0
+  if (reels > 0) fetched.push(`Views and likes on ${reels} showcase ${reels === 1 ? 'reel' : 'reels'}`)
   if (fetched.length === 0) return null
 
   return (
@@ -120,6 +128,14 @@ function VerifiedPanel({ v }: { v: VerifiedMarks }) {
             Age and gender cover followers aged 18 and over.
           </p>
         )}
+        {reels > 0 && (
+          <p className="sf-verified__meta">
+            Those reels carry a tick on their card. The rest of the showcase is
+            the creator&rsquo;s own, with figures they entered.
+          </p>
+        )}
+        {/* Said last, and said plainly. A page that marks what it measured has
+            to be equally clear about what it did not. */}
         <p className="sf-verified__meta sf-verified__meta--quiet">
           Everything else on this page is entered by the creator.
         </p>
@@ -188,6 +204,10 @@ export interface VerifiedMarks {
   posts?: boolean
   /** Likes, comments, shares and saves over 30 days. */
   interactions?: boolean
+  /** How many showcase pieces the creator pulled in from Instagram, and whose
+   *  figures therefore come from it too. Zero is the normal case: the showcase
+   *  is optional and most of it is typed. */
+  showcaseReels?: number
   /** The age and gender percentages exclude under-18s, because the shopfront
    *  has no band for them. Surfaced so it is stated, not implied. */
   adultsOnly?: boolean
@@ -738,7 +758,10 @@ export default function ShopfrontPreview({
                       appears only when there is one. */}
                   {(() => {
                     const heroStats = [
-                      { key: 'followers', value: data.totalFollowers, label: 'Total followers', verified: data.verified?.followers },
+                      // "Followers", not "Total followers". There is no other follower count on
+                      // the page for this to be the total OF, and the extra word was the
+                      // widest label in the row, pushing the three numbers out of step.
+                      { key: 'followers', value: data.totalFollowers, label: 'Followers', verified: data.verified?.followers },
                       { key: 'posts', value: data.postsCount ?? '', label: 'Posts', verified: data.verified?.posts },
                       { key: 'interactions', value: data.interactions, label: 'Interactions', verified: false },
                       { key: 'avgViews', value: data.avgViews, label: 'Avg views', verified: false },
@@ -750,9 +773,17 @@ export default function ShopfrontPreview({
                       <>
                       {/* Once, heading the numbers it describes. */}
                       {data.verified && <VerifiedPanel v={data.verified} />}
-                      <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 26, marginTop: 24 }}>
+                      {/* Even columns, not a wrapping row.
+                          A flex row with a fixed gap spaces by LABEL WIDTH, so
+                          "Followers", "Posts" and "Interactions" sat at three
+                          different distances from each other and read as
+                          misaligned. Each cell now claims the same minimum, so
+                          the gaps between the numbers are equal whatever the
+                          labels say. The narrow-screen grid below already does
+                          this; the wide layout was the one out of step. */}
+                      <div className="sf-hero-stats" style={{ display: 'flex', flexWrap: 'wrap', gap: 32, marginTop: 24 }}>
                         {heroStats.map(s => (
-                          <div key={s.key}>
+                          <div key={s.key} style={{ minWidth: 104 }}>
                             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.03em', fontSize: 26, lineHeight: 1 }}>{s.value}</div>
                             <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 5 }}>
                               {s.label}
