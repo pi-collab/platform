@@ -279,6 +279,53 @@ export async function connectionsDueForSync(): Promise<ConnectionRow[]> {
   return (data ?? []) as ConnectionRow[]
 }
 
+/** How long a creator gets to act on the first message before we say it once
+ *  more. Seven days rather than three: the first notice is fresh for most of a
+ *  week, and a nudge that arrives while someone is still meaning to get to it
+ *  reads as nagging rather than helping. */
+export const REMINDER_AFTER_DAYS = 7
+
+export interface ReminderRow {
+  creator_id: string
+  status: IgStatus
+}
+
+/**
+ * Broken connections that were told once, a week ago, and are still broken.
+ *
+ * ── Why this is a SECOND query and not a widened connectionsDueForSync ──────
+ * That function's contract is "connections worth spending Instagram API calls
+ * on", and it filters to status = 'connected' for exactly that reason. Broken
+ * rows are invisible to it BY DESIGN — there is no point refreshing a token
+ * that cannot be refreshed.
+ *
+ * The consequence, and the reason this function has to exist: once a
+ * connection breaks, nothing in the nightly pass ever looks at it again. There
+ * was no loop to hang a reminder off. Widening the sync query to find these
+ * would drag dead connections back into the refresh path and spend API calls
+ * on them every night to learn what we already know.
+ *
+ * So: its own query, no Instagram calls at all, just a send.
+ *
+ * `reminder_sent_at IS NULL` is what makes this fire once and never again. A
+ * creator who ignores both messages is not chased a third time; at that point
+ * they have decided, and the ops connection filter is where an unactivated
+ * creator gets picked up by a human instead.
+ */
+export async function connectionsDueForReminder(): Promise<ReminderRow[]> {
+  const cutoff = new Date(Date.now() - REMINDER_AFTER_DAYS * 86_400_000).toISOString()
+  const { data } = await createAdminClient()
+    .from('creator_instagram_connections')
+    .select('creator_id, status')
+    .in('status', ['expired', 'needs_reconnect', 'personal_account'])
+    .not('broken_notified_at', 'is', null)
+    .lt('broken_notified_at', cutoff)
+    .is('reminder_sent_at', null)
+    .order('broken_notified_at', { ascending: true })
+    .limit(200)
+  return (data ?? []) as ReminderRow[]
+}
+
 /* ── Prefill: presentation, not proof ───────────────────────────────────────── */
 
 const AVATAR_BUCKET = 'storefronts'
