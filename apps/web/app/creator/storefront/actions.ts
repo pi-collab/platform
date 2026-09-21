@@ -333,26 +333,46 @@ export async function upsertStorefront(input: UpsertInput) {
      inside `stats.content_items`; reading the wrong one here found no ids,
      concluded nothing had changed, and skipped the sync entirely — which is
      the exact bug this block exists to fix. */
-  const priorIds = idsOf(priorStats.content_items)
   const nextIds = idsOf((stats as Record<string, unknown>).content_items)
-  const changed = priorIds.length !== nextIds.length || nextIds.some((id, i) => priorIds[i] !== id)
+
+  /* ── Sync when the snapshot does not MATCH the picks ────────────────────
+     Not "when the selection changed", which was the first version of this and
+     could never recover from a miss. If a sync failed — a rate limit, a
+     thumbnail that would not copy, a save that happened before this code
+     shipped — the ids were already stored, so the next save saw no change,
+     skipped the sync, and left the creator re-saving a page that could not
+     fix itself.
+
+     Comparing against what is actually resolved makes the save self-healing:
+     any gap, in either direction, is a reason to run. A matching snapshot
+     costs one cheap read and no Instagram calls, so the common case of
+     editing a bio still pays nothing. */
+  const admin = createAdminClient()
+  const { data: before } = await admin
+    .from('creator_instagram_connections')
+    .select('snapshot')
+    .eq('creator_id', ctx.creatorId)
+    .maybeSingle()
+
+  const resolvedIds = (((before?.snapshot ?? {}) as { media?: { id: string }[] }).media ?? []).map(m => m.id)
+  const inSync = resolvedIds.length === nextIds.length && nextIds.every((id, i) => resolvedIds[i] === id)
 
   let reelNotice: string | undefined
-  if (changed && nextIds.length > 0) {
+  if (!inSync && nextIds.length > 0) {
     await syncFeaturedReels(ctx.creatorId).catch(() => {})
 
     // Say so rather than leaving a blank card unexplained. A reel can fail to
     // resolve for reasons the creator cannot see: a rate limit, a thumbnail
     // that would not copy, a reel deleted on Instagram since it was listed.
-    const { data: after } = await createAdminClient()
+    const { data: after } = await admin
       .from('creator_instagram_connections')
       .select('snapshot')
       .eq('creator_id', ctx.creatorId)
       .maybeSingle()
-    const resolved = new Set(
+    const now = new Set(
       (((after?.snapshot ?? {}) as { media?: { id: string }[] }).media ?? []).map(m => m.id),
     )
-    const missing = nextIds.filter(id => !resolved.has(id)).length
+    const missing = nextIds.filter(id => !now.has(id)).length
     if (missing > 0) {
       reelNotice = missing === nextIds.length
         ? 'Saved, but Instagram did not return your reels just now. They will appear after tonight\'s refresh.'
