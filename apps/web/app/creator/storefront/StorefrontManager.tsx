@@ -352,6 +352,24 @@ const metaLabel: React.CSSProperties = {
   color: 'var(--ink-faint)', marginBottom: 8,
 }
 
+/**
+ * The reorder buttons.
+ *
+ * minWidth and minHeight, not just width and height — the same fix removeBtn
+ * below already carries, for the same reason. As flex children in a row that
+ * runs out of space on a phone, `width: 26` is a starting size a flex
+ * container is free to shrink; the height is not. So the circles squashed
+ * into vertical ovals on narrow screens while looking perfect on a laptop.
+ *
+ * flexShrink: 0 says it outright rather than relying on the minimums.
+ */
+const moveBtn: React.CSSProperties = {
+  width: 26, height: 26, minWidth: 26, minHeight: 26, flexShrink: 0,
+  padding: 0, boxSizing: 'border-box', borderRadius: '50%',
+  border: `1px solid ${BHL}`, background: '#FFFFFF',
+  cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+}
+
 const removeBtn: React.CSSProperties = {
   // Explicit box and no padding: a bare <button> carries browser padding, and
   // with the × set as TEXT its shape followed whatever font resolved — which is
@@ -627,16 +645,14 @@ function ContentCard({ item, index, total, isNew, onUpdate, onRemove, onMove }: 
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
           {index > 0 && (
             <button type="button" onClick={() => onMove(-1)} style={{
-              width: 26, height: 26, borderRadius: '50%', border: `1px solid ${BHL}`, background: '#FFFFFF',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              ...moveBtn,
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.5" strokeLinecap="round"><path d="m18 15-6-6-6 6" /></svg>
             </button>
           )}
           {index < total - 1 && (
             <button type="button" onClick={() => onMove(1)} style={{
-              width: 26, height: 26, borderRadius: '50%', border: `1px solid ${BHL}`, background: '#FFFFFF',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              ...moveBtn,
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.5" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
             </button>

@@ -182,6 +182,26 @@
 
 .sf-ig-panel__head { display: flex; align-items: center; gap: 10px; }
 
+/* On a phone this row asks for more than the width it has: a 32px icon, a
+   title, a refresh button and a VERIFIED pill. The button and the pill hold
+   their size, so the only thing that gives is the text — which is how
+   "Instagram · @palak_pj" became "Instagram · @p…" while the controls sat
+   comfortably beside it, and the two-line subtitle pushed everything out of
+   alignment.
+
+   Letting the row wrap puts the icon and the name on the first line with the
+   room they need, and drops the controls onto their own line together when
+   they no longer fit. Nothing is truncated that did not have to be. */
+@media (max-width: 460px) {
+  .sf-ig-panel__head { flex-wrap: wrap; row-gap: 12px; }
+  /* Enough basis that the title is the thing keeping the first line, and the
+     controls are the things that move. */
+  .sf-ig-panel__text { flex: 1 1 60%; }
+  /* Pushed to the right of their own line, so they read as a pair of actions
+     rather than as leftovers. */
+  .sf-ig-sync { margin-left: auto; }
+}
+
 .sf-ig-panel__icon {
   width: 32px; height: 32px; flex-shrink: 0;
   border-radius: 9px;
