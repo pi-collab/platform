@@ -446,6 +446,14 @@
 .sf-verified[open] .sf-verified__caret { transform: rotate(180deg); }
 
 .sf-verified__body {
+  /* LEFT, said explicitly.
+     The panel now renders inside the phone hero, which centres its text, and
+     the body inherited it: a bulleted list with the markers hard against the
+     left edge and every line centred away from them, so the bullets belonged
+     to nothing. Prose that wraps over several lines wants a straight left
+     edge regardless, and this is the one block on the page whose whole job is
+     to be read carefully. */
+  text-align: left;
   margin-top: 10px;
   max-width: 460px;
   padding: 14px 16px;
