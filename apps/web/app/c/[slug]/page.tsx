@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { productSortRank } from '@/lib/product-types'
 import { getPublicSnapshot } from '@/lib/instagram-sync'
+import { isSampleItem } from '@/lib/showcase-samples'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { notFound } from 'next/navigation'
 import { getPublicStorefront, getRichStorefront } from './actions'
@@ -122,7 +123,17 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   // restore. That also means there is no per-field provenance to keep in sync —
   // "verified" is exactly "this came from the snapshot".
   const ig = await getPublicSnapshot(creator.id)
-  const storedItems = (stats.content_items ?? []) as ContentItem[]
+  /* Demo rows never reach the public page.
+     A new shopfront is pre-filled with five invented pieces — "Product
+     review", "1.2M views", "Brand" — to show what a filled showcase looks
+     like. A creator who never edits them still presses Publish, and on
+     production one did: a live page was stating 1.2M views for work that does
+     not exist, in the same grid and styling as figures Instagram reported.
+
+     They stay in the editor, where they are scaffolding. They do not ship.
+     isSampleItem matches the seeded rows exactly, so anything the creator has
+     touched is theirs and is published. */
+  const storedItems = ((stats.content_items ?? []) as ContentItem[]).filter(i => !isSampleItem(i))
 
   /* ── Instagram's numbers, read LIVE onto the items that came from it ─────
      A showcase item pulled in from Instagram stores the reel's id, not a copy

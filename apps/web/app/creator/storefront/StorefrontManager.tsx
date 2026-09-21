@@ -15,6 +15,7 @@ import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type Conte
 import AvatarUpload from '@/components/AvatarUpload'
 import FeaturedReelsPicker from './FeaturedReelsPicker'
 import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
+import { SAMPLE_CONTENT_ITEMS, isSampleItem } from '@/lib/showcase-samples'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 
@@ -73,45 +74,6 @@ interface EditState {
   topLocations: { city: string; pct: number }[]
   contentItems: ContentItem[]
   brandCollabs: BrandCollab[]
-}
-
-/**
- * What a brand-new shopfront is pre-filled with.
- *
- * Demonstration content, not the creator's: invented titles against invented
- * figures, there to show what a filled showcase looks like. Five of them,
- * which is the whole cap — so until this list was recognisable as samples, a
- * creator setting up for the first time found both "Add content piece" and
- * "Pull from Instagram" disabled before they had done anything at all.
- *
- * `isSampleItem` below compares against this list EXACTLY, so a sample the
- * creator has edited in any way stops being a sample and is never displaced.
- * That is the whole reason this is a shared constant rather than an inline
- * literal: two copies would drift and the comparison would quietly stop
- * matching, putting the first-run deadlock back.
- */
-const SAMPLE_CONTENT_ITEMS: ContentItem[] = [
-  { title: 'Product review', type: 'Reel', brand: 'Brand', date: 'Jul 2026', views: '1.2M', engagement: '7.5%', saves: '28K' },
-  { title: 'Day in my life', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '800K', engagement: '6.2%', saves: '15K' },
-  { title: 'Tutorial', type: 'Reel', brand: 'Brand', date: 'Jun 2026', views: '650K', engagement: '8.1%', saves: '32K' },
-  { title: 'Unboxing', type: 'Story', brand: 'Brand', date: 'May 2026', views: '400K', engagement: '5.8%', saves: '10K' },
-  { title: 'Get ready with me', type: 'Reel', brand: 'Brand', date: 'May 2026', views: '900K', engagement: '7.2%', saves: '22K' },
-]
-
-/**
- * An untouched demo row, still exactly as it was seeded.
- *
- * Compared field by field rather than by title alone: a creator who typed
- * their own piece and happened to call it "Tutorial" owns that row, and it
- * must not be treated as disposable. Anything edited fails this check
- * immediately, which is the safe direction to fail in.
- */
-function isSampleItem(item: ContentItem): boolean {
-  if (item.igMediaId || item.embedUrl || item.thumbnailUrl) return false
-  return SAMPLE_CONTENT_ITEMS.some(s =>
-    s.title === item.title && s.type === item.type && s.brand === item.brand
-    && s.date === item.date && s.views === item.views
-    && s.engagement === item.engagement && s.saves === item.saves)
 }
 
 function initEditState(creator: Creator | null, storefront: StorefrontRow | null): EditState {

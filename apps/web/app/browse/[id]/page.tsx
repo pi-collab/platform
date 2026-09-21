@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isSampleItem } from '@/lib/showcase-samples'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
@@ -151,7 +152,10 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
     const niches = (storefront.categories?.length ? storefront.categories : creator.niches) ?? []
     const workedWith = creator.worked_with ?? []
     const audience = stats.audience ?? {}
-    const contentItems = (stats.content_items ?? []) as ContentItem[]
+    // Demo rows are editor scaffolding and never ship. Filtered here as well
+    // as on /c/[slug]: this is the copy a BRAND sees, which is the audience
+    // invented figures would mislead most.
+    const contentItems = ((stats.content_items ?? []) as ContentItem[]).filter(i => !isSampleItem(i))
     const brandCollabs = (stats.brand_collabs ?? workedWith.map((b: string) => ({ name: b, type: 'Reel + Stories', views: '', engagement: '' }))) as BrandCollab[]
 
     const sections: ShopfrontSection[] = [
