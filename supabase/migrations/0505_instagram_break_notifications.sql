@@ -34,11 +34,12 @@
 -- which is what makes "nothing but the admin client reads this table" true.
 ALTER TABLE creator_instagram_connections
   ADD COLUMN IF NOT EXISTS broken_notified_at timestamptz,
-  -- Not read by anything yet. The 7-day reminder is a deliberate fast-follow,
-  -- and it needs its own query: connectionsDueForSync() filters on
-  -- status = 'connected', so a broken row is invisible to the nightly pass and
-  -- nothing would ever revisit it to send a reminder. The column ships now so
-  -- the reset in the connect upsert is written once, not twice.
+  -- The 7-day reminder (added 2026-09-21, shortly after this migration ran)
+  -- reads this. It needed its own query, connectionsDueForReminder():
+  -- connectionsDueForSync() filters on status = 'connected', so a broken row
+  -- is invisible to the nightly pass and nothing would otherwise revisit it.
+  -- The column shipped here, ahead of that code, so the reset in the connect
+  -- upsert was written once rather than twice.
   ADD COLUMN IF NOT EXISTS reminder_sent_at timestamptz;
 
 -- The reminder pass will ask "which broken connections were notified more than

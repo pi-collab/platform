@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectionsDueForSync, refreshAndSync } from '@/lib/instagram-sync'
+import { connectionsDueForSync, refreshAndSync, connectionsDueForReminder } from '@/lib/instagram-sync'
+import { remindConnectionBroken } from '@/lib/instagram-break-notify'
 import { postsDueForRefresh, refreshOnePost } from '@/lib/deal-post-insights'
 
 /**
@@ -64,6 +65,20 @@ export async function GET(request: NextRequest) {
     console.info(`[instagram-cron] ${synced} synced in ${Date.now() - started}ms`)
   }
 
+  // The one reminder, for connections that broke a week ago and are still
+  // broken. Placed BEFORE the post refresh deliberately: it makes no Instagram
+  // calls at all, touches a handful of rows, and matters more than a post's
+  // insight figures being a day fresher. Behind the post refresh it would be
+  // the first thing starved on a busy night, and starving it silently is the
+  // failure this whole feature exists to prevent.
+  let reminded = 0
+  for (const due of await connectionsDueForReminder()) {
+    if (Date.now() - started > 260_000) break
+    await remindConnectionBroken(due.creator_id, due.status)
+    reminded++
+  }
+  if (reminded > 0) console.info(`[instagram-cron] ${reminded} reconnect reminders sent`)
+
   // Delivered posts, on their own decaying cadence. Runs AFTER the connection
   // sync so a token refreshed above is the one used here, and inside the same
   // time budget: an overrunning post refresh must not cost tomorrow's token
@@ -76,5 +91,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ synced, failed, considered: rows.length, posts })
+  return NextResponse.json({ synced, failed, considered: rows.length, posts, reminded })
 }

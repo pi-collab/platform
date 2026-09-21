@@ -189,17 +189,27 @@ const RECONNECT_SUFFIX = 'creator/settings'
 export async function notifyCreatorInstagramBroken(
   creatorId: string,
   variant: 'reconnect' | 'personal_account',
+  /** Recorded, but it does NOT change the template. See the note below. */
+  stage: 'first' | 'reminder' = 'first',
 ): Promise<boolean> {
   try {
     const { phone, name, skipReason } = await creatorWhatsAppContact(creatorId)
 
     if (!phone) {
       await record('creator.instagram_whatsapp_skipped', {
-        creator_id: creatorId, variant, reason: skipReason ?? 'no_phone',
+        creator_id: creatorId, variant, stage, reason: skipReason ?? 'no_phone',
       })
       return false
     }
 
+    // The REMINDER REUSES THE SAME TEMPLATE, deliberately.
+    //
+    // Distinct reminder wording would mean two more templates through Meta
+    // review, for a message whose instruction has not changed: reconnect, or
+    // switch your account type back. Email and the dashboard banner carry the
+    // "it has been a week" framing, because there the copy is free. Paying two
+    // approval cycles to say the same thing differently on one channel is not
+    // worth the delay to shipping the reminder at all.
     const res = await sendWhatsAppTemplate({
       template: variant === 'personal_account' ? IG_PERSONAL_TEMPLATE : IG_RECONNECT_TEMPLATE,
       toPhone: phone,
@@ -214,6 +224,7 @@ export async function notifyCreatorInstagramBroken(
     await record(res.ok ? 'creator.instagram_whatsapp_sent' : 'creator.instagram_whatsapp_failed', {
       creator_id: creatorId,
       variant,
+      stage,
       to: maskPhone(phone),
       ...(res.ok ? {} : { reason: res.reason }),
     })

@@ -351,31 +351,50 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
 export async function notifyCreatorInstagramBroken(
   creatorId: string,
   variant: 'reconnect' | 'personal_account',
+  stage: 'first' | 'reminder' = 'first',
 ): Promise<boolean> {
   try {
     const { email, name } = await creatorEmail(creatorId)
     if (!email) {
       await record('creator.instagram_email_skipped', {
-        creator_id: creatorId, variant, reason: 'no_address',
+        creator_id: creatorId, variant, stage, reason: 'no_address',
       })
       return false
     }
 
     const personal = variant === 'personal_account'
+    const reminder = stage === 'reminder'
 
     const { html, text } = renderAccountEmail({
+      // The reminder says something the first message could not: that a week
+      // has passed and nothing has changed. Repeating the original word for
+      // word would read as a duplicate and be ignored as one.
       heading: personal
-        ? `Switch your Instagram back to a Business or Creator account`
-        : `Reconnect your Instagram, ${name}`,
+        ? reminder
+          ? 'Your Instagram is still set to Personal'
+          : 'Switch your Instagram back to a Business or Creator account'
+        : reminder
+          ? `Your Instagram is still disconnected, ${name}`
+          : `Reconnect your Instagram, ${name}`,
       body: personal
-        ? [
-            `Your Instagram account is now set to Personal. Instagram does not report audience insights for Personal accounts, so the verified figures on your ${BRAND_NAME} shopfront have stopped updating.`,
-            'To fix it: open Instagram, go to Settings and account type, and switch back to a Business or Creator account. Then reconnect here. Reconnecting on its own will not work while the account is Personal.',
-          ]
-        : [
-            `Your Instagram connection needs a quick reconnect to keep your verified stats live on your shopfront.`,
-            `Until you do, brands see the audience numbers you typed in yourself rather than the ones Instagram reports. It takes about thirty seconds.`,
-          ],
+        ? reminder
+          ? [
+              `Your Instagram account is still set to Personal, so the verified figures on your ${BRAND_NAME} shopfront have not updated for a week.`,
+              'Open Instagram, go to Settings and account type, and switch back to a Business or Creator account. Then reconnect here. This is the last reminder we will send about it.',
+            ]
+          : [
+              `Your Instagram account is now set to Personal. Instagram does not report audience insights for Personal accounts, so the verified figures on your ${BRAND_NAME} shopfront have stopped updating.`,
+              'To fix it: open Instagram, go to Settings and account type, and switch back to a Business or Creator account. Then reconnect here. Reconnecting on its own will not work while the account is Personal.',
+            ]
+        : reminder
+          ? [
+              'Your Instagram has been disconnected for a week, so brands browsing your shopfront are still seeing the audience numbers you typed in yourself rather than the ones Instagram reports.',
+              'Reconnecting takes about thirty seconds. This is the last reminder we will send about it.',
+            ]
+          : [
+              `Your Instagram connection needs a quick reconnect to keep your verified stats live on your shopfront.`,
+              `Until you do, brands see the audience numbers you typed in yourself rather than the ones Instagram reports. It takes about thirty seconds.`,
+            ],
       ctaUrl: `${siteBase()}/creator/settings`,
       ctaLabel: 'Reconnect Instagram',
     })
@@ -383,16 +402,23 @@ export async function notifyCreatorInstagramBroken(
     const res = await sendAccountEmail({
       to: [email],
       subject: personal
-        ? `Your Instagram is set to Personal. Switch it back to keep verified stats`
-        : `Reconnect your Instagram to keep your verified stats live`,
+        ? reminder
+          ? `Your Instagram is still set to Personal`
+          : `Your Instagram is set to Personal. Switch it back to keep verified stats`
+        : reminder
+          ? `Your shopfront still is not showing verified stats`
+          : `Reconnect your Instagram to keep your verified stats live`,
       html,
       text,
-      idempotencyKey: `creator-instagram-${variant}-${creatorId}`,
+      // Stage is part of the key, so the reminder is not swallowed as a
+      // duplicate of the first message inside Resend's window.
+      idempotencyKey: `creator-instagram-${variant}-${stage}-${creatorId}`,
     })
 
     await record(res.ok ? 'creator.instagram_email_sent' : 'creator.instagram_email_failed', {
       creator_id: creatorId,
       variant,
+      stage,
       ...(res.ok ? {} : { reason: res.reason }),
     })
     return res.ok
