@@ -5,6 +5,8 @@ import VettingBadge from '@/components/ops/VettingBadge'
 import { VETTING_STATUSES, VETTING_LABEL, type VettingStatus } from '@/lib/vetting-status'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
+import IgConnectionBadge from '@/components/ops/IgConnectionBadge'
+import { IG_STATUSES, IG_STATUS_LABEL, IG_STORED_STATUSES, igStatusOf, isIgStatus } from '@/lib/ig-connection-status'
 
 /** Must match FOLLOWER_RANGES in the creator onboarding form. */
 const BANDS = ['Under 20k', '20k \u2013 50k', '50k \u2013 100k', '100k \u2013 500k', '500k \u2013 1M', '1M+']
@@ -17,7 +19,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function OpsCreatorsPage({ searchParams }: {
-  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; q?: string }
+  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; ig?: string | string[]; q?: string }
 }) {
   const actor = await requireOps('creators.read')
   if (!actor) redirect('/login/brand')
@@ -48,6 +50,13 @@ export default async function OpsCreatorsPage({ searchParams }: {
   const shopfront = searchParams?.shopfront === 'yes' ? 'yes'
     : searchParams?.shopfront === 'no' ? 'no' : ''
 
+  // Instagram connection. Multi-select like the bands and vetting status, and
+  // validated against the same list the badge renders from, so a hand-edited
+  // URL cannot reach the database. `not_connected` is a legitimate choice here
+  // even though it is not a stored value — see applyIgStatus.
+  const rawIg = searchParams?.ig
+  const igStatuses = (Array.isArray(rawIg) ? rawIg : rawIg ? [rawIg] : []).filter(isIgStatus)
+
   // Name or handle. A leading @ is stripped because that is how ops will type a
   // handle and how the creator writes it, but handles are stored bare.
   const term = stripLeadingAt(opsSearchTerm(searchParams?.q))
@@ -57,8 +66,9 @@ export default async function OpsCreatorsPage({ searchParams }: {
     ...selected.map((b) => `band=${encodeURIComponent(b)}`),
     ...statuses.map((v) => `status=${encodeURIComponent(v)}`),
     ...(shopfront ? [`shopfront=${shopfront}`] : []),
+    ...igStatuses.map((v) => `ig=${encodeURIComponent(v)}`),
   ].join('&')
-  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== '' || term !== ''
+  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== '' || term !== '' || igStatuses.length > 0
 
   const admin = createAdminClient()
 
@@ -70,6 +80,40 @@ export default async function OpsCreatorsPage({ searchParams }: {
     const { data: withShopfront } = await admin
       .from('creator_storefronts').select('creator_id')
     shopfrontIds = Array.from(new Set((withShopfront ?? []).map((r) => r.creator_id).filter(Boolean)))
+  }
+
+  // Instagram connections, resolved up front for the same reason as the
+  // storefronts above: the status lives in another table, and the per-page
+  // lookup further down runs on ids this page has already returned, which is
+  // too late to filter by.
+  //
+  // SCALE CAVEAT: both of these become an id list inside the query string. At
+  // today's roster (a few hundred creators, a handful connected) that is
+  // nothing. Once most of the roster is connected the NOT IN list is most of
+  // the table on every filtered request, and PostgREST will hit a URL length
+  // limit — quietly, as a failed request rather than a wrong answer. The fix
+  // when that day comes is a denormalised `ig_status` column on `creators`,
+  // written by the sync, so this filter becomes an ordinary .in() on one table.
+  // Deliberately not built now: it is a second copy of a value, and copies go
+  // stale. Revisit when the connected count passes ~500.
+  let igExcludeIds: string[] = []
+  let igMatchIds: string[] = []
+  if (igStatuses.length) {
+    const { data: conns } = await admin
+      .from('creator_instagram_connections').select('creator_id, status')
+    const rows = conns ?? []
+    const wantedStored = IG_STORED_STATUSES.filter((s) => igStatuses.includes(s)) as string[]
+    if (igStatuses.includes('not_connected')) {
+      // "No row" is not a value any column holds, so the question is asked the
+      // other way round: exclude the creators whose row holds a status we did
+      // NOT ask for. A creator with no row falls through that exclusion and is
+      // included — which is precisely what not_connected means. This also
+      // handles not_connected combined with real statuses in one selection,
+      // which an .in() plus a .not() could not express as a single filter.
+      igExcludeIds = rows.filter((r) => !wantedStored.includes(igStatusOf(r))).map((r) => r.creator_id)
+    } else {
+      igMatchIds = rows.filter((r) => wantedStored.includes(igStatusOf(r))).map((r) => r.creator_id)
+    }
   }
 
   // One definition per filter, applied to BOTH the list and the summary counts.
@@ -97,9 +141,20 @@ export default async function OpsCreatorsPage({ searchParams }: {
     }
     return shopfrontIds.length ? (q.not('id', 'in', `(${shopfrontIds.join(',')})`) as T) : q
   }
+  const applyIgStatus = <T extends Q>(q: T): T => {
+    if (!igStatuses.length) return q
+    if (igStatuses.includes('not_connected')) {
+      // No connections at all means nothing to exclude, and every creator is
+      // correctly not_connected.
+      return igExcludeIds.length ? (q.not('id', 'in', `(${igExcludeIds.join(',')})`) as T) : q
+    }
+    // No row matches the wanted statuses, and .in() with an empty list is a
+    // syntax error rather than an empty result.
+    return igMatchIds.length ? (q.in('id', igMatchIds) as T) : (q.eq('id', NO_MATCH) as T)
+  }
   const applySearch = <T extends Q>(q: T): T =>
     term ? (q.or(opsSearchFilter(['full_name', 'handle'], term)) as T) : q
-  const applyAll = <T extends Q>(q: T): T => applySearch(applyShopfront(applyStatus(applyBands(q))))
+  const applyAll = <T extends Q>(q: T): T => applySearch(applyIgStatus(applyShopfront(applyStatus(applyBands(q)))))
 
   const listQuery = applyAll(
     admin
@@ -122,6 +177,18 @@ export default async function OpsCreatorsPage({ searchParams }: {
     : { data: [] as { creator_id: string; slug: string; is_published: boolean }[] }
 
   const shopfrontByCreator = new Map((shopfronts ?? []).map((sf) => [sf.creator_id, sf]))
+
+  // Connections for the creators on THIS page only, same reasoning as the
+  // storefronts above. The token columns are never selected: this table denies
+  // all client access and nothing rendered here should be able to leak one.
+  const { data: igConns } = pageIds.length
+    ? await admin
+        .from('creator_instagram_connections')
+        .select('creator_id, status, username, sync_error, last_synced_at')
+        .in('creator_id', pageIds)
+    : { data: [] as { creator_id: string; status: string; username: string | null; sync_error: string | null; last_synced_at: string | null }[] }
+
+  const igByCreator = new Map((igConns ?? []).map((r) => [r.creator_id, r]))
 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
@@ -227,6 +294,17 @@ export default async function OpsCreatorsPage({ searchParams }: {
 
         <span style={{ flexBasis: '100%', height: 0 }} />
 
+        {/* Checkboxes, not radios: "show me everything that is broken" is the
+            question ops actually has, and that is three of these at once. */}
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>Instagram</span>
+        {IG_STATUSES.map((v) => (
+          <label key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
+            <input type="checkbox" name="ig" value={v} defaultChecked={igStatuses.includes(v)} />
+            {IG_STATUS_LABEL[v]}
+          </label>
+        ))}
+
+        <span style={{ flexBasis: '100%', height: 0 }} />
 
         <button type="submit" style={{ padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Apply</button>
         {anyFilter && (
@@ -258,6 +336,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                 <th style={thStyle}>Niches</th>
                 <th style={thStyle}>Audience</th>
               <th style={thStyle}>Shopfront</th>
+                <th style={thStyle}>Instagram</th>
                 <th style={thStyle}>Phone</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Created</th>
@@ -315,6 +394,22 @@ export default async function OpsCreatorsPage({ searchParams }: {
                              style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
                             /c/{sf.slug}
                           </a>
+                        )
+                      })()}
+                    </td>
+                    <td style={tdStyle}>
+                      {/* The sync error is the hover text rather than a column:
+                          it is a raw API message, too long to sit in a table and
+                          only wanted when the badge has already said something
+                          is wrong. The detail page shows it in full. */}
+                      {(() => {
+                        const conn = igByCreator.get(c.id)
+                        return (
+                          <IgConnectionBadge
+                            status={igStatusOf(conn)}
+                            username={conn?.username}
+                            title={conn?.sync_error}
+                          />
                         )
                       })()}
                     </td>

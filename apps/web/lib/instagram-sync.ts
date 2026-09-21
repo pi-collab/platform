@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptToken, encryptToken } from '@/lib/instagram-token'
 import { buildSnapshot, refreshLongLivedToken, fetchReelCandidates, fetchReelById, type IgSnapshot, type IgMediaItem } from '@/lib/instagram'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
+import { notifyConnectionBroken } from '@/lib/instagram-break-notify'
 
 /**
  * Reading, refreshing and syncing Instagram connections.
@@ -12,7 +13,11 @@ import { mergeSocialAccounts } from '@/lib/social-accounts'
  * to a caller includes the token.
  */
 
-export type IgStatus = 'not_connected' | 'connected' | 'expired' | 'needs_reconnect' | 'personal_account'
+/** Re-exported so existing importers keep working. The list itself lives in
+ *  `lib/ig-connection-status.ts`, which has no server-only import and so can be
+ *  read by the ops and creator surfaces that render it. */
+export type { IgStatus } from '@/lib/ig-connection-status'
+import type { IgStatus } from '@/lib/ig-connection-status'
 
 /** What the UI is allowed to see. Note the absence of any token field: this
  *  shape is what makes "no client ever reads the token" true by construction
@@ -93,7 +98,7 @@ export async function markChannelConnected(creatorId: string, username: string):
     .eq('id', creatorId)
 }
 
-async function clearChannelConnected(creatorId: string): Promise<void> {
+export async function clearChannelConnected(creatorId: string): Promise<void> {
   const admin = createAdminClient()
   const { data } = await admin.from('creators').select('social_accounts').eq('id', creatorId).maybeSingle()
   const existing = (data?.social_accounts ?? []) as Record<string, unknown>[]
@@ -101,6 +106,42 @@ async function clearChannelConnected(creatorId: string): Promise<void> {
   await admin.from('creators')
     .update({ social_accounts: mergeSocialAccounts(existing, incoming) })
     .eq('id', creatorId)
+}
+
+/**
+ * Record that a connection has broken: set the status, take the verified badge
+ * off the storefront, and tell the creator — in that order, once.
+ *
+ * ── Why every breakage path goes through here ───────────────────────────────
+ * There were three of them, written separately, and they had already drifted.
+ * Two — an undecryptable token and a failed refresh — set the status and
+ * stopped there, leaving `social_accounts.connected` set. The storefront went
+ * on showing "Verified from Instagram" above figures that had quietly stopped
+ * updating, which is worse than showing nothing: it is a claim we can no longer
+ * support. Only the expiry and personal-account paths cleared it.
+ *
+ * That is the drift a fourth breakage path would have inherited. So the three
+ * steps live together in one function, and adding a new way to break means
+ * calling it rather than remembering all three.
+ *
+ * NOT for the transient catch at the end of refreshAndSync. A rate limit or an
+ * Instagram outage leaves the token perfectly good and deliberately keeps the
+ * last good snapshot; running this for one would blank a working storefront and
+ * send a reconnect message to a creator with nothing to fix.
+ */
+async function markConnectionBroken(
+  creatorId: string,
+  status: 'expired' | 'needs_reconnect' | 'personal_account',
+  syncError: string | null,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  await createAdminClient().from('creator_instagram_connections')
+    .update({ status, sync_error: syncError, ...patch })
+    .eq('creator_id', creatorId)
+  await clearChannelConnected(creatorId)
+  // Deduped on broken_notified_at, so this is safe to reach every night the
+  // connection stays broken; it speaks only the first time.
+  await notifyConnectionBroken(creatorId, status)
 }
 
 /** Remove a connection entirely: deauthorization, data deletion, or the
@@ -142,9 +183,7 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
     // Undecryptable means the key changed or the row was tampered with. Either
     // way the token is unusable and the creator must reconnect; it is not a
     // transient failure worth retrying daily.
-    await admin.from('creator_instagram_connections')
-      .update({ status: 'needs_reconnect', sync_error: 'token could not be decrypted', ...patch })
-      .eq('creator_id', row.creator_id)
+    await markConnectionBroken(row.creator_id, 'needs_reconnect', 'token could not be decrypted', patch)
     return { ok: false, detail: `decrypt failed: ${err instanceof Error ? err.message : String(err)}` }
   }
 
@@ -152,10 +191,7 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
   const expiresInDays = (new Date(row.token_expires_at).getTime() - Date.now()) / 86_400_000
 
   if (expiresInDays <= 0) {
-    await admin.from('creator_instagram_connections')
-      .update({ status: 'expired', sync_error: 'token expired before it could be refreshed', ...patch })
-      .eq('creator_id', row.creator_id)
-    await clearChannelConnected(row.creator_id)
+    await markConnectionBroken(row.creator_id, 'expired', 'token expired before it could be refreshed', patch)
     return { ok: false, detail: 'expired' }
   }
 
@@ -172,9 +208,10 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
         last_refreshed_at: new Date().toISOString(),
       })
     } catch (err) {
-      await admin.from('creator_instagram_connections')
-        .update({ status: 'needs_reconnect', sync_error: `refresh failed: ${err instanceof Error ? err.message : String(err)}`, ...patch })
-        .eq('creator_id', row.creator_id)
+      await markConnectionBroken(
+        row.creator_id, 'needs_reconnect',
+        `refresh failed: ${err instanceof Error ? err.message : String(err)}`, patch,
+      )
       return { ok: false, detail: 'refresh failed' }
     }
   }
@@ -187,10 +224,12 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
     // any time, and the storefront must stop showing verified figures the
     // moment we can no longer verify them.
     if (snapshot.accountType === 'PERSONAL') {
-      await admin.from('creator_instagram_connections')
-        .update({ status: 'personal_account', account_type: 'PERSONAL', sync_error: null, ...patch })
-        .eq('creator_id', row.creator_id)
-      await clearChannelConnected(row.creator_id)
+      // sync_error stays null: nothing failed. The account type changed, which
+      // is a fact about the account rather than a fault in the sync, and putting
+      // it in sync_error would show ops a red error string for a working token.
+      await markConnectionBroken(
+        row.creator_id, 'personal_account', null, { ...patch, account_type: 'PERSONAL' },
+      )
       return { ok: false, detail: 'personal account' }
     }
 

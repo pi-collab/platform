@@ -152,6 +152,84 @@ export async function notifyCreatorStatusChanged(
   }
 }
 
+/**
+ * Two templates, because the instruction differs.
+ *
+ * `instagram_reconnect` says reconnect, and for an expired or failed token
+ * that is the whole fix. `instagram_personal_account` says change the account
+ * type FIRST, because reconnecting a Personal account produces a Personal
+ * account again — the creator would follow our instruction, watch it fail, and
+ * reasonably conclude the product is broken.
+ *
+ * Both declare ONE body variable (the creator's first name) and a URL button
+ * with a dynamic suffix. That shape is chosen against the scar tissue above:
+ * `status_update` was rejected twice for passing arguments it never declared.
+ * Whatever is registered with Meta must match this exactly — one body var, one
+ * dynamic URL suffix — or the send fails at MSG91 rather than at review.
+ *
+ * PENDING META APPROVAL at time of writing. Until each is live, sends return
+ * not ok and are recorded as failures; email and the dashboard banner still
+ * reach the creator. That is the intended degradation, not a gap to paper over.
+ */
+const IG_RECONNECT_TEMPLATE = 'instagram_reconnect'
+const IG_PERSONAL_TEMPLATE = 'instagram_personal_account'
+
+/** Where the button lands. A relative suffix, appended to the template's own
+ *  base URL by Meta. NOT /api/instagram/connect: that needs a live session and
+ *  would dead-end anyone tapping from WhatsApp while logged out. /creator/settings
+ *  carries them through login and back. */
+const RECONNECT_SUFFIX = 'creator/settings'
+
+/**
+ * Tell a creator their Instagram connection stopped working.
+ *
+ * Never throws: this is called from the nightly sync, and one creator's failed
+ * WhatsApp must not end a run that still has other creators' tokens to refresh.
+ */
+export async function notifyCreatorInstagramBroken(
+  creatorId: string,
+  variant: 'reconnect' | 'personal_account',
+): Promise<boolean> {
+  try {
+    const { phone, name, skipReason } = await creatorWhatsAppContact(creatorId)
+
+    if (!phone) {
+      await record('creator.instagram_whatsapp_skipped', {
+        creator_id: creatorId, variant, reason: skipReason ?? 'no_phone',
+      })
+      return false
+    }
+
+    const res = await sendWhatsAppTemplate({
+      template: variant === 'personal_account' ? IG_PERSONAL_TEMPLATE : IG_RECONNECT_TEMPLATE,
+      toPhone: phone,
+      // creatorWhatsAppContact already falls back to 'there' when full_name is
+      // empty, which matters more than it looks: sendWhatsAppTemplate REJECTS a
+      // blank body var outright, so an unnamed creator would otherwise get no
+      // message at all rather than an unpersonalised one.
+      bodyVars: [name],
+      buttonValue: RECONNECT_SUFFIX,
+    })
+
+    await record(res.ok ? 'creator.instagram_whatsapp_sent' : 'creator.instagram_whatsapp_failed', {
+      creator_id: creatorId,
+      variant,
+      to: maskPhone(phone),
+      ...(res.ok ? {} : { reason: res.reason }),
+    })
+
+    if (!res.ok) {
+      console.error(`[instagram-notify] whatsapp failed creator=${creatorId} reason=${res.reason}`)
+    }
+    return res.ok
+  } catch (err) {
+    console.error(
+      `[instagram-notify] whatsapp threw creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`,
+    )
+    return false
+  }
+}
+
 async function record(eventType: string, detail: Record<string, unknown>): Promise<void> {
   try {
     await createAdminClient().from('events').insert({ event_type: eventType, detail })

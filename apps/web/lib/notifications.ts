@@ -33,7 +33,11 @@ import { calculateFee } from '@/lib/fee'
 
 interface NotifyParams {
   userId: string
-  dealId: string
+  /** Optional: `notifications.deal_id` is nullable, and account-level events —
+   *  an Instagram connection breaking, say — belong to the person, not to a
+   *  deal. Required here originally only because every caller happened to have
+   *  one. */
+  dealId?: string | null
   type: string
   body: string
 }

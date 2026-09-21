@@ -7,7 +7,7 @@ import {
   exchangeCodeForToken, exchangeForLongLivedToken, buildSnapshot, IG_SCOPES,
 } from '@/lib/instagram'
 import { instagramRedirectUri, instagramReturnPath, isReturnTarget } from '@/lib/instagram-config'
-import { markChannelConnected, prefillFromInstagram } from '@/lib/instagram-sync'
+import { clearChannelConnected, markChannelConnected, prefillFromInstagram } from '@/lib/instagram-sync'
 
 /**
  * Instagram OAuth callback.
@@ -93,6 +93,21 @@ export async function GET(request: NextRequest) {
       snapshot: status === 'connected' ? snapshot : null,
       last_synced_at: status === 'connected' ? new Date().toISOString() : null,
       sync_error: null,
+      // Forget that we ever told them the connection was broken.
+      //
+      // This upsert lists every column EXPLICITLY, so a column left out here is
+      // simply carried over from the old row. Without these two lines a creator
+      // who breaks, reconnects, and breaks again is never told the second time:
+      // broken_notified_at would still hold the timestamp from the first break
+      // and the dedupe would read it as "already notified". That failure is
+      // invisible in testing, because the first break works perfectly.
+      //
+      // Note this runs for a PERSONAL reconnect too, where status lands on
+      // personal_account rather than connected. That is deliberate: they have
+      // acted, and if they are still on a personal account they should be told
+      // again rather than silently left with a dead badge.
+      broken_notified_at: null,
+      reminder_sent_at: null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'creator_id' })
 
@@ -104,6 +119,23 @@ export async function GET(request: NextRequest) {
     // The verified badge reads this, so the storefront never touches the token
     // table. Merged, not assigned: social_accounts carries keys owned by four
     // different screens and rebuilding it deletes the others.
+    if (status !== 'connected') {
+      // A PERSONAL reconnect must take the badge DOWN, not just decline to put
+      // it up.
+      //
+      // The guard below used to only skip marking the channel connected, which
+      // is right for someone connecting a personal account for the first time
+      // and wrong for everyone else: a creator who connected as Business, later
+      // switched to Personal, and then pressed Reconnect kept the badge from
+      // their previous connection. Their storefront went on claiming "Verified
+      // from Instagram" over figures that had stopped updating — the same fault
+      // the sync paths had, reached through the UI instead of the cron.
+      //
+      // Harmless when there was no badge to begin with: clearing an already
+      // clear channel is a no-op.
+      await clearChannelConnected(ctx.creatorId)
+    }
+
     if (status === 'connected') {
       await markChannelConnected(ctx.creatorId, snapshot.username)
 
