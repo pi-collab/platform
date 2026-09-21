@@ -215,6 +215,23 @@ export async function upsertStorefront(input: UpsertInput) {
     return { error: 'Maximum 10 categories allowed.' }
   }
 
+  /* ── Keys this form does not own must survive its save ──────────────────
+     `stats` is one jsonb object written by SEVERAL screens. This editor owns
+     the typed figures in it; the reel picker owns `featured_reel_ids`, and
+     writes them through its own action.
+
+     `input.stats` comes from this form's client state, which was loaded
+     before the picker ran and has never heard of that key. Writing it
+     wholesale therefore DELETED the creator's featured reels every time they
+     pressed Save — silently, and with the reels still on the page until the
+     next nightly sync resolved an empty list and cleared them. A creator
+     would have seen their reels vanish overnight, hours after an unrelated
+     edit, with nothing connecting the two.
+
+     So the keys owned elsewhere are read back from the stored row and merged
+     over the incoming object. Same rule, and the same reason, as
+     mergeSocialAccounts. Anything added to `stats` by another screen in
+     future belongs in this list. */
   const row = {
     creator_id: ctx.creatorId,
     slug,
@@ -231,25 +248,49 @@ export async function upsertStorefront(input: UpsertInput) {
     is_published: input.is_published ?? false,
   }
 
-  // Check if storefront already exists
+  // Check if storefront already exists. `stats` rides along so the keys this
+  // form does not own can be carried across the write below.
   const { data: existing } = await supabase
     .from('creator_storefronts')
-    .select('id, slug, is_published')
+    .select('id, slug, is_published, stats')
     .maybeSingle()
+
+  /* ── Keys this form does not own must survive its save ──────────────────
+     `stats` is one jsonb object written by SEVERAL screens. This editor owns
+     the typed figures in it; the reel picker owns `featured_reel_ids` and
+     writes them through its own action.
+
+     `input.stats` comes from this form's client state, which was loaded
+     before the picker ran and has never heard of that key. Writing it
+     wholesale therefore DELETED a creator's featured reels every time they
+     pressed Save — silently, and with the reels still on the page until the
+     next nightly sync resolved an empty list and cleared them. They would
+     have watched their reels vanish overnight, hours after an unrelated
+     edit, with nothing to connect the two.
+
+     Same rule, and the same reason, as mergeSocialAccounts. A key added to
+     `stats` by any other screen in future belongs in this list. */
+  const priorStats = (existing?.stats ?? {}) as Record<string, unknown>
+  const foreignKeys = ['featured_reel_ids'] as const
+  const preserved: Record<string, unknown> = {}
+  for (const key of foreignKeys) {
+    if (priorStats[key] !== undefined) preserved[key] = priorStats[key]
+  }
+  const rowWithStats = { ...row, stats: { ...(row.stats as Record<string, unknown>), ...preserved } }
 
   let error
   if (existing) {
     // Update — don't change creator_id
     const { error: updateErr } = await supabase
       .from('creator_storefronts')
-      .update(row)
+      .update(rowWithStats)
       .eq('id', existing.id)
     error = updateErr
   } else {
     // Insert
     const { error: insertErr } = await supabase
       .from('creator_storefronts')
-      .insert(row)
+      .insert(rowWithStats)
     error = insertErr
   }
 
