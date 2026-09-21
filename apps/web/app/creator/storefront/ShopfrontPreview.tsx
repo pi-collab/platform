@@ -212,6 +212,27 @@ export function ContentMedia({ item }: { item: ContentItem }) {
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
 
+  /* A reel that has been picked but not yet fetched.
+     Its thumbnail and figures live in the connection snapshot, and saving is
+     what fills that in. Until then the card had nothing in its media slot and
+     read as broken, when the truth is that it is still arriving. Says so
+     instead — and only for Instagram items, since a manual piece with no
+     upload genuinely has nothing to wait for. */
+  if (!item.thumbnailUrl && item.igMediaId) {
+    return (
+      <div
+        className="sf-vid-media"
+        style={{
+          display: 'grid', placeItems: 'center', background: '#EFEFEA',
+          fontFamily: 'var(--font-ui)', fontSize: 11, lineHeight: 1.5,
+          color: 'var(--ink-faint)', textAlign: 'center', padding: '0 14px',
+        }}
+      >
+        Updating from Instagram&hellip;
+      </div>
+    )
+  }
+
   if (!item.thumbnailUrl) return null
 
   if (item.mediaKind !== 'video') {

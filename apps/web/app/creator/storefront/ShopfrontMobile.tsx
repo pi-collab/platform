@@ -561,7 +561,10 @@ export default function ShopfrontMobile({
                 <div className="snap-track" style={{gap: '16px', margin: '22px -20px 0', padding: '2px 20px 6px'}}>
                   {contentItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
                     <a href={item.url || undefined} target={item.url ? "_blank" : undefined} rel="noopener noreferrer" className="mcard" style={{scrollSnapAlign: 'start', flex: '0 0 62%', overflow: 'hidden'}}>
-                      <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}>{item.raw.mediaKind === 'video'
+                      <div style={{position: 'relative', width: '100%', aspectRatio: '9/13'}}>{/* A picked-but-not-yet-fetched reel goes through ContentMedia so it
+                             gets the same "Updating from Instagram" state as desktop.
+                             Slot would show a blank box, which reads as broken. */}
+                          {item.raw.mediaKind === 'video' || (!item.slot && item.raw.igMediaId)
                           ? <ContentMedia item={item.raw} />
                           : <Slot url={item.slot} alt={item.name} style={{ width: '100%', height: '100%', display: 'block' }} />}<span style={{position: 'absolute', left: '10px', top: '10px', fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '.05em', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span>
                           {/* Same marker and same rule as desktop: set only

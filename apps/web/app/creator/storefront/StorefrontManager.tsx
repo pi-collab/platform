@@ -1203,6 +1203,16 @@ export default function StorefrontManager({
   // that reels displace reels rather than the creator's uploads.
   const manualContentCount = edit.contentItems.filter(i => !i.igMediaId && !isSampleItem(i)).length
 
+  /* Reels picked but not yet fetched from Instagram.
+     The snapshot is what holds a reel's thumbnail and figures, and saving is
+     what fills it — up to two Instagram calls per reel, which is seconds, not
+     milliseconds. Knowing this BEFORE the save lets the button say what it is
+     waiting on instead of a bare "Saving...", and lets the cards for those
+     reels show that they are still filling in rather than looking broken. */
+  const pendingReelIds = edit.contentItems
+    .map(i => i.igMediaId)
+    .filter((id): id is string => !!id && !(instagramConnection.snapshot?.media ?? []).some(m => m.id === id))
+
 
   // What the first three age bands leave for the last. Derived per render rather
   // than stored, so it cannot drift from the numbers above it. Floored at zero:
@@ -2153,7 +2163,8 @@ export default function StorefrontManager({
                 crowds a bar that has three controls on a phone. */}
             {!wizard && (
               <span style={{ ...metaLabel, marginRight: 'auto', marginBottom: 0 }}>
-                {isPublished ? 'PUBLISHED' : 'DRAFT'}{saving ? ' \u00B7 SAVING...' : ''}
+                {isPublished ? 'PUBLISHED' : 'DRAFT'}
+                {saving ? (pendingReelIds.length > 0 ? ' \u00B7 FETCHING REELS...' : ' \u00B7 SAVING...') : ''}
               </span>
             )}
 
@@ -2177,7 +2188,7 @@ export default function StorefrontManager({
             {/* Saving a draft mid-wizard is what makes leaving safe. */}
             <button onClick={() => handleSave(false)} disabled={saving || !slug || slug.length < 3}
               style={{ ...secondBtn, opacity: saving ? 0.5 : 1, cursor: saving ? 'not-allowed' : 'pointer' }}>
-              Save draft
+              {saving && pendingReelIds.length > 0 ? 'Fetching reels\u2026' : 'Save draft'}
             </button>
 
             {wizard && step < lastStep ? (
@@ -2340,7 +2351,9 @@ export default function StorefrontManager({
                 cursor: (saving || !slug || slug.length < 3) ? 'not-allowed' : 'pointer',
               }}
             >
-              {saving ? 'Publishing\u2026' : 'Publish'}
+              {saving
+                ? (pendingReelIds.length > 0 ? 'Fetching reels\u2026' : 'Publishing\u2026')
+                : 'Publish'}
             </button>
           )}
         </div>
