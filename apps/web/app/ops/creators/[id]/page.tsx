@@ -3,6 +3,8 @@ import VettingBadge from '@/components/ops/VettingBadge'
 import { followerRangeOf } from '@/lib/follower-range'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import { requireOps } from '@/lib/ops-capabilities'
+import IgConnectionBadge from '@/components/ops/IgConnectionBadge'
+import { igStatusOf, IG_BROKEN_STATUSES } from '@/lib/ig-connection-status'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import CreatorTabs from './CreatorTabs'
@@ -42,6 +44,20 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     .select('slug, display_name, headline, bio, portrait_path, categories, content_items, show_rates, show_past_collabs, is_published, updated_at')
     .eq('creator_id', params.id)
     .maybeSingle()
+
+  // Instagram connection. Fetched unconditionally, NOT behind isAdmin: this is
+  // activation data — who is verified, who broke, who to nudge — and that is
+  // outreach's job as much as a founder's. Nothing commercial in it.
+  //
+  // The token columns are deliberately absent from the select. This table
+  // denies all client access, and a page that never holds a token cannot leak
+  // one into its props.
+  const { data: igConn } = await admin
+    .from('creator_instagram_connections')
+    .select('status, username, account_type, last_synced_at, token_expires_at, sync_error')
+    .eq('creator_id', params.id)
+    .maybeSingle()
+  const igStatus = igStatusOf(igConn)
 
   const prefs = (contactRow?.preferences ?? {}) as Record<string, unknown>
   const contact = {
@@ -187,6 +203,60 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
           <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#92400e' }}>
             No notification channel opted into, so platform notifications will not reach them.
           </p>
+        )}
+      </div>
+
+      {/* Instagram. Sits immediately above the shopfront because it is what
+          fills it: a broken connection is why a storefront quietly went back to
+          hand-typed numbers, and that is not visible from the shopfront panel
+          alone. */}
+      <div style={{ margin: '0 0 1.25rem', padding: '0.85rem 1rem', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+          <p style={{ margin: 0, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>
+            Instagram
+          </p>
+          <IgConnectionBadge status={igStatus} username={igConn?.username} />
+        </div>
+
+        {!igConn ? (
+          <p style={{ margin: 0, fontSize: '0.8125rem', color: '#6b7280' }}>
+            Never connected. Their storefront shows hand-typed audience numbers, which
+            a brand cannot tell apart from verified ones. Usually worth a nudge.
+          </p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem 1.5rem', fontSize: '0.8125rem' }}>
+              <span>Account type: <strong>{igConn.account_type || '-'}</strong></span>
+              <span>
+                Last synced:{' '}
+                <strong>{igConn.last_synced_at ? new Date(igConn.last_synced_at).toLocaleString() : 'never'}</strong>
+              </span>
+              {/* The date the connection dies if the nightly refresh stops
+                  reaching it. The single most useful number on this panel when
+                  something has gone wrong. */}
+              <span>
+                Token expires:{' '}
+                <strong>{igConn.token_expires_at ? new Date(igConn.token_expires_at).toLocaleDateString() : '-'}</strong>
+              </span>
+            </div>
+
+            {igConn.sync_error && (
+              // Shown in full here, unlike the list, where it is hover text. This
+              // is the page someone opens BECAUSE the badge said something was
+              // wrong, so truncating it would send them to the logs.
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#991b1b', wordBreak: 'break-word' }}>
+                Last sync error: {igConn.sync_error}
+              </p>
+            )}
+
+            {IG_BROKEN_STATUSES.includes(igStatus) && (
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#92400e' }}>
+                {igStatus === 'personal_account'
+                  ? 'Switched to a Personal account, so insights stopped. They need to switch back to Business or Creator in Instagram, then reconnect. Reconnecting alone will not fix it.'
+                  : 'The verified badge is gone from their storefront until they reconnect.'}
+              </p>
+            )}
+          </>
         )}
       </div>
 

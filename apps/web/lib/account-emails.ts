@@ -328,6 +328,80 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
  * Sent ONCE per creator. The event guard is on existence rather than a time
  * window, so re-saving the profile does not re-notify.
  */
+/**
+ * Tell a creator their Instagram connection stopped working.
+ *
+ * ── Why this is worth an email at all ───────────────────────────────────────
+ * Nothing visibly breaks when a connection dies. The storefront keeps working,
+ * keeps showing audience figures, and simply reverts to the numbers the creator
+ * typed in months ago — which a brand cannot tell apart from verified ones, and
+ * which the creator has no reason to look at. Silence here is not a small
+ * omission: it is a storefront quietly making a weaker claim than it could.
+ *
+ * ── Two messages, not one with a clause ─────────────────────────────────────
+ * A Personal account needs a different ACTION, not a softer sentence. Sending
+ * the reconnect copy to someone on a Personal account tells them to do a thing
+ * that cannot work — they would do it, watch it fail, and be right to think the
+ * fault is ours.
+ *
+ * `idempotencyKey` carries the variant, so a creator who breaks, reconnects as
+ * Personal and breaks again inside Resend's 24h window still receives the
+ * second, different message rather than having it swallowed as a duplicate.
+ */
+export async function notifyCreatorInstagramBroken(
+  creatorId: string,
+  variant: 'reconnect' | 'personal_account',
+): Promise<boolean> {
+  try {
+    const { email, name } = await creatorEmail(creatorId)
+    if (!email) {
+      await record('creator.instagram_email_skipped', {
+        creator_id: creatorId, variant, reason: 'no_address',
+      })
+      return false
+    }
+
+    const personal = variant === 'personal_account'
+
+    const { html, text } = renderAccountEmail({
+      heading: personal
+        ? `Switch your Instagram back to a Business or Creator account`
+        : `Reconnect your Instagram, ${name}`,
+      body: personal
+        ? [
+            `Your Instagram account is now set to Personal. Instagram does not report audience insights for Personal accounts, so the verified figures on your ${BRAND_NAME} shopfront have stopped updating.`,
+            'To fix it: open Instagram, go to Settings and account type, and switch back to a Business or Creator account. Then reconnect here. Reconnecting on its own will not work while the account is Personal.',
+          ]
+        : [
+            `Your Instagram connection needs a quick reconnect to keep your verified stats live on your shopfront.`,
+            `Until you do, brands see the audience numbers you typed in yourself rather than the ones Instagram reports. It takes about thirty seconds.`,
+          ],
+      ctaUrl: `${siteBase()}/creator/settings`,
+      ctaLabel: 'Reconnect Instagram',
+    })
+
+    const res = await sendAccountEmail({
+      to: [email],
+      subject: personal
+        ? `Your Instagram is set to Personal. Switch it back to keep verified stats`
+        : `Reconnect your Instagram to keep your verified stats live`,
+      html,
+      text,
+      idempotencyKey: `creator-instagram-${variant}-${creatorId}`,
+    })
+
+    await record(res.ok ? 'creator.instagram_email_sent' : 'creator.instagram_email_failed', {
+      creator_id: creatorId,
+      variant,
+      ...(res.ok ? {} : { reason: res.reason }),
+    })
+    return res.ok
+  } catch (err) {
+    console.error(`[account-email] notifyCreatorInstagramBroken failed creator=${creatorId}: ${err instanceof Error ? err.message : String(err)}`)
+    return false
+  }
+}
+
 export async function notifyOpsCreatorPending(creatorId: string): Promise<void> {
   try {
     const admin = createAdminClient()

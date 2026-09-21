@@ -10,6 +10,8 @@ import WelcomeQuestions from '@/app/creator/welcome/WelcomeQuestions'
 import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
 import { verifyCreator } from '@/lib/creator-auth'
+import InstagramReconnectBanner from '@/components/creator/InstagramReconnectBanner'
+import { getConnection } from '@/lib/instagram-sync'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter } from '@/app/dashboard/DashboardControls'
@@ -48,6 +50,11 @@ export default async function CreatorDashboardPage({
   // thing between approval and the product, and the product should be visible
   // behind them.
   const askOnboarding = await shouldAskOnboarding(creatorId)
+
+  // Whether their Instagram is still working. Read here rather than inside the
+  // banner so the four dashboard renderings below share one answer, and so a
+  // server component does the query once.
+  const igConnection = await getConnection(creatorId)
 
   // Whether a payout method exists. upi_id is withheld from the client roles as
   // PII, so this reads through the admin client — and only the boolean leaves
@@ -407,6 +414,10 @@ export default async function CreatorDashboardPage({
 
   return (
     <>
+    {/* Above every branch on purpose: the dashboard has four renderings and a
+        banner threaded through each is a banner that goes missing from one.
+        Renders nothing when the connection is healthy. */}
+    <InstagramReconnectBanner status={igConnection.status} />
     {mobileEmpty}
     {/* Desktop has its own drawn empty state, so it gets that rather than the
         populated dashboard rendering with nothing in it. */}

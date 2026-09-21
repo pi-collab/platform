@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
+import { aiSearchConfigured } from '@/lib/ai-search/parse'
 
 interface SocialAccount {
   platform: string
@@ -132,6 +133,7 @@ export default async function BrowsePage() {
       storefrontSlugs={storefrontSlugs}
       verifiedFollowers={verifiedFollowers}
       startingRates={startingRates}
+      aiConfigured={aiSearchConfigured()}
     />
   )
 }
