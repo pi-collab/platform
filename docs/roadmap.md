@@ -580,6 +580,40 @@ AI helper that generates content scripts for creators.
 
 ---
 
+## Instagram verified data: two known gaps (2026-09-21)
+
+### 1. /browse/[id] shows brands LESS verified data than the public page
+
+`app/browse/[id]/page.tsx` never fetches the Instagram snapshot. It renders
+typed follower counts, no `verified` marks, no audience from Instagram and no
+featured reels, while `/c/[slug]` shows all of it from the connection.
+
+So a brand browsing a creator inside Guapd sees a weaker, unverified version
+of the same storefront that any anonymous visitor sees verified. Brands are
+precisely the audience the verification exists to convince, which makes this
+the wrong way round.
+
+Fix is to give that page `getPublicSnapshot` and the same snapshot-first
+ladder `/c/[slug]` uses (verified value wins, typed value is the fallback).
+Not a small change: the page builds its own ShopfrontData and its own sections
+list, so both need the same treatment or the inconsistency just moves.
+
+### 2. Featured-reel thumbnails re-download every night
+
+`refreshAndSync` writes the snapshot from `buildSnapshot` — which has no
+`media` key — BEFORE calling `syncFeaturedReels`. So by the time
+`syncFeaturedReels` builds its `held` map of already-stored thumbnails from
+`snapshot.media`, that field has just been cleared, and `held` is always
+empty. Every featured reel's thumbnail is therefore re-fetched from Instagram
+and re-uploaded on every sync.
+
+Idempotent, so this is waste and not breakage: same bucket path, upsert, same
+bytes. The `held` map exists specifically to avoid it and currently never
+does its job. Fix by carrying the prior `media` forward when refreshAndSync
+writes the snapshot, so syncFeaturedReels can see what is already stored.
+
+---
+
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';

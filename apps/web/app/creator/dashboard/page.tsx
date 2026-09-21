@@ -12,6 +12,7 @@ import { shouldAskOnboarding } from '@/lib/creator-onboarding'
 import { verifyCreator } from '@/lib/creator-auth'
 import InstagramReconnectBanner from '@/components/creator/InstagramReconnectBanner'
 import { getConnection } from '@/lib/instagram-sync'
+import { compactNumber } from '@/lib/compact-number'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter } from '@/app/dashboard/DashboardControls'
@@ -23,6 +24,16 @@ import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
+
+interface DeliverableRow {
+  id?: string
+  deal_id: string
+  submitted_at: string | null
+  posted_at?: string | null
+  ig_match_status?: string | null
+  ig_insights?: Record<string, number | undefined> | null
+  ig_thumbnail_url?: string | null
+}
 
 interface InvoiceRow {
   deal_id: string
@@ -301,12 +312,77 @@ export default async function CreatorDashboardPage({
   const lifetimeIds = lifetime.map((d) => d.id as string)
   const [{ data: trackItems }, { data: trackMessages }] = await Promise.all([
     lifetimeIds.length
-      ? supabase.from('deal_deliverable_items').select('deal_id, submitted_at, posted_at').in('deal_id', lifetimeIds)
-      : Promise.resolve({ data: [] as { deal_id: string; submitted_at: string | null; posted_at?: string | null }[] }),
+      ? supabase.from('deal_deliverable_items')
+          // ig_* columns ride along on a query this page already makes. The
+          // track record below counts these rows for on-time delivery; the
+          // reach panel reads the measured numbers off the same rows.
+          .select('id, deal_id, submitted_at, posted_at, ig_match_status, ig_insights, ig_thumbnail_url')
+          .in('deal_id', lifetimeIds)
+      : Promise.resolve({ data: [] as DeliverableRow[] }),
     lifetimeIds.length
       ? supabase.from('messages').select('deal_id, sender_party, created_at').in('deal_id', lifetimeIds)
       : Promise.resolve({ data: [] as { deal_id: string; sender_party: string; created_at: string }[] }),
   ])
+
+  /* ── Verified performance of PAID WORK ──────────────────────────────────
+     The creator's Guapd track record, not a mirror of their Instagram: these
+     are the posts brands paid for, measured by Instagram and refreshed nightly.
+     They can already see their account figures in the Instagram app; what they
+     could not see anywhere was how the work they were paid for actually did.
+
+     The arithmetic is deliberately IDENTICAL to the brand dashboard
+     (app/dashboard/page.tsx): same resolved-only filter, same sums, and
+     engagement computed once from the totals rather than as a mean of
+     per-post rates — which would weight a 500-reach post the same as a
+     400,000-reach one. A brand and a creator looking at the same deal must
+     not be shown two different numbers for it. */
+  const deliverables = (trackItems ?? []) as DeliverableRow[]
+  const verifiedPosts = deliverables.filter(
+    (d) => d.ig_match_status === 'resolved'
+      && d.ig_insights
+      && Object.values(d.ig_insights).some((v) => typeof v === 'number'),
+  )
+
+  const reachTotal = verifiedPosts.reduce((n, d) => n + (d.ig_insights?.reach ?? 0), 0)
+  const interactionsTotal = verifiedPosts.reduce((n, d) => n + (d.ig_insights?.totalInteractions ?? 0), 0)
+  const engagementPct = reachTotal > 0 ? (interactionsTotal / reachTotal) * 100 : null
+
+  // Averaged over the posts that actually reported views, not over every
+  // verified post: a post Instagram gave no view count for would otherwise
+  // drag the average down as if it had been seen by nobody.
+  const postsWithViews = verifiedPosts.filter((d) => typeof d.ig_insights?.views === 'number')
+  const avgViews = postsWithViews.length > 0
+    ? Math.round(postsWithViews.reduce((n, d) => n + (d.ig_insights?.views ?? 0), 0) / postsWithViews.length)
+    : null
+
+  const dealById = new Map(lifetime.map((d) => [d.id as string, d]))
+  const topPosts = [...postsWithViews]
+    .sort((a, b) => (b.ig_insights?.views ?? 0) - (a.ig_insights?.views ?? 0))
+    .slice(0, 3)
+    .map((d) => ({
+      id: d.id ?? d.deal_id,
+      title: (dealById.get(d.deal_id)?.title as string | undefined)?.trim() || 'Delivered post',
+      views: compactNumber(d.ig_insights?.views ?? 0),
+      thumbUrl: d.ig_thumbnail_url ?? null,
+    }))
+
+  /* Followers is the one account fact here, so it comes from the connection
+     snapshot rather than from deal posts — there is no per-post follower
+     count, and it is the number a brand asks for first.
+
+     NULL, not zero, when there is nothing verified yet: a creator with no
+     completed deals has not performed badly, they simply have no record. The
+     renderings below show a prompt instead, and it fills in as deals land. */
+  const reach = verifiedPosts.length > 0
+    ? {
+        followers: igConnection.snapshot?.followersCount != null
+          ? compactNumber(igConnection.snapshot.followersCount)
+          : '-',
+        engagement: engagementPct != null ? `${engagementPct.toFixed(1)}%` : '-',
+        avgViews: avgViews != null ? compactNumber(avgViews) : '-',
+        topPosts,
+      }
+    : null
 
   const postsByDeal = new Map<string, number>()
   for (const it of (trackItems ?? []) as { deal_id: string; posted_at?: string | null }[]) {
@@ -451,7 +527,7 @@ export default async function CreatorDashboardPage({
         monthly={monthlyEarnings}
         earnings={earnings}
         brands={mobileBrands}
-        reach={null}
+        reach={reach}
         completedEver={lifetimeCompleted}
         changePct={changePct}
         track={{
@@ -684,14 +760,49 @@ export default async function CreatorDashboardPage({
             <div>
               <h2 style={{ ...sectionHeading, margin: 0 }}>Your reach</h2>
               <div aria-hidden="true" style={accentLine} />
-              <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--wg-500)', marginTop: 12 }}>Coming soon</div>
+              <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--wg-500)', marginTop: 12 }}>
+                {reach
+                  ? `Measured by Instagram across ${verifiedPosts.length} delivered ${verifiedPosts.length === 1 ? 'post' : 'posts'}`
+                  : 'Verified performance of the work you are paid for'}
+              </div>
             </div>
           </div>
-          <div className="reachstat" style={{ border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden' }}>
-            <ReachCell label="Followers" value="-" />
-            <ReachCell label="Engagement" value="-" border />
-            <ReachCell label="Avg views" value="-" border />
-          </div>
+          {/* Same shape as the brand dashboard's reach panel, because it is the
+              same arithmetic over the same posts. The grid lives here rather
+              than in the stylesheet; .reachstat only collapses it to one
+              column on narrow screens. */}
+          {reach ? (
+            <div className="reachstat" style={{ border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              <ReachCell
+                label="Followers"
+                value={reach.followers}
+                note={igConnection.snapshot ? 'From your connected account' : 'Connect Instagram to show this'}
+              />
+              <ReachCell
+                label="Engagement"
+                value={reach.engagement}
+                note={`${compactNumber(interactionsTotal)} interactions over ${compactNumber(reachTotal)} reach`}
+                border
+              />
+              <ReachCell
+                label="Avg views"
+                value={reach.avgViews}
+                note={postsWithViews.length > 0
+                  ? `Across ${postsWithViews.length} ${postsWithViews.length === 1 ? 'post' : 'posts'} with view data`
+                  : 'No view data yet'}
+                border
+              />
+            </div>
+          ) : (
+            // Not dashes and not zeros: a creator with no completed deals has
+            // not performed badly, they have no record yet. Zeros would read
+            // as a verdict.
+            <div style={{ border: '1px solid var(--line)', borderRadius: 16, padding: 'clamp(24px, 3vw, 36px)', fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-500)', lineHeight: 1.6 }}>
+              Complete your first deal to see your verified performance here. Once a
+              post is live, Instagram&rsquo;s own reach and engagement figures for it
+              appear on this panel and on the brand&rsquo;s.
+            </div>
+          )}
         </section>
 
         {/* ── BRANDS YOU'VE WORKED WITH ───────────────── */}
@@ -882,14 +993,14 @@ function TrackRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ReachCell({ label, value, border }: { label: string; value: string; border?: boolean }) {
+function ReachCell({ label, value, note, border }: { label: string; value: string; note?: string; border?: boolean }) {
   return (
     <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column', borderLeft: border ? '1px solid var(--hair)' : undefined }}>
       <div className="t-meta" style={{ color: 'var(--meta)' }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
         <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 'clamp(40px, 4.4vw, 54px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>{value}</div>
       </div>
-      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>Coming soon</div>
+      {note && <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>{note}</div>}
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { timeAgo } from '@/lib/instagram-outcomes'
 import './shopfront-preview.css'
 import ShopfrontMobile from './ShopfrontMobile'
 import { atHandle, profileUrl } from '@/lib/handle'
+import { compactNumber } from '@/lib/compact-number'
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -55,12 +56,10 @@ export interface RecentReel {
   shares?: number
 }
 
-/** 12400 -> 12.4K. Compact, because these sit four to a card. */
-function fmtCount(n: number): string {
-  if (n >= 1_000_000) { const v = n / 1_000_000; return `${v % 1 === 0 ? v : v.toFixed(1)}M` }
-  if (n >= 1_000) { const v = n / 1_000; return `${v % 1 === 0 ? v : v.toFixed(1)}K` }
-  return String(n)
-}
+/** 12400 -> 12.4K. Compact, because these sit four to a card.
+ *  The shared implementation, so a reel's view count reads the same here as on
+ *  the dashboards that sum the very same figures. */
+const fmtCount = compactNumber
 
 /* Exported so the mobile rendering links brand reels through the SAME check.
    A second opinion about what counts as a safe href is how one of two renderings
@@ -377,9 +376,11 @@ const DEFAULT_SECTIONS: ShopfrontSection[] = [
   { key: 'ratecard', label: 'Rate Card', enabled: true },
   { key: 'audience', label: 'Audience', enabled: true },
   { key: 'content', label: 'Content Showcase', enabled: true },
-  // Auto-hides on its own when there is no connected account, but it needs a
-  // registered key or SectionWrapper has nothing to look up.
-  { key: 'reels', label: 'Recent reels', enabled: true },
+  // "Featured", not "Recent": the section shows what the creator picked, and
+  // the automatic latest-posts strip is still deliberately not built. Needs a
+  // registered key here or SectionWrapper has nothing to look up; it auto-hides
+  // on its own when nothing has been featured.
+  { key: 'reels', label: 'Featured Reels', enabled: true },
   { key: 'collabs', label: 'Past Collaborations', enabled: true },
   { key: 'pitch', label: 'Work With Me', enabled: true },
 ]
@@ -1395,13 +1396,78 @@ export default function ShopfrontPreview({
         </SectionWrapper>
       )}
 
-      {/* Recent reels are deliberately NOT shown.
-          The curated Content Showcase above is what a creator chose to be judged
-          on, and the brands section below carries the reel they made for each
-          brand. An automatic strip of latest posts competes with the first and
-          duplicates the second. The fetch is disabled to match — see
-          buildSnapshot — so nothing is downloaded or stored for a hidden
-          section. The renderer and the fetch both remain, one call site each. */}
+      {/* ═══ 5b. FEATURED REELS (chosen, measured) ═════════════
+          RECENT reels are still deliberately not shown, and the fetch for them
+          stays disabled in buildSnapshot. Latest is not best: an automatic
+          strip shows whatever the creator last made, competes with the curated
+          showcase above, and duplicates the collaborations section below,
+          which already carries the reel made for each brand.
+
+          What appears here is the opposite of automatic — reels the creator
+          picked in the editor, resolved by id on every sync so the figures stay
+          current. Its own section rather than folded into Selected work above,
+          because the two make different promises: that one is what they say
+          about their work, this one is what Instagram measured about it. Give
+          them one heading and "verified" stops meaning anything. */}
+      {(data.recentReels?.length ?? 0) > 0 && (
+        <SectionWrapper sectionKey="reels">
+          <section className="sf-sec" style={{ padding: 'clamp(30px,3.8vw,56px) clamp(20px,5vw,72px) clamp(16px,2vw,28px)' }}>
+            <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--ink-faint)' }}>Verified from Instagram</span>
+              <h2 className="t-title" style={{ margin: '10px 0 6px' }}>Reels {firstName} has featured</h2>
+              <p className="t-body" style={{ color: 'var(--ink-soft)', maxWidth: 520, margin: '0 0 clamp(20px,2.4vw,30px)' }}>
+                Chosen by {firstName}. Every number below is reported by Instagram, not typed in.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 'clamp(10px,1.2vw,16px)' }}>
+                {data.recentReels!.map((reel) => {
+                  // Same rule as the cards above: inside the editor a tap must
+                  // not navigate the creator off what they are editing.
+                  const href = !editing && reel.permalink ? reel.permalink : undefined
+                  const Card = (href ? 'a' : 'div') as React.ElementType
+                  const cardProps = href
+                    ? { href, target: '_blank', rel: 'noopener noreferrer' }
+                    : {}
+                  return (
+                    <Card key={reel.id} {...cardProps} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                      <div style={{ position: 'relative', aspectRatio: '9 / 16', borderRadius: 14, overflow: 'hidden', background: '#EFEFEA' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={reel.thumbnailUrl}
+                          alt={reel.caption?.slice(0, 80) ?? `Reel by ${firstName}`}
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                        {/* Views sit ON the tile because it is the one figure a
+                            brand scans for. The rest are underneath, where
+                            they can be read rather than skimmed. */}
+                        {typeof reel.views === 'number' && (
+                          <span style={{
+                            position: 'absolute', left: 0, right: 0, bottom: 0, padding: '18px 10px 8px',
+                            background: 'linear-gradient(to top, rgba(0,0,0,.66), transparent)',
+                            color: '#fff', fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 700,
+                          }}>{fmtCount(reel.views)} views</span>
+                        )}
+                      </div>
+                      {/* A reel from before the account turned professional has
+                          no insights at all — Instagram refuses them. Showing
+                          the tile with nothing under it is right; a zero would
+                          be a measurement we never took. */}
+                      <div className="t-meta" style={{ color: 'var(--ink-faint)', marginTop: 8, lineHeight: 1.5 }}>
+                        {[
+                          typeof reel.reach === 'number' ? `${fmtCount(reel.reach)} reach` : null,
+                          typeof reel.likes === 'number' ? `${fmtCount(reel.likes)} likes` : null,
+                          typeof reel.comments === 'number' ? `${fmtCount(reel.comments)} comments` : null,
+                        ].filter(Boolean).join(' · ')}
+                      </div>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+        </SectionWrapper>
+      )}
 
       {/* ═══ 6. PAST COLLABORATIONS (Marquee) ══════════════════ */}
       {/* A marquee needs enough tiles to be a marquee. Below five the track was
