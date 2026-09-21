@@ -10,6 +10,7 @@ import './shopfront-preview.css'
 import ShopfrontMobile from './ShopfrontMobile'
 import { atHandle, profileUrl } from '@/lib/handle'
 import { compactNumber } from '@/lib/compact-number'
+import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -1353,7 +1354,7 @@ export default function ShopfrontPreview({
               <h2 className="t-title" style={{ margin: '10px 0 clamp(20px,2.4vw,30px)' }}>Work {firstName} has picked out</h2>
 
               <div className="sf-exprow">
-                {data.contentItems.slice(0, 5).map((item, i) => {
+                {data.contentItems.slice(0, MAX_SHOWCASE_ITEMS).map((item, i) => {
                   // A card opens its link only on the published page. Inside
                   // the editor a tap must not navigate a creator off the very
                   // thing they are editing.

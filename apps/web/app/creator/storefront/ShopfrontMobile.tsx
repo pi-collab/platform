@@ -6,6 +6,7 @@ import { ContentMedia, isSafeUrl } from './ShopfrontPreview'
 import { profileUrl } from '@/lib/handle'
 // Same formatter the desktop section and both dashboards use.
 import { compactNumber as fmtCount } from '@/lib/compact-number'
+import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import './shopfront-mobile.css'
 
@@ -233,7 +234,7 @@ export default function ShopfrontMobile({
     ? 'Nothing selected yet'
     : `${selectedCount} item${selectedCount === 1 ? '' : 's'} selected`
 
-  const contentItems = data.contentItems.slice(0, 5).map((c: ContentItem) => ({
+  const contentItems = data.contentItems.slice(0, MAX_SHOWCASE_ITEMS).map((c: ContentItem) => ({
     name: c.title,
     brand: c.brand ?? '',
     views: c.views ?? '',

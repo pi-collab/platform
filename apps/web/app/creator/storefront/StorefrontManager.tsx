@@ -14,6 +14,7 @@ import '@/app/creator/packages/packages.css'
 import ShopfrontPreview, { type ShopfrontData, type ShopfrontSection, type ContentItem, type BrandCollab } from './ShopfrontPreview'
 import AvatarUpload from '@/components/AvatarUpload'
 import FeaturedReelsPicker from './FeaturedReelsPicker'
+import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 
@@ -1440,7 +1441,7 @@ export default function StorefrontManager({
         igMediaId: r.id,
       }))
     if (fresh.length === 0) return
-    set('contentItems', [...edit.contentItems, ...fresh].slice(0, 8))
+    set('contentItems', [...edit.contentItems, ...fresh].slice(0, MAX_SHOWCASE_ITEMS))
   }
 
   function addCollab() {
@@ -1977,7 +1978,7 @@ export default function StorefrontManager({
 
                   <div style={{ marginTop: 14 }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                      <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= 8} />
+                      <AddButton label="Add content piece" onClick={addContentItem} disabled={edit.contentItems.length >= MAX_SHOWCASE_ITEMS} />
                       {/* The same list, the other way in. A creator asking
                           "what work do brands see?" should not have to find two
                           separate panels to answer it, so pulling a reel in
@@ -1987,13 +1988,13 @@ export default function StorefrontManager({
                       <FeaturedReelsPicker
                         connected={instagramConnection.status === 'connected'}
                         alreadyPicked={edit.contentItems.map(i => i.igMediaId).filter((v): v is string => !!v)}
-                        remainingSlots={Math.max(0, 8 - edit.contentItems.length)}
+                        remainingSlots={Math.max(0, MAX_SHOWCASE_ITEMS - edit.contentItems.length)}
                         onPick={addReelsAsContent}
                       />
                     </div>
                   </div>
-                  {edit.contentItems.length >= 8 && (
-                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum 8 pieces. Remove one to add another.</div>
+                  {edit.contentItems.length >= MAX_SHOWCASE_ITEMS && (
+                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 8 }}>Maximum {MAX_SHOWCASE_ITEMS} pieces. Remove one to add another.</div>
                   )}
                 </Section>
               </div>
