@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createCampaign } from './actions'
 import TrackTag from '@/components/track/TrackTag'
+import CampaignTypeModal from './CampaignTypeModal'
 import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilter'
 import { PRODUCT_TYPES } from '@/lib/product-types'
-import { TRACK_LABEL, TRACK_TONE, type Track } from '@/lib/track'
+import type { Track } from '@/lib/track'
 
 interface Campaign {
   id: string
@@ -48,6 +49,9 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
   const [formTrack, setFormTrack] = useState<Track>('deals')
   const [formMode, setFormMode] = useState<'uniform' | 'per_creator'>('per_creator')
   const [formUniformType, setFormUniformType] = useState<string>(PRODUCT_TYPES[0])
+  /* Two steps, not one panel. The chooser decides the track; the panel then
+     collects a name for a campaign whose kind is already settled. */
+  const [chooserOpen, setChooserOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [formName, setFormName] = useState('')
   const [formDesc, setFormDesc] = useState('')
@@ -135,7 +139,10 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
           </div>
           <button
             className="neonbtn"
-            onClick={() => setCreateOpen((v) => !v)}
+            onClick={() => {
+              if (createOpen) { setCreateOpen(false); return }
+              setChooserOpen(true)
+            }}
             style={{
               flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
               height: 44, padding: '0 18px', borderRadius: 11,
@@ -153,6 +160,23 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
         </div>
       </div>
 
+      {chooserOpen && (
+        <CampaignTypeModal
+          canGrowth={canGrowth}
+          onClose={() => setChooserOpen(false)}
+          onChoose={(t) => {
+            setFormTrack(t)
+            /* Growth campaigns are one deliverable for everyone by default:
+               it is the mode that makes a bulk campaign quick, which is the
+               reason to run one. The brand can still switch to per-creator in
+               the panel. */
+            setFormMode(t === 'growth' ? 'uniform' : 'per_creator')
+            setChooserOpen(false)
+            setCreateOpen(true)
+          }}
+        />
+      )}
+
       {/* ===== CREATE PANEL ===== */}
       {createOpen && (
         <div className="surface reveal" style={{ padding: '26px 28px', marginTop: 18 }}>
@@ -168,29 +192,13 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
             onCancel={() => { setCreateOpen(false); setError(null) }}
             extra={
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
-                {/* Only when there is a choice to make. A single-option choice
-                    is a decision presented as one. */}
-                {canGrowth && (
-                  <div>
-                    <div className="t-meta" style={{ marginBottom: 7 }}>Track</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {(['deals', 'growth'] as Track[]).map((t) => (
-                        <button
-                          key={t} type="button" onClick={() => setFormTrack(t)}
-                          style={{
-                            padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
-                            background: formTrack === t ? TRACK_TONE[t].bg : 'var(--card)',
-                            border: `1px solid ${formTrack === t ? TRACK_TONE[t].border : 'var(--hairline)'}`,
-                            color: formTrack === t ? TRACK_TONE[t].fg : 'var(--ink-soft)',
-                            fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
-                          }}
-                        >
-                          {TRACK_LABEL[t]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {/* Settled in the chooser. Shown, not offered — a brand that
+                    picked Growth and then meets a track toggle would
+                    reasonably wonder whether their choice took. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="t-meta">Track</span>
+                  <TrackTag track={formTrack} />
+                </div>
 
                 <div>
                   <div className="t-meta" style={{ marginBottom: 7 }}>Deliverables</div>

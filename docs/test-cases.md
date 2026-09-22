@@ -5393,3 +5393,14 @@ lives, and audits every run.
 - [ ] On a Growth campaign the add-creators modal lists ONLY `growth` creators; on a Deals campaign only `deals_approved`
 - [ ] In uniform mode it lists only creators who offer that deliverable
 - [ ] `vetting_status` is stripped before the list reaches the browser
+
+**The campaign type chooser (design: "Choose Campaign Type - standalone")**
+- [ ] "New Campaign" opens the chooser FIRST — "What kind of campaign?" — not the name form
+- [ ] Two cards: Deals ("Vetted creators", "1:1 negotiation") and Growth, badged, ("Emerging & UGC", "Minimum applies")
+- [ ] Choosing a card closes the chooser and opens the create panel with the track already set, shown as a tag rather than a toggle
+- [ ] Choosing Growth also presets the deliverable mode to "same for everyone"; the brand can still switch to per-creator
+- [ ] A brand WITHOUT the entitlement still SEES the Growth card, disabled, reading "Not enabled yet" with a line about talking to us — it is the only place the product explains what Growth is, and an invisible option sells nothing
+- [ ] Clicking the disabled Growth card does nothing; it cannot be routed past
+- [ ] The backdrop, the close button and Escape all dismiss without creating anything
+- [ ] Cards stack on a phone (`.typegrid` single column under 700px)
+- [ ] Hover lifts the card, rings it in neon and nudges the arrow; a disabled card does none of it
