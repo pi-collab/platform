@@ -148,6 +148,39 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
 
   if (error) return { error: error.message }
 
+  /* ── Uniform mode fills itself in ─────────────────────────────────────────
+     The whole point of "same for everyone" is that a brand adding fifteen
+     creators is not making fifteen identical choices. The type is already
+     decided, and each creator has exactly one active product of it — the add
+     above refused anyone who did not — so there is nothing left to pick.
+
+     Each creator's OWN price applies. The deliverable is uniform; the rates
+     never are, because every creator sets their own. */
+  if (track === 'growth' && campaign.deliverable_mode === 'uniform' && campaign.uniform_product_type) {
+    const { data: fresh } = await supabase
+      .from('campaign_drafts')
+      .select('id, creator_id')
+      .eq('campaign_id', campaignId)
+      .in('creator_id', creatorIds)
+
+    const { data: products } = await supabase
+      .from('creator_products')
+      .select('id, creator_id')
+      .in('creator_id', creatorIds)
+      .eq('product_type', campaign.uniform_product_type)
+      .eq('is_active', true)
+
+    const productByCreator = new Map((products ?? []).map((p) => [p.creator_id, p.id]))
+
+    for (const d of fresh ?? []) {
+      const productId = productByCreator.get(d.creator_id)
+      if (!productId) continue
+      // Through the same action the roster uses, so the price and the fee are
+      // resolved in exactly one place.
+      await setGrowthDraftPackage(campaignId, d.id, productId)
+    }
+  }
+
   revalidatePath(`/campaigns/${campaignId}`)
   return { success: true, added: creatorIds.length }
 }
@@ -667,3 +700,125 @@ export async function removeCampaignBriefAttachment(campaignId: string, storageP
   return { success: true }
 }
 
+
+// ── Growth: one package per creator ─────────────────────────────────────────
+
+/**
+ * Set (or clear) the package a Growth creator is booked for.
+ *
+ * ── The price is READ HERE, never sent ──────────────────────────────────────
+ * updateCampaignDraft takes placements with prices in them, which is right for
+ * a Deals campaign: the brand negotiates, so the brand names the number. A
+ * Growth package is not negotiated. The creator set that price, the brand is
+ * buying it as offered, and there is no counter — so the only honest source for
+ * it is the product row. The client sends a product id and nothing else, and a
+ * tampered request can change WHICH package is bought but never what it costs.
+ *
+ * ── One package per creator, for now ────────────────────────────────────────
+ * The roster holds exactly one placement per draft. Two packages for one
+ * creator in one campaign is a real thing a brand will eventually want, and it
+ * is deliberately not here yet: it turns "five creators, five units" into an
+ * arithmetic the minimum and the footer would both have to learn.
+ */
+export async function setGrowthDraftPackage(
+  campaignId: string,
+  draftId: string,
+  productId: string | null,
+): Promise<{ error?: string; success?: boolean }> {
+  const brand = await verifyBrand()
+  const supabase = createClient()
+
+  const { data: campaign } = await supabase
+    .from('campaigns')
+    .select('id, track, deliverable_mode, uniform_product_type')
+    .eq('id', campaignId)
+    .maybeSingle()
+
+  if (!campaign) return { error: 'Campaign not found' }
+  if (campaign.track !== 'growth') return { error: 'This campaign does not use packages' }
+
+  const { data: draft } = await supabase
+    .from('campaign_drafts')
+    .select('id, creator_id')
+    .eq('id', draftId)
+    .eq('campaign_id', campaignId)
+    .maybeSingle()
+
+  if (!draft) return { error: 'Creator is not on this campaign' }
+
+  // Clearing: an empty roster row, which the send gate will refuse.
+  if (!productId) {
+    const { error } = await supabase
+      .from('campaign_drafts')
+      .update({ placements: [], total_price_paise: 0, total_brand_paise: 0 })
+      .eq('id', draftId)
+    if (error) return { error: error.message }
+    revalidatePath(`/campaigns/${campaignId}`)
+    return { success: true }
+  }
+
+  /* Scoped to the draft's own creator. Without the creator_id filter a brand
+     could book creator A at creator B's cheaper price by sending someone
+     else's product id. */
+  const { data: product } = await supabase
+    .from('creator_products')
+    .select('id, platform, handle, product_type, price_paise, is_active')
+    .eq('id', productId)
+    .eq('creator_id', draft.creator_id)
+    .maybeSingle()
+
+  if (!product) return { error: 'That package does not belong to this creator' }
+  if (!product.is_active) return { error: 'That package is no longer offered' }
+
+  /* Uniform campaigns take one deliverable type for everyone. Re-checked here
+     and not only at add time, because the roster is where a brand would
+     otherwise quietly swap one creator onto a different deliverable. */
+  if (campaign.deliverable_mode === 'uniform' && campaign.uniform_product_type
+      && product.product_type !== campaign.uniform_product_type) {
+    return { error: `This campaign is ${campaign.uniform_product_type} for everyone` }
+  }
+
+  const placement: DraftPlacement = {
+    label: product.product_type,
+    platform: product.platform,
+    handle: product.handle,
+    price_paise: product.price_paise,
+    product_id: product.id,
+  }
+
+  /* The growth rung, so the preview a brand sees is the fee the deal will
+     carry — 30%, deducted. The mismatch this avoids is not hypothetical: the
+     generic path resolved the brand's standard rate and previewed 15% on top
+     of a package the deal then charged 30% out of. */
+  const admin = createAdminClient()
+  const { resolveDealFee } = await import('@/lib/deal-fee')
+  const { data: brandRow } = await supabase
+    .from('brands').select('platform_fee_percent, fee_mode').eq('id', brand.brandId).single()
+
+  const resolved = await resolveDealFee(
+    admin,
+    brand.brandId,
+    draft.creator_id,
+    brandRow?.platform_fee_percent ?? 0,
+    (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+    'growth',
+  )
+
+  const fee = calculateFee(product.price_paise, resolved.feePercent, resolved.feeMode)
+
+  const { error } = await supabase
+    .from('campaign_drafts')
+    .update({
+      placements: [placement] as unknown as string,
+      total_price_paise: product.price_paise,
+      fee_percent: resolved.feePercent,
+      fee_mode: resolved.feeMode,
+      total_brand_paise: fee.brand_pays_paise,
+    })
+    .eq('id', draftId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/campaigns/${campaignId}`)
+  return { success: true }
+}

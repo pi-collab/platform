@@ -5347,3 +5347,37 @@ lives, and audits every run.
 **Environment**
 - [ ] **Migrations 0506–0510 must be applied.** `supabase migration list` shows 0499–0505 as local-only on staging, so those land first — confirm which of them were already applied by hand before pushing
 - [ ] `platform_settings` is seeded with `growth_campaign_minimum`; a missing row falls back to the default in `lib/platform-settings.ts` rather than breaking the builder
+
+**The Growth roster (`GrowthRoster.tsx`)**
+- [ ] A Growth campaign renders the Growth roster, NOT `DraftPlacementEditor` — no price field, no collab/boosting controls, no counter
+- [ ] A Deals campaign is unchanged and still gets the placement editor
+- [ ] MIXED mode: each creator has a package dropdown listing their own active products with prices; choosing one sets the row's price from the PRODUCT, not the client
+- [ ] UNIFORM mode: no dropdown. The deliverable is named once at the top, each creator's own price fills in automatically when added
+- [ ] Prices differ per creator in uniform mode — the TYPE is uniform, the rates are each creator's own
+- [ ] A row with no package shows "Choose a package", a red border and a dash for price, and blocks the send
+- [ ] Removing a creator updates the total and the progress immediately
+
+**Send gating**
+- [ ] The send button is disabled with a reason NAMED, and the three reasons are distinct: no creators / N have no package / below the minimum
+- [ ] Below minimum: the button is disabled and the bar reads e.g. "3 of 5 creators"
+- [ ] On reaching the minimum the panel turns green, reads "Minimum met", and the button enables
+- [ ] Value-metric campaigns show "₹X of ₹Y campaign value" instead, and gate on the total
+- [ ] The SERVER refuses a below-minimum send even if the button is bypassed — call `bulkSendCampaignDrafts` directly
+- [ ] The minimum used is the campaign's SNAPSHOT: change it in `/ops/settings` and an existing campaign still uses the old one
+
+**Price integrity (the client never names a price)**
+- [ ] `setGrowthDraftPackage` takes a product id only. Sending a forged price in the request cannot change what is charged
+- [ ] Sending another creator's product id is refused ("does not belong to this creator") — the lookup is scoped by `creator_id`
+- [ ] An inactive product is refused
+- [ ] In uniform mode, a product of a different type is refused naming the campaign's type
+
+**Preview matches the charge (the mismatch this round fixed)**
+- [ ] The roster footer shows **30%, deducted** — and the deal created at send carries `fee_percent = 30`, `fee_mode = 'deducted'`, `fee_basis = 'growth_standard'`
+- [ ] For a brand whose `platform_fee_percent` is 15 and `fee_mode` is `on_top`, the preview shows 30/deducted and so does the deal. Verify on a real `on_top` brand — staging has both kinds
+- [ ] Editing a draft through `updateCampaignDraft` on a Growth campaign also previews 30/deducted, not the brand's standard
+- [ ] Footer arithmetic: creator rates total, minus 30%, equals creators receive; "You pay" equals the rates total with nothing added on top
+
+**The picker**
+- [ ] On a Growth campaign the add-creators modal lists ONLY `growth` creators; on a Deals campaign only `deals_approved`
+- [ ] In uniform mode it lists only creators who offer that deliverable
+- [ ] `vetting_status` is stripped before the list reaches the browser

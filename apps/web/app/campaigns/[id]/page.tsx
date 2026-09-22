@@ -7,6 +7,8 @@ import { deriveDisplayStatus } from '@/lib/deal-status'
 import CampaignActions from './CampaignActions'
 import AddCreatorsModal from './AddCreatorsModal'
 import CampaignRoster from './CampaignRoster'
+import GrowthRoster, { type GrowthDraft } from './GrowthRoster'
+import { GROWTH_FEE_PERCENT } from '@/lib/deal-fee'
 import CampaignBrief from './CampaignBrief'
 import type { DraftPlacement } from './draft-actions'
 
@@ -34,7 +36,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const [{ data: campaign, error: campErr }, { data: deals }, { data: invoices }, { data: drafts }, { data: allCreators }] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('id, name, description, status, budget_paise, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, created_at, updated_at')
+      .select('id, name, description, status, budget_paise, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, created_at, updated_at, track, deliverable_mode, uniform_product_type, min_metric, min_creators, min_value_paise')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -52,7 +54,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .order('created_at', { ascending: true }),
     supabase
       .from('creators')
-      .select('id, full_name, handle, profile_photo_url, niches')
+      .select('id, full_name, handle, profile_photo_url, niches, vetting_status')
       .order('full_name'),
   ])
 
@@ -104,6 +106,53 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       productsMap[p.creator_id].push(p)
     }
   }
+
+  /* ── The Growth roster's own shape ────────────────────────────────────────
+     Flattened here rather than in the component: the products are already
+     loaded above for the placement editor, and a client component should not
+     be re-deriving which package a draft points at from a placements array. */
+  const isGrowth = ((campaign as Record<string, unknown>).track as string) === 'growth'
+  const uniformType = ((campaign as Record<string, unknown>).deliverable_mode as string) === 'uniform'
+    ? ((campaign as Record<string, unknown>).uniform_product_type as string | null)
+    : null
+
+  const growthDrafts: GrowthDraft[] = !isGrowth ? [] : allDrafts.map((d) => {
+    const placements = (typeof d.placements === 'string' ? JSON.parse(d.placements) : d.placements ?? []) as { product_id?: string }[]
+    const creator = d.creator as { full_name?: string; profile_photo_url?: string | null } | null
+    const all = productsMap[d.creator_id] ?? []
+    return {
+      id: d.id,
+      creator_id: d.creator_id,
+      creatorName: creator?.full_name ?? 'Unknown',
+      creatorPhoto: creator?.profile_photo_url ?? null,
+      productId: placements[0]?.product_id ?? null,
+      pricePaise: d.total_price_paise ?? 0,
+      /* In uniform mode the dropdown is not rendered, so only the one type is
+         worth sending to the browser. */
+      products: (uniformType ? all.filter((p) => p.product_type === uniformType) : all)
+        .map((p) => ({ id: p.id, product_type: p.product_type, platform: p.platform, handle: p.handle, price_paise: p.price_paise })),
+    }
+  })
+
+  /* Who may be added to THIS campaign. */
+  const requiredStatus = isGrowth ? 'growth' : 'deals_approved'
+  const uniformOfferers = uniformType
+    ? new Set(
+        ((await supabase
+          .from('creator_products')
+          .select('creator_id')
+          .eq('product_type', uniformType)
+          .eq('is_active', true)).data ?? []).map((r) => r.creator_id),
+      )
+    : null
+
+  const eligibleCreators = ((allCreators ?? []) as {
+    id: string; full_name: string; handle: string | null
+    profile_photo_url: string | null; niches: string[] | null; vetting_status?: string | null
+  }[])
+    .filter((c) => c.vetting_status === requiredStatus)
+    .filter((c) => !uniformOfferers || uniformOfferers.has(c.id))
+    .map(({ vetting_status: _ignored, ...rest }) => rest)
 
   // Index invoices
   const invoiceMap = new Map<string, { status: string; due_date: string | null; brand_pays_paise: number }>()
@@ -323,10 +372,32 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             <h2 className="sect-head" style={{ fontSize: 17 }}>Campaign roster</h2>
             <AddCreatorsModal
               campaignId={campaign.id}
-              creators={(allCreators ?? []) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }[]}
+              /* Narrowed to the campaign's own track. The server refuses a
+                 mismatch anyway, but a picker that offers creators who cannot
+                 be added is a picker that teaches the brand to expect errors.
+                 In uniform mode it narrows again, to creators who actually
+                 offer the chosen deliverable. */
+              creators={eligibleCreators}
               existingCreatorIds={existingDraftCreatorIds}
             />
           </div>
+          {isGrowth ? (
+            /* A Growth campaign is not a negotiation, so it does not get the
+               placement editor. One package per creator at the creator's own
+               price, and the only decision the brand makes is which. */
+            <GrowthRoster
+              campaignId={campaign.id}
+              drafts={growthDrafts}
+              minimum={{
+                metric: ((campaign as Record<string, unknown>).min_metric as 'creators' | 'value') ?? 'creators',
+                minCreators: (campaign as Record<string, unknown>).min_creators as number | null,
+                minValuePaise: (campaign as Record<string, unknown>).min_value_paise as number | null,
+              }}
+              feePercent={GROWTH_FEE_PERCENT}
+              uniformType={uniformType}
+              sentCount={campaignDeals.length}
+            />
+          ) : (
           <CampaignRoster
             drafts={allDrafts}
             productsMap={productsMap}
@@ -336,6 +407,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             briefPitch={(campaign as Record<string, unknown>).brief_pitch as string | null ?? null}
             briefGuidelines={(campaign as Record<string, unknown>).brief_guidelines as string | null ?? null}
           />
+          )}
         </div>
       </div>
 
