@@ -185,11 +185,17 @@ export async function updateCampaignDraft(
   const brandFeePercent = brandRow?.platform_fee_percent ?? 0
   const feeMode = (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
 
+  /* The draft's campaign, for its TRACK. Without it this function resolves the
+     brand's standard rate for a Growth draft — so the builder previewed 15%
+     on_top while the deal it becomes is 30% deducted. Same class of bug as the
+     one the comment below describes, and the reason that comment exists. */
   const { data: draftRow } = await supabase
     .from('campaign_drafts')
-    .select('creator_id')
+    .select('creator_id, campaign_id, campaigns(track)')
     .eq('id', draftId)
     .maybeSingle()
+
+  const draftTrack = ((draftRow as { campaigns?: { track?: string } | null } | null)?.campaigns?.track as Track) ?? 'deals'
 
   /* The SAME ladder the deal will be created with, not just the pair-rate rung.
      This used to read brand standard → pair rate, which skipped the storefront
@@ -200,6 +206,7 @@ export async function updateCampaignDraft(
      one number and the deal it becomes charging another. That is the exact
      mismatch the totals comment above this function exists to prevent. */
   let feePercent = brandFeePercent
+  let resolvedMode = feeMode
   if (draftRow?.creator_id) {
     const admin = createAdminClient()
     const { resolveDealFee } = await import('@/lib/deal-fee')
@@ -209,11 +216,16 @@ export async function updateCampaignDraft(
       draftRow.creator_id,
       brandFeePercent,
       feeMode,
+      draftTrack,
     )
     feePercent = resolved.feePercent
+    resolvedMode = resolved.feeMode
   }
 
-  const fee = calculateFee(totalPricePaise, feePercent, feeMode)
+  /* The RESOLVED mode, not the brand's. Growth forces deducted, and previewing
+     the brand's on_top here would quote a total with 30% added on top of a
+     package price the brand will in fact pay exactly. */
+  const fee = calculateFee(totalPricePaise, feePercent, resolvedMode)
 
   const { error } = await supabase
     .from('campaign_drafts')
@@ -221,7 +233,7 @@ export async function updateCampaignDraft(
       placements: placements as unknown as string,
       total_price_paise: totalPricePaise,
       fee_percent: feePercent,
-      fee_mode: feeMode,
+      fee_mode: resolvedMode,
       total_brand_paise: fee.brand_pays_paise,
       ...(note !== undefined ? { note } : {}),
     })

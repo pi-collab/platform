@@ -34,7 +34,7 @@ export function parseBudget(raw: string): { paise?: number; error?: string } {
 }
 
 export default function NewCampaignFields({
-  draft, onChange, error, busy, submitLabel = 'Create', onSubmit, onCancel, autoFocus = true,
+  draft, onChange, error, busy, submitLabel = 'Create', onSubmit, onCancel, autoFocus = true, extra,
 }: {
   draft: CampaignDraft
   onChange: (next: CampaignDraft) => void
@@ -44,6 +44,10 @@ export default function NewCampaignFields({
   onSubmit: () => void
   onCancel: () => void
   autoFocus?: boolean
+  /** Track and deliverable-mode controls, supplied by the caller. Here rather
+   *  than built in, because only the campaigns surfaces know whether the brand
+   *  may choose a track at all. */
+  extra?: React.ReactNode
 }) {
   const set = (patch: Partial<CampaignDraft>) => onChange({ ...draft, ...patch })
 
@@ -90,6 +94,8 @@ export default function NewCampaignFields({
           />
         </div>
       </div>
+
+      {extra}
 
       <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
         <button

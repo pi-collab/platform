@@ -5,6 +5,10 @@ import NewCampaignFields, { parseBudget } from '@/components/NewCampaignFields'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createCampaign } from './actions'
+import TrackTag from '@/components/track/TrackTag'
+import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilter'
+import { PRODUCT_TYPES } from '@/lib/product-types'
+import { TRACK_LABEL, TRACK_TONE, type Track } from '@/lib/track'
 
 interface Campaign {
   id: string
@@ -15,6 +19,7 @@ interface Campaign {
   totalDeals: number
   committedPaise: number
   paidPaise: number
+  track: Track
 }
 
 function formatINR(paise: number): string {
@@ -31,9 +36,18 @@ const STATUS_MAP: Record<string, { label: string; bg: string; fg: string }> = {
   archived:  { label: 'Archived',  bg: 'var(--sec-2)',    fg: 'var(--ink-faint)' },
 }
 
-export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }) {
+export default function CampaignsClient({ campaigns, canGrowth = false }: {
+  campaigns: Campaign[]
+  canGrowth?: boolean
+}) {
   const router = useRouter()
   const [search, setSearch] = useState('')
+  /* Defaults to All. A filter that starts narrowed is a mode wearing a
+     filter's clothes — the brand would wonder where their campaigns went. */
+  const [trackFilter, setTrackFilter] = useState<TrackFilterValue>('all')
+  const [formTrack, setFormTrack] = useState<Track>('deals')
+  const [formMode, setFormMode] = useState<'uniform' | 'per_creator'>('per_creator')
+  const [formUniformType, setFormUniformType] = useState<string>(PRODUCT_TYPES[0])
   const [createOpen, setCreateOpen] = useState(false)
   const [formName, setFormName] = useState('')
   const [formDesc, setFormDesc] = useState('')
@@ -42,7 +56,17 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
   const [error, setError] = useState<string | null>(null)
 
   const q = search.trim().toLowerCase()
-  const filtered = campaigns.filter((c) => !q || c.name.toLowerCase().includes(q))
+  const filtered = campaigns.filter((c) =>
+    (!q || c.name.toLowerCase().includes(q)) &&
+    (trackFilter === 'all' || c.track === trackFilter),
+  )
+  /* Counted over the SEARCH result, not the whole list, so the chips describe
+     what they would actually show rather than the roster in the abstract. */
+  const searched = campaigns.filter((c) => !q || c.name.toLowerCase().includes(q))
+  const trackCounts = {
+    deals: searched.filter((c) => c.track === 'deals').length,
+    growth: searched.filter((c) => c.track === 'growth').length,
+  }
   const activeCount = campaigns.filter((c) => c.status === 'active').length
 
   async function handleCreate() {
@@ -52,7 +76,11 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
     const budget = parseBudget(formBudget)
     if (budget.error) { setError(budget.error); setCreating(false); return }
     const budgetPaise = budget.paise
-    const res = await createCampaign(formName, formDesc || undefined, budgetPaise)
+    const res = await createCampaign(formName, formDesc || undefined, budgetPaise, {
+      track: formTrack,
+      deliverableMode: formMode,
+      uniformProductType: formMode === 'uniform' ? formUniformType : undefined,
+    })
     if (res.error) { setCreating(false); setError(res.error); return }
     setCreateOpen(false)
     setFormName('')
@@ -138,11 +166,84 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
             busy={creating}
             onSubmit={handleCreate}
             onCancel={() => { setCreateOpen(false); setError(null) }}
+            extra={
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16 }}>
+                {/* Only when there is a choice to make. A single-option choice
+                    is a decision presented as one. */}
+                {canGrowth && (
+                  <div>
+                    <div className="t-meta" style={{ marginBottom: 7 }}>Track</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {(['deals', 'growth'] as Track[]).map((t) => (
+                        <button
+                          key={t} type="button" onClick={() => setFormTrack(t)}
+                          style={{
+                            padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+                            background: formTrack === t ? TRACK_TONE[t].bg : 'var(--card)',
+                            border: `1px solid ${formTrack === t ? TRACK_TONE[t].border : 'var(--hairline)'}`,
+                            color: formTrack === t ? TRACK_TONE[t].fg : 'var(--ink-soft)',
+                            fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                          }}
+                        >
+                          {TRACK_LABEL[t]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="t-meta" style={{ marginBottom: 7 }}>Deliverables</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {([
+                      ['uniform', 'Same for everyone'],
+                      ['per_creator', 'Different per creator'],
+                    ] as const).map(([m, label]) => (
+                      <button
+                        key={m} type="button" onClick={() => setFormMode(m)}
+                        style={{
+                          padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+                          background: formMode === m ? 'var(--ink)' : 'var(--card)',
+                          border: `1px solid ${formMode === m ? 'var(--ink)' : 'var(--hairline)'}`,
+                          color: formMode === m ? '#fff' : 'var(--ink-soft)',
+                          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {formMode === 'uniform' && (
+                    <>
+                      <select
+                        className="ffield"
+                        value={formUniformType}
+                        onChange={(e) => setFormUniformType(e.target.value)}
+                        style={{ marginTop: 10 }}
+                      >
+                        {PRODUCT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 6 }}>
+                        Each creator&rsquo;s own price for this applies — the deliverable is the same, the rates are theirs.
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            }
           />
         </div>
       )}
 
       {/* ===== CAMPAIGN LIST ===== */}
+      {/* Shown only once there is something to filter. Chips over a list of one
+          are furniture. */}
+      {trackCounts.growth > 0 && (
+        <div style={{ marginTop: 22 }}>
+          <TrackFilter value={trackFilter} onChange={setTrackFilter} counts={trackCounts} />
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 22 }}>
         {filtered.map((c) => {
           const st = STATUS_MAP[c.status] ?? STATUS_MAP.active
@@ -174,6 +275,9 @@ export default function CampaignsClient({ campaigns }: { campaigns: Campaign[] }
                   }}>
                     {st.label}
                   </span>
+                  {/* Beside the status, because "what kind of campaign" and
+                      "where is it up to" are read together. */}
+                  <TrackTag track={c.track} size="sm" />
                 </div>
                 {c.description && (
                   <p style={{

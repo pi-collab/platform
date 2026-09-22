@@ -7,6 +7,9 @@ import NewCampaignFields, { EMPTY_CAMPAIGN_DRAFT, parseBudget, type CampaignDraf
 import Toast from '@/components/Toast'
 import { useRouter } from 'next/navigation'
 import FilterDropdown from '@/components/FilterDropdown'
+import TrackTag from '@/components/track/TrackTag'
+import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilter'
+import { trackOfVettingStatus } from '@/lib/track'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
 import { NICHES } from '@/lib/niches'
@@ -163,6 +166,14 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
       .map(([label, n]) => ({ value: label, label, hint: String(n) }))
   }, [creators])
   const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
+  /* All by default. This chip is what a global Deals/Growth mode would have
+     been — a brand building a Growth campaign narrows here rather than
+     flipping the product into a state they can forget they are in. */
+  const [trackFilter, setTrackFilter] = useState<TrackFilterValue>('all')
+  const growthCount = useMemo(
+    () => creators.filter((c) => trackOfVettingStatus(c.vetting_status) === 'growth').length,
+    [creators],
+  )
   const [rateFilter, setRateFilter] = useState('any')
   const [sort, setSort] = useState('followers')
   const [savedView, setSavedView] = useState(false)
@@ -334,6 +345,11 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
       )
     }
 
+    // Track
+    if (trackFilter !== 'all') {
+      list = list.filter((c) => trackOfVettingStatus(c.vetting_status) === trackFilter)
+    }
+
     // Rate
     if (rateFilter !== 'any') {
       list = list.filter((c) => {
@@ -358,7 +374,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     })
 
     return list
-  }, [creators, search, nicheFilter, platformFilter, rateFilter, sort, savedView, saved, startingRates, aiActive, aiMode, aiById])
+  }, [creators, search, nicheFilter, platformFilter, rateFilter, trackFilter, sort, savedView, saved, startingRates, aiActive, aiMode, aiById])
 
   const pageList = filtered.slice(0, shown)
   const hasMore = shown < filtered.length
@@ -648,6 +664,19 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ytActive ? 'var(--ink)' : '#9EA096'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9.5 5 2.5-5 2.5z" /></svg>
                 </button>
               </div>
+
+              {/* Track first, because it is the coarsest cut and the one that
+                  changes what a price means. Rendered only when there is
+                  actually a mix — chips over a roster of one track are
+                  furniture, and they would appear before a single Growth
+                  creator existed. */}
+              {growthCount > 0 && (
+                <TrackFilter
+                  value={trackFilter}
+                  onChange={(v) => { setTrackFilter(v); setShown(PAGE_SIZE) }}
+                  counts={{ deals: creators.length - growthCount, growth: growthCount }}
+                />
+              )}
 
               {/* All three share the dashboard's dropdown, so one page stops
                   carrying two visual languages. Niche is multi-select, which a
@@ -1108,6 +1137,11 @@ function CreatorRow({ creator: c, verifiedFollowers, startingRate, isPicked, onT
             <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
             <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
+          {/* The tick says Guapd reviewed them; the tag says which track they
+              came out on. Both are true of a Growth creator, and without the
+              tag a brand cannot tell a ₹60,000 Deals creator from a ₹4,000
+              Growth one — which are billed differently. */}
+          <TrackTag track={trackOfVettingStatus(c.vetting_status)} size="sm" />
         </div>
         {aiMatch && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
@@ -1286,6 +1320,7 @@ function CreatorCard({ creator: c, isSaved, onToggleSave, storefrontSlug, verifi
               <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
               <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+            <TrackTag track={trackOfVettingStatus(c.vetting_status)} size="sm" />
           </div>
           {primary && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--ink-soft)', fontWeight: 600, marginTop: 3 }}>

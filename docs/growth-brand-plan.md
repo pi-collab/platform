@@ -274,7 +274,48 @@ A prop on the existing editor, not a second editor.
 
 ---
 
-## 7. Tags and filters
+## 7. Deliverable mode — uniform or per creator
+
+Chosen at campaign setup, stored on the campaign, and it changes what the
+roster looks like.
+
+**Mode A — "Same for everyone" (`uniform`).** The brand picks ONE deliverable
+type for the whole campaign. As creators are added, each creator's own price
+for that type applies automatically. The TYPE is uniform; the PRICE never is,
+because every creator sets their own. Only creators who offer that type can be
+added, and the add refuses by name rather than filtering them out silently — a
+creator a brand deliberately chose who then vanishes without explanation is
+worse than being told why.
+
+**Mode B — "Different per creator" (`per_creator`).** Each creator's package is
+chosen individually as they are added. A mixed campaign: some reels, some
+stories.
+
+Mode A is the fast common case and exists so a brand adding fifteen creators is
+not making fifteen identical choices. Mode B is for a campaign that genuinely
+varies.
+
+**The roster in Mode A:** one header line naming the deliverable and the
+running total, then a row per creator — photo, name, track tag, their own price
+for that deliverable, remove. No per-row picker, because there is nothing to
+pick.
+
+**The roster in Mode B:** the same rows, each with a package dropdown of that
+creator's active products and the price of whatever is selected. A row with
+nothing selected reads "Choose a package" and blocks the send.
+
+**Both:** a footer carrying subtotal, the 30% fee deducted, what each creator
+receives, what the brand pays — and the minimum as progress ("3 of 5 creators"),
+so the thing standing between the brand and sending is always on screen.
+
+**Switching mode after creators are added** is the awkward case. B → A requires
+every creator already added to offer the chosen type: warn, and name who would
+have to be removed. A → B is free — each creator already has a product
+selected, and the dropdowns simply become editable.
+
+---
+
+## 8. Tags and filters
 
 Tier is shown, never inferred from context, and never a global mode.
 
@@ -293,7 +334,7 @@ already doing work.
 
 ---
 
-## 8. New vs reused
+## 9. New vs reused
 
 **Reused unchanged:** `campaigns`, `campaign_drafts`, `deals` + lifecycle + audit
 trigger, `messages`, `deliverables`, `invoices`, `payments`, `creator_products`,
@@ -314,20 +355,44 @@ and roster UI.
 
 ---
 
-## 9. Sequence, and the creator-side blocker
+## 10. Sequence, and the creator-side blocker
 
 1. **Brand side** (this document) — buildable now, in full.
-2. **Creator-side routing** — DEFERRED, and it is a hard prerequisite for the
-   feature to *function*. `apps/web/app/creator/layout.tsx:116` redirects any
-   creator with `vetting_status = 'growth'` to `/creator/growth` and keeps them
-   there, so **a Growth creator cannot reach `/creator/packages` and cannot set
-   the prices a brand would be buying.** Brand-side can be built and tested
-   against ops-seeded packages; Growth does not work end-to-end until this opens.
-3. **End-to-end** — a real Growth campaign, brief → accept → deliver → paid.
+2. **Creator-side routing** — DEFERRED. `apps/web/app/creator/layout.tsx:128`
+   redirects any creator with `vetting_status = 'growth'` to `/creator/growth`
+   and holds them there, which seals off every creator surface. Two of them
+   matter, and they are not equally urgent:
+
+   - **`/creator/packages` — the BLOCKER.** A Growth creator sells packages at
+     prices they set. Until they can set them there is nothing to buy, so
+     Growth cannot work end to end. Brand-side can be built and tested against
+     ops-seeded packages, but this must open before a real creator is involved.
+   - **`/creator/settings` — a NUDGE, not a gate.** This is where Instagram is
+     connected. Verified data is a strong incentive rather than a requirement:
+     a Growth creator's handle is visible, so a brand can check their Instagram
+     themselves and book them anyway. Connecting should be RECOMMENDED to the
+     creator — verified numbers help them get picked — and a brand is never
+     blocked from booking an unconnected one.
+
+   Nothing in the Instagram path gates on vetting, confirmed: `/api/instagram/
+   connect` checks only the session, the nightly sync selects every connection
+   row, and `/browse` reads snapshots through the admin client. So Growth
+   creators need no Instagram-specific work — only the routing.
+
+3. **`/browse/[id]` verified data — a SHOULD.** The brand-facing creator detail
+   page never fetches the Instagram snapshot: it renders typed follower counts
+   with no verified marks, while the public `/c/[slug]` shows everything
+   verified. For a Deals creator the storefront covered that gap. A Growth
+   creator has NO storefront, so this page is the only place a brand evaluates
+   them in depth — and a connected creator's verified numbers would never be
+   seen there. Fix with `getPublicSnapshot` and the same snapshot-first ladder
+   `/c/[slug]` uses. Part of the Growth brand side, but not gating: booking
+   works either way.
+4. **End-to-end** — a real Growth campaign, brief → accept → deliver → paid.
 
 ---
 
-## 10. Traps
+## 11. Traps
 
 1. **`is_vetted` is load-bearing** in 5 RLS policies and ~23 files. Additive only.
 2. **The column GRANT allowlist** — a missing grant fails the entire query.
@@ -345,7 +410,7 @@ and roster UI.
 
 ---
 
-## 11. On build
+## 12. On build
 
 - Test cases into `docs/test-cases.md` **in the same commit**, including the RLS
   checks for `brand_entitlements`, `usage_events` and `platform_settings`, and an

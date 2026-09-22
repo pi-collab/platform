@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
 import { deriveDisplayStatus, dueLabel } from '@/lib/deal-status'
+import TrackTag from '@/components/track/TrackTag'
 
 // ── Types ──
 interface Deal {
@@ -21,6 +22,8 @@ interface Deal {
   status: string
   is_posted: boolean | null
   created_at: string
+  /** deals | growth. Snapshotted at send, never re-derived. */
+  track?: string | null
   creator: { id: string; full_name: string; profile_photo_url: string | null } | null
   invoiceStatus: string | null
   invoiceDueDate: string | null
@@ -526,8 +529,14 @@ function DealCard({ deal: d }: { deal: Deal }) {
       <div className="deal-card-body" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '26px 30px', gap: 24, minWidth: 0 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {/* Creator name — t-subhead */}
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {creatorName}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {creatorName}
+            </div>
+            {/* Only Growth is tagged here. Every other deal is a Deals deal, and
+                a tag on all of them would be a word repeated down the whole
+                list saying nothing. The filter chips above still offer both. */}
+            {d.track === 'growth' && <TrackTag track="growth" size="sm" />}
           </div>
 
           {/* Title + deliverable count — t-content */}

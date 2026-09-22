@@ -64,7 +64,7 @@ export default async function DealsListPage({
   // Build query -- RLS scopes to brand's own deals
   let query = supabase
     .from('deals')
-    .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, held_at, created_at, creators(id, full_name, profile_photo_url)', { count: 'exact' })
+    .select('id, deal_ref, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, held_at, created_at, track, creators(id, full_name, profile_photo_url)', { count: 'exact' })
 
   // Status filter (server-side)
   // Built from TAB_STATUSES, the same definition the counts use. They were

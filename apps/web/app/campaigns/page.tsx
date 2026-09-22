@@ -2,17 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
 import CampaignsClient from './CampaignsClient'
+import { hasEntitlement } from '@/lib/entitlements'
+import type { Track } from '@/lib/track'
 
 const PAID_STATUSES = new Set(['paid', 'complete'])
 
 export default async function CampaignsPage() {
-  await verifyBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
+
+  /* Whether to OFFER a Growth campaign. The server checks again in
+     createCampaign — this only decides whether the choice is shown, because
+     offering an option and then refusing it is worse than not offering it. */
+  const canGrowth = await hasEntitlement(brand.brandId, 'growth_campaigns')
 
   const [{ data: campaigns }, { data: deals }, { data: invoices }] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('id, name, description, status, created_at')
+      .select('id, name, description, status, created_at, track, min_metric, min_creators, min_value_paise')
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
@@ -53,11 +60,12 @@ export default async function CampaignsPage() {
       description: c.description || '',
       status: c.status as 'active' | 'completed' | 'archived',
       createdAt: c.created_at,
+      track: (c.track as Track) ?? 'deals',
       totalDeals: r.totalDeals,
       committedPaise: r.committedPaise,
       paidPaise: r.paidPaise,
     }
   })
 
-  return <CampaignsClient campaigns={all} />
+  return <CampaignsClient campaigns={all} canGrowth={canGrowth} />
 }

@@ -22,6 +22,8 @@ export interface BrowseCreator {
   social_accounts: SocialAccount[]
   worked_with: string[]
   rate_card: Record<string, number> | null
+  /** deals_approved | growth. Carried so each row can show its track. */
+  vetting_status?: string | null
 }
 
 export default async function BrowsePage() {
@@ -34,14 +36,20 @@ export default async function BrowsePage() {
   // columns. This page is server-rendered behind verifyBrand(), so the service
   // role is the right client for it.
   //
-  // The .eq('is_vetted', true) is load bearing: RLS was enforcing it, and the
-  // service role bypasses RLS. Without it this page would list unvetted
-  // creators to every brand.
+  // The .eq('is_bookable', true) is load bearing: RLS was enforcing it, and the
+  // service role bypasses RLS. Without it this page would list pending and
+  // rejected creators to every brand.
+  //
+  // is_bookable, NOT is_vetted: true for deals_approved AND growth. This one
+  // line is what puts Growth creators in front of brands. vetting_status comes
+  // with it so each row can carry its track tag — a brand looking at a mixed
+  // list has to be able to tell a ₹60,000 Deals creator from a ₹4,000 Growth
+  // one, and the two are billed differently.
   const admin = createAdminClient()
   const { data: creators, error } = await admin
     .from('creators')
-    .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, rate_card')
-    .eq('is_vetted', true)
+    .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, rate_card, vetting_status')
+    .eq('is_bookable', true)
     .order('full_name', { ascending: true })
 
   if (error) {
