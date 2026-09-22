@@ -83,6 +83,19 @@ why. If nothing much did, say that plainly.
 
 ## Carousel concepts
 1-2 concepts. Each as:
+
+RULE FOR EVERY CONCEPT — one idea, tied to the bigger picture:
+Build each carousel around a SINGLE claim and follow one arc — a specific
+number, what it means, what is happening in the industry around it, why that
+matters to the reader, and what they should do. Do NOT stack four statistics
+into one carousel; that is a spreadsheet someone scrolls past, where one
+number set against an industry shift is an argument someone forwards.
+
+This is marketing for a business. The purpose is reach, relatability and
+signups from brands and creators, so the hook slide has to stop a scroll and
+the last slide has to give a reason to act. Catchy never means unsourced:
+every figure keeps its source, its date and its sample size.
+
 ### Concept: <working title>
 - **Hook (slide 1):** the line that stops the scroll, under 12 words
 - **Angle:** one sentence on the argument the carousel makes
