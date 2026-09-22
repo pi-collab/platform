@@ -11,7 +11,10 @@ import { QUESTIONS } from '@/lib/creator-onboarding-labels'
 import { shouldAskOnboarding } from '@/lib/creator-onboarding'
 import { verifyCreator } from '@/lib/creator-auth'
 import InstagramReconnectBanner from '@/components/creator/InstagramReconnectBanner'
+import CreatorTaskCard from '@/components/creator/CreatorTaskCard'
 import { getConnection } from '@/lib/instagram-sync'
+import { hasCreatorEmail } from '@/lib/creator-contact'
+import { creatorTasks } from '@/lib/creator-tasks'
 import { compactNumber } from '@/lib/compact-number'
 import Link from 'next/link'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
@@ -76,6 +79,12 @@ export default async function CreatorDashboardPage({
     .eq('id', creatorId)
     .maybeSingle()
   const hasPayout = Boolean((payoutRow as { upi_id?: string | null } | null)?.upi_id)
+
+  // Whether we hold any address we could email. Asked here for the same reason
+  // as the connection above: one query, shared by all four renderings below.
+  // The same resolution the sender uses, so the task stops being outstanding
+  // the moment an email would start working.
+  const hasEmail = await hasCreatorEmail(creatorId)
 
 
   const supabase = createClient()
@@ -247,21 +256,27 @@ export default async function CreatorDashboardPage({
   // so a creator on a desktop with no deals never saw the desktop dashboard.
   const mobileEmpty = showMobileEmpty ? (
     <div className="creator-empty-mobile">
-      <CreatorDashboardEmpty
-        firstName={firstName}
-        handleLine={emptyHandleLine}
-        // Done when a social account carries a handle — the row exists from
-        // signup, so its mere presence would mark the step complete before the
-        // creator had done anything.
-        hasSocials={Array.isArray(creatorRow?.social_accounts)
-          && (creatorRow!.social_accounts as { handle?: string }[])
-              .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
-        hasPackages={(packageCount ?? 0) > 0}
-        hasShopfront={Boolean(storefront)}
-        hasPayout={hasPayout}
-      />
+      <CreatorDashboardEmpty firstName={firstName} handleLine={emptyHandleLine} />
     </div>
   ) : null
+
+  /* What we are asking this creator to do. One list, read by one card, shown to
+     every creator rather than only to those with no deals — see CreatorTaskCard.
+     hasInstagram is a LIVE connection: the step it replaced counted a typed
+     handle while promising analytics only a connection can give. */
+  const tasks = creatorTasks({
+    /* Done once a connection EXISTS, including a broken one. A connection that
+       has since expired or been switched to a Personal account is a fault, not
+       an unstarted task, and InstagramReconnectBanner above already says so in
+       the words that fault needs. Counting it here too would ask twice for the
+       same thing — which is the duplication this card exists to end. */
+    hasInstagram: igConnection.status !== 'not_connected',
+    hasEmail,
+    hasPackages: (packageCount ?? 0) > 0,
+    hasShopfront: Boolean(storefront),
+    hasShopfrontPublished: Boolean(storefront?.is_published),
+    hasPayout,
+  })
 
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
@@ -494,19 +509,16 @@ export default async function CreatorDashboardPage({
         banner threaded through each is a banner that goes missing from one.
         Renders nothing when the connection is healthy. */}
     <InstagramReconnectBanner status={igConnection.status} />
+    {/* Same reasoning, same place: one card above every branch. "Get started"
+        while setup is outstanding, "Recommended" once it is done, nothing at
+        all when there is nothing to ask for. */}
+    <CreatorTaskCard tasks={tasks} />
     {mobileEmpty}
     {/* Desktop has its own drawn empty state, so it gets that rather than the
         populated dashboard rendering with nothing in it. */}
     {showMobileEmpty && (
       <div className="creator-empty-desktop">
-        <CreatorDashboardEmptyDesktop
-          hasSocials={Array.isArray(creatorRow?.social_accounts)
-            && (creatorRow!.social_accounts as { handle?: string }[])
-                .some((a) => typeof a?.handle === 'string' && a.handle.trim().length > 0)}
-          hasPackages={(packageCount ?? 0) > 0}
-          hasShopfront={Boolean(storefront)}
-          hasPayout={hasPayout}
-        />
+        <CreatorDashboardEmptyDesktop />
       </div>
     )}
     {!showMobileEmpty && (

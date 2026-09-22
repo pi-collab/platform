@@ -2,6 +2,7 @@ import 'server-only'
 import { followerRangeOf } from '@/lib/follower-range'
 import { checkDomainHealth } from '@/lib/domain-health'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { resolveCreatorEmail } from '@/lib/creator-contact'
 import { sendAccountEmail, isEmailConfigured } from '@/lib/email'
 import { renderAccountEmail } from '@/lib/email-template'
 import { BRAND_NAME } from '@/lib/content'
@@ -167,24 +168,14 @@ export async function notifyBrandRejected(brandId: string, reason: string | null
   }
 }
 
-/** Resolve a creator's best contact address, or null. */
-async function creatorEmail(creatorId: string): Promise<{ email: string | null; name: string }> {
-  const admin = createAdminClient()
-  const { data: creator } = await admin
-    .from('creators').select('full_name, contact_email, user_id').eq('id', creatorId).maybeSingle()
-
-  if (!creator) return { email: null, name: 'there' }
-
-  // contact_email is the address the creator gave us for exactly this; the
-  // users row only has one if they signed up with Google.
-  let email = creator.contact_email ?? null
-  if (!email && creator.user_id) {
-    const { data: u } = await admin.from('users').select('email').eq('id', creator.user_id).maybeSingle()
-    email = u?.email ?? null
-  }
-
-  return { email, name: creator.full_name?.split(' ')[0] || 'there' }
-}
+/**
+ * Resolve a creator's best contact address, or null.
+ *
+ * Lives in lib/creator-contact because the dashboard's "add your email" prompt
+ * has to ask the identical question — it shows exactly when this returns null,
+ * so the two must never be able to disagree.
+ */
+const creatorEmail = resolveCreatorEmail
 
 /**
  * Welcome a creator into Guapd Growth.

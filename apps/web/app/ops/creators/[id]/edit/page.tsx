@@ -11,7 +11,7 @@ export default async function EditCreatorPage({ params }: { params: { id: string
   const admin = createAdminClient()
   const { data: creator, error } = await admin
     .from('creators')
-    .select('id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, vetting_status')
+    .select('id, full_name, phone, contact_email, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card, is_vetted, is_rejected, vetting_status')
     .eq('id', params.id)
     .maybeSingle()
 

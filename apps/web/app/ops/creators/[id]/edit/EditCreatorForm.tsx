@@ -16,6 +16,7 @@ interface Creator {
   id: string
   full_name: string
   phone: string | null
+  contact_email: string | null
   niches: string[]
   handle: string | null
   bio: string | null
@@ -48,6 +49,7 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
 
   const [fullName, setFullName] = useState(creator.full_name)
   const [phone, setPhone] = useState(creator.phone ?? '')
+  const [contactEmail, setContactEmail] = useState(creator.contact_email ?? '')
   const [niches, setNiches] = useState<string[]>(creator.niches ?? [])
   const [handle, setHandle] = useState(creator.handle ?? '')
   const [bio, setBio] = useState(creator.bio ?? '')
@@ -83,6 +85,10 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
       id: creator.id,
       full_name: fullName,
       phone: phone || undefined,
+      // Sent as '' rather than undefined when cleared, so ops can REMOVE a
+      // wrong address. undefined would read as "leave it alone" and a bad
+      // address would be unclearable from here.
+      contact_email: contactEmail,
       niches: niches.length > 0 ? niches : undefined,
       handle: handle || undefined,
       bio: bio || undefined,
@@ -111,6 +117,10 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
 
       <Field label="Phone" hint="Include country code, e.g. +919876543210">
         <input style={inputStyle} value={phone} onChange={(e) => setPhone(e.target.value)} />
+      </Field>
+
+      <Field label="Contact email" hint="Where we email them. Creators who signed up by phone have none until someone asks.">
+        <input style={inputStyle} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
       </Field>
 
       <Field label="Niches">

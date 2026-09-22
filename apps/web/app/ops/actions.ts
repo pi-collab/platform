@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyBrandApproved, notifyBrandRejected, notifyCreatorApproved, notifyCreatorRejected, notifyCreatorGrowth } from '@/lib/account-emails'
 import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
 import { logOpsEvent } from '@/lib/ops-audit'
+import { isPlausibleEmail } from '@/lib/email'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
 import { calculateFee } from '@/lib/fee'
@@ -282,6 +283,9 @@ interface EditCreatorInput {
   id: string
   full_name: string
   phone?: string
+  /** Where WE can email them. Ops holds this for stub creators, who have no
+   *  login and so never see the dashboard prompt that asks everyone else. */
+  contact_email?: string
   niches?: string[]
   handle?: string
   bio?: string
@@ -296,8 +300,16 @@ export async function editCreator(input: EditCreatorInput) {
   const user = await verifyOpsAccess()
   if (!user) return { error: 'Not authorized' }
 
-  const { id, full_name, phone, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card } = input
+  const { id, full_name, phone, contact_email, niches, handle, bio, profile_photo_url, social_accounts, worked_with, portfolio_links, rate_card } = input
   if (!full_name.trim()) return { error: 'Full name is required' }
+
+  // Validated against the SENDER's gate, not a looser one of our own: an
+  // address ops types in is one we will actually mail, and a bounce off a
+  // typo costs the sending domain's reputation.
+  const email = contact_email?.trim().toLowerCase() || null
+  if (email && !isPlausibleEmail(email)) {
+    return { error: 'Contact email does not look like an email address' }
+  }
 
   if (profile_photo_url && !isValidUrl(profile_photo_url)) {
     return { error: 'Profile photo URL must start with http:// or https://' }
@@ -343,6 +355,7 @@ export async function editCreator(input: EditCreatorInput) {
     .update({
       full_name: full_name.trim(),
       phone: phone?.trim() || null,
+      contact_email: email,
       niches: niches ?? [],
       handle: handle?.trim() || null,
       bio: bio?.trim() || null,
@@ -358,6 +371,10 @@ export async function editCreator(input: EditCreatorInput) {
 
   await logOpsEvent(user, 'creator.edited', 'creators', id, {
     full_name: full_name.trim(),
+    // Whether ops set or cleared a contact address, not the address itself:
+    // ops_events is read by people who do not need a creator's inbox, and the
+    // question this answers is "did we start being able to reach them".
+    has_contact_email: email !== null,
   })
 
   revalidatePath('/ops/creators')

@@ -10,36 +10,21 @@ import Link from 'next/link'
  *
  * Identity arrives as props. The export hardcodes a name and handle, and a
  * dashboard showing someone else's name is worse than showing none.
+ *
+ * ── The "Get started" checklist used to live here ───────────────────────────
+ * It was hand-written in this file and again in CreatorDashboardEmptyDesktop,
+ * and it rendered ONLY while a creator had no deals — so it disappeared at the
+ * first deal, taking every unfinished task with it. It is now
+ * CreatorTaskCard, rendered once at the dashboard's page root for every
+ * creator, from the shared list in lib/creator-tasks.
  */
 export default function CreatorDashboardEmpty({
   firstName,
   handleLine,
-  hasSocials = false,
-  hasPackages = false,
-  hasShopfront = false,
-  hasPayout = false,
 }: {
   firstName: string
   handleLine: string
-  /** A social account with a handle exists. Marks the first step done. */
-  hasSocials?: boolean
-  /** At least one active package. A prerequisite for receiving deals — a brand
-      cannot build an offer against a creator with no priced deliverables — so
-      it sits above the shopfront, which is optional by comparison. */
-  hasPackages?: boolean
-  /** A creator_storefronts row exists. */
-  hasShopfront?: boolean
-  /** A UPI ID is saved. Only the fact crosses the boundary, never the value. */
-  hasPayout?: boolean
 }) {
-  // The four things a creator controls. "Receive your first brief" is not on
-  // this list: it is what happens WHEN these are done, not a task, and counting
-  // it would leave the bar stuck at 80% for reasons outside their hands.
-  const steps = [hasSocials, hasPackages, hasShopfront, hasPayout]
-  const doneCount = steps.filter(Boolean).length
-  const pct = Math.round((doneCount / steps.length) * 100)
-  const allDone = doneCount === steps.length
-
   return (
 <div className="creator-app__inner">
 
@@ -61,61 +46,6 @@ export default function CreatorDashboardEmpty({
         
         
 
-        {/* Hidden once every step is done. A checklist with nothing left on it
-            is just a row of ticks taking the top of the screen. */}
-        {!allDone && (
-        <div className="sr">
-          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '19px', margin: '0', color: 'var(--ink)', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '10px'}}><span>Get started<div className="secline"></div></span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '700', color: 'var(--wg-500)'}}>{pct}% complete</span></h2>
-          {/* Full width under the heading. The count says how many; the bar is
-              what shows how close — a number alone makes someone do the
-              arithmetic against a list they have to re-read. */}
-          <div style={{marginTop: '12px', height: '6px', borderRadius: '20px', background: 'rgba(24,28,36,.08)', overflow: 'hidden'}} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Setup progress">
-            <div style={{height: '100%', width: `${pct}%`, borderRadius: '20px', background: 'var(--neon-deep)', transition: 'width .35s cubic-bezier(.4,0,.2,1)'}} />
-          </div>
-          <div className="mcard" style={{marginTop: '16px', padding: '6px 18px'}}>
-            <Link href="/creator/settings" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Connect your socials</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>So brands can see your reach</div>
-              </div>
-              <StepPill done={hasSocials} />
-            </Link>
-            <Link href="/creator/packages?from=dashboard" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"></path><circle cx="7" cy="7" r="1.4"></circle></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set your packages</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>What you offer and what it costs</div>
-              </div>
-              <StepPill done={hasPackages} />
-            </Link>
-            <Link href="/creator/storefront" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Set up your shopfront</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Give brands a page to buy from</div>
-              </div>
-              <StepPill done={hasShopfront} />
-            </Link>
-            <Link href="/creator/payments?from=dashboard" style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'linear-gradient(135deg,#E9F7F0,#E7F1FC)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Add a payment method</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>So we can pay you when a deal completes</div>
-              </div>
-              <StepPill done={hasPayout} />
-            </Link>
-            <div style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0', borderTop: '1px solid var(--hair)'}}>
-              <span style={{width: '36px', height: '36px', borderRadius: '11px', background: 'rgba(24,28,36,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0'}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span>
-              <div style={{flex: '1', minWidth: '0'}}>
-                <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '13.5px', color: 'var(--ink)'}}>Receive your first brief</div>
-                <div style={{fontSize: '11.5px', color: 'var(--wg-500)', marginTop: '2px'}}>Brands send briefs straight to you</div>
-              </div>
-              <span style={{flexShrink: '0', fontFamily: 'var(--font-ui)', fontSize: '11px', fontWeight: '600', color: 'var(--wg-500)'}}>Up next</span>
-            </div>
-          </div>
-        </div>
-        )}
 
         
         
@@ -188,45 +118,5 @@ export default function CreatorDashboardEmpty({
 
       </div>
     </div>
-  )
-}
-
-/**
- * A checklist step's status pill.
- *
- * "Set up" in guap green while there is work to do; a done state once there
- * isn't. Green because this is the action we want taken — the checklist is the
- * first thing on the screen, and an ink-coloured button there reads as one more
- * row rather than the thing to press.
- */
-function StepPill({ done }: { done: boolean }) {
-  if (done) {
-    return (
-      <span
-        style={{
-          flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4,
-          borderRadius: 999, padding: '8px 12px',
-          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 11.5,
-          color: '#166534', background: 'rgba(22,101,52,.08)',
-        }}
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-        Done
-      </span>
-    )
-  }
-  return (
-    <span
-      style={{
-        flexShrink: 0, width: 64, textAlign: 'center', borderRadius: 999,
-        padding: '8px 0', fontFamily: 'var(--font-ui)', fontWeight: 700,
-        fontSize: 11.5, color: 'var(--lime-950)', background: 'var(--neon)',
-      }}
-    >
-      Set up
-    </span>
   )
 }

@@ -5124,3 +5124,75 @@ and its cases travel together.
 **Ops**
 - [ ] `/ops/insights` → "What brands search for" lists the last 50 queries as typed, with brand, result count, tokens or "from cache", and date
 - [ ] It says how many of those called the model
+
+---
+
+## 52. Creator task card — "Get started", then "Recommended"
+
+**What changed:** the "Get started" checklist was hand-written twice (mobile and
+desktop empty states) and rendered only while `dealsEverCount === 0`, so it
+disappeared at a creator's first deal with every unfinished task still on it.
+It is now one `CreatorTaskCard` at the dashboard page root, fed by
+`lib/creator-tasks.ts`, shown to every creator. The separate email prompt is
+gone. `InstagramReconnectBanner` stays, and keeps a different job: the card
+asks for setup, the banner reports a fault.
+
+**Where it renders**
+- [ ] The card appears above the dashboard on all four renderings: mobile empty, desktop empty, mobile populated, desktop populated
+- [ ] A creator WITH deals sees it — this is the case the old checklist never reached
+- [ ] Neither empty-state design carries its own checklist any more (no duplicate list on screen for a zero-deal creator)
+- [ ] With every setup task done and no recommendation outstanding, the card renders nothing at all
+
+**Mode 1 — "Get started"**
+- [ ] While any setup task is outstanding, the pill reads **Get started**, with "N of 5 done" and a progress bar
+- [ ] All five setup rows show, done ones included — the bar is only legible beside what it measures
+- [ ] A done row shows the green **Done** pill, never "Set up"
+- [ ] Progress counts setup tasks only. A recommendation never moves the bar
+- [ ] "Receive your first brief" is NOT a row: it is not something the creator can do
+
+**Mode 2 — "Recommended"**
+- [ ] With all five setup tasks done, the pill reads **Recommended**, the progress bar and the count disappear
+- [ ] Only outstanding recommendations list — a recommendation already taken is not shown
+- [ ] With a shopfront saved but `is_published` false, "Publish your shopfront" appears here
+- [ ] Publishing it empties the card, and the card disappears
+- [ ] A creator with NO shopfront does not see "Publish your shopfront" — that task is not applicable, not outstanding
+
+**The Instagram row (this is the fix)**
+- [ ] "Connect Instagram" is done only on a real connection — `status !== 'not_connected'`
+- [ ] A creator with typed social handles and no connection sees it as NOT done. The old row counted the typed handle while promising analytics a string cannot give
+- [ ] A creator whose connection is `expired`, `needs_reconnect` or `personal_account` sees the row as DONE, and the reconnect banner above carries the fault. Verify the two do not both ask: exactly one message about Instagram on screen in that state
+- [ ] The personal-account case still gets its own instruction (switch back to Business/Creator, then reconnect) — that wording lives in the banner and must not be lost
+- [ ] The row links to `/creator/settings`, which carries a logged-out creator through login — not to `/api/instagram/connect`, which dead-ends without a session
+
+**The email row (answered in place)**
+- [ ] A creator with no usable address sees "Add your email" with an inline field, not a link
+- [ ] Saving a valid address shows "Saved", then the row flips to Done on refresh
+- [ ] An invalid entry ("notanemail", "a@b") is refused inline, the field borders red, nothing is written
+- [ ] An `@auth.guapd.internal` address typed by hand is refused — the one wrong address a creator could copy off an older screen
+- [ ] Enter submits; the Save button submits; an empty field does nothing
+- [ ] The address writes to `creators.contact_email`, NOT `users.email` — confirm the creator can still log in with their phone afterwards
+- [ ] It then appears in Settings → Contact email and in `/ops/creators/[id]`
+- [ ] An `events` row `creator.contact_email_added` is written with `source: 'dashboard_prompt'`
+- [ ] A creator who signed up with Google (real `users.email`, no `contact_email`) sees this row already Done
+- [ ] A creator whose only address is the minted `creator_<phone>@auth.guapd.internal` sees it NOT done — a minted address is not an address
+- [ ] A stored-but-malformed `contact_email` reads as not done; it goes through the sender's own `isPlausibleEmail` gate
+
+**Collapse**
+- [ ] The header toggles the card open and shut; the chevron rotates
+- [ ] The state persists across reloads (localStorage `guapd.creatorTasks.collapsed`)
+- [ ] In a private window or with site data blocked, the card renders open and the toggle still works for that page view — every storage access is guarded
+- [ ] No hydration warning: the card renders open on the server and folds after mount if it was collapsed
+
+**Ops can record an email for stub creators**
+- [ ] `/ops/creators/[id]/edit` has a Contact email field, pre-filled. Stub creators (no `user_id`) never see the dashboard, so this is the only way to hold an address for them
+- [ ] Clearing it to blank REMOVES the address; a wrong one must be removable
+- [ ] An invalid address is refused with "Contact email does not look like an email address"
+- [ ] Editing a creator without touching the email leaves it intact — the form round-trips it
+- [ ] `ops_events` records `creator.edited` with `has_contact_email` — the boolean, never the address
+
+**One list, one meaning of done (`lib/creator-tasks.ts`)**
+- [ ] `account-emails.ts` and the email row agree in every case above: both call `resolveCreatorEmail`, so the task stops being outstanding exactly when a send would start working
+- [ ] Adding a future recommendation is one entry in `creatorTasks()` and needs no new component
+
+**Environment**
+- [ ] None of this needs `EMAIL_ENABLED`: capturing an address is independent of whether sending is switched on
