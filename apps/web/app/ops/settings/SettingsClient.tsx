@@ -91,7 +91,7 @@ export default function SettingsClient({
       <section style={card}>
         <h2 style={h2}>Growth campaign access</h2>
         <p style={sub}>
-          Which brands can create a Growth campaign. Granted here today, by subscription later — the
+          Which brands can create a Growth campaign. Granted here today, by subscription later. The
           app asks the same question either way and never looks at which.
         </p>
 

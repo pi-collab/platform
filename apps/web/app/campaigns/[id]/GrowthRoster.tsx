@@ -117,10 +117,11 @@ export default function GrowthRoster({
   /* Three separate reasons a send is refused, named separately. "Cannot send"
      with one message covering all of them is how a brand ends up re-reading a
      roster looking for what is wrong. */
+  /* drafts.length === 0 is not listed: the send row is not rendered at all in
+     that state, so a reason for it would never be read. */
   const blocked =
-    drafts.length === 0 ? 'Add creators to this campaign'
-    : unpriced > 0 ? `${unpriced} creator${unpriced === 1 ? ' has' : 's have'} no package chosen`
-    : !progress.met ? `Below the minimum — ${progress.label} ${progress.hint}`
+    unpriced > 0 ? `${unpriced} creator${unpriced === 1 ? ' has' : 's have'} no package chosen`
+    : !progress.met ? `Below the minimum. ${progress.label} ${progress.hint}`
     : null
 
   function choose(draftId: string, productId: string) {
@@ -157,17 +158,20 @@ export default function GrowthRoster({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* ── The minimum, first ───────────────────────────────────────────── */}
+      {/* ── The minimum, first ───────────────────────────────────────────
+          Not shown on an empty roster: a bar at zero measures nothing, and it
+          would be the second thing on screen telling a brand to add creators. */}
+      {drafts.length > 0 && (
       <div style={{
         borderRadius: 14, padding: '14px 18px',
         background: progress.met ? 'rgba(31,157,107,.07)' : 'var(--sec-2, #F7F4FB)',
         border: `1px solid ${progress.met ? 'rgba(31,157,107,.24)' : 'var(--hairline, #EAEAE3)'}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: progress.met ? '#1F8A5B' : 'var(--ink)' }}>
+          <span className="t-meta" style={{ color: progress.met ? '#1F8A5B' : 'var(--ink-2, #565C68)' }}>
             {progress.met ? 'Minimum met' : 'Campaign minimum'}
           </span>
-          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 700, color: progress.met ? '#1F8A5B' : 'var(--ink-soft, #565C68)' }}>
+          <span className="t-data" style={{ fontSize: 14, color: progress.met ? '#1F8A5B' : 'var(--ink)' }}>
             {progress.label} {progress.hint}
           </span>
         </div>
@@ -185,6 +189,7 @@ export default function GrowthRoster({
           </div>
         )}
       </div>
+      )}
 
       {/* ── The roster ───────────────────────────────────────────────────── */}
       <div>
@@ -231,7 +236,7 @@ export default function GrowthRoster({
                 <option value="">Choose a package</option>
                 {d.products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.product_type} — {inr(p.price_paise)}
+                    {p.product_type} &middot; {inr(p.price_paise)}
                   </option>
                 ))}
               </select>
@@ -242,7 +247,7 @@ export default function GrowthRoster({
               fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14,
               color: d.pricePaise > 0 ? 'var(--ink)' : 'var(--ink-faint, #8A9099)',
             }}>
-              {d.pricePaise > 0 ? inr(d.pricePaise) : '—'}
+              {d.pricePaise > 0 ? inr(d.pricePaise) : '\u2013'}
             </span>
 
             <button
@@ -261,7 +266,9 @@ export default function GrowthRoster({
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint, #8A9099)', padding: '18px 0' }}>
             {sentCount > 0
               ? 'Everyone on this campaign has been sent their offer.'
-              : 'No creators yet. Add Growth creators to build the campaign.'}
+              : uniformType
+                ? `No creators yet. Add Growth creators who offer ${uniformType}.`
+                : 'No creators yet. Add Growth creators to build the campaign.'}
           </p>
         )}
       </div>
@@ -279,7 +286,7 @@ export default function GrowthRoster({
 
           <Line label="Creator rates, as they set them" value={inr(creatorsTotal)} muted />
           <Line
-            label={`Guapd fee${sharedPercent != null ? ` (${sharedPercent}%)` : ''} — from the creator's side`}
+            label={`Guapd fee${sharedPercent != null ? ` (${sharedPercent}%)` : ''}, from the creator's side`}
             value={'\u2212' + inr(feeTotal)}
             muted
           />
@@ -287,8 +294,8 @@ export default function GrowthRoster({
 
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint, #8A9099)', margin: '4px 0 0', lineHeight: 1.5 }}>
             Nothing is added on top. You pay each creator the rate they set, and our fee comes out of
-            their side &mdash; so your total is the rates above and no more. Every creator is invoiced
-            and paid separately.
+            their side, so your total is the rates above and no more. Every creator is invoiced and
+            paid separately.
           </p>
         </div>
       )}
@@ -297,7 +304,12 @@ export default function GrowthRoster({
         <p role="alert" style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#9B3030', margin: 0 }}>{error}</p>
       )}
 
-      {/* ── Send ─────────────────────────────────────────────────────────── */}
+      {/* ── Send ───────────────────────────────────────────────────────────
+          Hidden entirely while the roster is empty. A disabled "Send to 0
+          creators" next to "Add creators to this campaign" under "No creators
+          yet" is the same sentence three times, and the Add creators button is
+          already the brightest thing on the panel. */}
+      {drafts.length > 0 && (
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <button
           type="button"
@@ -318,6 +330,7 @@ export default function GrowthRoster({
           <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint, #8A9099)' }}>{blocked}</span>
         )}
       </div>
+      )}
     </div>
   )
 }

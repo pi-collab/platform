@@ -232,7 +232,7 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
                         {PRODUCT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
                       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 6 }}>
-                        Each creator&rsquo;s own price for this applies — the deliverable is the same, the rates are theirs.
+                        Each creator&rsquo;s own price for this applies. The deliverable is the same, the rates are theirs.
                       </div>
                     </>
                   )}

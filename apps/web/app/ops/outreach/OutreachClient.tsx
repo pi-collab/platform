@@ -84,7 +84,7 @@ export default function OutreachClient({
       </Field>
 
       <Field
-        label={`Recipients — ${parsed.valid.length} valid${parsed.invalid.length ? `, ${parsed.invalid.length} unusable` : ''}${parsed.duplicates ? `, ${parsed.duplicates} duplicate` : ''}`}
+        label={`Recipients · ${parsed.valid.length} valid${parsed.invalid.length ? `, ${parsed.invalid.length} unusable` : ''}${parsed.duplicates ? `, ${parsed.duplicates} duplicate` : ''}`}
         hint='One per line: "email, Name". Leave the name off for a bare "Hey,".'
       >
         <textarea
@@ -122,14 +122,14 @@ export default function OutreachClient({
 
       {results && results.some((r) => !r.ok) && (
         <div style={{ fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', color: '#9B3030' }}>
-          {results.filter((r) => !r.ok).map((r) => <div key={r.email}>{r.email} — {r.detail}</div>)}
+          {results.filter((r) => !r.ok).map((r) => <div key={r.email}>{r.email}: {r.detail}</div>)}
         </div>
       )}
 
       {preview && (
         <div>
           <div style={{ fontSize: '0.75rem', color: '#666', marginBottom: 6 }}>
-            Preview — rendered with the first recipient&rsquo;s name. A browser is not a mail client; send
+            Preview, rendered with the first recipient&rsquo;s name. A browser is not a mail client; send
             the test before you send the list.
           </div>
           {/* Sandboxed: this is our own HTML, but a preview pane that can run
