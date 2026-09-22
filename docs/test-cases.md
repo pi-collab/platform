@@ -5137,8 +5137,11 @@ It is now one `CreatorTaskCard` at the dashboard page root, fed by
 gone. `InstagramReconnectBanner` stays, and keeps a different job: the card
 asks for setup, the banner reports a fault.
 
-**Where it renders**
-- [ ] The card appears above the dashboard on all four renderings: mobile empty, desktop empty, mobile populated, desktop populated
+**Where it renders — the order matters**
+- [ ] On all four renderings the order reads: name → reconnect banner → overview → task card → "Do first"
+- [ ] Neither the banner nor the card sits above the creator's own name on any rendering
+- [ ] Mobile populated, mobile empty, desktop populated and desktop empty each place BOTH slots — a rendering that forgets one shows nothing there, so check all four
+- [ ] On an empty dashboard there is no "Do first", and the card is the last thing in that run
 - [ ] A creator WITH deals sees it — this is the case the old checklist never reached
 - [ ] Neither empty-state design carries its own checklist any more (no duplicate list on screen for a zero-deal creator)
 - [ ] With every setup task done and no recommendation outstanding, the card renders nothing at all
@@ -5196,3 +5199,29 @@ asks for setup, the banner reports a fault.
 
 **Environment**
 - [ ] None of this needs `EMAIL_ENABLED`: capturing an address is independent of whether sending is switched on
+
+
+---
+
+## 53. Instagram disclosure modal, and the reconnect banner redrawn
+
+**The modal (`components/InstagramConnectButton.tsx`)**
+- [ ] On a phone, "Continue to Instagram" and "Cancel" are VISIBLE without scrolling, and are not covered by the creator tab bar. This was the bug: the dialog was `z-index: 80` and the tab bar is `10000`, so the actions rendered underneath it
+- [ ] The dialog sits ABOVE the tab bar while open (it is a modal; the bar being covered is correct)
+- [ ] The body scrolls INSIDE the dialog; the header and the action row stay put while it does
+- [ ] The page behind does not scroll with it
+- [ ] On a notched phone the action row clears the home indicator (`env(safe-area-inset-bottom)`)
+- [ ] With the address bar shown and hidden, the dialog still fits — it is sized in `dvh`, not `vh`
+- [ ] On desktop it is unchanged in character: centred, max 520px wide, and no taller than 700px
+- [ ] Tapping the backdrop closes it; Escape closes it; Cancel closes it and nothing is sent to Instagram
+- [ ] Continue still hands off to `/api/instagram/connect` (settings) or saves first then redirects (storefront)
+- [ ] The disclosure still names all three data groups (profile, audience, recent reels) and all three limits (read-only, not a login, no DMs) — it was shortened, not thinned. Meta app review reads this screen
+
+**The reconnect banner**
+- [ ] It is a card in the page's own language — white plate, amber icon chip, hairline border, pill button — not a tinted strip with a dot
+- [ ] Amber is confined to the chip and the border; there is no full-width wash
+- [ ] `expired` and `needs_reconnect` read "Instagram needs reconnecting" with a **Reconnect** pill
+- [ ] `personal_account` reads "Instagram is set to a Personal account", explains that Instagram only shares audience data from Business and Creator accounts, and the pill says **How to fix it**. Reconnecting a Personal account produces a Personal account again, so this wording must not be flattened into the generic one
+- [ ] Both land on `/creator/settings`, which carries a logged-out creator through login
+- [ ] A healthy connection renders nothing at all
+- [ ] It sits between the name and the overview on every rendering, and reads as one plate with the task card below it

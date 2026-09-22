@@ -50,7 +50,11 @@ export default function InstagramConnectButton({
         <div
           onClick={() => setOpen(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 80,
+            position: 'fixed', inset: 0,
+            /* ABOVE .creator-tabbar, which is 10000. At 80 the dialog rendered
+               UNDER the fixed bottom navigation on mobile, which is what hid
+               "Continue to Instagram" behind it. */
+            zIndex: 10010,
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
             background: 'rgba(18,21,28,.45)', backdropFilter: 'blur(2px)',
           }}
@@ -62,13 +66,21 @@ export default function InstagramConnectButton({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
             style={{
-              width: 'min(520px, 100%)', maxHeight: '88vh', overflowY: 'auto',
-              borderRadius: 22, background: 'var(--card, #fff)', padding: '26px 24px',
+              width: 'min(520px, 100%)',
+              /* dvh, not vh: on mobile Safari vh is the address-bar-less
+                 height, so 88vh is taller than what you can actually see. */
+              maxHeight: 'min(86dvh, 700px)',
+              /* Three bands — head, scrolling body, pinned actions. The whole
+                 dialog used to be one scroll area with the buttons at the
+                 bottom of it, so on a phone the disclosure pushed the only way
+                 forward off the screen. */
+              display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              borderRadius: 22, background: 'var(--card, #fff)',
               boxShadow: '0 40px 90px -30px rgba(18,21,28,.5)',
               fontFamily: 'var(--font-ui)', color: 'var(--ink)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, flex: 'none', padding: '22px 22px 14px' }}>
               <span style={{
                 width: 36, height: 36, borderRadius: 12, flex: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -90,44 +102,53 @@ export default function InstagramConnectButton({
               </div>
             </div>
 
-            <Heading>What Guapd will read</Heading>
+            <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 22px 18px' }}>
+            <Heading first>What Guapd will read</Heading>
             <ul style={listStyle}>
               <Line>
-                <b>Your profile</b> &mdash; username, account type, follower count and profile picture,
-                so your shopfront shows figures a brand can see came from Instagram.
+                <b>Your profile</b> &mdash; username, account type, followers and profile picture, so
+                your shopfront shows figures a brand can see came from Instagram.
               </Line>
               <Line>
-                <b>Your audience insights</b> &mdash; reach, interactions, and the age, gender and city
-                split of your followers, shown as percentages. Never anyone&rsquo;s name or contact details.
+                <b>Your audience</b> &mdash; reach, interactions, and the age, gender and city split of
+                your followers, as percentages. Never anyone&rsquo;s name or contact details.
               </Line>
               <Line>
                 <b>Your recent reels</b> &mdash; thumbnail, caption, link, views and likes, so you can
-                feature real work. We keep a copy of the thumbnails you feature, because Instagram&rsquo;s
-                own image links expire after a few hours and your page would go blank.
+                feature real work. We keep a copy of the ones you feature, because Instagram&rsquo;s own
+                image links expire within hours.
               </Line>
             </ul>
 
             <Heading>What it cannot do</Heading>
             <ul style={listStyle}>
               <Line muted>
-                It is <b>read-only</b>. Guapd cannot post, comment, reply or change anything on your
-                account, and we never ask Instagram for permission to.
+                <b>Read-only.</b> We cannot post, comment, reply or change anything, and never ask
+                Instagram for permission to.
               </Line>
-              <Line muted>It is not a login. You keep signing in to Guapd with your phone number.</Line>
-              <Line muted>We cannot read your DMs or anything belonging to other people.</Line>
+              <Line muted>Not a login &mdash; you keep signing in to Guapd with your phone.</Line>
+              <Line muted>No DMs, and nothing belonging to other people.</Line>
             </ul>
 
             <p style={{ margin: '16px 0 0', fontSize: 12.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>
-              You can disconnect at any time from Guapd, or from Instagram under{' '}
-              <em>Settings &rarr; Website permissions &rarr; Apps and websites</em>. Either one deletes
-              the access token and everything we stored from Instagram; the figures you typed yourself
-              are not affected.{' '}
+              Disconnect whenever you like, here or in Instagram under{' '}
+              <em>Settings &rarr; Apps and websites</em>. Either deletes the token and everything we
+              stored from Instagram; figures you typed yourself are untouched.{' '}
               <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }}>
                 Read our privacy policy
               </a>.
             </p>
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+            </div>
+
+            {/* Pinned, and padded for the home indicator. Whatever the
+                disclosure's length, the way forward is on screen. */}
+            <div style={{
+              flex: 'none', display: 'flex', gap: 10, flexWrap: 'wrap',
+              padding: '14px 22px calc(14px + env(safe-area-inset-bottom))',
+              borderTop: '1px solid var(--hairline, #EAEAE3)',
+              background: 'var(--card, #fff)',
+            }}>
               <button
                 type="button"
                 onClick={proceed}
@@ -167,11 +188,11 @@ const listStyle: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 8,
 }
 
-function Heading({ children }: { children: React.ReactNode }) {
+function Heading({ children, first = false }: { children: React.ReactNode; first?: boolean }) {
   return (
     <div style={{
       fontSize: 10.5, fontWeight: 700, letterSpacing: '.12em',
-      textTransform: 'uppercase', color: 'var(--ink-soft)', marginTop: 20,
+      textTransform: 'uppercase', color: 'var(--ink-soft)', marginTop: first ? 0 : 20,
     }}>
       {children}
     </div>

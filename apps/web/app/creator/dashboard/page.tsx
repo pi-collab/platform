@@ -254,12 +254,6 @@ export default async function CreatorDashboardPage({
   // Rendered alongside the real dashboard rather than instead of it. This is a
   // transcription of a MOBILE export; returning it early fired at every width,
   // so a creator on a desktop with no deals never saw the desktop dashboard.
-  const mobileEmpty = showMobileEmpty ? (
-    <div className="creator-empty-mobile">
-      <CreatorDashboardEmpty firstName={firstName} handleLine={emptyHandleLine} />
-    </div>
-  ) : null
-
   /* What we are asking this creator to do. One list, read by one card, shown to
      every creator rather than only to those with no deals — see CreatorTaskCard.
      hasInstagram is a LIVE connection: the step it replaced counted a typed
@@ -277,6 +271,23 @@ export default async function CreatorDashboardPage({
     hasShopfrontPublished: Boolean(storefront?.is_published),
     hasPayout,
   })
+
+  /* Built ONCE and handed to each rendering as a slot. See the note at the
+     return: what varies between the four is position, never content. */
+  const alertNode = <InstagramReconnectBanner status={igConnection.status} />
+  const tasksNode = <CreatorTaskCard tasks={tasks} />
+
+  const mobileEmpty = showMobileEmpty ? (
+    <div className="creator-empty-mobile">
+      <CreatorDashboardEmpty
+        firstName={firstName}
+        handleLine={emptyHandleLine}
+        alert={alertNode}
+        tasks={tasksNode}
+      />
+    </div>
+  ) : null
+
 
   // ── Attention items
   const hasAttention = offersAwaiting.length > 0 || deliverablesToDo.length > 0 || invoicesToIssue.length > 0
@@ -503,22 +514,19 @@ export default async function CreatorDashboardPage({
     ? Math.round(((totalEarned - prevEarned) / prevEarned) * 100)
     : null
 
+  /* The slots above are placed by each rendering: the banner between the
+     greeting and the overview, the card after the overview and before "Do
+     first". They used to render above all four branches, which was safe but put
+     a fault notice and a task list above the creator's own name. Both render
+     null when there is nothing to show, so a slot simply collapses. */
   return (
     <>
-    {/* Above every branch on purpose: the dashboard has four renderings and a
-        banner threaded through each is a banner that goes missing from one.
-        Renders nothing when the connection is healthy. */}
-    <InstagramReconnectBanner status={igConnection.status} />
-    {/* Same reasoning, same place: one card above every branch. "Get started"
-        while setup is outstanding, "Recommended" once it is done, nothing at
-        all when there is nothing to ask for. */}
-    <CreatorTaskCard tasks={tasks} />
     {mobileEmpty}
     {/* Desktop has its own drawn empty state, so it gets that rather than the
         populated dashboard rendering with nothing in it. */}
     {showMobileEmpty && (
       <div className="creator-empty-desktop">
-        <CreatorDashboardEmptyDesktop />
+        <CreatorDashboardEmptyDesktop alert={alertNode} tasks={tasksNode} />
       </div>
     )}
     {!showMobileEmpty && (
@@ -548,6 +556,8 @@ export default async function CreatorDashboardPage({
           completionPct: track.completionPct,
         }}
         unreadNotifications={unreadNotifs}
+        alert={alertNode}
+        tasks={tasksNode}
       />
     )}
     <div
@@ -618,6 +628,9 @@ export default async function CreatorDashboardPage({
             )}
           </div>
 
+          {/* After the name, before the overview. */}
+          <div style={{ position: 'relative', zIndex: 2, marginTop: 24 }}>{alertNode}</div>
+
           {/* KPI Grid */}
           <div className="kpigrid" style={{ position: 'relative', zIndex: 2, marginTop: 24, borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden' }}>
             <KpiCell label="Total earned" value={fmt(totalEarned)} sub={`${completedDeals.length + paidInvoices.length} deals`} large />
@@ -626,6 +639,9 @@ export default async function CreatorDashboardPage({
             <KpiCell label="Completed" value={String(completedDeals.length)} sub={completedDeals.length > 0 ? '100% paid out' : 'No deals yet'} border />
           </div>
         </section>
+
+        {/* After the overview, before "Do first". */}
+        <div style={{ marginTop: 'clamp(28px, 3.2vw, 42px)' }}>{tasksNode}</div>
 
         {/* ── TICKER ──────────────────────────────────── */}
         <section style={{ position: 'relative', marginTop: 'clamp(28px, 3.2vw, 42px)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '12px 0', overflow: 'hidden', background: '#F7F7F4' }}>

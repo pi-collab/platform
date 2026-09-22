@@ -87,7 +87,7 @@ export default function CreatorDashboardMobile({
   firstName, handleLine, followersLabel, shopfrontSlug, period,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
   paidCount, actions, motion, monthly, earnings, brands, reach, completedEver, track,
-  changePct, unreadNotifications = 0,
+  changePct, unreadNotifications = 0, alert, tasks,
 }: {
   firstName: string
   handleLine: string
@@ -115,6 +115,10 @@ export default function CreatorDashboardMobile({
    *  meaningless, and this is the most quotable number on the screen. */
   changePct: number | null
   unreadNotifications?: number
+  /** The fault banner, when something is wrong. Built by the route. */
+  alert?: React.ReactNode
+  /** "Get started" / "Recommended". Built by the route. */
+  tasks?: React.ReactNode
 }) {
   const router = useRouter()
 
@@ -158,6 +162,9 @@ export default function CreatorDashboardMobile({
       </div>
 
       <div className="cdash-m__stack">
+        {/* After the name, before the overview: a fault is about the account,
+            so it reads next to who the account belongs to. */}
+        {alert}
         {/* ── Overview ── */}
         <section className="cdash-m__card" style={{ padding: 22 }}>
           <div className="cdash-m__cardhead">
@@ -203,6 +210,10 @@ export default function CreatorDashboardMobile({
             </div>
           </div>
         </section>
+
+        {/* After the overview, before "Do first": what we are asking for sits
+            with the other things asking for attention, not above the greeting. */}
+        {tasks}
 
         {/* ── Do first ── */}
         {actions.length > 0 && (

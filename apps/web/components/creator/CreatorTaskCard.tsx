@@ -15,6 +15,12 @@ import { taskHeading, taskProgress, type CreatorTask } from '@/lib/creator-tasks
  * only spoke when a connection BROKE, and an email prompt. They disagreed, and
  * two of them were invisible to most creators.
  *
+ * ── Placed, not floated ─────────────────────────────────────────────────────
+ * Built once in the dashboard route and passed to each rendering as a slot, so
+ * it can sit after the overview and before "Do first" — where a creator reads
+ * it as the next thing to do, rather than as a notice stacked above their own
+ * name. It carries no outer padding: every layout it lands in has its own.
+ *
  * ── Why it renders for everyone, not just the empty state ───────────────────
  * The checklist lived inside the empty-state designs, which render only while
  * `dealsEverCount === 0`. So it vanished at a creator's FIRST deal — taking
@@ -58,9 +64,7 @@ export default function CreatorTaskCard({ tasks }: { tasks: CreatorTask[] }) {
   }
 
   return (
-    <div style={{ padding: '12px clamp(18px, 4vw, 44px) 0' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
-        <section
+    <section
           style={{
             borderRadius: 16,
             background: 'var(--card, #fff)',
@@ -120,9 +124,7 @@ export default function CreatorTaskCard({ tasks }: { tasks: CreatorTask[] }) {
               </div>
             </>
           )}
-        </section>
-      </div>
-    </div>
+    </section>
   )
 }
 

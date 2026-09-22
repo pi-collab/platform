@@ -21,9 +21,15 @@ import Link from 'next/link'
 export default function CreatorDashboardEmpty({
   firstName,
   handleLine,
+  alert,
+  tasks,
 }: {
   firstName: string
   handleLine: string
+  /** The fault banner, when something is wrong. Built by the route. */
+  alert?: React.ReactNode
+  /** "Get started" / "Recommended". Built by the route. */
+  tasks?: React.ReactNode
 }) {
   return (
 <div className="creator-app__inner">
@@ -43,14 +49,8 @@ export default function CreatorDashboardEmpty({
 
       <div style={{padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: '36px'}}>
 
-        
-        
-
-
-        
-        
-
-        
+        {/* After the name, before the overview. */}
+        {alert}
 
         <div className="sr mcard" style={{padding: '22px'}}>
           <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', borderBottom: '1px solid var(--hair)'}}>
@@ -83,6 +83,10 @@ export default function CreatorDashboardEmpty({
             </div>
           </div>
         </div>
+
+        {/* After the overview. There is no "Do first" on an empty dashboard,
+            so this is the first thing asking anything of them. */}
+        {tasks}
 
         <div className="sr">
           <div style={{display: 'flex', alignItems: 'baseline', justifyContent: 'space-between'}}>

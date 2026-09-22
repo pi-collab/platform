@@ -23,7 +23,12 @@ import './dashboard-desktop.css'
  * Schibsted Grotesk and Instrument Serif, and shipping them again would refetch
  * the same faces from a second source.
  */
-export default function CreatorDashboardEmptyDesktop() {
+export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
+  /** The fault banner, when something is wrong. Built by the route. */
+  alert?: React.ReactNode
+  /** "Get started" / "Recommended". Built by the route. */
+  tasks?: React.ReactNode
+}) {
   return (
     <div className="cdash-desk">
       <div style={{minHeight: '100vh', position: 'relative', overflowX: 'hidden', fontFamily: 'var(--font-ui)', color: 'var(--ink)', background: '#F5F7FA'}}>
@@ -48,6 +53,8 @@ export default function CreatorDashboardEmptyDesktop() {
               <div style={{position: 'relative', zIndex: '2', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '22px'}}>
                 <a href="/creator/storefront" className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12" /><path d="M9 21v-6h6v6" /></svg>Set up your shopfront</a>
               </div>
+              {/* After the name, before the overview. */}
+              {alert && <div style={{position: 'relative', zIndex: 2, marginTop: '24px'}}>{alert}</div>}
               <div className="kpigrid" style={{position: 'relative', zIndex: '2', marginTop: '24px', borderRadius: '16px', background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '0'}}>
                 <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column'}}>
                   <div className="t-meta" style={{color: 'var(--meta)'}}>Total earned</div>
@@ -71,6 +78,9 @@ export default function CreatorDashboardEmptyDesktop() {
                 </div>
               </div>
             </section>
+
+            {/* After the overview. */}
+            {tasks && <div style={{marginTop: 'clamp(28px,3.2vw,42px)'}}>{tasks}</div>}
 
 
 
