@@ -5217,6 +5217,14 @@ asks for setup, the banner reports a fault.
 - [ ] Continue still hands off to `/api/instagram/connect` (settings) or saves first then redirects (storefront)
 - [ ] The disclosure still names all three data groups (profile, audience, recent reels) and all three limits (read-only, not a login, no DMs) — it was shortened, not thinned. Meta app review reads this screen
 
+**The profile's Connected accounts row (mobile)**
+- [ ] A broken connection reads exactly "Needs reconnecting" — no trailing clause, and nothing truncated. It used to render "Needs reconnecting · number…" mid-word on a phone
+- [ ] A Personal account reads exactly "Personal account"
+- [ ] The status text is amber (`#A9761D`) in both fault states, matching the dashboard banner — the dot is no longer the only thing carrying the state
+- [ ] "Connected as @handle" and the not-connected prompt stay in ink; only a fault is coloured
+- [ ] The action word (Reconnect / Fix / Manage / Connect) stays in ink on every state
+- [ ] The row still opens `/creator/settings?tab=connected`
+
 **The reconnect banner**
 - [ ] It is a card in the page's own language — white plate, amber icon chip, hairline border, pill button — not a tinted strip with a dot
 - [ ] Amber is confined to the chip and the border; there is no full-width wash

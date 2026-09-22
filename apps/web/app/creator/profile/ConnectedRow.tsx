@@ -17,17 +17,34 @@ import type { IgConnectionView } from '@/lib/instagram-sync'
 export default function ConnectedRow({ connection }: { connection: IgConnectionView }) {
   const s = connection.status
 
+  /* ── The fault states say ONE thing ───────────────────────────────────────
+     They used to carry the consequence too — "Needs reconnecting · numbers are
+     stale", "Personal account · switch to Creator" — on a row that also holds
+     an icon, a label, an action and a chevron. On a phone there was never
+     width for it: the line truncated mid-word to "Needs reconnecting ·
+     number…", which reads as a sentence that broke rather than a status.
+
+     The state is the status; the instruction belongs to the action beside it
+     and to the settings screen it opens. */
   const state = s === 'connected'
     ? { label: `Connected as @${connection.username ?? ''}`, tone: 'ok' as const, action: 'Manage' }
     : s === 'personal_account'
-      ? { label: 'Personal account · switch to Creator', tone: 'warn' as const, action: 'Fix' }
+      ? { label: 'Personal account', tone: 'warn' as const, action: 'Fix' }
       : s === 'expired' || s === 'needs_reconnect'
-        ? { label: 'Needs reconnecting · numbers are stale', tone: 'warn' as const, action: 'Reconnect' }
+        ? { label: 'Needs reconnecting', tone: 'warn' as const, action: 'Reconnect' }
         : { label: 'Show verified numbers on your shopfront', tone: 'off' as const, action: 'Connect' }
 
   const dot = state.tone === 'ok' ? 'var(--neon-deep, #C9EB3C)'
     : state.tone === 'warn' ? '#D89A2E'
       : 'var(--wg-400, #878D99)'
+
+  /* Only a fault is coloured. The dot alone carried the state, which is a lot
+     to ask of six pixels next to text in the same ink as every other row on
+     the screen. Amber rather than red, and the same amber as the dashboard's
+     reconnect banner: a connection that needs attention is not an error, and
+     two different colours for one state across two screens is worse than
+     either. */
+  const textColor = state.tone === 'warn' ? '#A9761D' : 'var(--ink)'
 
   return (
     <Link
@@ -54,7 +71,7 @@ export default function ConnectedRow({ connection }: { connection: IgConnectionV
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
           <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', flex: 'none', background: dot }} />
           <span style={{
-            fontSize: 13.5, fontWeight: 600, color: 'var(--ink)',
+            fontSize: 13.5, fontWeight: 600, color: textColor,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {state.label}
@@ -62,6 +79,9 @@ export default function ConnectedRow({ connection }: { connection: IgConnectionV
         </span>
       </span>
 
+      {/* Left in ink. It is the same control on every row of this screen, and
+          colouring it would make the action compete with the status for the
+          alarm rather than answer it. */}
       <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', flex: 'none' }}>{state.action}</span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }} aria-hidden="true">
         <path d="m9 18 6-6-6-6" />
