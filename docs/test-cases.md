@@ -5351,9 +5351,10 @@ lives, and audits every run.
 **The Growth roster (`GrowthRoster.tsx`)**
 - [ ] A Growth campaign renders the Growth roster, NOT `DraftPlacementEditor` — no price field, no collab/boosting controls, no counter
 - [ ] A Deals campaign is unchanged and still gets the placement editor
-- [ ] MIXED mode: each creator's packages are laid out as CHIPS showing type and price, not hidden in a dropdown. Choosing one sets the row's price from the PRODUCT, not the client
-- [ ] Clicking the already-chosen chip CLEARS it, so a wrong pick is recoverable
-- [ ] A creator with more than four packages falls back to a select (chips would wrap taller than the row)
+- [ ] MIXED mode: each creator gets a styled SELECT listing their own active products with prices. Choosing one sets the row's price from the PRODUCT, not the client
+- [ ] The select carries the app's radius, hairline, type and its own chevron — not the platform's default control
+- [ ] Unchosen it reads "Choose a package" in faint; chosen it reads the type and price in ink
+- [ ] Choosing the blank option again CLEARS the package, so a wrong pick is recoverable
 - [ ] A creator with NO active packages reads "No packages listed yet" and cannot be priced — this is the state every Growth creator is in until the creator-side routing opens
 - [ ] An unchosen row shows a faint dash for price and is counted in the send-blocked reason; it is not reddened, because a row the brand has not reached yet is not an error
 - [ ] UNIFORM mode: no dropdown. The deliverable is named once at the top, each creator's own price fills in automatically when added
@@ -5363,6 +5364,8 @@ lives, and audits every run.
 
 **Send gating**
 - [ ] The send button is disabled with a reason NAMED, and the three reasons are distinct: no creators / N have no package / below the minimum
+- [ ] The minimum counts creators ON THE ROSTER, not creators with a package chosen. Adding 2 creators against a minimum of 2 reads "2 of 2", even before any package is picked — it read "0 of 2" and that is wrong by any reading
+- [ ] Unpriced creators still block the send, separately, with their own reason
 - [ ] Below minimum: the button is disabled and the bar reads e.g. "3 of 5 creators"
 - [ ] On reaching the minimum the panel turns green, reads "Minimum met", and the button enables
 - [ ] Value-metric campaigns show "₹X of ₹Y campaign value" instead, and gate on the total
@@ -5417,3 +5420,7 @@ lives, and audits every run.
 **Deals roster empty state**
 - [ ] The dashed lime circle contains the creators glyph. It shipped empty in the campaign redesign (7326c5b), and an 84px flex-centred frame with nothing in it reads as a spinner that never resolves
 - [ ] The glyph is quiet (ink-faint), so "Add creators" stays the loudest thing on the panel
+
+**Campaigns list while creating**
+- [ ] Opening the create panel HIDES the campaign list, the track filter and the empty state beneath it. Naming a new campaign is one task, and the previous campaigns are what the brand just navigated away from
+- [ ] Cancelling or finishing brings the list back unchanged, with the filter still on All

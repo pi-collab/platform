@@ -2404,9 +2404,27 @@
 .typecard .arrow { transition: transform .18s ease; }
 .typecard:hover:not(:disabled) .arrow { transform: translateX(3px); }
 
-/* ── Growth roster package chips ────────────────────────────────────────────
-   The unselected state has to invite a press without shouting: these sit in a
-   list where the only loud thing should be Send. */
-.pkgchip { transition: border-color .14s ease, background .14s ease, transform .1s ease; }
-.pkgchip:hover:not(:disabled) { border-color: rgba(24,28,36,.38); }
-.pkgchip:active:not(:disabled) { transform: scale(.98); }
+/* ── Growth roster package select ───────────────────────────────────────────
+   A real <select>, because it is the right control on a phone and with a
+   keyboard. appearance:none is only there so the platform stops drawing its
+   own chevron over ours. */
+.pkgselect { position: relative; display: inline-flex; align-items: center; }
+.pkgselect select {
+  appearance: none; -webkit-appearance: none;
+  min-width: 210px; padding: 9px 34px 9px 12px;
+  border-radius: 10px; border: 1px solid rgba(24,28,36,.16);
+  background: #fff; color: var(--ink, #181C24);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: border-color .14s ease, box-shadow .14s ease;
+}
+.pkgselect select[data-empty] { color: var(--ink-faint, #8A9099); font-weight: 500; }
+.pkgselect select:hover:not(:disabled) { border-color: rgba(24,28,36,.34); }
+.pkgselect select:focus-visible {
+  outline: none; border-color: var(--neon-deep, #D2F04A);
+  box-shadow: 0 0 0 3px rgba(232,255,102,.35);
+}
+.pkgselect select:disabled { cursor: wait; opacity: .6; }
+.pkgselect svg {
+  position: absolute; right: 12px; pointer-events: none;
+  color: var(--ink-faint, #8A9099);
+}

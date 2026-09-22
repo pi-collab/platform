@@ -105,14 +105,18 @@ export default function GrowthRoster({
         pct: need > 0 ? Math.min(100, Math.round((creatorsTotal / need) * 100)) : 100,
       }
     }
+    /* Counts everyone ON the roster, not just those with a package chosen.
+       "0 of 2 creators" after adding two creators is wrong by any reading —
+       the brand added them, they are there. Whether each has been priced is a
+       separate condition, and it blocks the send on its own below. */
     const need = minimum.minCreators ?? 0
     return {
-      met: priced.length >= need,
-      label: `${priced.length} of ${need}`,
+      met: drafts.length >= need,
+      label: `${drafts.length} of ${need}`,
       hint: need === 1 ? 'creator' : 'creators',
       pct: need > 0 ? Math.min(100, Math.round((priced.length / need) * 100)) : 100,
     }
-  }, [minimum, priced.length, creatorsTotal])
+  }, [minimum, drafts.length, creatorsTotal])
 
   /* Three separate reasons a send is refused, named separately. "Cannot send"
      with one message covering all of them is how a brand ends up re-reading a
@@ -157,7 +161,7 @@ export default function GrowthRoster({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 18 }}>
       {/* ── The minimum, first ───────────────────────────────────────────
           Not shown on an empty roster: a bar at zero measures nothing, and it
           would be the second thing on screen telling a brand to add creators. */}
@@ -216,15 +220,7 @@ export default function GrowthRoster({
               )}
             </span>
 
-            {/* ── Uniform: nothing to choose. Mixed: their packages. ──────
-                Laid out rather than hidden in a <select>. A creator has one to
-                three packages and the PRICE is most of the decision, so a
-                dropdown makes the brand open something to find out what their
-                options cost, then close it again to compare the next creator.
-                Side by side, a roster of ten can be read down a column.
-
-                Falls back to a select past four, where chips would wrap into a
-                block taller than the row. */}
+            {/* ── Uniform: nothing to choose. Mixed: their packages. ────── */}
             {uniformType ? (
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft, #565C68)' }}>
                 {uniformType}
@@ -233,59 +229,29 @@ export default function GrowthRoster({
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#9B3030' }}>
                 No packages listed yet
               </span>
-            ) : d.products.length > 4 ? (
-              <select
-                value={d.productId ?? ''}
-                disabled={pending}
-                onChange={(e) => choose(d.id, e.target.value)}
-                aria-label={`Package for ${d.creatorName}`}
-                style={{
-                  minWidth: 210, padding: '8px 10px', borderRadius: 9, fontSize: 13,
-                  border: `1px solid ${d.productId ? 'rgba(24,28,36,.18)' : 'rgba(210,84,90,.55)'}`,
-                  background: '#fff', color: 'var(--ink)',
-                }}
-              >
-                <option value="">Choose a package</option>
-                {d.products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.product_type} &middot; {inr(p.price_paise)}
-                  </option>
-                ))}
-              </select>
             ) : (
-              <span role="radiogroup" aria-label={`Package for ${d.creatorName}`}
-                    style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
-                {d.products.map((p) => {
-                  const on = d.productId === p.id
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      disabled={pending}
-                      /* Clicking the chosen one clears it, so a brand who picked
-                         the wrong package is not stuck with a control that only
-                         ever moves forward. */
-                      onClick={() => choose(d.id, on ? '' : p.id)}
-                      className="pkgchip"
-                      style={{
-                        display: 'inline-flex', alignItems: 'baseline', gap: 6,
-                        padding: '7px 12px', borderRadius: 10, cursor: pending ? 'wait' : 'pointer',
-                        background: on ? 'var(--ink, #181C24)' : '#fff',
-                        border: `1px solid ${on ? 'var(--ink, #181C24)' : 'rgba(24,28,36,.16)'}`,
-                        color: on ? '#fff' : 'var(--ink-soft, #565C68)',
-                        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {p.product_type}
-                      <span style={{ fontSize: 11.5, fontWeight: 700, opacity: on ? 0.85 : 0.65 }}>
-                        {inr(p.price_paise)}
-                      </span>
-                    </button>
-                  )
-                })}
+              /* A select, styled rather than left native. The chevron is ours
+                 and the field carries the app's radius, hairline and type;
+                 appearance:none is what stops the platform drawing its own. */
+              <span className="pkgselect">
+                <select
+                  value={d.productId ?? ''}
+                  disabled={pending}
+                  onChange={(e) => choose(d.id, e.target.value)}
+                  aria-label={`Package for ${d.creatorName}`}
+                  data-empty={d.productId ? undefined : 'true'}
+                >
+                  <option value="">Choose a package</option>
+                  {d.products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.product_type} &middot; {inr(p.price_paise)}
+                    </option>
+                  ))}
+                </select>
+                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
               </span>
             )}
 

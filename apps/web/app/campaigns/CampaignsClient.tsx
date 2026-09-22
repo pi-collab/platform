@@ -243,7 +243,14 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
         </div>
       )}
 
-      {/* ===== CAMPAIGN LIST ===== */}
+      {/* ===== CAMPAIGN LIST =====
+          Hidden while the create panel is open. Naming a new campaign is a
+          single task, and a list of the previous ones underneath it is the
+          thing the brand has just navigated away from — it pushes the form's
+          own buttons down the page and gives the eye somewhere else to go at
+          the exact moment there is one thing to do. */}
+      {!createOpen && (
+      <>
       {/* Shown only once there is something to filter. Chips over a list of one
           are furniture. */}
       {trackCounts.growth > 0 && (
@@ -347,6 +354,8 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
             {search.trim() ? 'Try a different search term.' : 'Create a campaign to organise your deals and brief creators.'}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   )
