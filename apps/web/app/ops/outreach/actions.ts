@@ -123,7 +123,13 @@ export async function sendOutreach(input: OutreachInput): Promise<{
   /* Audited BEFORE the first send, not after. A run that dies halfway must
      still leave a record that it started, who started it, and to how many —
      "we think someone sent something last Tuesday" is not an audit trail. */
-  await logOpsEvent(user, 'outreach.campaign_started', 'campaign', input.campaignId, {
+  /* target_id is NULL: ops_events.target_id is a UUID column and a campaign id
+     here is a slug like 'beauty-creators-2026-09'. Passing it made Postgres
+     reject the insert, and logOpsEvent throws on a failed audit write — which
+     on the SENT log below would have thrown AFTER the emails had gone out,
+     reporting a failure for a campaign that had actually been delivered. */
+  await logOpsEvent(user, 'outreach.campaign_started', 'campaign', null, {
+    campaign_id: input.campaignId,
     subject: input.subject,
     heading: input.heading,
     recipients: clean.length,
@@ -151,7 +157,8 @@ export async function sendOutreach(input: OutreachInput): Promise<{
   const sent = results.filter((r) => r.ok).length
   const failed = results.length - sent
 
-  await logOpsEvent(user, 'outreach.campaign_sent', 'campaign', input.campaignId, {
+  await logOpsEvent(user, 'outreach.campaign_sent', 'campaign', null, {
+    campaign_id: input.campaignId,
     subject: input.subject,
     sent,
     failed,

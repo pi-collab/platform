@@ -5404,3 +5404,8 @@ lives, and audits every run.
 - [ ] The backdrop, the close button and Escape all dismiss without creating anything
 - [ ] Cards stack on a phone (`.typegrid` single column under 700px)
 - [ ] Hover lifts the card, rings it in neon and nudges the arrow; a disabled card does none of it
+
+**`ops_events.target_id` is a UUID column (bug fixed 23 Sep)**
+- [ ] Saving the Growth minimum in `/ops/settings` succeeds and writes `settings.growth_minimum_changed` with `target_id` NULL and the key in `detail.setting_key`. It cannot take a text key: `platform_settings` is keyed by TEXT, Postgres rejected the insert, and `logOpsEvent` THROWS on a failed audit write — so the action 500'd *after* the setting had already saved
+- [ ] The outreach send writes both audit rows with `target_id` NULL and `detail.campaign_id`. A campaign id there is a slug, not a UUID. On `outreach.campaign_sent` that throw would have landed AFTER the emails went out, reporting failure for a campaign that was delivered
+- [ ] Any new `logOpsEvent` call passes a real row UUID or NULL — never a text identifier

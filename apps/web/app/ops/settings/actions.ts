@@ -59,7 +59,16 @@ export async function setGrowthMinimum(input: {
   /* Before and after, per the ops-audit rule. This is a threshold that decides
      whether a brand can send a campaign, so "it used to be five" needs to be
      answerable. */
-  await logOpsEvent(user, 'settings.growth_minimum_changed', 'platform_settings', 'growth_campaign_minimum', {
+  /* ── target_id is NULL, and the key lives in detail ───────────────────────
+     ops_events.target_id is a UUID column. platform_settings is keyed by TEXT,
+     so passing 'growth_campaign_minimum' as the target made Postgres reject
+     the insert — and because logOpsEvent THROWS on a failed audit write (by
+     design: an unaudited ops action must not silently succeed), the whole
+     action 500'd after the setting had already been saved.
+
+     The column is nullable precisely for rows that do not act on one. */
+  await logOpsEvent(user, 'settings.growth_minimum_changed', 'platform_settings', null, {
+    setting_key: 'growth_campaign_minimum',
     before: { metric: before.metric, min_creators: before.minCreators, min_value_paise: before.minValuePaise },
     after: { metric: input.metric, min_creators: input.minCreators, min_value_paise: input.minValuePaise },
   })

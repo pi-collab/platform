@@ -1,7 +1,5 @@
 'use client'
 
-import { TRACK_TONE } from '@/lib/track'
-
 /**
  * "What kind of campaign?" — the fork, before anything is typed.
  *
@@ -33,6 +31,7 @@ export default function CampaignTypeModal({
         position: 'fixed', inset: 0, zIndex: 50,
         background: 'rgba(24,28,36,.4)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        animation: 'ctFadeIn .25s ease backwards',
       }}
     >
       <div
@@ -44,12 +43,13 @@ export default function CampaignTypeModal({
           width: '100%', maxWidth: 920, maxHeight: '90vh', overflow: 'auto',
           background: '#FCFBF7', borderRadius: 28,
           boxShadow: '0 40px 80px -30px rgba(24,28,36,.5)',
+          animation: 'ctPopIn .3s cubic-bezier(.22,1,.36,1) backwards',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '44px 48px 0' }}>
           <div>
             <span style={{
-              fontFamily: 'var(--font-mono, ui-monospace)', fontSize: 10.5, fontWeight: 500,
+              fontFamily: "var(--font-mono, ui-monospace, 'SF Mono', Menlo, monospace)", fontSize: 10.5, fontWeight: 500,
               letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ink-faint)',
             }}>
               New campaign
@@ -73,6 +73,7 @@ export default function CampaignTypeModal({
               background: 'rgba(24,28,36,.05)', cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}
+            className="ct-closebtn"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -150,7 +151,7 @@ function TypeCard({
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 48, height: 48, borderRadius: 15,
-        background: 'linear-gradient(150deg, var(--frost-strong, rgba(255,255,255,.9)), rgba(255,255,255,0))',
+        background: 'linear-gradient(150deg, var(--frost-strong, rgba(255,255,255,.72)), rgba(255,255,255,0))',
         border: '1px solid var(--frost-edge, rgba(24,28,36,.08))',
       }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -162,12 +163,14 @@ function TypeCard({
         <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: '-0.01em', margin: 0 }}>
           {title}
         </h2>
+        {/* Neon, per the design — not the indigo the Growth tag uses elsewhere.
+            This is the one primary moment on the screen, which is what the
+            neon is reserved for; the indigo tag is for rows in a list. */}
         {badge && (
           <span style={{
             display: 'inline-flex', alignItems: 'center',
             fontFamily: 'var(--font-ui)', fontSize: 10.5, fontWeight: 700,
-            color: TRACK_TONE.growth.fg, background: TRACK_TONE.growth.bg,
-            border: `1px solid ${TRACK_TONE.growth.border}`,
+            color: 'var(--ink)', background: 'var(--neon)',
             borderRadius: 999, padding: '4px 10px',
           }}>
             {badge}
