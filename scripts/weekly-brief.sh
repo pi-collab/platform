@@ -123,3 +123,16 @@ fi
 
 mv "$OUT_FILE.tmp" "$OUT_FILE"
 echo "Wrote $OUT_FILE" >&2
+
+# Reveal it in Finder, selected, so the run announces itself.
+#
+# A scheduled job that succeeds silently is indistinguishable from one that
+# never fired — and this one runs while you are doing something else on a
+# Monday morning. `open -R` selects the new file rather than just opening the
+# folder, so which week's brief is new is obvious at a glance.
+#
+# Skipped without a GUI session (SSH, CI), where it would fail noisily for no
+# reason. The brief is already written by this point either way.
+if [[ -z "${CI:-}" ]] && [[ -n "${HOME:-}" ]] && command -v open >/dev/null 2>&1; then
+  open -R "$OUT_FILE" 2>/dev/null || true
+fi

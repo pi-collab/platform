@@ -39,6 +39,10 @@ launchctl start com.guapd.weekly-brief
 launchctl unload ~/Library/LaunchAgents/com.guapd.weekly-brief.plist
 ```
 
+Each successful run reveals the new file in Finder (`open -R`), so a Monday
+morning run announces itself rather than finishing silently — a scheduled job
+that succeeds quietly is indistinguishable from one that never fired.
+
 Logs: `/tmp/guapd-weekly-brief.{out,err}.log`, and `docs/content/.weekly-brief.log`
 for the research run's own stderr.
 
