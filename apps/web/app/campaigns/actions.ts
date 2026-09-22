@@ -2,13 +2,55 @@
 
 import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
+import { hasEntitlement } from '@/lib/entitlements'
+import { getGrowthMinimum } from '@/lib/platform-settings'
+import type { Track } from '@/lib/track'
 import { revalidatePath } from 'next/cache'
 
-export async function createCampaign(name: string, description?: string, budgetPaise?: number) {
+export interface CampaignSetup {
+  /** 'deals' unless the brand explicitly chose Growth. */
+  track?: Track
+  /** uniform: one deliverable type for everyone. per_creator: pick each. */
+  deliverableMode?: 'uniform' | 'per_creator'
+  /** Required when deliverableMode is 'uniform'. */
+  uniformProductType?: string
+}
+
+export async function createCampaign(
+  name: string,
+  description?: string,
+  budgetPaise?: number,
+  setup: CampaignSetup = {},
+) {
   const brand = await verifyBrand()
   const supabase = createClient()
 
   if (!name.trim()) return { error: 'Campaign name is required' }
+
+  const track: Track = setup.track === 'growth' ? 'growth' : 'deals'
+
+  /* ── The entitlement gate ──────────────────────────────────────────────────
+     Checked here, in the action, not only in the UI. The UI hides the Growth
+     option, which stops an honest mistake; this stops a direct call. It asks
+     hasEntitlement and never looks at HOW the brand got it — ops grant today,
+     subscription later, same check. */
+  if (track === 'growth' && !(await hasEntitlement(brand.brandId, 'growth_campaigns'))) {
+    return { error: 'This account does not have Growth campaigns enabled. Talk to us and we will switch it on.' }
+  }
+
+  const mode = setup.deliverableMode === 'uniform' ? 'uniform' : 'per_creator'
+  const uniformType = mode === 'uniform' ? (setup.uniformProductType ?? '').trim() : ''
+
+  if (mode === 'uniform' && !uniformType) {
+    return { error: 'Choose the deliverable for this campaign' }
+  }
+
+  /* ── The minimum, SNAPSHOT here ────────────────────────────────────────────
+     Read once, at creation, and stored on the row. Ops can move the platform
+     minimum tomorrow; this campaign is judged against the rule it started
+     under. Same instinct as snapshotting the fee — a brand halfway through
+     building a roster should not have the goalposts moved. */
+  const min = track === 'growth' ? await getGrowthMinimum() : null
 
   const { data, error } = await supabase
     .from('campaigns')
@@ -17,6 +59,12 @@ export async function createCampaign(name: string, description?: string, budgetP
       name: name.trim(),
       description: description?.trim() || null,
       budget_paise: budgetPaise ?? null,
+      track,
+      deliverable_mode: mode,
+      uniform_product_type: mode === 'uniform' ? uniformType : null,
+      min_metric: min?.metric ?? null,
+      min_creators: min?.minCreators ?? null,
+      min_value_paise: min?.minValuePaise ?? null,
     })
     .select('id')
     .single()
@@ -106,6 +154,7 @@ export async function startCampaignWithCreators(
   creatorIds: string[],
   description?: string,
   budgetPaise?: number,
+  setup: CampaignSetup = {},
 ) {
   if (creatorIds.length === 0) return { error: 'Select at least one creator' }
 
@@ -113,7 +162,7 @@ export async function startCampaignWithCreators(
      from a shortlist used to take a name alone, so a campaign created that way
      opened with a brief and a budget the brand then had to go back and fill
      in. */
-  const created = await createCampaign(name, description, budgetPaise)
+  const created = await createCampaign(name, description, budgetPaise, setup)
   if ('error' in created && created.error) return { error: created.error }
   const campaignId = (created as { campaignId: string }).campaignId
 

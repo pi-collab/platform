@@ -5281,3 +5281,69 @@ lives, and audits every run.
 - [ ] `app/ops/outreach/campaigns.ts` holds both the wording and the list, so "what exactly did we say to these people" is answerable later
 - [ ] The email renders through the same `shell()` as every other Guapd email — wordmark, neon rule, white card, dark pill button
 - [ ] A plain-text alternative is produced alongside the HTML (spam filters penalise HTML-only mail)
+
+---
+
+## 55. Guapd Growth — brand side (backend)
+
+**Plan:** `docs/growth-brand-plan.md`. Migrations 0506–0510.
+**Not yet applied to staging** — see the environment note at the end.
+
+**Track columns**
+- [ ] A campaign created without a track is `deals`; every pre-existing campaign and deal reads `deals` after migration
+- [ ] `deals.track` is written at creation from the campaign and never re-derived — editing the campaign afterwards does not change a sent deal's track
+- [ ] A standalone deal (`/deals/new`) is `deals` track
+
+**Entitlement**
+- [ ] A brand WITHOUT `growth_campaigns` cannot create a Growth campaign — refused in `createCampaign`, not only hidden in the UI. Call the action directly to confirm
+- [ ] Granting it in `/ops/settings` lets the same brand create one immediately
+- [ ] Revoking deletes the row rather than setting false (one spelling of "no")
+- [ ] An `expires_at` in the past reads as not granted
+- [ ] `brand_entitlements` RLS: a brand reads only its own; INSERT/UPDATE/DELETE denied to every client role — a brand cannot grant itself Growth
+- [ ] `ops_events` records `brand.entitlement_changed` with before/after
+
+**The minimum**
+- [ ] `/ops/settings` changes the metric and the numbers; `ops_events` records before/after
+- [ ] A campaign created AFTER a change carries the new snapshot; one created BEFORE keeps the old — raising the platform minimum must not invalidate a campaign mid-build
+- [ ] Sending a Growth campaign below `min_creators` is refused with the count named
+- [ ] Switching the metric to `value` enforces `min_value_paise` instead, with no migration
+- [ ] The minimum is re-checked at send AFTER the draft refetch — remove a draft between rendering and sending and the send is still refused
+- [ ] A Deals campaign has no minimum and is unaffected
+
+**Track-aware gates**
+- [ ] A Growth campaign rejects a `deals_approved` creator at ADD time, with a message saying why
+- [ ] A Deals campaign rejects a `growth` creator at add time
+- [ ] The send re-checks by `vetting_status`, not `is_vetted` — a Growth campaign sends successfully, which it could not if the old `is_vetted = true` check had been left in place
+- [ ] A creator moved off the track between add and send is skipped with a track-specific message
+- [ ] In `uniform` mode, adding a creator who does not offer that product type is refused naming the type
+
+**Fee**
+- [ ] A Growth deal resolves to **30%, `deducted`, `fee_basis = 'growth_standard'`** — regardless of the brand's `platform_fee_percent` or `fee_mode`
+- [ ] A brand on `on_top` still gets `deducted` on a Growth deal: the brand pays the package price exactly, with no markup added to a number shown as final
+- [ ] An ops pair rate still overrides on the Growth track (a human decision wins)
+- [ ] `deals_fee_basis_chk` accepts `growth_standard` — without the 0506 constraint update every Growth deal insert fails at send, after the brand has committed
+- [ ] Deals-track fees are unchanged: 15%, the storefront 0% exemption still fires
+
+**Billing ledger (`usage_events`)**
+- [ ] A Deals campaign of 5 creators writes **5** rows, `unit_type = 'deal'`
+- [ ] A Growth campaign of 5 creators writes **1** row, `unit_type = 'growth_campaign'` — and NO per-deal rows
+- [ ] Sending the same campaign twice writes no second row (unique index on `unit_type, ref_id`)
+- [ ] A held deal writes NO row at creation, and writes one when ops approves the brand and releases it
+- [ ] A cancelled deal does NOT remove its row — what was counted stays counted
+- [ ] A failed ledger write never fails the send: creators have already been mailed
+- [ ] RLS: a brand reads its own usage; INSERT/UPDATE/DELETE denied to every client role
+
+**⚠️ The money model**
+- [ ] Every creator in a Growth campaign has their OWN deal and their OWN invoice
+- [ ] There is no code path anywhere that creates one pooled invoice for a campaign, or that routes one brand payment to several creators. "One billable unit" is counting only — the pooled version is Razorpay Route / RBI payment-aggregator territory
+
+**Visibility (`is_bookable`)**
+- [ ] After 0507, a `growth` creator is visible to a brand on `/browse`; a `pending` or `rejected` one is not
+- [ ] `is_vetted` is UNCHANGED for growth creators (still false) — the storefront RPC and the verified badge stay Deals-only
+- [ ] A Growth creator's `creator_products` and `creator_addon_rates` are readable by a brand
+- [ ] **`is_bookable` is in the `GRANT SELECT` allowlist.** Remove it and confirm queries naming it fail with "permission denied for table creators" — the WHOLE query, not just that column. This is the trap that broke the creator layout when `vetting_status` was added
+- [ ] Adversarial: Brand B still cannot see Brand A's deals, campaigns, entitlements or usage
+
+**Environment**
+- [ ] **Migrations 0506–0510 must be applied.** `supabase migration list` shows 0499–0505 as local-only on staging, so those land first — confirm which of them were already applied by hand before pushing
+- [ ] `platform_settings` is seeded with `growth_campaign_minimum`; a missing row falls back to the default in `lib/platform-settings.ts` rather than breaking the builder

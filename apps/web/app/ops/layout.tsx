@@ -73,6 +73,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           {/* Admin only: mailing strangers from guapd.com spends the sending
               domain's reputation that every transactional email depends on. */}
           {isAdmin && <Link href="/ops/outreach" style={{ color: '#555', textDecoration: 'none' }}>Outreach</Link>}
+          {isAdmin && <Link href="/ops/settings" style={{ color: '#555', textDecoration: 'none' }}>Settings</Link>}
           <Link href="/ops/playbook" style={{ color: '#555', textDecoration: 'none' }}>Playbook</Link>
         </nav>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

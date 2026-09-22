@@ -184,8 +184,8 @@ CREATE POLICY brand_members_read_own_brand
 
 -- ── creators ──────────────────────────────────────────────────────
 -- SELECT: three cases allowed (AUTHENTICATED ONLY — anon cannot read):
---   1. Any authenticated user can see vetted creators (is_vetted=true)
---      — the "pick a creator" list for brands.
+--   1. Any authenticated user can see BOOKABLE creators (is_bookable=true,
+--      i.e. deals_approved OR growth) — the "pick a creator" list for brands.
 --   2. A creator can always see their own profile, even if not yet vetted.
 --   3. A brand member can see any creator already in one of their deals,
 --      even if unvetted — covers in-progress relationships.
@@ -207,7 +207,11 @@ CREATE POLICY creators_read
   USING (
     auth.role() = 'authenticated'
     AND (
-      is_vetted = true
+      -- is_bookable, NOT is_vetted: true for deals_approved AND growth, which
+      -- is the whole of how Growth creators reach brands (migration 0507).
+      -- is_vetted still means "approved for Deals" and still gates storefronts
+      -- and the verified badge.
+      is_bookable = true
       OR user_id = my_user_id()
       OR EXISTS (
         SELECT 1 FROM deals
@@ -441,7 +445,7 @@ CREATE POLICY creator_products_read
         AND EXISTS (
           SELECT 1 FROM creators
           WHERE creators.id = creator_products.creator_id
-            AND creators.is_vetted = true
+            AND creators.is_bookable = true
         )
       )
     )
@@ -850,7 +854,7 @@ REVOKE SELECT ON public.creators FROM anon, authenticated;
 GRANT SELECT (
   id, user_id, full_name, niche, niches, handle, bio, profile_photo_url,
   worked_with, portfolio_links, social_accounts, location, primary_platform,
-  is_vetted, is_rejected, vetting_status,
+  is_vetted, is_rejected, vetting_status, is_bookable,
   revisions_enabled, included_revisions, price_per_extra_revision_paise,
   created_at, updated_at
 ) ON public.creators TO anon, authenticated;
@@ -884,7 +888,7 @@ CREATE POLICY creator_addon_rates_read_vetted
     EXISTS (
       SELECT 1 FROM creators c
       WHERE c.id = creator_addon_rates.creator_id
-        AND c.is_vetted = true
+        AND c.is_bookable = true
     )
   );
 
@@ -935,3 +939,52 @@ CREATE POLICY message_reads_insert_own ON message_reads
   FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY message_reads_update_own ON message_reads
   FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+
+-- ── brand_entitlements ──────────────────────────────────────────────────────
+-- What a brand may do, independent of HOW it was granted (migration 0508).
+-- A brand reads its own; nobody writes from a client role, because an
+-- entitlement a brand can grant itself is not an entitlement.
+
+ALTER TABLE brand_entitlements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS brand_entitlements_read_own ON brand_entitlements;
+
+CREATE POLICY brand_entitlements_read_own
+  ON brand_entitlements FOR SELECT
+  TO authenticated
+  USING (brand_id = my_brand_id());
+
+-- No INSERT/UPDATE/DELETE policy: all three are denied to every client role.
+
+
+-- ── platform_settings ───────────────────────────────────────────────────────
+-- Global settings ops tunes without a deploy (migration 0509).
+-- Readable by any signed-in user: the campaign builder must SHOW the Growth
+-- minimum before it can enforce it. A brand reading a threshold about to be
+-- applied to them is the point, not a leak. Writes are service-role only.
+
+ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS platform_settings_read ON platform_settings;
+
+CREATE POLICY platform_settings_read
+  ON platform_settings FOR SELECT
+  TO authenticated
+  USING (true);
+
+
+-- ── usage_events ────────────────────────────────────────────────────────────
+-- The immutable billing ledger (migration 0510). One row per billable unit:
+-- one per DEAL on the deals track, ONE PER CAMPAIGN on the growth track.
+-- A brand reads its own usage. Nothing writes from a client role — a ledger a
+-- brand can write is not a ledger.
+
+ALTER TABLE usage_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS usage_events_read_own ON usage_events;
+
+CREATE POLICY usage_events_read_own
+  ON usage_events FOR SELECT
+  TO authenticated
+  USING (brand_id = my_brand_id());

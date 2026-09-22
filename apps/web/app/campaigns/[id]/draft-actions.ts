@@ -9,6 +9,9 @@ import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { createDeal } from '@/app/deals/actions'
 import { netTerms } from '@/lib/payment-terms'
+import { requiredVettingStatus, type Track } from '@/lib/track'
+import { checkMinimum } from '@/lib/platform-settings'
+import { recordUsage } from '@/lib/usage'
 
 export interface DraftPlacement {
   label: string
@@ -41,24 +44,57 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
 
   if (creatorIds.length === 0) return { error: 'No creators selected' }
 
-  // Validate brand owns the campaign
+  // Validate brand owns the campaign, and learn its track and mode
   const { data: campaign } = await supabase
     .from('campaigns')
-    .select('id')
+    .select('id, track, deliverable_mode, uniform_product_type')
     .eq('id', campaignId)
     .maybeSingle()
 
   if (!campaign) return { error: 'Campaign not found' }
 
-  // Validate all creators are vetted
-  const { data: vetted } = await supabase
+  const track = (campaign.track as Track) ?? 'deals'
+  const needStatus = requiredVettingStatus(track)
+
+  /* ── A campaign never mixes tracks ─────────────────────────────────────────
+     Checked at ADD time as well as at send, because the roster is where a
+     brand would otherwise spend ten minutes building something that cannot be
+     sent. RLS already limits this to bookable creators; this narrows it to the
+     one track the campaign bills as, which is what keeps "one growth campaign
+     = one billable unit" meaning anything. */
+  const { data: eligible } = await supabase
     .from('creators')
-    .select('id')
+    .select('id, vetting_status')
     .in('id', creatorIds)
 
-  const vettedIds = new Set((vetted ?? []).map((c) => c.id))
-  const unvetted = creatorIds.filter((id) => !vettedIds.has(id))
-  if (unvetted.length > 0) return { error: 'Some creators are not vetted or do not exist' }
+  const okIds = new Set((eligible ?? []).filter((c) => c.vetting_status === needStatus).map((c) => c.id))
+  const wrongTrack = creatorIds.filter((id) => !okIds.has(id))
+  if (wrongTrack.length > 0) {
+    return {
+      error: track === 'growth'
+        ? 'Some of those creators are not Growth creators. A Growth campaign can only hold Growth creators.'
+        : 'Some of those creators are not available for deals.',
+    }
+  }
+
+  /* ── Uniform mode: only creators who offer that deliverable ────────────────
+     Added here rather than filtered silently in the picker, because a creator a
+     brand deliberately chose and who then vanishes without explanation is
+     worse than being told why. */
+  if (campaign.deliverable_mode === 'uniform' && campaign.uniform_product_type) {
+    const { data: offering } = await supabase
+      .from('creator_products')
+      .select('creator_id')
+      .in('creator_id', creatorIds)
+      .eq('product_type', campaign.uniform_product_type)
+      .eq('is_active', true)
+
+    const offeringIds = new Set((offering ?? []).map((r) => r.creator_id))
+    const missing = creatorIds.filter((id) => !offeringIds.has(id))
+    if (missing.length > 0) {
+      return { error: `Some of those creators do not offer ${campaign.uniform_product_type}. This campaign is set to one deliverable for everyone.` }
+    }
+  }
 
   // Get brand's current fee settings for preview snapshot
   const { data: brandRow } = await supabase
@@ -86,9 +122,13 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
      happened to start it. */
   const { resolveDealFee } = await import('@/lib/deal-fee')
   const resolvedFees = new Map<string, number>()
+  /* Growth forces 'deducted' regardless of the brand's setting, so the preview
+     has to carry the resolved mode rather than the brand's. */
+  const resolvedModes = new Map<string, 'on_top' | 'deducted'>()
   for (const cid of creatorIds) {
-    const r = await resolveDealFee(admin, brand.brandId, cid, brandFeePercent, feeMode)
+    const r = await resolveDealFee(admin, brand.brandId, cid, brandFeePercent, feeMode, track)
     resolvedFees.set(cid, r.feePercent)
+    resolvedModes.set(cid, r.feeMode)
   }
 
   // Insert drafts — skip duplicates (ON CONFLICT DO NOTHING via upsert)
@@ -98,7 +138,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     placements: [] as DraftPlacement[],
     total_price_paise: 0,
     fee_percent: resolvedFees.get(creatorId) ?? pairRateMap.get(creatorId) ?? brandFeePercent,
-    fee_mode: feeMode,
+    fee_mode: resolvedModes.get(creatorId) ?? feeMode,
     total_brand_paise: 0,
   }))
 
@@ -309,14 +349,44 @@ export async function bulkSendCampaignDrafts(
 
   if (!drafts || drafts.length === 0) return { results: [] }
 
-  // 2. Fetch campaign name for deal titles
+  // 2. Campaign name for deal titles — and its track, which decides everything
+  //    below: which creators are eligible, what fee applies, and whether this
+  //    send is one billable unit or N.
   const { data: campaign } = await supabase
     .from('campaigns')
-    .select('name')
+    .select('name, track, min_metric, min_creators, min_value_paise')
     .eq('id', campaignId)
     .single()
 
   if (!campaign) return { results: [] }
+
+  const track = (campaign.track as Track) ?? 'deals'
+
+  /* ── The Growth minimum, enforced against the SNAPSHOT ─────────────────────
+     Judged by the rule this campaign was created under, not the live platform
+     setting — ops can move the threshold at any time and a brand mid-build must
+     not have it moved under them.
+
+     Re-checked HERE and not only in the builder, and specifically AFTER the
+     draft refetch above: drafts can be removed between the page rendering a
+     happy "5 of 5" and this running. */
+  if (track === 'growth') {
+    const roster = drafts.reduce(
+      (acc, d) => ({ creators: acc.creators + 1, totalPaise: acc.totalPaise + (d.total_price_paise ?? 0) }),
+      { creators: 0, totalPaise: 0 },
+    )
+    const verdict = checkMinimum(
+      {
+        metric: (campaign.min_metric as 'creators' | 'value' | null) ?? 'creators',
+        minCreators: campaign.min_creators,
+        minValuePaise: campaign.min_value_paise,
+      },
+      roster,
+    )
+    if (!verdict.ok) {
+      return { results: [{ creatorName: '', success: false, error: verdict.message ?? 'Below the campaign minimum' }] }
+    }
+  }
 
   // 3. Existing-deal check — skip drafts whose creator already has a deal in this campaign
   const draftCreatorIds = drafts.map((d) => d.creator_id)
@@ -328,14 +398,18 @@ export async function bulkSendCampaignDrafts(
 
   const creatorsWithDeals = new Set((existingDeals ?? []).map((d) => d.creator_id))
 
-  // 4. Vetted re-check — batch query all creators with is_vetted = true
-  const { data: vettedCreators } = await supabase
+  /* 4. Eligibility re-check, by TRACK rather than by is_vetted.
+        A deals campaign needs deals_approved creators; a growth campaign needs
+        growth creators. is_vetted is true only for the first of those, so
+        reading it here would have refused every Growth creator at the last
+        step — after the brand had built the roster and pressed send. */
+  const { data: eligibleCreators } = await supabase
     .from('creators')
     .select('id, full_name')
     .in('id', draftCreatorIds)
-    .eq('is_vetted', true)
+    .eq('vetting_status', requiredVettingStatus(track))
 
-  const vettedMap = new Map((vettedCreators ?? []).map((c) => [c.id, c.full_name]))
+  const vettedMap = new Map((eligibleCreators ?? []).map((c) => [c.id, c.full_name]))
 
   // 5. Process each draft
   const results: BulkSendResult[] = []
@@ -351,9 +425,15 @@ export async function bulkSendCampaignDrafts(
       continue
     }
 
-    // Vetted gate
+    // Eligibility gate
     if (!vettedMap.has(draft.creator_id)) {
-      results.push({ creatorName: 'Unknown creator', success: false, error: 'Creator is no longer vetted' })
+      results.push({
+        creatorName: 'Unknown creator',
+        success: false,
+        error: track === 'growth'
+          ? 'Creator is no longer on the Growth track'
+          : 'Creator is no longer vetted',
+      })
       continue
     }
 
@@ -383,6 +463,10 @@ export async function bulkSendCampaignDrafts(
       revision_limit: 2,
       items,
       campaign_id: campaignId,
+      /* Denormalised onto the deal so the deals list can filter and tag
+         without a join, and so the deal keeps the track it was SENT as even if
+         the campaign is edited later. */
+      track,
       message: message?.trim() || undefined,
       internal_note: (draft as Record<string, unknown>).note as string | undefined,
       /* Campaigns have no payment-terms field yet, and createDeal now REQUIRES
@@ -414,6 +498,34 @@ export async function bulkSendCampaignDrafts(
     await supabase.from('campaign_drafts').delete().eq('id', draft.id)
 
     results.push({ creatorName, success: true, dealId: dealResult.dealId })
+
+    /* Deals-track units are recorded inside createDeal, which every route to a
+       deal goes through — standalone offers included. Doing it here as well
+       would double-count nothing (the unique index holds) but would put the
+       rule in two places. */
+  }
+
+  /* ── The billing ledger, growth track ─────────────────────────────────────
+     ONE unit for the whole campaign, however many creators are in it. That
+     asymmetry is the entire commercial difference between the two tracks.
+
+     Written after the loop and only if something actually went out: a send
+     where every creator failed has incurred nothing. The unique index on
+     (unit_type, ref_id) makes a second send of the same campaign a no-op
+     rather than a second charge.
+
+     ⚠ ONE UNIT IS COUNTING, NOT ONE PAYMENT. Each creator still has their own
+     deal and their own invoice, and the brand pays each of them directly.
+     Guapd pools and splits nothing — that would be Route / RBI
+     payment-aggregator territory. See migration 0506. */
+  const sentCount = results.filter((r) => r.success && r.dealId).length
+  if (track === 'growth' && sentCount > 0) {
+    await recordUsage(brand.brandId, 'growth_campaign', campaignId, {
+      campaign_name: campaign.name,
+      creators: sentCount,
+      total_price_paise: drafts.reduce((sum, d) => sum + (d.total_price_paise ?? 0), 0),
+      fee_basis: 'growth_standard',
+    })
   }
 
   revalidatePath(`/campaigns/${campaignId}`)

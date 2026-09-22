@@ -18,7 +18,12 @@ import 'server-only'
  *      stated reason. It wins over everything, including the 0% rule: if ops
  *      has set a rate for this pair, that is a decision already made.
  *   2. The storefront first-deal exemption (0%).
- *   3. brands.platform_fee_percent  — the brand's standard rate.
+ *   3. GROWTH: 30%, deducted, for any deal on the growth track. A Growth
+ *      creator sells a fixed package at a rate they set, and the fee comes out
+ *      of it — no markup on the brand. This REPLACES the brand's standard rate
+ *      rather than sitting beside it, and it ignores the brand's fee_mode:
+ *      on_top would put a markup on a price the brand was shown as final.
+ *   4. brands.platform_fee_percent  — the brand's standard rate.
  *
  * ── What consumes the exemption ────────────────────────────────────────────
  * Any deal between the pair that was not declined or cancelled. A brand that
@@ -39,6 +44,7 @@ export type FeeBasis =
   | 'brand_standard'
   | 'ops_pair_rate'
   | 'storefront_first_deal'
+  | 'growth_standard'
   | 'deal_override'
 
 export interface ResolvedFee {
@@ -55,12 +61,18 @@ type Client = { from: (t: string) => any }
 
 const NOT_A_DEAL = ['declined', 'cancelled']
 
+/** The Growth track's platform fee. Deducted from the creator, never on top. */
+export const GROWTH_FEE_PERCENT = 30
+
 export async function resolveDealFee(
   supabase: Client,
   brandId: string,
   creatorId: string,
   brandFeePercent: number,
   brandFeeMode: 'on_top' | 'deducted',
+  /* Defaulted so every existing caller keeps its exact behaviour. Only the
+     growth campaign path passes 'growth'. */
+  track: 'deals' | 'growth' = 'deals',
 ): Promise<ResolvedFee> {
   // 1. An ops override is a human decision about this exact pair.
   const { data: pairRate } = await supabase
@@ -107,7 +119,26 @@ export async function resolveDealFee(
     }
   }
 
-  // 3. The brand's standard rate.
+  /* 3. The growth track's own rate.
+        Placed BELOW the storefront exemption rather than above it so that
+        exemption keeps its meaning — though in practice it cannot fire here: a
+        storefront origin comes from /c/[slug], and Growth creators have
+        packages, not storefronts.
+
+        feeMode is FORCED to 'deducted', not taken from the brand. The brand is
+        shown the creator's package price and pays exactly that; on_top would
+        quietly add 30% to a number presented as final. */
+  if (track === 'growth') {
+    return {
+      feePercent: GROWTH_FEE_PERCENT,
+      feeMode: 'deducted',
+      basis: 'growth_standard',
+      storefrontFirstDeal: false,
+      opsOverride: false,
+    }
+  }
+
+  // 4. The brand's standard rate.
   return {
     feePercent: brandFeePercent,
     feeMode: brandFeeMode,

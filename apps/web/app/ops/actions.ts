@@ -9,6 +9,7 @@ import { notifyBrandApproved, notifyBrandRejected, notifyCreatorApproved, notify
 import { CREATOR_APPROVAL_ACK } from '@/lib/creator-approval'
 import { logOpsEvent } from '@/lib/ops-audit'
 import { isPlausibleEmail } from '@/lib/email'
+import { recordUsage } from '@/lib/usage'
 import { notifyDealParty } from '@/lib/notifications'
 import { generateOfferToken } from '@/lib/offer-token'
 import { calculateFee } from '@/lib/fee'
@@ -472,7 +473,7 @@ async function releaseHeldDeals(brandId: string, actor: string): Promise<number>
 
   const { data: held } = await admin
     .from('deals')
-    .select('id, price_paise, fee_percent, fee_mode')
+    .select('id, price_paise, fee_percent, fee_mode, track, campaign_id, creator_id, fee_basis')
     .eq('brand_id', brandId)
     .not('held_at', 'is', null)
 
@@ -496,6 +497,23 @@ async function releaseHeldDeals(brandId: string, actor: string): Promise<number>
       event_type: 'deal.hold_released',
       detail: { brand_id: brandId, released_by: actor },
     })
+
+    /* ── Billed on RELEASE, not on creation ───────────────────────────────
+       createDeal skips the ledger for a held deal, because a held deal has
+       reached nobody and a brand rejected at review must not be billed for
+       offers that never went out. This is the moment it actually goes out.
+
+       Growth-track deals are excluded for the same reason as everywhere else:
+       a growth campaign is one unit for the campaign, never one per creator. */
+    if ((deal.track ?? 'deals') === 'deals') {
+      await recordUsage(brandId, 'deal', deal.id, {
+        campaign_id: deal.campaign_id ?? null,
+        creator_id: deal.creator_id,
+        price_paise: deal.price_paise,
+        fee_basis: deal.fee_basis ?? null,
+        released_from_hold: true,
+      })
+    }
 
     const { creator_receives_paise } = calculateFee(
       deal.price_paise ?? 0,

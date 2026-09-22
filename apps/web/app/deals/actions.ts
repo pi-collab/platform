@@ -10,6 +10,7 @@ import { collabCharge, boostingCharge } from '@/lib/addons'
 import { formatAmountForMessage } from '@/lib/money'
 import { resolveSendMode, registerHeldSend } from '@/lib/send-gate'
 import { ensurePairOrigin } from '@/lib/attribution'
+import { recordUsage } from '@/lib/usage'
 /* Type-only: the value import stays dynamic below, so deal-fee's `server-only`
    guard is not pulled into this module's static graph. */
 import type { FeeBasis } from '@/lib/deal-fee'
@@ -98,6 +99,10 @@ interface CreateDealInput {
   internal_note?: string
   source?: string
   fee_pct_override?: number
+  /* Which track this deal is sent on. Defaulted to 'deals' so every existing
+     caller is unchanged; only the growth campaign path passes 'growth'. It
+     decides the fee rung AND is snapshotted onto the row. */
+  track?: 'deals' | 'growth'
   brief_pitch?: string
   brief_guidelines?: string
   brief_avoid?: string
@@ -107,7 +112,7 @@ interface CreateDealInput {
 export async function createDeal(input: CreateDealInput) {
   const brand = await verifyBrand()
 
-  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, go_live_date, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
+  const { creator_id, title, deliverables, price_paise, timeline_date, revision_limit, price_per_extra_revision_paise, usage_rights, go_live_date, payment_terms, items, reengaged_from, requires_shipment, usage_rights_end_date, campaign_id, internal_note, source, fee_pct_override, track, brief_pitch, brief_guidelines, brief_avoid, brief_attachments } = input
 
   // Validation
   if (!title.trim()) return { error: 'Title is required' }
@@ -148,6 +153,11 @@ export async function createDeal(input: CreateDealInput) {
      it came from a storefront referral. See migration 0500. */
   let feeBasis: FeeBasis
   let storefrontFirstDeal = false
+  /* Starts as the brand's setting and is replaced by whatever the ladder
+     resolves. It used to be read straight off the brand at insert time, which
+     would have written on_top onto a Growth deal whose fee the ladder had just
+     decided was deducted. */
+  let resolvedFeeMode: 'on_top' | 'deducted' = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
   if (fee_pct_override != null) {
     resolvedFeePercent = fee_pct_override
     feeBasis = 'deal_override'
@@ -158,10 +168,15 @@ export async function createDeal(input: CreateDealInput) {
       creator_id,
       brandFee?.platform_fee_percent ?? 0,
       (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+      track ?? 'deals',
     )
     resolvedFeePercent = resolved.feePercent
     feeBasis = resolved.basis
     storefrontFirstDeal = resolved.storefrontFirstDeal
+    /* Growth forces deducted: the brand is shown the creator's package price
+       and pays exactly that. Taking the brand's fee_mode here would add 30% on
+       top of a number presented as final. */
+    resolvedFeeMode = resolved.feeMode
   }
 
   // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
@@ -183,8 +198,9 @@ export async function createDeal(input: CreateDealInput) {
       payment_terms: payment_terms?.trim() || null,
       last_offer_by: 'brand',
       fee_percent: resolvedFeePercent,
-      fee_mode: brandFee?.fee_mode ?? 'deducted',
+      fee_mode: resolvedFeeMode,
       fee_basis: feeBasis,
+      track: track ?? 'deals',
       fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,
@@ -247,11 +263,29 @@ export async function createDeal(input: CreateDealInput) {
     return { success: true, dealId: data.id, held: true, dealCount: null, pairCount: null, pricePaise: price_paise }
   }
 
+  /* ── The billing ledger ───────────────────────────────────────────────────
+     One unit per deal on the DEALS track. Growth-track deals are deliberately
+     NOT recorded here: a growth campaign is one unit for the whole campaign,
+     written once by bulkSendCampaignDrafts. Recording both would bill a growth
+     campaign twice over — once as a campaign and once per creator — which is
+     the exact thing the two tracks differ on.
+
+     Held deals are not recorded either. A held deal has reached nobody; it is
+     billed when ops approves the brand and releases it (see releaseHeldDeals
+     in ops/actions.ts). Never throws — see lib/usage.ts. */
+  if ((track ?? 'deals') === 'deals' && !isHeld) {
+    await recordUsage(brand.brandId, 'deal', data.id, {
+      campaign_id: campaign_id ?? null,
+      creator_id,
+      price_paise,
+      fee_basis: feeBasis,
+    })
+  }
+
   // Notify creator: new offer (in-app + WhatsApp).
   // The creator sees what they will RECEIVE, net of any deducted fee — the
   // same number as the accept-page, not the gross price.
-  const feeMode = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
-  const { creator_receives_paise } = calculateFee(price_paise, resolvedFeePercent, feeMode)
+  const { creator_receives_paise } = calculateFee(price_paise, resolvedFeePercent, resolvedFeeMode)
 
   await notifyDealParty(data.id, 'creator', 'offer_sent', (t) => `New offer: ${t}`, {
     whatsapp: (ctx) => ({
