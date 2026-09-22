@@ -5206,8 +5206,10 @@ asks for setup, the banner reports a fault.
 ## 53. Instagram disclosure modal, and the reconnect banner redrawn
 
 **The modal (`components/InstagramConnectButton.tsx`)**
-- [ ] On a phone, "Continue to Instagram" and "Cancel" are VISIBLE without scrolling, and are not covered by the creator tab bar. This was the bug: the dialog was `z-index: 80` and the tab bar is `10000`, so the actions rendered underneath it
-- [ ] The dialog sits ABOVE the tab bar while open (it is a modal; the bar being covered is correct)
+- [ ] On a phone, "Continue to Instagram" and "Cancel" are fully visible — not clipped, not behind the creator tab bar
+- [ ] The dialog sits ABOVE the tab bar while open (it is a modal; the bar being covered is correct). It is portalled to `document.body`: raising z-index alone did NOT fix this, because an ancestor stacking context traps a `fixed` child regardless of how high its z-index goes
+- [ ] There is visible backdrop above and below the dialog — it never reaches both screen edges (cap is `min(72dvh, 560px)`)
+- [ ] The page behind does not move when you drag inside the dialog, and scrolls normally again after it closes (body overflow is restored, not blanked)
 - [ ] The body scrolls INSIDE the dialog; the header and the action row stay put while it does
 - [ ] The page behind does not scroll with it
 - [ ] On a notched phone the action row clears the home indicator (`env(safe-area-inset-bottom)`)

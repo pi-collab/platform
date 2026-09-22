@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * Connect Instagram, with our own disclosure in front of it.
@@ -34,6 +35,17 @@ export default function InstagramConnectButton({
 }) {
   const [open, setOpen] = useState(false)
 
+  /* Hold the page still underneath. Without this the body keeps scrolling
+     behind the dialog on a phone — you drag to read the disclosure, reach the
+     end of its own scroll, and the page carries on moving, which reads as the
+     dialog sliding off. */
+  useEffect(() => {
+    if (!open) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [open])
+
   function proceed() {
     setOpen(false)
     if (onContinue) { onContinue(); return }
@@ -46,7 +58,13 @@ export default function InstagramConnectButton({
         {label}
       </button>
 
-      {open && (
+      {/* PORTALLED TO document.body, and not left where the button sits.
+          z-index alone could not win: any ancestor with a transform, filter or
+          its own z-index makes a new stacking context, and a `fixed` child of
+          one is positioned and stacked INSIDE it — so the dialog kept rendering
+          under the creator tab bar however high its z-index went. At the body
+          there is no ancestor left to be trapped by. */}
+      {open && createPortal((
         <div
           onClick={() => setOpen(false)}
           style={{
@@ -55,7 +73,10 @@ export default function InstagramConnectButton({
                UNDER the fixed bottom navigation on mobile, which is what hid
                "Continue to Instagram" behind it. */
             zIndex: 10010,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            /* Room at the edges even on the shortest phone, and the bottom
+               inset keeps the dialog off the home indicator. */
+            padding: '16px 16px calc(16px + env(safe-area-inset-bottom))',
             background: 'rgba(18,21,28,.45)', backdropFilter: 'blur(2px)',
           }}
         >
@@ -68,8 +89,12 @@ export default function InstagramConnectButton({
             style={{
               width: 'min(520px, 100%)',
               /* dvh, not vh: on mobile Safari vh is the address-bar-less
-                 height, so 88vh is taller than what you can actually see. */
-              maxHeight: 'min(86dvh, 700px)',
+                 height, so a vh cap is taller than what you can actually see.
+                 72 rather than 86 because a dialog that reaches both edges of
+                 the screen reads as a page you are stuck on rather than
+                 something you opened and can close — and the disclosure is
+                 long enough that it scrolls either way. */
+              maxHeight: 'min(72dvh, 560px)',
               /* Three bands — head, scrolling body, pinned actions. The whole
                  dialog used to be one scroll area with the buttons at the
                  bottom of it, so on a phone the disclosure pushed the only way
@@ -178,7 +203,7 @@ export default function InstagramConnectButton({
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </>
   )
 }
