@@ -2403,3 +2403,10 @@
 }
 .typecard .arrow { transition: transform .18s ease; }
 .typecard:hover:not(:disabled) .arrow { transform: translateX(3px); }
+
+/* ── Growth roster package chips ────────────────────────────────────────────
+   The unselected state has to invite a press without shouting: these sit in a
+   list where the only loud thing should be Send. */
+.pkgchip { transition: border-color .14s ease, background .14s ease, transform .1s ease; }
+.pkgchip:hover:not(:disabled) { border-color: rgba(24,28,36,.38); }
+.pkgchip:active:not(:disabled) { transform: scale(.98); }

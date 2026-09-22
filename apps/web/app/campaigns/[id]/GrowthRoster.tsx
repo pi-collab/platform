@@ -216,20 +216,32 @@ export default function GrowthRoster({
               )}
             </span>
 
-            {/* ── Uniform: nothing to choose. Mixed: their packages. ────── */}
+            {/* ── Uniform: nothing to choose. Mixed: their packages. ──────
+                Laid out rather than hidden in a <select>. A creator has one to
+                three packages and the PRICE is most of the decision, so a
+                dropdown makes the brand open something to find out what their
+                options cost, then close it again to compare the next creator.
+                Side by side, a roster of ten can be read down a column.
+
+                Falls back to a select past four, where chips would wrap into a
+                block taller than the row. */}
             {uniformType ? (
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft, #565C68)' }}>
                 {uniformType}
               </span>
-            ) : (
+            ) : d.products.length === 0 ? (
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#9B3030' }}>
+                No packages listed yet
+              </span>
+            ) : d.products.length > 4 ? (
               <select
                 value={d.productId ?? ''}
                 disabled={pending}
                 onChange={(e) => choose(d.id, e.target.value)}
                 aria-label={`Package for ${d.creatorName}`}
                 style={{
-                  minWidth: 210, padding: '7px 10px', borderRadius: 8, fontSize: 13,
-                  border: `1px solid ${d.productId ? 'rgba(24,28,36,.18)' : '#D2545A'}`,
+                  minWidth: 210, padding: '8px 10px', borderRadius: 9, fontSize: 13,
+                  border: `1px solid ${d.productId ? 'rgba(24,28,36,.18)' : 'rgba(210,84,90,.55)'}`,
                   background: '#fff', color: 'var(--ink)',
                 }}
               >
@@ -240,6 +252,41 @@ export default function GrowthRoster({
                   </option>
                 ))}
               </select>
+            ) : (
+              <span role="radiogroup" aria-label={`Package for ${d.creatorName}`}
+                    style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap' }}>
+                {d.products.map((p) => {
+                  const on = d.productId === p.id
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      disabled={pending}
+                      /* Clicking the chosen one clears it, so a brand who picked
+                         the wrong package is not stuck with a control that only
+                         ever moves forward. */
+                      onClick={() => choose(d.id, on ? '' : p.id)}
+                      className="pkgchip"
+                      style={{
+                        display: 'inline-flex', alignItems: 'baseline', gap: 6,
+                        padding: '7px 12px', borderRadius: 10, cursor: pending ? 'wait' : 'pointer',
+                        background: on ? 'var(--ink, #181C24)' : '#fff',
+                        border: `1px solid ${on ? 'var(--ink, #181C24)' : 'rgba(24,28,36,.16)'}`,
+                        color: on ? '#fff' : 'var(--ink-soft, #565C68)',
+                        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {p.product_type}
+                      <span style={{ fontSize: 11.5, fontWeight: 700, opacity: on ? 0.85 : 0.65 }}>
+                        {inr(p.price_paise)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </span>
             )}
 
             <span style={{

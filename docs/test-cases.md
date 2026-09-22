@@ -5351,7 +5351,11 @@ lives, and audits every run.
 **The Growth roster (`GrowthRoster.tsx`)**
 - [ ] A Growth campaign renders the Growth roster, NOT `DraftPlacementEditor` — no price field, no collab/boosting controls, no counter
 - [ ] A Deals campaign is unchanged and still gets the placement editor
-- [ ] MIXED mode: each creator has a package dropdown listing their own active products with prices; choosing one sets the row's price from the PRODUCT, not the client
+- [ ] MIXED mode: each creator's packages are laid out as CHIPS showing type and price, not hidden in a dropdown. Choosing one sets the row's price from the PRODUCT, not the client
+- [ ] Clicking the already-chosen chip CLEARS it, so a wrong pick is recoverable
+- [ ] A creator with more than four packages falls back to a select (chips would wrap taller than the row)
+- [ ] A creator with NO active packages reads "No packages listed yet" and cannot be priced — this is the state every Growth creator is in until the creator-side routing opens
+- [ ] An unchosen row shows a faint dash for price and is counted in the send-blocked reason; it is not reddened, because a row the brand has not reached yet is not an error
 - [ ] UNIFORM mode: no dropdown. The deliverable is named once at the top, each creator's own price fills in automatically when added
 - [ ] Prices differ per creator in uniform mode — the TYPE is uniform, the rates are each creator's own
 - [ ] A row with no package shows "Choose a package", a red border and a dash for price, and blocks the send
@@ -5409,3 +5413,7 @@ lives, and audits every run.
 - [ ] Saving the Growth minimum in `/ops/settings` succeeds and writes `settings.growth_minimum_changed` with `target_id` NULL and the key in `detail.setting_key`. It cannot take a text key: `platform_settings` is keyed by TEXT, Postgres rejected the insert, and `logOpsEvent` THROWS on a failed audit write — so the action 500'd *after* the setting had already saved
 - [ ] The outreach send writes both audit rows with `target_id` NULL and `detail.campaign_id`. A campaign id there is a slug, not a UUID. On `outreach.campaign_sent` that throw would have landed AFTER the emails went out, reporting failure for a campaign that was delivered
 - [ ] Any new `logOpsEvent` call passes a real row UUID or NULL — never a text identifier
+
+**Deals roster empty state**
+- [ ] The dashed lime circle contains the creators glyph. It shipped empty in the campaign redesign (7326c5b), and an 84px flex-centred frame with nothing in it reads as a spinner that never resolves
+- [ ] The glyph is quiet (ink-faint), so "Add creators" stays the loudest thing on the panel

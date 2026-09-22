@@ -185,8 +185,23 @@ export default function CampaignRoster({
   if (totalRows === 0) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '40px 24px 10px' }}>
+        {/* The dashed ring is a FRAME — 84px, flex-centred, with the ring
+            absolutely positioned behind — and it shipped with nothing in it,
+            so it read as a loading spinner that never resolved.
+
+            The glyph is the creators icon from Chandreyee's campaign-type
+            design, where it stands for "creators" on the Growth card. Same
+            meaning here: this is where creators go. Kept quiet in ink-faint so
+            it frames the sentence below rather than competing with the Add
+            creators button, which is the actual thing to press. */}
         <div style={{ position: 'relative', width: 84, height: 84, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '1.5px dashed var(--lime-200)' }} />
+          <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none"
+               stroke="var(--ink-faint)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
         </div>
         <p className="t-body" style={{ color: 'var(--ink-2)', margin: '18px 0 0', maxWidth: 320 }}>
           No creators added yet. Use &quot;Add creators&quot; to build your roster.
