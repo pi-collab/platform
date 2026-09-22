@@ -260,6 +260,76 @@ export function renderAccountEmail(content: AccountEmailContent): { html: string
   return { html, text }
 }
 
+// ── Outreach (campaigns to people who are not users yet) ───────────────────
+
+export interface OutreachBullet {
+  title: string
+  /** Optional clause after the title. Omit for a bullet that is just a claim. */
+  detail?: string
+}
+
+export interface OutreachEmailContent {
+  /** "Hey Vamakshi," or "Hey," — the caller decides, because a wrong name is
+   *  worse than none and only the caller knows which it has. */
+  greeting: string
+  heading: string
+  /** Paragraphs between the heading and the list. */
+  intro: EmailLine[]
+  bullets: OutreachBullet[]
+  ctaUrl: string
+  ctaLabel: string
+  /** Closing line under the CTA, e.g. "Team Guapd". */
+  signoff: string
+  footerNote?: string
+}
+
+/**
+ * A campaign email.
+ *
+ * Through the same shell as every other email we send, so outreach looks like
+ * the product rather than like a mailshot — the first impression a creator
+ * gets of Guapd should be the thing they will see again after they sign up.
+ *
+ * NOT renderAccountEmail with the bullets flattened into paragraphs: a list of
+ * claims reads as a list, and the account renderer would have had to grow a
+ * bullets concept anyway.
+ */
+export function renderOutreachEmail(content: OutreachEmailContent): { html: string; text: string } {
+  const { greeting, heading, intro, bullets, ctaUrl, ctaLabel, signoff, footerNote } = content
+  const note = footerNote ?? siteHost()
+
+  const list = bullets.map((b) => `
+              <tr><td style="padding:0 0 12px 0;font-family:${FONT};font-size:15px;line-height:1.55;color:${COLORS.muted};">
+                <span>&#9989;</span>&nbsp;<b style="color:${COLORS.ink};">${esc(b.title)}</b>${b.detail ? ' &mdash; ' + esc(b.detail) : ''}
+              </td></tr>`).join('')
+
+  const html = shell({
+    heading,
+    preheader: lineText(intro[0] ?? heading),
+    inner: [
+      `              <p style="margin:0 0 14px 0;font-size:15px;line-height:1.65;color:${COLORS.ink};">${esc(greeting)}</p>`,
+      h1(heading),
+      ...intro.map(para),
+      `              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">${list}
+              </table>`,
+      button(ctaUrl, ctaLabel),
+      `              <p style="margin:20px 0 0 0;font-size:15px;line-height:1.65;color:${COLORS.ink};">${esc(signoff)}</p>`,
+    ].join('\n'),
+    footer: esc(note),
+  })
+
+  const text = [
+    greeting, '',
+    heading, '',
+    ...intro.map(lineText), '',
+    ...bullets.map((b) => `- ${b.title}${b.detail ? ' \u2014 ' + b.detail : ''}`), '',
+    `${ctaLabel}: ${ctaUrl}`, '',
+    signoff,
+  ].join('\n')
+
+  return { html, text }
+}
+
 // ── Notices (demo requests, and anything else with optional detail rows) ────
 
 export interface NoticeEmailContent {

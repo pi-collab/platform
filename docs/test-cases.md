@@ -5235,3 +5235,49 @@ asks for setup, the banner reports a fault.
 - [ ] Both land on `/creator/settings`, which carries a logged-out creator through login
 - [ ] A healthy connection renders nothing at all
 - [ ] It sits between the name and the overview on every rendering, and reads as one plate with the task card below it
+
+---
+
+## 54. Ops outreach — campaign email from the server that holds the key
+
+**Why it exists:** the Resend key is a production secret, marked sensitive in
+Vercel and unreadable from a laptop. Sending a campaign from a local script
+means copying that key onto a machine. This sends from where the key already
+lives, and audits every run.
+
+**Access**
+- [ ] `/ops/outreach` is ADMIN only — an outreach-role ops user is redirected, and `sendOutreach` refuses even if the URL is typed directly
+- [ ] A logged-out user and a non-ops user are refused
+- [ ] The nav link shows only for admins
+
+**Recipient parsing**
+- [ ] `email, Name` per line parses to a named greeting ("Hey Vamakshi,")
+- [ ] A line with no name gives a bare "Hey," — never a guessed one
+- [ ] A malformed address (`nandinichoudhary0428gmail.com`) or a handle (`@letsrebuild.content`) is listed as unusable and skipped, not sent to
+- [ ] The same address twice is sent to ONCE, and the count says so
+- [ ] Blank lines and `#` comment lines are ignored
+- [ ] The valid/unusable/duplicate counts update as you edit the box, before anything is sent
+
+**Sending**
+- [ ] ONE request per recipient. Check the Resend dashboard: 35 separate sends, never one send with 35 addresses in `to` (which would show every creator everyone else's address)
+- [ ] "Send test to <me>" goes to the signed-in ops user ONLY, and the recipient list is not touched
+- [ ] More than 60 recipients is refused with the cap named
+- [ ] Sending with email unconfigured is refused with a clear message, not a silent no-op
+- [ ] A re-run inside 24h does not double-mail anyone already sent to (idempotency key is `campaign-address`)
+- [ ] The run holds a gap between sends — 35 recipients takes ~20s, and the page stays responsive with the button disabled
+- [ ] `maxDuration = 60` is set on the page. At the 10s default a 35-recipient run is cut off midway, half the list mailed and no record of where it stopped
+
+**Audit (CLAUDE.md: every ops action writes ops_events)**
+- [ ] `outreach.campaign_started` is written BEFORE the first send, with the subject, heading and recipient count — a run that dies halfway still leaves a record that it began and who began it
+- [ ] `outreach.campaign_sent` follows with sent/failed counts, and failures listed with MASKED addresses
+- [ ] One `events` row per recipient (`outreach.email_sent` / `outreach.email_failed`) with the unmasked address — the only record that a stranger who is not yet a `creators` row was contacted
+- [ ] A failure to write those events logs and does not fail the send (the email has already gone; lying about it would be worse)
+
+**Preview**
+- [ ] Preview renders with the first recipient's name and is sandboxed (`sandbox=""`)
+- [ ] It says plainly that a browser is not a mail client and to send the test first
+
+**Copy and list under version control**
+- [ ] `app/ops/outreach/campaigns.ts` holds both the wording and the list, so "what exactly did we say to these people" is answerable later
+- [ ] The email renders through the same `shell()` as every other Guapd email — wordmark, neon rule, white card, dark pill button
+- [ ] A plain-text alternative is produced alongside the HTML (spam filters penalise HTML-only mail)
