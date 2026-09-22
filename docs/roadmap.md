@@ -617,3 +617,36 @@ writes the snapshot, so syncFeaturedReels can see what is already stored.
 ## Deploy notes
 
 REALTIME PROD GOTCHA: the supabase_realtime publication must include deals, messages, notifications, deal_deliverable_items, invoices in EVERY environment (dev done; must re-run on the production Supabase project post-registration). If missing, subscriptions connect but events never fire — silent failure ("only updates after clicking elsewhere"). Verify with: SELECT tablename FROM pg_publication_tables WHERE pubname='supabase_realtime';
+
+---
+
+## Structured campaign-level terms for Growth campaigns (post-pilot)
+
+**The gap:** a campaign's brief is free text — `brief_pitch`, `brief_guidelines`,
+`brief_avoid`. Timeline and usage rights are per-DEAL structured fields, set
+during negotiation.
+
+**Why that is fine for Deals and risky for Growth:** a Deals campaign negotiates
+each deal, so anything vague in the brief gets pinned down per creator before
+anyone agrees. A Growth campaign has **no per-creator negotiation** — the
+creator accepts or declines a fixed package. So whatever the prose brief says
+IS the binding agreement, identically, for every creator in the campaign. A
+vague brief is not one ambiguous deal; it is twenty.
+
+The concrete exposures are the two things the deal model already takes
+seriously enough to structure: **when it is due**, and **what the brand may do
+with the content afterwards**. Today both live in whatever sentence the brand
+typed.
+
+**The refinement:** structured campaign-level timeline and usage-rights fields
+on a Growth campaign, snapshotted onto each deal at send the way the fee and the
+minimum already are — so every creator gets the same explicit terms rather than
+the same paragraph, and the audit log records what they were.
+
+**Not a blocker.** Free text carries it for the pilot, and the brief is shared
+and live-edited, so a brand can clarify mid-campaign and everyone sees it. Build
+this once real Growth campaigns show where the prose is being relied on.
+
+Related: the deal model already has `usage_rights`, `usage_rights_end_date`,
+`timeline_date` and `rights_confirmed_at` — this is about deciding them ONCE per
+campaign rather than per deal, not about inventing new fields.
