@@ -127,6 +127,10 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       creatorPhoto: creator?.profile_photo_url ?? null,
       productId: placements[0]?.product_id ?? null,
       pricePaise: d.total_price_paise ?? 0,
+      /* The draft's own snapshot, which setGrowthDraftPackage resolved through
+         the same ladder the deal will use. Not a constant: an ops pair rate
+         outranks the growth rung. */
+      feePercent: d.fee_percent ?? GROWTH_FEE_PERCENT,
       /* In uniform mode the dropdown is not rendered, so only the one type is
          worth sending to the browser. */
       products: (uniformType ? all.filter((p) => p.product_type === uniformType) : all)
@@ -393,7 +397,6 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                 minCreators: (campaign as Record<string, unknown>).min_creators as number | null,
                 minValuePaise: (campaign as Record<string, unknown>).min_value_paise as number | null,
               }}
-              feePercent={GROWTH_FEE_PERCENT}
               uniformType={uniformType}
               sentCount={campaignDeals.length}
             />

@@ -5371,6 +5371,18 @@ lives, and audits every run.
 - [ ] An inactive product is refused
 - [ ] In uniform mode, a product of a different type is refused naming the campaign's type
 
+**The footer is DEDUCTED, and reads as deducted**
+- [ ] "You pay" is the FIRST line and equals the sum of creator rates exactly — rates + 30% never appears anywhere
+- [ ] The fee breakdown sits BELOW the total as an explanation, never above it as a line the total is built up from
+- [ ] The fee line reads "from the creator's side"; the note says "Nothing is added on top… our fee comes out of their side"
+- [ ] Five creators at ₹10,000 each → You pay ₹50,000 · fee ₹15,000 · creators receive ₹35,000. NOT ₹65,000
+- [ ] The fee is summed PER DRAFT, not taken off the grand total — so an ops pair rate on one creator is reported correctly rather than averaged away
+- [ ] With a mixed set of fee percentages, no single percentage is named (naming one would be a claim about rows it is not true of)
+- [ ] With every creator on the same rate, the percentage is shown
+
+**Packages are standard deliverables only**
+- [ ] Package options come from `creator_products` — reel, story, carousel, YouTube, etc. There is NO amplification option anywhere in Phase 1; amplification is Phase 2 with its own flow and verification
+
 **Preview matches the charge (the mismatch this round fixed)**
 - [ ] The roster footer shows **30%, deducted** — and the deal created at send carries `fee_percent = 30`, `fee_mode = 'deducted'`, `fee_basis = 'growth_standard'`
 - [ ] For a brand whose `platform_fee_percent` is 15 and `fee_mode` is `on_top`, the preview shows 30/deducted and so does the deal. Verify on a real `on_top` brand — staging has both kinds

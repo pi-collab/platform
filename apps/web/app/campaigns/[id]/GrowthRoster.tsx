@@ -39,6 +39,11 @@ export interface GrowthDraft {
   /** The chosen package, or null when nothing is picked yet. */
   productId: string | null
   pricePaise: number
+  /* This draft's OWN resolved fee. Usually 30, but an ops pair rate outranks
+     the growth rung, so a flat 30 in the footer would misreport a creator the
+     founders have agreed a different rate with — and the footer would then
+     disagree with the deal the send creates. */
+  feePercent: number
   products: GrowthProduct[]
 }
 
@@ -52,13 +57,11 @@ const inr = (paise: number) =>
   '₹' + Math.round(paise / 100).toLocaleString('en-IN')
 
 export default function GrowthRoster({
-  campaignId, drafts, minimum, feePercent, uniformType, sentCount,
+  campaignId, drafts, minimum, uniformType, sentCount,
 }: {
   campaignId: string
   drafts: GrowthDraft[]
   minimum: GrowthMinimumView
-  /** Snapshot of what the deals will carry. 30 on the growth track. */
-  feePercent: number
   /** Set when the campaign is "same for everyone". */
   uniformType: string | null
   /** Deals already sent from this campaign — the roster is drafts only. */
@@ -73,11 +76,24 @@ export default function GrowthRoster({
   const unpriced = drafts.length - priced.length
 
   const creatorsTotal = priced.reduce((sum, d) => sum + d.pricePaise, 0)
-  /* Deducted, always, on this track: the brand pays the package price and the
-     fee comes out of it. Shown rather than folded away, because "no markup on
-     the brand" only reads as true if the arithmetic is on screen. */
-  const feeTotal = Math.round(creatorsTotal * feePercent / 100)
+
+  /* ── DEDUCTED, always, on this track ──────────────────────────────────────
+     The brand pays the sum of the creators' own rates and NOTHING is added on
+     top. The fee is Guapd's cut out of the creator's side. It is shown rather
+     than folded away, because "no markup on the brand" only reads as true when
+     the arithmetic is on screen — but it must never be shown as a line the
+     brand's total is built UP from.
+
+     Summed per draft rather than taken off the total, so an ops pair rate on
+     one creator is reported correctly instead of being averaged away. */
+  const feeTotal = priced.reduce((sum, d) => sum + Math.round(d.pricePaise * d.feePercent / 100), 0)
   const creatorsReceive = creatorsTotal - feeTotal
+
+  /* One percentage only when every creator carries the same one. With a mixed
+     set, naming a single number would be a claim about rows it is not true of. */
+  const sharedPercent = priced.length > 0 && priced.every((d) => d.feePercent === priced[0].feePercent)
+    ? priced[0].feePercent
+    : null
 
   const progress = useMemo(() => {
     if (minimum.metric === 'value') {
@@ -253,14 +269,26 @@ export default function GrowthRoster({
       {/* ── What it costs, written out ───────────────────────────────────── */}
       {priced.length > 0 && (
         <div style={{ borderTop: '1px solid var(--hairline, #EAEAE3)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <Line label={`Creator rates (${priced.length})`} value={inr(creatorsTotal)} />
-          <Line label={`Guapd fee (${feePercent}%, deducted)`} value={'−' + inr(feeTotal)} muted />
-          <Line label="Creators receive" value={inr(creatorsReceive)} muted />
+          {/* What the brand pays, FIRST and on its own. The fee breakdown sits
+              below it as an explanation of where that money goes — never above
+              it as a line the total is built up from. A brand should not have
+              to read three rows to find out what this costs them. */}
+          <Line label={`You pay (${priced.length} creator${priced.length === 1 ? '' : 's'})`} value={inr(creatorsTotal)} strong />
+
           <div style={{ height: 1, background: 'var(--hairline, #EAEAE3)', margin: '4px 0' }} />
-          <Line label="You pay" value={inr(creatorsTotal)} strong />
-          <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint, #8A9099)', margin: '2px 0 0', lineHeight: 1.5 }}>
-            Nothing is added on top &mdash; you pay each creator their listed rate, and our fee comes out of it.
-            Every creator is invoiced and paid separately.
+
+          <Line label="Creator rates, as they set them" value={inr(creatorsTotal)} muted />
+          <Line
+            label={`Guapd fee${sharedPercent != null ? ` (${sharedPercent}%)` : ''} — from the creator's side`}
+            value={'\u2212' + inr(feeTotal)}
+            muted
+          />
+          <Line label="Creators receive" value={inr(creatorsReceive)} muted />
+
+          <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint, #8A9099)', margin: '4px 0 0', lineHeight: 1.5 }}>
+            Nothing is added on top. You pay each creator the rate they set, and our fee comes out of
+            their side &mdash; so your total is the rates above and no more. Every creator is invoiced
+            and paid separately.
           </p>
         </div>
       )}
