@@ -95,11 +95,10 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
   }
 
   return (
-    /* 1080 and the deals page's padding, because every other brand page uses
-       them: deals, browse, dashboard and the campaign detail screen. This one
-       sat at 1120 with its own gutters, so switching tabs nudged the whole
+    /* 1200 and the deals page's padding, the width every app page uses. This
+       one sat at 1120 with its own gutters, so switching tabs nudged the whole
        layout sideways. */
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
 
       {/* ===== HERO =====
           Hidden while the create panel is open. Everything in it belongs to

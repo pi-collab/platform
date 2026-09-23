@@ -223,7 +223,7 @@ export default function BrandInboxView({
 
   if (threads.length === 0) {
     return (
-      <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 40 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 40 }}>
         <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(20px,2vw,24px)', letterSpacing: '-0.02em', marginTop: 20 }}>
           No conversations yet
         </div>
@@ -235,7 +235,7 @@ export default function BrandInboxView({
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', width: '100%', padding: 'clamp(14px,2vw,22px) clamp(14px,2.4vw,26px) clamp(16px,2vw,24px)', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: 'clamp(14px,2vw,22px) clamp(14px,2.4vw,26px) clamp(16px,2vw,24px)', boxSizing: 'border-box', overflow: 'hidden' }}>
     <div style={{
       display: 'flex', flexDirection: 'column', height: 'calc(100vh - 130px)',
       borderRadius: 26, overflow: 'hidden',

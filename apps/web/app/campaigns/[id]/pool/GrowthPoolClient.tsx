@@ -111,12 +111,10 @@ export default function GrowthPoolClient({
   }
 
   return (
-    /* The export draws this at 1200, but every brand page in the product is
-       1080 and a tab that changes the layout's width as you move between them
-       is the thing being fixed here. Three cards still fit: 3 x 338 + two 32px
-       gaps is 1078. The bottom padding stays deep, for the floating bar. */
+    /* 1200, as the export draws it and as every app page now does. The bottom
+       padding stays deep, to clear the floating bar. */
     <main style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(120px,10vw,140px)' }}>
-      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* ===== HERO ===== */}
         <div className="surface pool-hero" style={{ padding: 0, overflow: 'hidden', display: 'flex' }}>

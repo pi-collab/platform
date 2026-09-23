@@ -112,7 +112,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto' }}>
       {/* title */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 'clamp(20px,2.6vw,28px)' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(26px,3vw,34px)', lineHeight: 1.05, letterSpacing: '-0.025em', margin: 0 }}>

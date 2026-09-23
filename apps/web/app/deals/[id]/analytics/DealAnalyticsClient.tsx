@@ -217,7 +217,7 @@ export default function DealAnalyticsClient(props: DealAnalyticsProps) {
   }
 
   return (
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
       {/* ===== SECTION 1: Header Card ===== */}
       <div className="surface reveal" style={{ padding: '26px 28px', borderRadius: 20 }}>

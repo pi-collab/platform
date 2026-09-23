@@ -186,7 +186,7 @@ export default async function DealsListPage({
       // HeldNotice keeps the page width, since it belongs to the page rather
       // than to the drawn screen.
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <HeldNotice
             heldCount={heldCount ?? 0}
             status={brand.brandStatus}
@@ -277,7 +277,7 @@ const container: React.CSSProperties = {
   position: 'relative',
   zIndex: 1,
   padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)',
-  maxWidth: 1080,
+  maxWidth: 1200,
   margin: '0 auto',
 }
 

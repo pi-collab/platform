@@ -36,7 +36,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
 
   if (error) {
     return (
-      <main style={{ padding: '2rem clamp(1rem, 3vw, 2.5rem)', maxWidth: 1080, margin: '0 auto' }}>
+      <main style={{ padding: '2rem clamp(1rem, 3vw, 2.5rem)', maxWidth: 1200, margin: '0 auto' }}>
         <p style={{ color: '#dc2626', fontSize: '0.875rem' }}>
           Error loading payments: {error.message}
         </p>
