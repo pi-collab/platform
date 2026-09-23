@@ -5505,6 +5505,7 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Every brand page renders at `maxWidth: 1200`: dashboard, deals, deal detail, new deal, deal analytics, campaigns, campaign detail, the Growth pool, browse, inbox, settings, notifications
 - [ ] Every creator desktop page too: dashboard, deals, deal detail, payments, settings, inbox, notifications, storefront editor
 - [ ] The standalone empty screens match: BrandDashboardEmpty, BrandDealsEmpty, CreatorDashboardEmptyDesktop, CreatorDealsEmptyDesktop, CreatorInboxEmptyDesktop
+- [ ] Content columns LINE UP across tabs. Compare deals, campaigns and dashboard side by side on a wide screen: the card edges must sit at the same x. Pages that carry `padding` and `maxWidth` on ONE element need `boxSizing: 'content-box'`, because the global `box-sizing: border-box` otherwise takes the padding out of the 1200 and leaves ~1112
 - [ ] MOBILE IS UNAFFECTED. `maxWidth` is a cap, so below 1200 nothing changes — check a phone and a tablet render exactly as before
 - [ ] Browse and campaigns render their empty states inside the page container, so they follow it automatically
 - [ ] Switching tabs does not shift the layout sideways in either direction

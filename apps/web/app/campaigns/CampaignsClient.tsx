@@ -98,7 +98,11 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
     /* 1200 and the deals page's padding: the width every app page and every
        drawn empty state uses. This one sat at 1120 with its own gutters, so
        switching tabs nudged the whole layout sideways. */
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+    /* boxSizing content-box: the cap measures the CONTENT, not the padded
+       box. Global box-sizing is border-box, which left this page ~1112 of
+       usable width while dashboard and browse — which pad an outer wrapper and
+       cap an inner div — got the full 1200. Same result, one property. */
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)', boxSizing: 'content-box' }}>
 
       {/* ===== HERO =====
           Hidden while the create panel is open. Everything in it belongs to

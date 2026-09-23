@@ -279,6 +279,11 @@ const container: React.CSSProperties = {
   padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)',
   maxWidth: 1200,
   margin: '0 auto',
+  /* content-box so the cap measures the CONTENT. With the global border-box,
+     the padding above would come out of the 1200 and leave ~1112 — which is
+     why this page looked narrower than dashboard and browse, both of which pad
+     an outer wrapper and cap an inner div. */
+  boxSizing: 'content-box',
 }
 
 const heroCard: React.CSSProperties = {
