@@ -5428,7 +5428,6 @@ lives, and audits every run.
 **Confirmations are the product's, not the browser's (`components/ui/ConfirmDialog.tsx`)**
 - [ ] Sending a Growth campaign opens a Guapd dialog, NOT `window.confirm`. No system title bar, no "OK"
 - [ ] The confirm button names the action ("Send 2 offers"), never "OK" — the last thing read before pressing says what pressing does
-- [ ] It repeats the numbers: what you pay, what creators receive, and who it reaches. This is the last screen before offers hit real people
 - [ ] Escape and the backdrop both cancel; focus lands on the confirm button when it opens
 - [ ] While sending, the confirm reads "Working…", both buttons are disabled, and neither the backdrop nor Escape dismisses it
 - [ ] The page behind does not scroll while it is open, and scrolls again after

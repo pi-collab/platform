@@ -347,28 +347,13 @@ export default function GrowthRoster({
       </div>
       )}
 
-      {/* The numbers are repeated here on purpose. This is the last screen
-          before offers reach real people, and "are you sure" is only a useful
-          question if what you are agreeing to is in front of you. */}
+      {/* Deliberately plain. The totals are on the panel directly behind this
+          dialog, and restating them here made an ordinary confirmation read
+          like an invoice needing approval. */}
       <ConfirmDialog
         open={confirming}
         title={`Send to ${priced.length} creator${priced.length === 1 ? '' : 's'}?`}
         body="Each creator gets their own offer at their own rate, and can accept or decline it. Offers cannot be unsent."
-        detail={
-          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span>You pay</span>
-              <strong style={{ color: 'var(--ink)' }}>{inr(creatorsTotal)}</strong>
-            </span>
-            <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-              <span>Creators receive</span>
-              <strong style={{ color: 'var(--ink)' }}>{inr(creatorsReceive)}</strong>
-            </span>
-            <span style={{ opacity: 0.8 }}>
-              {priced.map((d) => d.creatorName).join(', ')}
-            </span>
-          </span>
-        }
         confirmLabel={`Send ${priced.length} offer${priced.length === 1 ? '' : 's'}`}
         busy={sending}
         onConfirm={send}
