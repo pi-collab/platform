@@ -1340,7 +1340,22 @@ export default function StorefrontManager({
   // Step 1 is the only mandatory one: everything else on the page hangs off a
   // URL, and there is nothing to publish without one.
   const slugReady = slug.length >= 3 && slugStatus !== 'taken' && slugStatus !== 'invalid'
-  const canAdvance = step !== 0 || slugReady
+  /* ── What blocks the Continue button, per step ────────────────────────────
+     Step 0 needs an available link. Step 3 is the RATE CARD, and it needs at
+     least one package: the storefront cannot be published without one, and
+     finding that out at the very last button — after writing a bio, picking
+     content and listing collaborations — is the wrong end of the wizard to
+     learn it. Caught here, the fix is one step away rather than seven.
+
+     Held to the same rule as the server, which refuses the publish outright.
+     This is the courteous version of that refusal, not a substitute for it. */
+  const RATE_CARD_STEP = WIZARD_STEPS.indexOf('Rate card')
+  const hasPackages = products.length > 0
+  const blockedReason =
+    step === 0 && !slugReady ? 'Pick an available link first'
+    : step === RATE_CARD_STEP && !hasPackages ? 'Add at least one package to continue. Brands book from your rate card.'
+    : null
+  const canAdvance = blockedReason === null
 
   const set = useCallback(<K extends keyof EditState>(key: K, val: EditState[K]) => {
     setEdit(prev => ({ ...prev, [key]: val }))
@@ -2150,6 +2165,20 @@ export default function StorefrontManager({
                   }}>
                     Your rate card pulls from your products. <a href="/creator/deals" style={{ color: 'var(--ink)', textDecoration: 'underline', fontWeight: 600 }}>manage rates</a>.
                   </div>
+                  {/* Said on the step itself, not only in the button's tooltip —
+                      a title attribute is invisible on a phone, and this is the
+                      one step that can stop the whole wizard. */}
+                  {!hasPackages && (
+                    <div style={{
+                      padding: '10px 14px', borderRadius: 12,
+                      background: 'rgba(216,154,46,.08)', border: '1px solid rgba(216,154,46,.28)',
+                      fontSize: 12, color: '#A9761D', lineHeight: 1.5,
+                    }}>
+                      You have no packages yet, so there is nothing for a brand to book.
+                      Add at least one before you can continue &mdash; a storefront cannot go
+                      live without a rate card.
+                    </div>
+                  )}
                 </Section>
               </div>
 
@@ -2215,7 +2244,7 @@ export default function StorefrontManager({
                 // React state until someone remembered to press "Save draft".
                 onClick={async () => { if (await handleSave(false)) setStep(step + 1) }}
                 disabled={!canAdvance || saving}
-                title={canAdvance ? undefined : 'Pick an available link first'}
+                title={blockedReason ?? undefined}
                 style={{
                   ...primaryBtn,
                   background: 'var(--neon)', color: 'var(--ink)', fontWeight: 800,
