@@ -5422,6 +5422,8 @@ lives, and audits every run.
 - [ ] The glyph is quiet (ink-faint), so "Add creators" stays the loudest thing on the panel
 
 **Campaigns list while creating**
+- [ ] Opening the create panel HIDES the whole overview header too: the title, the active/total counts, the search box and the New Campaign button. All of it belongs to browsing campaigns, and a New Campaign button above the New Campaign form is the button offering to do what it has already done
+- [ ] The create panel is then the only thing on the page, with Cancel as the way back
 - [ ] Opening the create panel HIDES the campaign list, the track filter and the empty state beneath it. Naming a new campaign is one task, and the previous campaigns are what the brand just navigated away from
 - [ ] Cancelling or finishing brings the list back unchanged, with the filter still on All
 

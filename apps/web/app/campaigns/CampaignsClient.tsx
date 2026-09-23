@@ -97,7 +97,12 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)' }}>
 
-      {/* ===== HERO ===== */}
+      {/* ===== HERO =====
+          Hidden while the create panel is open. Everything in it belongs to
+          browsing campaigns, not making one: a count of campaigns that are not
+          on screen, a search box for a list that is hidden, and a New Campaign
+          button sitting above the New Campaign form it already opened. */}
+      {!createOpen && (
       <div className="surface reveal" style={{ padding: '28px 30px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
           <span className="t-meta">Campaign overview</span>
@@ -159,6 +164,7 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
           </button>
         </div>
       </div>
+      )}
 
       {chooserOpen && (
         <CampaignTypeModal
@@ -179,7 +185,7 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
 
       {/* ===== CREATE PANEL ===== */}
       {createOpen && (
-        <div className="surface reveal" style={{ padding: '26px 28px', marginTop: 18 }}>
+        <div className="surface reveal" style={{ padding: '26px 28px' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
             New Campaign
           </span>
