@@ -5494,7 +5494,7 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] In a UNIFORM campaign the rate shown is the creator's price for THAT deliverable, not their cheapest package, and the label names it ("reel rate", "story rate")
 - [ ] In a MIXED campaign the card leads with the creator's **Instagram Reel** price, not their cheapest package. A card leading with a ₹2,000 story makes a creator look cheaper than they will cost
 - [ ] A creator with no reel falls back to their lowest-priced package, and the label names whichever it is
-- [ ] MIXED only: "Other deliverables" opens the full list on the card, cheapest first, with a line saying the choice is made on the roster after adding. It toggles to "Hide" when open
+- [ ] MIXED only: "View more" opens the full list on the card, cheapest first, with a line saying the choice is made on the roster after adding. It toggles to "Hide" when open
 - [ ] UNIFORM campaigns do NOT offer that list — the other packages are unbuyable there, and showing them would mislead
 - [ ] A creator with one package shows no expander
 - [ ] A creator who does not offer the uniform deliverable is shown but not addable, with the reason — not silently filtered out

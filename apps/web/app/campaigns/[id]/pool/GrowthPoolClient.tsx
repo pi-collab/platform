@@ -284,7 +284,7 @@ function Card({ c, busy, uniformType, onToggle }: {
                   textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
                 }}
               >
-                {open ? 'Hide' : 'Other deliverables'}
+                {open ? 'Hide' : 'View more'}
               </button>
             )}
           </div>
