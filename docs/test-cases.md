@@ -5445,3 +5445,32 @@ lives, and audits every run.
 - [ ] A row opens that deal at `/deals/[id]`
 - [ ] With both sent offers and unsent drafts, the two groups are labelled Sent and "Still to send"
 - [ ] With everything sent and no drafts left, the minimum bar and send button are gone and only the Sent list remains
+
+## 56. Storefront with no packages (hotfix, 23 Sep)
+
+**What was live:** `/c/pankit-narang` had `show_rates = true` and ZERO
+`creator_products`. The public page pushed two hardcoded placeholder rows —
+"Instagram Reel · ₹60,000" and "Instagram Story · ₹25,000" — under the heading
+"Add what you need at Pankit's set rates". The prices were suppressed because
+the rate-card section disables itself with no products, so a brand saw two
+unpriced deliverables the creator had never listed, offered in his name.
+
+**No placeholders on a public storefront**
+- [ ] A creator with no active packages has NO rate card on `/c/[slug]`: no "Instagram Reel", no "Instagram Story", no invented prices in the page payload
+- [ ] Check the payload, not just the rendering: `rateCardItems` must be empty, since the placeholder prices were visible in the RSC data even while hidden on screen
+- [ ] A creator WITH packages is unchanged: their real products, real prices, real modes
+
+**Desktop and mobile agree**
+- [ ] Both renderings hide the rate card when there is nothing to sell. Desktop already did this via `sections[ratecard].enabled`; mobile showed a heading, the "set rates" line and an empty card
+- [ ] "Create an offer" does not appear when there is nothing to buy (`takesOffers`)
+- [ ] Other sections (hero, stats, audience, content, collabs, work-with-me) still render, so the page is a profile rather than a dead end
+
+**Packages are required to PUBLISH**
+- [ ] Publishing a storefront with no active package is refused: "Add at least one package before publishing…"
+- [ ] SAVING a draft with no packages still works — a half-built storefront is a normal state
+- [ ] Deactivating every package does NOT retro-unpublish a live storefront; the gate applies at the next publish
+- [ ] The check counts `is_active = true` products only
+- [ ] Server-side: call `upsertStorefront({ is_published: true })` directly with no packages and confirm it refuses
+
+**Existing live storefronts with no packages**
+- [ ] They stay published and now simply show no rate card. Identify them: storefronts where `is_published = true` and the creator has no active products

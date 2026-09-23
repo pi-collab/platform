@@ -227,14 +227,21 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
         countsToward: normalizePriceMode(p) !== 'on_request',
         approximate: normalizePriceMode(p) === 'from' || normalizePriceMode(p) === 'range',
   }))
-  if (rateCardItems.length === 0) {
-    rateCardItems.push(
-      /* Placeholder rows for a card with nothing on it, so rates is null: a
-         made-up line must not offer add-ons priced from a real channel. */
-      { key: 'reel', name: 'Instagram Reel', desc: 'Per reel, feed-posted', pricePaise: 6000000, platform: 'instagram', handle, rates: null, priceLabel: formatProductPrice({ price_paise: 6000000 }), countsToward: true, approximate: false },
-      { key: 'story', name: 'Instagram Story', desc: 'Per story, with link sticker', pricePaise: 2500000, platform: 'instagram', handle, rates: null, priceLabel: formatProductPrice({ price_paise: 2500000 }), countsToward: true, approximate: false },
-    )
-  }
+  /* ── NO placeholders on the public page ───────────────────────────────────
+     This used to push two invented rows — "Instagram Reel · ₹60,000" and
+     "Instagram Story · ₹25,000" — whenever a creator had no packages, so the
+     rate card would not look empty.
+
+     They were written for the creator's own PREVIEW and leaked here. The
+     public effect was that a creator with no packages had two deliverables
+     they never listed advertised under "Add what you need at <name>'s set
+     rates", at prices they had never seen. The numbers themselves were hidden
+     only because the section is disabled when there are no products, so what a
+     brand actually saw was two unpriced services on offer.
+
+     Advertising work on a creator's behalf that they have not agreed to offer
+     is worse than an empty section. So the list stays empty and the section
+     stays off, which the sections array below already handles. */
 
   // Auto-hide empty sections
   const sections: ShopfrontSection[] = [
