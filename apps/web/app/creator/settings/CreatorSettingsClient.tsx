@@ -204,7 +204,7 @@ export default function CreatorSettingsClient({
         />
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* Page header */}
         <div className="set-desktop-head" style={{ marginBottom: 22 }}>

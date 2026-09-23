@@ -113,6 +113,6 @@ const wrapper: React.CSSProperties = {
   position: 'relative',
   zIndex: 1,
   padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)',
-  maxWidth: 1200,
+  maxWidth: 1280,
   margin: '0 auto',
 }

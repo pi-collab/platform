@@ -28,7 +28,7 @@ import './brand-dashboard-empty.css'
 export default function BrandDashboardEmpty() {
   return (
     <div className="bdash-desk">
-      <div style={{maxWidth: '1200px', margin: '0 auto'}}>
+      <div style={{maxWidth: '1280px', margin: '0 auto'}}>
 
 
             <section className="sr in" style={{position: 'relative', overflow: 'hidden', borderRadius: '24px', background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px,3vw,40px) clamp(24px,3vw,40px) clamp(28px,3.4vw,40px)'}}>

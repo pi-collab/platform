@@ -5501,10 +5501,13 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Empty states differ: "No Growth creators yet" when the roster is empty, "No creators match those filters" when the filters are
 - [ ] Grid is 3 across, 2 on a tablet, 1 on a phone; the hero's side panel stacks under the title below 860px
 
-**One page width across the whole app: 1200**
-- [ ] Every brand page renders at `maxWidth: 1200`: dashboard, deals, deal detail, new deal, deal analytics, campaigns, campaign detail, the Growth pool, browse, inbox, settings, notifications
+**One page width across the whole app: 1280, matching the nav**
+- [ ] Page content lines up with the nav bar above it. The nav is `maxWidth: 1280` (BrandSidebar/CreatorSidebar `navBar`); pages were 1200, so every screen sat 80px narrower than the bar over it
+- [ ] Every brand page renders at `maxWidth: 1280`: dashboard, deals, deal detail, new deal, deal analytics, campaigns, campaign detail, the Growth pool, browse, inbox, settings, notifications
 - [ ] Every creator desktop page too: dashboard, deals, deal detail, payments, settings, inbox, notifications, storefront editor
-- [ ] EMPTY states match their populated pages. `BrandDashboardEmpty` and `BrandDealsEmpty` were already 1200 and stay there; browse and campaigns render their empty states inside the page container, so they follow it
+- [ ] The standalone empty screens match: BrandDashboardEmpty, BrandDealsEmpty, CreatorDashboardEmptyDesktop, CreatorDealsEmptyDesktop, CreatorInboxEmptyDesktop
+- [ ] Browse and campaigns render their empty states inside the page container, so they follow it automatically
 - [ ] Switching tabs does not shift the layout sideways in either direction
 - [ ] NOT changed: `ShopfrontPreview` keeps its own 1080 sections — that is the public storefront's drawn composition (hero, stats strip, rate card), not a page shell — and the marketing pages keep their own widths
-- [ ] The pool's three-card grid still sits correctly at 1200 and still collapses to 2 then 1
+- [ ] The pool's three-card grid still sits correctly at 1280 and still collapses to 2 then 1
+- [ ] NOTE: the design file specifies 1200 for BOTH nav and content. The app's nav is 1280, so the pages follow the nav rather than the file — if the nav is ever narrowed to 1200, these all move with it

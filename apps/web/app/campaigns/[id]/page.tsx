@@ -237,7 +237,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const nameRest = nameParts.join(' ')
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+    <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
 
       {/* ===== HEADER ===== */}
       <div className="surface reveal" style={{ padding: '36px 38px' }}>

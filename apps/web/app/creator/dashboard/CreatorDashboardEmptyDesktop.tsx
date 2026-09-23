@@ -39,7 +39,7 @@ export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
         </header>
 
         <main style={{position: 'relative', zIndex: '1', padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)'}}>
-          <div style={{maxWidth: '1200px', margin: '0 auto'}}>
+          <div style={{maxWidth: '1280px', margin: '0 auto'}}>
 
 
             <section className="sr in" style={{position: 'relative', overflow: 'hidden', borderRadius: '24px', background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px,3vw,40px) clamp(24px,3vw,40px) clamp(28px,3.4vw,40px)'}}>
