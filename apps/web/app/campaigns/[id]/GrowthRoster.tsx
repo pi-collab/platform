@@ -183,14 +183,14 @@ export default function GrowthRoster({
       {drafts.length > 0 && (
       <div style={{
         borderRadius: 14, padding: '14px 18px',
-        background: progress.met ? 'rgba(31,157,107,.07)' : 'var(--sec-2, #F7F4FB)',
-        border: `1px solid ${progress.met ? 'rgba(31,157,107,.24)' : 'var(--hairline, #EAEAE3)'}`,
+        background: progress.met ? 'var(--lime-50, #F6FCE6)' : 'var(--sec-2, #F7F4FB)',
+        border: `1px solid ${progress.met ? 'rgba(210,240,74,.55)' : 'var(--hairline, #EAEAE3)'}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <span className="t-meta" style={{ color: progress.met ? '#1F8A5B' : 'var(--ink-2, #565C68)' }}>
+          <span className="t-meta" style={{ color: progress.met ? 'var(--lime-700, #4F6B12)' : 'var(--ink-2, #565C68)' }}>
             {progress.met ? 'Minimum met' : 'Campaign minimum'}
           </span>
-          <span className="t-data" style={{ fontSize: 14, color: progress.met ? '#1F8A5B' : 'var(--ink)' }}>
+          <span className="t-data" style={{ fontSize: 14, color: progress.met ? 'var(--lime-700, #4F6B12)' : 'var(--ink)' }}>
             {progress.label} {progress.hint}
           </span>
         </div>
@@ -198,7 +198,10 @@ export default function GrowthRoster({
              role="progressbar" aria-valuenow={progress.pct} aria-valuemin={0} aria-valuemax={100}>
           <div style={{
             height: '100%', width: `${progress.pct}%`, borderRadius: 20,
-            background: progress.met ? '#1F9D6B' : 'var(--lime-400, #C9EB3C)',
+            /* One colour, ours. The bar being full is what says the minimum
+               is met; swapping to the invoice-paid green made it look like a
+               different system's control. */
+            background: 'var(--neon-deep, #D2F04A)',
             transition: 'width .35s cubic-bezier(.4,0,.2,1)',
           }} />
         </div>

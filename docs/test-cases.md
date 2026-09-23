@@ -5525,3 +5525,8 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] On browse, "N creators" and its filter chips sit over the creator names they count, inset by the rows' own 24px
 - [ ] Neither row hangs to the left of every word on the page, which reads as a control that has slipped out of the layout
 - [ ] The insets are unchanged on a phone, where the cards keep the same internal padding
+
+**Progress bars use Guapd's lime, not the success green**
+- [ ] The pool's hero bar, its floating bar and the roster's minimum bar all fill with `--neon-deep` (#D2F04A) at every stage. `#1F9D6B` is the invoice-paid green and must not appear on them
+- [ ] Reaching the minimum is signalled by the bar being FULL plus the label ("Minimum met" / "Minimum met" hint in `--lime-700`), not by the fill changing colour
+- [ ] The roster's met panel tints with `--lime-50` and a lime hairline, not a green one

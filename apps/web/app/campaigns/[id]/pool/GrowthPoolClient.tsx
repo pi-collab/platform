@@ -149,7 +149,7 @@ export default function GrowthPoolClient({
             <div>
               <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>{progressLabel}</span>
               <div style={{ marginTop: 8, height: 7, borderRadius: 999, background: 'rgba(24,28,36,.08)', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: minimumMet ? '#1F9D6B' : 'var(--neon-deep, #D2F04A)', transition: 'width .3s ease' }} />
+                <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: 'var(--neon-deep, #D2F04A)', transition: 'width .3s ease' }} />
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -196,16 +196,21 @@ export default function GrowthPoolClient({
         )}
       </div>
 
-      {/* ===== STICKY BAR ===== */}
+      {/* ===== STICKY BAR =====
+          The fill is Guapd's lime, not the palette's semantic success green.
+          #1F9D6B is what we use to say an invoice was PAID; borrowing it here
+          made the bar read as another system's control. Reaching a minimum is
+          the campaign going right, which is what the neon is for — and the bar
+          being FULL is the signal, so the colour need not change as well. */}
       <div style={{ position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)', zIndex: 40, width: 'min(560px, calc(100% - 32px))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '10px 10px 10px 20px', borderRadius: 999, background: '#FFFFFF', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 2px 4px rgba(18,21,28,.04), 0 18px 40px -12px rgba(18,21,28,.28)' }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
               <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap' }}>{progressLabel}</span>
-              <span style={{ fontSize: 11.5, color: minimumMet ? '#1F8A5B' : 'var(--ink-soft)', whiteSpace: 'nowrap' }}>{floatHint}</span>
+              <span style={{ fontSize: 11.5, fontWeight: minimumMet ? 700 : 400, color: minimumMet ? 'var(--lime-700, #4F6B12)' : 'var(--ink-soft)', whiteSpace: 'nowrap' }}>{floatHint}</span>
             </div>
             <div style={{ height: 5, borderRadius: 999, background: 'rgba(24,28,36,.08)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: minimumMet ? '#1F9D6B' : 'var(--neon-deep, #D2F04A)', transition: 'width .35s cubic-bezier(.22,1,.36,1), background .2s ease' }} />
+              <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: 'var(--neon-deep, #D2F04A)', transition: 'width .35s cubic-bezier(.22,1,.36,1)' }} />
             </div>
           </div>
           <Link href={`/campaigns/${campaignId}`} className="inkbtn"
