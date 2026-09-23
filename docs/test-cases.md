@@ -5310,5 +5310,13 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The check counts `is_active = true` products only
 - [ ] Server-side: call `upsertStorefront({ is_published: true })` directly with no packages and confirm it refuses
 
+**Caught at the wizard step, not at the last button**
+- [ ] On the **Rate card** step with no packages, Continue is disabled and an amber note on the step itself says why — not only in the button's `title`, which is invisible on a phone
+- [ ] A creator WITH at least one active package advances normally; nothing changes for them
+- [ ] Adding a package and returning unblocks Continue
+- [ ] The client gate and the server gate count the same thing: `creator_products` with `is_active = true`. The storefront page already filters on it, so a creator with only deactivated packages is blocked on both sides rather than passing the wizard and failing at publish
+- [ ] The step-0 link check still works and still shows its own reason
+- [ ] The final publish button remains gated server-side — the wizard note is the courteous version of that refusal, not a replacement
+
 **Existing live storefronts with no packages**
 - [ ] They stay published and now simply show no rate card. Identify them: storefronts where `is_published = true` and the creator has no active products
