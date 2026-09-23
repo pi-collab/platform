@@ -39,9 +39,8 @@ export interface GrowthDraft {
   creatorName: string
   creatorPhoto: string | null
   /** The chosen package, or null when nothing is picked yet. */
-  productId: string | null
-  /** How many of that package. Stored as repeated placements. */
-  qty: number
+  /** One line per package the creator is booked for, with how many of each. */
+  items: { productId: string; qty: number }[]
   pricePaise: number
   /* This draft's OWN resolved fee. Usually 30, but an ops pair rate outranks
      the growth rung, so a flat 30 in the footer would misreport a creator the
@@ -89,7 +88,9 @@ export default function GrowthRoster({
   const [sending, setSending] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
-  const priced = drafts.filter((d) => d.productId && d.pricePaise > 0)
+  /* Priced means at least one deliverable is booked. A creator can now carry
+     several, so the test is the items, not a single chosen package. */
+  const priced = drafts.filter((d) => d.items.length > 0 && d.pricePaise > 0)
   const unpriced = drafts.length - priced.length
 
   const creatorsTotal = priced.reduce((sum, d) => sum + d.pricePaise, 0)
@@ -148,17 +149,24 @@ export default function GrowthRoster({
   /* One writer for both controls. The package select and the stepper are two
      halves of the same answer — which deliverable, and how many — so sending
      them separately would let a half-saved row exist between two round trips. */
-  function setItem(draftId: string, productId: string | null, qty: number) {
+  /* The whole set every time, not a delta. A creator can be booked for a reel
+     AND a carousel AND two stories, so the roster sends what the row should
+     look like and the server writes exactly that — no merge, nothing to get
+     out of step between two round trips. */
+  function setItems(draftId: string, items: { productId: string; qty: number }[]) {
     setError(null)
     startTransition(async () => {
-      const res = await setGrowthDraftItems(
-        campaignId,
-        draftId,
-        productId && qty > 0 ? [{ productId, qty }] : [],
-      )
+      const res = await setGrowthDraftItems(campaignId, draftId, items.filter((i) => i.qty > 0))
       if (res.error) setError(res.error)
       else router.refresh()
     })
+  }
+
+  /** Change one package's count, leaving the creator's other lines alone. */
+  function setQty(d: GrowthDraft, productId: string, qty: number) {
+    const next = d.items.filter((i) => i.productId !== productId)
+    if (qty > 0) next.push({ productId, qty })
+    setItems(d.id, next)
   }
 
   function remove(draftId: string) {
@@ -292,82 +300,60 @@ export default function GrowthRoster({
         <div className="t-meta" style={{ color: 'var(--ink-2, #565C68)' }}>Still to send</div>
       )}
       <div>
-        {drafts.map((d, i) => (
+        {drafts.map((d, i) => {
+          const qtyOf = (productId: string) => d.items.find((it) => it.productId === productId)?.qty ?? 0
+          /* Uniform campaigns show only the campaign's deliverable; mixed ones
+             show everything the creator sells, each with its own count. That
+             is how a brand books a reel AND a carousel AND two stories from
+             one person without adding them three times. */
+          const lines = uniformType ? d.products.slice(0, 1) : d.products
+          return (
           <div key={d.id} style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', flexWrap: 'wrap',
+            display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 0', flexWrap: 'wrap',
             borderTop: i === 0 ? undefined : '1px solid var(--hairline, #EAEAE3)',
           }}>
             <Avatar name={d.creatorName} photo={d.creatorPhoto} />
 
-            <span style={{ flex: 1, minWidth: 160 }}>
+            <span style={{ flex: 1, minWidth: 150 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>
                   {d.creatorName}
                 </span>
                 <TrackTag track="growth" size="sm" />
               </span>
-              {d.productId && (
+              {d.products[0]?.handle && (
                 <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-faint, #8A9099)', marginTop: 2 }}>
-                  {d.products.find((p) => p.id === d.productId)?.handle
-                    ? '@' + d.products.find((p) => p.id === d.productId)!.handle
-                    : ''}
+                  @{d.products[0].handle.replace(/^@/, '')}
                 </span>
               )}
             </span>
 
-            {/* ── Uniform: nothing to choose. Mixed: their packages. ────── */}
-            {uniformType ? (
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft, #565C68)' }}>
-                {uniformType}
-              </span>
-            ) : d.products.length === 0 ? (
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#9B3030' }}>
+            {/* ── What they are booked for ──────────────────────────────── */}
+            {d.products.length === 0 ? (
+              <span style={{ flex: 2, minWidth: 200, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#9B3030' }}>
                 No packages listed yet
               </span>
             ) : (
-              /* A select, styled rather than left native. The chevron is ours
-                 and the field carries the app's radius, hairline and type;
-                 appearance:none is what stops the platform drawing its own. */
-              <span className="pkgselect">
-                <select
-                  value={d.productId ?? ''}
-                  disabled={pending}
-                  onChange={(e) => setItem(d.id, e.target.value || null, e.target.value ? Math.max(1, d.qty) : 0)}
-                  aria-label={`Package for ${d.creatorName}`}
-                  data-empty={d.productId ? undefined : 'true'}
-                >
-                  <option value="">Choose a package</option>
-                  {d.products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.product_type} &middot; {inr(p.price_paise)}
-                    </option>
-                  ))}
-                </select>
-                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
+              <span style={{ flex: 2, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {lines.map((p) => {
+                  const q = qtyOf(p.id)
+                  return (
+                    <span key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ flex: 1, minWidth: 130, fontFamily: 'var(--font-ui)', fontSize: 13, color: q > 0 ? 'var(--ink)' : 'var(--ink-soft, #565C68)' }}>
+                        {p.product_type}
+                        <span style={{ color: 'var(--ink-faint, #8A9099)', marginLeft: 6, fontSize: 12 }}>
+                          {inr(p.price_paise)}
+                        </span>
+                      </span>
+                      <Stepper qty={q} disabled={pending} onChange={(next) => setQty(d, p.id, next)} />
+                    </span>
+                  )
+                })}
               </span>
             )}
 
-            {/* Quantity, for both modes. A brand wanting two reels from one
-                creator had to add them twice or settle for one; the Deals
-                editor has always allowed it and there is no reason Growth
-                should not. Hidden until a package is chosen, since there is
-                nothing yet to count. */}
-            {(uniformType ? d.products[0] : d.products.find((p) => p.id === d.productId)) && (
-              <Stepper
-                qty={d.qty}
-                disabled={pending}
-                onChange={(next) => {
-                  const productId = uniformType ? d.products[0]?.id ?? null : d.productId
-                  setItem(d.id, productId, next)
-                }}
-              />
-            )}
-
             <span style={{
-              minWidth: 92, textAlign: 'right',
+              minWidth: 92, textAlign: 'right', paddingTop: 4,
               fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14,
               color: d.pricePaise > 0 ? 'var(--ink)' : 'var(--ink-faint, #8A9099)',
             }}>
@@ -379,12 +365,13 @@ export default function GrowthRoster({
               onClick={() => remove(d.id)}
               disabled={pending}
               aria-label={`Remove ${d.creatorName}`}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-faint, #8A9099)', fontSize: 18, lineHeight: 1, padding: '0 4px' }}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-faint, #8A9099)', fontSize: 18, lineHeight: 1, padding: '2px 4px 0' }}
             >
               &times;
             </button>
           </div>
-        ))}
+          )
+        })}
 
         {drafts.length === 0 && (
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint, #8A9099)', padding: '18px 0' }}>

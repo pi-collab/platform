@@ -125,10 +125,15 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       creator_id: d.creator_id,
       creatorName: creator?.full_name ?? 'Unknown',
       creatorPhoto: creator?.profile_photo_url ?? null,
-      productId: placements[0]?.product_id ?? null,
-      /* Quantity is the NUMBER of placements, because that is how the Deals
-         editor has always written it: two reels is two entries. */
-      qty: placements.length,
+      /* Grouped back into one line per package. Placements are stored repeated
+         — two reels is two entries, the shape the Deals editor uses — so the
+         roster counts them rather than storing a quantity of its own. */
+      items: Object.entries(
+        placements.reduce<Record<string, number>>((acc, pl) => {
+          if (pl.product_id) acc[pl.product_id] = (acc[pl.product_id] ?? 0) + 1
+          return acc
+        }, {}),
+      ).map(([productId, qty]) => ({ productId, qty })),
       pricePaise: d.total_price_paise ?? 0,
       /* The draft's own snapshot, which setGrowthDraftItems resolved through
          the same ladder the deal will use. Not a constant: an ops pair rate

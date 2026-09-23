@@ -5351,10 +5351,8 @@ lives, and audits every run.
 **The Growth roster (`GrowthRoster.tsx`)**
 - [ ] A Growth campaign renders the Growth roster, NOT `DraftPlacementEditor` — no price field, no collab/boosting controls, no counter
 - [ ] A Deals campaign is unchanged and still gets the placement editor
-- [ ] MIXED mode: each creator gets a styled SELECT listing their own active products with prices. Choosing one sets the row's price from the PRODUCT, not the client
-- [ ] The select carries the app's radius, hairline, type and its own chevron — not the platform's default control
-- [ ] Unchosen it reads "Choose a package" in faint; chosen it reads the type and price in ink
-- [ ] Choosing the blank option again CLEARS the package, so a wrong pick is recoverable
+- [ ] MIXED mode: the creator's packages are listed on the row, each with its price and a stepper. Prices come from the PRODUCT row, never the client
+- [ ] Stepping every line to zero clears the creator's deliverables, so a wrong pick is recoverable
 - [ ] A creator with NO active packages reads "No packages listed yet" and cannot be priced — this is the state every Growth creator is in until the creator-side routing opens
 - [ ] An unchosen row shows a faint dash for price and is counted in the send-blocked reason; it is not reddened, because a row the brand has not reached yet is not an error
 - [ ] UNIFORM mode: no dropdown. The deliverable is named once at the top, each creator's own price fills in automatically when added
@@ -5534,8 +5532,10 @@ unpriced deliverables the creator had never listed, offered in his name.
 **Quantity per deliverable (both modes)**
 - [ ] A roster row has a stepper beside the package. Minus, the count, plus
 - [ ] UNIFORM: the stepper appears even though there is no package select — everyone delivers the same thing, but not necessarily one of it
-- [ ] MIXED: the stepper appears once a package is chosen, and nothing before that, since there is nothing to count
-- [ ] Two reels doubles the row's price and the campaign total, and the footer's fee follows
+- [ ] MIXED: every package the creator sells is listed with its price and its own stepper, so ONE creator can be booked for a reel AND a carousel AND two stories without being added three times
+- [ ] Changing one package's count leaves that creator's other lines alone
+- [ ] Two reels doubles that line, and the row's price is the SUM across all their deliverables; the campaign total and the 30% fee follow
+- [ ] A row counts as ready when ANY deliverable is booked; the blocked-send reason says "N creators have nothing selected"
 - [ ] Quantity is stored as REPEATED placements (2 reels = 2 entries), the shape `DraftPlacementEditor` has always used, so the deal's items and the invoice need no new concept
 - [ ] Stepping to zero clears the deliverable and the row blocks the send again
 - [ ] The stepper stops at 20 and the server refuses more, so the UI cannot reach a number the action rejects
