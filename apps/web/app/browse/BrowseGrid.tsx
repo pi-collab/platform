@@ -750,7 +750,9 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 18 }}>
+        {/* Inset by the 24px the creator rows carry, so "18 creators" sits over
+            the names it is counting rather than 24px to their left. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginTop: 18, paddingInline: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap' }}>
               {filtered.length} creator{filtered.length !== 1 ? 's' : ''}

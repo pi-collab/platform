@@ -5512,3 +5512,9 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] NOT changed: `ShopfrontPreview` keeps its own 1080 sections — that is the public storefront's drawn composition (hero, stats strip, rate card), not a page shell — and the marketing pages keep their own widths
 - [ ] The pool's three-card grid still sits correctly at 1200 and still collapses to 2 then 1
 - [ ] KNOWN AND DELIBERATE: the nav pill stays at `maxWidth: 1280`, so on screens wider than 1280 the content sits 40px inside the bar on each side. The design file puts both at 1200; the nav drifted and is being left alone for now. Narrowing the nav to 1200 is the one-line change that aligns them
+
+**Rows between cards line up with the cards' content**
+- [ ] On campaigns, the All / Deals / Growth chips start on the same vertical line as the campaign names below them, not at the card's outer edge (cards are `padding: 24px 28px`, so the row is inset 28px)
+- [ ] On browse, "N creators" and its filter chips sit over the creator names they count, inset by the rows' own 24px
+- [ ] Neither row hangs to the left of every word on the page, which reads as a control that has slipped out of the layout
+- [ ] The insets are unchanged on a phone, where the cards keep the same internal padding

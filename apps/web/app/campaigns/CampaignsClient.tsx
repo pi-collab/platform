@@ -267,7 +267,11 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
       {/* Shown only once there is something to filter. Chips over a list of one
           are furniture. */}
       {trackCounts.growth > 0 && (
-        <div style={{ marginTop: 22 }}>
+        /* Inset by the card's own 28px so the chips start on the same line as
+           the campaign names below them. Flush to the container they sat 28px
+           to the left of every word on the page, which reads as a row that has
+           slipped out of the layout rather than a control belonging to it. */
+        <div style={{ marginTop: 22, paddingLeft: 28 }}>
           <TrackFilter value={trackFilter} onChange={setTrackFilter} counts={trackCounts} />
         </div>
       )}
