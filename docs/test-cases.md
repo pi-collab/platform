@@ -5500,3 +5500,8 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] A creator with no follower count is excluded from every follower band rather than counted in one
 - [ ] Empty states differ: "No Growth creators yet" when the roster is empty, "No creators match those filters" when the filters are
 - [ ] Grid is 3 across, 2 on a tablet, 1 on a phone; the hero's side panel stacks under the title below 860px
+
+**Brand page width is the same on every tab**
+- [ ] Campaigns, campaign detail, the Growth pool, Deals, Browse and Dashboard all render at `maxWidth: 1080` with the same gutters (`clamp(20px,3vw,40px) clamp(18px,4vw,44px) …`)
+- [ ] Switching tabs does not shift the layout sideways — the campaigns list was 1120 with its own gutters, and the pool was 1200 from its export
+- [ ] The pool's three-card grid still fits at 1080 (3 × 338 + two 32px gaps = 1078) and still collapses to 2 and then 1
