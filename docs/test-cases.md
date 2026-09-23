@@ -5424,3 +5424,15 @@ lives, and audits every run.
 **Campaigns list while creating**
 - [ ] Opening the create panel HIDES the campaign list, the track filter and the empty state beneath it. Naming a new campaign is one task, and the previous campaigns are what the brand just navigated away from
 - [ ] Cancelling or finishing brings the list back unchanged, with the filter still on All
+
+**Confirmations are the product's, not the browser's (`components/ui/ConfirmDialog.tsx`)**
+- [ ] Sending a Growth campaign opens a Guapd dialog, NOT `window.confirm`. No system title bar, no "OK"
+- [ ] The confirm button names the action ("Send 2 offers"), never "OK" — the last thing read before pressing says what pressing does
+- [ ] It repeats the numbers: what you pay, what creators receive, and who it reaches. This is the last screen before offers hit real people
+- [ ] Escape and the backdrop both cancel; focus lands on the confirm button when it opens
+- [ ] While sending, the confirm reads "Working…", both buttons are disabled, and neither the backdrop nor Escape dismisses it
+- [ ] The page behind does not scroll while it is open, and scrolls again after
+- [ ] It renders ABOVE fixed navigation (portalled to `document.body`; z-index alone cannot escape an ancestor stacking context)
+- [ ] Removing one creator, and bulk-removing several, use the same dialog in `danger` tone and say the removal is reversible
+- [ ] The ops outreach send uses it too, showing the subject line and the recipient count
+- [ ] No `window.confirm` remains in the campaigns or outreach surfaces

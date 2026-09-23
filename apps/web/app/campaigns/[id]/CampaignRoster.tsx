@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { removeCampaignDraft, updateCampaignDraftNote, updateDealInternalNote } from './draft-actions'
 import { useRouter } from 'next/navigation'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import DraftPlacementEditor from './DraftPlacementEditor'
 import SendProposalsModal from './SendProposalsModal'
 import { calculateFee } from '@/lib/fee'
@@ -115,6 +116,9 @@ export default function CampaignRoster({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showSendModal, setShowSendModal] = useState(false)
   const [bulkRemoving, setBulkRemoving] = useState(false)
+  /** The draft awaiting a yes, or null. */
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
+  const [confirmBulk, setConfirmBulk] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [noteValue, setNoteValue] = useState('')
   const [savingNote, setSavingNote] = useState(false)
@@ -148,8 +152,12 @@ export default function CampaignRoster({
     }
   }
 
+  /* Held until the dialog answers, rather than asked through window.confirm.
+     Removing a creator is recoverable — they can be added back — so this asks
+     once, in our own voice, instead of through a browser dialog whose buttons
+     say OK and Cancel. */
   async function handleRemove(draftId: string) {
-    if (!confirm('Remove this creator from the campaign?')) return
+    setConfirmRemove(null)
     setRemovingId(draftId)
     await removeCampaignDraft(draftId, campaignId)
     setRemovingId(null)
@@ -160,7 +168,7 @@ export default function CampaignRoster({
 
   async function handleBulkRemove() {
     if (selectedIds.size === 0) return
-    if (!confirm(`Remove ${selectedIds.size} creator${selectedIds.size !== 1 ? 's' : ''} from the campaign?`)) return
+    setConfirmBulk(false)
     setBulkRemoving(true)
     for (const id of Array.from(selectedIds)) {
       await removeCampaignDraft(id, campaignId)
@@ -268,7 +276,7 @@ export default function CampaignRoster({
           <div style={{ display: 'flex', gap: 10 }}>
             <button
               className="pill"
-              onClick={handleBulkRemove}
+              onClick={() => setConfirmBulk(true)}
               disabled={bulkRemoving}
               style={{
                 height: 36, padding: '0 16px', borderRadius: 10,
@@ -586,7 +594,7 @@ export default function CampaignRoster({
                           View profile
                         </Link>
                         <button
-                          onClick={() => { setOpenMenuId(null); handleRemove(d.id) }}
+                          onClick={() => { setOpenMenuId(null); setConfirmRemove({ id: d.id, name: d.creator.full_name }) }}
                           disabled={isRemoving}
                           style={{
                             display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8, textAlign: 'left',
@@ -630,6 +638,28 @@ export default function CampaignRoster({
           onClose={() => { setShowSendModal(false); setSelectedIds(new Set()) }}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmRemove !== null}
+        title="Remove from campaign?"
+        body={`${confirmRemove?.name ?? 'This creator'} comes off the roster. Nothing has been sent to them, and you can add them back.`}
+        confirmLabel="Remove"
+        tone="danger"
+        busy={removingId === confirmRemove?.id}
+        onConfirm={() => confirmRemove && handleRemove(confirmRemove.id)}
+        onCancel={() => setConfirmRemove(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmBulk}
+        title={`Remove ${selectedIds.size} creator${selectedIds.size === 1 ? '' : 's'}?`}
+        body="They come off the roster. Nothing has been sent to them, and you can add them back."
+        confirmLabel={`Remove ${selectedIds.size}`}
+        tone="danger"
+        busy={bulkRemoving}
+        onConfirm={handleBulkRemove}
+        onCancel={() => setConfirmBulk(false)}
+      />
     </div>
   )
 }

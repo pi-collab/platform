@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { sendOutreach, previewOutreach, type OutreachRecipient, type OutreachResult } from './actions'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import type { CampaignCopy } from './campaigns'
 
 /**
@@ -32,6 +33,7 @@ export default function OutreachClient({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [results, setResults] = useState<OutreachResult[] | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [confirmSend, setConfirmSend] = useState(false)
 
   const parsed = useMemo(() => parseList(raw), [raw])
 
@@ -68,7 +70,7 @@ export default function OutreachClient({
   }
 
   function sendAll() {
-    if (!confirm(`Send to ${parsed.valid.length} recipients? This cannot be recalled.`)) return
+    setConfirmSend(false)
     setMsg(null); setResults(null)
     startTransition(async () => {
       const res = await sendOutreach(input(parsed.valid))
@@ -105,7 +107,7 @@ export default function OutreachClient({
         <button type="button" onClick={sendTest} disabled={pending || !opsEmail} style={btnQuiet}>
           Send test to {opsEmail || 'me'}
         </button>
-        <button type="button" onClick={sendAll} disabled={pending || parsed.valid.length === 0} style={btnPrimary}>
+        <button type="button" onClick={() => setConfirmSend(true)} disabled={pending || parsed.valid.length === 0} style={btnPrimary}>
           {pending ? 'Working…' : `Send to ${parsed.valid.length}`}
         </button>
       </div>
@@ -142,6 +144,17 @@ export default function OutreachClient({
           />
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmSend}
+        title={`Send to ${parsed.valid.length} people?`}
+        body="One email each, sent from guapd.com. This cannot be recalled."
+        detail={`Subject: ${subject}`}
+        confirmLabel={`Send ${parsed.valid.length} emails`}
+        busy={pending}
+        onConfirm={sendAll}
+        onCancel={() => setConfirmSend(false)}
+      />
     </div>
   )
 }

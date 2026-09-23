@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setGrowthDraftPackage, removeCampaignDraft, bulkSendCampaignDrafts } from './draft-actions'
 import TrackTag from '@/components/track/TrackTag'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 /**
  * The roster of a Growth campaign.
@@ -71,6 +72,7 @@ export default function GrowthRoster({
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [confirming, setConfirming] = useState(false)
 
   const priced = drafts.filter((d) => d.productId && d.pricePaise > 0)
   const unpriced = drafts.length - priced.length
@@ -148,9 +150,9 @@ export default function GrowthRoster({
 
   function send() {
     if (blocked) return
-    if (!confirm(`Send this campaign to ${priced.length} creators? Each gets their own offer at their own rate.`)) return
     setError(null)
     setSending(true)
+    setConfirming(false)
     startTransition(async () => {
       const { results } = await bulkSendCampaignDrafts(campaignId, priced.map((d) => d.id))
       const failed = results.filter((r) => !r.success)
@@ -326,7 +328,7 @@ export default function GrowthRoster({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <button
           type="button"
-          onClick={send}
+          onClick={() => setConfirming(true)}
           disabled={Boolean(blocked) || pending || sending}
           style={{
             display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 22px',
@@ -344,6 +346,34 @@ export default function GrowthRoster({
         )}
       </div>
       )}
+
+      {/* The numbers are repeated here on purpose. This is the last screen
+          before offers reach real people, and "are you sure" is only a useful
+          question if what you are agreeing to is in front of you. */}
+      <ConfirmDialog
+        open={confirming}
+        title={`Send to ${priced.length} creator${priced.length === 1 ? '' : 's'}?`}
+        body="Each creator gets their own offer at their own rate, and can accept or decline it. Offers cannot be unsent."
+        detail={
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span>You pay</span>
+              <strong style={{ color: 'var(--ink)' }}>{inr(creatorsTotal)}</strong>
+            </span>
+            <span style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <span>Creators receive</span>
+              <strong style={{ color: 'var(--ink)' }}>{inr(creatorsReceive)}</strong>
+            </span>
+            <span style={{ opacity: 0.8 }}>
+              {priced.map((d) => d.creatorName).join(', ')}
+            </span>
+          </span>
+        }
+        confirmLabel={`Send ${priced.length} offer${priced.length === 1 ? '' : 's'}`}
+        busy={sending}
+        onConfirm={send}
+        onCancel={() => setConfirming(false)}
+      />
     </div>
   )
 }
