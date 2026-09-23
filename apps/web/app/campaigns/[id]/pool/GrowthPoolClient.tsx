@@ -276,7 +276,7 @@ function Card({ c, busy, uniformType, onToggle }: {
                   textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
                 }}
               >
-                {open ? 'Hide' : `All ${c.packages.length} packages`}
+                {open ? 'Hide' : 'Other deliverables'}
               </button>
             )}
           </div>
