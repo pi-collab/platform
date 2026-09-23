@@ -247,7 +247,12 @@ export default async function CreatorStorefrontRoute({ params }: Props) {
   const sections: ShopfrontSection[] = [
     { key: 'hero', label: 'Hero', enabled: true },
     { key: 'stats', label: 'Stats Strip', enabled: true },
-    { key: 'ratecard', label: 'Rate Card', enabled: activeProducts.length > 0 },
+    /* Always on. It was hidden with no products, which also hid the only
+       route a brand had to approach a creator who had not published rates —
+       and it left the hero's "Create an offer" anchor pointing at nothing. The
+       section now says "Rates on request" rather than disappearing, and it
+       never invents a deliverable to fill itself. */
+    { key: 'ratecard', label: 'Rate Card', enabled: true },
     { key: 'audience', label: 'Audience', enabled: Boolean(ig?.topLocations || (audience as Record<string, unknown>).top_locations) },
     { key: 'content', label: 'Content Showcase', enabled: contentItems.some(i => i.title?.trim()) },
     { key: 'collabs', label: 'Past Collaborations', enabled: brandCollabs.some(c => c.name?.trim()) },

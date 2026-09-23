@@ -2428,3 +2428,30 @@
   position: absolute; right: 12px; pointer-events: none;
   color: var(--ink-faint, #8A9099);
 }
+
+/* ── Growth creator pool ────────────────────────────────────────────────────
+   Three across, two on a tablet, one on a phone. The cards carry figures in a
+   three-column strip, so squeezing four into a row would wrap them. */
+.cardgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+@media (max-width: 1100px) { .cardgrid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+@media (max-width: 720px)  { .cardgrid { grid-template-columns: 1fr !important; } }
+
+.ccard { transition: transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s cubic-bezier(.22,1,.36,1), border-color .22s ease; }
+.ccard:hover { transform: translateY(-3px); box-shadow: 0 30px 60px -34px rgba(40,45,25,.4); border-color: rgba(40,45,25,.16); }
+
+/* The remove state is red on hover and only there: a button that is red at
+   rest reads as a warning about the creator rather than about the click. */
+.addedbtn { transition: background .16s ease, border-color .16s ease; }
+.addedbtn:hover:not(:disabled) { background: rgba(210,84,90,.08); border-color: rgba(210,84,90,.3); }
+.inkbtn { transition: filter .16s ease, transform .12s ease, box-shadow .16s ease; }
+.inkbtn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+.backlink { transition: color .14s ease; }
+.backlink:hover { color: var(--ink); }
+.selctrl { cursor: pointer; }
+
+/* The hero's side panel stacks under the title rather than squeezing to
+   nothing; at 300px fixed it would crush the campaign name on a tablet. */
+@media (max-width: 860px) {
+  .pool-hero { flex-direction: column; }
+  .pool-hero__side { width: 100% !important; border-left: none !important; border-top: 1px solid var(--border-hairline, #EAEAE3); padding: 24px !important; }
+}

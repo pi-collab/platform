@@ -374,6 +374,23 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         <div style={{ borderTop: '1px solid var(--hairline)', padding: '24px 30px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <h2 className="sect-head" style={{ fontSize: 17 }}>Campaign roster</h2>
+            {isGrowth ? (
+              /* Growth picks from a pool, not a tick-list. The choice is made
+                 on reach, engagement and rate, which needs a card rather than
+                 a row — and a grid of cards needs a page. */
+              <Link
+                href={`/campaigns/${campaign.id}/pool`}
+                className="neonbtn"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 40, padding: '0 18px',
+                  borderRadius: 11, background: 'var(--neon)', color: 'var(--ink)', textDecoration: 'none',
+                  fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, whiteSpace: 'nowrap',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                Add creators
+              </Link>
+            ) : (
             <AddCreatorsModal
               campaignId={campaign.id}
               /* Narrowed to the campaign's own track. The server refuses a
@@ -384,6 +401,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
               creators={eligibleCreators}
               existingCreatorIds={existingDraftCreatorIds}
             />
+            )}
           </div>
           {isGrowth ? (
             /* A Growth campaign is not a negotiation, so it does not get the

@@ -5482,3 +5482,21 @@ unpriced deliverables the creator had never listed, offered in his name.
 
 **Existing live storefronts with no packages**
 - [ ] They stay published and now simply show no rate card. Identify them: storefronts where `is_published = true` and the creator has no active products
+
+**Growth creator pool (`/campaigns/[id]/pool`, design: "Growth Creator Pool")**
+- [ ] "Add creators" on a GROWTH campaign opens the pool page; on a DEALS campaign it still opens the AddCreatorsModal
+- [ ] Visiting the pool URL for a Deals campaign redirects back to the campaign — it would otherwise offer creators that campaign cannot add
+- [ ] Only `growth` creators appear, and only `is_bookable` ones
+- [ ] Each card shows name, handle · followers, niches, rate, and Avg reach / Engagement / Interactions
+- [ ] A creator with NO Instagram connection shows a dash for all three figures and NO verified tick — never a zero, which would read as a measurement
+- [ ] The verified tick appears only for a live connection, the same rule the storefront uses
+- [ ] Engagement is computed only when interactions AND followers both come from the snapshot; a verified interaction count over a typed follower count is not a percentage of anything
+- [ ] In a UNIFORM campaign the rate shown is the creator's price for THAT deliverable, not their cheapest package
+- [ ] A creator who does not offer the uniform deliverable is shown but not addable, with the reason — not silently filtered out
+- [ ] Add puts them straight on the campaign (no offer step); the button flips to "Added · remove" and removes on a second press
+- [ ] The hero panel and the sticky bar both track progress against the campaign's snapshotted minimum, turning green when met
+- [ ] Combined rate sums the added creators' rates
+- [ ] Filters: niche and location are built from the roster (a filter that can only return nothing never appears); follower bands and platforms are fixed lists
+- [ ] A creator with no follower count is excluded from every follower band rather than counted in one
+- [ ] Empty states differ: "No Growth creators yet" when the roster is empty, "No creators match those filters" when the filters are
+- [ ] Grid is 3 across, 2 on a tablet, 1 on a phone; the hero's side panel stacks under the title below 860px

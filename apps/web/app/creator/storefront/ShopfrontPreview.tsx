@@ -607,7 +607,11 @@ export default function ShopfrontPreview({
    * one is "are you the creator looking at yourself", this one is "is there
    * anything here to buy". Both hide the same buttons for different reasons.
    */
-  const takesOffers = data.rateCardItems.length > 0
+  /* Was `rateCardItems.length > 0`, which hid the only way to contact a creator
+     who had not published rates — the people most in need of being asked. The
+     offer builder already handles a missing price (offerPrefillPaise returns
+     null for on-request), so the brand types one. */
+  const takesOffers = true
   const showDealCta = !data.hideDealCta && takesOffers
 
   // Platform tab state
@@ -891,6 +895,25 @@ export default function ShopfrontPreview({
               boxShadow: '0 30px 66px -40px rgba(40,45,25,.4),inset 0 1px 0 rgba(255,255,255,.9)',
               padding: 'clamp(10px,1.4vw,18px) clamp(20px,2.6vw,30px) clamp(20px,2.4vw,26px)',
             }}>
+              {/* ── Nothing priced yet ─────────────────────────────────────
+                  The section still renders, because a brand who has arrived
+                  here should be able to start something. What it must NOT do
+                  is invent deliverables: for a while this page filled the gap
+                  with two hardcoded rows, "Instagram Reel ₹60,000" and
+                  "Instagram Story ₹25,000", advertising work the creator had
+                  never listed at prices they had never seen. */}
+              {data.rateCardItems.length === 0 && (
+                <div style={{ padding: '26px 4px 20px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+                    Rates on request
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '8px auto 0', maxWidth: 380 }}>
+                    {firstName} hasn&apos;t published a rate card yet. Tell them what you have in mind
+                    and they&apos;ll come back with a price.
+                  </p>
+                </div>
+              )}
+
               {data.rateCardItems.map((item, i) => {
                 const q = qty[item.key] || 0
                 return (

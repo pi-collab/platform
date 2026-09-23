@@ -460,16 +460,21 @@ export default function ShopfrontMobile({
                    Both renderings are in the DOM and the desktop one comes
                    first, so a link to #packages scrolled to an element inside a
                    display:none subtree — which is to say, nowhere. */}
-                {/* Hidden when there is nothing to sell, matching the desktop
-                    rendering, which already drops this section via
-                    sections[ratecard].enabled. The two disagreed: desktop showed
-                    nothing while mobile showed a heading, the line "Add what you
-                    need at <name>'s set rates", and an empty card. */}
-                {rateItems.length > 0 && (
+                {/* Always rendered, on both this and the desktop layout. With
+                    nothing priced it says so; hiding it took the anchor out
+                    from under the "Create an offer" button in the hero, which
+                    links to #packages-mobile and had nowhere to go. */}
                 <div id="packages-mobile" className="sr">
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.015em', fontSize: '26px', lineHeight: '1.2', margin: '0', color: 'var(--ink)'}}>Build a <span className="opit">deal</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
-                <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates, the total updates as you go.`}</p>
+                <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{rateItems.length > 0
+                  ? `Add what you need at ${firstName}’s set rates, the total updates as you go.`
+                  : `${firstName} hasn’t published a rate card yet. Tell them what you have in mind and they’ll come back with a price.`}</p>
                 <div style={{marginTop: '22px', background: '#fff', borderRadius: '22px', padding: '6px 20px', boxShadow: '0 10px 24px -18px rgba(40,45,25,.2)'}}>
+                  {rateItems.length === 0 && (
+                    <div style={{padding: '26px 2px 22px', textAlign: 'center'}}>
+                      <div style={{fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: '15px', color: 'var(--ink)'}}>Rates on request</div>
+                    </div>
+                  )}
                   {rateItems.map((item, itemIdx) => (<React.Fragment key={itemIdx}>
                     <div style={{padding: '22px 2px', borderTop: '1px solid var(--hair)', background: item.rowBg}}>
                       <div style={{display: 'flex', alignItems: 'flex-start', gap: '14px'}}>
@@ -516,7 +521,6 @@ export default function ShopfrontMobile({
                   </div>
                 </div>
               </div>
-              )}
 
               {/* AUDIENCE */}
               <div className="sr">
