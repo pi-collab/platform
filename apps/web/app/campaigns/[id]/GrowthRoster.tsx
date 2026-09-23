@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { setGrowthDraftPackage, removeCampaignDraft, bulkSendCampaignDrafts } from './draft-actions'
 import TrackTag from '@/components/track/TrackTag'
@@ -48,6 +49,18 @@ export interface GrowthDraft {
   products: GrowthProduct[]
 }
 
+/** A deal already sent from this campaign. The page builds these for the
+ *  Deals roster too; the same rows, so a campaign looks like a campaign
+ *  whichever track it is on. */
+export interface GrowthSentDeal {
+  dealId: string
+  creatorName: string
+  creatorPhoto: string | null
+  deliverables: string
+  brandPaysPaise: number
+  statusLabel: string
+}
+
 export interface GrowthMinimumView {
   metric: 'creators' | 'value'
   minCreators: number | null
@@ -58,15 +71,15 @@ const inr = (paise: number) =>
   '₹' + Math.round(paise / 100).toLocaleString('en-IN')
 
 export default function GrowthRoster({
-  campaignId, drafts, minimum, uniformType, sentCount,
+  campaignId, drafts, minimum, uniformType, sent,
 }: {
   campaignId: string
   drafts: GrowthDraft[]
   minimum: GrowthMinimumView
   /** Set when the campaign is "same for everyone". */
   uniformType: string | null
-  /** Deals already sent from this campaign — the roster is drafts only. */
-  sentCount: number
+  /** Deals already sent from this campaign. */
+  sent: GrowthSentDeal[]
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -197,7 +210,75 @@ export default function GrowthRoster({
       </div>
       )}
 
-      {/* ── The roster ───────────────────────────────────────────────────── */}
+      {/* ── Sent ─────────────────────────────────────────────────────────
+          A campaign does not empty itself when it is sent. Growth drafts are
+          deleted as they become deals, exactly as Deals drafts are, so without
+          this the roster went blank at the moment the brand most wanted to see
+          what had gone out. Same rows as the Deals roster: avatar with a stage
+          dot, name, status, deliverable, what you pay. */}
+      {sent.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <span className="t-meta" style={{ color: 'var(--ink-2, #565C68)' }}>Sent</span>
+            <span className="t-meta" style={{ color: 'var(--ink-faint, #8A9099)' }}>
+              {sent.length} offer{sent.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          {sent.map((d, i) => (
+            <Link
+              key={d.dealId}
+              href={`/deals/${d.dealId}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0',
+                borderTop: i === 0 ? '1px solid var(--hairline, #EAEAE3)' : '1px solid var(--hairline, #EAEAE3)',
+                textDecoration: 'none', color: 'inherit', flexWrap: 'wrap',
+              }}
+            >
+              <span style={{ position: 'relative', flexShrink: 0 }}>
+                <Avatar name={d.creatorName} photo={d.creatorPhoto} />
+                <span aria-hidden="true" style={{
+                  position: 'absolute', right: -1, bottom: -1, width: 11, height: 11,
+                  borderRadius: '50%', background: 'var(--neon-deep, #D2F04A)', border: '2px solid #fff',
+                }} />
+              </span>
+
+              <span style={{ flex: 1, minWidth: 160 }}>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>
+                    {d.creatorName}
+                  </span>
+                  <span style={{ color: 'var(--ink-faint, #8A9099)', fontSize: 13 }}>&middot;</span>
+                  <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 500, fontSize: 12, color: 'var(--ink-faint, #8A9099)' }}>
+                    {d.statusLabel}
+                  </span>
+                </span>
+                {d.deliverables && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--ink-faint, #8A9099)', marginTop: 2 }}>
+                    {d.deliverables}
+                  </span>
+                )}
+              </span>
+
+              <span style={{
+                minWidth: 92, textAlign: 'right',
+                fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)',
+              }}>
+                {inr(d.brandPaysPaise)}
+              </span>
+
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint, #8A9099)"
+                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* ── Still to send ────────────────────────────────────────────────── */}
+      {drafts.length > 0 && sent.length > 0 && (
+        <div className="t-meta" style={{ color: 'var(--ink-2, #565C68)' }}>Still to send</div>
+      )}
       <div>
         {drafts.map((d, i) => (
           <div key={d.id} style={{
@@ -279,7 +360,7 @@ export default function GrowthRoster({
 
         {drafts.length === 0 && (
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint, #8A9099)', padding: '18px 0' }}>
-            {sentCount > 0
+            {sent.length > 0
               ? 'Everyone on this campaign has been sent their offer.'
               : uniformType
                 ? `No creators yet. Add Growth creators who offer ${uniformType}.`

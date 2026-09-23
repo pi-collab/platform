@@ -5435,3 +5435,11 @@ lives, and audits every run.
 - [ ] Removing one creator, and bulk-removing several, use the same dialog in `danger` tone and say the removal is reversible
 - [ ] The ops outreach send uses it too, showing the subject line and the recipient count
 - [ ] No `window.confirm` remains in the campaigns or outreach surfaces
+
+**Sent offers stay on the Growth campaign**
+- [ ] After sending, the roster shows a **Sent** section listing every offer that went out. It does NOT go blank — drafts are deleted as they become deals (same as the Deals track), so without this the page empties at the moment the brand most wants to see what happened
+- [ ] Each sent row matches the Deals roster's design: avatar with a stage dot, creator name, the deal's status label, the deliverable, and what the brand pays
+- [ ] The status is the deal's real derived status (Sent, Agreed, Delivered, Paid…), not a fixed word
+- [ ] A row opens that deal at `/deals/[id]`
+- [ ] With both sent offers and unsent drafts, the two groups are labelled Sent and "Still to send"
+- [ ] With everything sent and no drafts left, the minimum bar and send button are gone and only the Sent list remains

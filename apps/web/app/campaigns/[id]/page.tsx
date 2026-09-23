@@ -398,7 +398,16 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                 minValuePaise: (campaign as Record<string, unknown>).min_value_paise as number | null,
               }}
               uniformType={uniformType}
-              sentCount={campaignDeals.length}
+              /* The same rows the Deals roster gets, from the same source, so
+                 a campaign reads the same whichever track it is on. */
+              sent={campaignDeals.map((d) => ({
+                dealId: d.dealId,
+                creatorName: d.creatorName,
+                creatorPhoto: d.creatorPhoto,
+                deliverables: d.deliverables,
+                brandPaysPaise: d.brandPaysPaise,
+                statusLabel: d.statusLabel,
+              }))}
             />
           ) : (
           <CampaignRoster
