@@ -53,7 +53,7 @@ export default function GrowthPoolClient({
   brandId: string
 }) {
   const router = useRouter()
-  const [pending, startTransition] = useTransition()
+  const [, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -102,6 +102,10 @@ export default function GrowthPoolClient({
       : `${Math.max(0, need - added.length)} more to go`
 
   function toggle(c: PoolCreator) {
+    /* One at a time: a second click while the first is in flight would leave
+       busyId pointing at whichever finished last, and the button it was taken
+       from would sit on "Working…" forever. */
+    if (busyId) return
     setError(null)
     setBusyId(c.id)
     startTransition(async () => {
@@ -170,8 +174,12 @@ export default function GrowthPoolClient({
         {/* ===== GRID ===== */}
         {shown.length > 0 ? (
           <div className="cardgrid" style={{ marginTop: 22 }}>
+            {/* busy is busyId ONLY, never the transition: `pending` is shared
+                by every card, so adding one creator put "Working…" on all
+                eighteen buttons and made it look as though the whole grid was
+                being acted on. Only the card that was clicked changes. */}
             {shown.map((c) => (
-              <Card key={c.id} c={c} busy={busyId === c.id || pending} uniformType={uniformType} onToggle={() => toggle(c)} />
+              <Card key={c.id} c={c} busy={busyId === c.id} uniformType={uniformType} onToggle={() => toggle(c)} />
             ))}
           </div>
         ) : (

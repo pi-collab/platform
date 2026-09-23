@@ -5499,6 +5499,8 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] A creator with one package shows no expander
 - [ ] A creator who does not offer the uniform deliverable is shown but not addable, with the reason — not silently filtered out
 - [ ] Add puts them straight on the campaign (no offer step); the button flips to "Added · remove" and removes on a second press
+- [ ] While one creator is being added, ONLY that card's button reads "Working…". Every other card is untouched — `pending` from useTransition is shared by the whole grid, so using it put the busy label on all eighteen buttons
+- [ ] A second click elsewhere while one add is in flight is ignored, rather than moving the busy marker and leaving the first button stuck on "Working…" 
 - [ ] The hero panel and the sticky bar both track progress against the campaign's snapshotted minimum, turning green when met
 - [ ] Combined rate sums the added creators' rates
 - [ ] Filters: niche and location are built from the roster (a filter that can only return nothing never appears); follower bands and platforms are fixed lists
