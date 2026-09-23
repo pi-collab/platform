@@ -5542,5 +5542,6 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Sending creates ONE deal per creator carrying all their units, not one deal per unit
 
 **The pool's finishing CTA**
-- [ ] The sticky bar reads "Review campaign", and "Review and send" once the minimum is met — never "Back to campaign", which names where you came from rather than what happens next
+- [ ] With creators added, the sticky bar reads "Done adding" — the job on this page is picking creators, so the button names that finishing
+- [ ] With nobody added it reads "Back to campaign", because there is nothing to be done with yet and that is the honest label for leaving
 - [ ] The hero still has a plain "Back to campaign" link for leaving without finishing
