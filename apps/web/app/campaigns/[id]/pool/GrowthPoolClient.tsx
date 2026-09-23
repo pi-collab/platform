@@ -213,9 +213,15 @@ export default function GrowthPoolClient({
               <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: 'var(--neon-deep, #D2F04A)', transition: 'width .35s cubic-bezier(.22,1,.36,1)' }} />
             </div>
           </div>
+          {/* Not "Back to campaign". Back is where you came FROM, and this is
+              the button that finishes the job — the roster is where packages
+              and quantities are set and where the campaign is sent. It names
+              what happens next, and says "send" only once sending is actually
+              possible. The hero keeps a plain Back link for leaving early. */}
           <Link href={`/campaigns/${campaignId}`} className="inkbtn"
-                style={{ flexShrink: 0, height: 42, padding: '0 20px', borderRadius: 999, background: 'var(--ink)', color: '#fff', display: 'inline-flex', alignItems: 'center', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-            Back to campaign
+                style={{ flexShrink: 0, height: 42, padding: '0 20px', borderRadius: 999, background: 'var(--ink)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            {minimumMet ? 'Review and send' : 'Review campaign'}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </Link>
         </div>
       </div>

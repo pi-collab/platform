@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { setGrowthDraftPackage, removeCampaignDraft, bulkSendCampaignDrafts } from './draft-actions'
+import { setGrowthDraftItems, removeCampaignDraft, bulkSendCampaignDrafts } from './draft-actions'
 import TrackTag from '@/components/track/TrackTag'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
@@ -40,6 +40,8 @@ export interface GrowthDraft {
   creatorPhoto: string | null
   /** The chosen package, or null when nothing is picked yet. */
   productId: string | null
+  /** How many of that package. Stored as repeated placements. */
+  qty: number
   pricePaise: number
   /* This draft's OWN resolved fee. Usually 30, but an ops pair rate outranks
      the growth rung, so a flat 30 in the footer would misreport a creator the
@@ -143,10 +145,17 @@ export default function GrowthRoster({
     : !progress.met ? `Below the minimum. ${progress.label} ${progress.hint}`
     : null
 
-  function choose(draftId: string, productId: string) {
+  /* One writer for both controls. The package select and the stepper are two
+     halves of the same answer — which deliverable, and how many — so sending
+     them separately would let a half-saved row exist between two round trips. */
+  function setItem(draftId: string, productId: string | null, qty: number) {
     setError(null)
     startTransition(async () => {
-      const res = await setGrowthDraftPackage(campaignId, draftId, productId || null)
+      const res = await setGrowthDraftItems(
+        campaignId,
+        draftId,
+        productId && qty > 0 ? [{ productId, qty }] : [],
+      )
       if (res.error) setError(res.error)
       else router.refresh()
     })
@@ -323,7 +332,7 @@ export default function GrowthRoster({
                 <select
                   value={d.productId ?? ''}
                   disabled={pending}
-                  onChange={(e) => choose(d.id, e.target.value)}
+                  onChange={(e) => setItem(d.id, e.target.value || null, e.target.value ? Math.max(1, d.qty) : 0)}
                   aria-label={`Package for ${d.creatorName}`}
                   data-empty={d.productId ? undefined : 'true'}
                 >
@@ -339,6 +348,22 @@ export default function GrowthRoster({
                   <path d="m6 9 6 6 6-6" />
                 </svg>
               </span>
+            )}
+
+            {/* Quantity, for both modes. A brand wanting two reels from one
+                creator had to add them twice or settle for one; the Deals
+                editor has always allowed it and there is no reason Growth
+                should not. Hidden until a package is chosen, since there is
+                nothing yet to count. */}
+            {(uniformType ? d.products[0] : d.products.find((p) => p.id === d.productId)) && (
+              <Stepper
+                qty={d.qty}
+                disabled={pending}
+                onChange={(next) => {
+                  const productId = uniformType ? d.products[0]?.id ?? null : d.productId
+                  setItem(d.id, productId, next)
+                }}
+              />
             )}
 
             <span style={{
@@ -444,6 +469,35 @@ export default function GrowthRoster({
         onCancel={() => setConfirming(false)}
       />
     </div>
+  )
+}
+
+/**
+ * A quantity stepper, in the Deals editor's shape: minus, count, plus.
+ *
+ * Zero removes the deliverable rather than leaving a row booked for nothing,
+ * which is what "set it to none" means. Capped at 20, matching the server —
+ * a UI that lets you reach a number the action refuses is a UI that lies.
+ */
+function Stepper({ qty, disabled, onChange }: {
+  qty: number; disabled: boolean; onChange: (next: number) => void
+}) {
+  const btn: React.CSSProperties = {
+    width: 26, height: 26, borderRadius: 7, cursor: disabled ? 'not-allowed' : 'pointer',
+    border: '1px solid rgba(24,28,36,.16)', background: '#fff', color: 'var(--ink)',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700, lineHeight: 1, padding: 0,
+  }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <button type="button" style={btn} disabled={disabled || qty <= 0}
+              aria-label="One fewer" onClick={() => onChange(Math.max(0, qty - 1))}>&minus;</button>
+      <span className="tnum" style={{ minWidth: 14, textAlign: 'center', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
+        {qty}
+      </span>
+      <button type="button" style={btn} disabled={disabled || qty >= 20}
+              aria-label="One more" onClick={() => onChange(Math.min(20, qty + 1))}>+</button>
+    </span>
   )
 }
 

@@ -126,8 +126,11 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       creatorName: creator?.full_name ?? 'Unknown',
       creatorPhoto: creator?.profile_photo_url ?? null,
       productId: placements[0]?.product_id ?? null,
+      /* Quantity is the NUMBER of placements, because that is how the Deals
+         editor has always written it: two reels is two entries. */
+      qty: placements.length,
       pricePaise: d.total_price_paise ?? 0,
-      /* The draft's own snapshot, which setGrowthDraftPackage resolved through
+      /* The draft's own snapshot, which setGrowthDraftItems resolved through
          the same ladder the deal will use. Not a constant: an ops pair rate
          outranks the growth rung. */
       feePercent: d.fee_percent ?? GROWTH_FEE_PERCENT,

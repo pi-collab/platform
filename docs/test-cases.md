@@ -5530,3 +5530,17 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The pool's hero bar, its floating bar and the roster's minimum bar all fill with `--neon-deep` (#D2F04A) at every stage. `#1F9D6B` is the invoice-paid green and must not appear on them
 - [ ] Reaching the minimum is signalled by the bar being FULL plus the label ("Minimum met" / "Minimum met" hint in `--lime-700`), not by the fill changing colour
 - [ ] The roster's met panel tints with `--lime-50` and a lime hairline, not a green one
+
+**Quantity per deliverable (both modes)**
+- [ ] A roster row has a stepper beside the package. Minus, the count, plus
+- [ ] UNIFORM: the stepper appears even though there is no package select — everyone delivers the same thing, but not necessarily one of it
+- [ ] MIXED: the stepper appears once a package is chosen, and nothing before that, since there is nothing to count
+- [ ] Two reels doubles the row's price and the campaign total, and the footer's fee follows
+- [ ] Quantity is stored as REPEATED placements (2 reels = 2 entries), the shape `DraftPlacementEditor` has always used, so the deal's items and the invoice need no new concept
+- [ ] Stepping to zero clears the deliverable and the row blocks the send again
+- [ ] The stepper stops at 20 and the server refuses more, so the UI cannot reach a number the action rejects
+- [ ] Sending creates ONE deal per creator carrying all their units, not one deal per unit
+
+**The pool's finishing CTA**
+- [ ] The sticky bar reads "Review campaign", and "Review and send" once the minimum is met — never "Back to campaign", which names where you came from rather than what happens next
+- [ ] The hero still has a plain "Back to campaign" link for leaving without finishing

@@ -177,7 +177,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
       if (!productId) continue
       // Through the same action the roster uses, so the price and the fee are
       // resolved in exactly one place.
-      await setGrowthDraftPackage(campaignId, d.id, productId)
+      await setGrowthDraftItems(campaignId, d.id, [{ productId, qty: 1 }])
     }
   }
 
@@ -704,26 +704,26 @@ export async function removeCampaignBriefAttachment(campaignId: string, storageP
 // ── Growth: one package per creator ─────────────────────────────────────────
 
 /**
- * Set (or clear) the package a Growth creator is booked for.
+ * Set what a Growth creator is booked for: which packages, and how many of each.
  *
- * ── The price is READ HERE, never sent ──────────────────────────────────────
- * updateCampaignDraft takes placements with prices in them, which is right for
- * a Deals campaign: the brand negotiates, so the brand names the number. A
- * Growth package is not negotiated. The creator set that price, the brand is
- * buying it as offered, and there is no counter — so the only honest source for
- * it is the product row. The client sends a product id and nothing else, and a
- * tampered request can change WHICH package is bought but never what it costs.
+ * ── The client sends ids and counts, never prices ───────────────────────────
+ * updateCampaignDraft takes placements with prices inside them, which is right
+ * for a Deals campaign: the brand negotiates, so the brand names the number. A
+ * Growth package is not negotiated — the creator set that price and the brand
+ * is buying it as listed — so the only honest source is the product row. A
+ * tampered request can change WHICH packages are bought and how many, never
+ * what they cost.
  *
- * ── One package per creator, for now ────────────────────────────────────────
- * The roster holds exactly one placement per draft. Two packages for one
- * creator in one campaign is a real thing a brand will eventually want, and it
- * is deliberately not here yet: it turns "five creators, five units" into an
- * arithmetic the minimum and the footer would both have to learn.
+ * ── Quantity is repeated placements, like the Deals editor ──────────────────
+ * Two reels is two entries, not one entry with a count. That is how
+ * DraftPlacementEditor has always written them, so every reader downstream —
+ * the roster totals, the deal's items, the invoice — already understands it
+ * without being taught a second shape.
  */
-export async function setGrowthDraftPackage(
+export async function setGrowthDraftItems(
   campaignId: string,
   draftId: string,
-  productId: string | null,
+  items: { productId: string; qty: number }[],
 ): Promise<{ error?: string; success?: boolean }> {
   const brand = await verifyBrand()
   const supabase = createClient()
@@ -746,8 +746,10 @@ export async function setGrowthDraftPackage(
 
   if (!draft) return { error: 'Creator is not on this campaign' }
 
-  // Clearing: an empty roster row, which the send gate will refuse.
-  if (!productId) {
+  const wanted = items.filter((i) => i.qty > 0)
+
+  // Nothing chosen: an empty row, which the send gate refuses.
+  if (wanted.length === 0) {
     const { error } = await supabase
       .from('campaign_drafts')
       .update({ placements: [], total_price_paise: 0, total_brand_paise: 0 })
@@ -757,39 +759,51 @@ export async function setGrowthDraftPackage(
     return { success: true }
   }
 
-  /* Scoped to the draft's own creator. Without the creator_id filter a brand
+  /* A ceiling per line, so a stuck stepper or a forged request cannot commit a
+     brand to two hundred reels. High enough that no real campaign meets it. */
+  if (wanted.some((i) => !Number.isInteger(i.qty) || i.qty > 20)) {
+    return { error: 'Quantity must be a whole number, 20 or fewer per deliverable' }
+  }
+
+  /* Scoped to the draft's own creator: without the creator_id filter a brand
      could book creator A at creator B's cheaper price by sending someone
      else's product id. */
-  const { data: product } = await supabase
+  const { data: products } = await supabase
     .from('creator_products')
     .select('id, platform, handle, product_type, price_paise, is_active')
-    .eq('id', productId)
     .eq('creator_id', draft.creator_id)
-    .maybeSingle()
+    .in('id', wanted.map((i) => i.productId))
 
-  if (!product) return { error: 'That package does not belong to this creator' }
-  if (!product.is_active) return { error: 'That package is no longer offered' }
+  const byId = new Map((products ?? []).map((p) => [p.id, p]))
 
-  /* Uniform campaigns take one deliverable type for everyone. Re-checked here
-     and not only at add time, because the roster is where a brand would
-     otherwise quietly swap one creator onto a different deliverable. */
-  if (campaign.deliverable_mode === 'uniform' && campaign.uniform_product_type
-      && product.product_type !== campaign.uniform_product_type) {
-    return { error: `This campaign is ${campaign.uniform_product_type} for everyone` }
+  for (const item of wanted) {
+    const product = byId.get(item.productId)
+    if (!product) return { error: 'That package does not belong to this creator' }
+    if (!product.is_active) return { error: `${product.product_type} is no longer offered` }
+    if (campaign.deliverable_mode === 'uniform' && campaign.uniform_product_type
+        && product.product_type !== campaign.uniform_product_type) {
+      return { error: `This campaign is ${campaign.uniform_product_type} for everyone` }
+    }
   }
 
-  const placement: DraftPlacement = {
-    label: product.product_type,
-    platform: product.platform,
-    handle: product.handle,
-    price_paise: product.price_paise,
-    product_id: product.id,
+  const placements: DraftPlacement[] = []
+  let total = 0
+  for (const item of wanted) {
+    const product = byId.get(item.productId)!
+    for (let i = 0; i < item.qty; i++) {
+      placements.push({
+        label: product.product_type,
+        platform: product.platform,
+        handle: product.handle,
+        price_paise: product.price_paise,
+        product_id: product.id,
+      })
+      total += product.price_paise
+    }
   }
 
-  /* The growth rung, so the preview a brand sees is the fee the deal will
-     carry — 30%, deducted. The mismatch this avoids is not hypothetical: the
-     generic path resolved the brand's standard rate and previewed 15% on top
-     of a package the deal then charged 30% out of. */
+  /* The growth rung, so the preview a brand sees is the fee the deal carries:
+     30%, deducted. */
   const admin = createAdminClient()
   const { resolveDealFee } = await import('@/lib/deal-fee')
   const { data: brandRow } = await supabase
@@ -804,13 +818,13 @@ export async function setGrowthDraftPackage(
     'growth',
   )
 
-  const fee = calculateFee(product.price_paise, resolved.feePercent, resolved.feeMode)
+  const fee = calculateFee(total, resolved.feePercent, resolved.feeMode)
 
   const { error } = await supabase
     .from('campaign_drafts')
     .update({
-      placements: [placement] as unknown as string,
-      total_price_paise: product.price_paise,
+      placements: placements as unknown as string,
+      total_price_paise: total,
       fee_percent: resolved.feePercent,
       fee_mode: resolved.feeMode,
       total_brand_paise: fee.brand_pays_paise,
@@ -822,3 +836,4 @@ export async function setGrowthDraftPackage(
   revalidatePath(`/campaigns/${campaignId}`)
   return { success: true }
 }
+
