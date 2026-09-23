@@ -17,6 +17,10 @@ export interface PoolCreator {
   followersLabel: string | null
   verified: boolean
   ratePaise: number | null
+  /** What the headline rate is FOR: the uniform deliverable, or the reel. */
+  rateType: string | null
+  /** Every package this campaign could buy from them, cheapest first. */
+  packages: { type: string; pricePaise: number }[]
   avgReachLabel: string | null
   engagementLabel: string | null
   interactionsLabel: string | null
@@ -209,6 +213,7 @@ export default function GrowthPoolClient({
 function Card({ c, busy, uniformType, onToggle }: {
   c: PoolCreator; busy: boolean; uniformType: string | null; onToggle: () => void
 }) {
+  const [open, setOpen] = useState(false)
   const initials = c.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   /* A creator who does not sell this campaign's deliverable cannot be added,
      and is told rather than silently filtered away — a brand who deliberately
@@ -249,16 +254,48 @@ function Card({ c, busy, uniformType, onToggle }: {
           <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 4, lineHeight: 1.4 }}>
             {c.niches.join(' · ') || '—'}
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 'auto', paddingTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 'auto', paddingTop: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
               {c.ratePaise != null ? inr(c.ratePaise) : '—'}
             </span>
+            {/* Named, never a bare number. ₹50,000 says nothing about whether
+                that buys a reel or a story, and the two are not close. */}
             <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-              {uniformType && c.ratePaise != null ? `${uniformType.toLowerCase()} rate` : 'rate'}
+              {c.rateType ? c.rateType.replace(/^Instagram /, '').toLowerCase() : 'rate'}
             </span>
+            {/* Mixed campaigns only: there any package is buyable, so the rest
+                are worth opening. In a uniform campaign they are not, and
+                listing them would only mislead. */}
+            {!uniformType && c.packages.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                style={{
+                  marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+                  fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, color: 'var(--ink-soft)',
+                  textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
+                }}
+              >
+                {open ? 'Hide' : `All ${c.packages.length} packages`}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {open && !uniformType && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {c.packages.map((p) => (
+            <div key={p.type} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 12 }}>
+              <span style={{ color: 'var(--ink-soft)' }}>{p.type}</span>
+              <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{inr(p.pricePaise)}</span>
+            </div>
+          ))}
+          <p style={{ fontSize: 11, color: 'var(--ink-faint)', margin: '2px 0 0', lineHeight: 1.45 }}>
+            Pick which one on the campaign roster after adding them.
+          </p>
+        </div>
+      )}
 
       {/* Three figures, and a dash where there is no measurement. A blank would
           read as zero, and a guess would read as verified. */}

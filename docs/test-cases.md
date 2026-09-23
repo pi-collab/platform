@@ -5491,7 +5491,12 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] A creator with NO Instagram connection shows a dash for all three figures and NO verified tick — never a zero, which would read as a measurement
 - [ ] The verified tick appears only for a live connection, the same rule the storefront uses
 - [ ] Engagement is computed only when interactions AND followers both come from the snapshot; a verified interaction count over a typed follower count is not a percentage of anything
-- [ ] In a UNIFORM campaign the rate shown is the creator's price for THAT deliverable, not their cheapest package
+- [ ] In a UNIFORM campaign the rate shown is the creator's price for THAT deliverable, not their cheapest package, and the label names it ("reel rate", "story rate")
+- [ ] In a MIXED campaign the card leads with the creator's **Instagram Reel** price, not their cheapest package. A card leading with a ₹2,000 story makes a creator look cheaper than they will cost
+- [ ] A creator with no reel falls back to their lowest-priced package, and the label names whichever it is
+- [ ] MIXED only: "All N packages" opens the full list on the card, cheapest first, with a line saying the choice is made on the roster after adding
+- [ ] UNIFORM campaigns do NOT offer that list — the other packages are unbuyable there, and showing them would mislead
+- [ ] A creator with one package shows no expander
 - [ ] A creator who does not offer the uniform deliverable is shown but not addable, with the reason — not silently filtered out
 - [ ] Add puts them straight on the campaign (no offer step); the button flips to "Added · remove" and removes on a second press
 - [ ] The hero panel and the sticky bar both track progress against the campaign's snapshotted minimum, turning green when met

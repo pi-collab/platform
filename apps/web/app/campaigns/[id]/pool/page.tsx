@@ -89,11 +89,22 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
 
   const pool: PoolCreator[] = (creators ?? []).map((c) => {
     const mine = (products ?? []).filter((p) => p.creator_id === c.id)
-    /* In a uniform campaign the only rate that matters is the one for THAT
-       deliverable. Showing a cheaper package the campaign cannot buy would be
-       a price the brand never gets. */
+
+    /* ── Which rate the card leads with ───────────────────────────────────
+       UNIFORM: the price for THAT deliverable and nothing else. A cheaper
+       package the campaign cannot buy is a price the brand never gets.
+
+       MIXED: the Reel, because it is what most Growth campaigns are built on
+       and a card leading with a ₹2,000 story makes a creator look cheaper than
+       they will actually cost. Falls back to the lowest when they have no
+       reel. Either way the brand can open the full list on the card, since in
+       a mixed campaign any of them is buyable. */
     const relevant = uniformType ? mine.filter((p) => p.product_type === uniformType) : mine
-    const cheapest = relevant.length ? Math.min(...relevant.map((p) => p.price_paise)) : null
+    const reel = relevant.find((p) => p.product_type === 'Instagram Reel')
+    const headline = uniformType
+      ? (relevant.length ? Math.min(...relevant.map((p) => p.price_paise)) : null)
+      : (reel?.price_paise ?? (relevant.length ? Math.min(...relevant.map((p) => p.price_paise)) : null))
+    const headlineType = uniformType ?? (reel ? 'Instagram Reel' : relevant[0]?.product_type ?? null)
 
     const snap = snapshotOf.get(c.id)
     const typedFollowers = Array.isArray(c.social_accounts)
@@ -123,7 +134,14 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
       /* Verified means it came from the connection, the same rule the
          storefront's badge follows. A typed number never earns the tick. */
       verified: Boolean(snap),
-      ratePaise: cheapest,
+      ratePaise: headline,
+      rateType: headlineType,
+      /* Every active package, so the card can open the full list. Sorted by
+         price so the cheapest reads first, which is the order a brand
+         comparing creators scans in. */
+      packages: relevant
+        .map((p) => ({ type: p.product_type, pricePaise: p.price_paise }))
+        .sort((a, b) => a.pricePaise - b.pricePaise),
       avgReachLabel: snap?.reachLast30 != null ? compactNumber(snap.reachLast30) : null,
       engagementLabel: engagement != null ? `${engagement}%` : null,
       interactionsLabel: snap?.interactionsLast30 != null ? compactNumber(snap.interactionsLast30) : null,
