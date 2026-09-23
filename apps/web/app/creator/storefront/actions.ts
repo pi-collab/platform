@@ -219,6 +219,31 @@ export async function upsertStorefront(input: UpsertInput) {
     return { error: 'Maximum 10 categories allowed.' }
   }
 
+  /* ── A storefront with no packages cannot be PUBLISHED ────────────────────
+     The whole page is an invitation to buy something, and its rate card is the
+     thing a brand acts on. Published without one, it advertises a creator who
+     has listed nothing — which is how /c/pankit-narang ended up live with two
+     invented deliverables in place of a rate card.
+
+     Gated on PUBLISHING, not on saving. A half-built storefront is a normal
+     state and must stay saveable; it just does not go public until there is
+     something on it to buy.
+
+     Existing published storefronts are untouched: this refuses the next
+     publish, it does not retro-unpublish anyone. Pulling a live page out from
+     under a creator without warning is worse than the gap it closes. */
+  if (input.is_published) {
+    const { count } = await createAdminClient()
+      .from('creator_products')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', ctx.creatorId)
+      .eq('is_active', true)
+
+    if ((count ?? 0) === 0) {
+      return { error: 'Add at least one package before publishing. Brands book from your rate card, and yours is empty.' }
+    }
+  }
+
   /* ── Keys this form does not own must survive its save ──────────────────
      `stats` is one jsonb object written by SEVERAL screens. This editor owns
      the typed figures in it; the reel picker owns `featured_reel_ids`, and

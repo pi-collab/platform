@@ -460,6 +460,12 @@ export default function ShopfrontMobile({
                    Both renderings are in the DOM and the desktop one comes
                    first, so a link to #packages scrolled to an element inside a
                    display:none subtree — which is to say, nowhere. */}
+                {/* Hidden when there is nothing to sell, matching the desktop
+                    rendering, which already drops this section via
+                    sections[ratecard].enabled. The two disagreed: desktop showed
+                    nothing while mobile showed a heading, the line "Add what you
+                    need at <name>'s set rates", and an empty card. */}
+                {rateItems.length > 0 && (
                 <div id="packages-mobile" className="sr">
                 <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.015em', fontSize: '26px', lineHeight: '1.2', margin: '0', color: 'var(--ink)'}}>Build a <span className="opit">deal</span><div className="secline" style={{marginTop: '14px'}}></div></h2>
                 <p style={{fontSize: '13.5px', lineHeight: '1.65', color: 'var(--wg-500)', margin: '16px 0 0', maxWidth: '94%'}}>{`Add what you need at ${firstName}’s set rates, the total updates as you go.`}</p>
@@ -510,6 +516,7 @@ export default function ShopfrontMobile({
                   </div>
                 </div>
               </div>
+              )}
 
               {/* AUDIENCE */}
               <div className="sr">
