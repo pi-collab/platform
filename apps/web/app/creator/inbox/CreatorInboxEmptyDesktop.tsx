@@ -43,7 +43,7 @@ const GHOSTS = [
 export default function CreatorInboxEmptyDesktop() {
   return (
     <div className="cinbox-desk">
-      <main style={{ flex: '1', minHeight: '0', minWidth: '0', maxWidth: '1280px', width: '100%', margin: '0 auto', padding: 'clamp(14px,2vw,22px) clamp(14px,2.4vw,26px) 0' }}>
+      <main style={{ flex: '1', minHeight: '0', minWidth: '0', maxWidth: '1200px', width: '100%', margin: '0 auto', padding: 'clamp(14px,2vw,22px) clamp(14px,2.4vw,26px) 0' }}>
         <div className="workspace reveal" style={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: '26px', overflow: 'hidden', border: '1px solid var(--frost-edge)', background: 'var(--card)', boxShadow: '0 34px 66px -34px rgba(40,45,25,.42),inset 0 1px 0 rgba(255,255,255,.9)' }}>
 
           <div className="worktop" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px,2vw,22px)', padding: '16px clamp(16px,2vw,24px)', borderBottom: '1px solid var(--border-hairline)', background: 'var(--card)' }}>

@@ -24,7 +24,7 @@ export default function BrandDealsEmpty() {
           It carries its own padding, which stacked on top of the page's
           and left this screen with a visibly bigger gap under the header
           than the dashboard has. The page owns the spacing. */}
-        <div style={{maxWidth: '1280px', margin: '0 auto'}}>
+        <div style={{maxWidth: '1200px', margin: '0 auto'}}>
 
 
           <div style={{background: 'var(--card)', borderRadius: '24px', boxShadow: 'var(--sh-2)', padding: 'clamp(26px,3vw,40px) clamp(24px,3vw,40px) clamp(28px,3.4vw,40px)'}}>

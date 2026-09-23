@@ -1584,7 +1584,7 @@ export default function StorefrontManager({
   if (mode === 'edit') {
     return (
       <main style={{ flex: 1, minWidth: 0, padding: 'clamp(24px,3vw,40px) clamp(20px,4vw,48px) clamp(60px,6vw,100px)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* ── Header (matches deals hero card) ──────── */}
           <div style={{
@@ -2190,7 +2190,7 @@ export default function StorefrontManager({
           {/* ── Sticky save bar ───────────────────────────── */}
           {saveMsg && (
             <div style={{
-              maxWidth: 1280, margin: '0 auto 14px',
+              maxWidth: 1200, margin: '0 auto 14px',
               padding: '12px 18px', borderRadius: 14, fontSize: 13.5, fontWeight: 600,
               background: saveMsg.type === 'ok' ? 'color-mix(in oklab, var(--neon) 14%, var(--card))' : 'var(--danger-soft, #FFEBEB)',
               color: saveMsg.type === 'ok' ? 'var(--ink)' : 'var(--danger, #dc2626)',
@@ -2198,7 +2198,7 @@ export default function StorefrontManager({
             }}>{saveMsg.text}</div>
           )}
           <div style={{
-            position: 'sticky', bottom: 20, zIndex: 50, maxWidth: 1280, margin: '0 auto',
+            position: 'sticky', bottom: 20, zIndex: 50, maxWidth: 1200, margin: '0 auto',
             display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center',
             padding: '14px 24px', borderRadius: 999,
             background: '#FFFFFF', border: `1px solid ${BHL}`,

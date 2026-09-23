@@ -564,7 +564,7 @@ export default async function CreatorDashboardPage({
       className={showMobileEmpty ? 'creator-hide-always' : 'cdash-desktop'}
       style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}
     >
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <RealtimeDashboardListener />
 
         {/* ── HERO CARD ──────────────────────────────── */}

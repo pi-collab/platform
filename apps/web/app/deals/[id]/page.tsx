@@ -229,7 +229,7 @@ export default async function DealPage({ params, searchParams }: {
 
   return (
     <main style={{ flex: '1 1 0%', minWidth: 0, padding: 'clamp(18px, 2.4vw, 30px) clamp(22px, 4vw, 56px) clamp(56px, 6vw, 96px)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <RealtimeDealListener dealId={deal.id} />
 
         {/* The most important place this can appear. The deal reads

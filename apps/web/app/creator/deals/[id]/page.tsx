@@ -407,8 +407,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         .reveal { animation: fadeUp .6s cubic-bezier(.22,1,.36,1) backwards; }
       `}</style>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-        <div className="frame reveal" style={{ width: '100%', maxWidth: 1280, display: 'flex', flexDirection: 'column', gap: 36 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <div className="frame reveal" style={{ width: '100%', maxWidth: 1200, display: 'flex', flexDirection: 'column', gap: 36 }}>
 
           {/* ── Editorial hero ── */}
           <div className="surface" style={{ padding: '28px 30px' }}>

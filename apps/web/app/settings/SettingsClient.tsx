@@ -189,7 +189,7 @@ export default function SettingsClient({
 
   return (
     <div style={{ padding: 'clamp(20px,2.6vw,34px) clamp(22px,4vw,56px) clamp(64px,6vw,110px)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Page header */}
         <div style={{ marginBottom: 22 }}>

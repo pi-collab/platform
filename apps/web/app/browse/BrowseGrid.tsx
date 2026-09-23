@@ -458,7 +458,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           .card-tick { opacity: 1; }
         }
       `}</style>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* ══════ HEADER CARD ══════ */}
         <div style={{

@@ -22,7 +22,7 @@ export default async function CreatorDealsPage() {
   if (error) {
     return (
       <main style={wrapper}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '14px 18px', borderRadius: 20, background: '#fff',
@@ -123,7 +123,7 @@ export default async function CreatorDealsPage() {
             handling of its own, so before this a phone got a desktop table. */}
         <CreatorDealsMobile deals={all} unreadNotifications={unreadNotifs} />
         <main className="cdeals-desktop" style={wrapper}>
-          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <CreatorDealsTable deals={all} />
           </div>
         </main>

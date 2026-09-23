@@ -114,7 +114,7 @@ export default function GrowthPoolClient({
     /* 1200, as the export draws it and as every app page now does. The bottom
        padding stays deep, to clear the floating bar. */
     <main style={{ padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(120px,10vw,140px)' }}>
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* ===== HERO ===== */}
         <div className="surface pool-hero" style={{ padding: 0, overflow: 'hidden', display: 'flex' }}>

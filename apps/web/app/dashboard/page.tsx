@@ -245,7 +245,7 @@ export default async function DashboardPage({
   if ((dealsEverCount ?? 0) === 0) {
     return (
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           {/* Above everything: a brand whose first deal is sitting unsent needs
               to know that before it reads a word of the dashboard. Kept OUTSIDE
               the drawn empty state, which has no place for a status banner. */}
@@ -266,7 +266,7 @@ export default async function DashboardPage({
     <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
       {onboardingModal}
       <RealtimeDashboardListener />
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Above the hero: a brand whose deals are sitting unsent needs to know
             that before anything else on the page. Rendered in BOTH dashboard

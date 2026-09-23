@@ -95,10 +95,10 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
   }
 
   return (
-    /* 1280 — the nav's own width, so the cards line up with the bar above
-       them. Every app page uses it. This one sat at 1120 with its own gutters,
-       so switching tabs nudged the whole layout sideways as well. */
-    <div style={{ maxWidth: 1280, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
+    /* 1200 and the deals page's padding: the width every app page and every
+       drawn empty state uses. This one sat at 1120 with its own gutters, so
+       switching tabs nudged the whole layout sideways. */
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
 
       {/* ===== HERO =====
           Hidden while the create panel is open. Everything in it belongs to

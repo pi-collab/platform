@@ -48,7 +48,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1280, margin: '0 auto', padding: '1rem' }}>
+    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
       <header style={{
         display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap',
         borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem',
