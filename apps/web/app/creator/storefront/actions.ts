@@ -418,7 +418,7 @@ export async function upsertStorefront(input: UpsertInput) {
 // ── Check slug availability ─────────────────────────────────────────────────
 
 export async function checkSlugAvailable(slug: string): Promise<{ available: boolean; error?: string }> {
-  await verifyCreator()
+  const { creatorId } = await verifyCreator()
 
   const normalized = slug.toLowerCase().trim()
   const slugError = validateSlug(normalized)
@@ -426,23 +426,24 @@ export async function checkSlugAvailable(slug: string): Promise<{ available: boo
 
   const supabase = createClient()
 
-  // Check if another creator owns this slug
-  const { data: existing } = await supabase
-    .from('creator_storefronts')
-    .select('id')
-    .ilike('slug', normalized)
-    .maybeSingle()
+  /* Through the RPC, not a SELECT on the table.
+     RLS scopes creator_storefronts to the caller's OWN row, so a slug another
+     creator holds was invisible to a plain query and this function answered
+     "available" — the creator saw a green tick, finished the form, and met
+     "already taken" only on save. is_storefront_slug_taken runs as definer and
+     returns a boolean: whether the name is spoken for, never who has it.
 
-  // If it exists, check if it's ours (RLS scopes to own rows only)
-  if (existing) {
-    const { data: mine } = await supabase
-      .from('creator_storefronts')
-      .select('id')
-      .eq('id', existing.id)
-      .maybeSingle()
+     Passing our own creator id keeps OUR current slug available to us;
+     without it a creator could not save their own storefront unchanged. */
+  const { data: taken, error } = await supabase
+    .rpc('is_storefront_slug_taken', { p_slug: normalized, p_creator_id: creatorId })
 
-    if (!mine) return { available: false, error: 'Someone already has this one' }
-  }
+  /* A check that cannot reach the database must not claim the name is free.
+     The unique index still refuses the save, so the worst case is the old
+     behaviour — found out on submit — rather than a wrong green tick. */
+  if (error) return { available: false, error: 'Could not check that URL just now' }
+
+  if (taken === true) return { available: false, error: 'Someone already has this one' }
 
   return { available: true }
 }

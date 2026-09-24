@@ -5676,3 +5676,29 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Copy is per tab — "Nothing in production", "Nothing to review", "No declined deals" — not one generic line
 - [ ] An empty SEARCH says so and offers to clear, rather than showing the tab's copy
 - [ ] The genuinely-empty account still returns the separate first-run screen before any of this
+
+---
+
+## 59. Storefront URL uniqueness, and the availability check that could not see it
+
+**The guarantee (unchanged — verify it still holds)**
+- [ ] `creator_storefronts_slug_lower_idx` — `UNIQUE (lower(slug))`, migration 0270 — is present on EVERY environment. This, not any app code, is what makes a URL one creator's
+- [ ] Two creators cannot hold the same slug in any case variation: `utkarsh`, `Utkarsh` and `UTKARSH` are one name
+- [ ] Ops uses the service-role key, which bypasses RLS but NOT a unique index — an ops-created storefront cannot duplicate a slug either
+- [ ] Saving a slug another creator holds returns "This slug is already taken. Choose a different one." (23505 handled), never a 500
+- [ ] Reserved slugs (`ops`, `admin`, `login`, `deals`, `api`, …) are refused, so no storefront can shadow a real route
+- [ ] `/c/<slug>` resolves case-insensitively (`lower(slug) = lower(p_slug)` in `get_public_storefront`)
+
+**The fix — `is_storefront_slug_taken` (migration 0511)**
+- [ ] **Regression guard:** typing a slug another creator already holds shows TAKEN while typing. It showed a green "available" tick before, because `checkSlugAvailable` ran a plain SELECT against `creator_storefronts`, whose RLS is own-row-only — another creator's slug was invisible, so the check answered "free" and the truth arrived only on save
+- [ ] An UNPUBLISHED draft still owns its slug: checking a draft's slug reports taken. Reporting drafts as free would recreate the bug at save time
+- [ ] Your OWN current slug reports available to you — otherwise you could not save your own storefront without renaming it
+- [ ] Case and surrounding whitespace do not change the answer (`lower(trim(...))`, matching the index exactly rather than an ILIKE sitting beside it)
+- [ ] The function returns a BOOLEAN only — never a row, a creator_id or a name. It must not become a way to find out WHO has a slug
+- [ ] If the check cannot reach the database it reports NOT available with "Could not check that URL just now". It must never fail open into a green tick; the unique index still refuses the save either way
+
+**SECURITY — the grant**
+- [ ] `is_storefront_slug_taken` is callable by `authenticated` and REFUSED for `anon` (HTTP 401, `42501 permission denied for function`). Verified against the live database with the anon key
+- [ ] **Why `REVOKE ... FROM anon` is explicit and must stay:** revoking from PUBLIC alone leaves Supabase's own direct grant to `anon` in place. The first version of 0511 revoked only PUBLIC and the anon key could still call it
+- [ ] An open version of this endpoint is a slug enumerator, and unlike opening `/c/<slug>` it reveals unpublished drafts — so this grant is a security boundary, not a tidiness rule
+- [ ] `creator_storefronts` still has NO anon SELECT policy; both slug questions are answered by SECURITY DEFINER functions (`get_public_storefront`, `is_storefront_slug_taken`) rather than a table read

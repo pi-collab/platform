@@ -647,6 +647,18 @@ CREATE POLICY brand_invites_read
 -- get_public_storefront() SECURITY DEFINER function (returns whitelisted
 -- JSON only). This prevents broad anon policies from leaking data via
 -- permissive-OR union with other policies.
+--
+-- The own-row SELECT policy means a creator CANNOT see whether another
+-- creator holds a slug, which is correct and is why the two questions the
+-- product asks about a slug are both answered by SECURITY DEFINER functions
+-- rather than by a SELECT:
+--
+--   get_public_storefront(slug)                 → the published page, anon
+--   is_storefront_slug_taken(slug, creator_id)  → a BOOLEAN, authenticated
+--
+-- is_storefront_slug_taken is REVOKED from anon explicitly (migration 0511).
+-- Revoking from PUBLIC alone leaves Supabase's direct grant to anon in place,
+-- and an open version of it enumerates slugs including unpublished drafts.
 
 DROP POLICY IF EXISTS creator_storefronts_read_own    ON creator_storefronts;
 DROP POLICY IF EXISTS creator_storefronts_insert_own  ON creator_storefronts;
