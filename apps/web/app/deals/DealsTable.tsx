@@ -183,13 +183,16 @@ interface Props {
   totalCount: number
   /** Computed server-side over ALL the brand's deals, not the current page. */
   tabCounts: Record<string, number>
+  /** Set when the page is narrowed to one creator, so the chip can say whose
+   *  deals these are and offer a way out of it. */
+  creatorFilter: { id: string; name: string } | null
 }
 
 // ════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 
-export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts }: Props) {
+export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts, creatorFilter }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(currentQuery)
@@ -359,6 +362,30 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
             )}
           </div>
         </div>
+
+        {/* A narrowing the brand did not type, so it has to be visible and
+            removable. Without it the page just looks short. */}
+        {creatorFilter && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '6px 8px 6px 14px', borderRadius: 'var(--radius-pill)',
+              background: 'var(--neon)', color: 'var(--ink)',
+              fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+            }}>
+              Deals with {creatorFilter.name}
+              <button
+                onClick={() => navigate({ creator: null })}
+                aria-label={`Show all deals, not just ${creatorFilter.name}`}
+                style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--ink)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          </div>
+        )}
 
         {/* ── Status tabs ── */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-hairline)', paddingBottom: 2 }}>

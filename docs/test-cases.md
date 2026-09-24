@@ -5575,3 +5575,47 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] "Do first" badge is ink with white text, not neon
 - [ ] Deal cards: tinted `#F5FAF7`, creator name with the CAMPAIGN beneath it, 36px amount, status pill, two-column footer
 - [ ] The footer's second column changes label with state: "Respond by" when the brand owes a reply, "Awaiting / Creator reply" when the creator does, "Due" otherwise
+
+**Campaigns in motion**
+- [ ] List of active campaigns on the left, the selected one in a panel on the right; clicking a row swaps the panel without a page load
+- [ ] The state label is DERIVED from the campaign's deals, never stored: something delivered → "In review"; a creator counter outstanding → "Your counter"; offers still out → "N pending"; otherwise "In progress", or "No deals yet"
+- [ ] "N posts" counts deliverable ITEMS across the campaign's deals, not deals
+- [ ] Overlapping creator initials, capped with a "+N" bubble
+
+**Performance ("Your collabs' reach")**
+- [ ] Section reads: "Performance" eyebrow, "Your collabs' reach" heading, a 2px ink rule, the top-posts grid, a hairline, then three numbered stats (01/02/03)
+- [ ] Top posts are ranked by VIEWS, falling back to reach for a format that reports no views — and the word under the tile changes with it ("142K views" vs "84K reach"), so the two are never read as the same measure
+- [ ] Only VERIFIED posts are eligible — `ig_match_status = 'resolved'` with at least one numeric insight. A post we could not match to the creator's own account never appears, and no figure is inferred for it
+- [ ] Fewer than four verified posts shows fewer than four tiles; ZERO shows no grid at all and one line of explanation, never four empty frames
+- [ ] Each tile links to that deal's analytics page
+- [ ] A tile with no stored thumbnail falls back to the gradient, not a broken image
+- [ ] 01 Total reach — sums verified posts only, with "Verified across N posts" beneath so the coverage is stated rather than hidden
+- [ ] 02 Engagement — ONE ratio of interactions to reach over the totals, not a mean of per-post rates (which would weight a 500-reach post like a 400,000 one). Labelled "Engagement", not "Avg engagement"
+- [ ] 03 Cost per 1,000 reach — NOT "return on spend" or "ROI". We hold spend and reach; we hold no conversions or revenue
+- [ ] Every stat is `—` with "No verified posts yet" beneath when there is no verified post. The design's 1.8M / 5.8% / ₹18K are sample values
+- [ ] Phone: the grid drops to two tiles, then one under 480px
+
+**Creators you've worked with**
+- [ ] Two-column grid of cards with "View all" → `/browse`
+- [ ] Money is either PAID (sum of paid invoices) or IN PROGRESS (committed price of live deals) and the label says which — never one combined "paid out" that reports money still in the brand's account as spent
+- [ ] The pill reads Active where a deal is live, Completed otherwise
+- [ ] "posts" counts deliverables actually marked posted; "deals" counts deals
+- [ ] "Last deal <Mon YYYY>", from the most recent deal date — not "last active", which is not something we hold
+- [ ] "View deals" opens `/deals?creator=<id>`
+
+**Deals list: filtered to one creator (`/deals?creator=<uuid>`)**
+- [ ] The list, the TAB COUNTS and the KPI row are all narrowed by the creator, so a tab never counts deals the list cannot show
+- [ ] A removable chip names the creator ("Deals with Sneha Reddy") — a narrowing the brand did not type must be visible, or the page just looks short
+- [ ] Clearing the chip returns to all deals; switching tabs or typing in search KEEPS the creator filter (the param survives in the URL)
+- [ ] A malformed or non-uuid `creator` value is ignored rather than erroring
+- [ ] A creator whose filtered list is empty still names them on the chip (looked up), never "this creator"
+- [ ] The first-run empty screen is NOT shown when the creator filter is what emptied the page
+
+**Closing panel**
+- [ ] "Brand–creator deals / without the *chaos*." over the diagonal wash, with the glow low and left, and "Browse creators" → `/browse`
+
+**Chart ("How it's going")**
+- [ ] Heading is "How it's going" with the lime rule; the badge on the right reads "▲ N% vs prev month/quarter/year" and names the SPAN, not the date
+- [ ] The badge is absent when the previous window had no spend — "▲ 100%" from zero is noise
+- [ ] Axis labels are 13px/600; there is no "NOW" caption under the current month (the month itself is in neon)
+- [ ] Hovering a point shows month and amount via a native title (the design's tooltip needs a client component; the information is the same)

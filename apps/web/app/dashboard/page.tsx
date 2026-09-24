@@ -51,6 +51,19 @@ interface CampaignRow {
   created_at: string
 }
 
+/** One deliverable on a deal. Fetched once and used for three different
+ *  things: the campaign rows' "N posts", the performance grid, and the
+ *  per-creator post counts. */
+interface ItemRow {
+  deal_id: string
+  label: string | null
+  posted_url: string | null
+  posted_at: string | null
+  ig_match_status: string | null
+  ig_insights: Record<string, number | undefined> | null
+  ig_thumbnail_url: string | null
+}
+
 const VALID_PERIODS = new Set(['this_year', 'this_quarter', 'this_month', 'this_week', 'custom'])
 
 export default async function DashboardPage({
@@ -126,16 +139,16 @@ export default async function DashboardPage({
   // this brand's posts. Reach and interactions are summed; nothing is inferred
   // and posts without verified numbers simply do not contribute, which is why
   // the coverage count is shown beneath.
-  const postedDealIds = allDeals.map((d) => d.id)
-  const { data: perfRows } = postedDealIds.length
+  const dealIds = allDeals.map((d) => d.id)
+  const { data: itemRows } = dealIds.length
     ? await supabase
         .from('deal_deliverable_items')
-        .select('deal_id, ig_match_status, ig_insights')
-        .in('deal_id', postedDealIds)
-        .eq('ig_match_status', 'resolved')
-    : { data: [] as { deal_id: string; ig_insights: Record<string, number | undefined> | null }[] }
+        .select('deal_id, label, posted_url, posted_at, ig_match_status, ig_insights, ig_thumbnail_url')
+        .in('deal_id', dealIds)
+    : { data: [] as ItemRow[] }
 
-  const perf = (perfRows ?? []) as { deal_id: string; ig_insights: Record<string, number | undefined> | null }[]
+  const allItems = (itemRows ?? []) as ItemRow[]
+  const perf = allItems.filter((i) => i.ig_match_status === 'resolved')
   const verifiedPosts = perf.filter((p) => p.ig_insights && Object.values(p.ig_insights).some((v) => typeof v === 'number'))
 
   const reachTotal = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.reach ?? 0), 0)
@@ -152,6 +165,30 @@ export default async function DashboardPage({
     .filter((d) => verifiedPosts.some((p) => p.deal_id === d.id))
     .reduce((n, d) => n + (d.price_paise ?? 0), 0)
   const cpmRupees = reachTotal > 0 ? (spendOnVerifiedPaise / 100) / (reachTotal / 1000) : null
+
+  /* ── Top performing posts ───────────────────────────────────────────────
+     Ranked by views, which is how a brand reads a post; reach is the fallback
+     for a format that reports no views. Only VERIFIED posts are eligible — a
+     post we could not match to the creator's own account has no figure to
+     rank by, and inventing one would put a made-up number at the top of the
+     page. Fewer than four tiles is the honest answer when that is all there
+     is. */
+  const creatorNameOfDeal = new Map(allDeals.map((d) => {
+    const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { full_name?: string } | null
+    return [d.id, (c?.full_name ?? 'Creator').trim()] as const
+  }))
+  const topPosts = verifiedPosts
+    .map((p) => ({
+      dealId: p.deal_id,
+      creator: creatorNameOfDeal.get(p.deal_id) ?? 'Creator',
+      label: (p.label ?? '').trim() || 'Post',
+      thumbnail: p.ig_thumbnail_url,
+      views: p.ig_insights?.views ?? null,
+      reach: p.ig_insights?.reach ?? null,
+    }))
+    .filter((p) => (p.views ?? p.reach ?? 0) > 0)
+    .sort((a, b) => (b.views ?? b.reach ?? 0) - (a.views ?? a.reach ?? 0))
+    .slice(0, 4)
   const allInvoices = (invoices ?? []) as InvoiceRow[]
 
   const invoiceMap = new Map<string, InvoiceRow>()
@@ -203,21 +240,68 @@ export default async function DashboardPage({
      rather than repeating its own title. */
   const campaignNameById = new Map(((campaigns ?? []) as CampaignRow[]).map((c) => [c.id, c.name]))
 
-  // ── TOP CREATORS
-  const creatorAgg = new Map<string, { name: string; photo: string | null; dealCount: number; totalPaise: number; latestDealId: string }>()
+  /* ── TOP CREATORS ────────────────────────────────────────────────────────
+     Two money figures, kept apart deliberately. What a brand has PAID is the
+     sum of their paid invoices; what is RUNNING is the committed price of
+     deals still in flight. One combined "paid out" total would report money
+     that has not left the brand's account as though it had, on the screen
+     they check their spend from. The card shows whichever is live for that
+     creator and says which one it is. */
+  const postsPerDeal = new Map<string, number>()
+  for (const i of allItems) {
+    if (!i.posted_at) continue
+    postsPerDeal.set(i.deal_id, (postsPerDeal.get(i.deal_id) ?? 0) + 1)
+  }
+
+  interface CreatorAgg {
+    id: string
+    name: string
+    photo: string | null
+    dealCount: number
+    paidPaise: number
+    activePaise: number
+    posts: number
+    /** epoch ms of the most recent deal with this creator */
+    lastDealAt: number
+    hasActive: boolean
+    latestDealId: string
+  }
+  const creatorAgg = new Map<string, CreatorAgg>()
   for (const d of allDeals) {
     const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { id: string; full_name: string; profile_photo_url: string | null } | null
     if (!c) continue
+    const inv = invoiceMap.get(d.id)
+    const paid = inv?.status === 'paid' ? (inv.brand_pays_paise ?? 0) : 0
+    const active = ACTIVE_STATUSES.has(d.status) ? (d.price_paise ?? 0) : 0
+    const at = new Date(d.created_at).getTime()
     const existing = creatorAgg.get(c.id)
     if (existing) {
       existing.dealCount++
-      existing.totalPaise += d.price_paise ?? 0
+      existing.paidPaise += paid
+      existing.activePaise += active
+      existing.posts += postsPerDeal.get(d.id) ?? 0
+      existing.hasActive = existing.hasActive || active > 0
+      if (at > existing.lastDealAt) {
+        existing.lastDealAt = at
+        existing.latestDealId = d.id
+      }
     } else {
-      creatorAgg.set(c.id, { name: c.full_name, photo: c.profile_photo_url, dealCount: 1, totalPaise: d.price_paise ?? 0, latestDealId: d.id })
+      creatorAgg.set(c.id, {
+        id: c.id,
+        name: c.full_name,
+        photo: c.profile_photo_url,
+        dealCount: 1,
+        paidPaise: paid,
+        activePaise: active,
+        posts: postsPerDeal.get(d.id) ?? 0,
+        lastDealAt: at,
+        hasActive: active > 0,
+        latestDealId: d.id,
+      })
     }
   }
   const topCreators = Array.from(creatorAgg.values())
-    .sort((a, b) => b.dealCount - a.dealCount || b.totalPaise - a.totalPaise)
+    .sort((a, b) => b.dealCount - a.dealCount || (b.paidPaise + b.activePaise) - (a.paidPaise + a.activePaise))
     .slice(0, 4)
 
   /* ── What the KPI row reports ─────────────────────────────────────────────
@@ -253,6 +337,16 @@ export default async function DashboardPage({
     : period === 'this_quarter' ? 'this quarter'
     : period === 'this_year' ? periodFrom.getFullYear().toString()
     : 'this period'
+
+  /* The comparison is against the SAME LENGTH of time immediately before, so
+     the badge names the span, not the date: "vs prev month", never "vs prev
+     July", which would read as a comparison against a month that is not the
+     one measured. */
+  const prevPeriodLabel = period === 'this_month' ? 'month'
+    : period === 'this_week' ? 'week'
+    : period === 'this_quarter' ? 'quarter'
+    : period === 'this_year' ? 'year'
+    : 'period'
 
   /* ── The brand's own track record ─────────────────────────────────────────
      Over EVERY deal and invoice, not the selected period: a record is what you
@@ -291,13 +385,9 @@ export default async function DashboardPage({
   }
 
   /* Deliverable items, so "8 posts" is the work actually agreed rather than a
-     count of deals. Skipped entirely when there are no campaign deals. */
-  const campaignDealIds = Array.from(dealsByCampaign.values()).flat().map((d) => d.id)
-  const { data: itemRows } = campaignDealIds.length
-    ? await supabase.from('deal_deliverable_items').select('deal_id').in('deal_id', campaignDealIds)
-    : { data: [] as { deal_id: string }[] }
+     count of deals. Counted from the single item fetch above. */
   const itemsPerDeal = new Map<string, number>()
-  for (const r of (itemRows ?? []) as { deal_id: string }[]) {
+  for (const r of allItems) {
     itemsPerDeal.set(r.deal_id, (itemsPerDeal.get(r.deal_id) ?? 0) + 1)
   }
 
@@ -333,31 +423,9 @@ export default async function DashboardPage({
     })
 
   const brandFirstName = brand.brandName?.split(' ')[0] ?? 'there'
-  const allCampaigns = (campaigns ?? []) as CampaignRow[]
 
   // ── MONTHLY SPEND (for chart)
   const monthlySpend = computeMonthlySpend(allInvoices)
-
-  // ── CAMPAIGN BUDGET (spend per campaign)
-  const campaignSpend = new Map<string, number>()
-  for (const d of allDeals) {
-    if (!d.campaign_id) continue
-    const inv = invoiceMap.get(d.id)
-    if (inv?.status === 'paid') {
-      campaignSpend.set(d.campaign_id, (campaignSpend.get(d.campaign_id) ?? 0) + (inv.brand_pays_paise ?? 0))
-    }
-  }
-  const campaignsWithBudget = allCampaigns
-    .filter((c) => c.budget_paise && c.budget_paise > 0)
-    .slice(0, 2)
-    .map((c) => ({
-      name: c.name,
-      budgetPaise: c.budget_paise!,
-      spentPaise: campaignSpend.get(c.id) ?? 0,
-    }))
-  const totalCampaignBudget = campaignsWithBudget.reduce((s, c) => s + c.budgetPaise, 0)
-  const totalCampaignSpent = campaignsWithBudget.reduce((s, c) => s + c.spentPaise, 0)
-  const budgetPct = totalCampaignBudget > 0 ? Math.round((totalCampaignSpent / totalCampaignBudget) * 100) : 0
 
   /* ── EMPTY STATE ──────────────────────────────────────────────────────────
      Counted WITHOUT the period filter. `deals` above is bounded by the selected
@@ -659,19 +727,18 @@ export default async function DashboardPage({
         {/* ── CHART + TRACK RECORD ─────────────────── */}
         <div style={{ marginTop: 'clamp(52px, 6vw, 80px)', display: 'grid', gridTemplateColumns: '1.63fr 1fr', gap: 'clamp(16px, 2vw, 20px)', alignItems: 'stretch' }} className="ctgrid">
           {/* Your quarter yet — chart */}
-          <section className="neon-hover" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--card)', padding: 'clamp(18px, 2vw, 26px)', boxShadow: 'var(--sh-2)' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const, marginBottom: 8 }}>
-              <div>
-                <h2 style={{ ...sectionH2Style, margin: 0 }}>Your quarter yet</h2>
-                <div style={{ fontSize: '12.5px', color: 'var(--wg-500)', marginTop: 8 }}>Monthly creator spend</div>
-              </div>
-              {monthlySpend.length > 0 && (
-                <div style={{ textAlign: 'right' as const }}>
-                  <div className="t-meta" style={{ color: 'var(--meta)' }}>Biggest month</div>
-                  <div style={{ fontWeight: 700, fontSize: 24, letterSpacing: '-0.045em', marginTop: 5, whiteSpace: 'nowrap' as const }}>
-                    {formatRupees(Math.max(...monthlySpend.map((m) => m.total)))}
-                    <span style={{ fontSize: 14, color: 'var(--wg-500)', fontWeight: 600 }}> &middot; {monthlySpend[monthlySpend.length - 1]?.label}</span>
-                  </div>
+          <section className="neon-hover" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--card)', padding: 'clamp(14px, 1.6vw, 20px) clamp(18px, 2vw, 26px)', boxShadow: 'var(--sh-2)' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' as const, marginBottom: 8 }}>
+              <h2 style={{ ...sectionH2Style, margin: 0 }}>
+                How it&rsquo;s going
+                <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
+              </h2>
+              {/* The design's "▲ 22% vs prev 6 mo". Shown only where there IS a
+                  previous period with spend in it — a first-quarter brand has
+                  nothing to be up against, and "▲ 100%" from zero is noise. */}
+              {spendChangePct != null && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: spendChangePct >= 0 ? 'var(--lime-700)' : 'var(--wg-500)' }}>
+                  {spendChangePct >= 0 ? '\u25B2' : '\u25BC'} {Math.abs(spendChangePct)}% vs prev {prevPeriodLabel}
                 </div>
               )}
             </div>
@@ -713,23 +780,73 @@ export default async function DashboardPage({
           </section>
         </div>
 
-        {/* ── YOUR REACH ─────────────────────────────────── */}
+        {/* ── PERFORMANCE ─────────────────────────────────
+            The design's four tiles and three numbered stats, with one
+            difference that matters: every figure here comes from a post we
+            matched to the creator's own Instagram account. Where there is no
+            verified post the tiles are simply absent and the stats read as a
+            dash, because the alternative on a performance panel is a number
+            the brand would price their next deal from. */}
         <section className="neon-hover" style={{ marginTop: 'clamp(52px, 6vw, 80px)', borderRadius: 20, background: 'var(--card)', padding: 'clamp(24px, 3vw, 36px)', boxShadow: 'var(--sh-2)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
-            <div>
-              <h2 style={{ ...sectionH2Style, margin: 0 }}>Your reach</h2>
-              <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
-              <div style={{ fontSize: '12.5px', color: 'var(--wg-500)', marginTop: 12 }}>Across all live campaigns</div>
+          <div style={{ marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase' as const, color: 'var(--wg-500)' }}>Performance</span>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 8 }}>
+              <h2 style={{ ...sectionH2Style, margin: 0 }}>Your collabs&rsquo; reach</h2>
             </div>
+            <div aria-hidden="true" style={{ height: 2, background: 'var(--ink)', marginTop: 18 }} />
           </div>
-          <div style={{ border: '1px solid var(--line)', borderRadius: 16, overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }} className="reachstat">
-            <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const }}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>Total reach</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
-                  {reachTotal > 0 ? compactNumber(reachTotal) : '-'}
-                </div>
+
+          {topPosts.length > 0 ? (
+            <>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '14px 0' }}>
+                <span className="t-meta" style={{ color: 'var(--meta)' }}>Top performing posts</span>
+                <span style={{ fontSize: '11.5px', color: 'var(--wg-500)' }}>by views</span>
               </div>
+              <div className="postgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'clamp(12px, 1.4vw, 16px)' }}>
+                {topPosts.map((post, i) => (
+                  <Link
+                    key={`${post.dealId}-${i}`}
+                    href={`/deals/${post.dealId}/analytics`}
+                    className="lift posttile"
+                    style={{ display: 'block', borderRadius: 14, border: '1px solid var(--line)', overflow: 'hidden', background: 'var(--card)', textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <div style={{ position: 'relative', aspectRatio: '4 / 3', background: 'linear-gradient(150deg, var(--sec) 0%, var(--sec-2) 55%, #FAFAF8 100%)' }}>
+                      {post.thumbnail && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={post.thumbnail} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' as const }} />
+                      )}
+                      <span style={{ position: 'absolute', top: 10, left: 10, width: 22, height: 22, borderRadius: 7, background: 'rgba(255,255,255,.85)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, color: 'var(--wg-700)' }}>{i + 1}</span>
+                    </div>
+                    <div style={{ padding: '12px 14px 14px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--ink)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {post.creator} &middot; {post.label}
+                      </div>
+                      {/* Views where the format reports them, reach where it
+                          does not. The word changes with the number so the two
+                          are never read as the same measure. */}
+                      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 4 }}>
+                        {post.views != null && post.views > 0
+                          ? `${compactNumber(post.views)} views`
+                          : `${compactNumber(post.reach ?? 0)} reach`}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div style={{ margin: '18px 0 4px', fontSize: '13.5px', color: 'var(--wg-500)', lineHeight: 1.6 }}>
+              No verified posts yet. Once a creator marks a deliverable posted and has Instagram connected, their numbers appear here.
+            </div>
+          )}
+
+          <div aria-hidden="true" style={{ height: 1, background: 'rgba(24,28,36,.1)', margin: '28px 0 0' }} />
+
+          <div className="reachstat" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginTop: 14 }}>
+            <div style={{ padding: '20px 24px 8px 4px' }}>
+              <div style={statIndexStyle}>01</div>
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 10 }}>Total reach</div>
+              <div style={reachStatValue}>{reachTotal > 0 ? compactNumber(reachTotal) : '—'}</div>
               {/* Coverage, not a bare total. Posts from creators who have not
                   connected contribute nothing, and a total that hides that
                   understates the brand's reach while looking complete. */}
@@ -739,31 +856,25 @@ export default async function DashboardPage({
                   : 'No verified posts yet'}
               </div>
             </div>
-            <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>Engagement</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
-                  {engagementPct != null ? `${engagementPct.toFixed(1)}%` : '-'}
-                </div>
-              </div>
+            <div style={{ padding: '20px 24px', borderLeft: '1px solid rgba(24,28,36,.08)' }}>
+              <div style={statIndexStyle}>02</div>
               {/* Named precisely. "Avg engagement" implies a mean of per-post
                   rates, which would weight a 500-reach post the same as a
                   400,000 one. This is one ratio of two totals. */}
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 10 }}>Engagement</div>
+              <div style={reachStatValue}>{engagementPct != null ? `${engagementPct.toFixed(1)}%` : '—'}</div>
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
                 {engagementPct != null ? 'Interactions per reach' : 'No verified posts yet'}
               </div>
             </div>
-            <div style={{ padding: 'clamp(20px, 2vw, 26px)', display: 'flex', flexDirection: 'column' as const, borderLeft: '1px solid var(--hair)' }}>
+            <div style={{ padding: '20px 4px 20px 24px', borderLeft: '1px solid rgba(24,28,36,.08)' }}>
+              <div style={statIndexStyle}>03</div>
               {/* NOT "return on spend". We hold what was paid and what it
                   reached; we hold no conversions and no revenue, so a return
                   would be a number nothing in this codebase can compute. Cost
                   per thousand reach uses the same two inputs and is true. */}
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>Cost per 1,000 reach</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
-                <div style={{ fontWeight: 700, fontSize: 'clamp(38px, 4.2vw, 52px)', letterSpacing: '-0.045em', lineHeight: 0.9 }}>
-                  {cpmRupees != null ? `\u20B9${cpmRupees.toFixed(0)}` : '-'}
-                </div>
-              </div>
+              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 10 }}>Cost per 1,000 reach</div>
+              <div style={reachStatValue}>{cpmRupees != null ? `₹${cpmRupees.toFixed(0)}` : '—'}</div>
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
                 {cpmRupees != null ? 'On deals with verified reach' : 'No verified posts yet'}
               </div>
@@ -771,66 +882,103 @@ export default async function DashboardPage({
           </div>
         </section>
 
-        {/* ── CREATORS YOU WORK WITH MOST ──────────────── */}
+        {/* ── CREATORS YOU'VE WORKED WITH ──────────────── */}
         {topCreators.length > 0 && (
           <section style={{ marginTop: 'clamp(52px, 6vw, 80px)' }}>
-            <h2 style={{ ...sectionH2Style, margin: '0 0 24px' }}>
-              Creators you work with most
-              <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
-            </h2>
-            <div className="brandgrid">
-              {topCreators.map((c) => {
-                const initials = c.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-                return (
-                  <div key={c.name} className="brandc" style={{ display: 'block', borderRadius: 18, background: 'var(--card)', padding: 'clamp(24px, 2.6vw, 34px)', boxShadow: 'var(--sh-2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      {c.photo ? (
-                        <img src={c.photo} alt={c.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
-                      ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: 'var(--wg-500)' }}>{initials}</div>
-                      )}
-                      <div style={{ minWidth: 0, flex: '1 1 0%' }}>
-                        <div style={{ fontWeight: 600, fontSize: 17, letterSpacing: 0 }}>{c.name}</div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--lime-700)', marginTop: 5 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)' }} />Active
+            <div style={{ borderRadius: 20, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 32px)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 28 }}>
+                <h2 style={{ ...sectionH2Style, margin: 0 }}>
+                  Creators you&rsquo;ve worked with
+                  <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
+                </h2>
+                <Link href="/browse" style={{ fontSize: 12, fontWeight: 600, color: 'var(--wg-600)', display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                  View all
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                </Link>
+              </div>
+              <div className="brandgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(24px, 3vw, 32px)' }}>
+                {topCreators.map((c) => {
+                  const initials = c.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+                  /* Running money where a deal is still live, paid money once
+                     it is done. Labelled as whichever it is. */
+                  const money = c.hasActive
+                    ? { value: c.activePaise, label: 'in progress' }
+                    : { value: c.paidPaise, label: 'paid' }
+                  return (
+                    <Link key={c.id} href={`/deals?creator=${c.id}`} className="brandc" style={{ display: 'block', borderRadius: 14, background: 'var(--card)', border: '1px solid rgba(24,28,36,.08)', textDecoration: 'none', color: 'inherit', padding: 26 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        {c.photo ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={c.photo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initials}</div>
+                        )}
+                        <div style={{ minWidth: 0, flex: '1 1 0%' }}>
+                          <div style={{ fontWeight: 600, fontSize: 17, letterSpacing: 0 }}>{c.name}</div>
+                          {c.hasActive ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--lime-700)', marginTop: 5 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)' }} />Active
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--wg-500)', marginTop: 5 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'linear-gradient(90deg, var(--sec-mid), var(--sec-mid-2))' }} />Completed
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '9px 16px', fontWeight: 700, fontSize: '12.5px', color: '#fff' }}>
+                          View deals
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                         </span>
                       </div>
-                      <Link href={`/deals/new?from=${c.latestDealId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, background: 'var(--lime-400)', borderRadius: 'var(--radius-pill)', padding: '9px 16px', fontWeight: 700, fontSize: '12.5px', color: 'var(--lime-950)', boxShadow: 'rgba(180,215,50,0.85) 0px 10px 20px -10px', textDecoration: 'none' }}>
-                        View deals
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                      </Link>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 22, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
-                      <div>
-                        <div style={creatorStatVal}>{formatRupees(c.totalPaise)}</div>
-                        <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>paid out</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 22, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+                        <div>
+                          <div style={creatorStatVal}>{money.value > 0 ? formatRupees(money.value) : '—'}</div>
+                          <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{money.label}</div>
+                        </div>
+                        <div>
+                          <div style={creatorStatVal}>{c.posts}</div>
+                          <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{c.posts === 1 ? 'post' : 'posts'}</div>
+                        </div>
+                        <div>
+                          <div style={creatorStatVal}>{c.dealCount}</div>
+                          <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{c.dealCount === 1 ? 'deal' : 'deals'}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={creatorStatVal}>{c.dealCount}</div>
-                        <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>deals</div>
+                      {/* "Last deal", not "last active" — a deal date is what we
+                          hold; whether they were active is not. */}
+                      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 16 }}>
+                        Last deal {new Date(c.lastDealAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                       </div>
-                      <div />
-                    </div>
-                  </div>
-                )
-              })}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
           </section>
         )}
 
-        {/* ── BOTTOM CTA CARD ─────────────────────────────── */}
-        <section style={{ marginTop: 'clamp(52px, 6vw, 80px)', borderRadius: 24, background: 'linear-gradient(135deg, #FFFFFF 0%, #FAFAFA 50%, #F3F3F0 100%)', boxShadow: 'var(--sh-2)', padding: 'clamp(40px, 5vw, 64px) clamp(28px, 4vw, 48px)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, right: 0, width: '50%', height: '100%', background: 'linear-gradient(135deg, transparent 0%, rgba(243,243,240,0.6) 100%)', pointerEvents: 'none' }} />
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 'clamp(28px, 3.6vw, 42px)', letterSpacing: '-0.025em', lineHeight: 1.15, margin: 0, color: 'var(--ink)', position: 'relative', zIndex: 1 }}>
-            Creator campaigns<br />without the <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.05em' }}>chaos</span>.
-          </h2>
-          <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14.5, color: '#5C5E52', lineHeight: 1.6, margin: '18px 0 0', maxWidth: 440, position: 'relative', zIndex: 1 }}>
-            One home for offers, contracts, content and payments, so you can focus on the work, not the chasing.
-          </p>
-          <Link href="/campaigns" style={{ ...neonBtnStyle, marginTop: 26, position: 'relative', zIndex: 1 }}>
-            Plan your next campaign
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-          </Link>
+        {/* ── CLOSING ─────────────────────────────────────────
+            The design's closing panel, verbatim: the diagonal wash, the glow
+            low and left, and the line set over two rows with "chaos" in the
+            serif italic. The button goes to browse, which is where the next
+            deal actually starts. */}
+        <section style={{ marginTop: 'clamp(52px, 6vw, 80px)', position: 'relative', overflow: 'hidden', borderRadius: 32, background: 'linear-gradient(115deg, var(--sec) 0%, var(--sec-2) 26%, var(--card) 55%, #FCFDF6 100%)', minHeight: 300, display: 'flex', alignItems: 'center', padding: 'clamp(32px, 4vw, 60px)', boxShadow: 'var(--sh-2)' }}>
+          <div aria-hidden="true" style={{ position: 'absolute', bottom: -170, left: -90, width: 540, height: 480, borderRadius: '50%', background: 'radial-gradient(circle, rgba(122,129,157,.08), transparent 66%)', filter: 'blur(20px)', pointerEvents: 'none', zIndex: 0 }} />
+          <div className="brandmoment" style={{ position: 'relative', zIndex: 2 }}>
+            <div>
+              <h2 style={{ fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 'clamp(38px, 4.8vw, 44px)', margin: 0, color: 'var(--ink)' }}>
+                Brand&ndash;creator deals<br />without the <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.12em' }}>chaos</span>.
+              </h2>
+              <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: 400 }}>
+                One home for offers, contracts, content and payments &mdash; so your team can focus on the work, not the follow-ups.
+              </p>
+              <Link href="/browse" className="neonbtn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 26, padding: '13px 22px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', fontWeight: 700, fontSize: 14, color: 'var(--lime-950)', boxShadow: '0 14px 26px -12px rgba(180,215,50,.7)', textDecoration: 'none' }}>
+                Browse creators
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              </Link>
+            </div>
+            <div aria-hidden="true" style={{ position: 'relative', aspectRatio: '1 / 1', width: '100%', maxWidth: 280, justifySelf: 'center', borderRadius: 24 }} />
+          </div>
         </section>
 
       </div>
@@ -993,7 +1141,7 @@ function SpendChart({ data }: { data: { label: string; total: number }[] }) {
           <line x1={PL} y1={PT} x2={W - PR} y2={PT} />
         </g>
         {/* Y-axis labels */}
-        <g fill="var(--meta)" fontSize="9.5" fontWeight="500" letterSpacing=".14em" textAnchor="end">
+        <g fill="var(--meta)" fontSize="13" fontWeight="600" letterSpacing=".06em" textAnchor="end">
           <text x={PL - 10} y={PT + usableH + 3}>₹0</text>
           <text x={PL - 10} y={midY + 3}>{formatRupees(midVal)}</text>
           <text x={PL - 10} y={PT + 3}>{formatRupees(niceMax)}</text>
@@ -1005,21 +1153,24 @@ function SpendChart({ data }: { data: { label: string; total: number }[] }) {
         {/* Dots */}
         <g stroke="var(--ink)" strokeWidth="2" fill="var(--card)">
           {points.slice(0, -1).map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r="4" />
+            <circle key={i} cx={p.x} cy={p.y} r="4"><title>{`${p.label} \u00B7 ${formatRupees(p.total)}`}</title></circle>
           ))}
         </g>
         {/* Last dot (neon) */}
-        <circle cx={points[points.length - 1]!.x} cy={points[points.length - 1]!.y} r="6" fill="var(--lime-400)" stroke="var(--ink)" strokeWidth="2.4" />
+        <circle cx={points[points.length - 1]!.x} cy={points[points.length - 1]!.y} r="6" fill="var(--lime-400)" stroke="var(--ink)" strokeWidth="2.4">
+          <title>{`${points[points.length - 1]!.label} \u00B7 ${formatRupees(points[points.length - 1]!.total)}`}</title>
+        </circle>
         {/* X-axis labels */}
-        <g fill="var(--meta)" fontSize="9.5" fontWeight="500" letterSpacing=".14em" textAnchor="middle">
+        <g fill="var(--meta)" fontSize="13" fontWeight="600" letterSpacing=".06em" textAnchor="middle">
           {points.slice(0, -1).map((p, i) => (
             <text key={i} x={p.x} y={PT + usableH + 22}>{p.label.toUpperCase()}</text>
           ))}
         </g>
-        {/* Current month label */}
+        {/* Current month, in neon. The design's hover tooltip needs a client
+            component; a <title> on each dot gives the same month-and-amount
+            from the server. */}
         <g textAnchor="middle">
-          <text x={points[points.length - 1]!.x} y={PT + usableH + 22} fill="var(--lime-700)" fontSize="9.5" fontWeight="800" letterSpacing=".1em">{points[points.length - 1]!.label.toUpperCase()}</text>
-          <text x={points[points.length - 1]!.x} y={PT + usableH + 36} fill="var(--wg-400)" fontSize="7.5" fontWeight="700" letterSpacing=".16em">NOW</text>
+          <text x={points[points.length - 1]!.x} y={PT + usableH + 22} fill="var(--lime-700)" fontSize="13" fontWeight="800" letterSpacing=".06em">{points[points.length - 1]!.label.toUpperCase()}</text>
         </g>
       </svg>
     </div>
@@ -1040,11 +1191,15 @@ function formatRupees(paise: number): string {
 // ── Styles (exact match to Chandreyee's Brand Dashboard v3 HTML) ──
 
 const heroH1Style: React.CSSProperties = {
-  fontFamily: 'var(--font-heading)',
-  fontWeight: 700,
-  letterSpacing: '-0.025em',
+  fontFamily: 'var(--font-display)',
+  fontWeight: 600,
+  letterSpacing: '-0.02em',
   lineHeight: 1,
-  fontSize: 'clamp(46px, 5.8vw, 74px)',
+  /* The design fixes this at 44px and adds white-space:nowrap. A real brand
+     name is not "Ceejay", so the top of the clamp is kept and the bottom is
+     allowed to shrink — a headline that cannot wrap and cannot shrink runs off
+     a phone the first time someone is called Sugar Cosmetics. */
+  fontSize: 'clamp(34px, 6.2vw, 44px)',
   margin: '12px 0 0',
   color: 'var(--ink)',
 }
@@ -1134,11 +1289,27 @@ const kpiMedNum: React.CSSProperties = {
 }
 
 const sectionH2Style: React.CSSProperties = {
-  fontFamily: 'var(--font-heading)',
-  fontWeight: 700,
-  letterSpacing: '-0.025em',
+  fontFamily: 'var(--font-display)',
+  fontWeight: 600,
+  letterSpacing: '-0.02em',
   fontSize: 'clamp(23px, 2.2vw, 26px)',
   margin: '14px 0 0',
+}
+
+/** The 01 / 02 / 03 index above each performance stat. */
+const statIndexStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'var(--wg-400)',
+}
+
+const reachStatValue: React.CSSProperties = {
+  fontFamily: 'var(--font-num)',
+  fontWeight: 600,
+  fontSize: 'clamp(34px, 3.6vw, 38px)',
+  letterSpacing: '-0.03em',
+  lineHeight: 0.9,
+  marginTop: 14,
 }
 
 const creatorStatVal: React.CSSProperties = {

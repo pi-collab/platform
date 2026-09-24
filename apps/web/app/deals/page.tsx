@@ -10,6 +10,8 @@ import { countDealsByTab, TAB_STATUSES } from '@/lib/deal-tabs'
 const PAGE_SIZE = 20
 
 /** Whitelist search query to alphanumeric, space, hyphen only. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function sanitizeQuery(raw: string | null | undefined): string {
   if (!raw) return ''
   return raw.replace(/[^a-zA-Z0-9 \-]/g, '').trim().slice(0, 100)
@@ -39,12 +41,18 @@ function formatRupees(paise: number): string {
 export default async function DealsListPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; page?: string; sort?: string }
+  searchParams: { q?: string; status?: string; page?: string; sort?: string; creator?: string }
 }) {
   const brand = await verifyBrand()
 
   const q = sanitizeQuery(searchParams.q)
   const status = validStatus(searchParams.status)
+  /* One creator's deals, arrived at from the dashboard's "View deals". Validated
+     as a uuid rather than passed through: it goes into .eq() on a scoped query,
+     and an unparseable value should narrow to nothing rather than error. The
+     tab counts and the KPI row are narrowed with it, so a tab never counts
+     deals the list below cannot show. */
+  const creatorId = UUID_RE.test(searchParams.creator ?? '') ? searchParams.creator! : null
   const page = Math.max(1, parseInt(searchParams.page ?? '1', 10) || 1)
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -111,6 +119,8 @@ export default async function DealsListPage({
     query = query.eq('status', status)
   }
 
+  if (creatorId) query = query.eq('creator_id', creatorId)
+
   // Search -- sanitized q is safe for ILIKE and .or() filter string
   if (q) {
     query = query.or(`deal_ref.ilike.%${q}%,title.ilike.%${q}%,deliverables.ilike.%${q}%`)
@@ -123,14 +133,23 @@ export default async function DealsListPage({
   const [{ data: deals, error, count }, { data: invoices }, { data: allDealsForKpi }, { data: dealCensus }] = await Promise.all([
     query,
     supabase.from('invoices').select('deal_id, status, due_date'),
-    supabase
-      .from('deals')
-      .select('id, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted')
-      .not('status', 'in', '(cancelled,declined)'),
-    // Every deal, unfiltered and unpaginated, for the tab counts. Separate from
-    // the KPI query above because that one excludes cancelled and declined, and
-    // the Declined tab needs to count exactly those.
-    supabase.from('deals').select('id, status, is_posted'),
+    (() => {
+      let k = supabase
+        .from('deals')
+        .select('id, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted')
+        .not('status', 'in', '(cancelled,declined)')
+      if (creatorId) k = k.eq('creator_id', creatorId)
+      return k
+    })(),
+    // Every deal, unpaginated, for the tab counts. Separate from the KPI query
+    // above because that one excludes cancelled and declined, and the Declined
+    // tab needs to count exactly those. Narrowed by creator alongside the list
+    // so the tabs and the rows agree.
+    (() => {
+      let c = supabase.from('deals').select('id, status, is_posted')
+      if (creatorId) c = c.eq('creator_id', creatorId)
+      return c
+    })(),
   ])
 
   if (error) {
@@ -153,6 +172,19 @@ export default async function DealsListPage({
     const inv = invoiceMap.get(d.id) ?? null
     return { ...d, creator, invoiceStatus: inv?.status ?? null, invoiceDueDate: inv?.due_date ?? null }
   })
+
+  /* Whose deals the chip names. Taken from a row where there is one, looked up
+     where the creator filter and a status tab have narrowed to nothing — a chip
+     that reads "this creator" tells the brand less than no chip at all. */
+  let creatorFilterName = ''
+  if (creatorId) {
+    creatorFilterName = all.find((d) => d.creator?.id === creatorId)?.creator?.full_name ?? ''
+    if (!creatorFilterName) {
+      const { data: cr } = await supabase
+        .from('creators').select('full_name').eq('id', creatorId).maybeSingle()
+      creatorFilterName = cr?.full_name ?? 'this creator'
+    }
+  }
 
   const totalCount = count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
@@ -177,7 +209,7 @@ export default async function DealsListPage({
   //
   // HeldNotice stays above it. A brand whose first deal is sitting unsent needs
   // that before anything else, and the design has nowhere to put a banner.
-  if (totalCount === 0 && !q && !status) {
+  if (totalCount === 0 && !q && !status && !creatorId) {
     return (
       // NOT `container`. That caps at 1080 and the drawn screen sets its own
       // 1200, the same width the brand dashboard's empty state uses; nested, the
@@ -256,6 +288,9 @@ export default async function DealsListPage({
         deals={all}
         currentStatus={status}
         currentQuery={q}
+        /* The name, not the id: the chip has to say whose deals these are, and
+           the id is already in the URL. */
+        creatorFilter={creatorId ? { id: creatorId, name: creatorFilterName } : null}
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}

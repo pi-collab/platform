@@ -433,6 +433,12 @@ input[type="date"].dinput::-webkit-inner-spin-button { display: none; }
   .brandmoment { grid-template-columns: 1fr !important; }
 }
 
+/* One tile per row on a phone — two 4:3 tiles side by side leave the creator
+   name too narrow to read. */
+@media (max-width: 480px) {
+  .postgrid { grid-template-columns: 1fr !important; }
+}
+
 /* ── Inbox split-pane ── */
 /* Mobile: show thread list OR chat, not both */
 @media (max-width: 767px) {
