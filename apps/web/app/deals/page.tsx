@@ -3,7 +3,6 @@ import BrandDealsEmpty from './BrandDealsEmpty'
 import HeldNotice from '@/components/HeldNotice'
 import { verifyBrand } from '@/lib/brand-auth'
 import Link from 'next/link'
-import { calculateFee } from '@/lib/fee'
 import DealsTable from './DealsTable'
 import { countDealsByTab, TAB_STATUSES } from '@/lib/deal-tabs'
 
@@ -21,21 +20,6 @@ function sanitizeQuery(raw: string | null | undefined): string {
 function validStatus(s: string | null | undefined): string | null {
   const VALID = new Set(['negotiating', 'agreed', 'delivered', 'revision', 'approved', 'paid', 'complete', 'declined', 'cancelled', 'needs_you'])
   return s && VALID.has(s) ? s : null
-}
-
-function brandTotal(d: { price_paise: number | null; fee_percent: number | null; fee_mode: string | null; price_per_extra_revision_paise: number | null; revisions_used: number | null; revision_limit: number | null }): number | null {
-  if (d.price_paise == null || d.price_paise <= 0) return null
-  const fee = calculateFee(d.price_paise, d.fee_percent ?? 0, (d.fee_mode as 'on_top' | 'deducted') ?? 'deducted')
-  const extra = Math.max(0, (d.revisions_used ?? 0) - (d.revision_limit ?? 0))
-  const overage = extra * (d.price_per_extra_revision_paise ?? 0)
-  return fee.brand_pays_paise + overage
-}
-
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100_000) { const v = (rupees / 100_000); return `\u20B9${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)}L` }
-  if (rupees >= 1_000) return `\u20B9${Math.round(rupees / 1_000)}K`
-  return `\u20B9${rupees.toLocaleString('en-IN')}`
 }
 
 export default async function DealsListPage({
@@ -121,9 +105,24 @@ export default async function DealsListPage({
 
   if (creatorId) query = query.eq('creator_id', creatorId)
 
-  // Search -- sanitized q is safe for ILIKE and .or() filter string
+  /* Search -- sanitized q is safe for ILIKE and .or() filter string.
+
+     The CREATOR's name is part of it, which it was not before: a brand
+     searching "Sneha" got nothing, because the text was only matched against
+     the deal's own columns. The name lives on another table, and PostgREST
+     cannot OR a filter on an embedded resource against filters on base
+     columns, so the matching creators are resolved first and their ids join
+     the same .or(). Capped, because this is a filter clause, not a report. */
   if (q) {
-    query = query.or(`deal_ref.ilike.%${q}%,title.ilike.%${q}%,deliverables.ilike.%${q}%`)
+    const { data: matchedCreators } = await supabase
+      .from('creators')
+      .select('id')
+      .ilike('full_name', `%${q}%`)
+      .limit(50)
+    const creatorIds = (matchedCreators ?? []).map((c) => c.id)
+    const clauses = [`deal_ref.ilike.%${q}%`, `title.ilike.%${q}%`, `deliverables.ilike.%${q}%`]
+    if (creatorIds.length > 0) clauses.push(`creator_id.in.(${creatorIds.join(',')})`)
+    query = query.or(clauses.join(','))
   }
 
   // Order + paginate
@@ -134,9 +133,12 @@ export default async function DealsListPage({
     query,
     supabase.from('invoices').select('deal_id, status, due_date'),
     (() => {
+      /* Only the status is read now: the counters are counts, and the fee
+         columns were here for a "committed" figure the design replaced with
+         "total deals". */
       let k = supabase
         .from('deals')
-        .select('id, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted')
+        .select('id, status')
         .not('status', 'in', '(cancelled,declined)')
       if (creatorId) k = k.eq('creator_id', creatorId)
       return k
@@ -189,15 +191,21 @@ export default async function DealsListPage({
   const totalCount = count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
-  // ── KPIs (computed from ALL active deals, not just the current page) ──
+  /* ── Counters ─────────────────────────────────────────────────────────────
+     Over every deal the brand has, not the current page.
+
+     "Live right now" is the deals IN FLIGHT. It read `is_posted === true`
+     before, which counts FINISHED deals — the opposite of what the label says,
+     and the number a brand would use to decide whether anything is running.
+
+     "Total deals" counts everything including declined, which is what a total
+     means; the census is the query that keeps those. */
   const kpiDeals = allDealsForKpi ?? []
   const HOT_STATUSES = new Set(['negotiating', 'delivered', 'approved'])
+  const DONE_STATUSES = new Set(['paid', 'complete', 'declined', 'cancelled'])
   const needsActionCount = kpiDeals.filter((d) => HOT_STATUSES.has(d.status)).length
-  const liveCount = kpiDeals.filter((d) => d.is_posted === true).length
-  const committedPaise = kpiDeals.reduce((sum, d) => {
-    const bt = brandTotal(d)
-    return sum + (bt ?? 0)
-  }, 0)
+  const liveCount = kpiDeals.filter((d) => !DONE_STATUSES.has(d.status)).length
+  const totalDealsEver = (dealCensus ?? []).length
 
   // Held deals belong to a brand not yet cleared to send. Surfaced FIRST and
   // prominently — a brand seeing no creator response with no explanation
@@ -241,40 +249,44 @@ export default async function DealsListPage({
         showDealsLink={false}
       />
 
-      {/* ══════ HERO CARD ══════ */}
+      {/* ══════ HERO ══════
+          Transcribed from "Brand Deals": the title and the one button on one
+          row, then the counters as a hairline-divided plate inside the same
+          card — the shape the brand dashboard's hero already uses. */}
       <section style={heroCard}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' as const }}>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(26px, 3vw, 34px)', letterSpacing: '-0.025em', lineHeight: 1.05, margin: 0, color: 'var(--ink)' }}>
-              My <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.12em', letterSpacing: 0 }}>deals</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' as const }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1, fontSize: 'clamp(34px, 4.4vw, 44px)', margin: 0, color: 'var(--ink)' }}>
+              My <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>deals</span>
             </h1>
-            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: '#5C5E52', margin: '8px 0 0', lineHeight: 1.6 }}>
-              Everything you have running with creators, newest first.</p>
+            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
+              Everything you have running with creators, newest first.
+            </p>
           </div>
-          <Link href="/browse" style={neonBtnStyle}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          <Link href="/browse" className="neonbtn" style={neonBtnStyle}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" /><path d="M3 9h18" /><path d="M11 13h2" />
+            </svg>
             New deal
           </Link>
         </div>
 
-        {/* ── KPI row ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28, marginTop: 26, paddingTop: 24, borderTop: '1px solid #EAEAE3' }}>
-          <Link href="/deals?status=needs_you" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
+        {/* ── Counters ──
+            "Live right now" means deals IN FLIGHT — not declined, not finished.
+            It counted posted deals before, which is the opposite thing and made
+            a brand with nine deals running read zero. */}
+        <div className="kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginTop: 24, borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden' }}>
+          <Link href="/deals?status=needs_you" style={{ ...kpiCell, textDecoration: 'none', color: 'inherit' }} className="kpicell">
             <div style={kpiLabel}>Needs your action</div>
             <div style={kpiValue}>{needsActionCount}</div>
           </Link>
-          <Link href="/deals?status=paid" style={{ textDecoration: 'none', color: 'inherit', paddingLeft: 28, borderLeft: '1px solid #EAEAE3', cursor: 'pointer' }}>
+          <div style={{ ...kpiCell, borderLeft: '1px solid var(--hair)' }}>
             <div style={kpiLabel}>Live right now</div>
             <div style={kpiValue}>{liveCount}</div>
-          </Link>
-          <div style={{ paddingLeft: 28, borderLeft: '1px solid #EAEAE3' }}>
-            <div style={kpiLabel}>Committed &middot; you pay</div>
-            <div style={{ position: 'relative', display: 'inline-block', marginTop: 10 }}>
-              <span aria-hidden="true" style={{ position: 'absolute', left: -3, right: -3, bottom: 3, height: 9, background: 'var(--neon)', borderRadius: 3, zIndex: 0 }} />
-              <span style={{ ...kpiValue, position: 'relative', zIndex: 1, marginTop: 0, fontWeight: 800 }}>
-                {committedPaise > 0 ? formatRupees(committedPaise) : '\u20B90'}
-              </span>
-            </div>
+          </div>
+          <div style={{ ...kpiCell, borderLeft: '1px solid var(--hair)' }}>
+            <div style={kpiLabel}>Total deals</div>
+            <div style={kpiValue}>{totalDealsEver}</div>
           </div>
         </div>
       </section>
@@ -294,6 +306,9 @@ export default async function DealsListPage({
         currentPage={page}
         totalPages={totalPages}
         totalCount={totalCount}
+        /* Passed, not mirrored: the range label needs the server's page size,
+           and a second copy of the number is a thing that drifts. */
+        pageSize={PAGE_SIZE}
         /* The census carries the same awaiting_brand flag the filter above
            used, so the number on a tab is the number of rows behind it. */
         tabCounts={countDealsByTab(
@@ -322,32 +337,35 @@ const container: React.CSSProperties = {
 }
 
 const heroCard: React.CSSProperties = {
-  borderRadius: 20,
+  borderRadius: 24,
   background: 'var(--card)',
-  boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
-  padding: 28,
+  padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)',
 }
 
+const kpiCell: React.CSSProperties = {
+  padding: 'clamp(22px, 2.2vw, 30px)',
+  display: 'flex',
+  flexDirection: 'column',
+}
 
 const kpiLabel: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
-  fontWeight: 500,
-  fontSize: 9.5,
-  lineHeight: 1.4,
-  letterSpacing: '0.14em',
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: '#9EA096',
+  color: 'var(--wg-500)',
 }
 
 const kpiValue: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
-  fontWeight: 700,
-  fontSize: 38,
-  lineHeight: 0.9,
-  letterSpacing: '-0.045em',
+  fontWeight: 600,
+  fontSize: 'clamp(34px, 3.6vw, 40px)',
+  lineHeight: 1,
+  letterSpacing: '-0.03em',
   color: 'var(--ink)',
   fontVariantNumeric: 'tabular-nums lining-nums',
-  marginTop: 10,
+  marginTop: 14,
 }
 
 const neonBtnStyle: React.CSSProperties = {
@@ -357,14 +375,15 @@ const neonBtnStyle: React.CSSProperties = {
   height: 46,
   padding: '0 22px',
   borderRadius: 999,
-  background: 'var(--neon)',
-  color: 'var(--ink)',
+  background: 'var(--lime-400)',
+  color: 'var(--lime-950)',
   fontFamily: 'var(--font-ui)',
-  fontWeight: 600,
-  fontSize: 14,
+  fontWeight: 700,
+  fontSize: 13,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
   border: 'none',
   cursor: 'pointer',
-  boxShadow: '0 14px 26px -12px rgba(180,215,50,.7)',
+  flexShrink: 0,
+  boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)',
 }

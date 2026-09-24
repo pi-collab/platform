@@ -5625,3 +5625,54 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The three cards carry the design's rotating tints — green `#F5FAF7`, blue `#F5F8FC`, violet `#F9F7FC` — so a row reads as three things, not one block
 - [ ] The status chip is OUTLINED on white, not a filled tint: ochre border while the creator has it (offer sent / agreed / revision), green when it is back with the brand (content in review / approved), blue for "Awaiting your counter"
 - [ ] "Negotiating" is split by whose move it is — "Offer sent" when the brand's offer is out, "Awaiting your counter" when the creator has replied
+
+---
+
+## 58. Deals list — matched to the design (populated, desktop)
+
+**Hero**
+- [ ] "My *deals*" with the serif italic, the sub-line, and one "New deal" button (briefcase icon, lime) on the same row
+- [ ] Counters sit as a hairline-divided plate INSIDE the hero card, three columns, not a bordered row under a rule
+- [ ] **Needs your action** — deals in negotiating / delivered / approved. Clickable → `/deals?status=needs_you`
+- [ ] **Live right now** — deals IN FLIGHT: anything not paid, complete, declined or cancelled. **Regression guard:** it counted `is_posted = true` before, i.e. FINISHED deals, so a brand with nine deals running read zero
+- [ ] **Total deals** — every deal including declined (the census), because that is what a total means
+- [ ] The old "Committed · you pay" counter and its neon underline are gone; nothing on the page claims a committed total any more
+- [ ] Under 900px the three counters stack and the dividers move from left to top
+
+**Console — one card**
+- [ ] Search, sort, tabs and the rows live in ONE white card (radius 20, no shadow, no border). The rows are separated from the tabs by the same hairline that separates one row from the next
+- [ ] Search: 54px, pill, inset shadow, no border; focus draws a soft lime ring
+- [ ] The placeholder types through "deals / by creator / a deal reference / deliverables", stops the moment the field is focused or has text, and never animates under `prefers-reduced-motion`
+- [ ] The animation runs through a ref, NOT state — it must not re-render the row list on every character
+- [ ] Typing shows "N matches" (or "No matches") and a round clear button; Esc clears, Enter blurs
+- [ ] **The match count is the SERVER's count for the search, not the rows on screen** — a search matching 40 deals must not report 20
+- [ ] **Search covers the CREATOR'S NAME** as well as deal ref, title and deliverables. Searching "Sneha" returns Sneha's deals. It did not before, which the placeholder would otherwise be lying about
+- [ ] Sort is a real `<select>` (opens natively on a phone, answers the keyboard); the chevron is decorative and does not swallow clicks
+- [ ] Tabs: active is ink with white text; the count is plain text inside the chip, not a badge pill
+- [ ] Tab counts are over ALL the brand's deals and are NOT narrowed by the search — clicking a tab must show the number it promised
+
+**Rows**
+- [ ] One flat row per deal: 48px circle avatar (photo, else initials on `--sec-2`), creator name, `{title} · {deliverables}` beneath, a fixed 150px stage pill, the amount, a chevron
+- [ ] The progress track, the coloured left rail, the gradient avatar panel, the created date and the action button are all GONE — the whole row is the link
+- [ ] The deliverables text is shown as the brand wrote it and truncates; a deal with none shows only its title
+- [ ] Stage pill tint is computed in JS, not with CSS `color-mix` — an inline style the browser cannot parse is dropped silently and would leave the pill transparent
+- [ ] Stage colours: negotiating blue "Offer on the table" · agreed violet "In production" · delivered green "Work submitted" · revision amber "Revision requested" · approved lime "Awaiting post" · paid/complete grey "Posted · paid" · declined red
+- [ ] Invoice states (invoice to accept / payment due / overdue) keep their own labels and take the amber tone — the design has no invoice stages because its sample data has none
+- [ ] Only Growth deals carry a track tag
+- [ ] Under 900px the row folds onto two lines — avatar and name first, then pill, amount and chevron — rather than truncating the name to nothing
+
+**Sorting**
+- [ ] "Needs you first" sorts on the SAME `hot` flag the stage pill is built from, so the order and the chips cannot disagree. The status set it used before did not know an unpaid invoice needs the brand
+- [ ] Sorting is within the page the server sent; it does not claim to reorder the whole result
+
+**Result count and pages**
+- [ ] "Showing 1–20 of 57 deals" on the left, from the SERVER's page size (passed as a prop, not a second copy of the number)
+- [ ] Numbered pages on the right in a pill container, with prev/next chevrons; the current page is ink
+- [ ] Over 7 pages the run around the current page is shown and the rest collapses to an ellipsis; page 1 and the last page stay reachable
+- [ ] Disabled prev/next are dimmed and do nothing
+
+**Nothing matched**
+- [ ] The empty state lives INSIDE the console card, under a hairline, with the mascot
+- [ ] Copy is per tab — "Nothing in production", "Nothing to review", "No declined deals" — not one generic line
+- [ ] An empty SEARCH says so and offers to clear, rather than showing the tab's copy
+- [ ] The genuinely-empty account still returns the separate first-run screen before any of this

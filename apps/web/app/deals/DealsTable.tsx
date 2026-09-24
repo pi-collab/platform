@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { calculateFee } from '@/lib/fee'
-import { deriveDisplayStatus, dueLabel } from '@/lib/deal-status'
+import { deriveDisplayStatus } from '@/lib/deal-status'
 import TrackTag from '@/components/track/TrackTag'
 
 // ── Types ──
@@ -38,59 +38,70 @@ function brandTotal(d: Deal): number | null {
   return fee.brand_pays_paise + overage
 }
 
-function formatRupees(paise: number): string {
-  const rupees = paise / 100
-  if (rupees >= 100_000) { const v = (rupees / 100_000); return `\u20B9${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)}L` }
-  if (rupees >= 1_000) return `\u20B9${Math.round(rupees / 1_000)}K`
-  return `\u20B9${rupees.toLocaleString('en-IN')}`
-}
-
 // ── Stage configuration ──
+//
+// Colours and labels transcribed from "Brand Deals". Each stage carries a dot
+// colour and a tint; the pill is built from both — mixWithWhite lightens the
+// tint to 45% against white and the dot colour at 30% alpha draws the border,
+// so one pair of values defines the whole chip.
 interface StageConfig {
-  index: number
   label: string
+  /** Dot colour; also the source of the pill's border. */
   dot: string
-  action: string
+  /** Pill tint before it is mixed with white. */
+  bg: string
   hot: boolean
 }
+
+/* The design writes the pill's fill as a CSS colour mix of the tint and white.
+   Computed here instead: an inline style whose value the browser does not
+   understand is dropped silently, which would leave the pill transparent
+   rather than tinted, and the mix is two hex values and a ratio. */
+function mixWithWhite(hex: string, tintPct: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  const t = tintPct / 100
+  const ch = (shift: number) => Math.round(((n >> shift) & 0xff) * t + 255 * (1 - t))
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`
+}
+
+/* The design has no invoice stages, because its sample data has no invoices.
+   Ours do exist and a brand acts on them, so they keep their own labels and
+   take the amber tone the design gives "revision" — the same "something is
+   waiting on you but nothing is wrong" weight. */
+const INVOICE_TONE = { dot: '#C89A3C', bg: '#FCF6E4' }
 
 function getStageConfig(deal: Deal): StageConfig {
   const derived = deriveDisplayStatus(deal.status, deal.invoiceStatus, deal.invoiceDueDate)
 
-  // Invoice states
   if (derived.label === 'invoice to accept' || derived.label === 'payment due' || derived.label === 'overdue') {
-    return { index: 3, label: derived.label.charAt(0).toUpperCase() + derived.label.slice(1), dot: '#C89A3C', action: 'View invoice', hot: true }
+    return {
+      label: derived.label.charAt(0).toUpperCase() + derived.label.slice(1),
+      ...INVOICE_TONE,
+      hot: true,
+    }
   }
 
   switch (deal.status) {
     case 'negotiating':
-      return { index: 0, label: 'Offer on the table', dot: 'var(--ink-soft)', action: 'Review offer', hot: true }
+      return { label: 'Offer on the table', dot: '#4A7FB0', bg: '#E7F1FC', hot: true }
     case 'agreed':
-      return { index: 1, label: 'Agreed \u00B7 in production', dot: 'var(--ink-soft)', action: 'View deal', hot: false }
+      return { label: 'In production', dot: '#7E6BC4', bg: '#F0EAFD', hot: false }
     case 'delivered':
-      return { index: 2, label: 'Work submitted', dot: 'var(--ink-soft)', action: 'Review work', hot: true }
+      return { label: 'Work submitted', dot: '#4C9E82', bg: '#E9F7F0', hot: true }
     case 'revision':
-      return { index: 2, label: 'Revision requested', dot: '#C89A3C', action: 'View revision', hot: false }
+      return { label: 'Revision requested', dot: '#C89A3C', bg: '#FCF6E4', hot: false }
     case 'approved':
-      return { index: 3, label: 'Approved \u00B7 awaiting post', dot: '#C89A3C', action: 'Release payment', hot: true }
+      return { label: 'Awaiting post', dot: '#8FAF1F', bg: '#F4FBDC', hot: true }
     case 'paid':
     case 'complete':
-      return { index: 4, label: 'Posted \u00B7 paid', dot: '#A8C233', action: 'View deal', hot: false }
+      return { label: 'Posted \u00B7 paid', dot: '#9AA08C', bg: '#F2F3EE', hot: false }
     case 'declined':
-      return { index: -1, label: 'Declined', dot: '#C4494F', action: 'View deal', hot: false }
+      return { label: 'Declined', dot: '#C4494F', bg: '#FDF0F0', hot: false }
     case 'cancelled':
-      return { index: -1, label: 'Cancelled', dot: '#8B90A0', action: 'View deal', hot: false }
+      return { label: 'Cancelled', dot: '#9AA08C', bg: '#F2F3EE', hot: false }
     default:
-      return { index: 0, label: deal.status, dot: 'var(--ink-soft)', action: 'View deal', hot: false }
+      return { label: deal.status, dot: '#9AA08C', bg: '#F2F3EE', hot: false }
   }
-}
-
-// ── Left-rail color for deal card ──
-function railColor(stage: StageConfig): string {
-  if (stage.hot) return 'var(--neon)'
-  if (stage.index >= 0 && stage.index < 4) return '#C89A3C'
-  if (stage.index === 4) return 'var(--ink-faint)'
-  return 'var(--ink-faint)'
 }
 
 // ── Status tabs ──
@@ -103,6 +114,20 @@ const STATUS_TABS: [string, string][] = [
   ['paid', 'Posted'],
   ['declined', 'Declined'],
 ]
+
+/* What the placeholder cycles through, from the design. */
+const SEARCH_WORDS = ['deals', 'by creator', 'a deal reference', 'deliverables']
+
+/* Transcribed from the design, keyed by the tab a brand is standing on. */
+const EMPTY_COPY: Record<string, [string, string]> = {
+  all: ['No deals yet', 'Deals you start with creators land here. Browse creators to send your first brief.'],
+  needs_you: ['Nothing needs you', 'Every deal is moving on its own. We will flag anything that needs a decision.'],
+  negotiating: ['No open offers', 'When you send an offer or a creator counters, it shows up here.'],
+  agreed: ['Nothing in production', 'Deals move here once you and the creator lock the terms.'],
+  delivered: ['Nothing to review', 'Submitted work, revisions and approved deals collect here.'],
+  paid: ['Nothing posted yet', 'Deals whose content is live and paid will show here.'],
+  declined: ['No declined deals', 'Deals that were declined will be listed here.'],
+}
 
 // ── Sort options ──
 type SortKey = 'needs_you' | 'newest' | 'oldest' | 'highest' | 'stage'
@@ -117,15 +142,17 @@ const SORT_OPTIONS: [SortKey, string][] = [
 const STAGE_ORDER: Record<string, number> = {
   negotiating: 0, agreed: 1, delivered: 2, revision: 3, approved: 4, paid: 5, complete: 6, declined: 7, cancelled: 8,
 }
-const HOT_STAGES = new Set(['negotiating', 'delivered', 'approved'])
 
 function sortDeals(list: Deal[], key: SortKey): Deal[] {
   const sorted = list.slice()
   switch (key) {
     case 'needs_you':
+      /* The same `hot` the stage pill is built from, so "needs you first" and
+         the chips cannot disagree. The status set kept alongside it did
+         disagree: it had no idea an unpaid invoice needs the brand. */
       sorted.sort((a, b) => {
-        const aHot = HOT_STAGES.has(a.status) ? 0 : 1
-        const bHot = HOT_STAGES.has(b.status) ? 0 : 1
+        const aHot = getStageConfig(a).hot ? 0 : 1
+        const bHot = getStageConfig(b).hot ? 0 : 1
         if (aHot !== bHot) return aHot - bHot
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       })
@@ -146,33 +173,6 @@ function sortDeals(list: Deal[], key: SortKey): Deal[] {
   return sorted
 }
 
-// ── Avatar gradients ──
-const GRADIENTS = [
-  'linear-gradient(135deg,#F4F8FC,#F7F4FB)',
-  'linear-gradient(135deg,#ECE6FF,#E2F0FF)',
-  'linear-gradient(135deg,#E7F6EE,#DFEBFF)',
-  'linear-gradient(135deg,#F0E9FF,#FBE9F3)',
-  'linear-gradient(135deg,#FFF6DC,#FFE9D6)',
-  'linear-gradient(135deg,#FFEEE2,#FFE1EC)',
-  'linear-gradient(135deg,#E4F6EC,#DDEBFF)',
-  'linear-gradient(135deg,#FFEBEB,#F4F0FF)',
-  'linear-gradient(135deg,#EEF6FD,#ECFBF5)',
-  'linear-gradient(135deg,#FFFEF3,#FFF3EC)',
-]
-
-function nameHash(name: string): number {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
-  return Math.abs(hash)
-}
-
-// ── Deliverable count helper ──
-function countDeliverables(text: string | null): number {
-  if (!text) return 0
-  // Split by common separators: comma, +, newline, semicolon
-  return text.split(/[,+;\n]/).filter((s) => s.trim().length > 0).length
-}
-
 // ── Props ──
 interface Props {
   deals: Deal[]
@@ -183,6 +183,8 @@ interface Props {
   totalCount: number
   /** Computed server-side over ALL the brand's deals, not the current page. */
   tabCounts: Record<string, number>
+  /** The server's page size, so the range label matches the slice it sent. */
+  pageSize: number
   /** Set when the page is narrowed to one creator, so the chip can say whose
    *  deals these are and offer a way out of it. */
   creatorFilter: { id: string; name: string } | null
@@ -192,25 +194,44 @@ interface Props {
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 
-export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts, creatorFilter }: Props) {
+export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts, creatorFilter, pageSize }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(currentQuery)
   const [sortKey, setSortKey] = useState<SortKey>('needs_you')
-  const [sortOpen, setSortOpen] = useState(false)
-  const sortRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  // Close sort dropdown on outside click
+  /* The design types its placeholder through a list of things you can search
+     for. Driven through the ref rather than state: as state it would re-render
+     the whole list of rows roughly sixteen times a second for the life of the
+     page, to animate a word nobody is looking at while they read their deals.
+
+     It stops the moment the field is focused or has anything in it, and never
+     starts for someone who asked for less motion. */
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (!sortOpen) return
-      if (sortRef.current?.contains(e.target as Node)) return
-      setSortOpen(false)
+    const el = searchRef.current
+    if (!el) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+
+    let word = 0, char = 0, deleting = false, timer: ReturnType<typeof setTimeout>
+    const tick = () => {
+      if (document.activeElement === el || el.value) {
+        el.placeholder = 'Search deals'
+        timer = setTimeout(tick, 600)
+        return
+      }
+      const target = SEARCH_WORDS[word]!
+      let delay: number
+      if (!deleting && char >= target.length) { deleting = true; delay = 1400 }
+      else if (deleting && char <= 0) { deleting = false; word = (word + 1) % SEARCH_WORDS.length; delay = 300 }
+      else { char += deleting ? -1 : 1; delay = deleting ? 40 : 65 }
+      el.placeholder = `Search ${target.slice(0, char)}`
+      timer = setTimeout(tick, delay)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [sortOpen])
+    tick()
+    return () => clearTimeout(timer)
+  }, [])
 
   // Navigate with updated search params
   function navigate(updates: Record<string, string | null>) {
@@ -243,415 +264,349 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
   // Client-side sort
   const sorted = useMemo(() => sortDeals(deals, sortKey), [deals, sortKey])
 
-  // Match count for search
-  const matchCount = searchInput.trim() ? sorted.length : null
-  const isFiltered = !!currentStatus || !!searchInput.trim()
-  const currentSortLabel = SORT_OPTIONS.find(([k]) => k === sortKey)?.[1] ?? 'Needs you first'
+  /* "Showing 8–20 of 57". Derived from the SERVER's page, not from the rows in
+     hand: the range has to describe where this page sits in the whole result,
+     and `sorted` only knows about itself. */
+  const rangeFrom = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeTo = Math.min(rangeFrom + sorted.length - 1, totalCount)
+
+  /* Numbered pages, windowed. The design lists every page because its sample
+     has three; a brand with four hundred deals would get twenty buttons, so
+     the run around the current page is shown and the rest collapses to an
+     ellipsis. First and last are always reachable. */
+  const pageNumbers: (number | null)[] = (() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const out: (number | null)[] = [1]
+    const from = Math.max(2, currentPage - 1)
+    const to = Math.min(totalPages - 1, currentPage + 1)
+    if (from > 2) out.push(null)
+    for (let n = from; n <= to; n++) out.push(n)
+    if (to < totalPages - 1) out.push(null)
+    out.push(totalPages)
+    return out
+  })()
+
+  /* Per-tab empty copy, transcribed from the design. Keyed on the tab, so the
+     line answers the question the brand is actually asking — what lands HERE. */
+  const emptyCopy: [string, string] = searchInput.trim()
+    ? ['No deals match that search', 'Try a different name, title or deal reference, or clear the search to see everything.']
+    : EMPTY_COPY[currentStatus ?? 'all'] ?? EMPTY_COPY.all!
 
   return (
     <>
       <style>{`
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .drow { transition: transform .14s ease, box-shadow .16s ease, outline-color .2s ease; outline: 2px solid transparent; outline-offset: -1px; border-radius: 16px; }
-        .drow:hover { transform: translateY(-2px); outline-color: var(--neon); box-shadow: 0 0 0 2px var(--neon), 0 18px 34px -18px rgba(40,52,70,.5); }
-        .drow:focus-visible { outline-color: var(--neon); }
-        .drow:focus:not(:focus-visible) { outline-color: transparent; }
+        .dcard { transition: background .14s ease; outline: 2px solid transparent; outline-offset: -2px; }
+        .dcard:hover { background: #FAFBFC; }
+        .dcard:focus-visible { outline-color: var(--neon); }
         .ftab { transition: background .16s ease, color .16s ease; cursor: pointer; }
-        .ctrlbtn { transition: background .16s ease, box-shadow .16s ease; cursor: pointer; }
-        .ctrlbtn:hover { background: #fff; box-shadow: 0 10px 22px -12px rgba(40,52,70,.46); transform: translateY(-1px); }
-        .ddmenu { animation: fadeUp .16s cubic-bezier(.22,1,.36,1); }
-        .ddi { transition: background .13s ease; cursor: pointer; }
-        .ddi:hover { background: #F3F6FB; }
-        .pill-btn { transition: background .16s ease, box-shadow .16s ease, transform .12s ease; }
-        .pill-btn:hover { box-shadow: 0 8px 18px -10px rgba(40,52,70,.4); transform: translateY(-1px); }
-        .searchwrap { transition: border-color .16s ease, box-shadow .16s ease; }
-        .searchwrap:focus-within { border-color: var(--neon-deep); box-shadow: 0 0 0 4px rgba(218,254,12,.16); }
-        .searchwrap input { outline: none; border: none; background: transparent; font-family: var(--font-ui); font-size: 14px; color: var(--ink); width: 100%; caret-color: var(--ink); }
-        .searchwrap input::placeholder { color: var(--ink-faint); }
-        @media (prefers-reduced-motion: reduce) { .ddmenu { animation: none; } }
-        @media (max-width: 640px) {
-          .deal-card-body { flex-direction: column !important; }
-          .deal-card-money { padding-left: 0 !important; border-top: 1px solid var(--border-hairline); padding-top: 10px !important; margin-top: 8px; text-align: left !important; }
+        .pagebtn { transition: background .14s ease; }
+        .pagebtn:hover:not(:disabled) { background: #F5F7FA; }
+        .searchwrap { transition: box-shadow .16s ease; }
+        .searchwrap:focus-within { box-shadow: 0 0 0 3px rgba(218,254,12,.28), inset 0 1px 3px rgba(18,21,28,.07); }
+        .searchwrap input { outline: none; border: none; background: transparent; font-family: var(--font-ui); font-size: 15.5px; font-weight: 500; color: var(--ink); width: 100%; caret-color: var(--ink); }
+        .searchwrap input::placeholder { color: var(--wg-400); font-weight: 400; }
+        .sortselect { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+        @media (max-width: 900px) {
+          /* The row folds onto two lines rather than squeezing: the avatar and
+             the name keep the first, the stage pill, the amount and the chevron
+             take the second. Squeezed onto one line at this width, the name and
+             the pill both truncate to nothing legible. */
+          .dcard { flex-wrap: wrap; row-gap: 14px; column-gap: 16px !important; }
+          .dcard .dname { flex: 1 1 calc(100% - 64px); min-width: 0 !important; }
+          .dcard .dmoney { margin-left: auto; }
         }
       `}</style>
 
-      {/* ══════ FILTER CONSOLE CARD ══════ */}
+      {/* ══════ DEALS CONSOLE ══════
+          One card holds the search, the filters and the rows. The design draws
+          no gap between them: the tabs are separated from the list by the same
+          hairline that separates one row from the next, so the whole thing
+          reads as a single console rather than a toolbar floating above a
+          stack of cards. */}
       <section style={consoleCard}>
 
-        {/* ── Top row: search + sort ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {/* Search bar */}
-          <div className="searchwrap" style={{
-            flex: 1, minWidth: 240,
-            display: 'flex', alignItems: 'center', gap: 10,
-            height: 44, padding: '0 14px', borderRadius: 'var(--radius-pill)',
-            background: '#F4F6F2', border: '1px solid transparent',
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search deals..."
-              value={searchInput}
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
-            {matchCount !== null && (
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                {matchCount} match{matchCount !== 1 ? 'es' : ''}
-              </span>
-            )}
-            {searchInput && (
-              <span onClick={() => handleSearchChange('')} style={{ cursor: 'pointer', display: 'inline-flex', color: 'var(--ink-faint)', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </span>
-            )}
-            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 500, color: 'var(--ink-faint)', whiteSpace: 'nowrap', flexShrink: 0, background: 'rgba(40,52,70,.06)', borderRadius: 5, padding: '2px 6px' }}>
-              {'\u2318'}K
-            </span>
-          </div>
+        <div style={{ padding: '26px clamp(18px, 2.4vw, 26px)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const }}>
 
-          {/* Sort dropdown */}
-          <div ref={sortRef} style={{ position: 'relative', flexShrink: 0 }}>
-            <button className="ctrlbtn" onClick={() => setSortOpen((v) => !v)} style={sortBtnStyle}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 18V4" />
-              </svg>
-              {currentSortLabel}
-              <svg
-                width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-                style={{ transition: 'transform .24s ease', transform: sortOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            {sortOpen && (
-              <div className="ddmenu" style={{
-                position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 30,
-                minWidth: 200, borderRadius: 14,
-                border: '1px solid var(--frost-edge)', background: '#fff',
-                boxShadow: '0 26px 52px -24px rgba(40,52,70,.5), inset 0 1px 0 rgba(255,255,255,.95)',
-                padding: 6,
-              }}>
-                {SORT_OPTIONS.map(([k, label]) => {
-                  const active = k === sortKey
-                  return (
-                    <div
-                      key={k}
-                      className="ddi"
-                      onClick={() => { setSortKey(k); setSortOpen(false) }}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
-                        padding: '9px 11px', borderRadius: 10,
-                        fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: active ? 700 : 500, color: 'var(--ink)',
-                        background: active ? 'rgba(232,255,102,.28)' : 'transparent',
-                      }}
-                    >
-                      <span>{label}</span>
-                      {active && (
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M20 6 9 17l-5-5" />
-                        </svg>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* A narrowing the brand did not type, so it has to be visible and
-            removable. Without it the page just looks short. */}
-        {creatorFilter && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '6px 8px 6px 14px', borderRadius: 'var(--radius-pill)',
-              background: 'var(--neon)', color: 'var(--ink)',
-              fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+            {/* ── Search ── */}
+            <div className="searchwrap" style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              flex: '1 1 320px', minWidth: 200, height: 54,
+              padding: '0 10px 0 20px', borderRadius: 999,
+              background: '#F5F7FA', border: 'none',
+              boxShadow: 'inset 0 1px 3px rgba(18,21,28,.07), inset 0 0 0 1px rgba(18,21,28,.03)',
             }}>
-              Deals with {creatorFilter.name}
-              <button
-                onClick={() => navigate({ creator: null })}
-                aria-label={`Show all deals, not just ${creatorFilter.name}`}
-                style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--ink)' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </span>
-          </div>
-        )}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                id="dealsearch"
+                ref={searchRef}
+                type="search"
+                placeholder="Search deals"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleSearchChange('')
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                }}
+              />
+              {searchInput && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                  {/* The SERVER's count for this search, not the rows in hand.
+                      Counting `sorted` would report at most one page, so a
+                      search matching 40 deals would claim 20 matches. */}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: totalCount === 0 ? 'var(--wg-400)' : 'var(--ink)', whiteSpace: 'nowrap' as const }}>
+                    {totalCount === 0 ? 'No matches' : totalCount === 1 ? '1 match' : `${totalCount} matches`}
+                  </span>
+                  <span
+                    onClick={() => handleSearchChange('')}
+                    title="Clear (Esc)"
+                    style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: '50%', background: '#F4F6F2', color: 'var(--wg-600)', flexShrink: 0 }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 6 6 18M6 6l12 12" />
+                    </svg>
+                  </span>
+                </div>
+              )}
+            </div>
 
-        {/* ── Status tabs ── */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'nowrap', overflowX: 'auto', marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border-hairline)', paddingBottom: 2 }}>
-          {STATUS_TABS.map(([id, label]) => {
-            const count = tabCounts[id] ?? 0
-            const active = id === 'all' ? !currentStatus : currentStatus === id
-            return (
-              <button
-                key={id}
-                className="ftab"
-                onClick={() => navigate({ status: id === 'all' ? null : id })}
+            {/* ── Sort ──
+                A real <select>. The custom menu it replaces was more code for
+                less: this one opens natively on a phone and answers the
+                keyboard without a click-outside listener. */}
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+              <select
+                className="sortselect"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                title="Sort deals"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px', borderRadius: 'var(--radius-pill)',
-                  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
-                  color: active ? 'var(--ink)' : 'var(--ink-soft)',
-                  background: active ? 'var(--neon)' : 'transparent',
-                  border: 'none',
+                  height: 46, padding: '0 38px 0 18px', borderRadius: 999,
+                  border: '1px solid var(--hairline)', background: '#FFFFFF',
+                  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
+                  color: 'var(--ink)', cursor: 'pointer', whiteSpace: 'nowrap' as const,
                 }}
               >
-                {label}
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
-                  fontSize: 10.5, fontWeight: 700,
-                  color: active ? 'var(--ink)' : 'var(--ink-faint)',
-                  background: active ? 'rgba(0,0,0,.1)' : 'rgba(40,52,70,.06)',
-                }}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-
-          {/* Reset button */}
-          {isFiltered && (
-            <button
-              onClick={() => { handleSearchChange(''); navigate({ status: null, q: null }) }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '7px 12px', borderRadius: 'var(--radius-pill)',
-                fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600,
-                color: 'var(--ink-faint)', background: 'transparent', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12" />
+                {SORT_OPTIONS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+                <path d="m6 9 6 6 6-6" />
               </svg>
-              Reset
-            </button>
+            </div>
+          </div>
+
+          {/* ── Status tabs ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline)' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, flex: 1, minWidth: 0 }}>
+              {STATUS_TABS.map(([id, label]) => {
+                const count = tabCounts[id] ?? 0
+                const active = id === 'all' ? !currentStatus : currentStatus === id
+                return (
+                  <button
+                    key={id}
+                    className="ftab"
+                    onClick={() => navigate({ status: id === 'all' ? null : id })}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      padding: '8px 16px', borderRadius: 999, border: 'none',
+                      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' as const,
+                      background: active ? 'var(--ink)' : '#F5F7FA',
+                      color: active ? '#fff' : 'var(--wg-600)',
+                    }}
+                  >
+                    {label}
+                    {/* A number, not a badge. The design sets it as part of the
+                        tab's own text so a row of seven chips does not read as
+                        a row of seven counters. */}
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: active ? 'rgba(255,255,255,.6)' : 'var(--wg-400)' }}>
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* A narrowing the brand did not type, so it has to be visible and
+              removable. Without it the page just looks short. */}
+          {creatorFilter && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 8px 6px 14px', borderRadius: 999,
+                background: 'var(--neon)', color: 'var(--ink)',
+                fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600,
+              }}>
+                Deals with {creatorFilter.name}
+                <button
+                  onClick={() => navigate({ creator: null })}
+                  aria-label={`Show all deals, not just ${creatorFilter.name}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', color: 'var(--ink)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            </div>
           )}
         </div>
-      </section>
 
-      {/* ══════ DEAL CARDS ══════ */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 22 }}>
-        {sorted.map((d) => (
-          <DealCard key={d.id} deal={d} />
-        ))}
+        {/* ── Rows ── */}
+        <div>
+          {sorted.map((d) => <DealRow key={d.id} deal={d} />)}
+        </div>
 
-        {/* Empty filter state */}
+        {/* ── Nothing matched ──
+            Worded per tab, because "no deals match this filter" is the one
+            thing the brand can already see. What they cannot see is what WOULD
+            land in the tab they are looking at. */}
         {sorted.length === 0 && (
-          <div style={{ ...emptyFilterCard }}>
-            <Mascot size={56} />
-            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, letterSpacing: '-0.01em', margin: '16px 0 0', color: 'var(--ink)' }}>
-              No deals match this filter
+          <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', textAlign: 'center' as const, padding: 'clamp(40px, 5vw, 64px) 24px', borderTop: '1px solid var(--hairline)' }}>
+            <Mascot size={64} />
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(20px, 2vw, 24px)', lineHeight: 1.1, letterSpacing: '-0.02em', margin: '18px 0 0', color: 'var(--ink)' }}>
+              {emptyCopy[0]}
             </p>
-            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint)', margin: '8px 0 0', maxWidth: 320, lineHeight: 1.5 }}>
-              Try another status or clear your search.
+            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, lineHeight: 1.6, color: 'var(--wg-600)', margin: '9px 0 0', maxWidth: 370 }}>
+              {emptyCopy[1]}
             </p>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* ══════ PAGINATION ══════ */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 24 }}>
-          <button
-            disabled={currentPage <= 1}
-            onClick={() => navigate({ page: String(currentPage - 1) })}
-            style={{ ...paginationBtn, opacity: currentPage <= 1 ? 0.4 : 1 }}
-          >
-            &larr; Prev
-          </button>
-          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            disabled={currentPage >= totalPages}
-            onClick={() => navigate({ page: String(currentPage + 1) })}
-            style={{ ...paginationBtn, opacity: currentPage >= totalPages ? 0.4 : 1 }}
-          >
-            Next &rarr;
-          </button>
-        </div>
-      )}
-
-      {/* ══════ FOOTER ══════ */}
-      <div style={{ textAlign: 'center', marginTop: 16, padding: '0 2px' }}>
-        <p style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', margin: 0 }}>
-          Showing {sorted.length} of {totalCount} deal{totalCount !== 1 ? 's' : ''}
-        </p>
-        <p style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)', margin: '6px 0 0', opacity: 0.7 }}>
-          Prices shown include platform fee where applicable.
-        </p>
+      {/* ══════ RESULT COUNT + PAGES ══════ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 22, padding: '0 4px', flexWrap: 'wrap' as const }}>
+        <span className="t-meta" style={{ color: 'var(--meta)' }}>
+          {totalCount === 0
+            ? 'No deals'
+            : `Showing ${rangeFrom}–${rangeTo} of ${totalCount} deal${totalCount !== 1 ? 's' : ''}`}
+        </span>
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: '#FFFFFF', border: '1px solid var(--hairline)' }}>
+            <button
+              className="pagebtn"
+              disabled={currentPage <= 1}
+              onClick={() => navigate({ page: String(currentPage - 1) })}
+              aria-label="Previous page"
+              style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: currentPage > 1 ? 1 : 0.35, cursor: currentPage > 1 ? 'pointer' : 'default' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            </button>
+            {pageNumbers.map((n, i) => n === null ? (
+              <span key={`gap-${i}`} style={{ minWidth: 20, textAlign: 'center' as const, color: 'var(--wg-400)', fontSize: 13 }}>&hellip;</span>
+            ) : (
+              <button
+                key={n}
+                className="pagebtn"
+                onClick={() => navigate({ page: String(n) })}
+                aria-current={n === currentPage ? 'page' : undefined}
+                style={{
+                  minWidth: 34, height: 34, padding: '0 6px', borderRadius: 999, border: 'none',
+                  background: n === currentPage ? 'var(--ink)' : 'transparent',
+                  color: n === currentPage ? '#FFFFFF' : 'var(--wg-600)',
+                  fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 13,
+                  fontWeight: n === currentPage ? 700 : 500, cursor: 'pointer',
+                }}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              className="pagebtn"
+              disabled={currentPage >= totalPages}
+              onClick={() => navigate({ page: String(currentPage + 1) })}
+              aria-label="Next page"
+              style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: currentPage < totalPages ? 1 : 0.35, cursor: currentPage < totalPages ? 'pointer' : 'default' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+            </button>
+          </div>
+        )}
       </div>
     </>
   )
 }
 
 // ════════════════════════════════════════════════════════════════
-// DEAL CARD
+// DEAL ROW
 // ════════════════════════════════════════════════════════════════
 
-function DealCard({ deal: d }: { deal: Deal }) {
+function DealRow({ deal: d }: { deal: Deal }) {
   const stage = getStageConfig(d)
   const total = brandTotal(d)
-  const due = dueLabel(d.status, d.invoiceStatus, d.invoiceDueDate)
   const creatorName = d.creator?.full_name ?? 'Unknown'
-  const initials = creatorName
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-  const gradient = GRADIENTS[nameHash(creatorName) % GRADIENTS.length]
-  const delCount = countDeliverables(d.deliverables)
-  const createdDate = new Date(d.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const initials = creatorName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+
+  /* "{title} · {deliverables}", as drawn. The deliverables text is what the
+     brand wrote on the offer, shown as written and truncated if long — a
+     count ("3 deliverables") says less than "1 Reel + 2 Stories" in the same
+     space. A deal with none simply shows its title. */
+  const subtitle = [d.title?.trim() || 'Untitled deal', d.deliverables?.trim()]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
     <Link
       href={`/deals/${d.id}`}
-      className="drow"
+      className="dcard"
       style={{
-        display: 'flex', alignItems: 'stretch', textDecoration: 'none', color: 'inherit',
-        background: '#fff', borderRadius: 16, overflow: 'hidden',
-        border: '1px solid var(--frost-edge)',
-        boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
+        display: 'flex', alignItems: 'center', gap: 'clamp(18px, 2.4vw, 30px)',
+        borderTop: '1px solid var(--hairline)',
+        padding: '22px clamp(20px, 2.4vw, 28px)',
+        textDecoration: 'none', color: 'inherit',
       }}
     >
-      {/* ── Left rail ── */}
-      <div style={{ width: 3, background: railColor(stage), flexShrink: 0 }} />
-
-      {/* ── Avatar area ── */}
-      <div style={{
-        width: 110, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: gradient,
-      }}>
-        {d.creator?.profile_photo_url ? (
-          <img
-            src={d.creator.profile_photo_url}
-            alt={creatorName}
-            style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,.8)' }}
-          />
-        ) : (
-          <div style={{
-            width: 44, height: 44, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(255,255,255,.7)', border: '2px solid rgba(255,255,255,.9)',
-            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: 'var(--ink)',
-          }}>
-            {initials || '?'}
-          </div>
-        )}
-      </div>
-
-      {/* ── Body ── */}
-      <div className="deal-card-body" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '26px 30px', gap: 24, minWidth: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Creator name — t-subhead */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 17, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {creatorName}
-            </div>
-            {/* Only Growth is tagged here. Every other deal is a Deals deal, and
-                a tag on all of them would be a word repeated down the whole
-                list saying nothing. The filter chips above still offer both. */}
-            {d.track === 'growth' && <TrackTag track="growth" size="sm" />}
-          </div>
-
-          {/* Title + deliverable count — t-content */}
-          <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: '#5C5E52', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {d.title || 'Untitled deal'}
-            {delCount > 0 && (
-              <>
-                <span style={{ margin: '0 5px', color: 'var(--ink-faint)' }}>&middot;</span>
-                {delCount} deliverable{delCount !== 1 ? 's' : ''}
-              </>
-            )}
-          </div>
-
-          {/* Stage progress track */}
-          <div style={{ display: 'flex', gap: 4, marginTop: 12, maxWidth: 420 }}>
-            {[0, 1, 2, 3, 4].map((i) => {
-              const filled = stage.index >= 0 && i <= stage.index
-              const isCurrent = i === stage.index
-              return (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1, height: 4, borderRadius: 2,
-                    background: filled
-                      ? isCurrent
-                        ? 'var(--neon)'
-                        : 'var(--neon-deep)'
-                      : 'var(--border-hairline)',
-                    transition: 'background .2s ease',
-                  }}
-                />
-              )
-            })}
-          </div>
-
-          {/* Stage label + dot + date — t-meta */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: stage.dot, flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#5C5E52' }}>
-              {stage.label}
-            </span>
-            {due && (
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: stage.label.toLowerCase().includes('overdue') ? '#991b1b' : '#854d0e', marginLeft: 2 }}>
-                {due}
-              </span>
-            )}
-            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--ink-faint)', flexShrink: 0 }} />
-            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase' as const, color: '#9EA096' }}>
-              {createdDate}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Money section ── */}
-        <div className="deal-card-money" style={{ flexShrink: 0, textAlign: 'right', paddingLeft: 24, minWidth: 100 }}>
-          {total != null ? (
-            <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 24, letterSpacing: '-0.035em', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums lining-nums' }}>
-              {'\u20B9'}{(total / 100).toLocaleString('en-IN')}
-            </div>
-          ) : (
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>
-              -
-            </div>
-          )}
-        </div>
-
-        {/* ── Action button ── */}
-        <span
-          className="pill-btn"
-          style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-            flexShrink: 0, padding: '13px 24px', borderRadius: 'var(--radius-pill)',
-            fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-            ...(stage.hot
-              ? { background: 'var(--ink)', color: '#fff', border: '1px solid var(--ink)', boxShadow: '0 6px 16px -8px rgba(0,0,0,.4)' }
-              : { background: 'transparent', color: 'var(--ink)', border: '1px solid #D4D4CB', boxShadow: 'none' }
-            ),
-          }}
-        >
-          {stage.action}
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m9 18 6-6-6-6" />
-          </svg>
+      {d.creator?.profile_photo_url ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={d.creator.profile_photo_url} alt="" style={{ flexShrink: 0, width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' as const }} />
+      ) : (
+        <span style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%', background: 'var(--sec-2)', color: 'var(--wg-600)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5 }}>
+          {initials || '?'}
         </span>
+      )}
+
+      <div className="dname" style={{ flex: 1, minWidth: 220 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 16, color: 'var(--ink)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {creatorName}
+          </h3>
+          {/* Only Growth is tagged. Every other deal is a Deals deal, and a tag
+              on all of them would be one word repeated down the whole list. */}
+          {d.track === 'growth' && <TrackTag track="growth" size="sm" />}
+        </div>
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 400, color: 'var(--wg-500)', marginTop: 5, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {subtitle}
+        </div>
       </div>
+
+      <span className="dstage" style={{
+        flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        width: 150, padding: '6px 10px', borderRadius: 999,
+        fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 600, letterSpacing: '.01em',
+        whiteSpace: 'nowrap' as const,
+        background: mixWithWhite(stage.bg, 45),
+        border: `1px solid ${stage.dot}30`,
+        color: 'var(--wg-600)',
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: stage.dot }} />
+        {stage.label}
+      </span>
+
+      <div className="dmoney" style={{ flexShrink: 0, textAlign: 'right' as const, minWidth: 110 }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 22, letterSpacing: '-0.02em', color: 'var(--ink)', fontVariantNumeric: 'tabular-nums lining-nums' }}>
+          {total != null ? `₹${(total / 100).toLocaleString('en-IN')}` : '—'}
+        </div>
+      </div>
+
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="m9 18 6-6-6-6" />
+      </svg>
     </Link>
   )
 }
+
 
 // ── Mascot SVG ──
 function Mascot({ size = 56 }: { size?: number }) {
@@ -665,42 +620,12 @@ function Mascot({ size = 56 }: { size?: number }) {
 }
 
 // ── Styles ──
+/* The design's console: plain white, radius 20, no shadow and no border. The
+   rows' own hairlines carry the structure, so a shadow around them would put a
+   second edge inside the page's own card. */
 const consoleCard: React.CSSProperties = {
   borderRadius: 20,
-  background: 'var(--card)',
-  boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
-  padding: 18,
+  background: '#FFFFFF',
   marginTop: 30,
-}
-
-const sortBtnStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 7,
-  height: 44, padding: '0 14px', borderRadius: 'var(--radius-pill)',
-  border: '1px solid var(--frost-edge)', background: '#F4F6F2',
-  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)',
-  cursor: 'pointer', whiteSpace: 'nowrap',
-}
-
-const emptyFilterCard: React.CSSProperties = {
-  borderRadius: 20,
-  background: 'var(--card)',
-  boxShadow: '0 12px 28px -20px rgba(40,52,70,.42), inset 0 1px 0 rgba(255,255,255,.95)',
-  padding: '48px 24px',
-  textAlign: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-}
-
-const paginationBtn: React.CSSProperties = {
-  padding: '8px 16px',
-  fontSize: 13,
-  fontWeight: 600,
-  fontFamily: 'var(--font-ui)',
-  background: 'var(--card)',
-  border: '1px solid var(--frost-edge)',
-  borderRadius: 'var(--radius-pill)',
-  cursor: 'pointer',
-  color: 'var(--ink)',
-  boxShadow: '0 4px 12px -8px rgba(40,52,70,.3)',
+  overflow: 'hidden',
 }

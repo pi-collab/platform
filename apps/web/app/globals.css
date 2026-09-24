@@ -4945,6 +4945,14 @@ button.signup-form__cross-link {
    Each column links to the list its number came from. The hover has to say so
    without turning a quiet figure row into four buttons, so it is a tint and a
    lift of the label rather than a border or a shadow. */
+/* Three counters side by side need ~220px each; below that they stack rather
+   than squeeze a 40px figure into a column that cannot hold it. */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: 1fr !important; }
+  .kpis > * + * { border-left: none !important; border-top: 1px solid var(--hair); }
+}
+
 .kpicell { transition: background .16s ease; }
 .kpicell:hover { background: rgba(24,28,36,.025); }
 .kpicell:focus-visible { outline: 2px solid var(--neon-deep, #D2F04A); outline-offset: -2px; }
