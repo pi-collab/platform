@@ -146,60 +146,6 @@ export function DateFilter({ basePath = '/dashboard' }: { basePath?: string } = 
   )
 }
 
-export function DashboardSearch() {
-  const router = useRouter()
-  const [query, setQuery] = useState('')
-  const [focused, setFocused] = useState(false)
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
-    if (!q) return
-    // Route to deals search or browse depending on query
-    router.push(`/deals?q=${encodeURIComponent(q)}`)
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center',
-        gap: 14, marginTop: 28, padding: '14px 14px 14px 20px', borderRadius: 16,
-        border: focused ? '1px solid var(--neon-deep)' : '1px solid #EAEAE3',
-        background: 'var(--card)', transition: 'border-color .16s ease, box-shadow .16s ease',
-        boxShadow: focused ? '0 0 0 4px rgba(218,254,12,.16)' : 'none',
-      }}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9EA096" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-      </svg>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder="Search creators, deals, campaigns..."
-        style={{
-          flex: 1, border: 'none', outline: 'none', background: 'transparent',
-          fontFamily: 'var(--font-ui)', fontSize: 15, color: 'var(--ink)',
-          caretColor: 'var(--ink)',
-        }}
-      />
-      <button
-        type="submit"
-        style={{
-          width: 42, height: 42, borderRadius: 12,
-          background: 'var(--neon)', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-      </button>
-    </form>
-  )
-}
-
 function formatShortDate(dateStr: string): string {
   const d = new Date(dateStr)
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })

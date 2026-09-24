@@ -5702,3 +5702,30 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] **Why `REVOKE ... FROM anon` is explicit and must stay:** revoking from PUBLIC alone leaves Supabase's own direct grant to `anon` in place. The first version of 0511 revoked only PUBLIC and the anon key could still call it
 - [ ] An open version of this endpoint is a slug enumerator, and unlike opening `/c/<slug>` it reveals unpublished drafts — so this grant is a security boundary, not a tidiness rule
 - [ ] `creator_storefronts` still has NO anon SELECT policy; both slug questions are answered by SECURITY DEFINER functions (`get_public_storefront`, `is_storefront_slug_taken`) rather than a table read
+
+**Second pass against the drawing (spacing, colour, weight)**
+- [ ] `sectionH2Style` defaults to `margin: 0` — six of the design's seven headings use it. It defaulted to a 14px top margin, which was right for the ONE heading under the "Do first" badge and 14px of drift everywhere else; that heading now asks for the margin itself
+- [ ] Section rhythm matches the drawing exactly: hero → ticker `clamp(28px,3.2vw,42px)` → do-first `clamp(28px,3.2vw,42px)` → everything after it `clamp(52px,6vw,80px)`
+- [ ] Do-first card is radius 20 with the design's deeper shadow (`0 24px 54px -34px`), not radius 16 with `--sh-2`
+- [ ] **The brand's name is serif italic with NO neon slab behind it.** It carried a rotated lime rectangle the design does not draw — the page's loudest colour on the one thing nobody needs drawing to
+- [ ] **CTA colours follow the design's hierarchy:** lime is the single primary action ("Start a new deal", and "Browse creators" in the closing panel). Every Do-first row action is an INK pill with white text. "View all" is a plain 12px/600 link. Five neon buttons down one card is five primary actions, which is none
+- [ ] Do-first icon tiles are the cool gradient (`#E9F7F0 → #E7F1FC`) with the glyph stroked in `--ink`, not grey on flat grey
+- [ ] The search field is gone from the hero action row — the dashboard is read, and deals, campaigns and browse each carry search over the thing being looked for. `DashboardSearch` is deleted, not left orphaned
+- [ ] Widget geometry: KPI value rows `min-height: 64`; the three deal cards are equal height (`flex: 1` body); chart and track record are equal height (`align-items: stretch` on a `1.63fr 1fr` grid); campaigns split is `1fr 1.2fr`
+
+**Deliverables read as counts, not names (`lib/deliverable-summary.ts`)**
+- [ ] A deal card's Deliverable footer reads "2 Reels · 1 Story", not "Instagram Reel, Instagram Reel, Instagra…"
+- [ ] Counted from `deal_deliverable_items`, which is the work actually agreed — NOT from the free-text `deals.deliverables` column, which is used only as the fallback when a deal has no items
+- [ ] Platform prefixes and "Sponsored" are dropped: `Instagram Reel` → Reel, `Sponsored Reel` → Reel, `Story Series` → Story, `YouTube Long form` → Video, `Instagram Static/Carousel` → Carousel
+- [ ] Plurals are right, including Story → Stories
+- [ ] Groups are ordered most-numerous first, ties alphabetical, so the same deal always reads the same way
+- [ ] More than three types collapses to "+N more" rather than wrapping the line and breaking the card
+- [ ] A custom item keeps its own name rather than becoming "Other" — it is the one deliverable whose name was chosen deliberately
+- [ ] A deal with no items and no text shows an em-dash
+
+**Creators you've worked with — simplified from the drawing**
+- [ ] The design's card carries seven things (avatar, name, status pill, solid button, three figures, a date); two side by side is fourteen pieces of chrome. This one carries four
+- [ ] Status and date are ONE sub-line: "Deal in progress" when something is live, otherwise "Last deal <Mon YYYY>". A creator is never both at once
+- [ ] The solid "View deals" button is replaced by a chevron — the whole card is already the link
+- [ ] Two figures, not three. "Posts" was dropped: it counts deliverables marked posted, which is zero for most creators, and a column of zeroes is not information
+- [ ] The money figure still says which it is — "in progress" or "paid" — and never merges the two

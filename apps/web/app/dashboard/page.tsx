@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { compactNumber } from '@/lib/compact-number'
+import { summariseDeliverables } from '@/lib/deliverable-summary'
 import BrandDashboardEmpty from './BrandDashboardEmpty'
 import { verifyBrand } from '@/lib/brand-auth'
 import HeldNotice from '@/components/HeldNotice'
@@ -13,7 +14,7 @@ import { computeBrandTrackRecord, formatPct } from '@/lib/brand-track-record'
 import CampaignsInMotion, { type CampaignVM } from './CampaignsInMotion'
 import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
-import { DateFilter, DashboardSearch } from './DashboardControls'
+import { DateFilter } from './DashboardControls'
 import { periodToDateRange } from './period-utils'
 import type { Period } from './period-utils'
 
@@ -247,6 +248,17 @@ export default async function DashboardPage({
      that has not left the brand's account as though it had, on the screen
      they check their spend from. The card shows whichever is live for that
      creator and says which one it is. */
+  /* "2 Reels · 1 Story" per deal, from the ITEMS rather than the free-text
+     column. The items are the work actually agreed; the column is whatever
+     sentence the brand typed, and on a card it truncates to nothing useful. */
+  const labelsPerDeal = new Map<string, string[]>()
+  for (const i of allItems) {
+    if (!i.label) continue
+    const list = labelsPerDeal.get(i.deal_id) ?? []
+    list.push(i.label)
+    labelsPerDeal.set(i.deal_id, list)
+  }
+
   const postsPerDeal = new Map<string, number>()
   for (const i of allItems) {
     if (!i.posted_at) continue
@@ -494,13 +506,11 @@ export default async function DashboardPage({
           </div>
 
           {/* ── The action row ────────────────────────────────
-              The design draws one primary button here. Search is kept from the
-              previous dashboard and put on the far side of the same row rather
-              than above the fold on its own: the CTA stays leftmost and
-              loudest, which is the emphasis the design sets, and the field
-              reads as a tool on the shelf beside it instead of competing for
-              the first thing the eye lands on. */}
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
+              One button, as drawn. The search field that sat on the far side
+              of this row is gone: the dashboard is a place you read, and every
+              surface it points at — deals, campaigns, creators — carries its
+              own search over the thing you are actually looking for. */}
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
             <Link href="/browse" className="neonbtn" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px',
               borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent',
@@ -510,9 +520,6 @@ export default async function DashboardPage({
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
               Start a new deal
             </Link>
-            <div style={{ marginLeft: 'auto', minWidth: 220, maxWidth: 320, flex: '0 1 320px' }}>
-              <DashboardSearch />
-            </div>
           </div>
 
           {/* ── KPI GRID ──────────────────────────────────────
@@ -585,12 +592,12 @@ export default async function DashboardPage({
 
         {/* ── DO FIRST / ATTENTION ────────────────────────────── */}
         {attentionCount > 0 && (
-          <section className="neon-hover" style={{ position: 'relative', marginTop: 'clamp(28px, 3.2vw, 42px)', borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 38px)' }}>
+          <section className="neon-hover" style={{ position: 'relative', marginTop: 'clamp(28px, 3.2vw, 42px)', borderRadius: 20, background: 'var(--card)', boxShadow: '0 24px 54px -34px rgba(24,28,36,.28)', padding: 'clamp(24px, 3vw, 38px)' }}>
             <div style={{ marginBottom: 20 }}>
               {/* Ink, not neon. The neon is for the thing to press; this is a
                   label on a section that already has buttons inside it. */}
               <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' as const, color: '#fff', background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '4px 12px' }}>Do first</span>
-              <h2 style={sectionH2Style}>
+              <h2 style={{ ...sectionH2Style, margin: '14px 0 0' }}>
                 A few things need you
                 <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
               </h2>
@@ -598,7 +605,7 @@ export default async function DashboardPage({
             <div>
               {overdue.length > 0 && (
                 <AttentionRow
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-700)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>}
                   label={`${formatRupees(overdueTotal)} payment to release`}
                   sublabel={<><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--amber)', fontWeight: 600 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />Overdue by {overdue.length} deal{overdue.length !== 1 ? 's' : ''}</span></>}
                   action="Release"
@@ -608,7 +615,7 @@ export default async function DashboardPage({
               )}
               {submissionsToReview.length > 0 && (
                 <AttentionRow
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-700)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>}
                   label={`${submissionsToReview.length} submission${submissionsToReview.length !== 1 ? 's' : ''} to review`}
                   sublabel={<><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--amber)', fontWeight: 600 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />Awaiting you</span><span style={{ color: 'rgb(198,200,186)' }}>&middot;</span><span>Creators are waiting on feedback</span></>}
                   action="Review"
@@ -618,7 +625,7 @@ export default async function DashboardPage({
               )}
               {awaitingApproval.length > 0 && (
                 <AttentionRow
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-700)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m9 15 2 2 4-4" /></svg>}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m9 15 2 2 4-4" /></svg>}
                   label={`${awaitingApproval.length} deal${awaitingApproval.length !== 1 ? 's' : ''} awaiting approval`}
                   sublabel={<span>Terms are ready for your sign-off</span>}
                   action="Approve"
@@ -628,7 +635,7 @@ export default async function DashboardPage({
               )}
               {paymentsDue.length > 0 && (
                 <AttentionRow
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-700)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20" /></svg>}
                   label={`${formatRupees(paymentsDueTotal)} payment${paymentsDue.length !== 1 ? 's' : ''} due`}
                   sublabel={<span>{paymentsDue.length} deal{paymentsDue.length !== 1 ? 's' : ''}</span>}
                   action="Pay"
@@ -638,7 +645,7 @@ export default async function DashboardPage({
               )}
               {invoicesToAccept.length > 0 && (
                 <AttentionRow
-                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--wg-700)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m9 15 2 2 4-4" /></svg>}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m9 15 2 2 4-4" /></svg>}
                   label={`${invoicesToAccept.length} invoice${invoicesToAccept.length !== 1 ? 's' : ''} to review`}
                   sublabel={<span>Review and approve</span>}
                   action="Approve"
@@ -714,7 +721,11 @@ export default async function DashboardPage({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(24,28,36,.08)' }}>
                       <div style={{ padding: '14px 22px', borderRight: '1px solid rgba(24,28,36,.08)' }}>
                         <div style={footLabel}>Deliverable</div>
-                        <div style={footValue}>{d.deliverables?.trim() || '\u2014'}</div>
+                        {/* Counted, not quoted. The brand's own sentence goes
+                            in only where the deal has no items to count. */}
+                        <div style={footValue}>
+                          {summariseDeliverables(labelsPerDeal.get(d.id) ?? []) || d.deliverables?.trim() || '\u2014'}
+                        </div>
                       </div>
                       <div style={{ padding: '14px 22px' }}>
                         <div style={footLabel}>{waiting.label}</div>
@@ -902,7 +913,22 @@ export default async function DashboardPage({
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                 </Link>
               </div>
-              <div className="brandgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(24px, 3vw, 32px)' }}>
+              {/* ── Simplified from the drawing ────────────────────────
+                  The design's card carries seven things: avatar, name, status
+                  pill, a solid "View deals" button, three figures and a date.
+                  On two cards side by side that is fourteen pieces of chrome
+                  for what is really one question — who have I worked with, and
+                  how much of it is live.
+
+                  So: the status and the date become ONE sub-line under the
+                  name (a creator is either running something or they last ran
+                  something — never both at once), the button goes because the
+                  whole card is already the link and a chevron says so more
+                  quietly, and three figures become two. "Posts" was the one
+                  dropped: it reads zero for most creators, because it counts
+                  deliverables marked posted and most deals have not got
+                  there. A column of zeroes is not information. */}
+              <div className="brandgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'clamp(16px, 2vw, 20px)' }}>
                 {topCreators.map((c) => {
                   const initials = c.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
                   /* Running money where a deal is still live, paid money once
@@ -910,50 +936,49 @@ export default async function DashboardPage({
                   const money = c.hasActive
                     ? { value: c.activePaise, label: 'in progress' }
                     : { value: c.paidPaise, label: 'paid' }
+                  const when = new Date(c.lastDealAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
                   return (
-                    <Link key={c.id} href={`/deals?creator=${c.id}`} className="brandc" style={{ display: 'block', borderRadius: 14, background: 'var(--card)', border: '1px solid rgba(24,28,36,.08)', textDecoration: 'none', color: 'inherit', padding: 26 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <Link key={c.id} href={`/deals?creator=${c.id}`} className="brandc lift" style={{ display: 'block', borderRadius: 14, background: 'var(--card)', border: '1px solid rgba(24,28,36,.08)', textDecoration: 'none', color: 'inherit', padding: 22 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
                         {c.photo ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={c.photo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
                         ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initials}</div>
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initials}</div>
                         )}
                         <div style={{ minWidth: 0, flex: '1 1 0%' }}>
-                          <div style={{ fontWeight: 600, fontSize: 17, letterSpacing: 0 }}>{c.name}</div>
+                          <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: 0, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                          {/* One sub-line, not a pill AND a date. A live deal
+                              is the more useful fact, so it wins; otherwise
+                              the last one says when they were last worked
+                              with, which is what "Completed" was standing in
+                              for anyway. */}
                           {c.hasActive ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--lime-700)', marginTop: 5 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)' }} />Active
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: 'var(--lime-700)', marginTop: 4 }}>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)' }} />
+                              Deal in progress
                             </span>
                           ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '10.5px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: 'var(--wg-500)', marginTop: 5 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'linear-gradient(90deg, var(--sec-mid), var(--sec-mid-2))' }} />Completed
+                            <span style={{ display: 'inline-block', fontSize: 11.5, color: 'var(--wg-500)', marginTop: 4 }}>
+                              Last deal {when}
                             </span>
                           )}
                         </div>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '9px 16px', fontWeight: 700, fontSize: '12.5px', color: '#fff' }}>
-                          View deals
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                        </span>
+                        {/* The card is the link. A chevron says so without
+                            putting a filled button on every card. */}
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="m9 18 6-6-6-6" />
+                        </svg>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 22, paddingTop: 20, borderTop: '1px solid var(--line)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--line)' }}>
                         <div>
-                          <div style={creatorStatVal}>{money.value > 0 ? formatRupees(money.value) : '—'}</div>
+                          <div style={creatorStatVal}>{money.value > 0 ? formatRupees(money.value) : '\u2014'}</div>
                           <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{money.label}</div>
-                        </div>
-                        <div>
-                          <div style={creatorStatVal}>{c.posts}</div>
-                          <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{c.posts === 1 ? 'post' : 'posts'}</div>
                         </div>
                         <div>
                           <div style={creatorStatVal}>{c.dealCount}</div>
                           <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{c.dealCount === 1 ? 'deal' : 'deals'}</div>
                         </div>
-                      </div>
-                      {/* "Last deal", not "last active" — a deal date is what we
-                          hold; whether they were active is not. */}
-                      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 16 }}>
-                        Last deal {new Date(c.lastDealAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
                       </div>
                     </Link>
                   )
@@ -994,12 +1019,13 @@ export default async function DashboardPage({
 
 // ── Sub-components ──────────────────────────────────────────
 
+/* The brand's name, in the serif italic and nothing else.
+   It carried a rotated lime slab behind it, which the design does not draw —
+   and which put the page's loudest colour on the one thing nobody needs
+   drawing to. The neon belongs on what you press. */
 function NameHighlight({ name }: { name: string }) {
   return (
-    <span style={{ position: 'relative', display: 'inline-block' }}>
-      <span aria-hidden="true" style={{ position: 'absolute', inset: '24% -0.06em 16%', background: 'var(--lime-400)', borderRadius: 14, transform: 'rotate(-1.6deg)', zIndex: 0 }} />
-      <span style={{ position: 'relative', zIndex: 1, fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.12em' }}>{name}</span>
-    </span>
+    <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.12em' }}>{name}</span>
   )
 }
 
@@ -1018,7 +1044,9 @@ function AttentionRow({ icon, label, sublabel, action, href, first }: {
       color: 'inherit',
       borderTop: first ? 'none' : '1px solid var(--hair)',
     }}>
-      <span style={{ width: 40, height: 40, borderRadius: 12, background: 'rgb(238,240,234)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {/* The design's tinted tile: a cool gradient, and the glyph in ink
+          rather than a grey — at 18px a mid-grey stroke reads as disabled. */}
+      <span style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #E9F7F0, #E7F1FC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {icon}
       </span>
       <div style={{ minWidth: 0 }}>
@@ -1027,7 +1055,11 @@ function AttentionRow({ icon, label, sublabel, action, href, first }: {
           {sublabel}
         </div>
       </div>
-      <span className="pillbtn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 112, height: 40, borderRadius: 'var(--radius-pill)', fontWeight: 700, fontSize: '12.5px', color: 'var(--lime-950)', background: 'var(--lime-400)', border: '1px solid transparent', boxShadow: 'rgba(180,215,50,0.9) 0px 10px 20px -10px' }}>{action}</span>
+      {/* INK, not neon. The design keeps the lime for the one primary action
+          on the page — "Start a new deal" — and gives these rows the dark
+          pill. Five neon buttons stacked down a card is five primary actions,
+          which is none. */}
+      <span className="pillbtn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 110, padding: '10px 18px', borderRadius: 'var(--radius-pill)', fontWeight: 700, fontSize: '12.5px', color: '#fff', background: 'var(--ink)', border: '1px solid transparent' }}>{action}</span>
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9A9C8E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
     </Link>
   )
@@ -1307,12 +1339,17 @@ const kpiMedNum: React.CSSProperties = {
   color: 'var(--ink)',
 }
 
+/* margin 0, which is what six of the design's seven section headings use.
+   It defaulted to a 14px top margin — right for the ONE heading that sits
+   under the "Do first" badge, and 14px of drift on every other section, which
+   is what made the vertical rhythm read as not-quite-the-drawing. That one
+   heading now asks for the margin itself. */
 const sectionH2Style: React.CSSProperties = {
   fontFamily: 'var(--font-display)',
   fontWeight: 600,
   letterSpacing: '-0.02em',
   fontSize: 'clamp(23px, 2.2vw, 26px)',
-  margin: '14px 0 0',
+  margin: 0,
 }
 
 /** The 01 / 02 / 03 index above each performance stat. */
