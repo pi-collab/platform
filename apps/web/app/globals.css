@@ -4934,3 +4934,11 @@ button.signup-form__cross-link {
   /* A waived fee is good news; it should not read like a missing value. */
   .offer-m__feerow--free { color: #4F6B12; font-weight: 600; }
 }
+
+/* ── Dashboard KPI cells ────────────────────────────────────────────────────
+   Each column links to the list its number came from. The hover has to say so
+   without turning a quiet figure row into four buttons, so it is a tint and a
+   lift of the label rather than a border or a shadow. */
+.kpicell { transition: background .16s ease; }
+.kpicell:hover { background: rgba(24,28,36,.025); }
+.kpicell:focus-visible { outline: 2px solid var(--neon-deep, #D2F04A); outline-offset: -2px; }

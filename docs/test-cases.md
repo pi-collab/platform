@@ -5566,6 +5566,9 @@ unpriced deliverables the creator had never listed, offered in his name.
 **Matched to the design**
 - [ ] Hero: "Welcome back" eyebrow, `Hey, <brand>.` with the name in serif italic, date filter, one "Start a new deal" button
 - [ ] KPI row is ONE plate of four hairline-divided columns — Total spent / Pending payouts / Active campaigns / Active deals — not three bordered cards
+- [ ] Every KPI column is CLICKABLE and lands where its own number lives: spent → `/deals?status=paid`, payouts → `/deals?status=needs_you`, campaigns → `/campaigns`, deals → `/deals`
+- [ ] Hover tints the cell rather than bordering it — four figures must not read as four buttons — and keyboard focus shows a neon outline
+- [ ] The search bar is kept, on the far side of the action row from "Start a new deal", so the CTA stays leftmost and loudest as the design sets it
 - [ ] Total spent is the largest figure; its sub-line reads "N deals · ▲ X%" against the previous window, and the arrow is absent when that window was empty
 - [ ] Pending payouts counts accepted-but-unpaid plus awaiting-acceptance invoices
 - [ ] Ticker: five items, middot separators, amber dot on the task count. No lime stars

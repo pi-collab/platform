@@ -367,8 +367,14 @@ export default async function DashboardPage({
             <DateFilter />
           </div>
 
-          {/* One primary action, as drawn. The design carries no search here. */}
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
+          {/* ── The action row ────────────────────────────────
+              The design draws one primary button here. Search is kept from the
+              previous dashboard and put on the far side of the same row rather
+              than above the fold on its own: the CTA stays leftmost and
+              loudest, which is the emphasis the design sets, and the field
+              reads as a tool on the shelf beside it instead of competing for
+              the first thing the eye lands on. */}
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
             <Link href="/browse" className="neonbtn" style={{
               display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px',
               borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent',
@@ -378,6 +384,9 @@ export default async function DashboardPage({
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
               Start a new deal
             </Link>
+            <div style={{ marginLeft: 'auto', minWidth: 220, maxWidth: 320, flex: '0 1 320px' }}>
+              <DashboardSearch />
+            </div>
           </div>
 
           {/* ── KPI GRID ──────────────────────────────────────
@@ -385,28 +394,36 @@ export default async function DashboardPage({
               separate bordered cards. Spend, what is owed, campaigns, deals —
               money first, because that is what a brand opens this page for. */}
           <div className="kpigrid" style={{ position: 'relative', zIndex: 0, marginTop: 24, borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+            {/* Each column goes where its own number lives. Kept clickable
+                from the previous dashboard, and every destination is the list
+                that actually contains what was counted — a figure you cannot
+                follow is a figure you have to go and find. */}
             <Kpi
               label="Total spent"
               value={formatRupees(budgetSpent)}
               big
+              href="/deals?status=paid"
               sub={<>{totalDeals} deal{totalDeals === 1 ? '' : 's'}{spendChangePct != null && <> &middot; <span style={{ color: 'var(--ink)', fontWeight: 700 }}>{spendChangePct >= 0 ? '\u25B2' : '\u25BC'} {Math.abs(spendChangePct)}%</span></>}</>}
             />
             <Kpi
               label="Pending payouts"
               value={formatRupees(pendingPayoutPaise)}
               sub={`${pendingInvoiceCount} invoice${pendingInvoiceCount === 1 ? '' : 's'}`}
+              href="/deals?status=needs_you"
               divided
             />
             <Kpi
               label="Active campaigns"
               value={String(activeCampaignCount)}
               sub="In progress"
+              href="/campaigns"
               divided
             />
             <Kpi
               label="Active deals"
               value={String(activeDeals.length)}
               sub="Across all campaigns"
+              href="/deals"
               divided
             />
           </div>
@@ -1078,16 +1095,19 @@ const creatorStatVal: React.CSSProperties = {
  * comes to this page for, and the design sizes it accordingly rather than
  * setting four equal numbers and letting the eye choose.
  */
-function Kpi({ label, value, sub, big, divided }: {
+function Kpi({ label, value, sub, big, divided, href }: {
   label: string
   value: string
   sub: React.ReactNode
   big?: boolean
   divided?: boolean
+  /** Where this number lives in full. */
+  href: string
 }) {
   return (
-    <div style={{
+    <Link href={href} className="kpicell" style={{
       padding: 'clamp(22px, 2.2vw, 30px)', display: 'flex', flexDirection: 'column',
+      textDecoration: 'none', color: 'inherit',
       ...(divided ? { borderLeft: '1px solid var(--hair, var(--hairline))' } : {}),
     }}>
       <div className="t-meta" style={{ color: 'var(--meta)' }}>{label}</div>
@@ -1101,7 +1121,7 @@ function Kpi({ label, value, sub, big, divided }: {
         </div>
       </div>
       <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>{sub}</div>
-    </div>
+    </Link>
   )
 }
 
