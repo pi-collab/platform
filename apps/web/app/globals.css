@@ -4942,3 +4942,10 @@ button.signup-form__cross-link {
 .kpicell { transition: background .16s ease; }
 .kpicell:hover { background: rgba(24,28,36,.025); }
 .kpicell:focus-visible { outline: 2px solid var(--neon-deep, #D2F04A); outline-offset: -2px; }
+
+/* Campaigns in motion: the list and its selected panel stack on a narrow
+   screen, where 1fr / 1.2fr would give each half nothing to work with. */
+@media (max-width: 900px) {
+  .cimgrid { grid-template-columns: 1fr !important; }
+  .cimgrid > div:first-child { border-right: none !important; border-bottom: 1px solid rgba(24,28,36,.08); }
+}

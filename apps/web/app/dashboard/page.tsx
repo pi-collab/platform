@@ -10,6 +10,7 @@ import BrandWelcomeQuestions from './BrandWelcomeQuestions'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
 import { computeBrandTrackRecord, formatPct } from '@/lib/brand-track-record'
+import CampaignsInMotion, { type CampaignVM } from './CampaignsInMotion'
 import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter, DashboardSearch } from './DashboardControls'
@@ -47,6 +48,7 @@ interface CampaignRow {
   status: string
   /** deals | growth. Tagged on the campaign cards. */
   track: string | null
+  created_at: string
 }
 
 const VALID_PERIODS = new Set(['this_year', 'this_quarter', 'this_month', 'this_week', 'custom'])
@@ -111,7 +113,7 @@ export default async function DashboardPage({
       .from('campaigns')
       /* status and track come with it: the KPI row counts the ACTIVE ones, and
          the campaigns section tags each with its track. */
-      .select('id, name, budget_paise, status, track')
+      .select('id, name, budget_paise, status, track, created_at')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -273,6 +275,62 @@ export default async function DashboardPage({
     })),
     (trackMessages ?? []) as { deal_id: string; sender_party: string; created_at: string }[],
   )
+
+  /* ── Campaigns in motion ──────────────────────────────────────────────────
+     One row per active campaign, with what it is waiting on. The state is
+     DERIVED from its deals rather than stored: a campaign is "in review" when
+     something has been delivered and not yet approved, and "N pending" when
+     offers are still out — both of which change without anyone editing the
+     campaign, so a stored label would go stale the moment a creator replied. */
+  const dealsByCampaign = new Map<string, DealRow[]>()
+  for (const d of allDeals) {
+    if (!d.campaign_id) continue
+    const list = dealsByCampaign.get(d.campaign_id) ?? []
+    list.push(d)
+    dealsByCampaign.set(d.campaign_id, list)
+  }
+
+  /* Deliverable items, so "8 posts" is the work actually agreed rather than a
+     count of deals. Skipped entirely when there are no campaign deals. */
+  const campaignDealIds = Array.from(dealsByCampaign.values()).flat().map((d) => d.id)
+  const { data: itemRows } = campaignDealIds.length
+    ? await supabase.from('deal_deliverable_items').select('deal_id').in('deal_id', campaignDealIds)
+    : { data: [] as { deal_id: string }[] }
+  const itemsPerDeal = new Map<string, number>()
+  for (const r of (itemRows ?? []) as { deal_id: string }[]) {
+    itemsPerDeal.set(r.deal_id, (itemsPerDeal.get(r.deal_id) ?? 0) + 1)
+  }
+
+  const campaignsInMotion: CampaignVM[] = ((campaigns ?? []) as CampaignRow[])
+    .filter((c) => c.status === 'active')
+    .map((c) => {
+      const ds = dealsByCampaign.get(c.id) ?? []
+      const live = ds.filter((d) => !['declined', 'cancelled'].includes(d.status))
+
+      const inReview = live.filter((d) => d.status === 'delivered').length
+      const yourCounter = live.filter((d) => d.status === 'negotiating' && d.last_offer_by === 'creator').length
+      const pending = live.filter((d) => d.status === 'negotiating').length
+
+      const state: { stateLabel: string; stateTone: CampaignVM['stateTone'] } =
+        inReview > 0 ? { stateLabel: 'In review', stateTone: 'review' }
+        : yourCounter > 0 ? { stateLabel: 'Your counter', stateTone: 'pending' }
+        : pending > 0 ? { stateLabel: `${pending} pending`, stateTone: 'pending' }
+        : { stateLabel: live.length > 0 ? 'In progress' : 'No deals yet', stateTone: 'neutral' }
+
+      return {
+        id: c.id,
+        name: c.name,
+        creatorInitials: live.map((d) => {
+          const cr = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { full_name?: string } | null
+          return (cr?.full_name ?? '?').trim().charAt(0).toUpperCase()
+        }),
+        creatorCount: new Set(live.map((d) => d.creator_id)).size,
+        committedPaise: live.reduce((sum, d) => sum + (d.price_paise ?? 0), 0),
+        deliverableCount: live.reduce((sum, d) => sum + (itemsPerDeal.get(d.id) ?? 0), 0),
+        startedOn: new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+        ...state,
+      }
+    })
 
   const brandFirstName = brand.brandName?.split(' ')[0] ?? 'there'
   const allCampaigns = (campaigns ?? []) as CampaignRow[]
@@ -596,7 +654,9 @@ export default async function DashboardPage({
           </section>
         )}
 
-        {/* ── CHART + CAMPAIGNS GRID ─────────────────── */}
+        <CampaignsInMotion campaigns={campaignsInMotion} />
+
+        {/* ── CHART + TRACK RECORD ─────────────────── */}
         <div style={{ marginTop: 'clamp(52px, 6vw, 80px)', display: 'grid', gridTemplateColumns: '1.63fr 1fr', gap: 'clamp(16px, 2vw, 20px)', alignItems: 'stretch' }} className="ctgrid">
           {/* Your quarter yet — chart */}
           <section className="neon-hover" style={{ position: 'relative', overflow: 'hidden', borderRadius: 24, background: 'var(--card)', padding: 'clamp(18px, 2vw, 26px)', boxShadow: 'var(--sh-2)' }}>
