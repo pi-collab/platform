@@ -23,6 +23,10 @@ interface DealRow {
   created_at: string
   creator_id: string
   campaign_id: string | null
+  deliverables: string | null
+  timeline_date: string | null
+  last_offer_by: string | null
+  track: string | null
   creators: unknown
 }
 
@@ -38,6 +42,9 @@ interface CampaignRow {
   id: string
   name: string
   budget_paise: number | null
+  status: string
+  /** deals | growth. Tagged on the campaign cards. */
+  track: string | null
 }
 
 const VALID_PERIODS = new Set(['this_year', 'this_quarter', 'this_month', 'this_week', 'custom'])
@@ -83,7 +90,10 @@ export default async function DashboardPage({
   const [{ data: deals }, { data: invoices }, { count: campaignCount }, { data: campaigns }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, is_posted, created_at, creator_id, campaign_id, creators(id, full_name, profile_photo_url)')
+      /* deliverables and timeline_date drive the card's footer — what they are
+         making and when it is due — and last_offer_by decides whether the deal
+         is waiting on the creator or on the brand. */
+      .select('id, title, status, price_paise, is_posted, created_at, creator_id, campaign_id, deliverables, timeline_date, last_offer_by, track, creators(id, full_name, profile_photo_url)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .gte('created_at', periodFromISO)
@@ -97,7 +107,9 @@ export default async function DashboardPage({
       .select('id', { count: 'exact', head: true }),
     supabase
       .from('campaigns')
-      .select('id, name, budget_paise')
+      /* status and track come with it: the KPI row counts the ACTIVE ones, and
+         the campaigns section tags each with its track. */
+      .select('id, name, budget_paise, status, track')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -183,6 +195,10 @@ export default async function DashboardPage({
   // ── DEALS IN FLIGHT (top 3 active)
   const dealsInFlight = allDeals.filter((d) => ACTIVE_STATUSES.has(d.status)).slice(0, 3)
 
+  /* Campaign names, so a deal card can say which campaign it belongs to
+     rather than repeating its own title. */
+  const campaignNameById = new Map(((campaigns ?? []) as CampaignRow[]).map((c) => [c.id, c.name]))
+
   // ── TOP CREATORS
   const creatorAgg = new Map<string, { name: string; photo: string | null; dealCount: number; totalPaise: number; latestDealId: string }>()
   for (const d of allDeals) {
@@ -199,6 +215,40 @@ export default async function DashboardPage({
   const topCreators = Array.from(creatorAgg.values())
     .sort((a, b) => b.dealCount - a.dealCount || b.totalPaise - a.totalPaise)
     .slice(0, 4)
+
+  /* ── What the KPI row reports ─────────────────────────────────────────────
+     Owed, not spent: an invoice the brand has accepted but not paid, plus the
+     ones waiting to be accepted. Both are money already committed, which is
+     the number a brand is looking for when they ask what is outstanding. */
+  const pendingPayoutPaise = paymentsDueTotal + overdueTotal
+    + invoicesToAccept.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
+  const pendingInvoiceCount = paymentsDue.length + overdue.length + invoicesToAccept.length
+
+  const activeCampaignCount = ((campaigns ?? []) as CampaignRow[]).filter((c) => c.status === 'active').length
+
+  /* Spend against the previous window of the same length. Null when that
+     window was empty: a percentage off a zero base is not a number, and this
+     sits beside the biggest figure on the page. */
+  const spendChangePct = (() => {
+    const spanMs = periodTo.getTime() - periodFrom.getTime()
+    const prevFrom = new Date(periodFrom.getTime() - spanMs)
+    const prev = allInvoices.reduce((sum, inv) => {
+      if (!inv.paid_at) return sum
+      const t = new Date(inv.paid_at).getTime()
+      if (t < prevFrom.getTime() || t >= periodFrom.getTime()) return sum
+      return sum + (inv.brand_pays_paise ?? 0)
+    }, 0)
+    return prev > 0 ? Math.round(((budgetSpent - prev) / prev) * 100) : null
+  })()
+
+  /* "spent in July" — the window the figures above describe, named rather
+     than left as "spent", which says nothing about which spend. */
+  const periodLabel = period === 'this_month'
+    ? periodFrom.toLocaleDateString('en-IN', { month: 'long' })
+    : period === 'this_week' ? 'this week'
+    : period === 'this_quarter' ? 'this quarter'
+    : period === 'this_year' ? periodFrom.getFullYear().toString()
+    : 'this period'
 
   const brandFirstName = brand.brandName?.split(' ')[0] ?? 'there'
   const allCampaigns = (campaigns ?? []) as CampaignRow[]
@@ -280,43 +330,61 @@ export default async function DashboardPage({
           rejectionReason={brand.rejectionReason}
         />
 
-        {/* ── HERO CARD ─────────────────────────────────────── */}
+        {/* ── HERO ─────────────────────────────────────────────
+            Transcribed from "Brand Dashboard". The eyebrow is "Welcome back"
+            and the headline is the brand's own name in the serif italic, not a
+            slogan — a dashboard greets you, it does not pitch to you. */}
         <section className="neon-hover" style={{ position: 'relative', overflow: 'visible', borderRadius: 24, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(26px, 3vw, 40px) clamp(24px, 3vw, 40px) clamp(28px, 3.4vw, 40px)' }}>
-          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' as const }}>
-            <div style={{ flex: '1 1 0%', minWidth: 260 }}>
-              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--meta)' }}>HEY, {brandFirstName.toUpperCase()}</span>
-              <h1 style={heroH1Style}>Let&rsquo;s get you <NameHighlight name="guapd" />.</h1>
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' as const }}>
+            <div style={{ flex: '1 1 0%', minWidth: 240 }}>
+              <span className="t-meta" style={{ display: 'inline-block', color: 'var(--meta)' }}>Welcome back</span>
+              <h1 style={heroH1Style}>Hey, <NameHighlight name={brandFirstName} />.</h1>
             </div>
-            {/* Date filter */}
             <DateFilter />
           </div>
 
-          {/* Search bar */}
-          <DashboardSearch />
+          {/* One primary action, as drawn. The design carries no search here. */}
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 12, flexWrap: 'wrap' as const, marginTop: 22 }}>
+            <Link href="/browse" className="neonbtn" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px',
+              borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent',
+              fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--lime-950)',
+              boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)', textDecoration: 'none',
+            }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+              Start a new deal
+            </Link>
+          </div>
 
-          {/* KPI GRID — 3 bordered cards */}
-          <div style={{ position: 'relative', zIndex: 0, marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }} className="kpigrid">
-            <div style={kpiCardStyle}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>LIVE REACH</div>
-              <div style={{ marginTop: 20 }}>
-                <div style={kpiBigNum}>{formatRupees(budgetSpent)}</div>
-              </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 14 }}>ACCOUNTS REACHED {completedDeals.length > 0 && <>&middot; <span style={{ color: 'var(--lime-700)' }}>&triangle; {Math.round((completedDeals.length / Math.max(totalDeals, 1)) * 100)}%</span></>}</div>
-            </div>
-            <div style={kpiCardStyle}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>ACTIVE DEALS</div>
-              <div style={{ marginTop: 20 }}>
-                <div style={kpiBigNum}>{activeDeals.length}</div>
-              </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 14 }}>ACROSS {campaignCount ?? 0} CAMPAIGN{(campaignCount ?? 0) !== 1 ? 'S' : ''}</div>
-            </div>
-            <div style={kpiCardStyle}>
-              <div className="t-meta" style={{ color: 'var(--meta)' }}>CREATORS</div>
-              <div style={{ marginTop: 20 }}>
-                <div style={kpiBigNum}>{uniqueCreators.size}</div>
-              </div>
-              <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 14 }}>WORKED WITH YOU</div>
-            </div>
+          {/* ── KPI GRID ──────────────────────────────────────
+              ONE rounded plate of four columns divided by hairlines, not three
+              separate bordered cards. Spend, what is owed, campaigns, deals —
+              money first, because that is what a brand opens this page for. */}
+          <div className="kpigrid" style={{ position: 'relative', zIndex: 0, marginTop: 24, borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+            <Kpi
+              label="Total spent"
+              value={formatRupees(budgetSpent)}
+              big
+              sub={<>{totalDeals} deal{totalDeals === 1 ? '' : 's'}{spendChangePct != null && <> &middot; <span style={{ color: 'var(--ink)', fontWeight: 700 }}>{spendChangePct >= 0 ? '\u25B2' : '\u25BC'} {Math.abs(spendChangePct)}%</span></>}</>}
+            />
+            <Kpi
+              label="Pending payouts"
+              value={formatRupees(pendingPayoutPaise)}
+              sub={`${pendingInvoiceCount} invoice${pendingInvoiceCount === 1 ? '' : 's'}`}
+              divided
+            />
+            <Kpi
+              label="Active campaigns"
+              value={String(activeCampaignCount)}
+              sub="In progress"
+              divided
+            />
+            <Kpi
+              label="Active deals"
+              value={String(activeDeals.length)}
+              sub="Across all campaigns"
+              divided
+            />
           </div>
         </section>
 
@@ -327,25 +395,22 @@ export default async function DashboardPage({
             <div className="mq">
               {[0, 1].map((i) => (
                 <span key={i} aria-hidden={i > 0 || undefined} style={{ display: 'inline-flex', alignItems: 'center', gap: 22, paddingRight: 22 }}>
-                  <span>{submissionsToReview.length} submission{submissionsToReview.length !== 1 ? 's' : ''} to review</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{activeDeals.length} deal{activeDeals.length !== 1 ? 's' : ''} in flight</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{formatRupees(budgetSpent)} total invested</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{uniqueCreators.size} creator{uniqueCreators.size !== 1 ? 's' : ''} on roster</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
+                  {/* Five items, separated by a quiet middot rather than a
+                      lime star. The star was the loudest thing in a strip whose
+                      whole job is to be read without being looked at. */}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--amber)' }} />
-                    {attentionCount} thing{attentionCount !== 1 ? 's' : ''} need you
+                    {attentionCount} task{attentionCount !== 1 ? 's' : ''} need you
                   </span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{formatRupees(paymentsDueTotal + overdueTotal)} ready to release</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{completedDeals.length} deal{completedDeals.length !== 1 ? 's' : ''} completed</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
-                  <span>{(campaignCount ?? 0)} campaign{(campaignCount ?? 0) !== 1 ? 's' : ''} running</span>
-                  <span style={{ color: 'var(--lime-700)' }}>✦</span>
+                  <Dot />
+                  <span>{formatRupees(budgetSpent)} spent in {periodLabel}</span>
+                  <Dot />
+                  <span>{activeCampaignCount} campaign{activeCampaignCount !== 1 ? 's' : ''} in motion</span>
+                  <Dot />
+                  <span>{uniqueCreators.size} creator{uniqueCreators.size !== 1 ? 's' : ''} worked with</span>
+                  <Dot />
+                  <span>{totalDeals} deal{totalDeals !== 1 ? 's' : ''} total</span>
+                  <Dot />
                 </span>
               ))}
             </div>
@@ -355,7 +420,9 @@ export default async function DashboardPage({
         {attentionCount > 0 && (
           <section className="neon-hover" style={{ position: 'relative', marginTop: 'clamp(28px, 3.2vw, 42px)', borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 38px)' }}>
             <div style={{ marginBottom: 20 }}>
-              <span style={{ fontFamily: 'inherit', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--lime-950)', background: 'var(--lime-400)', borderRadius: 'var(--radius-pill)', padding: '4px 12px', boxShadow: 'rgba(180,215,50,0.9) 0px 8px 16px -8px' }}>Do first</span>
+              {/* Ink, not neon. The neon is for the thing to press; this is a
+                  label on a section that already has buttons inside it. */}
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' as const, color: '#fff', background: 'var(--ink)', borderRadius: 'var(--radius-pill)', padding: '4px 12px' }}>Do first</span>
               <h2 style={sectionH2Style}>
                 A few things need you
                 <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
@@ -416,13 +483,16 @@ export default async function DashboardPage({
           </section>
         )}
 
-        {/* ── DEALS IN FLIGHT ──────────────────────────────── */}
+        {/* ── DEALS IN MOTION ───────────────────────────────────
+            A card per deal, as drawn: who and which campaign, the amount, the
+            state it is in, and a two-column footer answering the only two
+            questions a brand has mid-deal — what are they making, and when. */}
         {dealsInFlight.length > 0 && (
-          <section style={{ marginTop: 'clamp(52px, 6vw, 80px)' }}>
+          <section className="sr" style={{ marginTop: 'clamp(52px, 6vw, 80px)', borderRadius: 20, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 32px)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
               <h2 style={sectionH2Style}>
-                My Deals
-                <div aria-hidden="true" style={{ width: 40, height: 1, background: 'rgb(201,235,60)', marginTop: 16 }} />
+                Deals in motion
+                <div aria-hidden="true" style={{ width: 40, height: 1, background: '#C9EB3C', marginTop: 16 }} />
               </h2>
               <Link href="/deals" style={{ fontSize: 12, fontWeight: 600, color: 'var(--wg-600)', display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, textDecoration: 'none' }}>
                 View all
@@ -430,42 +500,52 @@ export default async function DashboardPage({
               </Link>
             </div>
             <div className="g3">
-              {dealsInFlight.map((d, i) => {
+              {dealsInFlight.map((d) => {
                 const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { id: string; full_name: string; profile_photo_url: string | null } | null
                 const initials = (c?.full_name ?? '??').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+                const waiting = dealWaitingOn(d)
                 return (
-                  <Link key={d.id} href={`/deals/${d.id}`} className="dealcard" style={{
-                    display: 'block',
-                    borderRadius: 20,
-                    background: 'var(--card)',
-                    overflow: 'hidden',
-                    textDecoration: 'none',
-                    border: 'none',
-                    boxShadow: 'var(--sh-2)',
+                  <Link key={d.id} href={`/deals/${d.id}`} className="deal" style={{
+                    display: 'flex', flexDirection: 'column' as const, borderRadius: 14,
+                    background: '#F5FAF7', overflow: 'hidden', textDecoration: 'none',
                   }}>
-                    {/* Creator avatar + name */}
                     <div style={{ padding: '20px 22px 0', display: 'flex', alignItems: 'center', gap: 13 }}>
                       {c?.profile_photo_url ? (
-                        <img src={c.profile_photo_url} alt={c.full_name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.profile_photo_url} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
                       ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--sec-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: 'var(--wg-500)' }}>{initials}</div>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initials}</div>
                       )}
-                      <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>{c?.full_name ?? 'Creator'}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {c?.full_name ?? 'Creator'}
+                        </div>
+                        {/* The campaign, not the deal title: on this card the
+                            creator's name is the subject, and what a brand
+                            wants beside it is which piece of work this is. */}
+                        <div style={{ fontSize: 11.5, color: 'var(--wg-500)', marginTop: 1, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {(d.campaign_id && campaignNameById.get(d.campaign_id)) || d.title || 'Standalone deal'}
+                        </div>
+                      </div>
                     </div>
-                    {/* Amount + status */}
-                    <div style={{ padding: '26px 26px 30px' }}>
-                      <div style={{ fontWeight: 700, fontSize: 60, letterSpacing: '-0.045em', lineHeight: 1, color: 'var(--ink)' }}>
+
+                    <div style={{ padding: '22px 22px 24px', flex: 1 }}>
+                      <div style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 600, fontSize: 36, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--ink)' }}>
                         {formatRupees(d.price_paise)}
                       </div>
-                      {/* Status breadcrumb trail */}
-                      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 16 }}>
-                        <DealBreadcrumb status={d.status} />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14 }}>
+                      <div style={{ marginTop: 16 }}>
                         <DealStatusLabel status={d.status} />
-                        <span className="dealgo" style={{ display: 'inline-flex', color: 'var(--ink)', flexShrink: 0 }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(24,28,36,.08)' }}>
+                      <div style={{ padding: '14px 22px', borderRight: '1px solid rgba(24,28,36,.08)' }}>
+                        <div style={footLabel}>Deliverable</div>
+                        <div style={footValue}>{d.deliverables?.trim() || '\u2014'}</div>
+                      </div>
+                      <div style={{ padding: '14px 22px' }}>
+                        <div style={footLabel}>{waiting.label}</div>
+                        <div style={footValue}>{waiting.value}</div>
                       </div>
                     </div>
                   </Link>
@@ -975,4 +1055,73 @@ const creatorStatVal: React.CSSProperties = {
   fontSize: 26,
   letterSpacing: '-0.045em',
   color: 'var(--ink)',
+}
+
+/**
+ * One column of the KPI plate.
+ *
+ * The first figure is larger than the rest: total spent is the number a brand
+ * comes to this page for, and the design sizes it accordingly rather than
+ * setting four equal numbers and letting the eye choose.
+ */
+function Kpi({ label, value, sub, big, divided }: {
+  label: string
+  value: string
+  sub: React.ReactNode
+  big?: boolean
+  divided?: boolean
+}) {
+  return (
+    <div style={{
+      padding: 'clamp(22px, 2.2vw, 30px)', display: 'flex', flexDirection: 'column',
+      ...(divided ? { borderLeft: '1px solid var(--hair, var(--hairline))' } : {}),
+    }}>
+      <div className="t-meta" style={{ color: 'var(--meta)' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', minHeight: 64, marginTop: 16 }}>
+        <div style={{
+          fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 600,
+          fontSize: big ? 'clamp(36px, 5.2vw, 44px)' : 'clamp(30px, 3.2vw, 40px)',
+          lineHeight: .9, letterSpacing: '-0.03em', color: 'var(--ink)',
+        }}>
+          {value}
+        </div>
+      </div>
+      <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>{sub}</div>
+    </div>
+  )
+}
+
+/** The ticker's separator: quiet, and the same one the design draws. */
+function Dot() {
+  return <span style={{ color: 'var(--wg-400, #878D99)' }}>&middot;</span>
+}
+
+const footLabel: React.CSSProperties = {
+  fontSize: 10.5, fontWeight: 700, letterSpacing: '.05em',
+  textTransform: 'uppercase', color: 'var(--wg-500)',
+}
+const footValue: React.CSSProperties = {
+  fontSize: 13, fontWeight: 500, marginTop: 4, color: 'var(--ink)',
+}
+
+/**
+ * The card's second footer column: who the deal is waiting on, and by when.
+ *
+ * Three different questions depending on the state, which is why the LABEL
+ * changes with it rather than every card saying "Due" and leaving a brand to
+ * work out that a deal they have not answered is not waiting on the creator.
+ */
+function dealWaitingOn(d: { status: string; last_offer_by: string | null; timeline_date: string | null }): { label: string; value: string } {
+  const due = d.timeline_date
+    ? new Date(d.timeline_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : '\u2014'
+
+  if (d.status === 'negotiating') {
+    return d.last_offer_by === 'creator'
+      ? { label: 'Respond by', value: due }
+      : { label: 'Awaiting', value: 'Creator reply' }
+  }
+  if (d.status === 'delivered') return { label: 'Awaiting', value: 'Your review' }
+  if (d.status === 'revision') return { label: 'Awaiting', value: 'New draft' }
+  return { label: 'Due', value: due }
 }
