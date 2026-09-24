@@ -666,15 +666,21 @@ export default async function DashboardPage({
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
               </Link>
             </div>
-            <div className="g3">
-              {dealsInFlight.map((d) => {
+            {/* Three equal columns, gap 24 — set here rather than on .g3,
+                which the creator dashboard also uses at different proportions.
+                The class stays for its single-column rule on a phone. */}
+            <div className="g3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+              {dealsInFlight.map((d, cardIndex) => {
                 const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { id: string; full_name: string; profile_photo_url: string | null } | null
                 const initials = (c?.full_name ?? '??').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
                 const waiting = dealWaitingOn(d)
                 return (
                   <Link key={d.id} href={`/deals/${d.id}`} className="deal" style={{
                     display: 'flex', flexDirection: 'column' as const, borderRadius: 14,
-                    background: '#F5FAF7', overflow: 'hidden', textDecoration: 'none',
+                    /* The design tints each card differently — green, blue,
+                       violet — so three cards in a row read as three things
+                       rather than one block. */
+                    background: DEAL_CARD_TINTS[cardIndex % DEAL_CARD_TINTS.length], overflow: 'hidden', textDecoration: 'none',
                   }}>
                     <div style={{ padding: '20px 22px 0', display: 'flex', alignItems: 'center', gap: 13 }}>
                       {c?.profile_photo_url ? (
@@ -701,7 +707,7 @@ export default async function DashboardPage({
                         {formatRupees(d.price_paise)}
                       </div>
                       <div style={{ marginTop: 16 }}>
-                        <DealStatusLabel status={d.status} />
+                        <DealStatusLabel status={d.status} lastOfferBy={d.last_offer_by} />
                       </div>
                     </div>
 
@@ -1052,17 +1058,30 @@ function DealBreadcrumb({ status }: { status: string }) {
   )
 }
 
-function DealStatusLabel({ status }: { status: string }) {
-  const map: Record<string, { label: string; bg: string }> = {
-    negotiating: { label: 'Negotiating', bg: 'var(--sec-2)' },
-    agreed: { label: 'Agreed, awaiting content', bg: 'var(--sec-2)' },
-    delivered: { label: 'Submitted, to review', bg: 'var(--lime-200)' },
-    revision: { label: 'Revision requested', bg: 'var(--sec-2)' },
-    approved: { label: 'Approved, awaiting payment', bg: 'var(--sec-2)' },
-  }
-  const s = map[status] ?? { label: status, bg: 'var(--sec-2)' }
+/* The design's outlined chip: white, ink text, and a border carrying the
+   state's colour — ochre while the creator has it, green when it is back with
+   the brand, blue for a counter waiting on an answer. A filled tint read as a
+   badge; the outline reads as a state.
+
+   "Negotiating" is split by WHOSE move it is, because those are two different
+   situations to a brand and the design names them separately. */
+const CHIP_OCHRE = 'rgba(140,100,23,.35)'
+const CHIP_GREEN = 'rgba(15,107,74,.35)'
+const CHIP_BLUE = 'rgba(25,118,210,.35)'
+
+function DealStatusLabel({ status, lastOfferBy }: { status: string; lastOfferBy: string | null }) {
+  const s: { label: string; border: string } =
+    status === 'negotiating'
+      ? lastOfferBy === 'creator'
+        ? { label: 'Awaiting your counter', border: CHIP_BLUE }
+        : { label: 'Offer sent', border: CHIP_OCHRE }
+    : status === 'agreed' ? { label: 'Agreed, awaiting content', border: CHIP_OCHRE }
+    : status === 'delivered' ? { label: 'Content in review', border: CHIP_GREEN }
+    : status === 'revision' ? { label: 'Revision requested', border: CHIP_OCHRE }
+    : status === 'approved' ? { label: 'Approved, awaiting payment', border: CHIP_GREEN }
+    : { label: status, border: 'rgba(24,28,36,.2)' }
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 600, color: 'var(--lime-950)', background: s.bg, padding: '4px 11px', borderRadius: 'var(--radius-pill)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: 11, fontWeight: 600, color: 'var(--ink)', background: '#fff', border: `1px solid ${s.border}`, padding: '6px 13px', borderRadius: 999 }}>
       {s.label}
     </span>
   )
@@ -1360,6 +1379,8 @@ function Kpi({ label, value, sub, big, divided, href }: {
 function Dot() {
   return <span style={{ color: 'var(--wg-400, #878D99)' }}>&middot;</span>
 }
+
+const DEAL_CARD_TINTS = ['#F5FAF7', '#F5F8FC', '#F9F7FC']
 
 const footLabel: React.CSSProperties = {
   fontSize: 10.5, fontWeight: 700, letterSpacing: '.05em',

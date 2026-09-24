@@ -5619,3 +5619,9 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The badge is absent when the previous window had no spend — "▲ 100%" from zero is noise
 - [ ] Axis labels are 13px/600; there is no "NOW" caption under the current month (the month itself is in neon)
 - [ ] Hovering a point shows month and amount via a native title (the design's tooltip needs a client component; the information is the same)
+
+**Deal cards, second pass against the drawing**
+- [ ] Three equal columns with a 24px gap (set on the dashboard, not on the shared `.g3`, which the creator dashboard uses at other proportions); one column on a phone
+- [ ] The three cards carry the design's rotating tints — green `#F5FAF7`, blue `#F5F8FC`, violet `#F9F7FC` — so a row reads as three things, not one block
+- [ ] The status chip is OUTLINED on white, not a filled tint: ochre border while the creator has it (offer sent / agreed / revision), green when it is back with the brand (content in review / approved), blue for "Awaiting your counter"
+- [ ] "Negotiating" is split by whose move it is — "Offer sent" when the brand's offer is out, "Awaiting your counter" when the creator has replied
