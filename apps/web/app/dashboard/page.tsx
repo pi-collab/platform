@@ -9,6 +9,8 @@ import { shouldAskBrandOnboarding, BRAND_QUESTIONS } from '@/lib/brand-onboardin
 import BrandWelcomeQuestions from './BrandWelcomeQuestions'
 import { deriveDisplayStatus } from '@/lib/deal-status'
 import Link from 'next/link'
+import { computeBrandTrackRecord, formatPct } from '@/lib/brand-track-record'
+import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter, DashboardSearch } from './DashboardControls'
 import { periodToDateRange } from './period-utils'
@@ -249,6 +251,28 @@ export default async function DashboardPage({
     : period === 'this_quarter' ? 'this quarter'
     : period === 'this_year' ? periodFrom.getFullYear().toString()
     : 'this period'
+
+  /* ── The brand's own track record ─────────────────────────────────────────
+     Over EVERY deal and invoice, not the selected period: a record is what you
+     have done, and a brand switching the filter to "this week" has not become
+     a worse payer. The message read is scoped to this brand's deals by RLS. */
+  const { data: trackMessages } = allDeals.length
+    ? await supabase
+        .from('messages')
+        .select('deal_id, sender_party, created_at')
+        .in('deal_id', allDeals.map((d) => d.id))
+    : { data: [] as { deal_id: string; sender_party: string; created_at: string }[] }
+
+  const track = computeBrandTrackRecord(
+    allDeals.map((d) => ({ id: d.id, status: d.status })),
+    allInvoices.map((inv) => ({
+      deal_id: inv.deal_id,
+      due_date: inv.due_date ?? null,
+      paid_at: inv.paid_at ?? null,
+      status: inv.status,
+    })),
+    (trackMessages ?? []) as { deal_id: string; sender_party: string; created_at: string }[],
+  )
 
   const brandFirstName = brand.brandName?.split(' ')[0] ?? 'there'
   const allCampaigns = (campaigns ?? []) as CampaignRow[]
@@ -577,47 +601,37 @@ export default async function DashboardPage({
             <SpendChart data={monthlySpend} />
           </section>
 
-          {/* Campaigns running — budget */}
+          {/* ── YOUR TRACK RECORD ────────────────────────────────
+              Computed, never asserted. The empty state has carried this block
+              with dashes since it was drawn; the populated page printed
+              nothing at all, and the design's 100% / ~6h / 100% are sample
+              values. lib/brand-track-record works them out from invoices,
+              messages and deal states, and returns null wherever there is no
+              basis — a percentage over zero deals is not 100%, it is nothing.
+
+              These are a BRAND's figures, not a creator's: on-time PAYMENT,
+              not on-time delivery. Paying late is the complaint this market
+              runs on, so it is the number a brand should be shown about
+              themselves. */}
           <section className="neon-hover" style={{ position: 'relative', overflow: 'hidden', borderRadius: 20, background: 'var(--card)', padding: 'clamp(24px, 2.6vw, 34px)', boxShadow: 'var(--sh-2)', display: 'flex', alignItems: 'center' }}>
+            <div aria-hidden="true" style={{ position: 'absolute', bottom: -120, left: '6%', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,255,102,.07), transparent 68%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 2, width: '100%' }}>
-              <span className="t-meta" style={{ display: 'block', color: 'var(--meta)', marginBottom: 12 }}>Campaigns running</span>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-                <h2 style={{ ...sectionH2Style, margin: 0, fontSize: 'clamp(26px, 2.9vw, 34px)', lineHeight: 1.15 }}>
-                  Budget <span style={{ color: 'var(--ink)', background: 'linear-gradient(125deg,var(--sec),var(--sec-2))', padding: '2px 12px', borderRadius: 9, fontStyle: 'italic', fontWeight: 400, letterSpacing: 0, fontSize: '1.1em', fontFamily: 'var(--font-serif)' }}>used</span>
-                </h2>
-                <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 28, letterSpacing: '-0.045em' }}>{budgetPct}%</div>
-                  <div style={{ fontSize: 11, color: 'var(--wg-500)', whiteSpace: 'nowrap' as const }}>of {formatRupees(totalCampaignBudget)}</div>
+              <span className="t-meta" style={{ display: 'block', color: 'var(--meta)', marginBottom: 12 }}>Your track record</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                <div style={{
+                  fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 'clamp(34px, 3.6vw, 44px)',
+                  letterSpacing: '-0.03em', lineHeight: 1,
+                  color: track.dealsCompleted > 0 ? 'var(--ink)' : 'var(--wg-400)',
+                }}>
+                  {track.dealsCompleted}
                 </div>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--wg-500)' }}>deals completed</div>
               </div>
-              {/* Overall progress bar */}
-              <div style={{ height: 12, borderRadius: 20, background: 'linear-gradient(90deg,var(--sec),var(--sec-2))', marginTop: 24, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(budgetPct, 100)}%`, borderRadius: 20, background: 'var(--lime-400)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 0, marginTop: 22 }}>
+                <TrackRow label="On-time payment" value={formatPct(track.onTimePaymentPct)} />
+                <TrackRow label="Avg response" value={formatResponse(track.responseHours)} />
+                <TrackRow label="Completion rate" value={formatPct(track.completionPct)} />
               </div>
-              {/* Per-campaign bars */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginTop: 20 }}>
-                {campaignsWithBudget.map((c) => {
-                  const pct = c.budgetPaise > 0 ? Math.round((c.spentPaise / c.budgetPaise) * 100) : 0
-                  return (
-                    <div key={c.name}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{c.name}</span>
-                        <span style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--wg-500)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{formatRupees(c.spentPaise)} / {formatRupees(c.budgetPaise)}</span>
-                      </div>
-                      <div style={{ height: 7, borderRadius: 20, background: 'linear-gradient(90deg,var(--sec),var(--sec-2))', marginTop: 10, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, borderRadius: 20, background: 'linear-gradient(90deg,var(--sec-mid),var(--sec-mid-2))' }} />
-                      </div>
-                    </div>
-                  )
-                })}
-                {campaignsWithBudget.length === 0 && (
-                  <div style={{ fontSize: 13, color: 'var(--wg-500)' }}>No campaigns with budgets yet</div>
-                )}
-              </div>
-              <Link href="/campaigns" style={{ ...ghostBtnStyle, marginTop: 22, fontSize: '12.5px' }}>
-                Manage campaigns
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-              </Link>
             </div>
           </section>
         </div>
@@ -1124,4 +1138,22 @@ function dealWaitingOn(d: { status: string; last_offer_by: string | null; timeli
   if (d.status === 'delivered') return { label: 'Awaiting', value: 'Your review' }
   if (d.status === 'revision') return { label: 'Awaiting', value: 'New draft' }
   return { label: 'Due', value: due }
+}
+
+/** One line of the track record: the label, and the figure or an em-dash. */
+function TrackRow({ label, value }: { label: string; value: string }) {
+  const unknown = value === '\u2014'
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '13px 0', borderTop: '1px solid var(--sec)' }}>
+      <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--wg-600)' }}>{label}</span>
+      <span style={{
+        fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em',
+        /* Faint when there is nothing behind it, so an absent figure never
+           reads with the same weight as a measured one. */
+        color: unknown ? 'var(--wg-400)' : 'var(--ink)',
+      }}>
+        {value}
+      </span>
+    </div>
+  )
 }

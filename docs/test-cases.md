@@ -5545,3 +5545,30 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] With creators added, the sticky bar reads "Done adding" — the job on this page is picking creators, so the button names that finishing
 - [ ] With nobody added it reads "Back to campaign", because there is nothing to be done with yet and that is the honest label for leaving
 - [ ] The hero still has a plain "Back to campaign" link for leaving without finishing
+
+---
+
+## 57. Brand dashboard — matched to the design, with a real track record
+
+**"Your track record" is computed, never asserted (`lib/brand-track-record.ts`)**
+- [ ] A brand's figures are a BRAND's: **on-time PAYMENT**, not on-time delivery. The creator's lib measures the opposite thing and must not be reused here
+- [ ] Nothing is hardcoded. The design's "100% · ~6h · 100%" are sample values; the page must show what the data says
+- [ ] Each figure is `—` when there is no basis: no invoice with a due date, no reply ever sent, no accepted deal. A percentage over zero deals is nothing, not 100%
+- [ ] An em-dash renders faint, so an absent figure never reads with the weight of a measured one
+- [ ] **On-time payment** counts invoices that have a due date AND are either paid, or unpaid and past due. An unpaid invoice not yet due is not late and is excluded; an unpaid one past due counts as late, so a brand cannot sit at 100% while owing money for months
+- [ ] Paying at 6pm on the due date counts as on time (the day's end, not its midnight)
+- [ ] **Avg response** is the MEDIAN gap from a creator's message to this brand's reply, and only the first creator message in a run starts the clock — four messages in a row is one question
+- [ ] **Completion rate** is over ACCEPTED deals only. A declined offer is not a failure to complete
+- [ ] **Deals completed** counts complete/paid/approved
+- [ ] The record spans ALL deals, not the selected period: switching the filter to "this week" must not change it — a record is what you have done
+- [ ] It updates on its own as deals progress; no backfill or manual step anywhere
+
+**Matched to the design**
+- [ ] Hero: "Welcome back" eyebrow, `Hey, <brand>.` with the name in serif italic, date filter, one "Start a new deal" button
+- [ ] KPI row is ONE plate of four hairline-divided columns — Total spent / Pending payouts / Active campaigns / Active deals — not three bordered cards
+- [ ] Total spent is the largest figure; its sub-line reads "N deals · ▲ X%" against the previous window, and the arrow is absent when that window was empty
+- [ ] Pending payouts counts accepted-but-unpaid plus awaiting-acceptance invoices
+- [ ] Ticker: five items, middot separators, amber dot on the task count. No lime stars
+- [ ] "Do first" badge is ink with white text, not neon
+- [ ] Deal cards: tinted `#F5FAF7`, creator name with the CAMPAIGN beneath it, 36px amount, status pill, two-column footer
+- [ ] The footer's second column changes label with state: "Respond by" when the brand owes a reply, "Awaiting / Creator reply" when the creator does, "Due" otherwise
