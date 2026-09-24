@@ -5729,3 +5729,27 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The solid "View deals" button is replaced by a chevron — the whole card is already the link
 - [ ] Two figures, not three. "Posts" was dropped: it counts deliverables marked posted, which is zero for most creators, and a column of zeroes is not information
 - [ ] The money figure still says which it is — "in progress" or "paid" — and never merges the two
+
+---
+
+## 60. Correcting a creator's handle (ops) — it lives in more than one place
+
+**The gap this closes**
+- [ ] `creator_products.handle` is a per-package copy (NOT NULL — a package names the account it is sold on). Fixing the handle on the profile alone left every package naming the old one, and the rate card on the creator's storefront kept showing it
+- [ ] `editProduct` has never accepted a handle, so before this there was NO way through ops to correct a package's handle short of deleting and re-adding it
+- [ ] Worse, the creator could not fix it either: `savePackage` refuses a handle that is not in their own `social_accounts` ("Pick one of your own connected channels"), so a package left on a corrected-away handle becomes one its owner can no longer save
+
+**The cascade in `editCreator`**
+- [ ] Changing a creator's handle in `/ops/creators/<id>/edit` also retags their packages, in the same action
+- [ ] **Only rows carrying the OLD handle move.** Verified against real data: creators legitimately hold different handles per platform (`Chan_cleah` on Instagram vs `chan_Cleah` on YouTube; `utkarsh.finance` vs `@utkarshfinance`; `@ananyatech` vs `@ananyatechtv`). Rewriting every package of a creator whose Instagram handle changed would corrupt the others
+- [ ] The match is exact and case-sensitive, so two handles differing only in case are treated as two accounts — which is what they are on the products table
+- [ ] No handle change (name/phone/bio edit only) retags nothing
+- [ ] Clearing the handle retags nothing — there is no new value to move packages to, and blanking a NOT NULL column would fail
+- [ ] If the package update fails, the action returns an error naming the old handle rather than reporting success — the profile is already saved at that point, and "looks fixed but is not" is the failure worth avoiding
+- [ ] `ops_events` records `handle_before`, `handle_after` and `products_retagged` — a handle is an identity, and "which account was this?" must be answerable from the log without guesswork
+- [ ] Both `/ops/creators` and the creator's own ops page revalidate, so the corrected handle shows immediately
+
+**Still manual after an ops handle fix (check these by hand)**
+- [ ] `creators.social_accounts[].handle` and `.url` — edited on the same ops form, but they are separate fields and both need updating
+- [ ] `creator_storefronts.platform_links` — creator-owned content; ops does not rewrite it
+- [ ] `creator_storefronts.slug` — deliberately NOT derived from the handle and NOT changed, since a slug that has been shared is a link that would break

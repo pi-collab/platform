@@ -346,7 +346,7 @@ export async function editCreator(input: EditCreatorInput) {
   // creator from every band filter in ops. Same for the storefront stats
   // the creator owns on these entries.
   const { data: prevRow } = await admin
-    .from('creators').select('social_accounts').eq('id', id).maybeSingle()
+    .from('creators').select('social_accounts, handle').eq('id', id).maybeSingle()
   const mergedSocials = social_accounts
     ? mergeSocialAccounts(prevRow?.social_accounts, social_accounts as unknown as Record<string, unknown>[])
     : (prevRow?.social_accounts ?? [])
@@ -370,15 +370,55 @@ export async function editCreator(input: EditCreatorInput) {
 
   if (error) return { error: error.message }
 
+  /* ── The handle lives in more than one place ────────────────────────────
+     creator_products carries its OWN copy of the handle — one per package,
+     NOT NULL, because a package names the account it is sold on. So fixing a
+     handle here used to fix the profile and leave every package pointing at
+     the old one, and the rate card on the creator's storefront kept showing
+     it. editProduct does not accept a handle either, so there was no way
+     through ops to correct it short of deleting and re-adding each package.
+
+     Only rows carrying the OLD handle move. A creator with packages on two
+     accounts — an Instagram handle here and a YouTube one on the products —
+     must not have both rewritten because one of them changed. */
+  const oldHandle = (prevRow?.handle ?? '').trim()
+  const newHandle = handle?.trim() || null
+  let productsRetagged = 0
+  if (oldHandle && newHandle && oldHandle !== newHandle) {
+    const { data: moved, error: productErr } = await admin
+      .from('creator_products')
+      .update({ handle: newHandle })
+      .eq('creator_id', id)
+      .eq('handle', oldHandle)
+      .select('id')
+
+    /* The profile is already saved at this point. Reporting success while the
+       packages still name the old account is the failure worth avoiding: it
+       looks fixed and is not. */
+    if (productErr) {
+      return { error: `Profile saved, but the packages still show @${oldHandle}: ${productErr.message}` }
+    }
+    productsRetagged = moved?.length ?? 0
+  }
+
   await logOpsEvent(user, 'creator.edited', 'creators', id, {
     full_name: full_name.trim(),
     // Whether ops set or cleared a contact address, not the address itself:
     // ops_events is read by people who do not need a creator's inbox, and the
     // question this answers is "did we start being able to reach them".
     has_contact_email: email !== null,
+    /* Before and after, because a handle is an identity: it is what a brand
+       clicks through to, and "which account was this?" is a question the
+       audit log should answer without guesswork. */
+    ...(oldHandle !== (newHandle ?? '') ? {
+      handle_before: oldHandle || null,
+      handle_after: newHandle,
+      products_retagged: productsRetagged,
+    } : {}),
   })
 
   revalidatePath('/ops/creators')
+  revalidatePath(`/ops/creators/${id}`)
   return { success: true }
 }
 
