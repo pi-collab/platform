@@ -5807,7 +5807,7 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] **`upsertStorefront` refuses Growth** with a clear message. A server action is a public endpoint; a hidden button prevents nothing
 - [ ] **The Storefront nav entry is NOT DRAWN for a Growth creator** — desktop pills and the phone drawer both filter it out. An earlier version dimmed it with a padlock; a destination a creator cannot use is still a destination, and their nav should hold only things that work
 - [ ] The ROUTE still renders the locked screen: hiding the entry hides the door, it does not unlock it. Typing `/creator/storefront` reaches the explanation, and `upsertStorefront` still refuses
-- [ ] The profile's shopfront row is absent for a Growth creator too — with no nav entry, a row explaining the absence would be the only mention of a shopfront on their whole profile
+- [ ] **The profile's shopfront row STAYS, locked**: tinted row, padlock in its own tile, "Unlocks with Guapd Deals", and a line saying what a shopfront is. With the nav entry gone this is the only place a Growth creator learns one exists — and a lock is meant to be seen
 - [ ] A Deals creator sees no lock and no behaviour change anywhere
 
 **The dynamic CTA (`lib/growth-cta.ts`)**
