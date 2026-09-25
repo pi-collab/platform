@@ -28,6 +28,9 @@ interface Props {
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
   instagramConnection: IgConnectionView
+  /** Growth creators have no shopfront, so the "View shopfront" pill is
+   *  hidden rather than opening a locked page. */
+  isGrowth?: boolean
   /** Current profile photo, so the uploader can show it and offer Remove. */
   creatorPhotoUrl: string | null
   userEmail: string
@@ -63,6 +66,7 @@ function getInitials(name: string) {
 /* ── Main Component ─────────────────────────────────────────────── */
 
 export default function CreatorSettingsClient({
+  isGrowth = false,
   creatorName: initialName,
   creatorHandle: initialHandle,
   creatorBio: initialBio,
@@ -259,10 +263,12 @@ export default function CreatorSettingsClient({
                     <h2 style={h2Style}>Profile</h2>
                     <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>Your public creator profile brands see.</p>
                   </div>
-                  <Link href="/creator/storefront" className="pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 15px', borderRadius: 'var(--radius-pill)', background: 'var(--card)', border: '1px solid var(--frost-edge)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink)', boxShadow: '0 6px 16px -12px rgba(40,45,25,.4)' }}>
+                  {/* Hidden for Growth: there is no shopfront to view, and a
+                      pill that opens a locked page is worse than no pill. */}
+                  {!isGrowth && <Link href="/creator/storefront" className="pill" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 15px', borderRadius: 'var(--radius-pill)', background: 'var(--card)', border: '1px solid var(--frost-edge)', fontWeight: 600, fontSize: 12.5, color: 'var(--ink)', boxShadow: '0 6px 16px -12px rgba(40,45,25,.4)' }}>
                     View shopfront
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
-                  </Link>
+                  </Link>}
                 </div>
 
                 {/* Avatar. These were two inert <span>s — a creator could tap

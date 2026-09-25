@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import { creatorGrowthState } from '@/lib/creator-growth-state'
 import CreatorProfileMobile from './CreatorProfileMobile'
 import { getConnection } from '@/lib/instagram-sync'
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: 'Profile · Guapd Creator' }
 
 export default async function CreatorProfilePage() {
   const ctx = await verifyCreator()
+  const growth = await creatorGrowthState(ctx.creatorId)
   const supabase = createClient()
   // handle lives on creators, which withholds it from the session client for
   // some columns — the admin client keeps this one query consistent.
@@ -43,6 +45,8 @@ export default async function CreatorProfilePage() {
         // Only a PUBLISHED slug is passed. An unpublished one 404s, and handing
         // a creator a link to copy that does not work is worse than none.
         shopfrontSlug={storefront?.is_published ? storefront.slug : null}
+        growthCta={growth.cta}
+        isGrowth={growth.isGrowth}
       />
     </main>
   )

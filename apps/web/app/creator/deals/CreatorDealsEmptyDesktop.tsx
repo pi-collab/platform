@@ -22,7 +22,10 @@ import './deals-empty-desktop.css'
  * All CSS is scoped under .cdeals-desk. The export ships `*`, `body`, bare `a`
  * and ten :root blocks; unscoped, they restyle the entire site.
  */
-export default function CreatorDealsEmptyDesktop() {
+export default function CreatorDealsEmptyDesktop({ growthCta }: {
+  /** See CreatorDealsEmpty — same swap, desktop layout. */
+  growthCta?: { label: string; href: string } | null
+} = {}) {
   return (
     <div className="cdeals-desk">
       <main style={{position: 'relative', zIndex: '1', padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)'}}>
@@ -35,7 +38,7 @@ export default function CreatorDealsEmptyDesktop() {
                   <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', lineHeight: '1.0', fontSize: 'clamp(34px,4.4vw,44px)', margin: '0', color: 'var(--ink)'}}>My <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400', letterSpacing: '0', fontSize: '1.05em'}}>deals</span></h1>
                   <p style={{fontFamily: 'var(--font-ui)', fontSize: '14px', color: 'var(--wg-600)', margin: '8px 0 0'}}>Everything you have running with brands, newest first.</p>
                 </div>
-                <a href="/creator/storefront" className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9z" /><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" /><path d="M9 21v-6h6v6" /></svg>Set up shopfront</a>
+                <a href={growthCta?.href ?? "/creator/storefront"} className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9z" /><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" /><path d="M9 21v-6h6v6" /></svg>{growthCta?.label ?? 'Set up shopfront'}</a>
               </div>
               <div className="kpigrid" style={{display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0', marginTop: '24px', borderRadius: '16px', background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden'}}>
                 <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column'}}>

@@ -23,11 +23,15 @@ import './dashboard-desktop.css'
  * Schibsted Grotesk and Instrument Serif, and shipping them again would refetch
  * the same faces from a second source.
  */
-export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
+export default function CreatorDashboardEmptyDesktop({ alert, tasks, growthCta }: {
   /** The fault banner, when something is wrong. Built by the route. */
   alert?: React.ReactNode
   /** "Get started" / "Recommended". Built by the route. */
   tasks?: React.ReactNode
+  /** Growth creators have no shopfront, so all three shopfront CTAs in this
+   *  design point at a locked page — including "Share your shopfront", which
+   *  is advice they cannot take. Same slots, label and destination swapped. */
+  growthCta?: { label: string; href: string } | null
 }) {
   return (
     <div className="cdash-desk">
@@ -51,7 +55,7 @@ export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
                 <label style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', borderRadius: 'var(--radius-pill)', border: '1px solid var(--line)', background: 'var(--card)', fontFamily: 'var(--font-ui)', fontSize: '12.5px', fontWeight: '600', color: 'var(--ink)', cursor: 'pointer', flexShrink: '0'}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg><select style={{border: 'none', outline: 'none', background: 'transparent', fontFamily: 'var(--font-ui)', fontSize: '12.5px', fontWeight: '600', color: 'var(--ink)', cursor: 'pointer'}}><option>This month</option><option>This year</option><option>Last 3 months</option><option>All time</option></select></label>
               </div>
               <div style={{position: 'relative', zIndex: '2', display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '22px'}}>
-                <a href="/creator/storefront" className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12" /><path d="M9 21v-6h6v6" /></svg>Set up your shopfront</a>
+                <a href={growthCta?.href ?? "/creator/storefront"} className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: 'var(--lime-950)', boxShadow: '0 8px 16px -8px rgba(180,215,50,.55)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21V9l9-6 9 6v12" /><path d="M9 21v-6h6v6" /></svg>{growthCta?.label ?? 'Set up your shopfront'}</a>
               </div>
               {/* After the name, before the overview. */}
               {alert && <div style={{position: 'relative', zIndex: 2, marginTop: '24px'}}>{alert}</div>}
@@ -154,7 +158,7 @@ export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
                   <span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px', borderRadius: '16px', background: '#F5F7FA', border: '1px solid var(--line)'}}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--wg-500)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-3a2 2 0 0 1-2-2V2" /><path d="M9 22H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2h-1" /><path d="M12 12v6" /><path d="M9 15h6" /></svg></span>
                   <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '16px', marginTop: '16px', color: 'var(--ink)'}}>No brand deals yet</div>
                   <p style={{margin: '6px 0 0', fontSize: '13.5px', color: 'var(--wg-500)', maxWidth: '380px', lineHeight: '1.55'}}>Set up your shopfront so brands can discover you and send briefs, the brands you work with will collect here.</p>
-                  <a href="/creator/storefront" className="neonbtn" style={{marginTop: '18px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--ink)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: '#fff', boxShadow: '0 8px 16px -8px rgba(24,28,36,.35)'}}>Set up your shopfront<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
+                  <a href={growthCta?.href ?? "/creator/storefront"} className="neonbtn" style={{marginTop: '18px', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: 'var(--radius-pill)', background: 'var(--ink)', border: '1px solid transparent', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', color: '#fff', boxShadow: '0 8px 16px -8px rgba(24,28,36,.35)'}}>{growthCta?.label ?? 'Set up your shopfront'}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
                 </div>
               </div>
             </section>
@@ -165,7 +169,7 @@ export default function CreatorDashboardEmptyDesktop({ alert, tasks }: {
                 <div>
                   <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', lineHeight: '1.0', fontSize: 'clamp(38px,4.8vw,44px)', margin: '0', color: 'var(--ink)'}}>Brand–creator deals<br />without the <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400', letterSpacing: '0', fontSize: '1.12em'}}>chaos</span>.</h2>
                   <p style={{fontFamily: 'var(--font-ui)', fontSize: '15px', lineHeight: '1.6', color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: '400px'}}>One home for offers, contracts, content, and payments, so you can focus on making, not chasing.</p>
-                  <a href="/creator/storefront" className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '26px', padding: '13px 22px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: 'var(--lime-950)', boxShadow: '0 14px 26px -12px rgba(180,215,50,.7)'}}>Share your shopfront<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
+                  <a href={growthCta?.href ?? "/creator/storefront"} className="neonbtn" style={{display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '26px', padding: '13px 22px', borderRadius: 'var(--radius-pill)', background: 'var(--lime-400)', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '14px', color: 'var(--lime-950)', boxShadow: '0 14px 26px -12px rgba(180,215,50,.7)'}}>{growthCta?.label ?? 'Share your shopfront'}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg></a>
                 </div>
                 <div style={{position: 'relative', aspectRatio: '1/1', width: '100%', maxWidth: '280px', justifySelf: 'center'}}></div>
               </div>

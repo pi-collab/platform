@@ -1,3 +1,4 @@
+import { creatorGrowthState } from '@/lib/creator-growth-state'
 import { Suspense } from 'react'
 import { getConnection } from '@/lib/instagram-sync'
 import { verifyCreator } from '@/lib/creator-auth'
@@ -31,6 +32,7 @@ export default async function CreatorSettingsPage() {
     .single()
 
   const instagramConnection = await getConnection(ctx.creatorId)
+  const growth = await creatorGrowthState(ctx.creatorId)
   const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>
   const prefs = (user?.preferences ?? {}) as Record<string, string>
 
@@ -45,6 +47,7 @@ export default async function CreatorSettingsPage() {
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}
       instagramConnection={instagramConnection}
+      isGrowth={growth.isGrowth}
       creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
       userEmail={displayEmail(user?.email) ?? ''}
       userPhone={user?.phone ?? ''}

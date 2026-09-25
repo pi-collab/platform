@@ -385,7 +385,13 @@ export default async function OpsCreatorsPage({ searchParams }: {
                           linked — the public URL 404s until it is published. */}
                       {(() => {
                         const sf = shopfrontByCreator.get(c.id)
-                        if (!sf) return <span style={{ color: '#bbb' }}>-</span>
+                        /* A Growth creator has no shopfront and cannot make
+                           one, so a bare dash reads as setup they have not
+                           finished — which sends ops chasing them for
+                           something that is not theirs to do. */
+                        if (!sf) return c.vetting_status === 'growth'
+                          ? <span style={{ color: '#4f46e5', fontSize: '0.75rem', fontWeight: 600 }} title="Growth creators have no public shopfront">Growth</span>
+                          : <span style={{ color: '#bbb' }}>-</span>
                         if (!sf.is_published) {
                           return <span style={{ color: '#92400e', fontSize: '0.75rem', fontWeight: 600 }}>Draft</span>
                         }

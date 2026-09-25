@@ -14,6 +14,7 @@ import InstagramReconnectBanner from '@/components/creator/InstagramReconnectBan
 import CreatorTaskCard from '@/components/creator/CreatorTaskCard'
 import { getConnection } from '@/lib/instagram-sync'
 import { hasCreatorEmail } from '@/lib/creator-contact'
+import { growthCta, GROWTH_READY_LINE } from '@/lib/growth-cta'
 import { creatorTasks } from '@/lib/creator-tasks'
 import { compactNumber } from '@/lib/compact-number'
 import Link from 'next/link'
@@ -113,7 +114,7 @@ export default async function CreatorDashboardPage({
       .maybeSingle(),
     supabase
       .from('creators')
-      .select('handle, social_accounts')
+      .select('handle, social_accounts, vetting_status')
       .eq('id', creatorId)
       .maybeSingle(),
     // head + count: the checklist needs "any?", not the rows themselves.
@@ -123,6 +124,15 @@ export default async function CreatorDashboardPage({
       .eq('creator_id', creatorId)
       .eq('is_active', true),
   ])
+
+  /* ── Growth creators have no storefront ──────────────────────────────────
+     Every CTA on this page said "Set up your shopfront", which for them is a
+     locked page: the loudest button on their dashboard told them to do the one
+     thing they cannot. growthCta answers what they should press instead —
+     packages first, because a brand cannot buy from someone with no price;
+     Instagram second, because verified reach is what makes a brand choose them
+     once they already can. Null once both are done. */
+  const isGrowth = creatorRow?.vetting_status === 'growth'
 
   const allDeals = deals ?? []
   const rawInvoices = (invoices ?? []) as InvoiceRow[]
@@ -270,7 +280,14 @@ export default async function CreatorDashboardPage({
     hasShopfront: Boolean(storefront),
     hasShopfrontPublished: Boolean(storefront?.is_published),
     hasPayout,
+    isGrowth,
   })
+
+  /* Resolved once here so every slot on the page agrees about what a Growth
+     creator's next step is. */
+  const gCta = isGrowth
+    ? growthCta({ hasPackages: (packageCount ?? 0) > 0, hasInstagram: igConnection.status !== 'not_connected' })
+    : null
 
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
@@ -280,6 +297,7 @@ export default async function CreatorDashboardPage({
   const mobileEmpty = showMobileEmpty ? (
     <div className="creator-empty-mobile">
       <CreatorDashboardEmpty
+        growthCta={gCta}
         firstName={firstName}
         handleLine={emptyHandleLine}
         alert={alertNode}
@@ -526,7 +544,7 @@ export default async function CreatorDashboardPage({
         populated dashboard rendering with nothing in it. */}
     {showMobileEmpty && (
       <div className="creator-empty-desktop">
-        <CreatorDashboardEmptyDesktop alert={alertNode} tasks={tasksNode} />
+        <CreatorDashboardEmptyDesktop alert={alertNode} tasks={tasksNode} growthCta={gCta} />
       </div>
     )}
     {!showMobileEmpty && (
@@ -606,7 +624,10 @@ export default async function CreatorDashboardPage({
 
           {/* Action buttons */}
           <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 22 }}>
-            <Link href="/creator/storefront" className="ghost" style={ghostBtn}>
+            {/* "Edit your profile" lived in the storefront editor. For a Growth
+                creator that is the locked page, and their profile is in
+                settings — same button, the place it actually opens. */}
+            <Link href={isGrowth ? '/creator/settings?tab=profile' : '/creator/storefront'} className="ghost" style={ghostBtn}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
               Edit your profile
             </Link>
@@ -615,7 +636,13 @@ export default async function CreatorDashboardPage({
                 creator out of their dashboard with only the back button to
                 return, and the profile row linking to the same URL already
                 opened a tab. */}
-            {storefront?.is_published ? (
+            {isGrowth ? (
+              gCta ? (
+                <Link href={gCta.href} className="neonbtn" style={neonBtn}>{gCta.label}</Link>
+              ) : (
+                <span style={{ ...neonBtn, background: 'var(--sec-2)', color: 'var(--wg-600)', boxShadow: 'none', cursor: 'default' }}>{GROWTH_READY_LINE}</span>
+              )
+            ) : storefront?.is_published ? (
               <Link href={`/c/${storefront.slug}`} target="_blank" rel="noopener noreferrer" className="neonbtn" style={neonBtn}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9h18l-1.5 11a2 2 0 0 1-2 2H6.5a2 2 0 0 1-2-2Z" /><path d="M3 9l2.5-5h13L21 9" /><path d="M9 13a3 3 0 0 0 6 0" /></svg>
                 View your shopfront
@@ -884,7 +911,13 @@ export default async function CreatorDashboardPage({
               <p style={{ fontFamily: 'var(--font-ui)', fontSize: 15, lineHeight: 1.6, color: 'var(--wg-600)', margin: '16px 0 0', maxWidth: 400 }}>
                 One home for offers, contracts, content, and payments, so you can focus on making, not chasing.
               </p>
-              {storefront?.is_published ? (
+              {isGrowth ? (
+                gCta ? (
+                  <Link href={gCta.href} className="neonbtn" style={{ ...neonBtn, marginTop: 26 }}>{gCta.label}</Link>
+                ) : (
+                  <span style={{ ...neonBtn, marginTop: 26, background: 'var(--sec-2)', color: 'var(--wg-600)', boxShadow: 'none', cursor: 'default' }}>{GROWTH_READY_LINE}</span>
+                )
+              ) : storefront?.is_published ? (
                 <Link href={`/c/${storefront.slug}`} target="_blank" rel="noopener noreferrer" className="neonbtn" style={{ ...neonBtn, marginTop: 26 }}>
                   Share your shopfront
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>

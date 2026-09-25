@@ -14,7 +14,13 @@ import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
  * feature. The stat row stays because it tells you something ("nothing needs
  * you") rather than offering to do something impossible.
  */
-export default function CreatorDealsEmpty() {
+export default function CreatorDealsEmpty({ growthCta }: {
+  /* Growth creators have no shopfront, so this design's shopfront CTA points
+     at a locked page. Same slot, same prominence — only the label and the
+     destination swap. Null for a Deals creator, and for a Growth creator who
+     has finished setting up. */
+  growthCta?: { label: string; href: string } | null
+} = {}) {
   return (
     <>
       {/* Three-up counters. All zero here, which is the point: the row reads as
@@ -57,7 +63,7 @@ export default function CreatorDealsEmpty() {
         body="When a brand sends you an offer, it lands here, with the rate, timeline and revision count already agreed."
         action={
           <Link
-            href="/creator/storefront"
+            href={growthCta?.href ?? "/creator/storefront"}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -87,7 +93,7 @@ export default function CreatorDealsEmpty() {
               <path d="M3 21V9l9-6 9 6v12" />
               <path d="M9 21v-6h6v6" />
             </svg>
-            Set up your shopfront
+            {growthCta?.label ?? 'Set up your shopfront'}
           </Link>
         }
       />

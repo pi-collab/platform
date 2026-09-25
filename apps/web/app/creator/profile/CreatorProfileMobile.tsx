@@ -18,6 +18,8 @@ import ShopfrontLinkRow from './ShopfrontLinkRow'
  * added for the same reason.
  */
 export default function CreatorProfileMobile({
+  growthCta,
+  isGrowth,
   fullName,
   handle,
   dealsDone,
@@ -35,6 +37,9 @@ export default function CreatorProfileMobile({
   hasStorefront: boolean
   /** Slug of the published shopfront, when there is one. */
   shopfrontSlug?: string | null
+  /** A Growth creator's next real step, or null once there is none. */
+  growthCta?: { label: string; href: string } | null
+  isGrowth?: boolean
   instagramConnection: IgConnectionView
 }) {
   const initial = fullName.trim().charAt(0).toUpperCase() || '·'
@@ -117,7 +122,20 @@ export default function CreatorProfileMobile({
       {/* Shopfront. A prompt while there isn't one, the link itself once there
           is — sharing that link is the whole point of having built it, so it
           belongs here rather than one screen deeper. */}
-      {!hasStorefront ? (
+      {/* A Growth creator has no shopfront and cannot make one, so neither the
+          "set it up" row nor the link row applies. Their row carries whatever
+          their next real step is, and once there is none it becomes the locked
+          explanation rather than a button that goes nowhere. */}
+      {growthCta ? (
+        <Link href={growthCta.href} className="sr msurface" style={{ ...rowStyle, background: 'var(--neon)' }}>
+          <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: 'var(--lime-950)' }}>
+            {growthCta.label}
+          </span>
+          <Chevron color="var(--lime-950)" />
+        </Link>
+      ) : isGrowth ? (
+        <ShopfrontLinkRow slug={null} locked />
+      ) : !hasStorefront ? (
         <Link href="/creator/storefront" className="sr msurface" style={{ ...rowStyle, background: 'var(--neon)' }}>
           <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: 'var(--lime-950)' }}>
             Set up your shopfront

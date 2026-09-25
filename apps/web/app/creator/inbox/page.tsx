@@ -7,6 +7,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
+import { creatorGrowthState } from '@/lib/creator-growth-state'
 import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
 import { unreadNotificationCount } from '@/lib/unread'
@@ -16,7 +17,8 @@ export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
 export default async function CreatorInboxPage({ searchParams }: {
   searchParams: { deal?: string; from?: string }
 }) {
-  await verifyCreator()
+  const ctx = await verifyCreator()
+  const growth = await creatorGrowthState(ctx.creatorId)
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   // The users row, not the auth user: message_reads keys on users(id).
@@ -131,7 +133,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       {/* Desktop's own drawing. The phone version above is UNCHANGED, it is only
           gated by width now instead of rendering at all of them. */}
       <main className="creator-empty-desktop" style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorInboxEmptyDesktop />
+        <CreatorInboxEmptyDesktop growthCta={growth.cta} />
       </main>
       </>
     )

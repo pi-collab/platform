@@ -5789,3 +5789,58 @@ unpriced deliverables the creator had never listed, offered in his name.
 
 **The button trap**
 - [ ] The button suffix is optional and empty by default. Sending a value for a template whose URL button is STATIC is rejected outright (`Button at index 0 of type Url does not require parameters`) — this has already cost two `status_update` sends. The field says so
+
+---
+
+## 62. Growth creators: the full workflow, minus the storefront
+
+**Routing (the deferred blocker)**
+- [ ] `is_vetted` is true only for `deals_approved` (trigger, 0507), so a Growth creator fell into the not-vetted branch and was bounced to `/creator/growth` from EVERY route. The gate is now `isVetted || isGrowth`
+- [ ] A Growth creator reaches dashboard, deals, inbox, messages, packages, payments, settings, notifications and profile — all of it
+- [ ] Notifications load for them too (the count query was gated on `isVetted`)
+- [ ] Pending and rejected creators are unaffected: still `/signup/creator/complete` and the rejection screen
+- [ ] `/creator/growth` is still reachable, just not forced
+
+**Storefront: locked, not hidden**
+- [ ] `/creator/storefront` renders the locked screen for a Growth creator — "unlocks when you move to Deals" — and lists what they CAN do, with buttons to packages and Instagram
+- [ ] **Enforced server-side**, not just in the nav: typing the address reaches the locked screen, and none of the page's queries run
+- [ ] **`upsertStorefront` refuses Growth** with a clear message. A server action is a public endpoint; a hidden button prevents nothing
+- [ ] The sidebar keeps a Storefront pill with a padlock and a "Unlocks when you move to Deals" tooltip — removing it would tell a Growth creator nothing; a lock says there is something ahead
+- [ ] A Deals creator sees no lock and no behaviour change anywhere
+
+**The dynamic CTA (`lib/growth-cta.ts`)**
+- [ ] No packages → **"Set your packages"** → `/creator/packages`. This is the hard requirement: a brand cannot send an offer to someone with no price on anything
+- [ ] Has packages, no Instagram → **"Connect Instagram"** → `/creator/settings?tab=connected`. Credibility, not a gate
+- [ ] Both done → no CTA; the slot reads "You're ready — brands can book you"
+- [ ] A broken Instagram connection still counts as connected — reconnecting is the banner's job, and asking twice is what the task card exists to stop
+- [ ] Resolved ONCE in `creatorGrowthState` so five screens cannot disagree about whether a creator has packages
+
+**Every storefront CTA, swapped in place (same slot, same prominence)**
+- [ ] Creator dashboard, both desktop refs — the primary CTA
+- [ ] "Edit your profile" (ghost button) goes to settings for Growth, not the locked editor
+- [ ] `CreatorProfileMobile` — the full-width neon row
+- [ ] `CreatorDealsEmpty`, `CreatorDealsEmptyDesktop`
+- [ ] `CreatorInboxEmptyDesktop` — button AND the body copy that says "set up your shopfront so brands can find you"
+- [ ] `CreatorDashboardEmptyDesktop` — all three, including **"Share your shopfront"**, which is advice a Growth creator cannot take
+- [ ] `CreatorDashboardEmpty` — the Shopfront pill
+- [ ] `CreatorDealsTable` header — "Go to your shopfront"
+- [ ] Settings "View shopfront" pill is hidden for Growth
+- [ ] **Regression guard:** grep for `href="/creator/storefront"` under `app/creator` — every remaining one must sit in a branch a Growth creator cannot reach, not be unguarded
+
+**Tasks and the progress bar**
+- [ ] Both shopfront tasks (`shopfront`, `publish-shopfront`) are ABSENT for a Growth creator. Left in, the setup list could never complete: "Get started" would never become "Recommended" and the bar would never reach 100%
+- [ ] Their list is packages → Instagram → email → payout, **packages first**, matching the CTA's priority
+- [ ] A Growth creator who finishes all four sees 100% and the "Recommended" heading
+- [ ] A Deals creator's list is unchanged: instagram, email, packages, payout, shopfront, + the publish recommendation
+
+**Brand-facing (`/browse/[id]` — the only place a Growth creator is evaluated)**
+- [ ] Reads `getPublicSnapshot`, which keys off the CONNECTION not the storefront — so it works for a creator who has none
+- [ ] Verified followers, reach (30d) and interactions (30d) each carry the verified mark
+- [ ] Reach and interactions appear ONLY when connected — never a typed fallback, because a creator cannot type their reach and an invented figure here is worse than none
+- [ ] Follower count falls back to the typed value, unmarked
+- [ ] Packages render from `creator_products` with no storefront present
+- [ ] **The verified tick beside the name reads `is_bookable`, not `is_vetted`** — `is_vetted` is false for Growth, so every bookable Growth creator was silently shown as unvetted on the page brands judge them from
+
+**Smaller items**
+- [ ] `ShopfrontLinkRow` in locked mode reads "Unlocks when you move to Deals", not "Not published yet" — and drops its edit link, since there is no editor to return to
+- [ ] Ops creators list shows **"Growth"** in the Shopfront column instead of "-", so ops does not chase them for setup that is not theirs to do

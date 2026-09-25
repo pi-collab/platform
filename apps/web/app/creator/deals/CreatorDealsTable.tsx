@@ -27,7 +27,12 @@ function Mascot({ size = 56 }: { size?: number }) {
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 
-export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
+export default function CreatorDealsTable({ deals, growthCta }: {
+  deals: Deal[]
+  /** A Growth creator's next step, in place of this header's shopfront
+   *  button — which for them opens a locked page. */
+  growthCta?: { label: string; href: string } | null
+}) {
   const [filter, setFilter] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('priority')
@@ -156,7 +161,7 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
               Everything you have running with brands, newest first.
             </p>
           </div>
-          <Link href="/creator/storefront" style={{
+          <Link href={growthCta?.href ?? "/creator/storefront"} style={{
             flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 8,
             height: 46, padding: '0 22px', borderRadius: 999,
             background: '#FFFFFF', border: '1px solid var(--border-hairline, #EAEAE3)',
@@ -166,7 +171,7 @@ export default function CreatorDealsTable({ deals }: { deals: Deal[] }) {
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 9h18l-1.5-4.5A2 2 0 0 0 17.6 3H6.4a2 2 0 0 0-1.9 1.5L3 9z" /><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" /><path d="M9 21v-6h6v6" />
             </svg>
-            Go to your shopfront
+            {growthCta?.label ?? 'Go to your shopfront'}
           </Link>
         </div>
 

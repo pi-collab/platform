@@ -23,9 +23,13 @@ export default function CreatorDashboardEmpty({
   handleLine,
   alert,
   tasks,
+  growthCta,
 }: {
   firstName: string
   handleLine: string
+  /** Growth creators have no shopfront; this design's shopfront pill points at
+   *  a locked page. Same slot, label and destination swapped. */
+  growthCta?: { label: string; href: string } | null
   /** The fault banner, when something is wrong. Built by the route. */
   alert?: React.ReactNode
   /** "Get started" / "Recommended". Built by the route. */
@@ -41,7 +45,7 @@ export default function CreatorDashboardEmpty({
             <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '6px', whiteSpace: 'nowrap'}}>{handleLine}</div>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexShrink: '0'}}>
-            <Link href="/creator/storefront" aria-label="Shopfront" style={{display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 11px', borderRadius: '999px', border: '1px solid var(--line)', background: '#fff', flexShrink: '0'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', fontWeight: '700', color: 'var(--ink)'}}>Shopfront</span></Link>
+            <Link href={growthCta?.href ?? "/creator/storefront"} aria-label={growthCta?.label ?? "Shopfront"} style={{display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 11px', borderRadius: '999px', border: '1px solid var(--line)', background: '#fff', flexShrink: '0'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', fontWeight: '700', color: 'var(--ink)'}}>{growthCta?.label ?? 'Shopfront'}</span></Link>
             <Link href="/creator/notifications" aria-label="Notifications" style={{position: 'relative', width: '34px', height: '34px', flexShrink: '0', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', boxShadow: '0 6px 14px -10px rgba(40,45,25,.3)'}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></Link>
           </div>
         </div>

@@ -50,42 +50,74 @@ export interface CreatorTaskState {
   hasShopfront: boolean
   hasShopfrontPublished: boolean
   hasPayout: boolean
+  /** Growth creators have no public storefront, so the two shopfront rows are
+   *  not tasks they can complete — they are a progress bar that never fills. */
+  isGrowth?: boolean
 }
 
 export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
+  const instagram: CreatorTask = {
+    key: 'instagram',
+    kind: 'setup',
+    title: 'Connect Instagram',
+    // The old row said "connect your socials" and counted a typed handle. It
+    // promised analytics, which a string cannot give. This is the same
+    // promise, against the thing that keeps it.
+    subtitle: 'Show followers, reach and audience verified straight from Instagram',
+    href: '/creator/settings',
+    done: s.hasInstagram,
+    action: 'link',
+  }
+
+  const email: CreatorTask = {
+    key: 'email',
+    kind: 'setup',
+    title: 'Add your email',
+    subtitle: 'So we can reach you about offers and payments, not just on WhatsApp',
+    href: '/creator/settings?tab=profile',
+    done: s.hasEmail,
+    // Answered in place: this is one short field, and the nav hop to Settings
+    // is why the column sat empty for 16 of 19 creators.
+    action: 'email',
+  }
+
+  const packages: CreatorTask = {
+    key: 'packages',
+    kind: 'setup',
+    title: 'Set your packages',
+    subtitle: 'What you offer and what it costs, so brands can send a real brief',
+    href: '/creator/packages?from=dashboard',
+    done: s.hasPackages,
+    action: 'link',
+  }
+
+  const payout: CreatorTask = {
+    key: 'payout',
+    kind: 'setup',
+    title: 'Add a payment method',
+    subtitle: 'So we can pay you when a deal completes',
+    href: '/creator/payments?from=dashboard',
+    done: s.hasPayout,
+    action: 'link',
+  }
+
+  /* ── Growth: a shorter list, in a different order ────────────────────────
+     The two shopfront rows are gone, because a Growth creator cannot complete
+     them — the page is locked and the server action refuses. Left in, they
+     would hold the setup list permanently incomplete: "Get started" would
+     never become "Recommended" and the progress bar would never reach 100%.
+
+     PACKAGES leads. It is the hard requirement to be bookable — a brand cannot
+     send an offer to someone with no price on anything — so it outranks
+     Instagram, which is the credibility step that decides whether a brand
+     picks you once they already can. */
+  if (s.isGrowth) return [packages, instagram, email, payout]
+
   return [
-    {
-      key: 'instagram',
-      kind: 'setup',
-      title: 'Connect Instagram',
-      // The old row said "connect your socials" and counted a typed handle. It
-      // promised analytics, which a string cannot give. This is the same
-      // promise, against the thing that keeps it.
-      subtitle: 'Show followers, reach and audience verified straight from Instagram',
-      href: '/creator/settings',
-      done: s.hasInstagram,
-      action: 'link',
-    },
-    {
-      key: 'email',
-      kind: 'setup',
-      title: 'Add your email',
-      subtitle: 'So we can reach you about offers and payments, not just on WhatsApp',
-      href: '/creator/settings?tab=profile',
-      done: s.hasEmail,
-      // Answered in place: this is one short field, and the nav hop to Settings
-      // is why the column sat empty for 16 of 19 creators.
-      action: 'email',
-    },
-    {
-      key: 'packages',
-      kind: 'setup',
-      title: 'Set your packages',
-      subtitle: 'What you offer and what it costs, so brands can send a real brief',
-      href: '/creator/packages?from=dashboard',
-      done: s.hasPackages,
-      action: 'link',
-    },
+    instagram,
+    email,
+    packages,
+    payout,
     {
       key: 'shopfront',
       kind: 'setup',
@@ -93,15 +125,6 @@ export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
       subtitle: 'Give brands a page to buy from',
       href: '/creator/storefront',
       done: s.hasShopfront,
-      action: 'link',
-    },
-    {
-      key: 'payout',
-      kind: 'setup',
-      title: 'Add a payment method',
-      subtitle: 'So we can pay you when a deal completes',
-      href: '/creator/payments?from=dashboard',
-      done: s.hasPayout,
       action: 'link',
     },
     {

@@ -10,7 +10,13 @@ import { useState } from 'react'
  * — the reason a creator comes here is to paste the link into a DM or a bio —
  * so it gets the wider target and the arrow stays a plain link.
  */
-export default function ShopfrontLinkRow({ slug }: { slug: string | null }) {
+export default function ShopfrontLinkRow({ slug, locked = false }: {
+  slug: string | null
+  /** Growth creators have no shopfront at all. "Not published yet" would
+   *  describe a page they are about to publish; there is no such page, and the
+   *  row should say what is actually true. */
+  locked?: boolean
+}) {
   const [copied, setCopied] = useState(false)
 
   // Built from the browser's own origin rather than a hardcoded domain, so the
@@ -54,7 +60,7 @@ export default function ShopfrontLinkRow({ slug }: { slug: string | null }) {
               whiteSpace: 'nowrap',
             }}
           >
-            {slug ? `/c/${slug}` : 'Not published yet'}
+            {slug ? `/c/${slug}` : locked ? 'Unlocks when you move to Deals' : 'Not published yet'}
           </div>
         </div>
 
@@ -148,8 +154,9 @@ export default function ShopfrontLinkRow({ slug }: { slug: string | null }) {
         )}
 
         {/* No slug means a draft: nothing to copy or open, so the row becomes a
-            way back into the editor instead. */}
-        {!slug && (
+            way back into the editor instead. Locked means there is no editor
+            to go back to, so the row is just the explanation. */}
+        {!slug && !locked && (
           <Link
             href="/creator/storefront"
             style={{
