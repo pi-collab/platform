@@ -35,7 +35,12 @@ import { IG_BROKEN_STATUSES, type IgStatus } from '@/lib/ig-connection-status'
  * Returns null unless something is actually wrong, so the caller renders it
  * unconditionally and does not have to ask the question twice.
  */
-export default function InstagramReconnectBanner({ status }: { status: IgStatus }) {
+export default function InstagramReconnectBanner({ status, isGrowth = false }: {
+  status: IgStatus
+  /** Growth creators have no shopfront, so the consequence of a broken
+   *  connection has to be named as something they actually have. */
+  isGrowth?: boolean
+}) {
   if (!IG_BROKEN_STATUSES.includes(status)) return null
 
   // Two different instructions, because reconnecting a Personal account
@@ -44,9 +49,16 @@ export default function InstagramReconnectBanner({ status }: { status: IgStatus 
   const personal = status === 'personal_account'
 
   const title = personal ? 'Instagram is set to a Personal account' : 'Instagram needs reconnecting'
+
+  /* WHERE the stale numbers show. A Growth creator has no shopfront, so naming
+     one told them the consequence lands somewhere they do not have — which
+     reads as a bug in our copy and, worse, as a reason not to bother
+     reconnecting. What they do have is a profile brands look at. */
+  const surface = isGrowth ? 'brands see the numbers you entered yourself' : 'your shopfront shows the numbers you entered yourself'
+
   const body = personal
-    ? 'Instagram only shares audience data from Business and Creator accounts, so your verified stats have stopped updating. Switch it back in Instagram, then reconnect.'
-    : 'Your verified stats have stopped updating. Until you reconnect, your shopfront shows the numbers you entered yourself.'
+    ? `Instagram only shares audience data from Business and Creator accounts, so your verified stats have stopped updating. Switch it back in Instagram, then reconnect.`
+    : `Your verified stats have stopped updating. Until you reconnect, ${surface}.`
 
   return (
     <section

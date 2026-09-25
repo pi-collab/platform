@@ -291,7 +291,7 @@ export default async function CreatorDashboardPage({
 
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
-  const alertNode = <InstagramReconnectBanner status={igConnection.status} />
+  const alertNode = <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
   const tasksNode = <CreatorTaskCard tasks={tasks} />
 
   const mobileEmpty = showMobileEmpty ? (
@@ -549,6 +549,8 @@ export default async function CreatorDashboardPage({
     )}
     {!showMobileEmpty && (
       <CreatorDashboardMobile
+        isGrowth={isGrowth}
+        growthCta={gCta}
         firstName={firstName}
         handleLine={emptyHandleLine}
         followersLabel={followersLabel}

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import TrackTag from '@/components/track/TrackTag'
 import BrandMark from '@/components/BrandMark'
 import { useRouter } from 'next/navigation'
 
@@ -84,7 +85,7 @@ function Heading({ children }: { children: React.ReactNode }) {
 }
 
 export default function CreatorDashboardMobile({
-  firstName, handleLine, followersLabel, shopfrontSlug, period,
+  firstName, handleLine, followersLabel, shopfrontSlug, period, isGrowth = false, growthCta = null,
   totalEarnedPaise, dealCount, pendingPaise, activeCount, completedCount,
   paidCount, actions, motion, monthly, earnings, brands, reach, completedEver, track,
   changePct, unreadNotifications = 0, alert, tasks,
@@ -93,6 +94,10 @@ export default function CreatorDashboardMobile({
   handleLine: string
   followersLabel: string | null
   shopfrontSlug: string | null
+  /** Growth creators have no shopfront; this slot carries their next step,
+   *  then the track tag once there is no step left. */
+  isGrowth?: boolean
+  growthCta?: { label: string; href: string } | null
   period: string
   totalEarnedPaise: number
   dealCount: number
@@ -138,7 +143,22 @@ export default function CreatorDashboardMobile({
           </h1>
         </div>
         <div className="cdash-m__headactions">
-          {shopfrontSlug && (
+          {/* ── The slot a Growth creator gets instead of Shopfront ────────
+              While they still have setup to do it carries that step, because
+              the top of the dashboard is the one place they are guaranteed to
+              look. Once packages and Instagram are both done there is nothing
+              to ask for, so it becomes the Growth tag: a statement of which
+              track they are on rather than an empty corner. */}
+          {isGrowth ? (
+            growthCta ? (
+              <Link href={growthCta.href} className="cdash-m__pill">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                {growthCta.label}
+              </Link>
+            ) : (
+              <TrackTag track="growth" />
+            )
+          ) : shopfrontSlug && (
             <a href={`/c/${shopfrontSlug}`} target="_blank" rel="noopener noreferrer" className="cdash-m__pill">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
               Shopfront

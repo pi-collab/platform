@@ -5894,3 +5894,14 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The mobile dashboard header's "Shopfront" pill is absent for a Growth creator even when a published slug exists. It rendered because `shopfrontSlug` was passed whenever the slug was published, and it was the last visible storefront entry after the nav was hidden
 - [ ] Same on the mobile profile: the slug is withheld on track, not on publication state
 - [ ] **Still open:** `/c/<slug>` remains publicly live for such a creator. Hiding the entries does not take the page down
+
+**The mobile header slot, for a Growth creator**
+- [ ] Where a Deals creator sees a "Shopfront" pill, a Growth creator sees their NEXT STEP while they have one — "Set your packages", then "Connect Instagram" — because the top of the dashboard is the one place they are guaranteed to look
+- [ ] Once packages and Instagram are both done there is nothing left to ask, so the slot becomes the **Growth track tag** rather than an empty corner
+- [ ] Uses the same `TrackTag` as every other surface, so Growth looks like Growth everywhere
+- [ ] A Deals creator's slot is unchanged
+
+**Instagram reconnect banner names a surface the creator actually has**
+- [ ] For a Deals creator: "…your shopfront shows the numbers you entered yourself"
+- [ ] For a Growth creator: "…brands see the numbers you entered yourself". Naming a shopfront they do not have read as a bug in our copy, and gave them a reason not to bother reconnecting
+- [ ] The Personal-account variant is unchanged — its instruction is about Instagram's settings, not about where the numbers land
