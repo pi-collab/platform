@@ -132,6 +132,7 @@ const COLLAPSE_KEY = 'guapd.creatorTasks.collapsed'
 
 function Row({ task, first, onSaved }: { task: CreatorTask; first: boolean; onSaved: () => void }) {
   const border = first ? undefined : '1px solid var(--hair, rgba(24,28,36,.08))'
+  const [emailOpen, setEmailOpen] = useState(false)
 
   const inner = (
     <>
@@ -153,14 +154,39 @@ function Row({ task, first, onSaved }: { task: CreatorTask; first: boolean; onSa
     </>
   )
 
-  // The email task answers itself. Everything else is a link, because the work
-  // is on another screen and pretending otherwise would be a worse lie than a
-  // nav hop.
+  /* The email task answers itself rather than sending them to Settings for one
+     field. But the input CANNOT share the row with the text: at 180px plus a
+     Save button it left about 80px for the title on a phone, so "Add your
+     email" came out one word per line and its subtitle broke mid-word.
+
+     So the row looks exactly like every other row — icon, text, pill — and the
+     field appears BENEATH it, full width, when the pill is pressed. */
   if (task.action === 'email' && !task.done) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderTop: border, flexWrap: 'wrap' }}>
-        {inner}
-        <EmailField onSaved={onSaved} />
+      <div style={{ padding: '14px 0', borderTop: border }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {inner}
+          <button
+            type="button"
+            onClick={() => setEmailOpen((v) => !v)}
+            aria-expanded={emailOpen}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              minWidth: 92, borderRadius: 999, padding: '9px 16px', flexShrink: 0,
+              fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+              border: 'none', cursor: 'pointer',
+              color: emailOpen ? 'var(--ink, #181C24)' : '#fff',
+              background: emailOpen ? 'rgba(24,28,36,.06)' : 'var(--ink, #181C24)',
+            }}
+          >
+            {emailOpen ? 'Cancel' : 'Set up'}
+          </button>
+        </div>
+        {emailOpen && (
+          <div style={{ marginTop: 12 }}>
+            <EmailField onSaved={onSaved} />
+          </div>
+        )}
       </div>
     )
   }
@@ -220,7 +246,7 @@ function EmailField({ onSaved }: { onSaved: () => void }) {
   }
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
       <input
         type="email"
         inputMode="email"
@@ -231,7 +257,9 @@ function EmailField({ onSaved }: { onSaved: () => void }) {
         placeholder="you@email.com"
         aria-label="Your email address"
         style={{
-          minWidth: 180, padding: '8px 10px', borderRadius: 8, fontSize: 13,
+          /* flex:1 with minWidth:0, so it uses the row it now has to itself
+             instead of forcing a fixed 180px against the text. */
+          flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: 10, fontSize: 14,
           border: error ? '1px solid #D2545A' : '1px solid rgba(24,28,36,.18)',
           background: '#fff', color: 'var(--ink, #181C24)',
         }}

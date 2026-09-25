@@ -32,7 +32,15 @@ export default function ConnectedRow({ connection }: { connection: IgConnectionV
       ? { label: 'Personal account', tone: 'warn' as const, action: 'Fix' }
       : s === 'expired' || s === 'needs_reconnect'
         ? { label: 'Needs reconnecting', tone: 'warn' as const, action: 'Reconnect' }
-        : { label: 'Show verified numbers on your shopfront', tone: 'off' as const, action: 'Connect' }
+        /* "Not connected", not "Show verified numbers on your shopfront".
+           That was an instruction on a row whose own rule two comments up is
+           that the state says ONE thing — and it broke the same way the fault
+           states did, truncating to "Show verified numbers on your …". It also
+           named a shopfront, which a Growth creator does not have.
+
+           The instruction it was carrying is already on this row: the action
+           beside it says Connect. */
+        : { label: 'Not connected', tone: 'off' as const, action: 'Connect' }
 
   const dot = state.tone === 'ok' ? 'var(--neon-deep, #C9EB3C)'
     : state.tone === 'warn' ? '#D89A2E'

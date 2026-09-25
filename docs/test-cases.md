@@ -5917,3 +5917,15 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The shine is the storefront hero's **comet** (`.sf-comet`): a short bright streak with a glowing head on `offset-path: border-box`, riding the pill's edge. Scaled for a 26px pill, ~3.2s a lap
 - [ ] **There is deliberately NO `prefers-reduced-motion` rule on this tag.** It was twice reported as missing while present and correct in the build, because that rule was switching it off on the device it was being checked on. It is a small streak on a 26px pill, not a full-screen parallax
 - [ ] **Do NOT rewrite this as an animated `@property` angle.** The CSS minifier strips `@property` from the build (verified: zero occurrences in `.next/static/css`), so the custom property does not resolve, the gradient becomes invalid, and the shine disappears entirely rather than degrading
+
+**The "Add your email" task row (mobile)**
+- [ ] The row looks like every other task row: icon, title, subtitle, pill. **The input is NOT on that line**
+- [ ] Pressing "Set up" reveals the field BENEATH the row, full width; the pill becomes "Cancel"
+- [ ] **Regression guard:** the field used to sit inline at a fixed 180px plus a Save button, which left ~80px for the text on a phone — "Add your email" wrapped to one word per line and the subtitle broke mid-word. Never put a fixed-width control on that row
+- [ ] Saving still shows "Saved" before the refresh re-runs the server component and ticks the task
+- [ ] An invalid address shows its error under the field without collapsing the row
+
+**Connected accounts row on the profile**
+- [ ] Not connected reads **"Not connected"** — a status, matching the row's own rule that the state says one thing
+- [ ] **Regression guard:** it read "Show verified numbers on your shopfront", which truncated to "…on your …" on a phone AND named a shopfront a Growth creator does not have. The instruction it carried is already there — the action beside it says "Connect"
+- [ ] Connected / Personal account / Needs reconnecting are unchanged and still fit on one line
