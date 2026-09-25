@@ -4959,68 +4959,85 @@ button.signup-form__cross-link {
    tell two kinds of creator apart in a mixed list, and on your own profile
    there is nothing to tell apart.
 
-   ── Why this is not the storefront's comet ────────────────────────────────
-   The hero's .sf-comet is a straight 34px streak on offset-path: border-box.
-   On a 300px card that is fine — the streak is short against a long edge. On a
-   26px pill the same trick puts a straight bar across a tight corner radius,
-   so it leaves the edge on every turn and, with the glow that makes it read as
-   a comet, floats as a diffuse dot rather than following the outline.
+   ── Why a spinning square and not an animated angle ───────────────────────
+   The obvious version animates `from <angle>` in the conic gradient through a
+   registered @property. It is fewer elements and it is what the previous cut
+   did — but if that custom property fails to resolve as an angle for any
+   reason (an older engine, a minifier that drops the @property block), the
+   whole gradient becomes invalid and the shine does not degrade, it simply
+   disappears. Which is what happened.
 
-   This is a bright ARC in the ring itself: one conic gradient, masked to the
-   same 2px border as the edge below it, with its angle animated. It cannot
-   leave the circumference, because it IS the circumference. */
-@property --tier-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
+   This rotates a plain square with `transform`, clipped to the ring by the
+   wrapper's mask. Nothing here can fail to parse: the worst case is a
+   stationary arc, not a missing one.
 
+   ── Why not the storefront's comet ────────────────────────────────────────
+   .sf-comet is a straight 34px streak on offset-path: border-box. Fine on a
+   300px card; on a 26px pill the bar cuts every corner radius and its glow
+   reads as a dot floating near the edge rather than running along it. */
 .tier-tag { position: relative; }
 
 /* The resting edge: the storefront hero's ring, a 2px lime fill masked so only
    the border shows. A plain `border` cannot sit at partial opacity without
    tinting the white fill behind it. */
-.tier-tag::before,
-.tier-tag::after {
+.tier-tag::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 999px;
   padding: 2px;
   pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(rgba(232,255,102,.6), rgba(232,255,102,.6));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
 
-.tier-tag::before {
-  background: linear-gradient(rgba(232,255,102,.6), rgba(232,255,102,.6));
-  z-index: 2;
+/* Same ring, used as a window: masked to the 2px border AND clipping, so the
+   square spinning inside it is only ever visible along the circumference. */
+.tier-tag__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  padding: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
 }
 
-/* The travelling arc, over the resting edge. ~70deg of full-strength green
-   fading out behind it, so it reads as a length of the ring lighting up rather
-   than a point with a tail. */
-.tier-tag::after {
+/* Comfortably larger than the pill in both directions, so the gradient's
+   centre sits at the pill's centre and its edges never enter the frame. */
+.tier-tag__ring::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260px;
+  height: 260px;
+  margin: -130px 0 0 -130px;
+  /* ~70° lit, fading out behind, so it reads as a length of the ring lighting
+     up rather than a point with a tail. */
   background: conic-gradient(
-    from var(--tier-angle),
-    rgba(232,255,102,0) 0deg,
-    rgba(232,255,102,0) 290deg,
+    rgba(232,255,102,0) 0deg 290deg,
     rgba(232,255,102,.55) 325deg,
     #E8FF66 352deg,
     rgba(232,255,102,0) 360deg
   );
-  z-index: 3;
-  animation: tier-tag-sweep 3.6s linear infinite;
+  animation: tier-tag-spin 3.6s linear infinite;
 }
 
-@keyframes tier-tag-sweep { to { --tier-angle: 360deg; } }
+@keyframes tier-tag-spin { to { transform: rotate(1turn); } }
 
 /* Matches the storefront's own rule: a badge that never stops moving is the
    kind of motion people turn off. The resting ring stays — it is not motion. */
 @media (prefers-reduced-motion: reduce) {
-  .tier-tag::after { display: none !important; }
+  .tier-tag__ring { display: none !important; }
 }
 
 /* ── Brand campaigns row ── */
