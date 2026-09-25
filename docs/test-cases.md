@@ -5914,6 +5914,9 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The dashboard slot shows "Set your packages" or NOTHING. **It must not fall back to a shopfront CTA**
 - [ ] White fill, ink text, NOT the indigo `TrackTag`. That palette exists so a brand can tell two kinds of creator apart in a mixed list; on your own profile there is nothing to tell apart, and a coloured badge on your own name reads as a label someone put on you
 - [ ] The **border is the storefront hero's ring** — a 2px lime fill masked to the edge (`.sf-hero-border`), not a CSS `border`, which cannot sit at partial opacity without tinting the fill behind it
-- [ ] The **comet is the storefront hero's comet** (`.sf-comet`): same `offset-path: border-box` streak with the lime glow and bright head, so it traces the pill's curve exactly. Both are reused rather than reinvented — one green edge and one shine in the product, not two of each drifting apart
-- [ ] Comet sits ABOVE the ring (z-index 4 over 2), as the storefront orders its own
-- [ ] Under `prefers-reduced-motion` the comet is hidden and the ring stays — a ring is not motion
+- [ ] The shine is a bright **arc travelling in the ring itself** — one conic gradient masked to the same 2px border, with its angle animated via `@property --tier-angle`. It cannot leave the circumference because it IS the circumference
+- [ ] **NOT the storefront's `.sf-comet`.** That is a straight 34px streak on `offset-path: border-box`: fine on a 300px card, wrong on a 26px pill, where a straight bar cuts every corner radius and its glow reads as a diffuse dot floating near the edge rather than running along it
+- [ ] The lit arc spans roughly 70°, fading out behind, so it reads as a length of the ring lighting up rather than a point with a tail
+- [ ] The travelling arc sits above the resting ring (z-index 3 over 2)
+- [ ] Under `prefers-reduced-motion` the arc is hidden and the resting ring stays — a ring is not motion
+- [ ] `@property` is already relied on elsewhere (`--sfang` in the storefront), so this adds no new browser requirement

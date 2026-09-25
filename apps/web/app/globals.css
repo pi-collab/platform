@@ -4959,73 +4959,69 @@ button.signup-form__cross-link {
    tell two kinds of creator apart in a mixed list, and on your own profile
    there is nothing to tell apart.
 
-   Border and comet are both lifted from the storefront hero (.sf-hero-border
-   and .sf-comet in shopfront-mobile.css) rather than reinvented, so the
-   product has one shine and one green edge instead of two of each drifting
-   apart. */
+   ── Why this is not the storefront's comet ────────────────────────────────
+   The hero's .sf-comet is a straight 34px streak on offset-path: border-box.
+   On a 300px card that is fine — the streak is short against a long edge. On a
+   26px pill the same trick puts a straight bar across a tight corner radius,
+   so it leaves the edge on every turn and, with the glow that makes it read as
+   a comet, floats as a diffuse dot rather than following the outline.
+
+   This is a bright ARC in the ring itself: one conic gradient, masked to the
+   same 2px border as the edge below it, with its angle animated. It cannot
+   leave the circumference, because it IS the circumference. */
+@property --tier-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 .tier-tag { position: relative; }
 
-/* The storefront hero's ring, exactly: a 2px lime fill masked to the border so
-   only the edge shows. A plain `border` cannot do this at partial opacity
-   without tinting the fill behind it. */
-.tier-tag::before {
+/* The resting edge: the storefront hero's ring, a 2px lime fill masked so only
+   the border shows. A plain `border` cannot sit at partial opacity without
+   tinting the white fill behind it. */
+.tier-tag::before,
+.tier-tag::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 999px;
   padding: 2px;
-  background: linear-gradient(rgba(232,255,102,.6), rgba(232,255,102,.6));
+  pointer-events: none;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  pointer-events: none;
+}
+
+.tier-tag::before {
+  background: linear-gradient(rgba(232,255,102,.6), rgba(232,255,102,.6));
   z-index: 2;
 }
 
-.tier-tag__comet {
-  position: absolute;
-  top: 0;
-  left: 0;
-  /* Smaller than the storefront hero's 34px streak, and smaller again than the
-     20px first cut: this pill's edge is a short lap, and a long comet on it
-     reads as a moving arc rather than a point of light. */
-  width: 12px;
-  height: 1.5px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(232,255,102,.35) 30%, rgba(232,255,102,.75) 64%, rgba(232,255,102,1) 100%);
-  offset-path: border-box;
-  offset-distance: 0%;
-  offset-rotate: auto;
-  offset-anchor: 100% 50%;
-  animation: tier-tag-orbit 3.6s linear infinite;
-  pointer-events: none;
-  /* Above the ring, as the storefront orders its own two. */
-  z-index: 4;
-  filter: drop-shadow(0 0 1.5px rgba(232,255,102,.9)) drop-shadow(0 0 4px rgba(200,235,60,.5));
+/* The travelling arc, over the resting edge. ~70deg of full-strength green
+   fading out behind it, so it reads as a length of the ring lighting up rather
+   than a point with a tail. */
+.tier-tag::after {
+  background: conic-gradient(
+    from var(--tier-angle),
+    rgba(232,255,102,0) 0deg,
+    rgba(232,255,102,0) 290deg,
+    rgba(232,255,102,.55) 325deg,
+    #E8FF66 352deg,
+    rgba(232,255,102,0) 360deg
+  );
+  z-index: 3;
+  animation: tier-tag-sweep 3.6s linear infinite;
 }
-/* The bright head, so the streak reads as something travelling rather than a
-   gradient that happens to be brighter at one end. */
-.tier-tag__comet::after {
-  content: '';
-  position: absolute;
-  right: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--neon, #E8FF66);
-  box-shadow: 0 0 4px 1.5px rgba(232,255,102,.95), 0 0 8px 3px rgba(200,235,60,.45);
-}
+
+@keyframes tier-tag-sweep { to { --tier-angle: 360deg; } }
 
 /* Matches the storefront's own rule: a badge that never stops moving is the
-   kind of motion people turn off. The ring stays — it is not motion. */
+   kind of motion people turn off. The resting ring stays — it is not motion. */
 @media (prefers-reduced-motion: reduce) {
-  .tier-tag__comet { display: none !important; }
+  .tier-tag::after { display: none !important; }
 }
-
-@keyframes tier-tag-orbit { to { offset-distance: 100%; } }
 
 /* ── Brand campaigns row ── */
 /* Three columns on desktop, one on a phone. The middle column is avatars and

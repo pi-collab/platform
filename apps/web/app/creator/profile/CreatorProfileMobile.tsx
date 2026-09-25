@@ -122,7 +122,7 @@ export default function CreatorProfileMobile({
             Here rather than on the dashboard: this card is who they are, the
             dashboard header is what to do next.
 
-            The ring and the comet come from the storefront hero. Deliberately
+            The green edge comes from the storefront hero. Deliberately
             NOT the indigo TrackTag used on brand-facing lists — that palette
             lets a brand tell two kinds of creator apart at a glance in a mixed
             list, and on your own profile there is nothing to tell apart. */}
@@ -137,7 +137,6 @@ export default function CreatorProfileMobile({
             letterSpacing: '.02em', whiteSpace: 'nowrap' as const,
           }}>
             {isGrowth ? 'Guapd Growth' : 'Guapd Deals'}
-            <span className="tier-tag__comet" aria-hidden="true" />
           </span>
         </div>
 
