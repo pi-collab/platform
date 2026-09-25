@@ -5753,3 +5753,39 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] `creators.social_accounts[].handle` and `.url` — edited on the same ops form, but they are separate fields and both need updating
 - [ ] `creator_storefronts.platform_links` — creator-owned content; ops does not rewrite it
 - [ ] `creator_storefronts.slug` — deliberately NOT derived from the handle and NOT changed, since a slug that has been shared is a link that would break
+
+---
+
+## 61. WhatsApp broadcast to creators (`/ops/broadcast`)
+
+**Why it exists**
+- [ ] `sendWhatsAppTemplate` was only ever reached by transactional code — one creator, one event. There was no path to tell the roster anything, and the MSG91 key is a production secret marked sensitive in Vercel, so a one-off script means copying it onto a laptop. This runs where the key already lives
+
+**Access**
+- [ ] Admin only (`verifyOpsAccess`), shown beside Access on the ops home — a broadcast reaches real creators on the channel they read and spends the WhatsApp number's standing with Meta
+- [ ] A non-admin hitting `/ops/broadcast` directly is redirected
+
+**Preview before send — the whole point**
+- [ ] Preview is read-only and names every recipient, with the first name that will fill variable 1 shown beside them
+- [ ] It ALSO lists who is skipped and why: no phone, turned WhatsApp off, already sent this campaign. A broadcast that silently drops people is how "I messaged everyone" becomes untrue
+- [ ] Send is disabled until the exact recipient count is typed back. Not a checkbox — a checkbox beside a button that messages the whole roster is one mis-click
+- [ ] Over the 60 per-send cap, send is refused and the preview says so
+
+**Recipient rules**
+- [ ] Number selection and opt-out are NOT reimplemented — they come from `creatorWhatsAppContact`, the same helper the transactional sends use. A nominated WhatsApp number beats the login phone, and `notify_whatsapp === false` means do not send. A broadcast honouring different rules from a deal notification is how someone who opted out still hears from us
+- [ ] A creator with no name on file gets "there", never an empty variable — MSG91 rejects a blank body parameter, which would fail the send rather than send something slightly plain
+- [ ] Audience `deals` = `vetting_status = 'deals_approved'`; `growth` = `'growth'`; `all_vetted` = both
+- [ ] **The send re-resolves the audience server-side rather than trusting a list posted from the browser.** The preview is a view; the send is the decision
+
+**Idempotency — re-running must be safe**
+- [ ] Every send writes a per-recipient `events` row IMMEDIATELY, not batched at the end. A run that times out mid-way has already messaged people, and the next run reads these rows to know not to message them twice
+- [ ] Re-running with the same campaign id sends to nobody who already received it, and says so
+- [ ] Changing the campaign id deliberately re-sends — that is the escape hatch, and it should take a conscious act
+
+**Audit**
+- [ ] `broadcast.whatsapp_started` is written BEFORE the first send, with who, which template, which audience and how many. A run that dies halfway still leaves a record that it started
+- [ ] `broadcast.whatsapp_finished` records sent/failed counts and the failures
+- [ ] Phone numbers are masked in `events`; ops_events carries counts and names, not a list of everyone's number
+
+**The button trap**
+- [ ] The button suffix is optional and empty by default. Sending a value for a template whose URL button is STATIC is rejected outright (`Button at index 0 of type Url does not require parameters`) — this has already cost two `status_update` sends. The field says so

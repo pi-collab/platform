@@ -48,6 +48,13 @@ export default async function OpsIndex() {
               <strong>Access</strong>
               <span style={sub}>Manage ops console users</span>
             </Link>
+            {/* Admin only, alongside Access: a broadcast reaches real creators
+                on the channel they read and spends the WhatsApp number's
+                standing with Meta. Same class of action as vetting. */}
+            <Link href="/ops/broadcast" style={cardStyle}>
+              <strong>Broadcast</strong>
+              <span style={sub}>WhatsApp an approved template to creators</span>
+            </Link>
           </>
         )}
         <Link href="/ops/pipeline" style={cardStyle}>
