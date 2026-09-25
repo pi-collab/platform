@@ -183,9 +183,26 @@ interface UpsertInput {
   is_published?: boolean
 }
 
+/**
+ * A Growth creator has no storefront, and must not be able to create one by
+ * calling the action directly. The page renders a locked screen; this is what
+ * makes the lock real — a server action is a public endpoint, and a UI that
+ * hides a button has not prevented anything.
+ */
+async function refuseIfGrowth(creatorId: string): Promise<string | null> {
+  const { data } = await createClient()
+    .from('creators').select('vetting_status').eq('id', creatorId).maybeSingle()
+  return data?.vetting_status === 'growth'
+    ? 'Your storefront unlocks when you move to the Deals track.'
+    : null
+}
+
 export async function upsertStorefront(input: UpsertInput) {
   const ctx = await verifyCreator()
   const supabase = createClient()
+
+  const growthRefusal = await refuseIfGrowth(ctx.creatorId)
+  if (growthRefusal) return { error: growthRefusal }
 
   // Validate slug
   const slug = input.slug.toLowerCase().trim()

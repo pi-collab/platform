@@ -121,7 +121,7 @@ function InboxIcon() {
   )
 }
 
-export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, unreadCount: initialUnread = 0, recentNotifications = [], notifBrandMap = {}, unreadInbox = 0 }: { creatorName: string; creatorPhoto?: string | null; userEmail?: string | null; unreadCount?: number; recentNotifications?: NotifItem[]; notifBrandMap?: NotifBrandMap; unreadInbox?: number }) {
+export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, unreadCount: initialUnread = 0, recentNotifications = [], notifBrandMap = {}, unreadInbox = 0, storefrontLocked = false }: { creatorName: string; creatorPhoto?: string | null; userEmail?: string | null; unreadCount?: number; recentNotifications?: NotifItem[]; notifBrandMap?: NotifBrandMap; unreadInbox?: number; /** Growth creators have no public storefront. The link stays, marked with a lock, so it reads as something ahead of them rather than something missing. */ storefrontLocked?: boolean }) {
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -175,10 +175,20 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
           <div style={navPillsWrap}>
             {NAV_PILLS.map((link) => {
               const active = isActive(link.href)
+              /* Still a link, still reachable — the page itself explains the
+                 lock. Removing it would tell a Growth creator nothing; a
+                 padlock tells them there is a thing here they do not have
+                 yet, which is the truth and the nudge. */
+              const locked = storefrontLocked && link.icon === 'storefront'
               return (
-                <Link key={link.href} href={link.href} style={active ? navPillActive : navPillInactive}>
+                <Link key={link.href} href={link.href} style={active ? navPillActive : navPillInactive} title={locked ? 'Unlocks when you move to Deals' : undefined}>
                   <NavIcon icon={link.icon} active={active} />
                   {link.label}
+                  {locked && (
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55, marginLeft: 1 }} aria-label="Locked">
+                      <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                    </svg>
+                  )}
                 </Link>
               )
             })}

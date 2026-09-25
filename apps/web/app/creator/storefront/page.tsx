@@ -4,11 +4,22 @@ import { createClient } from '@/lib/supabase/server'
 import { getConnection } from '@/lib/instagram-sync'
 import { getMyStorefront } from './actions'
 import StorefrontManager from './StorefrontManager'
+import StorefrontLocked from './StorefrontLocked'
 
 export const metadata: Metadata = { title: 'My Storefront · Guapd Creator' }
 
 export default async function StorefrontPage() {
   const ctx = await verifyCreator()
+
+  /* Growth creators have no public storefront. Checked HERE, on the server,
+     and not only in the nav: a hidden link is a suggestion, and this page is
+     reachable by typing its address. Returning early also means none of the
+     queries below run for someone who cannot use their results. */
+  const supabaseGate = createClient()
+  const { data: gate } = await supabaseGate
+    .from('creators').select('vetting_status').eq('id', ctx.creatorId).maybeSingle()
+  if (gate?.vetting_status === 'growth') return <StorefrontLocked />
+
   const storefront = await getMyStorefront()
 
   // Fetch creator data for the preview

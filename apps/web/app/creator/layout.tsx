@@ -44,6 +44,20 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     vettingStatus = (creator?.vetting_status as string | undefined) ?? 'pending'
   }
 
+  /* ── Growth creators are IN the app ──────────────────────────────────────
+     is_vetted is true only for 'deals_approved' (the trigger in 0507), so a
+     Growth creator fell into the not-vetted branch below and was redirected to
+     /creator/growth from every route — settings, packages, deals, the lot.
+     That was right when Growth had no workflow behind it and wrong the moment
+     it did: a Growth creator takes real deals, uploads real deliverables and
+     gets paid, and needed the same app to do it in.
+
+     They differ in ONE thing: no public storefront. That is enforced at
+     /creator/storefront itself, not here, so this gate stays about whether
+     someone is in the product at all. */
+  const isGrowth = vettingStatus === 'growth'
+  const hasAppAccess = isVetted || isGrowth
+
   // No name means they verified a phone and never finished the profile step.
   // This used to send them to the marketing home page, which is the worst
   // possible answer: they are half-registered, nothing says so, and there is no
@@ -57,7 +71,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   let recentNotifications: { id: string; deal_id: string | null; type: string; body: string; read_at: string | null; created_at: string }[] = []
   let notifBrandMap: Record<string, { name: string; photo: string | null }> = {}
 
-  if (profile && isVetted) {
+  if (profile && hasAppAccess) {
     const [{ count }, { data: recentNotifs }] = await Promise.all([
       supabase
         .from('notifications')
@@ -109,28 +123,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   // second under-review message here: that page is the designed one, and it
   // also carries the notification preferences, which are the whole reason a
   // waiting creator would want to be on it.
-  if (!isVetted) {
-    /* Growth is a THIRD outcome, not a soft rejection, and it is checked before
-       the rejection branch so a Growth creator never meets the appeal box —
-       appealing a decision that was not a rejection only junks the queue. */
-    if (vettingStatus === 'growth') {
-      /* The Growth page lives UNDER this layout, so redirecting to it
-         unconditionally sent it straight back here — the page redirected to
-         itself and never rendered. On that path we hand the page through
-         instead.
-
-         Rendered BARE, like the rejection screen: a Growth creator is not in
-         the Deals flow, and a sidebar offering Deals, Payments and Storefront
-         would be three links that bounce them back to this same page. */
-      /* Nullable: the header is set by middleware, and a request that somehow
-         arrives without it must not be treated as "already on the page" — that
-         would render Growth over any creator route. Missing means redirect. */
-      if ((currentPath() ?? '').startsWith('/creator/growth')) {
-        return <>{children}</>
-      }
-      redirect('/creator/growth')
-    }
-
+  if (!hasAppAccess) {
     if (isRejected) {
       // Whether they have already appealed, so the box does not invite a
       // second note the action would refuse anyway.
@@ -155,7 +148,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profile?.id && <AnalyticsIdentify userId={profile.id} role="creator" />}
       <div className="creator-main creator-app">
-        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} />
+        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} storefrontLocked={isGrowth} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
         {/* Phones get the tab bar; the sidebar's own media query hides its
             mobile top bar at the same breakpoint, so a creator never sees two

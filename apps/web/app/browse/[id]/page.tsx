@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isSampleItem } from '@/lib/showcase-samples'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getPublicSnapshot } from '@/lib/instagram-sync'
 import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -69,6 +70,17 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
+/** The same mark the public storefront uses: this came from the connection. */
+function VerifiedMark() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-label="Verified from Instagram">
+      <title>Verified from Instagram</title>
+      <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
+      <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
   const brand = await verifyBrand()
   const supabase = createClient()
@@ -77,7 +89,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
   const [{ data: creator, error }, { data: products }, { data: lastDeal }, { data: storefront }] = await Promise.all([
     supabase
       .from('creators')
-      .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, is_vetted')
+      .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, is_vetted, is_bookable')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -100,6 +112,20 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
       .eq('is_published', true)
       .maybeSingle(),
   ])
+
+  /* ── Verified Instagram, for the view a BRAND actually sees ──────────────
+     This page never read the snapshot, so a brand browsing inside Guapd saw
+     typed follower counts while any anonymous visitor to /c/[slug] saw the
+     same creator's numbers marked verified. Brands are precisely the audience
+     the verification exists to convince, which made it the wrong way round.
+
+     It matters more now than when it was first flagged: a GROWTH creator has
+     no /c/[slug] at all, so this page is the only place their numbers are ever
+     shown to anyone. Unverified here means unverified everywhere.
+
+     getPublicSnapshot reads the connection, NOT the storefront — so it works
+     for a creator who has no storefront, which is the whole point. */
+  const ig = await getPublicSnapshot(params.id)
 
   if (error || !creator) notFound()
 
@@ -211,7 +237,11 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
   }
 
   // ── Basic profile view (no storefront) ──
-  const followers = Math.max(0, ...socials.map(s => s.follower_count ?? 0))
+  /* Snapshot first, typed second — the same ladder /c/[slug] uses, so the two
+     screens cannot disagree about the same creator. "Verified" means exactly
+     one thing in both places: it came from the connection, not from a form. */
+  const followers = ig?.followersCount ?? Math.max(0, ...socials.map(s => s.follower_count ?? 0))
+  const followersVerified = ig?.followersCount != null
   const niches = creator.niches ?? []
   const workedWith = creator.worked_with ?? []
 
@@ -247,7 +277,13 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                 <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, letterSpacing: '-0.02em', margin: 0 }}>
                   {creator.full_name}
                 </h1>
-                {creator.is_vetted && (
+                {/* is_vetted is true only for the Deals track (trigger, 0507).
+                    A Growth creator IS vetted — by a different decision — and
+                    is bookable, so keying the tick off is_vetted quietly
+                    marked every Growth creator as unvetted on the one page a
+                    brand judges them from. is_bookable is the flag that means
+                    "we approved this person", which is what the tick claims. */}
+                {creator.is_bookable && (
                   <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
                     <circle cx="12" cy="12" r="10" fill="var(--neon-deep)" />
                     <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="var(--card)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -336,7 +372,29 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
             {followers > 0 && (
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 }}>{formatStat(followers)}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>Followers</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>
+                  Followers
+                  {followersVerified && <VerifiedMark />}
+                </div>
+              </div>
+            )}
+            {/* Reach and engagement exist ONLY when connected. A typed value is
+                never shown here: a creator cannot type their reach, so an
+                unverified figure in this slot would be invented. */}
+            {ig?.reachLast30 != null && (
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 }}>{formatStat(ig.reachLast30)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>
+                  Reach &middot; 30d <VerifiedMark />
+                </div>
+              </div>
+            )}
+            {ig?.interactionsLast30 != null && (
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 }}>{formatStat(ig.interactionsLast30)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--ink-faint)', fontWeight: 600, marginTop: 3 }}>
+                  Interactions &middot; 30d <VerifiedMark />
+                </div>
               </div>
             )}
             {workedWith.length > 0 && (
