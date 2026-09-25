@@ -4987,8 +4987,11 @@ button.signup-form__cross-link {
   position: absolute;
   top: 0;
   left: 0;
-  width: 20px;
-  height: 2px;
+  /* Smaller than the storefront hero's 34px streak, and smaller again than the
+     20px first cut: this pill's edge is a short lap, and a long comet on it
+     reads as a moving arc rather than a point of light. */
+  width: 12px;
+  height: 1.5px;
   border-radius: 2px;
   background: linear-gradient(90deg, transparent 0%, rgba(232,255,102,.35) 30%, rgba(232,255,102,.75) 64%, rgba(232,255,102,1) 100%);
   offset-path: border-box;
@@ -4999,7 +5002,7 @@ button.signup-form__cross-link {
   pointer-events: none;
   /* Above the ring, as the storefront orders its own two. */
   z-index: 4;
-  filter: drop-shadow(0 0 2px rgba(232,255,102,.9)) drop-shadow(0 0 5px rgba(200,235,60,.5));
+  filter: drop-shadow(0 0 1.5px rgba(232,255,102,.9)) drop-shadow(0 0 4px rgba(200,235,60,.5));
 }
 /* The bright head, so the streak reads as something travelling rather than a
    gradient that happens to be brighter at one end. */
@@ -5009,11 +5012,11 @@ button.signup-form__cross-link {
   right: -1px;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: var(--neon, #E8FF66);
-  box-shadow: 0 0 6px 2px rgba(232,255,102,.95), 0 0 10px 4px rgba(200,235,60,.45);
+  box-shadow: 0 0 4px 1.5px rgba(232,255,102,.95), 0 0 8px 3px rgba(200,235,60,.45);
 }
 
 /* Matches the storefront's own rule: a badge that never stops moving is the
