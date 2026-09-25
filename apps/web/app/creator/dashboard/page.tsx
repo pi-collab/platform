@@ -289,6 +289,16 @@ export default async function CreatorDashboardPage({
     ? growthCta({ hasPackages: (packageCount ?? 0) > 0, hasInstagram: igConnection.status !== 'not_connected' })
     : null
 
+  /* ── The header slot asks for PACKAGES only ─────────────────────────────
+     Instagram is dropped from it deliberately. A creator who needs to connect
+     or reconnect already has InstagramReconnectBanner sitting directly beneath
+     this header saying so, in the words that fault needs — and a second ask
+     two inches above it is the same request twice on one screen.
+
+     Packages have no banner, so the slot is the only place that step gets
+     surfaced. When it is done, the slot carries the Growth tag instead. */
+  const headerCta = gCta?.href.startsWith('/creator/packages') ? gCta : null
+
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
   const alertNode = <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
@@ -550,7 +560,7 @@ export default async function CreatorDashboardPage({
     {!showMobileEmpty && (
       <CreatorDashboardMobile
         isGrowth={isGrowth}
-        growthCta={gCta}
+        growthCta={headerCta}
         firstName={firstName}
         handleLine={emptyHandleLine}
         followersLabel={followersLabel}

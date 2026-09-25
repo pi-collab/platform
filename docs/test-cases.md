@@ -5893,11 +5893,13 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Moving a creator from Deals to Growth does NOT unpublish their storefront — the row survives with `is_published = true`. Every surface that keys off "has a slug" therefore has to key off the TRACK instead
 - [ ] The mobile dashboard header's "Shopfront" pill is absent for a Growth creator even when a published slug exists. It rendered because `shopfrontSlug` was passed whenever the slug was published, and it was the last visible storefront entry after the nav was hidden
 - [ ] Same on the mobile profile: the slug is withheld on track, not on publication state
-- [ ] **Still open:** `/c/<slug>` remains publicly live for such a creator. Hiding the entries does not take the page down
+- [ ] `/c/<slug>` stays publicly live for such a creator, and that is FINE — a page already earned is not withdrawn. What matters is that their own UI does not point at it, since they cannot edit it
 
 **The mobile header slot, for a Growth creator**
-- [ ] Where a Deals creator sees a "Shopfront" pill, a Growth creator sees their NEXT STEP while they have one — "Set your packages", then "Connect Instagram" — because the top of the dashboard is the one place they are guaranteed to look
-- [ ] Once packages and Instagram are both done there is nothing left to ask, so the slot becomes the **Growth track tag** rather than an empty corner
+- [ ] Where a Deals creator sees a "Shopfront" pill, a Growth creator sees **"Set your packages"** while that is outstanding — packages have no banner anywhere, so this slot is the only place that step is surfaced
+- [ ] **Instagram is deliberately NOT offered here.** A creator who needs to connect or reconnect already has `InstagramReconnectBanner` directly beneath this header saying so; a second ask two inches above it is the same request twice on one screen
+- [ ] With packages done the slot carries the **Growth track tag** rather than an empty corner — even when Instagram is still outstanding, because the banner owns that
+- [ ] The EMPTY dashboard states keep the full CTA (packages → Instagram): their fallback label is "Set up your shopfront", so a null CTA there would reintroduce the exact bug this replaced
 - [ ] Uses the same `TrackTag` as every other surface, so Growth looks like Growth everywhere
 - [ ] A Deals creator's slot is unchanged
 
