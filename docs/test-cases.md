@@ -5888,3 +5888,9 @@ unpriced deliverables the creator had never listed, offered in his name.
 **Unchanged on purpose**
 - [ ] The create flow (type chooser → name panel) and its Growth entitlement check are untouched
 - [ ] Phone: the row grid collapses to one column and the hero's search stacks above the button
+
+**Regression: a Growth creator who still HAS a published storefront**
+- [ ] Moving a creator from Deals to Growth does NOT unpublish their storefront — the row survives with `is_published = true`. Every surface that keys off "has a slug" therefore has to key off the TRACK instead
+- [ ] The mobile dashboard header's "Shopfront" pill is absent for a Growth creator even when a published slug exists. It rendered because `shopfrontSlug` was passed whenever the slug was published, and it was the last visible storefront entry after the nav was hidden
+- [ ] Same on the mobile profile: the slug is withheld on track, not on publication state
+- [ ] **Still open:** `/c/<slug>` remains publicly live for such a creator. Hiding the entries does not take the page down

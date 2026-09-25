@@ -552,7 +552,12 @@ export default async function CreatorDashboardPage({
         firstName={firstName}
         handleLine={emptyHandleLine}
         followersLabel={followersLabel}
-        shopfrontSlug={storefront?.is_published ? storefront.slug : null}
+        /* Null for a Growth creator even when a slug exists. A creator moved
+           from Deals down to Growth keeps their published storefront row — the
+           ops move does not unpublish it — so the mobile header's Shopfront
+           pill kept rendering for someone whose nav no longer has a storefront
+           in it. The slug being present is not the question; the track is. */
+        shopfrontSlug={!isGrowth && storefront?.is_published ? storefront.slug : null}
         period={period}
         totalEarnedPaise={totalEarned}
         dealCount={allDeals.length}

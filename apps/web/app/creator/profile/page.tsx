@@ -44,7 +44,8 @@ export default async function CreatorProfilePage() {
         instagramConnection={instagramConnection}
         // Only a PUBLISHED slug is passed. An unpublished one 404s, and handing
         // a creator a link to copy that does not work is worse than none.
-        shopfrontSlug={storefront?.is_published ? storefront.slug : null}
+        /* Same rule as the dashboard: the track decides, not the slug. */
+        shopfrontSlug={!growth.isGrowth && storefront?.is_published ? storefront.slug : null}
         growthCta={growth.cta}
         isGrowth={growth.isGrowth}
       />
