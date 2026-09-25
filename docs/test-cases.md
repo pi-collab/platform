@@ -5919,5 +5919,6 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] **NOT the storefront's `.sf-comet`.** That is a straight 34px streak on `offset-path: border-box`: fine on a 300px card, wrong on a 26px pill, where a straight bar cuts every corner radius and its glow reads as a diffuse dot floating near the edge rather than running along it
 - [ ] The lit arc spans roughly 70°, fading out behind, so it reads as a length of the ring lighting up rather than a point with a tail
 - [ ] The travelling arc sits above the resting ring (z-index 3 over 2)
-- [ ] Under `prefers-reduced-motion` the arc is hidden and the resting ring stays — a ring is not motion
+- [ ] Under `prefers-reduced-motion` the arc **STOPS but stays visible** (`animation: none`), leaving a static highlight on the ring. It used to be `display: none`, which made the tag look unfinished to anyone with the setting on — and "reduce motion" asks for less movement, not less design
+- [ ] **Worth remembering when a shine "doesn't work":** iOS Reduce Motion is commonly on, so check that setting before assuming the CSS is broken. Two correct implementations were reported as invisible for this reason
 - [ ] `@property` is already relied on elsewhere (`--sfang` in the storefront), so this adds no new browser requirement

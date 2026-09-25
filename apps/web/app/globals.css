@@ -5034,10 +5034,15 @@ button.signup-form__cross-link {
 
 @keyframes tier-tag-spin { to { transform: rotate(1turn); } }
 
-/* Matches the storefront's own rule: a badge that never stops moving is the
-   kind of motion people turn off. The resting ring stays — it is not motion. */
+/* Reduced motion STOPS the arc; it does not delete it.
+   The storefront hides its comet outright, which is right for a 34px streak
+   flying round a hero card. Here the moving part is a lit length of the ring
+   itself, so freezing it leaves a perfectly good highlight — and "reduce
+   motion" asks for less movement, not less design. Hiding it also made the
+   tag look broken to anyone with the setting on, which is the majority of the
+   people who turn it on to avoid exactly that kind of confusion. */
 @media (prefers-reduced-motion: reduce) {
-  .tier-tag__ring { display: none !important; }
+  .tier-tag__ring::after { animation: none; }
 }
 
 /* ── Brand campaigns row ── */
