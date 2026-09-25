@@ -114,6 +114,32 @@ export default function CreatorProfileMobile({
           <div style={{ fontSize: 12.5, color: 'var(--sec-ink)', marginTop: 3 }}>@{handle}</div>
         )}
 
+        {/* ── Which track they are on ──────────────────────────────────────
+            Here rather than on the dashboard: this card is who they are, and
+            the dashboard header is for what to do next. Deliberately NOT the
+            indigo TrackTag used on brand-facing lists — that palette exists so
+            a brand can tell two kinds of creator apart at a glance in a mixed
+            list. On a creator's own profile there is nothing to tell apart,
+            and a coloured badge on your own name reads as a label someone has
+            put on you. White and ink states it plainly. */}
+        {isGrowth && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+            <span className="growth-tag" style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '4px 12px', borderRadius: 999,
+              /* Opaque on purpose: the ring behind it is only visible where
+                 this fill does not cover it. */
+              background: '#FFFFFF', color: 'var(--ink)',
+              border: '1px solid var(--ink)',
+              fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700,
+              letterSpacing: '.02em', whiteSpace: 'nowrap' as const,
+            }}>
+              Guapd Growth
+              <span className="growth-tag__comet" aria-hidden="true" />
+            </span>
+          </div>
+        )}
+
         <div style={{ fontSize: 12.5, color: 'var(--sec-ink)', marginTop: 10 }}>
           {dealsDone > 0 ? `${dealsDone} deal${dealsDone === 1 ? '' : 's'} completed` : 'No deals yet'}
         </div>

@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import TrackTag from '@/components/track/TrackTag'
 import BrandMark from '@/components/BrandMark'
 import { useRouter } from 'next/navigation'
 
@@ -150,13 +149,14 @@ export default function CreatorDashboardMobile({
               to ask for, so it becomes the Growth tag: a statement of which
               track they are on rather than an empty corner. */}
           {isGrowth ? (
-            growthCta ? (
+            /* The step, or nothing. The track tag moved to the profile card —
+               this header is for what to do next, and a badge saying which
+               tier you are on is not a thing to do. */
+            growthCta && (
               <Link href={growthCta.href} className="cdash-m__pill">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 {growthCta.label}
               </Link>
-            ) : (
-              <TrackTag track="growth" />
             )
           ) : shopfrontSlug && (
             <a href={`/c/${shopfrontSlug}`} target="_blank" rel="noopener noreferrer" className="cdash-m__pill">

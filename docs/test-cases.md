@@ -5907,3 +5907,11 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] For a Deals creator: "…your shopfront shows the numbers you entered yourself"
 - [ ] For a Growth creator: "…brands see the numbers you entered yourself". Naming a shopfront they do not have read as a bug in our copy, and gave them a reason not to bother reconnecting
 - [ ] The Personal-account variant is unchanged — its instruction is about Instagram's settings, not about where the numbers land
+
+**Growth tag lives on the profile, not the dashboard**
+- [ ] The creator's own profile identity card carries a **"Guapd Growth"** tag under their handle. The dashboard header slot no longer shows it — that header is for what to do next, and a badge saying which tier you are on is not a thing to do
+- [ ] The dashboard slot now shows "Set your packages" or NOTHING. It must not fall back to a shopfront CTA
+- [ ] The tag is **white with an ink border**, NOT the indigo `TrackTag`. That palette exists so a brand can tell two kinds of creator apart in a mixed list; on your own profile there is nothing to tell apart, and a coloured badge on your own name reads as a label someone put on you
+- [ ] A guapd-green comet orbits the rounded edge, using the SAME `offset-path: border-box` technique as the storefront hero's `.sf-comet` — reused rather than reinvented, so the product has one shine and not two to keep in step
+- [ ] It is hidden under `prefers-reduced-motion`, matching the storefront's own rule
+- [ ] A Deals creator sees no tag at all
