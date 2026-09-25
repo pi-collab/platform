@@ -4953,19 +4953,37 @@ button.signup-form__cross-link {
   .kpis > * + * { border-left: none !important; border-top: 1px solid var(--hair); }
 }
 
-/* ── Growth tag, on the creator's own profile card ──
-   White and ink so it reads as a statement rather than a label someone has put
-   on you, with a guapd-green comet running round the edge.
+/* ── Tier tag, on the creator's own profile card ──
+   Which track they are on: Guapd Growth or Guapd Deals. White fill and ink
+   text rather than the indigo TrackTag — that palette exists so a BRAND can
+   tell two kinds of creator apart in a mixed list, and on your own profile
+   there is nothing to tell apart.
 
-   The comet is the SAME technique as the storefront hero's (.sf-comet in
-   shopfront-mobile.css): a short bright streak on offset-path: border-box, so
-   it follows the rounded edge exactly instead of a rotating gradient
-   approximating one. Reused rather than reinvented — two different shines in
-   one product is two things to keep in step. Scaled down for a 24px pill and
-   run slower, because a small ring is a short lap. */
-.growth-tag { position: relative; }
+   Border and comet are both lifted from the storefront hero (.sf-hero-border
+   and .sf-comet in shopfront-mobile.css) rather than reinvented, so the
+   product has one shine and one green edge instead of two of each drifting
+   apart. */
+.tier-tag { position: relative; }
 
-.growth-tag__comet {
+/* The storefront hero's ring, exactly: a 2px lime fill masked to the border so
+   only the edge shows. A plain `border` cannot do this at partial opacity
+   without tinting the fill behind it. */
+.tier-tag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  padding: 2px;
+  background: linear-gradient(rgba(232,255,102,.6), rgba(232,255,102,.6));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tier-tag__comet {
   position: absolute;
   top: 0;
   left: 0;
@@ -4977,13 +4995,15 @@ button.signup-form__cross-link {
   offset-distance: 0%;
   offset-rotate: auto;
   offset-anchor: 100% 50%;
-  animation: growth-tag-orbit 3.6s linear infinite;
+  animation: tier-tag-orbit 3.6s linear infinite;
   pointer-events: none;
+  /* Above the ring, as the storefront orders its own two. */
+  z-index: 4;
   filter: drop-shadow(0 0 2px rgba(232,255,102,.9)) drop-shadow(0 0 5px rgba(200,235,60,.5));
 }
 /* The bright head, so the streak reads as something travelling rather than a
    gradient that happens to be brighter at one end. */
-.growth-tag__comet::after {
+.tier-tag__comet::after {
   content: '';
   position: absolute;
   right: -1px;
@@ -4997,12 +5017,12 @@ button.signup-form__cross-link {
 }
 
 /* Matches the storefront's own rule: a badge that never stops moving is the
-   kind of motion people turn off. */
+   kind of motion people turn off. The ring stays — it is not motion. */
 @media (prefers-reduced-motion: reduce) {
-  .growth-tag__comet { display: none !important; }
+  .tier-tag__comet { display: none !important; }
 }
 
-@keyframes growth-tag-orbit { to { offset-distance: 100%; } }
+@keyframes tier-tag-orbit { to { offset-distance: 100%; } }
 
 /* ── Brand campaigns row ── */
 /* Three columns on desktop, one on a phone. The middle column is avatars and

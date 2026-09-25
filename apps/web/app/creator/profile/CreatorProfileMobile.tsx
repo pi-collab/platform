@@ -115,30 +115,31 @@ export default function CreatorProfileMobile({
         )}
 
         {/* ── Which track they are on ──────────────────────────────────────
-            Here rather than on the dashboard: this card is who they are, and
-            the dashboard header is for what to do next. Deliberately NOT the
-            indigo TrackTag used on brand-facing lists — that palette exists so
-            a brand can tell two kinds of creator apart at a glance in a mixed
-            list. On a creator's own profile there is nothing to tell apart,
-            and a coloured badge on your own name reads as a label someone has
-            put on you. White and ink states it plainly. */}
-        {isGrowth && (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
-            <span className="growth-tag" style={{
-              display: 'inline-flex', alignItems: 'center',
-              padding: '4px 12px', borderRadius: 999,
-              /* Opaque on purpose: the ring behind it is only visible where
-                 this fill does not cover it. */
-              background: '#FFFFFF', color: 'var(--ink)',
-              border: '1px solid var(--ink)',
-              fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700,
-              letterSpacing: '.02em', whiteSpace: 'nowrap' as const,
-            }}>
-              Guapd Growth
-              <span className="growth-tag__comet" aria-hidden="true" />
-            </span>
-          </div>
-        )}
+            Shown for BOTH tracks. A tag only Growth creators carry is a mark
+            of not-being-the-other-one; shown to everyone it is simply which
+            tier you are on, which is a fact worth having on your own profile.
+
+            Here rather than on the dashboard: this card is who they are, the
+            dashboard header is what to do next.
+
+            The ring and the comet come from the storefront hero. Deliberately
+            NOT the indigo TrackTag used on brand-facing lists — that palette
+            lets a brand tell two kinds of creator apart at a glance in a mixed
+            list, and on your own profile there is nothing to tell apart. */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+          <span className="tier-tag" style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '5px 14px', borderRadius: 999,
+            /* Opaque: the ring and the comet are only visible where this fill
+               does not cover them. */
+            background: '#FFFFFF', color: 'var(--ink)',
+            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700,
+            letterSpacing: '.02em', whiteSpace: 'nowrap' as const,
+          }}>
+            {isGrowth ? 'Guapd Growth' : 'Guapd Deals'}
+            <span className="tier-tag__comet" aria-hidden="true" />
+          </span>
+        </div>
 
         <div style={{ fontSize: 12.5, color: 'var(--sec-ink)', marginTop: 10 }}>
           {dealsDone > 0 ? `${dealsDone} deal${dealsDone === 1 ? '' : 's'} completed` : 'No deals yet'}
