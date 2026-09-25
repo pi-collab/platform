@@ -5844,3 +5844,45 @@ unpriced deliverables the creator had never listed, offered in his name.
 **Smaller items**
 - [ ] `ShopfrontLinkRow` in locked mode reads "Unlocks when you move to Deals", not "Not published yet" — and drops its edit link, since there is no editor to return to
 - [ ] Ops creators list shows **"Growth"** in the Shopfront column instead of "-", so ops does not chase them for setup that is not theirs to do
+
+---
+
+## 63. Brand campaigns list — matched to the design
+
+**Hero**
+- [ ] "Campaign overview" eyebrow, "Your *campaigns*" with the serif italic, and the two counts on the RIGHT of the same row — they sat under the title before, which pushed the search down a line and left the hero's right half empty
+- [ ] The active chip is the design's 30px pill (`#EEF6D8` / `#4F6118`, dot `#7FA11A`), not the lime-50 token chip
+- [ ] Search and "New campaign" are a matched pair: both 52px tall, both radius 14. They were a 44px pill beside a radius-11 button
+- [ ] Button reads "New campaign" (sentence case), weight 700 / 14px
+- [ ] Searching resets to page 1
+
+**Segmented control**
+- [ ] All / Deals / Growth sit in ONE pill group on a tinted track; the selected one is a white chip with a shadow, so it reads as a switch rather than three adjacent chips
+- [ ] Counts are over the SEARCH result, not the whole roster, so a chip describes what it would actually show
+- [ ] `TrackFilter` is no longer used here; the 28px inset hack that aligned it with the rows below is gone with it
+- [ ] "Newest" toggles to "Oldest" and re-orders. **The design's second "Filter" button is deliberately not drawn** — a filter button beside a segmented control that already filters is a control with nothing left to do
+- [ ] Changing the segment resets to page 1
+
+**The row**
+- [ ] Three columns — `minmax(0,1fr) auto 280px`, gap 36 — radius 22, padding 24/30
+- [ ] Column 1: tier chip (Deals `#E7F1FC`/`#1F4E80`, Growth `#F0EAFD`/`#4B3B8F`) + status dot and label on one line, name (17px/600) beneath
+- [ ] **The description is gone**, per the drawing. It is what made the old rows different heights
+- [ ] Column 2: up to four overlapping 32px avatars with white rings, cycling six washes, then "+N"
+- [ ] **Avatars are DISTINCT creators, not deals** — a creator with two deliverables in one campaign is one circle. Declined and cancelled deals contribute nobody
+- [ ] Only initials reach the client; full creator names are not shipped to a page that draws one letter of them
+- [ ] Column 3, behind a left rule: "₹X paid / of ₹Y" and a 6px bar filled in INK, not neon — it is a reading, not something to press
+- [ ] A campaign with no deals shows ₹0 of ₹0 and an empty bar rather than breaking
+
+**Paging**
+- [ ] 8 per page. A brand with forty campaigns had forty rows and no way to ask for the next lot
+- [ ] "Showing 1–8 of 23 campaigns" on the left, numbered pages on the right
+- [ ] Sorting happens AFTER filtering, so page one's order describes what is on screen
+- [ ] The page number is CLAMPED, not reset: narrowing the filter while on page 3 lands on the last page that still has rows
+
+**Empty state**
+- [ ] A search or a non-All segment that matches nothing says "No campaigns found" / "Try a different search or tier."
+- [ ] A brand with no campaigns at all still gets "No campaigns yet" and the create prompt
+
+**Unchanged on purpose**
+- [ ] The create flow (type chooser → name panel) and its Growth entitlement check are untouched
+- [ ] Phone: the row grid collapses to one column and the hero's search stacks above the button

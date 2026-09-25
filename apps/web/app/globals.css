@@ -4953,6 +4953,19 @@ button.signup-form__cross-link {
   .kpis > * + * { border-left: none !important; border-top: 1px solid var(--hair); }
 }
 
+/* ── Brand campaigns row ── */
+/* Three columns on desktop, one on a phone. The middle column is avatars and
+   the third is the money bar; squeezed onto one line at phone width the name
+   truncates to nothing and the bar to a few pixels. */
+@media (max-width: 760px) {
+  .rowgrid { grid-template-columns: 1fr !important; gap: 18px !important; }
+  .herosearch { flex-direction: column !important; align-items: stretch !important; }
+}
+.search { transition: background .16s ease, box-shadow .16s ease; }
+.search:focus-within { background: #EEF1F6; box-shadow: 0 0 0 3px rgba(218,254,12,.28); }
+.ghostbtn { transition: background .16s ease, color .16s ease; }
+.ghostbtn:hover { background: rgba(24,28,36,.04); color: var(--ink); }
+
 .kpicell { transition: background .16s ease; }
 .kpicell:hover { background: rgba(24,28,36,.025); }
 .kpicell:focus-visible { outline: 2px solid var(--neon-deep, #D2F04A); outline-offset: -2px; }

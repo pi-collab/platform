@@ -21,9 +21,12 @@ export default async function CampaignsPage() {
       .from('campaigns')
       .select('id, name, description, status, created_at, track, min_metric, min_creators, min_value_paise')
       .order('created_at', { ascending: false }),
+    /* creators comes along for the avatars: the drawn row shows who is IN a
+       campaign as overlapping initials, which is the one thing the old row
+       never said — it counted deals and never named a person. */
     supabase
       .from('deals')
-      .select('id, campaign_id, status, price_paise, is_posted')
+      .select('id, campaign_id, status, price_paise, is_posted, creator_id, creators(full_name)')
       .not('campaign_id', 'is', null),
     supabase
       .from('invoices')
@@ -37,11 +40,17 @@ export default async function CampaignsPage() {
   }
 
   // Build rollup per campaign
-  const rollupMap = new Map<string, { totalDeals: number; committedPaise: number; paidPaise: number }>()
+  const rollupMap = new Map<string, { totalDeals: number; committedPaise: number; paidPaise: number; creators: Map<string, string> }>()
   for (const d of deals ?? []) {
     if (!d.campaign_id) continue
-    const r = rollupMap.get(d.campaign_id) ?? { totalDeals: 0, committedPaise: 0, paidPaise: 0 }
+    const r = rollupMap.get(d.campaign_id) ?? { totalDeals: 0, committedPaise: 0, paidPaise: 0, creators: new Map<string, string>() }
     r.totalDeals++
+    /* Keyed by creator id, so a creator with two deliverables in one campaign
+       is one avatar rather than two identical circles. */
+    if (d.creator_id && !['declined', 'cancelled'].includes(d.status)) {
+      const cr = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { full_name?: string } | null
+      r.creators.set(d.creator_id, (cr?.full_name ?? '').trim())
+    }
     if (!['declined', 'cancelled'].includes(d.status)) {
       r.committedPaise += d.price_paise ?? 0
     }
@@ -53,7 +62,7 @@ export default async function CampaignsPage() {
   }
 
   const all = (campaigns ?? []).map((c) => {
-    const r = rollupMap.get(c.id) ?? { totalDeals: 0, committedPaise: 0, paidPaise: 0 }
+    const r = rollupMap.get(c.id) ?? { totalDeals: 0, committedPaise: 0, paidPaise: 0, creators: new Map<string, string>() }
     return {
       id: c.id,
       name: c.name,
@@ -64,6 +73,12 @@ export default async function CampaignsPage() {
       totalDeals: r.totalDeals,
       committedPaise: r.committedPaise,
       paidPaise: r.paidPaise,
+      /* Initials only. The row shows circles, not names, and sending the full
+         names to the client would ship a creator roster to a page that draws
+         one letter of it. */
+      creatorInitials: Array.from(r.creators.values())
+        .map((n) => n.charAt(0).toUpperCase() || '?'),
+      creatorCount: r.creators.size,
     }
   })
 
