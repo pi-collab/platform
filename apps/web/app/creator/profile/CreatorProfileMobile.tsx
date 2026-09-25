@@ -137,7 +137,7 @@ export default function CreatorProfileMobile({
             letterSpacing: '.02em', whiteSpace: 'nowrap' as const,
           }}>
             {isGrowth ? 'Guapd Growth' : 'Guapd Deals'}
-            <span className="tier-tag__ring" aria-hidden="true" />
+            <span className="tier-tag__comet" aria-hidden="true" />
           </span>
         </div>
 

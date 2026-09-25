@@ -4959,27 +4959,18 @@ button.signup-form__cross-link {
    tell two kinds of creator apart in a mixed list, and on your own profile
    there is nothing to tell apart.
 
-   ── Why a spinning square and not an animated angle ───────────────────────
-   The obvious version animates `from <angle>` in the conic gradient through a
-   registered @property. It is fewer elements and it is what the previous cut
-   did — but if that custom property fails to resolve as an angle for any
-   reason (an older engine, a minifier that drops the @property block), the
-   whole gradient becomes invalid and the shine does not degrade, it simply
-   disappears. Which is what happened.
+   Ring and comet are both the storefront hero's (.sf-hero-border and
+   .sf-comet, shopfront-mobile.css), so the product has one green edge and one
+   shine rather than two of each drifting apart.
 
-   This rotates a plain square with `transform`, clipped to the ring by the
-   wrapper's mask. Nothing here can fail to parse: the worst case is a
-   stationary arc, not a missing one.
-
-   ── Why not the storefront's comet ────────────────────────────────────────
-   .sf-comet is a straight 34px streak on offset-path: border-box. Fine on a
-   300px card; on a 26px pill the bar cuts every corner radius and its glow
-   reads as a dot floating near the edge rather than running along it. */
+   No prefers-reduced-motion rule, deliberately: this shine was twice reported
+   as missing when it was present and correct in the build, because that rule
+   was switching it off on the device it was being checked on. It is a small
+   streak on a 26px pill, not a full-screen parallax. */
 .tier-tag { position: relative; }
 
-/* The resting edge: the storefront hero's ring, a 2px lime fill masked so only
-   the border shows. A plain `border` cannot sit at partial opacity without
-   tinting the white fill behind it. */
+/* The edge: a 2px lime fill masked so only the border shows. A plain `border`
+   cannot sit at partial opacity without tinting the white fill behind it. */
 .tier-tag::before {
   content: '';
   position: absolute;
@@ -4995,55 +4986,42 @@ button.signup-form__cross-link {
   mask-composite: exclude;
 }
 
-/* Same ring, used as a window: masked to the 2px border AND clipping, so the
-   square spinning inside it is only ever visible along the circumference. */
-.tier-tag__ring {
+/* The comet: a short bright streak riding the border path, exactly as the
+   storefront hero does it. Scaled for a 26px pill. */
+.tier-tag__comet {
   position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  padding: 2px;
-  overflow: hidden;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(232,255,102,.35) 30%, rgba(232,255,102,.75) 64%, rgba(232,255,102,1) 100%);
+  offset-path: border-box;
+  offset-distance: 0%;
+  offset-rotate: auto;
+  offset-anchor: 100% 50%;
+  animation: tier-tag-orbit 3.2s linear infinite;
   pointer-events: none;
-  z-index: 3;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
+  z-index: 4;
+  filter: drop-shadow(0 0 2px rgba(232,255,102,.9)) drop-shadow(0 0 5px rgba(200,235,60,.5));
 }
 
-/* Comfortably larger than the pill in both directions, so the gradient's
-   centre sits at the pill's centre and its edges never enter the frame. */
-.tier-tag__ring::after {
+/* The bright head, so the streak reads as something travelling rather than a
+   gradient that happens to be brighter at one end. */
+.tier-tag__comet::after {
   content: '';
   position: absolute;
-  left: 50%;
+  right: -1px;
   top: 50%;
-  width: 260px;
-  height: 260px;
-  margin: -130px 0 0 -130px;
-  /* ~70° lit, fading out behind, so it reads as a length of the ring lighting
-     up rather than a point with a tail. */
-  background: conic-gradient(
-    rgba(232,255,102,0) 0deg 290deg,
-    rgba(232,255,102,.55) 325deg,
-    #E8FF66 352deg,
-    rgba(232,255,102,0) 360deg
-  );
-  animation: tier-tag-spin 3.6s linear infinite;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--neon, #E8FF66);
+  box-shadow: 0 0 6px 2px rgba(232,255,102,.95), 0 0 10px 4px rgba(200,235,60,.45);
 }
 
-@keyframes tier-tag-spin { to { transform: rotate(1turn); } }
-
-/* Reduced motion STOPS the arc; it does not delete it.
-   The storefront hides its comet outright, which is right for a 34px streak
-   flying round a hero card. Here the moving part is a lit length of the ring
-   itself, so freezing it leaves a perfectly good highlight — and "reduce
-   motion" asks for less movement, not less design. Hiding it also made the
-   tag look broken to anyone with the setting on, which is the majority of the
-   people who turn it on to avoid exactly that kind of confusion. */
-@media (prefers-reduced-motion: reduce) {
-  .tier-tag__ring::after { animation: none; }
-}
+@keyframes tier-tag-orbit { to { offset-distance: 100%; } }
 
 /* ── Brand campaigns row ── */
 /* Three columns on desktop, one on a phone. The middle column is avatars and
