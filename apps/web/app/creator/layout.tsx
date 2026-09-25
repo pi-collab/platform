@@ -148,7 +148,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profile?.id && <AnalyticsIdentify userId={profile.id} role="creator" />}
       <div className="creator-main creator-app">
-        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} storefrontLocked={isGrowth} />
+        <CreatorSidebar creatorName={creatorName} creatorPhoto={creatorPhoto} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifBrandMap={notifBrandMap} hideStorefront={isGrowth} />
         <main style={{ position: 'relative', zIndex: 1 }}>{children}</main>
         {/* Phones get the tab bar; the sidebar's own media query hides its
             mobile top bar at the same breakpoint, so a creator never sees two

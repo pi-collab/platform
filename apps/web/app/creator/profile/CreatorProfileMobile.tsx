@@ -134,7 +134,10 @@ export default function CreatorProfileMobile({
           <Chevron color="var(--lime-950)" />
         </Link>
       ) : isGrowth ? (
-        <ShopfrontLinkRow slug={null} locked />
+        /* Nothing. A Growth creator has no shopfront and no nav entry to one,
+           so a row explaining the absence would be the only mention of it on
+           their whole profile. */
+        null
       ) : !hasStorefront ? (
         <Link href="/creator/storefront" className="sr msurface" style={{ ...rowStyle, background: 'var(--neon)' }}>
           <span style={{ flex: 1, fontSize: 14.5, fontWeight: 700, color: 'var(--lime-950)' }}>
