@@ -41,8 +41,17 @@ export default function ShopfrontLinkRow({ slug, locked = false }: {
   }
 
   return (
-    <div className="sr msurface" style={{ padding: '12px 16px' }}>
+    <div className="sr msurface" style={{ padding: '12px 16px', ...(locked ? { background: 'var(--sec-2)' } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* A padlock in its own tile, so the row reads as locked at a glance
+            rather than only once you get to the sentence. */}
+        {locked && (
+          <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 10, background: 'rgba(24,28,36,.06)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--wg-500)' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-label="Locked">
+              <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+          </span>
+        )}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--wg-400)' }}>
             YOUR SHOPFRONT
@@ -60,8 +69,13 @@ export default function ShopfrontLinkRow({ slug, locked = false }: {
               whiteSpace: 'nowrap',
             }}
           >
-            {slug ? `/c/${slug}` : locked ? 'Unlocks when you move to Deals' : 'Not published yet'}
+            {slug ? `/c/${slug}` : locked ? 'Unlocks with Guapd Deals' : 'Not published yet'}
           </div>
+          {locked && (
+            <div style={{ fontSize: 11.5, fontWeight: 400, color: 'var(--wg-500)', marginTop: 3, whiteSpace: 'normal' as const, lineHeight: 1.45 }}>
+              A public page brands can browse, with your rates on it.
+            </div>
+          )}
         </div>
 
         {slug && (

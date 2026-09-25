@@ -275,6 +275,10 @@
 }
 
 .gr-tier__pill--soon   { background: var(--ink, #12151C); color: #fff; }
+/* "You're here" rather than "Coming soon": the tier a creator is standing in
+   is a fact about now, so it reads in the live green rather than the ink
+   chip that announced something pending. */
+.gr-tier__pill--active { background: #EEF6D8; color: #4F6118; }
 .gr-tier__pill--locked { background: rgba(24, 28, 36, .07); color: var(--ink-faint, #878D99); }
 
 .gr-tier__body {

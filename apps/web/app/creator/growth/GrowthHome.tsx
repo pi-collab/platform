@@ -138,29 +138,42 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
               </div>
               <div>
-                <p className="gr-done-title">Something exciting coming soon</p>
+                {/* Was "Something exciting coming soon", which read as a
+                    waiting room. Their account is open — what is still coming
+                    is the growth tooling, not the deals. */}
+                <p className="gr-done-title">You&rsquo;re all set</p>
                 <p className="gr-done-body">
-                  We&rsquo;re lining up the best brand deals for creators like you, and the tools to
-                  grow your audience alongside them. Your answers shape what we do first, and
-                  we&rsquo;ll let you know the moment it&rsquo;s ready.
+                  Your account is open: add your packages, connect Instagram, and brand offers
+                  land in your deal inbox. Your answers shape the growth tools we build next, and
+                  we&rsquo;ll tell you the moment they land.
                 </p>
               </div>
             </div>
 
-            {/* The two tiers, so where a creator stands is legible without having
-                to infer it from what the app is missing. Deals is LOCKED rather
-                than hidden: knowing it exists and how to reach it is the point. */}
+            {/* ── The two tiers ───────────────────────────────────────────
+                These cards said "Coming soon" against Guapd Growth and
+                "Locked" against the whole of Guapd Deals. That was true when
+                a Growth creator had no workflow behind this page. It is not
+                true now: they take real offers, upload real deliverables and
+                get paid, in the same app as everyone else.
+
+                Left as it was, this screen told a creator their deals were
+                locked while a Deals tab sat working in their own nav — the
+                product contradicting itself on the page that explains it.
+
+                The ONE thing Guapd Deals still adds is the public storefront,
+                so that is what the locked card now describes. */}
             <div className="gr-tiers">
               <p className="gr-tiers__label">Your tier</p>
 
               <div className="gr-tier gr-tier--current">
                 <div className="gr-tier__head">
                   <span className="gr-tier__name">Guapd Growth</span>
-                  <span className="gr-tier__pill gr-tier__pill--soon">Coming soon</span>
+                  <span className="gr-tier__pill gr-tier__pill--active">You&rsquo;re here</span>
                 </div>
                 <p className="gr-tier__body">
-                  Where you are now. Tools to grow your audience, and brand deals suited to where
-                  you are, coming your way soon.
+                  Set your packages, connect Instagram, and take brand offers from your deal
+                  inbox &mdash; chat, deliver and get paid, all in one place.
                 </p>
               </div>
 
@@ -172,13 +185,14 @@ export default function GrowthHome({ firstName, quizDone, profile }: {
                   </span>
                   <span className="gr-tier__pill gr-tier__pill--locked">Locked</span>
                 </div>
-                {/* NOT "send and receive offers": a creator does not send
-                    offers, brands do. What this tier gives them is running the
-                    deal itself, directly, in one place. */}
+                {/* What Deals actually ADDS, now that running a deal is not it.
+                    A creator who reads this and then finds their deal inbox
+                    working has been told something false about their own
+                    account. */}
                 <p className="gr-tier__body">
-                  For creators working with brands regularly. One place to run every deal directly
-                  with the brand, from the offer through to getting paid. Opens up for you as you
-                  grow.
+                  Adds your own public storefront &mdash; a page at guapd.com that brands can
+                  browse and you can share anywhere, with your rates and verified numbers on it.
+                  Opens up for you as you grow.
                 </p>
               </div>
             </div>

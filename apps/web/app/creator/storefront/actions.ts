@@ -193,7 +193,7 @@ async function refuseIfGrowth(creatorId: string): Promise<string | null> {
   const { data } = await createClient()
     .from('creators').select('vetting_status').eq('id', creatorId).maybeSingle()
   return data?.vetting_status === 'growth'
-    ? 'Your storefront unlocks when you move to the Deals track.'
+    ? 'Your storefront unlocks with Guapd Deals.'
     : null
 }
 

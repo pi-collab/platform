@@ -180,12 +180,21 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                  padlock tells them there is a thing here they do not have
                  yet, which is the truth and the nudge. */
               const locked = storefrontLocked && link.icon === 'storefront'
+              /* A padlock alone was not enough: at full contrast the pill still
+                 read as an ordinary destination, so a Growth creator saw
+                 "Storefront" sitting in their nav like everything else. Dimmed
+                 AND locked, it reads as a door rather than a link. */
               return (
-                <Link key={link.href} href={link.href} style={active ? navPillActive : navPillInactive} title={locked ? 'Unlocks when you move to Deals' : undefined}>
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  style={{ ...(active ? navPillActive : navPillInactive), ...(locked ? { opacity: 0.45 } : {}) }}
+                  title={locked ? 'Unlocks with Guapd Deals' : undefined}
+                >
                   <NavIcon icon={link.icon} active={active} />
                   {link.label}
                   {locked && (
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.55, marginLeft: 1 }} aria-label="Locked">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 2 }} aria-label="Locked">
                       <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
                     </svg>
                   )}
@@ -408,14 +417,23 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
             <nav style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
               {ALL_MOBILE_LINKS.map((link) => {
                 const active = isActive(link.href)
+                const lockedRow = storefrontLocked && link.href === '/creator/storefront'
                 return (
                   <Link key={link.href} href={link.href} onClick={() => setDrawerOpen(false)} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                     fontSize: 14, fontWeight: active ? 700 : 500,
                     color: active ? 'var(--ink)' : 'var(--wg-600)', textDecoration: 'none', borderRadius: 10,
                     background: active ? 'var(--lime-400)' : 'transparent',
+                    /* The drawer had no lock at all, so on a phone the
+                       storefront was an ordinary menu row. */
+                    opacity: lockedRow ? 0.45 : 1,
                   }}>
                     {link.label}
+                    {lockedRow && (
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-label="Locked">
+                        <rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                      </svg>
+                    )}
                     {link.href === '/creator/notifications' && unreadCount > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: 'var(--red)', borderRadius: 999, padding: '1px 6px', marginLeft: 'auto' }}>
                         {unreadCount > 99 ? '99+' : unreadCount}

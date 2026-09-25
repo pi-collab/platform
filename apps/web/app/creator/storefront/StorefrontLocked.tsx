@@ -26,13 +26,13 @@ export default function StorefrontLocked() {
           </span>
 
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.02em', fontSize: 'clamp(26px,3.2vw,34px)', lineHeight: 1.1, margin: '18px 0 0', color: 'var(--ink)' }}>
-            Your storefront unlocks when you move to Deals
+            Your storefront unlocks with Guapd Deals
           </h1>
 
           <p style={{ fontSize: 15, lineHeight: 1.65, color: 'var(--wg-600)', margin: '14px 0 0' }}>
             A storefront is a public page at <strong>guapd.com/c/you</strong> that anyone can open &mdash;
             you share the link, brands browse your rates and send an offer from it.
-            It comes with the Deals track.
+            It comes with Guapd Deals.
           </p>
 
           <div style={{ marginTop: 26, paddingTop: 22, borderTop: '1px solid var(--line)' }}>
