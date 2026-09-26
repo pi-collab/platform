@@ -5989,6 +5989,17 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The fee side of the bar is hatched, not filled, so it reads as taken out rather than as a second thing the creator receives
 - [ ] **Regression guard:** the constants live in `lib/fee.ts`, NOT `lib/deal-fee.ts`. That module is `server-only` and this note renders on the client; importing them from there fails the build
 
+### 1. Creator pricing page (`/creator/pricing`) — BUILT
+
+- [ ] Reached from **Profile › Pricing & fees** (next to Payments, since it answers the same question) and from the **"See full pricing"** link in the package note, which the design promised and which now has a destination
+- [ ] A slider from ₹1,000 to ₹1,00,000 (step 500) with the payout beside it. **A fee is an abstraction until it is applied to YOUR number** — "15%" is arithmetic a creator has to do, a slider does it on the figure they actually charge
+- [ ] **Deals** shows TWO outcome cards: "Brand you bring, first deal / 0% fee" in neon, and "Deals we bring you / 15% fee". At ₹20,000: ₹20,000 and ₹17,000
+- [ ] **Growth** shows ONE: "Every Growth booking / 30% fee". At ₹20,000: ₹14,000. A second card invented to balance the layout would be a rate that does not exist
+- [ ] Track is resolved SERVER-SIDE, and there is deliberately **no toggle** between the two. A creator is on one track, and showing the other's economics raises a question this page cannot answer
+- [ ] The Growth page names the route out ("Grow into Deals, your fee drops to 15%") without pricing a tier they are not on
+- [ ] The Growth FAQ has three questions, not four: **the free-first-deal answer is absent**, because that exemption keys off a storefront origin and a Growth creator has none. Answering it would promise a route they cannot take
+- [ ] Percentages come from `GROWTH_FEE_PERCENT` / `DEALS_STANDARD_FEE_PERCENT`, the same constants the package note and the fee ladder use
+- [ ] Phone: the calculator stacks so the answer sits under the control that moves it; the three cards go to one column
+
 ### Still to build
-- [ ] 1. Creator pricing page (`/creator/pricing`) — new route, Deals + Growth variants, rate slider, FAQ
 - [ ] 4. Brand pricing page (`/pricing`) — new route, slider, fee-split cards, FAQ

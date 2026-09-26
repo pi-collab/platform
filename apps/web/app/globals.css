@@ -5023,6 +5023,17 @@ button.signup-form__cross-link {
 
 @keyframes tier-tag-orbit { to { offset-distance: 100%; } }
 
+/* ── Creator pricing page ── */
+/* The calculator is a slider beside its own answer; stacked on a phone the
+   answer sits under the control that moves it, which is the right order. */
+@media (max-width: 760px) {
+  .pricecalc { grid-template-columns: 1fr !important; }
+}
+/* Three cards need ~220px each before the headings start breaking. */
+@media (max-width: 900px) {
+  .pricecards { grid-template-columns: 1fr !important; }
+}
+
 /* ── Brand campaigns row ── */
 /* Three columns on desktop, one on a phone. The middle column is avatars and
    the third is the money bar; squeezed onto one line at phone width the name

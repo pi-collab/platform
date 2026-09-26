@@ -204,6 +204,11 @@ export default function CreatorProfileMobile({
         <MenuDivider />
         <MenuRow href="/creator/payments?from=profile" label="Payments" icon={<CardIcon />} />
         <MenuDivider />
+        {/* Next to Payments, because that is the question it answers: what
+            actually lands in my account. The breadcrumb on that page reads
+            Profile › Pricing & fees, so this is the route it names. */}
+        <MenuRow href="/creator/pricing" label="Pricing &amp; fees" icon={<PercentIcon />} />
+        <MenuDivider />
         {/* Opens the Account tab rather than the page default. Edit profile
             already lands on Profile, so pointing both rows at the same tab made
             one of them do nothing visible. */}
@@ -356,6 +361,14 @@ function HelpRow() {
       <ContactLink className="creator-help-row" label="Help &amp; support" />
       <Chevron />
     </div>
+  )
+}
+
+function PercentIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
   )
 }
 
