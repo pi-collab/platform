@@ -1,5 +1,6 @@
 'use server'
 
+import { trackForCreator } from '@/lib/deal-track'
 import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -158,6 +159,19 @@ export async function createDeal(input: CreateDealInput) {
      would have written on_top onto a Growth deal whose fee the ladder had just
      decided was deducted. */
   let resolvedFeeMode: 'on_top' | 'deducted' = (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted'
+
+  /* ── The track comes from the CREATOR, not the caller ────────────────────
+     `track` was an optional argument defaulting to 'deals'. Campaigns passed
+     it; the one-to-one offer builder never did, so a Growth creator booked
+     straight from /browse produced a Deals deal — standard fee instead of the
+     Growth 30%, and a Deals billing unit. Same creator, two prices, decided by
+     which door the brand happened to use.
+
+     Cannot disagree with a campaign: a campaign roster is already filtered to
+     requiredVettingStatus(track), so the creator and the campaign always
+     match. This only settles the case where nobody was asked. */
+  const resolvedTrack = await trackForCreator(admin, creator_id)
+
   if (fee_pct_override != null) {
     resolvedFeePercent = fee_pct_override
     feeBasis = 'deal_override'
@@ -168,7 +182,7 @@ export async function createDeal(input: CreateDealInput) {
       creator_id,
       brandFee?.platform_fee_percent ?? 0,
       (brandFee?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
-      track ?? 'deals',
+      resolvedTrack,
     )
     resolvedFeePercent = resolved.feePercent
     feeBasis = resolved.basis
@@ -200,7 +214,7 @@ export async function createDeal(input: CreateDealInput) {
       fee_percent: resolvedFeePercent,
       fee_mode: resolvedFeeMode,
       fee_basis: feeBasis,
-      track: track ?? 'deals',
+      track: resolvedTrack,
       fee_pct_override: fee_pct_override ?? null,
       reengaged_from: reengaged_from || null,
       requires_shipment: requires_shipment ?? false,
@@ -273,7 +287,13 @@ export async function createDeal(input: CreateDealInput) {
      Held deals are not recorded either. A held deal has reached nobody; it is
      billed when ops approves the brand and releases it (see releaseHeldDeals
      in ops/actions.ts). Never throws — see lib/usage.ts. */
-  if ((track ?? 'deals') === 'deals' && !isHeld) {
+  /* A standalone Growth booking IS a unit. Growth-CAMPAIGN deals are not,
+     because bulkSendCampaignDrafts writes one unit for the whole campaign and
+     recording both would bill it twice. Keying only on the track left a
+     one-to-one Growth deal billed by nobody: not a Deals unit, and not part of
+     any campaign's single unit. One deal, one counting unit, either way. */
+  const billsAsUnit = resolvedTrack === 'deals' || !campaign_id
+  if (billsAsUnit && !isHeld) {
     await recordUsage(brand.brandId, 'deal', data.id, {
       campaign_id: campaign_id ?? null,
       creator_id,

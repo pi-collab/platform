@@ -115,12 +115,21 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
      door - here, campaigns, and createDeal itself - goes through it. */
   const admin = createAdminClient()
   const { resolveDealFee } = await import('@/lib/deal-fee')
+  const { trackForCreator } = await import('@/lib/deal-track')
+
+  /* The SAME resolution createDeal uses, so the fee a brand is shown while
+     building the offer is the fee the offer is sent with. Omitted here, this
+     defaulted to 'deals' and quoted a Growth creator at the brand's standard
+     rate, which the send then contradicted. */
+  const offerTrack = await trackForCreator(admin, creatorId)
+
   const resolvedFee = await resolveDealFee(
     admin,
     brand.brandId,
     creatorId,
     brandRow?.platform_fee_percent ?? 0,
     (brandRow?.fee_mode as 'on_top' | 'deducted') ?? 'deducted',
+    offerTrack,
   )
 
   const effectiveFeePercent = resolvedFee.feePercent

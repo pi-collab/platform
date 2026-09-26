@@ -5929,3 +5929,37 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Not connected reads **"Not connected"** — a status, matching the row's own rule that the state says one thing
 - [ ] **Regression guard:** it read "Show verified numbers on your shopfront", which truncated to "…on your …" on a phone AND named a shopfront a Growth creator does not have. The instruction it carried is already there — the action beside it says "Connect"
 - [ ] Connected / Personal account / Needs reconnecting are unchanged and still fit on one line
+
+---
+
+## 64. The Growth track follows the CREATOR, not the door
+
+**The arbitrage this closes**
+- [ ] `track` was a caller-supplied argument defaulting to `'deals'`. Campaigns passed it; the one-to-one offer builder never did — so a Growth creator booked straight from `/browse` produced a DEALS deal: the brand's standard fee instead of Growth's 30%, and a Deals billing unit. The same creator cost a brand a different amount depending on which door they were booked through, and the cheaper door is the one a brand reaches first
+- [ ] It is now resolved **server-side from the creator row** (`lib/deal-track.ts`). A track posted from a browser is a price a brand could pick for themselves
+
+**Resolution**
+- [ ] `vetting_status = 'growth'` → track `growth`; `deals_approved` → `deals`
+- [ ] `pending`, `rejected` and a missing creator all resolve to `deals`. Neither can be booked at all, and defaulting an unknown to the track with the higher creator-side fee would be the same arbitrage in reverse
+- [ ] Lives in `lib/deal-track.ts`, NOT `lib/track.ts` — that file is imported by `TrackTag`, a client component
+
+**The money (₹10,000 package, verified)**
+- [ ] Growth: brand pays **₹10,000**, creator receives **₹7,000** (30% deducted). The brand sees the package price and pays exactly that, with no markup
+- [ ] Regression it replaces: brand paid ₹11,500 and the creator received ₹10,000 on the brand's standard 15% on-top
+- [ ] The fee shown in `/deals/new` while building matches the fee the offer is sent with — both now resolve the same way. They disagreed before
+
+**Billing units — one deal, one unit, either way**
+- [ ] Deals deal → one `deal` unit, as before
+- [ ] Growth CAMPAIGN deal → no per-deal unit; `bulkSendCampaignDrafts` writes one `growth_campaign` unit for the whole campaign. Recording both would bill it twice
+- [ ] **Growth STANDALONE deal → one `deal` unit.** Keying the unit purely on track would have left it billed by nobody: not a Deals unit, and not part of any campaign's single unit
+- [ ] Held deals still record nothing until ops releases them
+
+**No conflict with campaigns**
+- [ ] A campaign roster is already filtered to `requiredVettingStatus(track)`, so a Growth campaign only ever holds Growth creators and a Deals campaign only `deals_approved`. Creator and campaign always agree; this only settles the case where nobody was asked
+
+**Money movement unchanged**
+- [ ] Still per-deal invoices, creator paid directly, no pooling or fund-splitting. This is a fee and track resolution fix only
+
+**Brand visibility**
+- [ ] `/browse` already tagged every card with `TrackTag` and offers a Growth/Deals filter
+- [ ] `/browse/[id]` now tags the creator too. It did not even select `vetting_status`, so a brand could see "Growth" in the list, click through, and find the page they actually decide from saying nothing — and that is the page carrying the "Create an offer" button

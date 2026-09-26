@@ -48,3 +48,4 @@ export function trackOfVettingStatus(status: string | null | undefined): Track |
 export function requiredVettingStatus(track: Track): 'deals_approved' | 'growth' {
   return track === 'growth' ? 'growth' : 'deals_approved'
 }
+

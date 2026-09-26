@@ -3,6 +3,8 @@ import { isSampleItem } from '@/lib/showcase-samples'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPublicSnapshot } from '@/lib/instagram-sync'
+import TrackTag from '@/components/track/TrackTag'
+import { trackOfVettingStatus } from '@/lib/track'
 import { verifyBrand } from '@/lib/brand-auth'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -89,7 +91,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
   const [{ data: creator, error }, { data: products }, { data: lastDeal }, { data: storefront }] = await Promise.all([
     supabase
       .from('creators')
-      .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, is_vetted, is_bookable')
+      .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, is_vetted, is_bookable, vetting_status')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -277,6 +279,15 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                 <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 26, letterSpacing: '-0.02em', margin: 0 }}>
                   {creator.full_name}
                 </h1>
+                {/* Which track, beside the name. /browse already tags every
+                    card, so a brand could see "Growth" in the list, click
+                    through, and find the page they actually decide from
+                    saying nothing — and this is the page with the Create an
+                    offer button on it. The economics differ (30% deducted from
+                    the creator) and there is no storefront behind the link, so
+                    it should not be something a brand discovers afterwards. */}
+                <TrackTag track={trackOfVettingStatus(creator.vetting_status)} size="sm" />
+
                 {/* is_vetted is true only for the Deals track (trigger, 0507).
                     A Growth creator IS vetted — by a different decision — and
                     is bookable, so keying the tick off is_vetted quietly
