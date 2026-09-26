@@ -251,11 +251,17 @@ This is one of our clearest differentiators, and worth explaining well — most 
 
 **Guapd Deals** is the core: established creators who already run brand deals, hand-vetted and verified. These are the proven creators a brand uses for headline campaigns — the ones with the audience, the track record, and the reach.
 
-**Guapd Growth** is our track for emerging and UGC creators — smaller creators who aren't yet running big brand deals, but who are building an audience and want to grow. Rather than reject them (the way most platforms effectively do), we bring them into a community with guidance and a path forward. This isn't charity — it's strategy, and it creates real value on both sides:
+**Guapd Growth** is our track for emerging and UGC creators: smaller creators who are building an audience, priced for volume rather than headline spend. They are **bookable**. A Growth creator runs the same workflow as anyone else on Guapd, from brief through delivery to payment. The one thing they do not have is a public storefront.
 
-- **For those creators:** a way to grow, learn how brand collaborations work, produce content, and build toward being deal-ready — not a dead end.
-- **For brands:** a pool of authentic UGC creators for volume content, and — crucially — an **amplification engine**. Growth creators can repost, engage with, and extend a headline creator's branded content, and take on content tasks. That means more reach and engagement for a campaign, at a fraction of the cost of buying it through ads.
+Instead of a storefront, a brand books them on two things: the **packages** they have set, and their **verified Instagram data**, pulled from the account they connected. So a brand sees real reach and real prices before they send an offer, without a storefront page in between.
+
+They are a **separate pool**, not folded into the vetted Deals roster. A brand browsing creators sees both, tagged, and can filter to one or the other.
+
+- **For those creators:** the full product, and real paid work, while they build toward Guapd Deals.
+- **For brands:** a pool of authentic UGC creators for volume content, and, crucially, an **amplification engine**. Growth creators can repost, engage with, and extend a headline creator's branded content, and take on content tasks. That means more reach and engagement for a campaign, at a fraction of the cost of buying it through ads.
 - **For Guapd:** a growing, engaged supply base, a content and amplification layer no competitor has, and a pipeline of creators who graduate into Guapd Deals over time.
+
+**The fee.** A Guapd Growth creator carries a 30% platform fee, deducted from the creator, whether the brand books them one to one or inside a Growth campaign. The brand sees the creator's package price and pays exactly that. Nothing is added on top.
 
 The pitch in one line: **Guapd Deals gives you the proven creators; Guapd Growth gives you authentic content, amplification, and reach — so one campaign does more.**
 
@@ -335,7 +341,7 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - **Deliver work** — submit deliverables as links (Drive, YouTube, Loom, anything hosted), track multiple deliverables per deal, respond to revision requests, and mark content posted with the live URL.
 - **Get paid, cleanly** — raise an invoice, track payment status, see total earned and what's outstanding, send a polite reminder, and store your UPI payout ID so brands know where to send money. The fee split is always shown clearly.
 - **Show verified numbers** — connect Instagram for verified follower count, reach, and audience demographics, plus analytics on your own delivered content.
-- **Guapd Growth** — a dedicated track for creators not yet ready for brand deals, with its own guidance — not a dead end.
+- **Guapd Growth** — a track for emerging and UGC creators, with the full workflow: brands book you on your packages and your verified Instagram numbers, and you run the deal, deliver and get paid like anyone else. No public storefront, and a 30% platform fee deducted from what you earn.
 
 ---
 
@@ -466,8 +472,13 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - Growth history over time
 
 **Guapd Growth**
-- A separate track for creators not yet ready for brand deals
-- Its own quiz, screens and guidance — not a dead end
+- A track for emerging and UGC creators, bookable by brands
+- Booked on your packages and your connected Instagram, not a storefront
+- The full workflow: offers, chat, deliverables, review and payment
+- No public storefront page, so no /c/ link to share
+- 30% platform fee, deducted from the creator, one to one or in a campaign
+- Order to get bookable: set up your profile, add your packages, connect Instagram
+- A separate pool from the vetted Deals roster, not merged into it
 
 **Notifications**
 - In-app feed
