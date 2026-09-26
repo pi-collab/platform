@@ -62,7 +62,11 @@ type Client = { from: (t: string) => any }
 const NOT_A_DEAL = ['declined', 'cancelled']
 
 /** The Growth track's platform fee. Deducted from the creator, never on top. */
-export const GROWTH_FEE_PERCENT = 30
+/* GROWTH_FEE_PERCENT and DEALS_STANDARD_FEE_PERCENT live in lib/fee.ts:
+   this module is server-only, and the creator-facing fee note that needs them
+   renders on the client. Re-exported below so server callers keep one import. */
+export { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
+import { GROWTH_FEE_PERCENT } from '@/lib/fee'
 
 export async function resolveDealFee(
   supabase: Client,

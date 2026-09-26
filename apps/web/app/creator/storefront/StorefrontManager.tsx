@@ -2281,8 +2281,12 @@ export default function StorefrontManager({
 
         {/* Mounted once for the whole editor. On close we refresh so the list
             above and the preview both pick up the change without leaving. */}
+        {/* isGrowth={false} always: a Growth creator cannot reach this editor
+            at all, since /creator/storefront renders the locked screen for
+            them, so a Growth variant of the fee note here would be dead copy. */}
         {pkgEditing && (
           <PackageForm
+            isGrowth={false}
             channels={pkgChannels}
             existing={pkgEditing === 'new' ? null : pkgEditing}
             onClose={() => { setPkgEditing(null); router.refresh() }}

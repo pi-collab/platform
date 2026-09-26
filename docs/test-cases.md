@@ -5977,8 +5977,18 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] The percentage and amounts come from the LIVE fee resolution passed into the form, not hardcoded copy — so a Growth creator shows 30%, a Deals creator 15%, an ops pair rate whatever it is, and a storefront first deal still renders its own 0% row
 - [ ] The creator's first name is used, matching the rest of the summary
 
+### 2 + 3. Pricing note in the package editors — BUILT (one component, both places)
+
+- [ ] `PackageForm` is shared by `/creator/packages` and the storefront rate-card step, so the note lands in both from one change
+- [ ] Under the price field: an info line, a 70/30 split bar, and "You receive ₹3,500 / 30% of ₹5,000"
+- [ ] **Growth reads 30%, Deals reads 15%**, from `GROWTH_FEE_PERCENT` and `DEALS_STANDARD_FEE_PERCENT`, not hardcoded copy. Verified: typing 5,000 as a Growth creator shows ₹3,500, matching the design's worked example exactly
+- [ ] `DEALS_STANDARD_FEE_PERCENT` mirrors the DEFAULT on `brands.platform_fee_percent` (0100). It is a default, not a guarantee — the real fee comes from the ladder, which an ops pair rate, an override or the storefront exemption can move. Used only where there is no brand to resolve against, which is exactly a creator pricing a package
+- [ ] The Deals copy mentions the 0% first deal; **the Growth copy does not**, because that exemption keys off a storefront origin and Growth creators have none
+- [ ] The storefront editor always passes `isGrowth={false}` — a Growth creator cannot reach that screen at all, so a Growth variant there would be dead copy
+- [ ] The bar and figures are hidden until a price is typed. A 70/30 bar over an empty field is a proportion of nothing, and "You receive ₹0" reads as a warning
+- [ ] The fee side of the bar is hatched, not filled, so it reads as taken out rather than as a second thing the creator receives
+- [ ] **Regression guard:** the constants live in `lib/fee.ts`, NOT `lib/deal-fee.ts`. That module is `server-only` and this note renders on the client; importing them from there fails the build
+
 ### Still to build
 - [ ] 1. Creator pricing page (`/creator/pricing`) — new route, Deals + Growth variants, rate slider, FAQ
-- [ ] 2. Pricing note on the Packages editor — Deals + Growth variants
-- [ ] 3. Pricing note in the storefront packages editor — Deals only (Growth has no storefront)
 - [ ] 4. Brand pricing page (`/pricing`) — new route, slider, fee-split cards, FAQ

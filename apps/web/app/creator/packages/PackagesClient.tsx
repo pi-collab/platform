@@ -10,6 +10,7 @@ import {
 } from '@/lib/product-price'
 import { savePackage, deletePackage, saveAddonRates, saveRevisionPolicy } from './actions'
 import { percentToBasisPoints } from '@/lib/addons'
+import PackageFeeNote from '@/components/creator/PackageFeeNote'
 import './packages.css'
 
 export interface Channel { platform: string; handle: string }
@@ -463,11 +464,13 @@ export default function PackagesClient({
   addonRates = [],
   revisionPolicy,
   packages,
+  isGrowth = false,
 }: {
   channels: Channel[]
   addonRates?: AddonRateRow[]
   revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
   packages: PackageRow[]
+  isGrowth?: boolean
 }) {
   const [editing, setEditing] = useState<PackageRow | 'new' | null>(null)
   const orphans = packages.filter(
@@ -618,6 +621,7 @@ export default function PackagesClient({
 
       {editing && (
         <PackageForm
+          isGrowth={isGrowth}
           channels={channels}
           existing={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
@@ -640,10 +644,15 @@ export function PackageForm({
   channels,
   existing,
   onClose,
+  isGrowth = false,
 }: {
   channels: Channel[]
   existing: PackageRow | null
   onClose: () => void
+  /** Decides the fee shown beside the price: 30% for Growth, the standard
+   *  Deals rate otherwise. Shared by the packages screen and the storefront
+   *  editor, which is why it is a prop rather than read in here. */
+  isGrowth?: boolean
 }) {
   const [channelKey, setChannelKey] = useState(() => {
     // Matched against the creator's own channels rather than trusted as stored:
@@ -827,6 +836,18 @@ export function PackageForm({
             <span className="pk-preview-value">
               {previewText(mode, price, priceMax)}
             </span>
+          </div>
+
+          {/* What they keep, beside the number they are typing. A creator
+              setting a rate is doing this arithmetic in their head either way;
+              the only question is whether they are doing it against the real
+              figure. */}
+          <div style={{ marginTop: 14 }}>
+            <PackageFeeNote
+              isGrowth={isGrowth}
+              pricePaise={(parseInt(price, 10) || 0) * 100}
+              showFirstDealNote={!isGrowth}
+            />
           </div>
 
           

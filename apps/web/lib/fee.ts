@@ -29,3 +29,16 @@ export function calculateFee(
     creator_receives_paise: feeMode === 'deducted' ? basePaise - feePaise : basePaise,
   }
 }
+
+export const GROWTH_FEE_PERCENT = 30
+
+/**
+ * The standard Deals rate, and what a creator is shown before a brand exists.
+ *
+ * Mirrors the DEFAULT on brands.platform_fee_percent (migration 0100). It is a
+ * DEFAULT, not a guarantee: the fee on any real deal comes from the ladder in
+ * resolveDealFee, which an ops pair rate, a per-deal override or the
+ * storefront first-deal exemption can all move. Used only where there is no
+ * brand to resolve against — a creator pricing a package has not met one yet.
+ */
+export const DEALS_STANDARD_FEE_PERCENT = 15

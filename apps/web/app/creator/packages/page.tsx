@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { verifyCreator } from '@/lib/creator-auth'
+import { creatorGrowthState } from '@/lib/creator-growth-state'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import PackagesClient from './PackagesClient'
@@ -21,6 +22,9 @@ export default async function CreatorPackagesPage(
   { searchParams }: { searchParams?: { from?: string } },
 ) {
   const ctx = await verifyCreator()
+  /* The fee shown beside the price is 30% for Growth and the standard Deals
+     rate otherwise, so the note has to know which this creator is. */
+  const growth = await creatorGrowthState(ctx.creatorId)
   const admin = createAdminClient()
 
   const [{ data: creator }, { data: products }, { data: addonRates }] = await Promise.all([
@@ -47,6 +51,7 @@ export default async function CreatorPackagesPage(
     <main style={{ position: 'relative', zIndex: 1 }}>
       <CreatorPageHeader title="Packages" backHref={backFrom(searchParams?.from)} />
       <PackagesClient
+        isGrowth={growth.isGrowth}
         channels={channels}
         packages={(products ?? []) as never}
         addonRates={(addonRates ?? []) as never}
