@@ -650,3 +650,31 @@ this once real Growth campaigns show where the prose is being relied on.
 Related: the deal model already has `usage_rights`, `usage_rights_end_date`,
 `timeline_date` and `rights_confirmed_at` — this is about deciding them ONCE per
 campaign rather than per deal, not about inventing new fields.
+
+---
+
+## NEXT UP (PJ, 25 Sep 2026): "Set up your profile" as the FIRST creator task
+
+**The ask:** add a "Set up your profile" task to the creator setup checklist
+(`lib/creator-tasks.ts`), and make it the FIRST task for Growth creators —
+ahead of packages.
+
+**Why it belongs first:** the current Growth order is packages → Instagram →
+email → payout, on the reasoning that packages are what make a creator
+bookable. But a brand looking at a Growth creator sees them on `/browse/[id]`
+and nowhere else — there is no storefront — so the profile IS the pitch. A
+priced package on an empty profile is a rate with nobody attached to it.
+
+**Open question to settle first — what counts as "done":** the profile fields
+live across `creators` (full_name, handle, bio, niches, profile_photo_url) and
+the settings screen. Pick the smallest set that makes `/browse/[id]` look like
+a real person — photo + bio + niche is the likely answer — and make `done`
+test exactly that. A task that ticks itself the moment a row exists is not a
+task.
+
+**Where it lands:** the task list, the dashboard header CTA (`lib/growth-cta.ts`
+— currently packages then Instagram; profile would go first there too), and the
+empty-state CTAs that read from the same helper.
+
+**Watch:** the Growth list is four items and can reach 100%. Adding a fifth
+keeps that property only if `done` is genuinely reachable.
