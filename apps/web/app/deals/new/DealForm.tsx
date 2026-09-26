@@ -892,6 +892,43 @@ export default function DealForm({ creator, products, addonRates = [], platformF
                 </span>
               </div>
             )}
+
+            {/* ── "Guapd fee, zero" ────────────────────────────────────────
+                The drawn summary states the fee as its own line at ₹0 rather
+                than leaving it out. Absence is not reassurance: a brand who
+                has heard that platforms add a cut reads a missing line as one
+                they have not found yet. Stating it at zero answers the
+                question instead of dodging it.
+
+                ONLY on 'deducted'. When the brand genuinely bears the fee the
+                Platform fee row above is the true line, and printing ₹0
+                underneath it would contradict the total. */}
+            {feeMode === 'deducted' && finalPaise > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '9px 0' }}>
+                <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Guapd fee</span>
+                <b style={{ fontSize: 14, fontWeight: 700 }}>{'\u20B9'}0</b>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── What the brand is actually agreeing to ───────────────────────
+            The reassurance from the drawn summary, and it is only printed
+            where it is TRUE: on 'deducted', which is the platform rule and
+            always the case for a Growth creator. A brand on a negotiated
+            on_top rate does pay a fee on top, and telling them otherwise two
+            lines under a Platform fee row would be a lie they can see. */}
+        {selectedCount > 0 && feeMode === 'deducted' && finalPaise > 0 && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 18, padding: '14px 16px', borderRadius: 14, background: '#F7F8F4' }}>
+            <span style={{ flexShrink: 0, marginTop: 1 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+            </span>
+            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--ink-soft)' }}>
+              You pay {creator.full_name?.split(' ')[0] ?? 'the creator'}&rsquo;s listed rate. No markup, no extra Guapd fee on top.
+            </p>
           </div>
         )}
 

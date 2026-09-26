@@ -5963,3 +5963,22 @@ unpriced deliverables the creator had never listed, offered in his name.
 **Brand visibility**
 - [ ] `/browse` already tagged every card with `TrackTag` and offers a Growth/Deals filter
 - [ ] `/browse/[id]` now tags the creator too. It did not even select `vetting_status`, so a brand could see "Growth" in the list, click through, and find the page they actually decide from saying nothing — and that is the page carrying the "Create an offer" button
+
+---
+
+## 65. Pricing components (from "Pricing.html")
+
+### 5. Note in the brand offer builder — BUILT
+
+- [ ] On a **deducted** deal (the platform rule, and always the case for a Growth creator) the summary shows a **"Guapd fee ₹0"** line and a tinted note: "You pay <Creator>'s listed rate. No markup, no extra Guapd fee on top."
+- [ ] **Stating the fee at zero rather than omitting it is the point.** Absence is not reassurance — a brand who has heard that platforms take a cut reads a missing line as one they have not found yet
+- [ ] On an **on_top** deal NEITHER appears. The existing "Platform fee (X%)" row is the true line there, and printing ₹0 beneath it, or claiming no markup, would contradict the total the brand is about to agree to
+- [ ] Both are hidden until a deliverable is selected and the price is above ₹0, so an empty form shows no money claims
+- [ ] The percentage and amounts come from the LIVE fee resolution passed into the form, not hardcoded copy — so a Growth creator shows 30%, a Deals creator 15%, an ops pair rate whatever it is, and a storefront first deal still renders its own 0% row
+- [ ] The creator's first name is used, matching the rest of the summary
+
+### Still to build
+- [ ] 1. Creator pricing page (`/creator/pricing`) — new route, Deals + Growth variants, rate slider, FAQ
+- [ ] 2. Pricing note on the Packages editor — Deals + Growth variants
+- [ ] 3. Pricing note in the storefront packages editor — Deals only (Growth has no storefront)
+- [ ] 4. Brand pricing page (`/pricing`) — new route, slider, fee-split cards, FAQ
