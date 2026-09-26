@@ -5032,6 +5032,12 @@ button.signup-form__cross-link {
 /* Three cards need ~220px each before the headings start breaking. */
 @media (max-width: 900px) {
   .pricecards { grid-template-columns: 1fr !important; }
+  /* The two fee-split cards sit beside a paragraph explaining them; below this
+     the paragraph goes above and the cards keep their pair. */
+  .pricesplit { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 560px) {
+  .pricesplitcards { grid-template-columns: 1fr !important; }
 }
 
 /* ── Brand campaigns row ── */

@@ -6003,3 +6003,17 @@ unpriced deliverables the creator had never listed, offered in his name.
 
 ### Still to build
 - [ ] 4. Brand pricing page (`/pricing`) — new route, slider, fee-split cards, FAQ
+
+### 4. Brand pricing page (`/pricing`) — BUILT
+
+- [ ] Reached from the avatar dropdown (beside Payments, which answers the same question from the other end) and the mobile drawer
+- [ ] Behind `verifyBrand()`. It is drawn inside the app chrome and quotes figures a signed-in brand is about to be charged; a public pricing page is a marketing-site job
+- [ ] Slider ₹1,000–₹1,00,000. At any rate: **Creator's rate = X, Guapd fee on top = ₹0, Markup = ₹0, You pay = X**
+- [ ] **The zeros are stated, not omitted.** A brand arriving here has usually been charged a platform cut elsewhere and is looking for ours; a page that simply never mentions a fee reads as one that has not disclosed it yet
+- [ ] "How Guapd earns" shows both creator tiers with the split bars: Deals **85/15**, Growth **70/30**, the same bar the creator's package note uses so the two sides of the product describe one split rather than two coincidences
+- [ ] The Deals card carries the 0% first-deal note; the Growth card says the fee covers discovery and booking
+- [ ] Percentages come from the shared constants, so brand-facing and creator-facing numbers cannot drift apart
+- [ ] Three-question FAQ, and "Plans coming soon" is framed as optional
+- [ ] Phone: the calculator stacks, the split paragraph goes above its cards, and the two cards stack below 560px
+
+### All five pricing components built
