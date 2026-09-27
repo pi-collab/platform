@@ -1,4 +1,5 @@
 import 'server-only'
+import { rejectionReason } from '@/lib/rejection-reasons'
 import { followerRangeOf } from '@/lib/follower-range'
 import { checkDomainHealth } from '@/lib/domain-health'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -267,7 +268,7 @@ export async function notifyCreatorApproved(creatorId: string): Promise<void> {
  * is a judgement made on limited information, and the people most likely to be
  * rejected early are the ones whose profile was simply too thin to assess.
  */
-export async function notifyCreatorRejected(creatorId: string): Promise<void> {
+export async function notifyCreatorRejected(creatorId: string, reasonCode?: string | null): Promise<void> {
   try {
     const { email, name } = await creatorEmail(creatorId)
     if (!email) {
@@ -275,11 +276,21 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
       return
     }
 
+    /* The REASON, when we have one. The old email said review "looks at a few
+       different parameters" and named none of them — so the commonest case by
+       far, that we could not find a handle to look at, read as a verdict on
+       their work instead of a field they could fill in. */
+    const reason = rejectionReason(reasonCode)
+
     const { html, text } = renderAccountEmail({
       heading: `An update on your ${BRAND_NAME} profile`,
       body: [
         `Hi ${name}, we've reviewed your profile and can't approve it for ${BRAND_NAME} right now.`,
-        'Review looks at a few different parameters, and this is not a judgement on the quality of your work.',
+        ...(reason ? [reason.creatorLine] : ['Review looks at a few different parameters, and this is not a judgement on the quality of your work.']),
+        /* The next step belongs to the reason. Telling someone to add their
+           handle when the answer was really "your audience is not who our
+           brands buy" wastes their time and ours. */
+        ...(reason?.nextStep ? [reason.nextStep] : []),
         // NOT "reply to this email": EMAIL_REPLY_TO is unset, so a reply goes
         // nowhere. The appeal box on their profile page does reach us, and it
         // records what they wrote rather than depending on mail routing.
@@ -295,7 +306,10 @@ export async function notifyCreatorRejected(creatorId: string): Promise<void> {
       subject: `An update on your ${BRAND_NAME} profile`,
       html,
       text,
-      idempotencyKey: `creator-rejected-${creatorId}`,
+      /* The reason is in the key: a creator rejected, appealed, and rejected
+         again for a different reason must receive the new sentence, which a
+         key of the id alone would suppress as a duplicate. */
+      idempotencyKey: `creator-rejected-${creatorId}-${reasonCode ?? 'none'}`,
     })
 
     await record(res.ok ? 'creator.rejected_email_sent' : 'creator.rejected_email_failed', {

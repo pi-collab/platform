@@ -6056,3 +6056,42 @@ Payments row pointed at a tab that does not exist.
 - [ ] Hamburger drawer (`ALL_MOBILE_LINKS`, below 768px) → Payments resolves. It deliberately does NOT carry Packages or Pricing; the Profile tab is the surface that holds those, and duplicating them into the drawer gives two rows for one destination
 - [ ] `grep` for `tab=payments` across `apps/web` returns only the brand sidebar, where the section is real
 
+---
+
+## 67. Rejection reasons — ops picks one, the creator is told which
+
+`rejectCreator` took a creator id and nothing else. The email that followed said
+review "looks at a few different parameters" and named none, so the commonest
+case by far — no Instagram handle on the profile, nothing for us to look at —
+reached the creator as a judgement on their work rather than as a missing field
+they could fix in a minute.
+
+New: `supabase/migrations/0512_creator_rejection_reason.sql`
+(`creators.rejection_reason`, nullable text) and `apps/web/lib/rejection-reasons.ts`.
+
+### The picker (ops → creator → Vetting tab)
+- [ ] **Reject** no longer fires a `confirm()`. It opens a radio list of seven reasons
+- [ ] Each option shows the ops label AND the sentence the creator will read, so the reviewer sees what is being sent before sending it
+- [ ] **"Reject and send" stays disabled until a reason is picked.** A reason is not optional — the whole point is that the email says something
+- [ ] Approve, Growth and Reset are unchanged and take no reason
+
+### What gets written
+- [ ] `creators.rejection_reason` is set alongside `vetting_status = 'rejected'`
+- [ ] It is **cleared** on any other outcome, so a creator later approved does not carry a stale reason
+- [ ] An unrecognised code is stored as nothing rather than saved and later rendered to a creator as a blank sentence (`isRejectionReason()`)
+- [ ] The `ops_events` row records the code (CLAUDE.md: every ops action writes its audit entry in the same commit)
+
+### What the creator gets
+- [ ] The rejection email carries `reason.creatorLine`, and `reason.nextStep` where the reason has one
+- [ ] The **rejected status screen** (`components/CreatorRejected.tsx`) shows the same line, so the reason survives an unread or spam-filed email
+- [ ] A creator rejected BEFORE this column existed has no code and falls back to the original general wording. No invented reason
+- [ ] The idempotency key includes the code (`creator-rejected-<id>-<code>`), so re-rejecting with a different reason sends the corrected email rather than being deduped into silence
+
+### The wording rules
+- [ ] `fixable` reasons (no handle, handle not found, profile incomplete, inactive) carry a next step. The judgement reasons (content mismatch, audience, other) carry none — telling someone to "add your handle and reply" when the real answer is that their audience is not who our brands buy wastes their time
+- [ ] The next step points at the **appeal box on their own status screen**, NOT at replying to the email. `EMAIL_REPLY_TO` is unset, so a reply goes nowhere; `lib/account-emails.ts` already carries that warning. If a real reply-to (contact@guapd.com) is configured later, the next-step wording can change to match
+- [ ] Creator-facing sentences live in `lib/rejection-reasons.ts`, never in the DB row — so they can be reworded for everyone at once, including for creators already rejected
+- [ ] No free-text box. Ops writing the sentence fresh under a Reject button at the end of a vetting session is how an unkind sentence reaches someone on the worst email we send
+
+### Environment
+- [ ] **Migration 0512 must be applied before this code ships.** `app/creator/layout.tsx` now selects `rejection_reason`; without the column that query fails and the creator layout breaks for every creator, not just rejected ones. Applied to staging 27 Sep 2026; still to run on production

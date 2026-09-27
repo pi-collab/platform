@@ -5,6 +5,7 @@ import { QUESTIONS, labelFor } from '@/lib/creator-onboarding-labels'
 import { GROWTH_QUESTIONS, labelFor as growthLabelFor } from '@/lib/growth-quiz-labels'
 import { approveForDeals, moveToGrowth, rejectCreator, deleteCreator, addProduct, editProduct, setBrandCreatorRate } from '../../actions'
 import { useRouter } from 'next/navigation'
+import { REJECTION_REASONS, rejectionReason } from '@/lib/rejection-reasons'
 import { PRODUCT_TYPES, PRODUCT_TYPES_BY_PLATFORM } from '@/lib/product-types'
 import {
   formatProductPrice, normalizePriceMode,
@@ -94,6 +95,9 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
   const router = useRouter()
   const [actionLoading, setActionLoading] = useState(false)
 
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+
   async function handleVet() {
     setActionLoading(true)
     const res = await approveForDeals(creator.id)
@@ -111,12 +115,20 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
     setActionLoading(false)
   }
 
-  async function handleReject() {
-    if (!confirm('Reject this creator? (Row kept, marked not vetted.)')) return
+  /* Reject opens the reason picker rather than a confirm(). The reason is not
+     paperwork: it is the sentence the creator reads, and the commonest one by
+     far ("we could not find a handle to review") is a field they can fill in
+     rather than a verdict. A confirm() cannot collect it. */
+  function handleReject() {
+    setRejectOpen(true)
+  }
+
+  async function confirmReject() {
+    if (!rejectReason) return
     setActionLoading(true)
-    const res = await rejectCreator(creator.id)
+    const res = await rejectCreator(creator.id, rejectReason)
     if (res.error) alert(res.error)
-    else router.refresh()
+    else { setRejectOpen(false); setRejectReason(''); router.refresh() }
     setActionLoading(false)
   }
 
@@ -164,6 +176,55 @@ export default function CreatorTabs({ onboarding, growthQuiz, creator, products,
           </button>
         )}
       </div>}
+
+      {/* ── Reject: pick the reason first ─────────────────────────────────
+          The reason is the sentence the creator reads, so it is chosen from a
+          fixed list rather than typed: the kind wording is then the only
+          wording that can be sent, at the end of a long vetting session as
+          much as at the start. Reject stays disabled until one is picked. */}
+      {rejectOpen && (
+        <div style={{ marginTop: '1rem', padding: '1rem 1.25rem', border: '1px solid #fca5a5', borderRadius: 10, background: '#fff7f7' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#991b1b' }}>Why are you rejecting {creator.full_name || 'this creator'}?</div>
+          <p style={{ margin: '4px 0 12px', fontSize: '0.8rem', color: '#7f1d1d', lineHeight: 1.5 }}>
+            They will be emailed this reason, and it shows on their status screen.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {REJECTION_REASONS.map((r) => (
+              <label key={r.code} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 10px', borderRadius: 8, background: rejectReason === r.code ? '#fee2e2' : '#fff', border: '1px solid #f3d4d4', cursor: 'pointer' }}>
+                <input
+                  type="radio" name="reject-reason" value={r.code}
+                  checked={rejectReason === r.code}
+                  onChange={() => setRejectReason(r.code)}
+                  style={{ marginTop: 3 }}
+                />
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: '0.87rem', fontWeight: 600, color: '#1f2937' }}>{r.opsLabel}</span>
+                  {/* The creator's own words, shown to the reviewer. Picking a
+                      reason without seeing what it says is how an unkind
+                      sentence goes out unnoticed. */}
+                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#6b7280', marginTop: 2, lineHeight: 1.45 }}>
+                    &ldquo;{r.creatorLine}{r.nextStep ? ' ' + r.nextStep : ''}&rdquo;
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button
+              onClick={confirmReject}
+              disabled={!rejectReason || actionLoading}
+              style={{ ...actionBtn, background: rejectReason ? '#dc2626' : '#e5e7eb', color: rejectReason ? '#fff' : '#9ca3af', cursor: rejectReason ? 'pointer' : 'default' }}
+            >
+              {actionLoading ? '...' : 'Reject and send'}
+            </button>
+            <button onClick={() => { setRejectOpen(false); setRejectReason('') }} disabled={actionLoading} style={{ ...actionBtn, background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e5e5e5', marginBottom: '1.25rem', flexWrap: 'wrap' }}>

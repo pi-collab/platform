@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import FormError from '@/components/FormError'
 import { sendAppeal } from '@/app/creator/appeal-actions'
+import { rejectionReason } from '@/lib/rejection-reasons'
 
 /**
  * Shown to a creator whose profile was not approved. Design "Creator Signup
@@ -13,7 +14,12 @@ import { sendAppeal } from '@/app/creator/appeal-actions'
  * whose profile was simply too sparse to assess — so the screen has to leave a
  * route back rather than just delivering the verdict.
  */
-export default function CreatorRejected({ alreadyAppealed }: { alreadyAppealed: boolean }) {
+export default function CreatorRejected({ alreadyAppealed, reasonCode }: {
+  alreadyAppealed: boolean
+  /** Code from lib/rejection-reasons. Absent for rejections predating it. */
+  reasonCode?: string | null
+}) {
+  const reason = rejectionReason(reasonCode)
   const [note, setNote] = useState('')
   const [sent, setSent] = useState(alreadyAppealed)
   const [error, setError] = useState('')
@@ -57,10 +63,27 @@ export default function CreatorRejected({ alreadyAppealed }: { alreadyAppealed: 
 
       <div className="onboard-body denied-body">
         <div className="onboard-card denied-card">
-          <p className="denied-lede">
-            Your profile didn&rsquo;t meet our current criteria for approval. This isn&rsquo;t
-            permanent, and a lot of creators get in on a second try.
-          </p>
+          {/* The REASON, when ops recorded one. Without it this screen and the
+              email both say only "did not meet our criteria", which for the
+              commonest case — no handle for us to look at — is a verdict where
+              the truth was a missing field. Falls back to the general line for
+              every creator rejected before reasons existed. */}
+          {reason ? (
+            <>
+              <p className="denied-lede">{reason.creatorLine}</p>
+              {reason.nextStep && (
+                <div className="denied-note">
+                  <div className="denied-note__title">What you can do</div>
+                  <div className="denied-note__body">{reason.nextStep}</div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="denied-lede">
+              Your profile didn&rsquo;t meet our current criteria for approval. This isn&rsquo;t
+              permanent, and a lot of creators get in on a second try.
+            </p>
+          )}
 
           {/* The design says "we'll email you the moment you're eligible
               again", which implies a 30-day timer nothing runs. What is true:

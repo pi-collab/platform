@@ -1,5 +1,6 @@
 'use server'
 
+import { isRejectionReason } from '@/lib/rejection-reasons'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
@@ -124,7 +125,7 @@ export async function addCreator(input: AddCreatorInput) {
  */
 type VettingOutcome = 'deals_approved' | 'growth' | 'rejected'
 
-async function decideVetting(creatorId: string, outcome: VettingOutcome) {
+async function decideVetting(creatorId: string, outcome: VettingOutcome, reasonCode: string | null = null) {
   /* Admin only. The outreach role reads creators but decides nothing about
      them: every outcome here emails a real person and changes whether brands
      can see them. */
@@ -148,7 +149,10 @@ async function decideVetting(creatorId: string, outcome: VettingOutcome) {
 
   const { error } = await admin
     .from('creators')
-    .update({ vetting_status: outcome })
+    /* The reason is written WITH the status, and cleared on any other outcome:
+       a creator approved after an appeal must not keep the sentence explaining
+       why they were turned down. */
+    .update({ vetting_status: outcome, rejection_reason: outcome === 'rejected' ? reasonCode : null })
     .eq('id', creatorId)
 
   if (error) return { error: error.message }
@@ -156,6 +160,9 @@ async function decideVetting(creatorId: string, outcome: VettingOutcome) {
   await logOpsEvent(user, `creator.${outcome}`, 'creators', creatorId, {
     before: { vetting_status: from },
     after: { vetting_status: outcome },
+    /* The code, so "how many went for no handle" is a GROUP BY rather than a
+       guess. That number decides whether the fix is vetting or the signup form. */
+    ...(outcome === 'rejected' ? { rejection_reason: reasonCode } : {}),
   })
 
   if (outcome === 'deals_approved') {
@@ -179,7 +186,7 @@ async function decideVetting(creatorId: string, outcome: VettingOutcome) {
   }
 
   if (outcome === 'rejected') {
-    await notifyCreatorRejected(creatorId)
+    await notifyCreatorRejected(creatorId, reasonCode)
     await notifyCreatorStatusChanged(creatorId, 'rejected')
   }
 
@@ -208,8 +215,10 @@ export async function moveToGrowth(creatorId: string) {
   return decideVetting(creatorId, 'growth')
 }
 
-export async function rejectCreator(creatorId: string) {
-  return decideVetting(creatorId, 'rejected')
+export async function rejectCreator(creatorId: string, reasonCode?: string) {
+  /* An unrecognised code is stored as nothing rather than saved and then
+     rendered to a creator as a blank sentence. */
+  return decideVetting(creatorId, 'rejected', isRejectionReason(reasonCode) ? reasonCode : null)
 }
 
 /** @deprecated Use approveForDeals. Kept so no caller silently breaks. */

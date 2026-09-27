@@ -30,10 +30,11 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   let isRejected = false
   let vettingStatus = 'pending'
   let creatorId: string | null = null
+  let rejectionReasonCode: string | null = null
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('id, full_name, is_vetted, is_rejected, vetting_status, profile_photo_url')
+      .select('id, full_name, is_vetted, is_rejected, vetting_status, profile_photo_url, rejection_reason')
       .eq('user_id', profile.id)
       .maybeSingle()
     creatorId = creator?.id ?? null
@@ -42,6 +43,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     isVetted = creator?.is_vetted ?? false
     isRejected = creator?.is_rejected ?? false
     vettingStatus = (creator?.vetting_status as string | undefined) ?? 'pending'
+    rejectionReasonCode = (creator?.rejection_reason as string | null | undefined) ?? null
   }
 
   /* ── Growth creators are IN the app ──────────────────────────────────────
@@ -137,7 +139,7 @@ export default async function CreatorLayout({ children }: { children: React.Reac
             .maybeSingle()
         : { data: null }
 
-      return <CreatorRejected alreadyAppealed={Boolean(appeal)} />
+      return <CreatorRejected alreadyAppealed={Boolean(appeal)} reasonCode={rejectionReasonCode} />
     }
 
     redirect('/signup/creator/complete')
