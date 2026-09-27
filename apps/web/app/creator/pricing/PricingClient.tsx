@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
+import PricingFaq from '@/components/pricing/PricingFaq'
 import { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
 
 /**
@@ -169,12 +170,7 @@ export default function PricingClient({ isGrowth, backHref }: {
                 that exemption keys off a storefront origin, and a Growth
                 creator has no storefront. Answering it here would promise a
                 route they cannot take. */}
-            {(isGrowth ? GROWTH_FAQ : DEALS_FAQ).map(([q, a], i) => (
-              <div key={q} style={{ padding: '22px 0', borderTop: i === 0 ? 'none' : '1px solid var(--border-hairline)' }}>
-                <h4 style={{ margin: 0, fontSize: 16.5, fontWeight: 600, letterSpacing: '-0.005em', lineHeight: 1.45 }}>{q}</h4>
-                <p style={{ margin: '6px 0 0', fontSize: 15, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 760 }}>{a}</p>
-              </div>
-            ))}
+            <PricingFaq items={isGrowth ? GROWTH_FAQ : DEALS_FAQ} />
           </div>
         </section>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import ContactLink from '@/components/ContactLink'
+import PricingFaq from '@/components/pricing/PricingFaq'
 
 /**
  * What a brand pays — plans, not a fee calculator.
@@ -178,14 +179,7 @@ export default function BrandPricingClient() {
         {/* ── FAQ ── */}
         <div>
           <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em' }}>Questions</h2>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {FAQ.map(([q, a]) => (
-              <div key={q} style={{ padding: '22px 0', borderBottom: '1px solid rgba(18,21,28,.08)' }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>{q}</h3>
-                <p style={{ margin: '6px 0 0', fontSize: 15, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 720 }}>{a}</p>
-              </div>
-            ))}
-          </div>
+          <PricingFaq items={FAQ} headingSize={16} headingTag="h3" divider="bottom" answerMaxWidth={720} />
         </div>
 
       </div>

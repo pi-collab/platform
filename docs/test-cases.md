@@ -6245,3 +6245,16 @@ word-for-word what the design draws, including the hatched split bar.
 - [ ] So the page states a limit the product does not apply, to brands who are all on Free. If these are meant to bind, enforcement has to be built first
 - [ ] "AI creator search" is listed as a Free feature. The code is on production but gated off by a missing `ANTHROPIC_API_KEY`, so a brand reading this page cannot use it today
 - [ ] The prices themselves are a **cofounder decision** the roadmap still lists as open ("platform revenue model — needs math"). This page now publishes specific monthly figures to signed-in brands
+
+---
+
+## 74. Pricing FAQs collapse, first one open
+
+One `components/pricing/PricingFaq.tsx` behind both pricing pages.
+
+- [ ] Every question is a button with a rotating chevron. **The first answer is open, the rest are collapsed** — on desktop AND phone, on the creator page AND the brand page. Four answers open at once is a wall of prose under the thing the reader came for; collapsed, the questions read as a list of what can be asked
+- [ ] First open rather than all closed: an accordion with nothing open looks like a nav bar and gives no clue what an answer looks like
+- [ ] **Independent toggles, not one-at-a-time.** Opening a second question does not shut the first — a reader comparing two answers should not have to keep reopening one
+- [ ] `aria-expanded` on each button; it is a real `<button>`, so keyboard and screen readers get the state
+- [ ] The same behaviour serves both pages without either being redrawn: the creator page rules BETWEEN items with `h4` at 16.5, the brand page rules UNDER each with `h3` at 16, and both are props
+- [ ] The Growth FAQ is still three questions and the Deals one four — collapsing does not change which questions exist
