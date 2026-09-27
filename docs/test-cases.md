@@ -6017,3 +6017,42 @@ unpriced deliverables the creator had never listed, offered in his name.
 - [ ] Phone: the calculator stacks, the split paragraph goes above its cards, and the two cards stack below 560px
 
 ### All five pricing components built
+
+---
+
+## 66. Creator profile menu — the dead Payments link, and the two missing doors
+
+Reported from staging: "when user click on payments in creator - it does not
+take them anywhere in desktop", plus "there is no place to check the packages in
+the profile" and "no entry point for pricing".
+
+All three were DESKTOP-only. The phone's profile screen
+(`app/creator/profile/CreatorProfileMobile.tsx`) has carried Packages, Payments
+and Pricing & fees as menu rows all along; the desktop avatar dropdown in
+`components/CreatorSidebar.tsx` had Profile / Settings / Payments / Help, and its
+Payments row pointed at a tab that does not exist.
+
+### Payments, from the desktop avatar menu
+- [ ] Clicking **Payments** lands on `/creator/payments` — the earnings screen, with the payout method on it
+- [ ] It previously pointed at `/creator/settings?tab=payments`. Creator settings has THREE sections — `profile`, `connected`, `account` — so `payments` failed `validSections.includes(tabParam)` and fell back to `profile`. You clicked Payments and got Edit profile, which is why it read as a link that went nowhere
+- [ ] NOTE the brand side is NOT affected: `app/settings/SettingsClient.tsx` does have a `payments` section, so `BrandSidebar`'s `/settings?tab=payments` is a real destination. Only the creator's copy of the pattern was wrong
+
+### Packages, reachable again after they are set
+- [ ] **Packages** in the desktop avatar menu opens `/creator/packages`, for BOTH tracks
+- [ ] The regression this fixes: on desktop, packages were reachable only from the dashboard checklist task and the Growth header CTA — **both of which disappear once packages exist**. A creator who had set their rates had no route back to them at all. (A Deals creator could reach them sideways through the storefront editor, which embeds the same `PackageForm`; a Growth creator has no storefront, so they had nothing.)
+- [ ] No `?from=` on this link. `backFrom()` sends `from=profile` to `/creator/profile`, which is the phone's screen — from the desktop menu the dashboard default is where they actually were
+- [ ] Both tracks write the same `creator_products` rows, so the page and the storefront editor cannot drift
+
+### Pricing & fees
+- [ ] **Pricing & fees** opens `/creator/pricing`, sitting directly under Payments — it answers the same question one step earlier: of the rate I charge, what lands in my account
+- [ ] Its breadcrumb reads "Profile › Pricing & fees" and links to `/creator/profile`, so a desktop creator does land on the phone's profile screen. That screen now has `maxWidth: 560` and is centred: full-bleed at 1400px, a centred identity card read as a broken page. Wider than any phone viewport, so nothing changes on mobile
+
+### Growth creator, same menu
+- [ ] The first row reads **"Profile"** / "Your name, photo and bio" for a Growth creator, and "Profile & shopfront" / "Your public creator page" for a Deals creator. Naming a shopfront in the menu of someone who cannot have one points at a locked page — the same rule that already filters the Storefront nav pill
+
+### Mobile — verified, not changed
+- [ ] Tab bar **Payments** → `/creator/payments`. Works
+- [ ] Profile tab → **Packages** (`?from=profile`), **Payments** (`?from=profile`), **Pricing & fees**. All three present, all resolve
+- [ ] Hamburger drawer (`ALL_MOBILE_LINKS`, below 768px) → Payments resolves. It deliberately does NOT carry Packages or Pricing; the Profile tab is the surface that holds those, and duplicating them into the drawer gives two rows for one destination
+- [ ] `grep` for `tab=payments` across `apps/web` returns only the brand sidebar, where the section is real
+

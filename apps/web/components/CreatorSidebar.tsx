@@ -328,7 +328,24 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                   {/* Profile & shopfront */}
                   <Link href="/creator/settings?tab=profile" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>
-                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Profile & shopfront</span><span style={pmiSub}>Your public creator page</span></span>
+                    {/* A Growth creator has no shopfront, so naming one here
+                        points at a page they cannot reach. Same rule as the
+                        nav pill above. */}
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>{hideStorefront ? 'Profile' : 'Profile & shopfront'}</span><span style={pmiSub}>{hideStorefront ? 'Your name, photo and bio' : 'Your public creator page'}</span></span>
+                  </Link>
+                  {/* ── Packages ──────────────────────────────────────────────
+                      Was reachable on desktop only from the dashboard checklist
+                      and the Growth CTA — both of which DISAPPEAR once packages
+                      exist. So a creator who had set their rates had no way
+                      back to them at all on a desktop. The phone's profile menu
+                      has carried this row all along; this is the same row.
+
+                      No ?from=: that back arrow returns to /creator/profile,
+                      which is the phone's screen. From here the dashboard (the
+                      default) is where they actually came from. */}
+                  <Link href="/creator/packages" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1.4" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Packages</span><span style={pmiSub}>Your rates and what they include</span></span>
                   </Link>
                   {/* Settings */}
                   <Link href="/creator/settings?tab=account" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
@@ -336,9 +353,22 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                     <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Settings</span><span style={pmiSub}>Account, notifications, security</span></span>
                   </Link>
                   {/* Payments */}
-                  <Link href="/creator/settings?tab=payments" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                  {/* /creator/payments, NOT ?tab=payments. Settings has three
+                      sections — profile, connected, account — so 'payments'
+                      failed the valid-section check and fell back to Profile.
+                      Clicking Payments landed you on Edit profile, which is
+                      why it read as a link that went nowhere. The payments
+                      route carries both earnings and the payout method. */}
+                  <Link href="/creator/payments" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg></span>
-                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Payments</span><span style={pmiSub}>Payout method & earnings</span></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Payments</span><span style={pmiSub}>Earnings & payout method</span></span>
+                  </Link>
+                  {/* Next to Payments, because it answers the same question one
+                      step earlier: of the rate I charge, what lands in my
+                      account. Same row the phone's profile menu carries. */}
+                  <Link href="/creator/pricing" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Pricing & fees</span><span style={pmiSub}>What you keep on every deal</span></span>
                   </Link>
                   {/* Help & support */}
                   <Link href="/creator/settings" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>

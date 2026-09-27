@@ -49,7 +49,12 @@ export default function CreatorProfileMobile({
   const surname = restName.join(' ')
 
   return (
-    <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    /* maxWidth is for the DESKTOP visit. This screen is the phone's, but the
+       pricing page's breadcrumb reads "Profile › Pricing & fees" and links
+       here, so a desktop creator does land on it — and full-bleed at 1400px a
+       centred identity card reads as a broken page. Wider than the viewport on
+       a phone, so nothing changes there. */
+    <div style={{ padding: '0 16px', maxWidth: 560, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Identity */}
       <div
         className="sr msurface"
