@@ -6153,3 +6153,28 @@ login. Caused by §67, within an hour of shipping it.
 - [ ] Reload it from a DIRECT connection instead — the dashboard **SQL Editor** (`NOTIFY pgrst, 'reload schema';`), or restart the API under Project Settings → API
 - [ ] Test for it with the anon key: a select naming the new column returns `42703` while the cache is stale, and succeeds once it is not. RLS returning no rows is not the same as a privilege or cache error
 - [ ] **Applies to production too**: after running 0512 there, reload the cache from the SQL Editor before promoting, or the ops reject write will fail
+
+---
+
+## 70. Desktop polish on the screens the profile menu now reaches
+
+Four things reported after §66 opened those routes on desktop.
+
+### "Packages" heading pinned to the page edge
+- [ ] `CreatorPageHeader` is a phone header: full-bleed, 16px padding. Most callers wrap it in a mobile-only container, so it is never seen at desktop width — but **Packages and Profile are not wrapped**, and at 1400px the title sat at the far-left page edge while the content sat centred several hundred pixels away
+- [ ] It now takes an optional `columnWidth` (+ `columnInset`) applied at ≥768px only. Packages passes 720/20, matching `.pk-wrap`'s desktop column (max-width 720, padding 24) minus the row's own 4px, so "Packages" starts on the SAME x as the copy under it. Profile passes 560/12 to match its column
+- [ ] Omitted, nothing changes — every mobile caller draws the header exactly as before
+- [ ] The padding moved from an inline style to `.cph` so the desktop rule can override it; an inline style would have won
+
+### Pricing lede
+- [ ] The opening sentence is 17px (was 15) and sits on ONE line on a normal desktop. The 760px block cap and the 560px paragraph cap are gone — it is the sentence the whole page exists to say, and at 15px in a 560px column it read as body copy rather than as the answer
+- [ ] NOT `nowrap`: a phone cannot hold it on one line and forcing it would overflow instead of wrapping
+
+### Help & support opens the contact form
+- [ ] The desktop profile menu's **Help & support** opens the contact DIALOG. It pointed at `/creator/settings`, which answers nothing and is already two rows above
+- [ ] It uses `ContactLink` — the same control the footer and the phone's profile menu use — so a query from here still writes the `events` row the form records before it emails. A hand-rolled dialog would have quietly lost that
+- [ ] `ContactLink` now accepts `style`, so a menu row styled with a shared inline object no longer needs a non-interactive wrapper div around an interactive control
+
+### The double rule under Help & support
+- [ ] Not intentional — two identical hairline dividers sat back to back, 6px apart. One removed
+- [ ] The footer's **Support** link was `mailto:help@guapd.com`, an address the company contact notes never establish (contact@guapd.com is the real one), sitting one row under a Help & support that now opens a real form. It opens the same dialog: one support route rather than three, and no mail client required

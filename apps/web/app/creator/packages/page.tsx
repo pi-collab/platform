@@ -49,7 +49,10 @@ export default async function CreatorPackagesPage(
 
   return (
     <main style={{ position: 'relative', zIndex: 1 }}>
-      <CreatorPageHeader title="Packages" backHref={backFrom(searchParams?.from)} />
+      {/* 720/20 matches .pk-wrap's desktop column (max-width 720, padding 24)
+          minus the row's own 4px, so "Packages" starts exactly where the copy
+          under it does. */}
+      <CreatorPageHeader title="Packages" backHref={backFrom(searchParams?.from)} columnWidth={720} columnInset={20} />
       <PackagesClient
         isGrowth={growth.isGrowth}
         channels={channels}

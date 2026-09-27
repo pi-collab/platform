@@ -328,3 +328,20 @@ body:has(.creator-main) {
 .has-cookie-banner .creator-app {
   padding-bottom: calc(210px + env(safe-area-inset-bottom));
 }
+
+/* ── Page header (back arrow + title) ────────────────────────────────────────
+   Phone values, unchanged — moved out of the inline style only so the desktop
+   rule below can override the padding, which an inline style would win against.
+
+   The desktop rule applies ONLY when a caller passes columnWidth. Every other
+   caller wraps this header in a mobile-only container and never reaches it. */
+.cph { padding: 20px 16px 14px; background: #F5F7FA; }
+
+@media (min-width: 768px) {
+  .cph {
+    max-width: var(--cph-col, none);
+    margin-inline: auto;
+    padding-left: var(--cph-inset, 16px);
+    padding-right: var(--cph-inset, 16px);
+  }
+}

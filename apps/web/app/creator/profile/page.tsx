@@ -33,7 +33,8 @@ export default async function CreatorProfilePage() {
 
   return (
     <main style={{ position: 'relative', zIndex: 1 }}>
-      <CreatorPageHeader title="Profile" backHref="/creator/dashboard" />
+      {/* Matches CreatorProfileMobile's column: max-width 560, padding 16. */}
+      <CreatorPageHeader title="Profile" backHref="/creator/dashboard" columnWidth={560} columnInset={12} />
       <CreatorProfileMobile
         fullName={ctx.creatorName ?? ''}
         handle={creator?.handle ?? null}

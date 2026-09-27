@@ -15,17 +15,43 @@ export default function CreatorPageHeader({
   title,
   backHref,
   action,
+  columnWidth,
+  columnInset = 20,
 }: {
   title: string
   backHref: string
   /** Optional control on the right, e.g. "Mark all read". */
   action?: React.ReactNode
+  /**
+   * The content column this header sits above, in px — DESKTOP ONLY.
+   *
+   * Most callers wrap this header in a mobile-only container, so it is never
+   * seen at desktop width and needs none of this. Packages and Profile are the
+   * exceptions: they are phone screens the desktop profile menu now links to,
+   * and without a column the title pinned itself to the far-left page edge
+   * while the content sat centred several hundred pixels away.
+   *
+   * Omitted, nothing changes — the header stays full-bleed, as every mobile
+   * caller draws it.
+   */
+  columnWidth?: number
+  /**
+   * Horizontal padding inside that column, so the title lands on the SAME x as
+   * the content below it rather than merely near it. The row adds its own 4px,
+   * so this is the caller's content padding minus 4.
+   */
+  columnInset?: number
 }) {
   // 14px below the title, per the export. That spacing lived in the same
   // declaration as the sticky positioning, so removing sticky took it too and
   // the first card ended up flush against the heading.
   return (
-    <div style={{ padding: '20px 16px 14px', background: '#F5F7FA' }}>
+    <div
+      className="cph"
+      style={columnWidth
+        ? ({ '--cph-col': `${columnWidth}px`, '--cph-inset': `${columnInset}px` } as React.CSSProperties)
+        : undefined}
+    >
       <div
         style={{
           display: 'flex',

@@ -12,8 +12,15 @@ import ContactModal from '@/components/ContactModal'
  * configured, and it records nothing our side; the form writes an events row
  * before it emails, so a query survives Resend being down.
  */
-export default function ContactLink({ className, label = 'Contact', children }: {
+export default function ContactLink({ className, style, label = 'Contact', children }: {
   className?: string
+  /**
+   * Inline styles for the trigger. The creator profile menu styles its rows
+   * with a shared inline object rather than a class, and without this a caller
+   * has to wrap the button in a styled div — which is how the phone's Help row
+   * ended up with a non-interactive wrapper around an interactive control.
+   */
+  style?: React.CSSProperties
   label?: string
   /**
    * Replaces the label entirely, for menu rows that need an icon beside the
@@ -26,7 +33,7 @@ export default function ContactLink({ className, label = 'Contact', children }: 
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
+      <button type="button" className={className} style={style} onClick={() => setOpen(true)}>
         {children ?? label}
       </button>
       <ContactModal open={open} onClose={() => setOpen(false)} />

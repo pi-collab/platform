@@ -30,7 +30,10 @@ export default function PricingClient({ isGrowth }: { isGrowth: boolean }) {
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* ── Heading ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
+        {/* No maxWidth on the block: the lede below is meant to sit on ONE
+            line, and a 760px cap broke it into three. The heading is short
+            enough not to need one. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-faint)' }}>
             <Link href="/creator/profile" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Profile</Link>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
@@ -39,7 +42,11 @@ export default function PricingClient({ isGrowth }: { isGrowth: boolean }) {
           <h1 style={{ margin: '14px 0 0', fontSize: 26, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.015em' }}>
             Your rate, your payout
           </h1>
-          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 560 }}>
+          {/* One line, and bigger: it is the sentence the whole page exists to
+              say, and at 15px inside a 560px column it read as body copy
+              rather than as the answer. Not nowrap — a phone cannot hold it on
+              one line, and forcing it would overflow rather than wrap. */}
+          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
             {isGrowth
               ? 'Guapd brings you the bookings. The brand pays your listed rate, and our fee comes from your side.'
               : 'The brand pays your listed rate and our fee comes from your side. Your first deal with a brand you bring is 0%.'}

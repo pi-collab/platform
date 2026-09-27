@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
+import ContactLink from '@/components/ContactLink'
 
 const NAV_PILLS: { label: string; href: string; icon: 'dashboard' | 'deals' | 'payments' | 'storefront' }[] = [
   { label: 'Dashboard', href: '/creator/dashboard', icon: 'dashboard' },
@@ -370,13 +371,22 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg></span>
                     <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Pricing & fees</span><span style={pmiSub}>What you keep on every deal</span></span>
                   </Link>
-                  {/* Help & support */}
-                  <Link href="/creator/settings" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
-                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg></span>
-                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Help & support</span></span>
-                  </Link>
+                  {/* Help & support — the contact DIALOG, not a settings page.
+                      It pointed at /creator/settings, which answers nothing and
+                      is already two rows above. ContactLink is the same control
+                      the footer and the phone's profile menu use, so a query
+                      from here writes the events row the form records before it
+                      emails. Reimplementing the dialog would quietly lose that.
 
-                  <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
+                      The menu closes on click like every sibling row; the
+                      dialog lives inside ContactLink and stays open. */}
+                  <ContactLink
+                    className="pmi"
+                    style={{ ...pmiStyle, border: 'none', background: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  >
+                    <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg></span>
+                    <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}><span style={pmiLabel}>Help & support</span></span>
+                  </ContactLink>
 
                   <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
 
@@ -390,7 +400,15 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
                     <span aria-hidden="true">&middot;</span>
                     <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</a>
                     <span aria-hidden="true">&middot;</span>
-                    <a href="mailto:help@guapd.com" style={{ color: 'inherit', textDecoration: 'none' }}>Support</a>
+                    {/* Was mailto:help@guapd.com — an address the company
+                        contact notes never establish (contact@guapd.com is the
+                        real one), one row under a Help & support that now opens
+                        a real form. Same dialog, so support is one route rather
+                        than three, and it needs no mail client configured. */}
+                    <ContactLink
+                      label="Support"
+                      className="pmi-footer-link"
+                    />
                   </div>
 
                   {/* Sign out */}
@@ -464,6 +482,11 @@ export default function CreatorSidebar({ creatorName, creatorPhoto, userEmail, u
         .pmi { transition: background .14s ease; }
         .pmi:hover { background: #F7F7F4; }
         .pmi-danger:hover { background: rgba(210,84,90,.08) !important; }
+        .pmi-footer-link {
+          border: none; background: none; padding: 0; cursor: pointer;
+          font-family: inherit; font-size: inherit; color: inherit;
+        }
+        .pmi-footer-link:hover { text-decoration: underline; }
         .creator-topnav-desktop { display: none; }
         .creator-topbar-mobile {
           display: flex; align-items: center; justify-content: space-between;
