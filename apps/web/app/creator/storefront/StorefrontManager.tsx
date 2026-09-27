@@ -973,7 +973,17 @@ function FromInstagram({ note }: { note?: string }) {
 function LockedFields({ locked, children }: { locked: boolean; children: React.ReactNode }) {
   return (
     <fieldset
-      className={locked ? 'sf-ig-locked' : undefined}
+      /* sf-fieldset ALWAYS, sf-ig-locked only when locked.
+         The reset — border, margin, padding, min-width — used to live on
+         .sf-ig-locked, so it only applied when Instagram was connected. Every
+         other creator got a bare <fieldset>: the browser's own 2px groove
+         border drew a rectangle around each group, its default padding pushed
+         the contents in, and its implicit min-width:min-content stopped the
+         fields sizing to the column. That is the box around Age breakdown,
+         Gender split and Top locations, and it was on the state almost
+         everybody is in. The dimming stays on the locked class, which is all
+         that class should ever have carried. */
+      className={locked ? 'sf-fieldset sf-ig-locked' : 'sf-fieldset'}
       disabled={locked}
       // Native tooltip rather than a custom one: it works on the whole group,
       // needs no state, and does not have to be positioned inside a scrolling

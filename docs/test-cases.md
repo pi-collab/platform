@@ -6290,3 +6290,13 @@ screen (page titles are 22px there, body copy 13.5–14.5).
 - [ ] **Both creator types**, both states: a Growth creator's pill is their next step (e.g. "Set your packages"), a Deals creator's is "Shopfront". Both are in the pinned row in both states
 - [ ] Phone only (`max-width: 720px`). On a desktop the top nav is already fixed and a second pinned bar would stack under it
 - [ ] `.cdash-sticky-head` is its own class rather than a reuse of `.cdash-m__head`: the two states size their greeting (30px vs 34px) and their pill differently by design, so it carries only the behaviour they share
+
+---
+
+## 77. Storefront audience editor: the browser's own fieldset was showing
+
+- [ ] Age breakdown, Gender split and Top locations no longer have a thin rectangle drawn around them
+- [ ] Cause: `LockedFields` renders a `<fieldset>`, and the reset that removes a fieldset's **2px groove border, its default padding and its implicit `min-width: min-content`** lived on `.sf-ig-locked` — a class applied ONLY when Instagram is connected. Every creator without a connection, which is currently all of them, got the browser's raw fieldset
+- [ ] `min-width: min-content` is the part that was not merely cosmetic: it stops the group shrinking to its column, so the fields inside would not size correctly
+- [ ] The reset is now `.sf-fieldset`, applied in **both** states. `.sf-ig-locked` keeps only the dimming, which is all it should ever have carried
+- [ ] Check the connected state too: fields still dim and refuse input when Instagram supplies the values, and the group still has no border

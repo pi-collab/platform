@@ -291,7 +291,13 @@
 /* The fields keep their normal shape and simply cannot be edited. Dimmed enough
    to read as fixed, not so far that the numbers a brand will see become hard to
    check. */
-.sf-ig-locked {
+/* Every LockedFields group, locked or not.
+   A <fieldset> brings a 2px groove border, its own padding and an implicit
+   min-width:min-content. This reset used to sit on .sf-ig-locked, which is
+   only applied when Instagram is connected — so an unconnected creator, which
+   is almost all of them, saw a browser-drawn box around Age breakdown, Gender
+   split and Top locations, and fields that would not size to the column. */
+.sf-fieldset {
   border: 0; margin: 0; padding: 0; min-width: 0;
 }
 
