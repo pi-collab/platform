@@ -6210,3 +6210,37 @@ Four things reported after §66 opened those routes on desktop.
 - [ ] The two heads never both draw: `.pr-desktop-head` (crumb + h1) is hidden below 768px, `.pr-mobile-head` above it. Same split, same breakpoint as the settings page — a phone showing the header title AND the h1 would be the title twice
 - [ ] The mobile head's negative margin undoes the page's own side padding, so the header keeps its full-bleed inset
 - [ ] The brand `/pricing` page is NOT affected: it has an eyebrow label ("PRICING"), not a breadcrumb, which matches the other brand screens
+
+---
+
+## 73. Pricing designs, second pass ("Guapd Pricing.html")
+
+Five components in the export. **2, 3 and 5 already matched** and were not
+touched: the package-form note (`PackageFeeNote`), the storefront editor's copy
+of it (same component), and the brand offer summary's "Guapd fee ₹0" row — all
+word-for-word what the design draws, including the hatched split bar.
+
+### 1. Creator pricing page
+- [ ] The three cards each carry **their own icon**, per track. They shipped with the same tick on all three, which is decoration — a row of identical marks says the cards are a list and nothing more
+- [ ] Deals: a link (the storefront link that earns the 0%), a swiped card (which side the fee comes from), a document (the offer you read before accepting). Growth: a trophy, the same card, a rising line for "Grow into Deals"
+- [ ] **"The core product is free"** is a row with a **neon** 46px tile (gift), h3 at 17px. The only coloured tile on the page — three grey ones above make a set; this is the sentence a creator came for
+- [ ] FAQ: heading 24px, questions are `<h4>` at 16.5px, answers 15px capped at 760px, items 22px apart, card padded 36/40/14. They were 20px and 14.5px, which made question and answer nearly one size and the section read as fine print
+- [ ] The eyebrow asks for `--font-mono`, which is defined on the marketing scopes and NOT on the app's `:root` — so the fallback is what renders. Stated rather than dropped, so it matches when the token reaches the app
+- [ ] **Two deliberate departures from the export**, both from later instructions: the lede stays **17px on one line** (the design has 15px in a 560px column), and the crumb reads **"Account ›"** not "Profile ›" — see §72 for why. Flagged for a decision
+- [ ] Track-specific copy, the FAQ sets and the calculator are unchanged from §65
+
+### 4. Brand pricing page — rebuilt as PLANS
+- [ ] Four plan cards: **Free ₹0** (Active, "Current plan"), **Starter ₹9,999/mo**, **Scale ₹24,999/mo** (Most popular), **Enterprise Custom** — the last three marked "Launching soon"
+- [ ] The fee CALCULATOR is gone. The ₹0-on-top fact is still the first thing the page says and now has one card near the bottom ("No hidden markup"), where a reassurance belongs. It used to be the whole page, which left a brand reading a long proof of a zero and learning nothing about what Guapd costs
+- [ ] Scale is marked by a **heavier border and deeper shadow**, not a different fill — a coloured card among white ones reads as an advert rather than one of four comparable things
+- [ ] `min-height` on the blurb and `flex:1` on the feature list keep all four cards' quota boxes and buttons on one baseline whatever the copy does
+- [ ] **"Join waitlist" and "Contact us" open the contact dialog.** There is no waitlist table and no checkout; a button pointing at `#` is worse than one that does something, and the form reaches us and records an `events` row. "Current plan" is not a button — it states a fact
+- [ ] Phone: an **accordion**, open on Scale, each collapsed row showing name, status, a one-line summary and the price. Four columns do not survive a phone, and four stacked full cards is a long scroll past three plans nobody can buy
+- [ ] Breakpoints: 4 columns → 2 at 1080px → accordion at 720px; the h1 drops 44px → 32px
+- [ ] FAQ replaced with the design's four questions
+
+### ⚠️ THE QUOTAS ARE NOT ENFORCED — read before this goes near a real brand
+- [ ] "Up to 3 deals / month" and "2 growth campaigns / month" on Free are what the plan is INTENDED to include. **Nothing in the product counts a brand's deals or blocks the next one.** A brand on Free today can run as many as it likes
+- [ ] So the page states a limit the product does not apply, to brands who are all on Free. If these are meant to bind, enforcement has to be built first
+- [ ] "AI creator search" is listed as a Free feature. The code is on production but gated off by a missing `ANTHROPIC_API_KEY`, so a brand reading this page cannot use it today
+- [ ] The prices themselves are a **cofounder decision** the roadmap still lists as open ("platform revenue model — needs math"). This page now publishes specific monthly figures to signed-in brands

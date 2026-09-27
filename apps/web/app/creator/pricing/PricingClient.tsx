@@ -115,26 +115,17 @@ export default function PricingClient({ isGrowth, backHref }: {
           </div>
         </section>
 
-        {/* ── Three things worth knowing ── */}
+        {/* ── Three things worth knowing ──────────────────────────────────
+            One icon per card, not one icon three times. These shipped with the
+            same tick on all three, which is decoration: a row of identical
+            marks tells a reader the cards are a list and nothing else. Each
+            now draws the thing it is about — a link for the brand you bring, a
+            swiped card for where the fee comes from, a document for the offer
+            you read before accepting. */}
         <div className="pricecards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 20 }}>
-          {(isGrowth
-            ? [
-                ['Booked without a big following', 'Guapd brings you the bookings.'],
-                ['Fee from your side', 'Brands never pay extra.'],
-                ['Grow into Deals', 'Your fee drops to 15%.'],
-              ]
-            : [
-                ['Bring a brand, pay 0%', 'First deal through your link is free.'],
-                ['Fee from your side', 'Brands never pay extra.'],
-                ['Seen before you accept', 'Every offer shows your exact payout.'],
-              ]
-          ).map(([title, body]) => (
+          {(isGrowth ? GROWTH_POINTS : DEALS_POINTS).map(({ title, body, icon }) => (
             <div key={title} style={{ ...card, padding: 24 }}>
-              <span style={{ width: 46, height: 46, borderRadius: 14, background: '#F1F3EA', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              </span>
+              <span style={tile('#F1F3EA')}>{icon}</span>
               <div style={{ marginTop: 18 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{title}</h3>
                 <p style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{body}</p>
@@ -143,27 +134,45 @@ export default function PricingClient({ isGrowth, backHref }: {
           ))}
         </div>
 
-        {/* ── The product is free ── */}
-        <section style={{ ...card, padding: 'clamp(22px,2.6vw,32px)' }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em' }}>The core product is free</h2>
-          <p style={{ margin: '6px 0 0', fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 620 }}>
-            No monthly fees. Your profile, packages, deals and payments are all free. You only pay a fee when a deal happens.
-          </p>
+        {/* ── The product is free ──────────────────────────────────────────
+            A row, not a stack, and the only NEON tile on the page. Three grey
+            tiles above it make a set; this one is the sentence a creator came
+            to hear, so it is the one that is coloured. */}
+        <section style={{ ...card, padding: '22px 28px' }}>
+          <div className="pricefree" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <span style={tile('var(--neon)')}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="8" width="18" height="4" rx="1" />
+                <path d="M12 8v13" />
+                <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+                <path d="M12 8c-1.5-4-6-4-5-1s5 1 5 1 3.5 2 5-1-3.5-3-5 1" />
+              </svg>
+            </span>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>The core product is free</h3>
+              <p style={{ margin: '4px 0 0', fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>
+                No monthly fees. Your profile, packages, deals and payments are all free. You only pay a fee when a deal happens.
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* ── FAQ ── */}
-        <section style={{ ...card, padding: 'clamp(22px,2.6vw,32px)' }}>
+        <section className="pricefaq" style={{ ...card, padding: '36px 40px 14px' }}>
           <span style={label}>FAQ</span>
-          <h2 style={{ margin: '10px 0 0', fontSize: 20, fontWeight: 600, letterSpacing: '-0.01em' }}>Questions, answered</h2>
-          <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column' }}>
+          {/* 24px, and the questions are h4 at 16.5. They were 20 and 14.5,
+              which made the answers and the questions nearly one size and the
+              section read as fine print. */}
+          <h2 style={{ margin: '10px 0 0', fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.25 }}>Questions, answered</h2>
+          <div style={{ marginTop: 14 }}>
             {/* The free-first-deal question is absent for Growth on purpose:
                 that exemption keys off a storefront origin, and a Growth
                 creator has no storefront. Answering it here would promise a
                 route they cannot take. */}
             {(isGrowth ? GROWTH_FAQ : DEALS_FAQ).map(([q, a], i) => (
-              <div key={q} style={{ padding: '14px 0', borderTop: i === 0 ? 'none' : '1px solid var(--border-hairline)' }}>
-                <div style={{ fontSize: 14.5, fontWeight: 600 }}>{q}</div>
-                <p style={{ margin: '5px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{a}</p>
+              <div key={q} style={{ padding: '22px 0', borderTop: i === 0 ? 'none' : '1px solid var(--border-hairline)' }}>
+                <h4 style={{ margin: 0, fontSize: 16.5, fontWeight: 600, letterSpacing: '-0.005em', lineHeight: 1.45 }}>{q}</h4>
+                <p style={{ margin: '6px 0 0', fontSize: 15, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 760 }}>{a}</p>
               </div>
             ))}
           </div>
@@ -215,6 +224,97 @@ const card: React.CSSProperties = {
 }
 
 const label: React.CSSProperties = {
+  /* --font-mono is defined on the marketing page scopes, not on the app's
+     :root, so the fallback is what actually renders here. Stated rather than
+     dropped, so this matches the design when the token reaches the app. */
+  fontFamily: 'var(--font-mono, var(--font-ui))',
   fontSize: 10.5, fontWeight: 500, letterSpacing: '.1em',
   textTransform: 'uppercase', color: 'var(--ink-faint)', whiteSpace: 'nowrap',
 }
+
+/** The 46px rounded icon square every card on this page leads with. */
+function tile(background: string): React.CSSProperties {
+  return {
+    width: 46, height: 46, borderRadius: 14, background,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  }
+}
+
+const ICON = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--ink)', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
+
+interface Point { title: string; body: string; icon: React.ReactNode }
+
+const DEALS_POINTS: Point[] = [
+  {
+    title: 'Bring a brand, pay 0%',
+    body: 'First deal through your link is free.',
+    /* A link: the storefront link that earns the exemption. */
+    icon: (
+      <svg {...ICON}>
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Fee from your side',
+    body: 'Brands never pay extra.',
+    /* A card being swiped: the money moving, and which side it moves from. */
+    icon: (
+      <svg {...ICON}>
+        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Seen before you accept',
+    body: 'Every offer shows your exact payout.',
+    /* A document with lines: the offer you read first. */
+    icon: (
+      <svg {...ICON}>
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+        <path d="M9 13h6" />
+        <path d="M9 17h4" />
+      </svg>
+    ),
+  },
+]
+
+const GROWTH_POINTS: Point[] = [
+  {
+    title: 'Booked without a big following',
+    body: 'Guapd brings you the bookings.',
+    /* A trophy — booked on merit rather than on follower count. */
+    icon: (
+      <svg {...ICON}>
+        <path d="M7 20h10" />
+        <path d="M12 20v-8" />
+        <path d="M12 12c0-4 3-6 7-6 0 4-3 6-7 6z" />
+        <path d="M12 14c0-3-2-5-6-5 0 3 2 5 6 5z" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Fee from your side',
+    body: 'Brands never pay extra.',
+    icon: (
+      <svg {...ICON}>
+        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" />
+        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+      </svg>
+    ),
+  },
+  {
+    title: 'Grow into Deals',
+    body: 'Your fee drops to 15%.',
+    /* A rising line: the only card on either page about a change over time. */
+    icon: (
+      <svg {...ICON}>
+        <path d="M22 7 13.5 15.5 8.5 10.5 2 17" />
+        <path d="M16 7h6v6" />
+      </svg>
+    ),
+  },
+]
