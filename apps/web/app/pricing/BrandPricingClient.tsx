@@ -126,7 +126,12 @@ export default function BrandPricingClient() {
           <h1 className="brprice-h1" style={{ margin: '8px 0 0', fontSize: 44, lineHeight: 1.05, fontWeight: 600, letterSpacing: '-0.03em' }}>
             Pricing
           </h1>
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-soft)', maxWidth: 560 }}>
+          {/* One line on a desktop, same as the creator page's lede. The
+              560px cap broke it into three, which made the sentence the page
+              opens with read as body copy rather than as the answer. Not
+              nowrap: a phone cannot hold it on one line and forcing it would
+              overflow instead of wrapping. */}
+          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
             You always pay the creator&rsquo;s real rate, with no markup. Pick a plan that fits how much you run.
           </p>
         </div>

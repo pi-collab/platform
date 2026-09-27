@@ -6237,6 +6237,7 @@ word-for-word what the design draws, including the hatched split bar.
 - [ ] **"Join waitlist" and "Contact us" open the contact dialog.** There is no waitlist table and no checkout; a button pointing at `#` is worse than one that does something, and the form reaches us and records an `events` row. "Current plan" is not a button — it states a fact
 - [ ] Phone: an **accordion**, open on Scale, each collapsed row showing name, status, a one-line summary and the price. Four columns do not survive a phone, and four stacked full cards is a long scroll past three plans nobody can buy
 - [ ] Breakpoints: 4 columns → 2 at 1080px → accordion at 720px; the h1 drops 44px → 32px
+- [ ] The lede sits on **one line at 17px** on a desktop, matching the creator page. The design's 560px cap broke the sentence the page opens with into three, which made it read as body copy rather than as the answer. Not `nowrap` — a phone wraps it
 - [ ] FAQ replaced with the design's four questions
 
 ### ⚠️ THE QUOTAS ARE NOT ENFORCED — read before this goes near a real brand
