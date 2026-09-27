@@ -6275,3 +6275,15 @@ screen (page titles are 22px there, body copy 13.5–14.5).
 - [ ] **Applies to all three pricing surfaces**: creator Deals, creator Growth, and brand. They share one token block, so the three cannot drift
 - [ ] The sizes are CSS custom properties on a `.prc` scope, NOT media-query overrides. Both pages style inline and an inline style beats a class; a custom property resolves at computed time, so redefining it changes what those inline styles render — no `!important`, and no rewriting either page as classes
 - [ ] `PricingFaq` takes its sizes from the same tokens, so the shared FAQ scales with whichever page it is on
+
+---
+
+## 76. The empty dashboard's greeting row pins too
+
+- [ ] On a phone, scrolling the **empty** creator dashboard keeps the greeting, the action pill and the bell pinned at the top — the same behaviour the populated dashboard (`.cdash-m__head`) has always had
+- [ ] It did not before, so the empty state lost its "Set your packages" button and its bell the moment a creator scrolled — on the one screen whose whole purpose is to get that button pressed
+- [ ] Split exactly as the populated one is: greeting + controls pin, **the handle line below does not**. That line is context you read once, not a control you reach for, and pinning it costs a third of a phone screen
+- [ ] The pinned block carries its own background, so the page does not show through underneath
+- [ ] **Both creator types**, both states: a Growth creator's pill is their next step (e.g. "Set your packages"), a Deals creator's is "Shopfront". Both are in the pinned row in both states
+- [ ] Phone only (`max-width: 720px`). On a desktop the top nav is already fixed and a second pinned bar would stack under it
+- [ ] `.cdash-sticky-head` is its own class rather than a reuse of `.cdash-m__head`: the two states size their greeting (30px vs 34px) and their pill differently by design, so it carries only the behaviour they share

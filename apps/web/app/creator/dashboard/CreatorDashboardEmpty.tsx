@@ -38,11 +38,22 @@ export default function CreatorDashboardEmpty({
   return (
 <div className="creator-app__inner">
 
-      <div style={{padding: '20px 18px 0', background: '#F5F7FA', paddingBottom: '18px'}}>
-        <div style={{display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px'}}>
+      {/* ── Pinned, like the populated dashboard's ───────────────────────
+          The greeting row was inside the scrolling page here while the same
+          row on the populated dashboard pins, so the empty state lost its
+          "Set your packages" button and its bell the moment a creator
+          scrolled — on the one screen where the whole point is to get them to
+          press that button.
+
+          Split exactly as the populated one is: the greeting and the two
+          controls pin, the handle line below does NOT. That line is context
+          you read once, not a control you reach for, and pinning it costs a
+          third of a phone screen. The inline background is what stops the page
+          showing through underneath. */}
+      <div className="cdash-sticky-head" style={{padding: '20px 18px 10px', background: '#F5F7FA'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px'}}>
           <div style={{minWidth: '0'}}>
-            <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '30px', margin: '0', color: 'var(--ink)', whiteSpace: 'nowrap'}}>Hey, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>{firstName}</span></h1>
-            <div style={{fontSize: '12.5px', color: 'var(--wg-500)', marginTop: '6px', whiteSpace: 'nowrap'}}>{handleLine}</div>
+            <h1 style={{fontFamily: 'var(--font-display)', fontWeight: '600', letterSpacing: '-0.02em', fontSize: '30px', margin: '0', color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>Hey, <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>{firstName}</span></h1>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexShrink: '0'}}>
             <Link href={growthCta?.href ?? "/creator/storefront"} aria-label={growthCta?.label ?? "Shopfront"} style={{display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '7px 11px', borderRadius: '999px', border: '1px solid var(--line)', background: '#fff', flexShrink: '0'}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', fontWeight: '700', color: 'var(--ink)'}}>{growthCta?.label ?? 'Shopfront'}</span></Link>
@@ -50,6 +61,8 @@ export default function CreatorDashboardEmpty({
           </div>
         </div>
       </div>
+
+      <div style={{fontSize: '12.5px', color: 'var(--wg-500)', padding: '0 18px 14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{handleLine}</div>
 
       <div style={{padding: '4px 18px 0', display: 'flex', flexDirection: 'column', gap: '36px'}}>
 

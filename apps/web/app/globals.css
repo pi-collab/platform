@@ -5132,3 +5132,12 @@ button.signup-form__cross-link {
 /* The FAQ rows come down with everything else. */
 .prc { --prc-faq-item: 22px; }
 @media (max-width: 767px) { .prc { --prc-faq-item: 16px; } }
+
+/* The empty dashboard's greeting row pins, exactly as the populated one's does
+   (.cdash-m__head). It is a separate class rather than a reuse because the two
+   states size their greeting and their pill differently by design — this
+   carries only the behaviour they share. Phone only: on a desktop the top nav
+   is already fixed and a second pinned bar would stack under it. */
+@media (max-width: 720px) {
+  .cdash-sticky-head { position: sticky; top: 0; z-index: 6; }
+}
