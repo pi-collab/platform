@@ -212,7 +212,7 @@ export default function CreatorProfileMobile({
         {/* Next to Payments, because that is the question it answers: what
             actually lands in my account. The breadcrumb on that page reads
             Profile › Pricing & fees, so this is the route it names. */}
-        <MenuRow href="/creator/pricing" label="Pricing &amp; fees" icon={<PercentIcon />} />
+        <MenuRow href="/creator/pricing?from=profile" label="Pricing &amp; fees" icon={<PercentIcon />} />
         <MenuDivider />
         {/* Opens the Account tab rather than the page default. Edit profile
             already lands on Profile, so pointing both rows at the same tab made

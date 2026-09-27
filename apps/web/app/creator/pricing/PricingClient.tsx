@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
 
 /**
@@ -19,7 +20,11 @@ import { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
  * cannot answer. The Growth page names the route out (the fee drops to 15% on
  * Deals) without pricing a tier they are not on.
  */
-export default function PricingClient({ isGrowth }: { isGrowth: boolean }) {
+export default function PricingClient({ isGrowth, backHref }: {
+  isGrowth: boolean
+  /** Where the phone's back arrow returns to. See the page's backFrom(). */
+  backHref: string
+}) {
   const [rate, setRate] = useState(20000)
 
   const feePercent = isGrowth ? GROWTH_FEE_PERCENT : DEALS_STANDARD_FEE_PERCENT
@@ -27,6 +32,10 @@ export default function PricingClient({ isGrowth }: { isGrowth: boolean }) {
 
   return (
     <main style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
+      <div className="pr-mobile-head">
+        <CreatorPageHeader title="Pricing & fees" backHref={backHref} />
+      </div>
+
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* ── Heading ── */}
@@ -34,12 +43,24 @@ export default function PricingClient({ isGrowth }: { isGrowth: boolean }) {
             line, and a 760px cap broke it into three. The heading is short
             enough not to need one. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-faint)' }}>
-            <Link href="/creator/profile" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Profile</Link>
+          {/* ── The crumb, and why it is not "Profile" ──────────────────────
+              It read "Profile › Pricing & fees" and linked to /creator/profile
+              at EVERY width. That page is the phone's profile screen, and on a
+              desktop this page is opened from the avatar menu — so the crumb
+              named a parent the visitor had not come from and sent them to a
+              screen built for a different device.
+
+              Two heads, the same split the settings page uses: the desktop
+              crumb matches its "Account › Settings" exactly, so the two
+              creator sub-pages agree; the phone gets the back arrow every
+              other creator sub-page has, honouring ?from= so it returns to the
+              profile menu the row was tapped in. */}
+          <div className="pr-desktop-head" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-faint)' }}>
+            <Link href="/creator/dashboard" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Account</Link>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             <span style={{ color: 'var(--ink-soft)', fontWeight: 500 }}>Pricing &amp; fees</span>
           </div>
-          <h1 style={{ margin: '14px 0 0', fontSize: 26, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.015em' }}>
+          <h1 className="pr-desktop-head" style={{ margin: '14px 0 0', fontSize: 26, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.015em' }}>
             Your rate, your payout
           </h1>
           {/* One line, and bigger: it is the sentence the whole page exists to

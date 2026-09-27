@@ -6199,3 +6199,14 @@ Four things reported after §66 opened those routes on desktop.
 
 ### Known, unchanged
 - [ ] `help@guapd.com` still appears in `/privacy` and `/terms` as the stated support address. Those are legal documents naming a contact, not navigation, and the company notes say the real address is contact@guapd.com — a copy decision to make deliberately, not a link to silently reroute
+
+---
+
+## 72. Creator pricing: the crumb said "Profile" at every width
+
+- [ ] The breadcrumb read **"Profile › Pricing & fees"** and linked to `/creator/profile` on desktop as well as mobile. On a desktop this page is opened from the AVATAR MENU, so the crumb named a parent the visitor had not come from — and sent them to the phone's profile screen
+- [ ] Desktop now reads **"Account › Pricing & fees"**, Account → `/creator/dashboard`. That is exactly the creator settings page's crumb, so the two creator sub-pages agree rather than each inventing one
+- [ ] Phone now gets the **back arrow** every other creator sub-page has (`CreatorPageHeader`), honouring `?from=` — from the profile menu it returns to `/creator/profile`, otherwise the dashboard. The profile menu's row passes `?from=profile`
+- [ ] The two heads never both draw: `.pr-desktop-head` (crumb + h1) is hidden below 768px, `.pr-mobile-head` above it. Same split, same breakpoint as the settings page — a phone showing the header title AND the h1 would be the title twice
+- [ ] The mobile head's negative margin undoes the page's own side padding, so the header keeps its full-bleed inset
+- [ ] The brand `/pricing` page is NOT affected: it has an eyebrow label ("PRICING"), not a breadcrumb, which matches the other brand screens

@@ -5063,3 +5063,15 @@ button.signup-form__cross-link {
   .cimgrid { grid-template-columns: 1fr !important; }
   .cimgrid > div:first-child { border-right: none !important; border-bottom: 1px solid rgba(24,28,36,.08); }
 }
+
+/* Creator pricing: two heads, one per width — the same split the creator
+   settings page uses. Desktop gets the "Account › Pricing & fees" crumb and
+   the h1; the phone gets the back arrow every other creator sub-page has, and
+   neither is ever drawn twice. The negative margin undoes the page's own side
+   padding so the header keeps its full-bleed inset. */
+.pr-mobile-head { display: none; }
+
+@media (max-width: 767px) {
+  .pr-mobile-head { display: block; margin: -20px -18px 6px; }
+  .pr-desktop-head { display: none !important; }
+}
