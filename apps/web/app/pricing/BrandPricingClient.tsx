@@ -21,8 +21,12 @@ import { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
 export default function BrandPricingClient() {
   const [rate, setRate] = useState(20000)
 
+  // A div, not a <main>: the route's layout now supplies
+  // <main className="brand-main"> around this, and nesting a second main
+  // inside it is both invalid and a second landmark for a screen reader to
+  // announce. Same shape the settings page uses inside the same chrome.
   return (
-    <main style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
+    <div style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 760 }}>
@@ -135,7 +139,7 @@ export default function BrandPricingClient() {
           </div>
         </section>
       </div>
-    </main>
+    </div>
   )
 }
 

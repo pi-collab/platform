@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
+import ContactLink from '@/components/ContactLink'
 
 const NAV_LINKS = [
   { label: 'Dashboard', href: '/dashboard', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg> },
@@ -338,13 +339,18 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span>
                     <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Team</span><span style={pmiSub}>Invite & manage members</span></span>
                   </Link>
-                  {/* Help & support */}
-                  <Link href="/settings" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
+                  {/* Help & support — the contact DIALOG, not /settings, which
+                      answers nothing and is already a row in this same menu.
+                      Same fix and same control as the creator sidebar, so a
+                      brand's query writes the events row the form records
+                      before it emails. */}
+                  <ContactLink
+                    className="pmi"
+                    style={{ ...pmiStyle, border: 'none', background: 'none', width: '100%', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
+                  >
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg></span>
-                    <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Help & support</span></span>
-                  </Link>
-
-                  <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
+                    <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}><span style={pmiLabel}>Help & support</span></span>
+                  </ContactLink>
 
                   <div style={{ height: 1, background: 'var(--border-hairline)', margin: '6px 6px' }} />
 
@@ -358,7 +364,11 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
                     <span aria-hidden="true">&middot;</span>
                     <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</a>
                     <span aria-hidden="true">&middot;</span>
-                    <a href="mailto:help@guapd.com" style={{ color: 'inherit', textDecoration: 'none' }}>Support</a>
+                    {/* Same dialog as the row above, not mailto:help@guapd.com
+                        — an address the company contact notes never establish
+                        (contact@guapd.com is the real one) and which needs a
+                        configured mail client to reach at all. */}
+                    <ContactLink label="Support" className="pmi-footer-link" />
                   </div>
 
                   {/* Sign out */}
@@ -432,6 +442,11 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
         .pmi { transition: background .14s ease; }
         .pmi:hover { background: #F7F7F4; }
         .pmi-danger:hover { background: rgba(210,84,90,.08) !important; }
+        .pmi-footer-link {
+          border: none; background: none; padding: 0; cursor: pointer;
+          font-family: inherit; font-size: inherit; color: inherit;
+        }
+        .pmi-footer-link:hover { text-decoration: underline; }
         .brand-topnav-desktop { display: none; }
         .brand-topbar-mobile {
           display: flex; align-items: center; justify-content: space-between;

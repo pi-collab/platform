@@ -6178,3 +6178,24 @@ Four things reported after §66 opened those routes on desktop.
 ### The double rule under Help & support
 - [ ] Not intentional — two identical hairline dividers sat back to back, 6px apart. One removed
 - [ ] The footer's **Support** link was `mailto:help@guapd.com`, an address the company contact notes never establish (contact@guapd.com is the real one), sitting one row under a Help & support that now opens a real form. It opens the same dialog: one support route rather than three, and no mail client required
+
+---
+
+## 71. Brand side: the same two menu faults, and a pricing page with no app around it
+
+### Brand profile menu
+- [ ] **Help & support** opens the contact dialog. It pointed at `/settings`, which answers nothing and is already a row in the same menu — the identical fault the creator menu had
+- [ ] The **double rule** under it was two identical hairline dividers back to back. One removed
+- [ ] The footer's **Support** opens the same dialog instead of `mailto:help@guapd.com`
+- [ ] Both sidebars now use one `ContactLink`, so a query from either side writes the `events` row the form records before it emails
+
+### /pricing had no layout
+- [ ] Opening **Pricing** from the brand menu keeps BrandNav and the `brand-main` column. It previously rendered against the ROOT layout alone — no nav, no column, no way back, the whole application gone from around the page
+- [ ] Cause: every other signed-in brand route (`/dashboard`, `/deals`, `/campaigns`, `/settings`, `/inbox`, `/browse`, `/notifications`) has its own layout drawing `BrandNav`. `/pricing` was added without one. The page's own comment claimed it was "drawn inside the app chrome" — it was not
+- [ ] `app/pricing/layout.tsx` is a deliberate copy of `app/settings/layout.tsx`. The brand routes each carry their own, and one route quietly differing is what produced this
+- [ ] `BrandPricingClient`'s root is now a `div`, not a second `<main>` nested inside the layout's — invalid, and a second landmark for a screen reader
+- [ ] **Check when adding any new signed-in brand route**: no layout means no nav
+- [ ] `/creator/pricing` is unaffected — it sits under `app/creator/layout.tsx` and has always had the creator nav
+
+### Known, unchanged
+- [ ] `help@guapd.com` still appears in `/privacy` and `/terms` as the stated support address. Those are legal documents naming a contact, not navigation, and the company notes say the real address is contact@guapd.com — a copy decision to make deliberately, not a link to silently reroute
