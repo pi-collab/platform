@@ -28,13 +28,15 @@ import { useState } from 'react'
  */
 export default function PricingFaq({
   items,
-  headingSize = 16.5,
+  /* A token, not a number: both pricing pages scale their type down on a
+     phone, and the FAQ has to come with them. Callers pass a var. */
+  headingSize = 'var(--prc-faq-q, 16.5px)',
   headingTag: HeadingTag = 'h4',
   divider = 'top',
   answerMaxWidth = 760,
 }: {
   items: [string, string][]
-  headingSize?: number
+  headingSize?: string
   headingTag?: 'h3' | 'h4'
   /** 'top' rules between items; 'bottom' rules under each, including the last. */
   divider?: 'top' | 'bottom'
@@ -64,7 +66,7 @@ export default function PricingFaq({
             style={{
               width: '100%', border: 'none', background: 'none', font: 'inherit',
               color: 'inherit', textAlign: 'left', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 16, padding: '22px 0',
+              display: 'flex', alignItems: 'center', gap: 16, padding: 'var(--prc-faq-item, 22px) 0',
             }}
           >
             <HeadingTag style={{ margin: 0, flex: 1, minWidth: 0, fontSize: headingSize, fontWeight: 600, letterSpacing: '-0.005em', lineHeight: 1.45 }}>
@@ -87,7 +89,7 @@ export default function PricingFaq({
           {/* The question's own padding already spaces it from the rule above,
               so the answer only needs the gap under itself. */}
           {isOpen(i) && (
-            <p style={{ margin: '-8px 0 22px', fontSize: 15, lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: answerMaxWidth, paddingRight: 44 }}>
+            <p style={{ margin: '-8px 0 var(--prc-faq-item, 22px)', fontSize: 'var(--prc-faq-a, 15px)', lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: answerMaxWidth, paddingRight: 44 }}>
               {a}
             </p>
           )}

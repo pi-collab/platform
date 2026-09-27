@@ -5075,3 +5075,60 @@ button.signup-form__cross-link {
   .pr-mobile-head { display: block; margin: -20px -18px 6px; }
   .pr-desktop-head { display: none !important; }
 }
+
+/* ── Pricing pages: one type scale, two sizes ────────────────────────────────
+   Both pricing pages were drawn at desktop and shipped with those sizes at
+   every width, so on a phone they were a desktop page made narrow: a 48px
+   figure, a 17px lede and a 24px FAQ heading, all noticeably larger than every
+   other mobile screen in the app (page titles are 22px there, body copy 13.5
+   to 14.5).
+
+   The sizes are TOKENS rather than media-query overrides because both pages
+   style inline, and an inline style beats a class. A custom property resolves
+   at computed time, so redefining it here changes what those inline styles
+   render without any !important and without rewriting the pages as classes. */
+.prc {
+  --prc-lede: 17px;
+  --prc-amount: 48px;
+  --prc-outcome-amt: 28px;
+  --prc-card-h: 16px;
+  --prc-card-p: 14px;
+  --prc-free-h: 17px;
+  --prc-free-p: 14.5px;
+  --prc-faq-h: 24px;
+  --prc-faq-q: 16.5px;
+  --prc-faq-a: 15px;
+  --prc-cardpad: 40px;
+  --prc-faqpad: 36px 40px 14px;
+  --prc-freepad: 22px 28px;
+  --prc-gap: 24px;
+  /* Brand plans */
+  --prc-plan-price: 32px;
+}
+
+@media (max-width: 767px) {
+  .prc {
+    --prc-lede: 14.5px;
+    --prc-amount: 34px;
+    --prc-outcome-amt: 24px;
+    --prc-card-h: 15px;
+    --prc-card-p: 13.5px;
+    --prc-free-h: 15.5px;
+    --prc-free-p: 13.5px;
+    --prc-faq-h: 19px;
+    --prc-faq-q: 15px;
+    --prc-faq-a: 14px;
+    --prc-cardpad: 20px;
+    --prc-faqpad: 20px 20px 4px;
+    --prc-freepad: 18px 18px;
+    --prc-gap: 16px;
+    --prc-plan-price: 26px;
+  }
+  /* The icon tiles come down with the type they sit above. */
+  .prc .prc-tile { width: 40px; height: 40px; border-radius: 12px; }
+  .prc .prc-tile svg { width: 18px; height: 18px; }
+}
+
+/* The FAQ rows come down with everything else. */
+.prc { --prc-faq-item: 22px; }
+@media (max-width: 767px) { .prc { --prc-faq-item: 16px; } }

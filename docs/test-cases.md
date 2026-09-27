@@ -6258,3 +6258,20 @@ One `components/pricing/PricingFaq.tsx` behind both pricing pages.
 - [ ] `aria-expanded` on each button; it is a real `<button>`, so keyboard and screen readers get the state
 - [ ] The same behaviour serves both pages without either being redrawn: the creator page rules BETWEEN items with `h4` at 16.5, the brand page rules UNDER each with `h3` at 16, and both are props
 - [ ] The Growth FAQ is still three questions and the Deals one four — collapsing does not change which questions exist
+
+---
+
+## 75. Pricing pages: a second type scale for the phone
+
+Both pricing pages were drawn at desktop and shipped those sizes at every
+width, so on a phone they were a desktop page made narrow — a 48px figure, a
+17px lede, a 24px FAQ heading, all noticeably larger than every other mobile
+screen (page titles are 22px there, body copy 13.5–14.5).
+
+- [ ] On a phone, the creator page's figure is 34px (was 48), the lede 14.5 (was 17), card headings 15 (was 16), the FAQ 19/15/14 (was 24/16.5/15), and card padding 20px (was 40)
+- [ ] The brand h1 is `clamp(24px,3.6vw,44px)` — it was a flat 44 at every width, while every other brand page title is `clamp(22px,2.4vw,30px)`. The plan price is 26px on a phone (was 32)
+- [ ] The 46px icon tiles come down to 40px with the type they sit above
+- [ ] Desktop is unchanged on both pages — same figures the design specifies
+- [ ] **Applies to all three pricing surfaces**: creator Deals, creator Growth, and brand. They share one token block, so the three cannot drift
+- [ ] The sizes are CSS custom properties on a `.prc` scope, NOT media-query overrides. Both pages style inline and an inline style beats a class; a custom property resolves at computed time, so redefining it changes what those inline styles render — no `!important`, and no rewriting either page as classes
+- [ ] `PricingFaq` takes its sizes from the same tokens, so the shared FAQ scales with whichever page it is on

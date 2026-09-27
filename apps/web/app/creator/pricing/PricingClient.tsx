@@ -32,12 +32,12 @@ export default function PricingClient({ isGrowth, backHref }: {
   const keeps = Math.round(rate * (100 - feePercent) / 100)
 
   return (
-    <main style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
+    <main className="prc" style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
       <div className="pr-mobile-head">
         <CreatorPageHeader title="Pricing & fees" backHref={backHref} />
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'var(--prc-gap)' }}>
 
         {/* ── Heading ── */}
         {/* No maxWidth on the block: the lede below is meant to sit on ONE
@@ -68,7 +68,7 @@ export default function PricingClient({ isGrowth, backHref }: {
               say, and at 15px inside a 560px column it read as body copy
               rather than as the answer. Not nowrap — a phone cannot hold it on
               one line, and forcing it would overflow rather than wrap. */}
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
+          <p style={{ margin: 0, fontSize: 'var(--prc-lede)', lineHeight: 1.55, color: 'var(--ink-soft)' }}>
             {isGrowth
               ? 'Guapd brings you the bookings. The brand pays your listed rate, and our fee comes from your side.'
               : 'The brand pays your listed rate and our fee comes from your side. Your first deal with a brand you bring is 0%.'}
@@ -76,11 +76,11 @@ export default function PricingClient({ isGrowth, backHref }: {
         </div>
 
         {/* ── The calculator ── */}
-        <section style={{ ...card, padding: 'clamp(24px,3vw,40px)' }}>
+        <section style={{ ...card, padding: 'var(--prc-cardpad)' }}>
           <div className="pricecalc" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 'clamp(24px,4vw,56px)', alignItems: 'center' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <span style={label}>Your listed rate</span>
-              <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 48, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
+              <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 'var(--prc-amount)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
                 {rupees(rate)}
               </span>
               <input
@@ -125,11 +125,11 @@ export default function PricingClient({ isGrowth, backHref }: {
             you read before accepting. */}
         <div className="pricecards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 20 }}>
           {(isGrowth ? GROWTH_POINTS : DEALS_POINTS).map(({ title, body, icon }) => (
-            <div key={title} style={{ ...card, padding: 24 }}>
-              <span style={tile('#F1F3EA')}>{icon}</span>
+            <div key={title} style={{ ...card, padding: 'var(--prc-cardpad)' }}>
+              <span className="prc-tile" style={tile('#F1F3EA')}>{icon}</span>
               <div style={{ marginTop: 18 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{title}</h3>
-                <p style={{ margin: '4px 0 0', fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{body}</p>
+                <h3 style={{ margin: 0, fontSize: 'var(--prc-card-h)', fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{title}</h3>
+                <p style={{ margin: '4px 0 0', fontSize: 'var(--prc-card-p)', lineHeight: 1.6, color: 'var(--ink-soft)' }}>{body}</p>
               </div>
             </div>
           ))}
@@ -139,9 +139,9 @@ export default function PricingClient({ isGrowth, backHref }: {
             A row, not a stack, and the only NEON tile on the page. Three grey
             tiles above it make a set; this one is the sentence a creator came
             to hear, so it is the one that is coloured. */}
-        <section style={{ ...card, padding: '22px 28px' }}>
+        <section style={{ ...card, padding: 'var(--prc-freepad)' }}>
           <div className="pricefree" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <span style={tile('var(--neon)')}>
+            <span className="prc-tile" style={tile('var(--neon)')}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="8" width="18" height="4" rx="1" />
                 <path d="M12 8v13" />
@@ -150,8 +150,8 @@ export default function PricingClient({ isGrowth, backHref }: {
               </svg>
             </span>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>The core product is free</h3>
-              <p style={{ margin: '4px 0 0', fontSize: 14.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>
+              <h3 style={{ margin: 0, fontSize: 'var(--prc-free-h)', fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 }}>The core product is free</h3>
+              <p style={{ margin: '4px 0 0', fontSize: 'var(--prc-free-p)', lineHeight: 1.6, color: 'var(--ink-soft)' }}>
                 No monthly fees. Your profile, packages, deals and payments are all free. You only pay a fee when a deal happens.
               </p>
             </div>
@@ -159,12 +159,12 @@ export default function PricingClient({ isGrowth, backHref }: {
         </section>
 
         {/* ── FAQ ── */}
-        <section className="pricefaq" style={{ ...card, padding: '36px 40px 14px' }}>
+        <section className="pricefaq" style={{ ...card, padding: 'var(--prc-faqpad)' }}>
           <span style={label}>FAQ</span>
           {/* 24px, and the questions are h4 at 16.5. They were 20 and 14.5,
               which made the answers and the questions nearly one size and the
               section read as fine print. */}
-          <h2 style={{ margin: '10px 0 0', fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.25 }}>Questions, answered</h2>
+          <h2 style={{ margin: '10px 0 0', fontSize: 'var(--prc-faq-h)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.25 }}>Questions, answered</h2>
           <div style={{ marginTop: 14 }}>
             {/* The free-first-deal question is absent for Growth on purpose:
                 that exemption keys off a storefront origin, and a Growth
@@ -187,7 +187,7 @@ function Outcome({ title, fee, amount, tone }: { title: string; fee: string; amo
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12 }}>
         <span style={{ fontSize: 13.5, color: 'var(--ink-soft)' }}>You receive</span>
-        <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
+        <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 'var(--prc-outcome-amt)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, whiteSpace: 'nowrap' }}>
           {amount}
         </span>
       </div>

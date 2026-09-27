@@ -114,7 +114,7 @@ export default function BrandPricingClient() {
   const [open, setOpen] = useState<Plan['id'] | null>('scale')
 
   return (
-    <div style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
+    <div className="prc" style={{ padding: 'clamp(20px,3vw,40px) clamp(18px,4vw,44px) clamp(56px,6vw,90px)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 'clamp(24px,3vw,40px)' }}>
 
         {/* ── Heading ── */}
@@ -124,7 +124,10 @@ export default function BrandPricingClient() {
             <Chevron />
             <span style={{ color: 'var(--ink-soft)', fontWeight: 500 }}>Pricing</span>
           </div>
-          <h1 className="brprice-h1" style={{ margin: '8px 0 0', fontSize: 44, lineHeight: 1.05, fontWeight: 600, letterSpacing: '-0.03em' }}>
+          {/* clamp, not a fixed 44 with a phone override: every other page
+              title in the brand app is clamp(22px,2.4vw,30px), and this one
+              was 44 at every width. */}
+          <h1 style={{ margin: '8px 0 0', fontSize: 'clamp(24px,3.6vw,44px)', lineHeight: 1.05, fontWeight: 600, letterSpacing: '-0.03em' }}>
             Pricing
           </h1>
           {/* One line on a desktop, same as the creator page's lede. The
@@ -132,7 +135,7 @@ export default function BrandPricingClient() {
               opens with read as body copy rather than as the answer. Not
               nowrap: a phone cannot hold it on one line and forcing it would
               overflow instead of wrapping. */}
-          <p style={{ margin: 0, fontSize: 17, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
+          <p style={{ margin: 0, fontSize: 'var(--prc-lede)', lineHeight: 1.55, color: 'var(--ink-soft)' }}>
             You always pay the creator&rsquo;s real rate, with no markup. Pick a plan that fits how much you run.
           </p>
         </div>
@@ -163,14 +166,14 @@ export default function BrandPricingClient() {
         {/* ── The zero-markup promise ──────────────────────────────────────
             What the whole page used to be, now one line where it belongs:
             after the prices, as the reassurance that they are the only prices. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '22px 26px', borderRadius: 20, background: '#FFFFFF', border: '1px solid rgba(18,21,28,.06)' }}>
-          <span style={{ width: 44, height: 44, borderRadius: 14, background: '#F1F3EA', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 'var(--prc-freepad)', borderRadius: 20, background: '#FFFFFF', border: '1px solid rgba(18,21,28,.06)' }}>
+          <span className="prc-tile" style={{ width: 44, height: 44, borderRadius: 14, background: '#F1F3EA', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
               <path d="m9 12 2 2 4-4" />
             </svg>
           </span>
-          <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: 'var(--ink-soft)' }}>
+          <p style={{ margin: 0, fontSize: 'var(--prc-free-p)', lineHeight: 1.55, color: 'var(--ink-soft)' }}>
             <span style={{ fontWeight: 600, color: 'var(--ink)' }}>No hidden markup.</span>{' '}
             You always pay the creator&rsquo;s real rate. We never inflate a price and pocket the difference.
           </p>
@@ -178,8 +181,8 @@ export default function BrandPricingClient() {
 
         {/* ── FAQ ── */}
         <div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em' }}>Questions</h2>
-          <PricingFaq items={FAQ} headingSize={16} headingTag="h3" divider="bottom" answerMaxWidth={720} />
+          <h2 style={{ margin: '0 0 8px', fontSize: 'var(--prc-faq-h)', fontWeight: 600, letterSpacing: '-0.015em' }}>Questions</h2>
+          <PricingFaq items={FAQ} headingSize="var(--prc-faq-q, 16px)" headingTag="h3" divider="bottom" answerMaxWidth={720} />
         </div>
 
       </div>
@@ -192,7 +195,6 @@ export default function BrandPricingClient() {
         @media (max-width: 720px) {
           .brprice-grid { display: none !important; }
           .brprice-list { display: block; }
-          .brprice-h1 { font-size: 32px; }
         }
       `}</style>
     </div>
@@ -224,7 +226,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       </div>
 
       <div style={{ marginTop: 16, display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 32, fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1 }}>{plan.price}</span>
+        <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 'var(--prc-plan-price)', fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1 }}>{plan.price}</span>
         {plan.per && <span style={{ fontSize: 13.5, color: 'var(--ink-faint)' }}>{plan.per}</span>}
       </div>
 
