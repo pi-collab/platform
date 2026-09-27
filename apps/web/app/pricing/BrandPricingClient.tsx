@@ -182,7 +182,7 @@ export default function BrandPricingClient() {
         {/* ── FAQ ── */}
         <div>
           <h2 style={{ margin: '0 0 8px', fontSize: 'var(--prc-faq-h)', fontWeight: 600, letterSpacing: '-0.015em' }}>Questions</h2>
-          <PricingFaq items={FAQ} headingSize="var(--prc-faq-q, 16px)" headingTag="h3" divider="bottom" answerMaxWidth={720} />
+          <PricingFaq items={FAQ} headingSize="var(--prc-faq-q, 16px)" headingTag="h3" divider="bottom" />
         </div>
 
       </div>

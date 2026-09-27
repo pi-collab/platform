@@ -6275,6 +6275,9 @@ screen (page titles are 22px there, body copy 13.5–14.5).
 - [ ] **Applies to all three pricing surfaces**: creator Deals, creator Growth, and brand. They share one token block, so the three cannot drift
 - [ ] The sizes are CSS custom properties on a `.prc` scope, NOT media-query overrides. Both pages style inline and an inline style beats a class; a custom property resolves at computed time, so redefining it changes what those inline styles render — no `!important`, and no rewriting either page as classes
 - [ ] `PricingFaq` takes its sizes from the same tokens, so the shared FAQ scales with whichever page it is on
+- [ ] **FAQ answers do not wrap early on a desktop.** They were capped at 720–760px and then had a further 44px taken off the right to clear the chevron, leaving under 700px — so a 96-character answer ("A campaign where you book multiple Growth creators…") broke onto a second line on a 1200px page with room to spare. The chevron is on the QUESTION row, not beside the answer, so the answer never had to clear it
+- [ ] A cap remains at 880px: a line running the full width of a desktop is genuinely hard to read. Every one-sentence answer on both pages now fits one line; the long Deals answer about the free first deal still wraps, correctly
+- [ ] Checked the rest of both pages for the same fault — no other narrow cap. The two ledes, the "core product is free" line and "No hidden markup" all sit on one line at 1200px, and the plan feature lists wrap inside their columns as the design draws them
 
 ---
 

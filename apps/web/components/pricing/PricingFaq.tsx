@@ -33,14 +33,12 @@ export default function PricingFaq({
   headingSize = 'var(--prc-faq-q, 16.5px)',
   headingTag: HeadingTag = 'h4',
   divider = 'top',
-  answerMaxWidth = 760,
 }: {
   items: [string, string][]
   headingSize?: string
   headingTag?: 'h3' | 'h4'
   /** 'top' rules between items; 'bottom' rules under each, including the last. */
   divider?: 'top' | 'bottom'
-  answerMaxWidth?: number
 }) {
   const [open, setOpen] = useState<number[]>([0])
   const isOpen = (i: number) => open.includes(i)
@@ -87,9 +85,21 @@ export default function PricingFaq({
           </button>
 
           {/* The question's own padding already spaces it from the rule above,
-              so the answer only needs the gap under itself. */}
+              so the answer only needs the gap under itself.
+
+              ── Why there is no narrow cap on the answer ──────────────────
+              These were capped at 720-760px and then had a further 44px taken
+              off the right to clear the chevron, which left under 700px — so a
+              98-character answer broke onto a second line on a 1200px page
+              with room to spare. The chevron sits on the QUESTION row, not
+              beside the answer, so the answer never had to clear it.
+
+              A cap still exists, because a line running the full width of a
+              desktop is genuinely hard to read. It is just wide enough now
+              that the answers written for this page fit the lines they were
+              written for. */}
           {isOpen(i) && (
-            <p style={{ margin: '-8px 0 var(--prc-faq-item, 22px)', fontSize: 'var(--prc-faq-a, 15px)', lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: answerMaxWidth, paddingRight: 44 }}>
+            <p style={{ margin: '-8px 0 var(--prc-faq-item, 22px)', fontSize: 'var(--prc-faq-a, 15px)', lineHeight: 1.6, color: 'var(--ink-soft)', maxWidth: 'var(--prc-faq-w, 880px)' }}>
               {a}
             </p>
           )}
