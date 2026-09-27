@@ -154,7 +154,21 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
   if (screen === 'verify') {
     return (
       <>
-        <h2 className="signup-panel__title signup-panel__title--sm">One more step.</h2>
+        {/* SAY which of the two this is. A number with no account continues
+            into signup on this same screen (see `send`), and the screen used to
+            read "One more step" / "Signing you in" either way — so someone who
+            had typed their number into the LOGIN page verified a code, landed in
+            onboarding, and had been given no step that said an account was
+            being created. That is the whole of "why is login taking me to
+            signup". The flow is right; it was just silent. */}
+        <h2 className="signup-panel__title signup-panel__title--sm">
+          {isSignup ? 'Let\u2019s create your account.' : 'One more step.'}
+        </h2>
+        {isSignup && (
+          <p className="signup-panel__sub">
+            This number doesn&rsquo;t have an account yet, so we&rsquo;re setting one up.
+          </p>
+        )}
         <p className="signup-panel__sub otp-sentto">
           Code sent to <strong>+91 {formatPhone(digits)}</strong>
           <button type="button" onClick={backToPhone} className="otp-edit lnk" aria-label="Change number">
@@ -178,7 +192,7 @@ export default function CreatorLoginForm({ next }: { next?: string }) {
           {error && <FormError>{error}</FormError>}
 
           <button type="submit" disabled={loading || code.length < 6} className="signup-form__cta cta">
-            {loading ? 'Signing you in…' : error ? 'Try again' : 'Verify & continue'}
+            {loading ? (isSignup ? 'Creating your account…' : 'Signing you in…') : error ? 'Try again' : 'Verify & continue'}
           </button>
 
           <div className="otp-resend-row">

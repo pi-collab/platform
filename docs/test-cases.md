@@ -6095,3 +6095,34 @@ New: `supabase/migrations/0512_creator_rejection_reason.sql`
 
 ### Environment
 - [ ] **Migration 0512 must be applied before this code ships.** `app/creator/layout.tsx` now selects `rejection_reason`; without the column that query fails and the creator layout breaks for every creator, not just rejected ones. Applied to staging 27 Sep 2026; still to run on production
+
+---
+
+## 68. "Why is creator login taking me to signup?"
+
+Reported from staging. The login page is not broken — there are FOUR ways to end
+up in signup from it, three of them deliberate. Only the wording was wrong.
+
+Staging state when this was investigated (27 Sep 2026): 19 creator rows, 10
+claimed, 9 unclaimed ops stubs.
+
+### The one that was actually wrong: the silent switch
+- [ ] A number with NO creator row does not get an error. `sendLoginOTP` sends a SIGNUP code and returns `new_signup`, and the form continues on the same code screen (deliberate — the old "No account yet" screen linked to `/signup/creator`, which then asked for the number they had just typed)
+- [ ] The code screen now says **"Let's create your account."** with "This number doesn't have an account yet, so we're setting one up", and the button reads **"Creating your account…"**
+- [ ] It previously read "One more step." / "Signing you in…" in BOTH cases, so someone who typed their number into the *login* page verified a code, landed in `/signup/creator/onboarding`, and was never given a step that said an account was being created. The flow was right; it was silent
+- [ ] An existing account is unchanged: "One more step." / "Signing you in…"
+- [ ] "Back to sign in" returns to the phone screen from either state
+
+### Unclaimed ops stub → signup (correct, and only once)
+- [ ] A creator row with `user_id` null gets the "Almost there. / Claim your profile" screen, not a code. There is no login to sign into yet
+- [ ] Signup then CLAIMS that row — `update({ user_id }).eq('id', stub.id).is('user_id', null)` — so products, deals and vetting status stay on the original row. It does not create a second profile
+- [ ] A vetted stub with a name lands on `/signup/creator/complete?claimed=1`; one without a name goes to onboarding
+- [ ] (The roadmap entry calling the stub-claim mechanism unbuilt is STALE — it is built, including the race guard and the multi-stub alert)
+
+### Claimed, but the profile was never finished
+- [ ] A creator with `user_id` set and `full_name` null signs in successfully and is then redirected by the creator layout to `/signup/creator/onboarding`
+- [ ] This is the case that most looks like a bug, because authentication *did* succeed. It is deliberate: the alternative was dropping a half-registered creator on the marketing home page with no route back into the form
+
+### Two data problems on staging, not code problems
+- [ ] One creator row holds a **+44** number. `normalizePhone` is India-only by design (the OTP channel is Indian), so the phone field rejects it before any send and that account can never log in. If a non-Indian test account is needed, that is a real gap to decide on — not a login bug
+- [ ] One phone appears on **two** creator rows, one claimed and one not. Login finds the claimed one and works; the duplicate stub is orphaned and can never be claimed. `unclaimed.length > 1` would have blocked signup with the multi-stub ops alert, but a claimed + unclaimed pair does not trip it
