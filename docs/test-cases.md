@@ -6126,3 +6126,30 @@ claimed, 9 unclaimed ops stubs.
 ### Two data problems on staging, not code problems
 - [ ] One creator row holds a **+44** number. `normalizePhone` is India-only by design (the OTP channel is Indian), so the phone field rejects it before any send and that account can never log in. If a non-Indian test account is needed, that is a real gap to decide on — not a login bug
 - [ ] One phone appears on **two** creator rows, one claimed and one not. Login finds the claimed one and works; the duplicate stub is orphaned and can never be claimed. `unclaimed.length > 1` would have blocked signup with the multi-stub ops alert, but a claimed + unclaimed pair does not trip it
+
+---
+
+## 69. REGRESSION: one new column sent every logged-in creator to onboarding
+
+Reported: "I was already logged in, I refreshed and clicked on profile, it
+brought me to the signup details page", and both `...9200` and `...8410` —
+accounts that exist, are claimed and have names — went to "Your details" on
+login. Caused by §67, within an hour of shipping it.
+
+### What happened
+- [ ] 0512 added `creators.rejection_reason`. The DDL landed (0513's `IF NOT EXISTS` returned "already exists")
+- [ ] But **PostgREST serves from a cached schema** and does not notice a new column until told to reload. Until it did, every select naming the column failed with `42703: column creators.rejection_reason does not exist` — which reads like a missing column, not a stale cache
+- [ ] That select was in `app/creator/layout.tsx`, which runs on EVERY `/creator` request. The failure returned a null `creator` row, so `creatorName` was null, so `if (!creatorName) redirect('/signup/creator/onboarding')` fired — **for every logged-in creator**, whatever their vetting status
+- [ ] It presented as a login/session bug. It was neither: the session was fine and the creator rows were untouched. Re-verified after the fix that both numbers still have `user_id` and `full_name`
+
+### The code fix (this is the durable one)
+- [ ] `rejection_reason` is OUT of the layout's main select. It is read inside the `isRejected` branch only — the one place it is used — wrapped in its own try/catch
+- [ ] **A column only the rejected screen needs must never be able to take down the app for everyone.** The general rule: a column added in the same change as the code that reads it does not belong in a query on the hot path
+- [ ] With the reason unreadable for any reason, the rejected screen falls back to the original general wording rather than failing
+
+### The environment gotcha (note it — it will recur)
+- [ ] After `ALTER TABLE ... ADD COLUMN`, PostgREST needs `NOTIFY pgrst, 'reload schema';`
+- [ ] **`NOTIFY` from a CLI migration did NOT deliver it.** `supabase db push` connects through the transaction-mode pooler, which does not carry LISTEN/NOTIFY. 0513 ran clean and the cache stayed stale for 120s+ of polling
+- [ ] Reload it from a DIRECT connection instead — the dashboard **SQL Editor** (`NOTIFY pgrst, 'reload schema';`), or restart the API under Project Settings → API
+- [ ] Test for it with the anon key: a select naming the new column returns `42703` while the cache is stale, and succeeds once it is not. RLS returning no rows is not the same as a privilege or cache error
+- [ ] **Applies to production too**: after running 0512 there, reload the cache from the SQL Editor before promoting, or the ops reject write will fail

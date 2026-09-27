@@ -30,11 +30,10 @@ export default async function CreatorLayout({ children }: { children: React.Reac
   let isRejected = false
   let vettingStatus = 'pending'
   let creatorId: string | null = null
-  let rejectionReasonCode: string | null = null
   if (profile) {
     const { data: creator } = await supabase
       .from('creators')
-      .select('id, full_name, is_vetted, is_rejected, vetting_status, profile_photo_url, rejection_reason')
+      .select('id, full_name, is_vetted, is_rejected, vetting_status, profile_photo_url')
       .eq('user_id', profile.id)
       .maybeSingle()
     creatorId = creator?.id ?? null
@@ -43,7 +42,6 @@ export default async function CreatorLayout({ children }: { children: React.Reac
     isVetted = creator?.is_vetted ?? false
     isRejected = creator?.is_rejected ?? false
     vettingStatus = (creator?.vetting_status as string | undefined) ?? 'pending'
-    rejectionReasonCode = (creator?.rejection_reason as string | null | undefined) ?? null
   }
 
   /* ── Growth creators are IN the app ──────────────────────────────────────
@@ -138,6 +136,30 @@ export default async function CreatorLayout({ children }: { children: React.Reac
             .limit(1)
             .maybeSingle()
         : { data: null }
+
+      /* Read HERE, not in the select above.
+         That select runs for every creator on every /creator request, and
+         adding rejection_reason to it took the whole app down on staging: a
+         freshly added column is invisible to PostgREST until its schema cache
+         reloads, the select failed 42703, `creator` came back null, and
+         `!creatorName` sent EVERY logged-in creator to onboarding. A column
+         only the rejected screen needs must not be able to do that.
+
+         Its own try/catch for the same reason — a reason we cannot read is
+         worth less than the screen it sits on. */
+      let rejectionReasonCode: string | null = null
+      if (creatorId) {
+        try {
+          const { data: row } = await supabase
+            .from('creators')
+            .select('rejection_reason')
+            .eq('id', creatorId)
+            .maybeSingle()
+          rejectionReasonCode = (row as { rejection_reason?: string | null } | null)?.rejection_reason ?? null
+        } catch {
+          rejectionReasonCode = null
+        }
+      }
 
       return <CreatorRejected alreadyAppealed={Boolean(appeal)} reasonCode={rejectionReasonCode} />
     }
