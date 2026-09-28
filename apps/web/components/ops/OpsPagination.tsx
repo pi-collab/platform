@@ -40,6 +40,34 @@ function pageWindow(page: number, lastPage: number): (number | 'gap')[] {
 }
 
 /**
+ * A page URL that keeps the filters already applied.
+ *
+ * `basePath` arrives WITH its query string on every filtered list —
+ * "/ops/creators?band=…&status=…", "/ops/brands?q=…", "/ops/appeals?show=all".
+ * The links used to be built by appending "?page=N", which puts a SECOND
+ * question mark in the URL:
+ *
+ *     /ops/creators?band=Under%2020k&status=pending?page=2
+ *
+ * Only the first ? separates. So the browser read the last filter's value as
+ * "pending?page=2" — a status nothing matches — and found no `page` at all.
+ * Clicking page 2 therefore kept you on page one AND quietly changed the list,
+ * while the chips above still looked selected, because every filter BEFORE the
+ * mangled one came through fine. That is the whole of "the filter stays
+ * selected but the list shows something else".
+ *
+ * Composed through URLSearchParams instead, which keeps repeated keys — `band`
+ * and `status` are multi-select and must stay repeatable — and replaces only
+ * `page`.
+ */
+function pageHref(basePath: string, n: number): string {
+  const [path, queryString] = basePath.split('?')
+  const params = new URLSearchParams(queryString ?? '')
+  params.set('page', String(n))
+  return `${path}?${params.toString()}`
+}
+
+/**
  * Pagination for an ops table.
  *
  * Links rather than buttons: each page is a real URL, so it can be shared,
@@ -80,7 +108,7 @@ export default function OpsPagination({
       </span>
 
       <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <PageLink href={`${basePath}?page=${page - 1}`} disabled={page <= 1}>
+        <PageLink href={pageHref(basePath, page - 1)} disabled={page <= 1}>
           Previous
         </PageLink>
 
@@ -92,7 +120,7 @@ export default function OpsPagination({
           ) : (
             <PageLink
               key={n}
-              href={`${basePath}?page=${n}`}
+              href={pageHref(basePath, n)}
               disabled={false}
               current={n === page}
             >
@@ -101,7 +129,7 @@ export default function OpsPagination({
           ),
         )}
 
-        <PageLink href={`${basePath}?page=${page + 1}`} disabled={page >= lastPage}>
+        <PageLink href={pageHref(basePath, page + 1)} disabled={page >= lastPage}>
           Next
         </PageLink>
 

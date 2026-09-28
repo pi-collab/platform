@@ -6300,3 +6300,23 @@ screen (page titles are 22px there, body copy 13.5–14.5).
 - [ ] `min-width: min-content` is the part that was not merely cosmetic: it stops the group shrinking to its column, so the fields inside would not size correctly
 - [ ] The reset is now `.sf-fieldset`, applied in **both** states. `.sf-ig-locked` keeps only the dimming, which is all it should ever have carried
 - [ ] Check the connected state too: fields still dim and refuse input when Instagram supplies the values, and the group still has no border
+
+---
+
+## 78. Ops pagination dropped the filters on page 2
+
+Reported: "the ops filter applies on the first page, then when I click page 2
+the filter stays selected but the list shows something else."
+
+### The fault
+- [ ] `OpsPagination` built each link as `` `${basePath}?page=${n}` ``, and `basePath` already CARRIES a query string on every filtered list — `/ops/creators?band=…&status=…`, `/ops/brands?q=…`, `/ops/appeals?show=all`
+- [ ] Two question marks: `/ops/creators?band=Under%2020k&status=pending?page=2`. Only the first separates, so the browser read `status` as **`"pending?page=2"`** — a status nothing matches — and found **no `page` at all**
+- [ ] Which is exactly the symptom: clicking page 2 kept you on page one AND silently changed the list. The chips still looked selected because every filter BEFORE the mangled one parsed fine — only the last one was corrupted
+
+### Fixed
+- [ ] Links compose through `URLSearchParams`, which **keeps repeated keys** (`band` and `status` are multi-select and must stay repeatable) and replaces only `page`
+- [ ] Verify on `/ops/creators`: pick a band AND two statuses, go to page 2 — the chips stay selected, the URL keeps every filter, and the rows are the next 50 of the SAME filtered set
+- [ ] The count line ("51–100 of N") agrees with the filtered total, not the unfiltered one
+- [ ] Previous / Next / numbered links / the last-page link all carry the filters
+- [ ] Also fixed on `/ops/brands` (search term) and `/ops/appeals` (`show=all`). `/ops/deals` and `/ops/offers` pass a bare path and were never affected
+- [ ] **The "Go to" jump box was always correct** — it is a GET form re-submitting the filters as hidden fields. So jumping to a page worked while clicking a page number did not, which is worth knowing when someone says "pagination is broken"
