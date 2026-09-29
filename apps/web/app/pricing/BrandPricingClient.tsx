@@ -145,6 +145,20 @@ export default function BrandPricingClient() {
           {PLANS.map((p) => <PlanCard key={p.id} plan={p} />)}
         </div>
 
+        {/* ── What the numbers above are, and are not ─────────────────────
+            The deal and campaign counts describe the PLANS. Nothing in the
+            product counts a brand's deals or refuses the next one, and every
+            brand is on Free — so without this line the page states a cap to
+            exactly the people it does not apply to.
+
+            Said here rather than enforced, deliberately: capping a pilot brand
+            at three deals a month would cost us the pilot to make a page
+            accurate. The page moves instead. */}
+        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-faint)' }}>
+          Monthly limits apply once paid plans launch. Nothing is capped today &mdash;
+          run as many deals and campaigns as you like on Free.
+        </p>
+
         {/* ── Plans, phone ── */}
         <div className="brprice-list">
           <div style={{ background: '#FFFFFF', borderRadius: 20, border: '1px solid rgba(18,21,28,.06)', overflow: 'hidden' }}>

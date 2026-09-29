@@ -6355,3 +6355,18 @@ Verified: `tryon.com`/`airquerai.com` → review · `blinkit.com`/`grofers.com` 
 
 ### Watch when deploying
 - [ ] Any brand already on production that is unapproved **and** has a mismatched domain loses `/browse` the moment this ships. At pilot scale that is checkable by eye in `/ops/brands`; approve the real ones first
+
+---
+
+## 80. Two small ones: the unenforced quotas, and the pricing crumb
+
+### The brand plan limits say what they are
+- [ ] Under the plan cards: "Monthly limits apply once paid plans launch. Nothing is capped today — run as many deals and campaigns as you like on Free."
+- [ ] Why it is a line and not enforcement: the counts describe the PLANS, nothing in the product counts a brand's deals or refuses the next one, and every brand is on Free. Without the line the page stated a cap to exactly the people it did not apply to
+- [ ] Deliberately NOT enforced. Capping a pilot brand at three deals a month would cost the pilot to make a page accurate — the page moves instead. When billing exists, the line goes and the enforcement arrives together
+- [ ] Shows above both the desktop grid and the phone accordion, so neither layout can lose it
+
+### Creator pricing crumb reads "Profile" again
+- [ ] Desktop crumb is **"Profile › Pricing & fees"**, linking to `/creator/profile` — what the design draws
+- [ ] It was changed to "Account" in §72 because at the time that link sent a desktop visitor to an uncapped phone screen. That is fixed (§70 capped `/creator/profile` at 560px and centred it), so the reason for the substitute is gone
+- [ ] The phone still gets the back arrow, not the crumb, honouring `?from=` — §72's real fix stands
