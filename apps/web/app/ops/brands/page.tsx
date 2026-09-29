@@ -5,6 +5,7 @@ import { requireOps } from '@/lib/ops-capabilities'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import BrandStatusActions from './BrandStatusActions'
+import { brandDomainMatch } from '@/lib/brand-domain'
 
 export default async function OpsBrandsPage({ searchParams }: { searchParams: { page?: string; q?: string } }) {
   const actor = await requireOps('brands.read')
@@ -94,7 +95,15 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
                     <td style={tdStyle}>
                       {isAdmin ? <Link href={`/ops/brands/${b.id}/edit`}>{b.name}</Link> : b.name}
                     </td>
-                    <td style={tdStyle} data-ph-mask>{b.contact_email || '-'}</td>
+                    <td style={tdStyle} data-ph-mask>
+                      {b.contact_email || '-'}
+                      {/* WHY this brand is waiting, when the reason is the one
+                          the roster gate acts on. A flag, never a verdict:
+                          Blinkit's people are on grofers.com. It says what did
+                          not line up so a reviewer can go and check it, which
+                          is a minute of looking rather than a rule. */}
+                      <DomainFlag website={b.website} email={b.contact_email} />
+                    </td>
                     <td style={tdStyle} data-ph-mask>{b.contact_phone || '-'}</td>
                     <td style={tdStyle}>
                       <strong>{heldByBrand.get(b.id) ?? 0}</strong> held
@@ -228,4 +237,25 @@ const thStyle: React.CSSProperties = {
 const tdStyle: React.CSSProperties = {
   padding: '0.5rem 0.75rem',
   borderBottom: '1px solid #f0f0f0',
+}
+
+
+/**
+ * "Email domain does not match the website" — shown on a brand waiting review.
+ *
+ * This is the signal lib/brand-review-gate.ts uses to withhold the creator
+ * roster, so a reviewer should be able to see it without opening anything.
+ * Silent when the domains agree: a flag on every row is not a flag.
+ */
+function DomainFlag({ website, email }: { website: string | null; email: string | null }) {
+  const result = brandDomainMatch(website, email)
+  if (result.match) return null
+  return (
+    <div style={{ marginTop: 3, fontSize: '0.6875rem', fontWeight: 600, color: '#92400e' }}>
+      &#9888; {result.reason}
+      {result.siteName && result.emailName && (
+        <span style={{ fontWeight: 400, color: '#a16207' }}> ({result.emailName} vs {result.siteName})</span>
+      )}
+    </div>
+  )
 }

@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
 import { aiSearchConfigured } from '@/lib/ai-search/parse'
+import { brandRosterAccess } from '@/lib/brand-review-gate'
+import RosterUnderReview from '@/components/brand/RosterUnderReview'
 
 interface SocialAccount {
   platform: string
@@ -28,6 +30,24 @@ export interface BrowseCreator {
 
 export default async function BrowsePage() {
   const brand = await verifyBrand()
+
+  /* ── The roster is the thing worth gating ─────────────────────────────────
+     Names, handles, past brands, rate cards, package prices and audience data,
+     all of it readable by any signup that cleared the free-email check. This
+     withholds it from the accounts whose own details do not line up — today,
+     a contact email on a domain unrelated to the website — until a person has
+     looked.
+
+     Deliberately NOT every unapproved brand: most of them are real, and a wall
+     in front of a real brand costs a customer. See lib/brand-review-gate.ts. */
+  const access = await brandRosterAccess(brand.brandId)
+  if (access.held) {
+    return (
+      <RosterUnderReview
+        originCreatorHref={access.originCreatorId ? `/browse/${access.originCreatorId}` : null}
+      />
+    )
+  }
 
   // Service role, and the is_vetted filter is now WRITTEN OUT rather than left
   // to RLS. rate_card is no longer readable by the anon key — migration 0470

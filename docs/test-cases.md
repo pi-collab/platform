@@ -6320,3 +6320,38 @@ the filter stays selected but the list shows something else."
 - [ ] Previous / Next / numbered links / the last-page link all carry the filters
 - [ ] Also fixed on `/ops/brands` (search term) and `/ops/appeals` (`show=all`). `/ops/deals` and `/ops/offers` pass a bare path and were never affected
 - [ ] **The "Go to" jump box was always correct** — it is a GET form re-submitting the filters as hidden fields. So jumping to a page worked while clicking a page number did not, which is worth knowing when someone says "pagination is broken"
+
+---
+
+## 79. The creator roster is held from brands whose own details don't line up
+
+Prompted by a real signup: brand "Try on", website `tryon.com`, contact
+`support@airquerai.com`, which reached the product and tried to send.
+
+### What was already right, and what wasn't
+- [ ] The SEND was already held — `lib/send-gate.ts` returns `hold` for `pending_review`, so that deal never reached the creator. The brand was in `pending_review` *because* it tried to send; that transition only fires on the first held send
+- [ ] What was NOT protected: `/browse`. Any signup past the free-email check could read the whole vetted roster — names, handles, past brands, **rate cards, package prices, Instagram audience data**. That is the supply side, and it was open before a human had looked at the account
+
+### The rule (`lib/brand-domain.ts`)
+- [ ] Compares the contact email's domain with the website's, **ignoring the TLD**: `nykaa.com` / `priya@nykaa.in` matches. Indian brands routinely hold both
+- [ ] Handles two-part suffixes (`tryon.co.in` → `tryon`, not `co`), `www.`, paths, ports and subdomains (`shop.mamaearth.in` → `mamaearth`)
+- [ ] Punctuation is dropped, so `try-on.com` and `tryon.com` are the same name
+- [ ] One name containing the other matches (`nykaa` / `nykaafashion`) but only when the shorter is ≥ 4 characters — below that containment is coincidence
+- [ ] A missing website or unusable email is **not** a match: there is nothing to check against, which is the same position a reviewer is in
+- [ ] An unknown two-part suffix fails CLOSED (the name comes out as `co`/`com`, the domains stop matching, the brand gets reviewed). Right direction for a list that can never be complete
+
+Verified: `tryon.com`/`airquerai.com` → review · `blinkit.com`/`grofers.com` → review · `nykaa.com`/`nykaafashion.com` → match · `nykaa.com`/`nykaa.in` → match · `tryon.co.in`/`tryon.com` → match · `shop.mamaearth.in`/`mamaearth.com` → match · `ab.com`/`abcdefg.com` → review
+
+### The gate (`lib/brand-review-gate.ts`)
+- [ ] **Not every unapproved brand** — only the ones with a mismatch. Most unapproved brands are real and a wall in front of a real brand costs a customer
+- [ ] **A mismatch HOLDS, it never rejects.** Blinkit's staff are on grofers.com and will be held; that is only acceptable because they wait for an approval a founder gives in minutes. If this ever becomes a block, the reasoning stops holding
+- [ ] Approved brands are never checked. The rule decides what happens *before* a human looks; once one has, it has no further say
+- [ ] Held brands see `RosterUnderReview` on `/browse` and on every `/browse/[id]` — **except the creator whose storefront link brought them**, who stays visible. That creator invited them personally
+- [ ] Not gated: signup, onboarding, their own dashboard, their own deals. Sending stays governed by `send-gate.ts` for every unapproved brand, mismatch or not
+- [ ] The screen does not say WHY. The commonest reason describes real businesses, and naming it would read as a charge to answer. It carries a route to a human and does not dead-end
+
+### Ops
+- [ ] `/ops/brands` shows "⚠ email domain does not match website (airquerai vs tryon)" under the contact email of any brand awaiting review, and nothing when the domains agree — a flag on every row is not a flag
+
+### Watch when deploying
+- [ ] Any brand already on production that is unapproved **and** has a mismatched domain loses `/browse` the moment this ships. At pilot scale that is checkable by eye in `/ops/brands`; approve the real ones first

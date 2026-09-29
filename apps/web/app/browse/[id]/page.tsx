@@ -6,6 +6,8 @@ import { getPublicSnapshot } from '@/lib/instagram-sync'
 import TrackTag from '@/components/track/TrackTag'
 import { trackOfVettingStatus } from '@/lib/track'
 import { verifyBrand } from '@/lib/brand-auth'
+import { brandRosterAccess } from '@/lib/brand-review-gate'
+import RosterUnderReview from '@/components/brand/RosterUnderReview'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BrowseStorefront from './BrowseStorefront'
@@ -85,6 +87,20 @@ function VerifiedMark() {
 
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
   const brand = await verifyBrand()
+
+  /* Same gate as the roster, with ONE exception: the creator whose storefront
+     link brought them. That creator sent this brand here personally, and
+     walling a brand off from the person who invited them is the one outcome
+     worse than showing them a rate early. Every other profile waits for
+     review. */
+  const access = await brandRosterAccess(brand.brandId)
+  if (access.held && access.originCreatorId !== params.id) {
+    return (
+      <RosterUnderReview
+        originCreatorHref={access.originCreatorId ? `/browse/${access.originCreatorId}` : null}
+      />
+    )
+  }
   const supabase = createClient()
   const admin = createAdminClient()
 
