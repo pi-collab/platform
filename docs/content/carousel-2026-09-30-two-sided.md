@@ -1,9 +1,11 @@
-# Carousel — "They're each other's answer"
+# Carousel C — "They're each other's answer"
+
+**The set:** A is the creator half (`carousel-2026-09-30-creators.md`), B is the brand half (`carousel-2026-09-30-brands.md`), C is this — the one that only works because we have both.
 
 **Status:** copy only, ready for design. **One decision needed before publishing — see the box below.**
 **Source:** Guapd onboarding surveys, pulled from production 30 Sep 2026.
 Creators n=142, brands n=13.
-**Format:** 8 slides, Instagram square. Strong on LinkedIn.
+**Format:** 9 slides, Instagram square. Strong on LinkedIn.
 
 ---
 
@@ -57,49 +59,75 @@ mirror is the insight and it is true at this n.
 ## Slides
 
 **1 — Hook**
-> We asked 142 creators on Guapd what hurts most
+> We asked 142 creators what hurts most
 > about brand deals.
 >
-> Then we asked the brands.
+> Then we asked the brands the same thing.
+>
+> The two top answers were the same problem,
+> seen from opposite ends.
 
 **2**
 > Creators' number one:
 >
 > **68%** — not enough brand deals.
+>
+> The supply side, saying there isn't enough demand.
 
 **3**
 > Brands' number one:
 >
 > **69%** — can't find the right creators.
-
-**4 — turn**
-> They are each other's answer.
 >
-> And neither of them can find the other.
+> The demand side, saying there isn't enough supply.
+
+**4 — the turn**
+> One point apart.
+>
+> They are each other's answer, and they are
+> standing in the same room unable to see
+> each other.
 
 **5**
-> You'd think that's what an agency is for.
+> You'd assume that introduction is exactly
+> what an agency is for.
 >
-> 8% of creators work through one.
-> 15% of brands do.
+> **8%** of creators use one.
+> **15%** of brands do.
+>
+> The middleman we're all told is the problem
+> isn't even in the room.
 
 **6**
-> The rest of what brands said:
+> It isn't about price either.
 >
-> Can't tell if the audience numbers are real — 62%.
-> Can't measure what came of it — 69%.
+> Not one brand named cost. What they named was
+> **62%** can't verify the audience is real,
+> **69%** can't measure what came of it.
+>
+> They can't see what they're buying.
 
 **7**
-> The rest of what creators said:
+> And the creators aren't only short of deals.
 >
-> Payments are slow — 56%.
-> Deals scattered across WhatsApp, DMs and email — 42%.
-> No record of what was agreed — 30%.
+> **56%** waiting on payments.
+> **42%** running the deal across four apps.
+> **30%** with no record of what was agreed.
+>
+> They can't prove what they sold.
 
-**8 — close**
-> Both sides are describing the same missing thing.
+**8 — the argument**
+> One side can't prove what they sold.
+> The other can't see what they're buying.
 >
-> Somewhere a deal is visible, verified, and written down.
+> That is not a matching problem.
+> It's a **trust** problem, and it is the reason
+> the introduction alone was never enough.
+
+**9 — close**
+> Both sides described the same missing thing:
+> somewhere a deal is visible, verified,
+> and written down.
 >
 > That's what we're building.
 

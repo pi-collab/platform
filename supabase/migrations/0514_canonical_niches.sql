@@ -3,7 +3,7 @@
 -- ── The problem ─────────────────────────────────────────────────────────────
 -- The storefront editor accepted anything typed, and three tables carry the
 -- result: creators.niches (text[]), creators.niche (legacy singular text) and
--- creator_storefronts.categories (jsonb/text[]). A brand filtering the roster
+-- creator_storefronts.categories (jsonb). A brand filtering the roster
 -- was offered "Fashion", "fashion" and "beauty" as three separate things, plus
 -- "liefestyle" as a fourth, because /browse builds its filter from whatever
 -- values exist.
@@ -145,11 +145,16 @@ WHERE niche IS NOT NULL AND btrim(niche) <> '';
 -- ── creator_storefronts.categories ──────────────────────────────────────────
 -- This is the column /browse actually filters on, and the one the free-text
 -- box wrote to.
+-- jsonb here, not text[] (migration 0270), so it is taken apart with
+-- jsonb_array_elements_text and rebuilt with jsonb_agg rather than unnest.
 UPDATE creator_storefronts
 SET categories = COALESCE((
-      SELECT array_agg(DISTINCT v ORDER BY v)
-      FROM (SELECT canonical_niche(c) AS v FROM unnest(categories) AS c) t
+      SELECT jsonb_agg(DISTINCT v ORDER BY v)
+      FROM (
+        SELECT canonical_niche(c) AS v
+        FROM jsonb_array_elements_text(categories) AS c
+      ) t
       WHERE v IS NOT NULL
-    ), '{}')
-WHERE categories IS NOT NULL
-  AND array_length(categories, 1) IS NOT NULL;
+    ), '[]'::jsonb)
+WHERE jsonb_typeof(categories) = 'array'
+  AND jsonb_array_length(categories) > 0;
