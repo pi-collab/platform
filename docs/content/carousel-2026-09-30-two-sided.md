@@ -15,12 +15,13 @@ the moat the whole business rests on, showing up as a post.
 
 And the finding is genuinely good, not just ours:
 
-> **Creators' number one problem: not enough brand deals (67.6%).**
-> **Brands' number one problem: finding the right creators (9 of 13).**
+> **Creators' number one problem: not enough brand deals — 68%.**
+> **Brands' number one problem: finding the right creators — 69%.**
 
-They are each other's answer. Neither can find the other. And the middleman
-whose entire job is that introduction is barely in the room — 8.5% of creators
-work through an agency, 2 of 13 brands do.
+Two numbers a point apart, describing the same hole from opposite sides. They
+are each other's answer and neither can find the other — and the middleman
+whose entire job is that introduction is barely in the room: 8% of creators
+work through an agency, 15% of brands do.
 
 The 22 Sep carousel used the creator half of this at n=105. The brand half has
 never been published, and it is what makes this one new.
@@ -32,25 +33,24 @@ never been published, and it is what makes this one new.
 The brand sample is **thirteen**. That is small, and stating it publicly tells
 the market Guapd currently has about thirteen brands.
 
-Three honest options:
+**Decided: percentages, both sides.** The brand figures are shown as percentages
+rather than "9 of 13", at Palak's call. What that means in practice, and what
+has to stay true:
 
-1. **Publish as written, with n disclosed.** Counts, never percentages, for the
-   brand side — "9 of 13", not "69%". Early-stage companies publish small-n
-   findings all the time and disclosure reads as confidence. The risk is that a
-   competitor quotes "13 brands" back at you.
-2. **Publish the creator half only** (n=142, unimpeachable) and hold the mirror
-   until the brand side is 50+. Loses the whole point of the post.
-3. **Wait.** The finding will only get stronger as n grows, and it is not
-   time-sensitive the way the ASCI and Meta posts are.
+- **One brand respondent is 7.7 percentage points.** 69% is nine people. If one
+  more brand had answered differently the top line moves eight points, which is
+  why both sides are rounded to whole numbers — a decimal on 13 responses
+  claims a precision that does not exist.
+- **The caption still states n=142 and n=13.** Percentages without a
+  denominator is the version that gets the post taken apart; percentages with
+  one is a normal way to report a small sample.
+- **Rounding is honest here.** 9/13 = 69.2% and 96/142 = 67.6%, so 69% and 68%
+  are both true to the nearest point. The exact arithmetic is in the sourcing
+  table below.
 
-Recommendation: **option 1.** The mirror is the insight, it is true at n=13,
-and the alternative is publishing a weaker post to hide a number that a
-competitor could guess anyway. But it is a positioning call, not a copy one —
-it is yours.
-
-**Whatever is chosen: the brand side is counts, never percentages.** "9 of 13"
-is honest. "69% of brands" off thirteen respondents is the sentence that gets
-the post taken apart.
+The remaining trade is that stating n=13 tells the market Guapd has about
+thirteen brands. That is the cost of the post, accepted deliberately — the
+mirror is the insight and it is true at this n.
 
 ---
 
@@ -65,12 +65,12 @@ the post taken apart.
 **2**
 > Creators' number one:
 >
-> **67.6%** — not enough brand deals.
+> **68%** — not enough brand deals.
 
 **3**
 > Brands' number one:
 >
-> **9 of 13** — can't find the right creators.
+> **69%** — can't find the right creators.
 
 **4 — turn**
 > They are each other's answer.
@@ -80,21 +80,21 @@ the post taken apart.
 **5**
 > You'd think that's what an agency is for.
 >
-> 8.5% of creators work through one.
-> 2 of 13 brands do.
+> 8% of creators work through one.
+> 15% of brands do.
 
 **6**
 > The rest of what brands said:
 >
-> Can't tell if the audience numbers are real — 8 of 13.
-> Can't measure what came of it — 9 of 13.
+> Can't tell if the audience numbers are real — 62%.
+> Can't measure what came of it — 69%.
 
 **7**
 > The rest of what creators said:
 >
-> Payments are slow — 55.6%.
-> Deals scattered across WhatsApp, DMs and email — 41.5%.
-> No record of what was agreed — 30.3%.
+> Payments are slow — 56%.
+> Deals scattered across WhatsApp, DMs and email — 42%.
+> No record of what was agreed — 30%.
 
 **8 — close**
 > Both sides are describing the same missing thing.
@@ -110,14 +110,15 @@ the post taken apart.
 > We ask every creator and every brand who joins Guapd what their biggest
 > problem is. This week we lined the two answers up.
 >
-> Creators' number one, by a distance: not enough brand deals — 67.6% of 142.
+> Creators' number one, by a distance: not enough brand deals — 68%.
 >
-> Brands' number one: finding the right creators — 9 of 13.
+> Brands' number one: finding the right creators — 69%.
 >
-> They are each other's answer, and neither can find the other.
+> A point apart, describing the same hole from opposite sides. They are each
+> other's answer, and neither can find the other.
 >
-> You would assume that gap is exactly what an agency exists to close. 8.5% of
-> our creators work through one. 2 of our 13 brands do.
+> You would assume that gap is exactly what an agency exists to close. 8% of our
+> creators work through one. 15% of our brands do.
 >
 > The rest of the answers rhyme too. Brands can't verify whether audience
 > numbers are real, and can't measure what came of a campaign. Creators are
@@ -138,17 +139,17 @@ from `brand_onboarding_responses`, **n=13**. Both the pain and challenge
 questions are **multi-select**, so shares are of respondents and do not sum to
 100% — the caption says so.
 
-| Claim | Slide | Figure |
-|---|---|---|
-| Not enough brand deals | 2 | 96/142 = 67.6% |
-| Can't find the right creators | 3 | 9 of 13 |
-| Creators via agency only | 5 | 12/142 = 8.5% |
-| Brands via agency only | 5 | 2 of 13 |
-| Can't verify audience numbers | 6 | 8 of 13 |
-| Can't measure ROI | 6 | 9 of 13 |
-| Slow payments | 7 | 79/142 = 55.6% |
-| Scattered across channels | 7 | 59/142 = 41.5% |
-| No record of terms | 7 | 43/142 = 30.3% |
+| Claim | Slide | Exact | Shown |
+|---|---|---|---|
+| Not enough brand deals | 2 | 96/142 = 67.6% | 68% |
+| Can't find the right creators | 3 | 9/13 = 69.2% | 69% |
+| Creators via agency only | 5 | 12/142 = 8.5% | 8% |
+| Brands via agency only | 5 | 2/13 = 15.4% | 15% |
+| Can't verify audience numbers | 6 | 8/13 = 61.5% | 62% |
+| Can't measure ROI | 6 | 9/13 = 69.2% | 69% |
+| Slow payments | 7 | 79/142 = 55.6% | 56% |
+| Scattered across channels | 7 | 59/142 = 41.5% | 42% |
+| No record of terms | 7 | 43/142 = 30.3% | 30% |
 
 Not used, but true and available: 83.1% of creators run deals themselves or
 partly themselves (direct 45.1% + mix 38.0%). It says the same thing slide 5
@@ -158,8 +159,12 @@ says and slide 5 says it harder.
 
 ## Do not claim
 
-- **No percentages for the brand side.** Thirteen respondents. "9 of 13"
-  everywhere, including if a slide gets re-cut for stories.
+- **Never show a brand percentage without n=13 somewhere on the post.** The
+  caption carries it. If a slide is re-cut for stories, the denominator goes
+  with it — a standalone "69% of brands" is the version that gets the post
+  taken apart.
+- **Don't add decimals back.** One brand respondent is 7.7 points; a decimal on
+  thirteen responses claims precision that isn't there.
 - **Do not say creators "can't get deals" or brands "can't find anyone."** They
   said it is their biggest *problem*, which is not the same as it being
   impossible. The slides say "not enough" and "can't find the right" for that
