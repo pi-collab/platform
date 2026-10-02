@@ -6417,7 +6417,7 @@ The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePick
 
 ## 83. City, state and age bracket
 
-Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket` (CHECK: `18_24`, `25_34`, `35_44`, `45_plus`, or NULL). Lists live in `lib/creator-location.ts`. **Age is a bracket, never a date of birth.**
+Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket`; **0516** widens its CHECK to `under_18`, `18_24`, `25_34`, `35_44`, `45_plus`, or NULL. Lists live in `lib/creator-location.ts`. **Age is a bracket, never a date of birth.**
 
 ### Environment
 - [ ] 0515 run on the database the app points at. It ends with `NOTIFY pgrst, 'reload schema'`, because without a reload a select naming a new column fails (see 0513)
@@ -6425,7 +6425,8 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] Before 0515 is applied, nothing breaks: signup completes (the place write logs and moves on), the dashboard hides the task, and settings loads with the three fields blank
 
 ### Signup, `/signup/creator/onboarding`
-- [ ] State (dropdown of 28 states + 8 UTs), City (typed), Age (18–24 / 25–34 / 35–44 / 45+) appear after the follower range
+- [ ] State (dropdown of 28 states + 8 UTs), City (typed), Age (Under 18 / 18–24 / 25–34 / 35–44 / 45+) appear after the follower range
+- [ ] **0516:** "Under 18" is accepted by the database (`under_18`) and appears in signup, the dashboard prompt, settings, and the ops filter and edit form
 - [ ] "Complete setup" stays disabled until all three are answered
 - [ ] Server refuses a missing or unknown state, a blank city, or an unknown age code (`saveOnboarding` is directly callable)
 - [ ] Saves `city`, `state`, `age_bracket`, and `location` = "City, State"

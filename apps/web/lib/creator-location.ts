@@ -25,11 +25,13 @@ export const INDIAN_STATES = [
 ] as const
 
 /**
- * Stored as the code; the label is what is shown. Starts at 18 because a
- * creator must be an adult to sign the terms. Mirrors the CHECK in migration
- * 0515; keep the two in step.
+ * Stored as the code; the label is what is shown. Includes Under 18: there are
+ * child creators, usually run by a parent, and without the option they either
+ * pick a false bracket or abandon signup. Mirrors the CHECK in migration 0516;
+ * keep the two in step.
  */
 export const AGE_BRACKETS = [
+  { code: 'under_18', label: 'Under 18' },
   { code: '18_24', label: '18–24' },
   { code: '25_34', label: '25–34' },
   { code: '35_44', label: '35–44' },
