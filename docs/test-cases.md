@@ -6381,7 +6381,7 @@ The canonical list is `lib/niches.ts` (23 niches + Other / Not Listed since §84
 - [ ] "Niches" is the chip picker, not the old dropdown ("Tech & finance", "Gaming"… are gone)
 - [ ] Up to 5. At 5 the pick chips disappear and the line reads "That's 5, the most you can pick."
 - [ ] **+ Other** opens a text box. Typing "Astrology" and Add saves "Astrology" as typed. Typing "makeup" saves **Beauty & Skincare**, not a new value
-- [ ] Saves to `creators.niches` (canonicalised server-side) and sets `creators.niche` to the first pick; clearing all sets `niche` null
+- [ ] Saves through `setCreatorNiches`: `creators.niches`, `creators.niche` (first pick) AND the storefront's categories (§85); clearing all sets `niche` null
 - [ ] A creator with only the legacy `niche` set opens with it shown as a chip, not a blank field
 - [ ] Clicking the label area above the chips adds nothing (the picker is not inside a `<label>`)
 - [ ] Discard restores the original chips
@@ -6396,8 +6396,8 @@ The canonical list is `lib/niches.ts` (23 niches + Other / Not Listed since §84
 - [ ] Niche suggests the canonical list but still accepts free text (leads can be brands)
 - [ ] Saving "fitness" stores "Fitness, Sports & Bodybuilding"; saving "D2C skincare" stores it as typed
 
-### Known gap
-- [ ] Settings writes `creators.niches`; the storefront writes `creator_storefronts.categories`, which `/browse` filters on. Changing niches in settings does NOT change what brands filter by. Unchanged by this section, flagged to decide separately
+### Resolved gap
+- [ ] ~~Settings and the storefront wrote niches to different columns~~. Fixed in §85: one list per creator, everywhere
 
 ---
 
@@ -6492,3 +6492,23 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] "premium creators" still goes to unusedTerms, never otherNiches (qualities are not categories)
 - [ ] A query a list niche covers ("makeup creators") uses `niches: ["Beauty & Skincare"]` and leaves otherNiches empty
 - [ ] Searches cached before this change (no otherNiches key) still rank without error
+
+---
+
+## 85. One niche list per creator, the same everywhere
+
+`lib/creator-niches-server.ts` → `setCreatorNiches()` is the ONLY writer. It sets `creators.niches` (source of truth), `creators.niche` (first value, for AI search) and `creator_storefronts.categories` (if a storefront exists). Server ceiling 10; pickers stop at 5.
+
+### Every screen agrees
+- [ ] Change niches in **creator settings** → the storefront editor, `/browse` filter, `/browse/[id]`, AI search and ops all show the new list
+- [ ] Change niches in the **storefront editor** → settings and ops show the same list
+- [ ] Change niches in **ops edit** → settings, storefront and `/browse` follow
+- [ ] A niche typed into Other in settings ("Astrology") is now findable by brands even for a creator WITH a storefront (it was not before)
+- [ ] Ops "add creator" sets `niches` and `niche`; the storefront, when the creator makes one, starts from that list
+- [ ] If the storefront copy fails to update, the screen says so rather than reporting a clean save
+
+### Migration 0518 (run on each database)
+- [ ] Merges each creator's storefront categories + `niches` + legacy `niche`, storefront first, duplicates removed, max 10. Nothing a creator picked anywhere is dropped
+- [ ] Afterwards every storefront's categories equal its creator's `niches`, and `niche` = first value
+- [ ] Re-running it changes nothing
+- [ ] Verified on staging 2026-10-02: 6 of 6 storefronts consistent

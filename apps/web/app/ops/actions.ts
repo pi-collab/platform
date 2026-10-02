@@ -1,6 +1,7 @@
 'use server'
 
 import { isRejectionReason } from '@/lib/rejection-reasons'
+import { setCreatorNiches, MAX_NICHES } from '@/lib/creator-niches-server'
 import { canonicalNiches } from '@/lib/niches'
 import { validateLocation, type LocationInput } from '@/lib/creator-location'
 import { verifyOpsAccess } from '@/lib/ops-auth'
@@ -89,7 +90,10 @@ export async function addCreator(input: AddCreatorInput) {
   const { data, error } = await admin.from('creators').insert({
     full_name: full_name.trim(),
     phone: phone?.trim() || null,
-    niches: canonicalNiches(niches ?? []),
+    // A new creator has no storefront yet, so the two creator columns are all
+    // there is to keep in step; the storefront seeds itself from these.
+    niches: canonicalNiches(niches ?? []).slice(0, MAX_NICHES),
+    niche: canonicalNiches(niches ?? [])[0] ?? null,
     handle: handle?.trim() || null,
     bio: bio?.trim() || null,
     profile_photo_url: profile_photo_url?.trim() || null,
@@ -385,7 +389,6 @@ export async function editCreator(input: EditCreatorInput) {
       full_name: full_name.trim(),
       phone: phone?.trim() || null,
       contact_email: email,
-      niches: canonicalNiches(niches ?? []),
       handle: handle?.trim() || null,
       bio: bio?.trim() || null,
       profile_photo_url: profile_photo_url?.trim() || null,
@@ -428,6 +431,10 @@ export async function editCreator(input: EditCreatorInput) {
     }
     productsRetagged = moved?.length ?? 0
   }
+
+  // Niches through the one writer, so the creator's storefront follows.
+  const nicheRes = await setCreatorNiches(id, niches ?? [])
+  if (nicheRes.error) return { error: `Profile saved, but ${nicheRes.error}` }
 
   // Its own write, like everywhere else these columns are touched (0515).
   if (placeRow) {

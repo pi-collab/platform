@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
-import { canonicalNiches } from '@/lib/niches'
+import { setCreatorNiches } from '@/lib/creator-niches-server'
 import { validateLocation } from '@/lib/creator-location'
 
 // ── Update Creator Profile ───────────────────────────────────────
@@ -30,13 +30,6 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
   if (data.fullName !== undefined) update.full_name = data.fullName || null
   if (data.handle !== undefined) update.handle = data.handle || null
   if (data.bio !== undefined) update.bio = data.bio || null
-  if (data.niches !== undefined) {
-    const niches = canonicalNiches(data.niches).slice(0, 5)
-    update.niches = niches
-    // The legacy singular column is still read by AI search; keep it the
-    // creator's first pick rather than letting it drift from the list.
-    update.niche = niches[0] ?? null
-  }
   if (data.primaryPlatform !== undefined) update.primary_platform = data.primaryPlatform || null
   if (data.contactEmail !== undefined) update.contact_email = data.contactEmail || null
   if (data.socials !== undefined) {
@@ -74,6 +67,12 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
       .eq('id', ctx.creatorId)
 
     if (error) return { error: error.message }
+  }
+
+  // Through the one writer, so the storefront brands filter on changes too.
+  if (data.niches !== undefined) {
+    const res = await setCreatorNiches(ctx.creatorId, data.niches)
+    if (res.error) return { error: res.error }
   }
 
   if (placeRow) {
