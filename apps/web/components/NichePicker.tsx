@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { NICHES, canonicalNiche } from '@/lib/niches'
+import { NICHES, OTHER_NICHE, canonicalNiche } from '@/lib/niches'
 
 /**
  * Pick niches from the canonical list, with Other as a typed escape hatch.
@@ -10,7 +10,7 @@ import { NICHES, canonicalNiche } from '@/lib/niches'
  * roster sees one vocabulary. Other is deliberate, not a gap: a list that
  * cannot describe somebody's work is how they end up writing their real niche
  * into their bio, where nothing can filter on it. What they type still goes
- * through canonicalNiche(), so "makeup" lands in Fashion / Beauty rather than
+ * through canonicalNiche(), so "makeup" lands in Beauty & Skincare rather than
  * becoming a new bucket beside it.
  *
  * The storefront editor has its own rendering of the same control, drawn to
@@ -66,14 +66,14 @@ export default function NichePicker({
 
       {!full && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-          {NICHES.filter(n => n !== 'Other' && !value.includes(n)).map(n => (
+          {NICHES.filter(n => n !== OTHER_NICHE && !value.includes(n)).map(n => (
             <button key={n} type="button" onClick={() => add(n)} style={pick}>
               + {n}
             </button>
           ))}
           {!otherOpen && (
             <button type="button" onClick={() => setOtherOpen(true)} style={pick}>
-              + Other
+              + Other / Not listed
             </button>
           )}
         </div>

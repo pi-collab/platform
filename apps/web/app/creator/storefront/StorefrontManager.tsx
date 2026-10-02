@@ -18,7 +18,7 @@ import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 import { SAMPLE_CONTENT_ITEMS, isSampleItem } from '@/lib/showcase-samples'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
-import { NICHES, canonicalNiche } from '@/lib/niches'
+import { NICHES, OTHER_NICHE, canonicalNiche } from '@/lib/niches'
 
 interface Product {
   id: string
@@ -1757,7 +1757,7 @@ export default function StorefrontManager({
                     </div>
                     {edit.niches.length < 5 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                        {NICHES.filter(n => n !== 'Other' && !edit.niches.includes(n)).map(n => (
+                        {NICHES.filter(n => n !== OTHER_NICHE && !edit.niches.includes(n)).map(n => (
                           <button
                             key={n}
                             type="button"
@@ -1770,7 +1770,7 @@ export default function StorefrontManager({
                         {/* Other opens the box the rest of the control replaced. */}
                         {!otherOpen && (
                           <button type="button" onClick={() => setOtherOpen(true)} style={nichePick}>
-                            + Other
+                            + Other / Not listed
                           </button>
                         )}
                       </div>

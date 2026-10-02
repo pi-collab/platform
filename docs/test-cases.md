@@ -6375,12 +6375,12 @@ Verified: `tryon.com`/`airquerai.com` → review · `blinkit.com`/`grofers.com` 
 
 ## 81. One niche vocabulary on every form that asks for one
 
-The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePicker.tsx` is the shared control; the storefront editor draws its own copy of it to its design.
+The canonical list is `lib/niches.ts` (23 niches + Other / Not Listed since §84; was 12 + Other). `components/NichePicker.tsx` is the shared control; the storefront editor draws its own copy of it to its design.
 
 ### Creator settings (`/creator/settings` → Profile)
 - [ ] "Niches" is the chip picker, not the old dropdown ("Tech & finance", "Gaming"… are gone)
 - [ ] Up to 5. At 5 the pick chips disappear and the line reads "That's 5, the most you can pick."
-- [ ] **+ Other** opens a text box. Typing "Astrology" and Add saves "Astrology" as typed. Typing "makeup" saves **Fashion / Beauty**, not a new value
+- [ ] **+ Other** opens a text box. Typing "Astrology" and Add saves "Astrology" as typed. Typing "makeup" saves **Beauty & Skincare**, not a new value
 - [ ] Saves to `creators.niches` (canonicalised server-side) and sets `creators.niche` to the first pick; clearing all sets `niche` null
 - [ ] A creator with only the legacy `niche` set opens with it shown as a chip, not a blank field
 - [ ] Clicking the label area above the chips adds nothing (the picker is not inside a `<label>`)
@@ -6390,11 +6390,11 @@ The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePick
 - [ ] Same picker in place of the checkboxes; no limit
 - [ ] A creator carrying a non-canonical niche (e.g. "Astrology") shows it as a chip on edit and keeps it on save. The checkbox version silently kept it invisible
 - [ ] Clicking the "Niches" heading does not add the first niche
-- [ ] Server canonicalises: a niche posted as "finance" is stored as "Finance / Investing"
+- [ ] Server canonicalises: a niche posted as "finance" is stored as "Finance, Crypto & Investing"
 
 ### Ops pipeline leads
 - [ ] Niche suggests the canonical list but still accepts free text (leads can be brands)
-- [ ] Saving "fitness" stores "Fitness"; saving "D2C skincare" stores it as typed
+- [ ] Saving "fitness" stores "Fitness, Sports & Bodybuilding"; saving "D2C skincare" stores it as typed
 
 ### Known gap
 - [ ] Settings writes `creators.niches`; the storefront writes `creator_storefronts.categories`, which `/browse` filters on. Changing niches in settings does NOT change what brands filter by. Unchanged by this section, flagged to decide separately
@@ -6459,3 +6459,28 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] Setting one of the three without the others is refused with the specific message. Blanking all three clears them
 - [ ] An ops change writes `ops_events` `creator.edited` with `place_set_by_ops`, `state_after`, `age_bracket_after` (never the city)
 - [ ] **Before 0515 on a database:** `/ops/creators` and the creator page still load (the place reads are their own queries); the State/Age filter shows "could not run… matching nothing" instead of breaking the page
+
+---
+
+## 84. The 23-niche list
+
+`lib/niches.ts` now holds 23 niches + "Other / Not Listed" (Palak's list, 2026-10-02). Migration **0517** moves stored values onto it; its CASE is generated from `lib/niches.ts`, so regenerate rather than hand-edit if the list changes again.
+
+### Pickers
+- [ ] Settings, ops add/edit and the storefront show all 23 as chips, plus **+ Other / Not listed**, which opens a text box
+- [ ] What is typed into Other is stored as typed (e.g. "Astrology"), not as the label "Other / Not Listed", unless it matches a known word ("makeup" → Beauty & Skincare)
+- [ ] Ops pipeline suggestions list the 23 + Other
+
+### Migration 0517 (run on each database)
+- [ ] "Fashion / Beauty" becomes **both** "Fashion & Apparel" and "Beauty & Skincare" (we cannot tell which was meant; both keeps them findable)
+- [ ] "Finance / Investing", "Fintech" and "Crypto / Web3" become one "Finance, Crypto & Investing", with no duplicate in the array
+- [ ] Tech / Gadgets → Technology, AI & Gadgets · Business / Startups → Business, SaaS & Entrepreneurship · Education → Career & Education · Lifestyle → Lifestyle & Luxury · Fitness → Fitness, Sports & Bodybuilding · Food → Food, Beverage & Cooking · Travel → Travel, Hospitality & Adventure · Entertainment → Entertainment, Comedy & Pop Culture · Other → Other / Not Listed
+- [ ] Applies to `creators.niches`, `creators.niche` (first value), `creator_storefronts.categories` and `pipeline_leads.niche`
+- [ ] Unrecognised values survive as typed. Re-running 0517 changes nothing
+- [ ] Verified on staging 2026-10-02: all values now on the new list
+
+### Known loss from 0514 (production)
+- [ ] 0514 already folded gaming, music, dance and art into "Entertainment" on production, and parenting/home into "Lifestyle". Those creators now land in "Entertainment, Comedy & Pop Culture" / "Lifestyle & Luxury", not "Gaming & Esports" etc. The original words were overwritten in 0514 and cannot be recovered; those creators need to re-pick
+
+### AI search
+- [ ] Parser only returns niches from the new list, never "Other / Not Listed"; "makeup" maps to Beauty & Skincare
