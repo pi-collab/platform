@@ -12,9 +12,9 @@ import { NICHES, OTHER_NICHE, canonicalNiche } from '@/lib/niches'
  * It was 23 always-visible chips, which took more of the page than the rest of
  * the form; now the chosen ones are chips and the list lives in a panel.
  *
- * Drawn in FilterDropdown's language — bordered field, floating white panel,
- * the active row tinted neon with a tick — so it reads as the same control
- * family, but as a full-width form field with search, because 23 options is a
+ * Drawn in FilterDropdown's shape — bordered field, floating white panel, a
+ * tick on the active row — but black and white only, no neon (Palak's call),
+ * so it reads as the same control family, but as a full-width form field with search, because 23 options is a
  * list you want to type into, not scroll.
  *
  * Other is deliberate, not a gap: a list that cannot describe somebody's work
@@ -87,7 +87,7 @@ export default function NichePicker({
           minHeight: 46, padding: '6px 10px 6px 8px', borderRadius: 12,
           border: `1px solid ${open ? 'var(--ink, #181C24)' : '#D4D4CB'}`,
           background: 'var(--card, #fff)', cursor: 'pointer',
-          boxShadow: open ? '0 0 0 3px rgba(232,255,102,.45)' : 'inset 0 1px 2px rgba(40,45,25,.04)',
+          boxShadow: open ? '0 0 0 3px rgba(24,28,36,.08)' : 'inset 0 1px 2px rgba(40,45,25,.04)',
           transition: 'box-shadow .15s, border-color .15s',
         }}
       >
@@ -172,7 +172,7 @@ export default function NichePicker({
                     padding: '9px 11px', borderRadius: 10, border: 'none', textAlign: 'left',
                     fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: active ? 700 : 500,
                     color: 'var(--ink, #181C24)',
-                    background: active ? 'rgba(232,255,102,.28)' : 'transparent',
+                    background: active ? '#F4F4F1' : 'transparent',
                     cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
                   }}
                 >
@@ -248,7 +248,7 @@ export default function NichePicker({
 const chip: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 7,
   padding: '5px 10px 5px 12px', borderRadius: 999,
-  background: 'rgba(232,255,102,.35)', border: '1px solid rgba(24,28,36,.08)',
+  background: '#fff', border: '1px solid var(--ink, #181C24)',
   fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink, #181C24)',
 }
 

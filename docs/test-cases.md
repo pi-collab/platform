@@ -6550,9 +6550,9 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 
 `components/NichePicker.tsx`, now used by settings, ops add/edit AND the storefront editor (its own chip copy is gone). Styled in `FilterDropdown`'s language.
 
-- [ ] Closed: a field showing chosen niches as neon-tinted chips with ×, plus "Select your niches" / "Add more" and a chevron. "Pick up to 5. Brands filter by these." beneath (settings, storefront)
+- [ ] Closed: a field showing chosen niches as black-outlined white chips with × (black and white only, no neon), plus "Select your niches" / "Add more" and a chevron. "Pick up to 5. Brands filter by these." beneath (settings, storefront)
 - [ ] Click anywhere in the field opens the panel; × on a chip removes that niche WITHOUT opening it
-- [ ] Panel: search box focused, 23 niches with a tick box; chosen rows tinted neon with a filled tick; several can be ticked without the panel closing
+- [ ] Panel: search box focused, 23 niches with a tick box; chosen rows light grey with a filled black tick; several can be ticked without the panel closing
 - [ ] Search "fit" shows only Fitness, Sports & Bodybuilding; a search matching nothing says to use Other
 - [ ] At 5, unchosen rows grey out and the footer reads "5 of 5, the most you can pick"; unticking frees a slot
 - [ ] "+ Other / Not listed" opens a text box in the panel; Enter or Add saves it as a chip ("makeup" → Beauty & Skincare; "Astrology" as typed)
