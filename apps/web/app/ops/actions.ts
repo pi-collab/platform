@@ -1,6 +1,7 @@
 'use server'
 
 import { isRejectionReason } from '@/lib/rejection-reasons'
+import { setCreatorBio } from '@/lib/creator-bio-server'
 import { setCreatorNiches, MAX_NICHES } from '@/lib/creator-niches-server'
 import { canonicalNiches } from '@/lib/niches'
 import { validateLocation, type LocationInput } from '@/lib/creator-location'
@@ -390,7 +391,6 @@ export async function editCreator(input: EditCreatorInput) {
       phone: phone?.trim() || null,
       contact_email: email,
       handle: handle?.trim() || null,
-      bio: bio?.trim() || null,
       profile_photo_url: profile_photo_url?.trim() || null,
       social_accounts: mergedSocials,
       worked_with: worked_with ?? [],
@@ -431,6 +431,9 @@ export async function editCreator(input: EditCreatorInput) {
     }
     productsRetagged = moved?.length ?? 0
   }
+
+  const bioRes = await setCreatorBio(id, bio)
+  if (bioRes.error) return { error: `Profile saved, but ${bioRes.error}` }
 
   // Niches through the one writer, so the creator's storefront follows.
   const nicheRes = await setCreatorNiches(id, niches ?? [])

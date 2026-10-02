@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { setCreatorBio } from '@/lib/creator-bio-server'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
@@ -29,7 +30,6 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
   const update: Record<string, unknown> = {}
   if (data.fullName !== undefined) update.full_name = data.fullName || null
   if (data.handle !== undefined) update.handle = data.handle || null
-  if (data.bio !== undefined) update.bio = data.bio || null
   if (data.primaryPlatform !== undefined) update.primary_platform = data.primaryPlatform || null
   if (data.contactEmail !== undefined) update.contact_email = data.contactEmail || null
   if (data.socials !== undefined) {
@@ -69,7 +69,11 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
     if (error) return { error: error.message }
   }
 
-  // Through the one writer, so the storefront brands filter on changes too.
+  // Bio and niches through their one writers, so the storefront follows.
+  if (data.bio !== undefined) {
+    const res = await setCreatorBio(ctx.creatorId, data.bio)
+    if (res.error) return { error: res.error }
+  }
   if (data.niches !== undefined) {
     const res = await setCreatorNiches(ctx.creatorId, data.niches)
     if (res.error) return { error: res.error }

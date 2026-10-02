@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { setCreatorBio } from '@/lib/creator-bio-server'
 import { setCreatorNiches, MAX_NICHES } from '@/lib/creator-niches-server'
 import { canonicalNiches } from '@/lib/niches'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -355,6 +356,11 @@ export async function upsertStorefront(input: UpsertInput) {
   // creators.niches follows what was just picked here.
   const nicheRes = await setCreatorNiches(ctx.creatorId, categories)
   if (nicheRes.error) return { error: nicheRes.error }
+  // Same for the bio: it is the creator's, and settings and ops show it too.
+  if (input.bio !== undefined) {
+    const bioRes = await setCreatorBio(ctx.creatorId, input.bio)
+    if (bioRes.error) return { error: bioRes.error }
+  }
 
   /* ── Resolve newly chosen reels NOW, not tonight ────────────────────────
      A showcase item pulled in from Instagram holds only the media id. The

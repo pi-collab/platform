@@ -6512,3 +6512,34 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] Afterwards every storefront's categories equal its creator's `niches`, and `niche` = first value
 - [ ] Re-running it changes nothing
 - [ ] Verified on staging 2026-10-02: 6 of 6 storefronts consistent
+
+---
+
+## 86. Bio: one value, a dashboard task, an AI draft, and AI search reads it
+
+### One bio per creator
+- [ ] `setCreatorBio` (`lib/creator-bio-server.ts`) is the only writer: `creators.bio` + `creator_storefronts.bio`. Settings, ops edit and the storefront save all use it
+- [ ] Edit the bio in settings → the storefront editor, `/browse/[id]` and `/c/[slug]` show the new one (they did not, for creators with a storefront)
+- [ ] Migration **0519**: where both bios existed and differed, the storefront's wins, and the replaced `creators.bio` is saved in `events` as `creator.bio_replaced_0519` (`old_bio`, `new_bio`). Re-running logs and changes nothing. Staging 2026-10-02: 1 bio replaced and logged, 0 drift after
+
+### Dashboard task "Add your bio"
+- [ ] Shows for any creator whose bio is under 40 characters; after location in the regular and Growth lists
+- [ ] Subtitle explains brands search by bio and AI search uses it; the open panel says to mention topics, content type and audience, and offers AI for anyone unsure
+- [ ] Save is disabled under 40 characters; the server refuses under 40 too
+- [ ] Saving shows "Saved", the row ticks Done, and `events` gets `creator.bio_added`
+
+### "Write it with AI"
+- [ ] Puts a draft into the box; it is NEVER saved without the creator pressing Save
+- [ ] Draft is first person, 2–3 sentences, under ~350 characters, no emojis or hashtags
+- [ ] **No invented facts:** no follower numbers, brands, awards or years that are not in the profile. Try with a creator whose Instagram bio mentions a brand: the draft may use it; with one whose does not, no brand appears
+- [ ] Uses: name, niches, city/state, handles, Instagram bio + up to 8 recent captions (connected creators only). YouTube has no connection yet, so only the handle is used
+- [ ] With no Instagram and no existing bio, the note says it is a starting point and suggests connecting Instagram
+- [ ] 6th draft in 24h is refused with a message; each draft logs `creator.bio_drafted`
+- [ ] With `ANTHROPIC_API_KEY` unset, the button says AI is not available instead of failing silently
+- [ ] Model `claude-opus-5-5`, low effort, server-side fallback `"default"`; a refusal shows a plain message
+
+### AI search reads the bio
+- [ ] "mutual fund explainers": parser returns niches [Finance, Crypto & Investing] + topics ["mutual funds", "explainers"]; a creator whose bio says "I make short explainers on mutual funds" gets the reason "bio mentions …" and ranks above one whose bio does not
+- [ ] Topics never EXCLUDE a creator (most bios are short); no bio shows the gap "no bio"
+- [ ] An unlisted niche ("astrology") matches a creator whose bio mentions it even if their niches do not
+- [ ] Topic chips appear and can be removed; removing re-ranks without a new paid parse

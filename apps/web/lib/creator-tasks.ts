@@ -23,7 +23,7 @@
 export type TaskKind = 'setup' | 'recommended'
 
 /** How a task is completed from the card itself, when it can be. */
-export type TaskAction = 'link' | 'email' | 'location'
+export type TaskAction = 'link' | 'email' | 'location' | 'bio'
 
 export interface CreatorTask {
   key: string
@@ -48,6 +48,8 @@ export interface CreatorTaskState {
   hasEmail: boolean
   /** City, state and age bracket all on file. See lib/creator-location-server. */
   hasLocation: boolean
+  /** A bio of at least a sentence (BIO_MIN_FOR_TASK). */
+  hasBio: boolean
   hasPackages: boolean
   hasShopfront: boolean
   hasShopfrontPublished: boolean
@@ -95,6 +97,18 @@ export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
     action: 'location',
   }
 
+  const bio: CreatorTask = {
+    key: 'bio',
+    kind: 'setup',
+    title: 'Add your bio',
+    // The why is the point of this row: a bio reads as decoration until you
+    // know it is what brands and AI search match against.
+    subtitle: 'Brands search by your bio. Say what your content is about and who it is for, so AI search can find you',
+    href: '/creator/settings?tab=profile',
+    done: s.hasBio,
+    action: 'bio',
+  }
+
   const packages: CreatorTask = {
     key: 'packages',
     kind: 'setup',
@@ -125,12 +139,13 @@ export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
      send an offer to someone with no price on anything — so it outranks
      Instagram, which is the credibility step that decides whether a brand
      picks you once they already can. */
-  if (s.isGrowth) return [packages, instagram, email, location, payout]
+  if (s.isGrowth) return [packages, instagram, email, location, bio, payout]
 
   return [
     instagram,
     email,
     location,
+    bio,
     packages,
     payout,
     {

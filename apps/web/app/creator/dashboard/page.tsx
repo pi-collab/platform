@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import BrandMark from '@/components/BrandMark'
 import { hasCreatorLocation } from '@/lib/creator-location-server'
+import { hasCreatorBio } from '@/lib/creator-bio-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
@@ -89,6 +90,7 @@ export default async function CreatorDashboardPage({
   const hasEmail = await hasCreatorEmail(creatorId)
   // Own query: see lib/creator-location-server for why it is not folded in.
   const hasLocation = await hasCreatorLocation(creatorId)
+  const hasBio = await hasCreatorBio(creatorId)
 
 
   const supabase = createClient()
@@ -280,6 +282,7 @@ export default async function CreatorDashboardPage({
     hasInstagram: igConnection.status !== 'not_connected',
     hasEmail,
     hasLocation,
+    hasBio,
     hasPackages: (packageCount ?? 0) > 0,
     hasShopfront: Boolean(storefront),
     hasShopfrontPublished: Boolean(storefront?.is_published),
