@@ -84,7 +84,10 @@ export function rankCandidates(
 ): RankOutcome {
   const softened: SkippedFilter[] = []
 
-  const wantsNiche = filters.niches.length > 0
+  // Listed niches and the brand's own words for unlisted ones are one
+  // question: does this creator's category match. Matched the same loose way.
+  const nicheTerms = [...filters.niches, ...(filters.otherNiches ?? [])]
+  const wantsNiche = nicheTerms.length > 0
   const wantsPlatform = filters.platforms.length > 0
   const wantsLocation = filters.locations.length > 0
   const wantsFollowers = filters.followersMin !== null || filters.followersMax !== null
@@ -187,7 +190,7 @@ export function rankCandidates(
         gaps.push('no category on file')
         if (hardNiche) excluded = true
       } else {
-        const hits = c.categories.filter(cat => filters.niches.some(n => looseMatch(n, cat)))
+        const hits = c.categories.filter(cat => nicheTerms.some(n => looseMatch(n, cat)))
         if (hits.length > 0) {
           earned += W.niche
           reasons.push(hits.join(', '))

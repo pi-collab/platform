@@ -6484,3 +6484,11 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 
 ### AI search
 - [ ] Parser only returns niches from the new list, never "Other / Not Listed"; "makeup" maps to Beauty & Skincare
+
+### A niche typed into Other is findable (follows §84)
+- [ ] A creator who types "Astrology" into Other has "Astrology" stored as typed
+- [ ] `/browse` niche filter offers "Astrology" (options are built from creators' actual niches), and picking it shows that creator
+- [ ] AI search "astrology creators in Mumbai": the parser returns `otherNiches: ["astrology"]` (NOT in unusedTerms), the astrology creator ranks with "Astrology" as a reason, and an "astrology" chip appears that can be removed
+- [ ] "premium creators" still goes to unusedTerms, never otherNiches (qualities are not categories)
+- [ ] A query a list niche covers ("makeup creators") uses `niches: ["Beauty & Skincare"]` and leaves otherNiches empty
+- [ ] Searches cached before this change (no otherNiches key) still rank without error
