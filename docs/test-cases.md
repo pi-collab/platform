@@ -6543,3 +6543,19 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] Topics never EXCLUDE a creator (most bios are short); no bio shows the gap "no bio"
 - [ ] An unlisted niche ("astrology") matches a creator whose bio mentions it even if their niches do not
 - [ ] Topic chips appear and can be removed; removing re-ranks without a new paid parse
+
+---
+
+## 87. Niche picker is a multi-select dropdown
+
+`components/NichePicker.tsx`, now used by settings, ops add/edit AND the storefront editor (its own chip copy is gone). Styled in `FilterDropdown`'s language.
+
+- [ ] Closed: a field showing chosen niches as neon-tinted chips with ×, plus "Select your niches" / "Add more" and a chevron. "Pick up to 5. Brands filter by these." beneath (settings, storefront)
+- [ ] Click anywhere in the field opens the panel; × on a chip removes that niche WITHOUT opening it
+- [ ] Panel: search box focused, 23 niches with a tick box; chosen rows tinted neon with a filled tick; several can be ticked without the panel closing
+- [ ] Search "fit" shows only Fitness, Sports & Bodybuilding; a search matching nothing says to use Other
+- [ ] At 5, unchosen rows grey out and the footer reads "5 of 5, the most you can pick"; unticking frees a slot
+- [ ] "+ Other / Not listed" opens a text box in the panel; Enter or Add saves it as a chip ("makeup" → Beauty & Skincare; "Astrology" as typed)
+- [ ] Escape and clicking outside close the panel
+- [ ] **Not clipped:** the panel shows in full over the content below in creator settings, ops edit and the storefront editor (desktop AND phone widths)
+- [ ] Ops (no max): no counter, no limit

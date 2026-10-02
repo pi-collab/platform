@@ -18,7 +18,7 @@ import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 import { SAMPLE_CONTENT_ITEMS, isSampleItem } from '@/lib/showcase-samples'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
-import { NICHES, OTHER_NICHE, canonicalNiche } from '@/lib/niches'
+import NichePicker from '@/components/NichePicker'
 
 interface Product {
   id: string
@@ -1294,9 +1294,6 @@ export default function StorefrontManager({
   // into men would overstate men by exactly that much.
   const genderWomenShown = igSnap?.gender ? igSnap.gender.womenPct : edit.genderWomen
   const genderMenShown = igSnap?.gender ? igSnap.gender.menPct : 100 - edit.genderWomen
-  const [nicheInput, setNicheInput] = useState('')
-  /** Whether the Other box is showing. Closed until asked for. */
-  const [otherOpen, setOtherOpen] = useState(false)
   const [newContentIdx, setNewContentIdx] = useState<number | null>(null)
   const [newCollabIdx, setNewCollabIdx] = useState<number | null>(null)
 
@@ -1505,21 +1502,6 @@ export default function StorefrontManager({
     window.location.href = '/api/instagram/connect?return=storefront'
   }
 
-  /**
-   * Add whatever was typed into Other.
-   *
-   * Still canonicalised first: somebody typing "makeup" under Other should land
-   * in Fashion / Beauty rather than creating a thirteenth bucket beside it.
-   * Only a genuinely new word survives as itself.
-   */
-  function addNiche() {
-    const typed = nicheInput.trim()
-    if (!typed || edit.niches.length >= 5) return
-    const value = canonicalNiche(typed) ?? typed
-    if (!edit.niches.includes(value)) set('niches', [...edit.niches, value])
-    setNicheInput('')
-    setOtherOpen(false)
-  }
 
   function addContentItem() {
     const newItem: ContentItem = { title: '', type: 'Reel', brand: '', date: '', views: '', engagement: '', saves: '', embedUrl: '' }
@@ -1730,67 +1712,11 @@ export default function StorefrontManager({
                   <Field label="Reply time" hint="How fast you typically come back to a brand. Brands read this as a signal of how you work.">
                     <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
-                  {/* ── Pick, don't type ─────────────────────────────────
-                      This was a free-text box, and it is where the niche
-                      sprawl came from: "Fashion", "fashion" and "beauty" as
-                      three separate things, "liefestyle" as a fourth. A brand
-                      filtering the roster then had to guess which spelling the
-                      creator they want happened to use.
-
-                      Other is still here, deliberately. A fixed list that
-                      cannot describe somebody's work is how you get them
-                      writing their real niche into their bio instead, where
-                      nothing can filter on it at all. */}
-                  <Field label="Your niches" hint={edit.niches.length < 5 ? 'Pick up to 5. Brands filter by these.' : undefined}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: edit.niches.length > 0 ? 12 : 0 }}>
-                      {edit.niches.map(n => (
-                        <span key={n} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 7,
-                          padding: '5px 11px', borderRadius: 999,
-                          background: '#FAFAF7', border: `1px solid ${BHL}`,
-                          fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)',
-                        }}>
-                          {n}
-                          <button onClick={() => set('niches', edit.niches.filter(x => x !== n))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', fontSize: 16, lineHeight: 1, padding: 0 }}>&times;</button>
-                        </span>
-                      ))}
-                    </div>
-                    {edit.niches.length < 5 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                        {NICHES.filter(n => n !== OTHER_NICHE && !edit.niches.includes(n)).map(n => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => set('niches', [...edit.niches, n])}
-                            style={nichePick}
-                          >
-                            + {n}
-                          </button>
-                        ))}
-                        {/* Other opens the box the rest of the control replaced. */}
-                        {!otherOpen && (
-                          <button type="button" onClick={() => setOtherOpen(true)} style={nichePick}>
-                            + Other / Not listed
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {otherOpen && edit.niches.length < 5 && (
-                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                        <input type="text" value={nicheInput} onChange={e => setNicheInput(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNiche() } }}
-                          placeholder="Name your niche" maxLength={30} autoFocus style={dinput} />
-                        <button onClick={addNiche} disabled={!nicheInput.trim()}
-                          style={{
-                            ...primaryBtn, height: 46, padding: '0 20px', borderRadius: 12, flexShrink: 0,
-                            opacity: !nicheInput.trim() ? 0.25 : 1,
-                            cursor: !nicheInput.trim() ? 'not-allowed' : 'pointer',
-                          }}>
-                          Add
-                        </button>
-                      </div>
-                    )}
+                  {/* The shared niche dropdown: the same control settings and ops
+                      use, so the creator sees one picker and one list wherever
+                      they set their niches. Other still opens a text box. */}
+                  <Field label="Your niches">
+                    <NichePicker value={edit.niches} onChange={v => set('niches', v)} max={5} />
                   </Field>
                 </Section>
               </div>
@@ -2473,10 +2399,3 @@ function slugFromName(name: string): string {
 }
 
 /** An unpicked niche. Reads as something to add, not something selected. */
-const nichePick: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center',
-  padding: '6px 12px', borderRadius: 999,
-  background: '#FFFFFF', border: '1px dashed rgba(18,21,28,.22)',
-  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600,
-  color: 'var(--ink-soft)', cursor: 'pointer',
-}
