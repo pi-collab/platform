@@ -6412,3 +6412,38 @@ The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePick
 ### Ops, `/ops/creators/[id]`
 - [ ] The header line shows one link per channel: "Instagram @x ↗" and "YouTube @y ↗", each from that channel's own handle
 - [ ] A creator with no usable channel falls back to the old single `creators.handle` link (or plain text)
+
+---
+
+## 83. City, state and age bracket
+
+Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket` (CHECK: `18_24`, `25_34`, `35_44`, `45_plus`, or NULL). Lists live in `lib/creator-location.ts`. **Age is a bracket, never a date of birth.**
+
+### Environment
+- [ ] 0515 run on the database the app points at. It ends with `NOTIFY pgrst, 'reload schema'`, because without a reload a select naming a new column fails (see 0513)
+- [ ] **Constraint vs defaults (0485 trap):** after 0515, signup's `creators.insert({ user_id, full_name: '', phone, vetting_status })` still succeeds. The CHECK allows NULL, which is what an insert naming none of the three gets
+- [ ] Before 0515 is applied, nothing breaks: signup completes (the place write logs and moves on), the dashboard hides the task, and settings loads with the three fields blank
+
+### Signup, `/signup/creator/onboarding`
+- [ ] State (dropdown of 28 states + 8 UTs), City (typed), Age (18–24 / 25–34 / 35–44 / 45+) appear after the follower range
+- [ ] "Complete setup" stays disabled until all three are answered
+- [ ] Server refuses a missing or unknown state, a blank city, or an unknown age code (`saveOnboarding` is directly callable)
+- [ ] Saves `city`, `state`, `age_bracket`, and `location` = "City, State"
+- [ ] City is tidied: "  navi   mumbai " is stored as "navi mumbai" (spaces collapsed, not re-cased), max 60 characters
+
+### Existing creators: dashboard task card
+- [ ] A creator missing any of the three sees "Add your city and age" as a setup task, after "Add your email", on both the regular and the Growth list
+- [ ] "Set up" opens State / City / Age / Save beneath the row, full width, and wraps on a phone without crushing the title
+- [ ] Save is disabled until all three are set; on save it shows "Saved", refreshes, and the row ticks Done
+- [ ] Writes an `events` row `creator.location_added` with `source: 'dashboard_prompt'`
+- [ ] The card is foldable, not dismissible, just like email
+
+### Creator settings, Profile
+- [ ] The "Location" text box is replaced by State, City and Age, prefilled from the columns
+- [ ] Editing only the name with all three blank saves fine (nothing asked yet)
+- [ ] Filling one of the three without the others is refused with the specific message ("Enter your city." etc.)
+- [ ] Saving updates `location` to "City, State" too, so AI search's location match and the Growth pool's location filter pick it up
+
+### Privacy
+- [ ] No date of birth is collected anywhere
+- [ ] Vetted creator rows are readable by signed-in users under RLS, so a brand COULD read `age_bracket` via the API. That is acceptable for a bracket; it is the reason this is not a date of birth

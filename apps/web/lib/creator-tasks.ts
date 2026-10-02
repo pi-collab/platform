@@ -23,7 +23,7 @@
 export type TaskKind = 'setup' | 'recommended'
 
 /** How a task is completed from the card itself, when it can be. */
-export type TaskAction = 'link' | 'email'
+export type TaskAction = 'link' | 'email' | 'location'
 
 export interface CreatorTask {
   key: string
@@ -46,6 +46,8 @@ export interface CreatorTask {
 export interface CreatorTaskState {
   hasInstagram: boolean
   hasEmail: boolean
+  /** City, state and age bracket all on file. See lib/creator-location-server. */
+  hasLocation: boolean
   hasPackages: boolean
   hasShopfront: boolean
   hasShopfrontPublished: boolean
@@ -81,6 +83,18 @@ export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
     action: 'email',
   }
 
+  const location: CreatorTask = {
+    key: 'location',
+    kind: 'setup',
+    title: 'Add your city and age',
+    subtitle: 'So brands looking for creators in their city and age range can find you',
+    href: '/creator/settings?tab=profile',
+    done: s.hasLocation,
+    // Answered in place, like email, and for the same reason: three short
+    // answers, and a hop to Settings is how a column stays empty.
+    action: 'location',
+  }
+
   const packages: CreatorTask = {
     key: 'packages',
     kind: 'setup',
@@ -111,11 +125,12 @@ export function creatorTasks(s: CreatorTaskState): CreatorTask[] {
      send an offer to someone with no price on anything — so it outranks
      Instagram, which is the credibility step that decides whether a brand
      picks you once they already can. */
-  if (s.isGrowth) return [packages, instagram, email, payout]
+  if (s.isGrowth) return [packages, instagram, email, location, payout]
 
   return [
     instagram,
     email,
+    location,
     packages,
     payout,
     {

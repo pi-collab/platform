@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import BrandMark from '@/components/BrandMark'
+import { hasCreatorLocation } from '@/lib/creator-location-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
@@ -86,6 +87,8 @@ export default async function CreatorDashboardPage({
   // The same resolution the sender uses, so the task stops being outstanding
   // the moment an email would start working.
   const hasEmail = await hasCreatorEmail(creatorId)
+  // Own query: see lib/creator-location-server for why it is not folded in.
+  const hasLocation = await hasCreatorLocation(creatorId)
 
 
   const supabase = createClient()
@@ -276,6 +279,7 @@ export default async function CreatorDashboardPage({
        same thing — which is the duplication this card exists to end. */
     hasInstagram: igConnection.status !== 'not_connected',
     hasEmail,
+    hasLocation,
     hasPackages: (packageCount ?? 0) > 0,
     hasShopfront: Boolean(storefront),
     hasShopfrontPublished: Boolean(storefront?.is_published),

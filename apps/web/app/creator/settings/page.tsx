@@ -1,5 +1,6 @@
 import { creatorGrowthState } from '@/lib/creator-growth-state'
 import { Suspense } from 'react'
+import { readCreatorLocation } from '@/lib/creator-location-server'
 import { getConnection } from '@/lib/instagram-sync'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
@@ -32,6 +33,8 @@ export default async function CreatorSettingsPage() {
     .single()
 
   const instagramConnection = await getConnection(ctx.creatorId)
+  // Separate read: see lib/creator-location-server.
+  const place = await readCreatorLocation(ctx.creatorId)
   const growth = await creatorGrowthState(ctx.creatorId)
   const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>
   const prefs = (user?.preferences ?? {}) as Record<string, string>
@@ -49,7 +52,7 @@ export default async function CreatorSettingsPage() {
           ? (creator as Record<string, unknown>).niches as string[]
           : ((creator as Record<string, unknown>)?.niche ? [(creator as Record<string, unknown>).niche as string] : [])
       }
-      creatorLocation={(creator as Record<string, unknown>)?.location as string ?? ''}
+      creatorPlace={place}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}

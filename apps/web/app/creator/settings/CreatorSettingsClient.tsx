@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
 import NichePicker from '@/components/NichePicker'
+import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
@@ -24,7 +25,7 @@ interface Props {
   creatorHandle: string
   creatorBio: string
   creatorNiches: string[]
-  creatorLocation: string
+  creatorPlace: { city: string; state: string; ageBracket: string }
   creatorPrimaryPlatform: string
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
@@ -71,7 +72,7 @@ export default function CreatorSettingsClient({
   creatorHandle: initialHandle,
   creatorBio: initialBio,
   creatorNiches: initialNiches,
-  creatorLocation: initialLocation,
+  creatorPlace: initialPlace,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
   creatorPhotoUrl,
@@ -102,7 +103,9 @@ export default function CreatorSettingsClient({
   const [handle, setHandle] = useState(initialHandle)
   const [bio, setBio] = useState(initialBio)
   const [niches, setNiches] = useState<string[]>(initialNiches)
-  const [location, setLocation] = useState(initialLocation)
+  const [city, setCity] = useState(initialPlace.city)
+  const [placeState, setPlaceState] = useState(initialPlace.state)
+  const [ageBracket, setAgeBracket] = useState(initialPlace.ageBracket)
   const [platform, setPlatform] = useState(initialPlatform)
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
 
@@ -139,7 +142,9 @@ export default function CreatorSettingsClient({
         handle,
         bio,
         niches,
-        location,
+        city,
+        state: placeState,
+        ageBracket,
         primaryPlatform: platform,
         contactEmail,
         socials: socialArr,
@@ -170,7 +175,9 @@ export default function CreatorSettingsClient({
     setHandle(initialHandle)
     setBio(initialBio)
     setNiches(initialNiches)
-    setLocation(initialLocation)
+    setCity(initialPlace.city)
+    setPlaceState(initialPlace.state)
+    setAgeBracket(initialPlace.ageBracket)
     setPlatform(initialPlatform)
     setContactEmail(initialContactEmail)
     setSocials(socialsToMap(initialSocials))
@@ -298,7 +305,20 @@ export default function CreatorSettingsClient({
                     <div style={labelStyle}>Niches</div>
                     <NichePicker value={niches} onChange={v => { setNiches(v); markDirty() }} max={5} inputStyle={fldStyle} />
                   </div>
-                  <FieldInput label="Location" value={location} onChange={v => { setLocation(v); markDirty() }} placeholder="Mumbai, India" />
+                  <FieldSelect label="State" value={placeState} options={[...INDIAN_STATES]} onChange={v => { setPlaceState(v); markDirty() }} placeholder="Select state" />
+                  <FieldInput label="City" value={city} onChange={v => { setCity(v); markDirty() }} placeholder="Mumbai" />
+                  <div>
+                    <label style={labelStyle}>Age</label>
+                    <select
+                      className="fld"
+                      value={ageBracket}
+                      onChange={e => { setAgeBracket(e.target.value); markDirty() }}
+                      style={{ ...fldStyle, appearance: 'none', cursor: 'pointer', color: ageBracket ? 'var(--ink)' : 'var(--ink-faint)' }}
+                    >
+                      <option value="">Select age bracket</option>
+                      {AGE_BRACKETS.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
+                    </select>
+                  </div>
                   <FieldSelect label="Primary platform" value={platform} options={PLATFORM_OPTIONS} onChange={v => { setPlatform(v); markDirty() }} placeholder="Select platform" />
                   <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="you@email.com" />
                 </div>
