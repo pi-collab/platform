@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
+import NichePicker from '@/components/NichePicker'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
@@ -22,7 +23,7 @@ interface Props {
   creatorName: string
   creatorHandle: string
   creatorBio: string
-  creatorNiche: string
+  creatorNiches: string[]
   creatorLocation: string
   creatorPrimaryPlatform: string
   creatorContactEmail: string
@@ -48,7 +49,6 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitter', label: 'X (Twitter)', prefix: '@', placeholder: 'yourhandle' },
 ]
 
-const NICHE_OPTIONS = ['Tech & finance', 'Fashion', 'Beauty', 'Lifestyle', 'Food', 'Travel', 'Fitness', 'Education', 'Gaming', 'Other']
 const PLATFORM_OPTIONS = ['Instagram', 'YouTube', 'X', 'LinkedIn', 'TikTok']
 
 /* ── Section Config ─────────────────────────────────────────────── */
@@ -70,7 +70,7 @@ export default function CreatorSettingsClient({
   creatorName: initialName,
   creatorHandle: initialHandle,
   creatorBio: initialBio,
-  creatorNiche: initialNiche,
+  creatorNiches: initialNiches,
   creatorLocation: initialLocation,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
@@ -101,7 +101,7 @@ export default function CreatorSettingsClient({
   const [name, setName] = useState(initialName)
   const [handle, setHandle] = useState(initialHandle)
   const [bio, setBio] = useState(initialBio)
-  const [niche, setNiche] = useState(initialNiche)
+  const [niches, setNiches] = useState<string[]>(initialNiches)
   const [location, setLocation] = useState(initialLocation)
   const [platform, setPlatform] = useState(initialPlatform)
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
@@ -138,7 +138,7 @@ export default function CreatorSettingsClient({
         fullName: name,
         handle,
         bio,
-        niche,
+        niches,
         location,
         primaryPlatform: platform,
         contactEmail,
@@ -169,7 +169,7 @@ export default function CreatorSettingsClient({
     setName(initialName)
     setHandle(initialHandle)
     setBio(initialBio)
-    setNiche(initialNiche)
+    setNiches(initialNiches)
     setLocation(initialLocation)
     setPlatform(initialPlatform)
     setContactEmail(initialContactEmail)
@@ -292,7 +292,12 @@ export default function CreatorSettingsClient({
                       style={{ ...fldStyle, minHeight: 80, resize: 'vertical' }}
                     />
                   </div>
-                  <FieldSelect label="Niche / category" value={niche} options={NICHE_OPTIONS} onChange={v => { setNiche(v); markDirty() }} placeholder="Select niche" />
+                  {/* Its own row: the chips need the width, and a <label> must
+                      not wrap them or a click anywhere in it fires the first chip. */}
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <div style={labelStyle}>Niches</div>
+                    <NichePicker value={niches} onChange={v => { setNiches(v); markDirty() }} max={5} inputStyle={fldStyle} />
+                  </div>
                   <FieldInput label="Location" value={location} onChange={v => { setLocation(v); markDirty() }} placeholder="Mumbai, India" />
                   <FieldSelect label="Primary platform" value={platform} options={PLATFORM_OPTIONS} onChange={v => { setPlatform(v); markDirty() }} placeholder="Select platform" />
                   <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="you@email.com" />

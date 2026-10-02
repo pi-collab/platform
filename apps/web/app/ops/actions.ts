@@ -1,6 +1,7 @@
 'use server'
 
 import { isRejectionReason } from '@/lib/rejection-reasons'
+import { canonicalNiches } from '@/lib/niches'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
@@ -87,7 +88,7 @@ export async function addCreator(input: AddCreatorInput) {
   const { data, error } = await admin.from('creators').insert({
     full_name: full_name.trim(),
     phone: phone?.trim() || null,
-    niches: niches ?? [],
+    niches: canonicalNiches(niches ?? []),
     handle: handle?.trim() || null,
     bio: bio?.trim() || null,
     profile_photo_url: profile_photo_url?.trim() || null,
@@ -366,7 +367,7 @@ export async function editCreator(input: EditCreatorInput) {
       full_name: full_name.trim(),
       phone: phone?.trim() || null,
       contact_email: email,
-      niches: niches ?? [],
+      niches: canonicalNiches(niches ?? []),
       handle: handle?.trim() || null,
       bio: bio?.trim() || null,
       profile_photo_url: profile_photo_url?.trim() || null,

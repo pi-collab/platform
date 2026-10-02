@@ -27,7 +27,7 @@ export default async function CreatorSettingsPage() {
   // Fetch creator details
   const { data: creator } = await admin
     .from('creators')
-    .select('id, full_name, handle, bio, niche, social_accounts, profile_photo_url, location, primary_platform, contact_email')
+    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email')
     .eq('id', ctx.creatorId)
     .single()
 
@@ -41,7 +41,14 @@ export default async function CreatorSettingsPage() {
       creatorName={creator?.full_name ?? ctx.creatorName}
       creatorHandle={(creator as Record<string, unknown>)?.handle as string ?? ''}
       creatorBio={(creator as Record<string, unknown>)?.bio as string ?? ''}
-      creatorNiche={(creator as Record<string, unknown>)?.niche as string ?? ''}
+      creatorNiches={
+        // niches is the list every other screen writes; niche is the legacy
+        // single value this page used to write on its own. Fall back to it so
+        // a creator who only ever set it here does not open to a blank field.
+        ((creator as Record<string, unknown>)?.niches as string[] | null)?.length
+          ? (creator as Record<string, unknown>).niches as string[]
+          : ((creator as Record<string, unknown>)?.niche ? [(creator as Record<string, unknown>).niche as string] : [])
+      }
       creatorLocation={(creator as Record<string, unknown>)?.location as string ?? ''}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}

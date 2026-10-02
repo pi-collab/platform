@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { editCreator } from '../../../actions'
 import { useRouter } from 'next/navigation'
-import { NICHES } from '@/lib/niches'
+import NichePicker from '@/components/NichePicker'
 
 interface SocialEntry {
   platform: string
@@ -123,23 +123,13 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
         <input style={inputStyle} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
       </Field>
 
-      <Field label="Niches">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {NICHES.map((n) => (
-            <label key={n} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={niches.includes(n)}
-                onChange={(e) => {
-                  if (e.target.checked) setNiches((prev) => [...prev, n])
-                  else setNiches((prev) => prev.filter((x) => x !== n))
-                }}
-              />
-              {n}
-            </label>
-          ))}
-        </div>
-      </Field>
+      {/* Not inside <Field>: that is a <label>, and a click anywhere in a
+          label fires its first button — here, the first niche chip. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Niches</span>
+        <span style={{ fontSize: '0.7rem', color: '#888' }}>Pick from the list. Other lets you type one the list does not cover.</span>
+        <NichePicker value={niches} onChange={setNiches} inputStyle={inputStyle} />
+      </div>
 
       <Field label="Handle" hint="e.g. @rohanfinance">
         <input style={inputStyle} value={handle} onChange={(e) => setHandle(e.target.value)} />

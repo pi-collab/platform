@@ -6370,3 +6370,31 @@ Verified: `tryon.com`/`airquerai.com` → review · `blinkit.com`/`grofers.com` 
 - [ ] Desktop crumb is **"Profile › Pricing & fees"**, linking to `/creator/profile` — what the design draws
 - [ ] It was changed to "Account" in §72 because at the time that link sent a desktop visitor to an uncapped phone screen. That is fixed (§70 capped `/creator/profile` at 560px and centred it), so the reason for the substitute is gone
 - [ ] The phone still gets the back arrow, not the crumb, honouring `?from=` — §72's real fix stands
+
+---
+
+## 81. One niche vocabulary on every form that asks for one
+
+The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePicker.tsx` is the shared control; the storefront editor draws its own copy of it to its design.
+
+### Creator settings (`/creator/settings` → Profile)
+- [ ] "Niches" is the chip picker, not the old dropdown ("Tech & finance", "Gaming"… are gone)
+- [ ] Up to 5. At 5 the pick chips disappear and the line reads "That's 5, the most you can pick."
+- [ ] **+ Other** opens a text box. Typing "Astrology" and Add saves "Astrology" as typed. Typing "makeup" saves **Fashion / Beauty**, not a new value
+- [ ] Saves to `creators.niches` (canonicalised server-side) and sets `creators.niche` to the first pick; clearing all sets `niche` null
+- [ ] A creator with only the legacy `niche` set opens with it shown as a chip, not a blank field
+- [ ] Clicking the label area above the chips adds nothing (the picker is not inside a `<label>`)
+- [ ] Discard restores the original chips
+
+### Ops add / edit creator
+- [ ] Same picker in place of the checkboxes; no limit
+- [ ] A creator carrying a non-canonical niche (e.g. "Astrology") shows it as a chip on edit and keeps it on save. The checkbox version silently kept it invisible
+- [ ] Clicking the "Niches" heading does not add the first niche
+- [ ] Server canonicalises: a niche posted as "finance" is stored as "Finance / Investing"
+
+### Ops pipeline leads
+- [ ] Niche suggests the canonical list but still accepts free text (leads can be brands)
+- [ ] Saving "fitness" stores "Fitness"; saving "D2C skincare" stores it as typed
+
+### Known gap
+- [ ] Settings writes `creators.niches`; the storefront writes `creator_storefronts.categories`, which `/browse` filters on. Changing niches in settings does NOT change what brands filter by. Unchanged by this section, flagged to decide separately
