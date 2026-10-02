@@ -19,6 +19,7 @@ import { SAMPLE_CONTENT_ITEMS, isSampleItem } from '@/lib/showcase-samples'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
 import NichePicker from '@/components/NichePicker'
+import BioAiAssist from '@/components/creator/BioAiAssist'
 
 interface Product {
   id: string
@@ -1706,8 +1707,9 @@ export default function StorefrontManager({
                   <Field label="Display name">
                     <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
-                  <Field label="Bio" hint="One or two lines telling brands what you bring to the table.">
+                  <Field label="Bio" hint="Brands and AI search find you by your bio. Mention your topics, the kind of content you make and who watches it.">
                     <textarea value={edit.bio} onChange={e => set('bio', e.target.value)} placeholder="Everyday money, style and slow travel for a young Indian audience that actually buys." maxLength={500} rows={3} style={dtextarea} />
+                    <BioAiAssist hasBio={edit.bio.trim().length > 0} onDraft={v => set('bio', v)} />
                   </Field>
                   <Field label="Reply time" hint="How fast you typically come back to a brand. Brands read this as a signal of how you work.">
                     <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} onKeyDown={onFieldEnter} style={dinput} />

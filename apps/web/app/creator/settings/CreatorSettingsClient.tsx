@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
 import NichePicker from '@/components/NichePicker'
+import BioAiAssist from '@/components/creator/BioAiAssist'
 import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -295,9 +296,14 @@ export default function CreatorSettingsClient({
                       className="fld"
                       value={bio}
                       onChange={e => { setBio(e.target.value); markDirty() }}
-                      placeholder="Tell brands about yourself..."
+                      placeholder="What your content is about and who it is for, e.g. short explainers on mutual funds for young professionals in Pune."
+                      maxLength={500}
                       style={{ ...fldStyle, minHeight: 80, resize: 'vertical' }}
                     />
+                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 6 }}>
+                      Brands and AI search find you by your bio. Mention your topics, the kind of content you make and who watches it.
+                    </div>
+                    <BioAiAssist hasBio={bio.trim().length > 0} onDraft={v => { setBio(v); markDirty() }} />
                   </div>
                   {/* Its own row: the chips need the width, and a <label> must
                       not wrap them or a click anywhere in it fires the first chip. */}

@@ -6559,3 +6559,9 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] Escape and clicking outside close the panel
 - [ ] **Not clipped:** the panel shows in full over the content below in creator settings, ops edit and the storefront editor (desktop AND phone widths)
 - [ ] Ops (no max): no counter, no limit
+
+### "Write it with AI" beside every bio field (follows §86)
+- [ ] Creator settings → Profile → Bio and the storefront editor's Bio both show "Write it with AI" (or "Rewrite with AI" when a bio exists), with the line "Brands and AI search find you by your bio…"
+- [ ] The draft fills the box and marks the page unsaved; nothing is stored until the page's own Save
+- [ ] Rewrite uses the creator's SAVED bio as input, not unsaved typing
+- [ ] Same 5-a-day cap as the dashboard task (they share it)
