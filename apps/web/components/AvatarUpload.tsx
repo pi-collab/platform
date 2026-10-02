@@ -112,8 +112,10 @@ const btnStyle: React.CSSProperties = {
   fontWeight: 700,
   borderRadius: 999,
   border: 'none',
-  background: 'var(--neon, #E8FF66)',
-  color: 'var(--lime-950, #161B08)',
+  // Black and white, not neon (Palak, 2026-10-02): matches the rest of the
+  // profile form's primary actions.
+  background: 'var(--ink, #181C24)',
+  color: '#fff',
   cursor: 'pointer',
   fontFamily: 'var(--font-ui, inherit)',
   minHeight: 38,
