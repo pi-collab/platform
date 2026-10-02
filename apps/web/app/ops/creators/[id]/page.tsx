@@ -147,9 +147,23 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
           </div>
           <p style={{ color: '#888', fontSize: '0.75rem', margin: 0 }}>
             Added {new Date(creator.created_at).toLocaleDateString()}
-            {creator.handle && (() => {
-              const acct = primaryAccount(creator.social_accounts)
-              const url = socialProfileUrl(acct.platform, creator.handle)
+            {(() => {
+              // One link per channel, each from its OWN handle. This linked only
+              // the primary account, using creators.handle, so a creator's
+              // YouTube could not be opened from here at all.
+              const channels = (Array.isArray(creator.social_accounts) ? creator.social_accounts : [])
+                .map((a: { platform?: string; handle?: string }) => ({ platform: a?.platform ?? '', handle: a?.handle ?? '' }))
+                .map((a: { platform: string; handle: string }) => ({ ...a, url: socialProfileUrl(a.platform, a.handle) }))
+                .filter((a: { url: string | null }) => a.url)
+              if (channels.length > 0) {
+                return channels.map((a: { platform: string; handle: string; url: string | null }) => (
+                  <span key={`${a.platform}-${a.handle}`}> &middot; <a href={a.url!} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                    {a.platform === 'youtube' ? 'YouTube' : a.platform === 'instagram' ? 'Instagram' : a.platform} @{a.handle.replace(/^@+/, '')} ↗
+                  </a></span>
+                ))
+              }
+              if (!creator.handle) return null
+              const url = socialProfileUrl(primaryAccount(creator.social_accounts).platform, creator.handle)
               return (
                 <> &middot; {url
                   ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{creator.handle}</a>

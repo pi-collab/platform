@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isSampleItem } from '@/lib/showcase-samples'
+import { atHandle } from '@/lib/handle'
+import { socialProfileUrl } from '@/lib/social-url'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPublicSnapshot } from '@/lib/instagram-sync'
@@ -321,10 +323,12 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
               {/* Social handles */}
               {socials.length > 0 && (
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-                  {socials.filter(s => s.platform === 'instagram' || s.platform === 'youtube').map(s => (
+                  {/* Linked from the HANDLE. `url` is only ever set by ops, so
+                      linking to it sent nearly every brand to '#'. */}
+                  {socials.filter(s => (s.platform === 'instagram' || s.platform === 'youtube') && socialProfileUrl(s.platform, s.handle)).map(s => (
                     <a
                       key={`${s.platform}-${s.handle}`}
-                      href={s.url || '#'}
+                      href={socialProfileUrl(s.platform, s.handle)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -339,7 +343,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                       ) : (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9.5 5 2.5-5 2.5z" /></svg>
                       )}
-                      @{(s.handle || '').replace(/^@/, '')}
+                      {atHandle(s.handle)}
                     </a>
                   ))}
                 </div>

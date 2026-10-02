@@ -6398,3 +6398,17 @@ The canonical list is `lib/niches.ts` (12 niches + Other). `components/NichePick
 
 ### Known gap
 - [ ] Settings writes `creators.niches`; the storefront writes `creator_storefronts.categories`, which `/browse` filters on. Changing niches in settings does NOT change what brands filter by. Unchanged by this section, flagged to decide separately
+
+---
+
+## 82. Open a creator's Instagram / YouTube from their profile
+
+### Brand view, `/browse/[id]`
+- [ ] **Creator with a storefront:** hero handles and the platform cards already link out via `profileUrl()`. Unchanged; confirm both still open the right profile in a new tab
+- [ ] **Creator without a storefront:** the Instagram / YouTube chips under the name open `instagram.com/<handle>` / `youtube.com/@<handle>` in a new tab. They linked to `url`, which only ops ever sets, so for almost everyone they went to `#`
+- [ ] A handle stored with a leading "@" (17 of 21 on staging) shows one "@", and the link has none
+- [ ] A handle that is really a pasted URL or a sentence shows no chip rather than a broken link
+
+### Ops, `/ops/creators/[id]`
+- [ ] The header line shows one link per channel: "Instagram @x ↗" and "YouTube @y ↗", each from that channel's own handle
+- [ ] A creator with no usable channel falls back to the old single `creators.handle` link (or plain text)
