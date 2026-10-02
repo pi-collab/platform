@@ -6447,3 +6447,14 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 ### Privacy
 - [ ] No date of birth is collected anywhere
 - [ ] Vetted creator rows are readable by signed-in users under RLS, so a brand COULD read `age_bracket` via the API. That is acceptable for a bracket; it is the reason this is not a date of birth
+
+### Ops (added after §83's first cut)
+- [ ] `/ops/creators` has a **Location** column: "Pune, Maharashtra · 25–34", or "-" when nothing is given
+- [ ] Filter **State**: Any / Not answered / each state. "Not answered" lists creators with no state on file, which is the chase list
+- [ ] Filter **Age**: checkboxes, any of. Combines with State and every other filter, and the summary counts above the table follow it
+- [ ] Filters survive pagination (they are in `filterQuery`) and "Clear" resets them
+- [ ] `/ops/creators/[id]` header shows city, state and age, or "location not given" / "age not given" in grey
+- [ ] Edit form has State / City / Age. Leaving them untouched writes nothing to those columns
+- [ ] Setting one of the three without the others is refused with the specific message. Blanking all three clears them
+- [ ] An ops change writes `ops_events` `creator.edited` with `place_set_by_ops`, `state_after`, `age_bracket_after` (never the city)
+- [ ] **Before 0515 on a database:** `/ops/creators` and the creator page still load (the place reads are their own queries); the State/Age filter shows "could not run… matching nothing" instead of breaking the page

@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import VettingBadge from '@/components/ops/VettingBadge'
+import { readCreatorLocation } from '@/lib/creator-location-server'
+import { ageBracketLabel } from '@/lib/creator-location'
 import { followerRangeOf } from '@/lib/follower-range'
 import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import { requireOps } from '@/lib/ops-capabilities'
@@ -29,6 +31,8 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     .maybeSingle()
 
   if (error || !creator) notFound()
+  // Own query, so a database without 0515 shows "not given" instead of a 404.
+  const place = await readCreatorLocation(creator.id)
 
   // How to reach this creator. The channels they choose at signup live in
   // users.preferences, which nothing in ops was reading — so answering "how do
@@ -174,6 +178,10 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
             {followerRangeOf(creator.social_accounts) && (
               <> &middot; {followerRangeOf(creator.social_accounts)} followers</>
             )}
+            {/* Shown as "not given" rather than left out: ops chasing who has
+                not answered needs to see the gap, not infer it. */}
+            <> &middot; {[place.city, place.state].filter(Boolean).join(', ') || <span style={{ color: '#bbb' }}>location not given</span>}</>
+            <> &middot; {ageBracketLabel(place.ageBracket) ?? <span style={{ color: '#bbb' }}>age not given</span>}</>
           </p>
         </div>
         {isAdmin && (

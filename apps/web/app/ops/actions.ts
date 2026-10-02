@@ -2,6 +2,7 @@
 
 import { isRejectionReason } from '@/lib/rejection-reasons'
 import { canonicalNiches } from '@/lib/niches'
+import { validateLocation, type LocationInput } from '@/lib/creator-location'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
@@ -305,6 +306,9 @@ interface EditCreatorInput {
   worked_with?: string[]
   portfolio_links?: string[]
   rate_card?: Record<string, number>
+  /** City, state, age bracket. Only sent when ops touched them. All blank
+   *  clears them; otherwise all three are required, as everywhere else. */
+  place?: LocationInput
 }
 
 export async function editCreator(input: EditCreatorInput) {
@@ -346,6 +350,20 @@ export async function editCreator(input: EditCreatorInput) {
       if (!isValidUrl(portfolio_links[i])) {
         return { error: `Portfolio link ${i + 1}: must start with http:// or https://` }
       }
+    }
+  }
+
+  // Validated BEFORE the main update, so a half-filled place cannot leave the
+  // profile saved and the place silently not.
+  let placeRow: Record<string, unknown> | null = null
+  if (input.place) {
+    const blank = ![input.place.city, input.place.state, input.place.ageBracket].some(v => (v ?? '').trim())
+    if (blank) {
+      placeRow = { city: null, state: null, age_bracket: null }
+    } else {
+      const v = validateLocation(input.place)
+      if (!v.ok) return { error: v.error }
+      placeRow = v.row
     }
   }
 
@@ -411,12 +429,21 @@ export async function editCreator(input: EditCreatorInput) {
     productsRetagged = moved?.length ?? 0
   }
 
+  // Its own write, like everywhere else these columns are touched (0515).
+  if (placeRow) {
+    const { error: placeErr } = await admin.from('creators').update(placeRow).eq('id', id)
+    if (placeErr) return { error: `Profile saved, but city, state and age did not: ${placeErr.message}` }
+  }
+
   await logOpsEvent(user, 'creator.edited', 'creators', id, {
     full_name: full_name.trim(),
     // Whether ops set or cleared a contact address, not the address itself:
     // ops_events is read by people who do not need a creator's inbox, and the
     // question this answers is "did we start being able to reach them".
     has_contact_email: email !== null,
+    // State and age only, not the city: enough to answer "did ops change
+    // where this creator is", without copying more personal detail than that.
+    ...(placeRow ? { place_set_by_ops: true, state_after: placeRow.state ?? null, age_bracket_after: placeRow.age_bracket ?? null } : {}),
     /* Before and after, because a handle is an identity: it is what a brand
        clicks through to, and "which account was this?" is a question the
        audit log should answer without guesswork. */

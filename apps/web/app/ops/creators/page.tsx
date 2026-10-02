@@ -14,12 +14,14 @@ const NOT_ANSWERED = 'none'
 /** A uuid that cannot exist, for "match nothing": .in() rejects an empty list. */
 const NO_MATCH = '00000000-0000-0000-0000-000000000000'
 import { followerRangeOf } from '@/lib/follower-range'
+import { INDIAN_STATES, AGE_BRACKETS, isAgeBracket, isIndianState, ageBracketLabel } from '@/lib/creator-location'
+import { readCreatorPlaces, creatorIdsByPlace, PLACE_NOT_ANSWERED } from '@/lib/creator-location-server'
 import { requireOps } from '@/lib/ops-capabilities'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function OpsCreatorsPage({ searchParams }: {
-  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; ig?: string | string[]; q?: string }
+  searchParams: { page?: string; band?: string | string[]; status?: string | string[]; shopfront?: string; ig?: string | string[]; q?: string; state?: string; age?: string | string[] }
 }) {
   const actor = await requireOps('creators.read')
   if (!actor) redirect('/login/brand')
@@ -57,6 +59,13 @@ export default async function OpsCreatorsPage({ searchParams }: {
   const rawIg = searchParams?.ig
   const igStatuses = (Array.isArray(rawIg) ? rawIg : rawIg ? [rawIg] : []).filter(isIgStatus)
 
+  // State (one, or "not answered") and age brackets (any of). Both validated
+  // against the lists signup offers, so a hand-edited URL cannot reach the
+  // database.
+  const placeState = searchParams?.state === PLACE_NOT_ANSWERED || isIndianState(searchParams?.state) ? searchParams!.state! : ''
+  const rawAge = searchParams?.age
+  const ages = (Array.isArray(rawAge) ? rawAge : rawAge ? [rawAge] : []).filter(isAgeBracket)
+
   // Name or handle. A leading @ is stripped because that is how ops will type a
   // handle and how the creator writes it, but handles are stored bare.
   const term = stripLeadingAt(opsSearchTerm(searchParams?.q))
@@ -67,8 +76,10 @@ export default async function OpsCreatorsPage({ searchParams }: {
     ...statuses.map((v) => `status=${encodeURIComponent(v)}`),
     ...(shopfront ? [`shopfront=${shopfront}`] : []),
     ...igStatuses.map((v) => `ig=${encodeURIComponent(v)}`),
+    ...(placeState ? [`state=${encodeURIComponent(placeState)}`] : []),
+    ...ages.map((v) => `age=${encodeURIComponent(v)}`),
   ].join('&')
-  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== '' || term !== '' || igStatuses.length > 0
+  const anyFilter = selected.length > 0 || statuses.length > 0 || shopfront !== '' || term !== '' || igStatuses.length > 0 || placeState !== '' || ages.length > 0
 
   const admin = createAdminClient()
 
@@ -116,6 +127,13 @@ export default async function OpsCreatorsPage({ searchParams }: {
     }
   }
 
+  // City/state/age (migration 0515), resolved to ids up front so the list
+  // query itself never names those columns: on a database without 0515 the
+  // list still loads, and only this filter reports that it could not run.
+  const wantsPlace = placeState !== '' || ages.length > 0
+  const placeIds = wantsPlace ? await creatorIdsByPlace(placeState, ages) : []
+  const placeFilterFailed = wantsPlace && placeIds === null
+
   // One definition per filter, applied to BOTH the list and the summary counts.
   // The counts previously carried only the bands, so filtering by status or
   // shopfront produced a breakdown that did not add up to the total above it.
@@ -154,7 +172,11 @@ export default async function OpsCreatorsPage({ searchParams }: {
   }
   const applySearch = <T extends Q>(q: T): T =>
     term ? (q.or(opsSearchFilter(['full_name', 'handle'], term)) as T) : q
-  const applyAll = <T extends Q>(q: T): T => applySearch(applyIgStatus(applyShopfront(applyStatus(applyBands(q)))))
+  const applyPlace = <T extends Q>(q: T): T => {
+    if (!wantsPlace) return q
+    return placeIds && placeIds.length ? (q.in('id', placeIds) as T) : (q.eq('id', NO_MATCH) as T)
+  }
+  const applyAll = <T extends Q>(q: T): T => applyPlace(applySearch(applyIgStatus(applyShopfront(applyStatus(applyBands(q))))))
 
   const listQuery = applyAll(
     admin
@@ -189,6 +211,9 @@ export default async function OpsCreatorsPage({ searchParams }: {
     : { data: [] as { creator_id: string; status: string; username: string | null; sync_error: string | null; last_synced_at: string | null }[] }
 
   const igByCreator = new Map((igConns ?? []).map((r) => [r.creator_id, r]))
+
+  // City, state and age for THIS page, in their own query (see above).
+  const placeByCreator = await readCreatorPlaces(pageIds)
 
   if (error) return <p style={{ color: 'red' }}>Error loading creators: {error.message}</p>
 
@@ -306,9 +331,30 @@ export default async function OpsCreatorsPage({ searchParams }: {
 
         <span style={{ flexBasis: '100%', height: 0 }} />
 
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280' }}>State</span>
+        <select name="state" defaultValue={placeState} aria-label="Filter by state" style={{ padding: '0.25rem 0.4rem', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: '0.8125rem' }}>
+          <option value="">Any</option>
+          <option value={PLACE_NOT_ANSWERED}>Not answered</option>
+          {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6b7280', marginLeft: '0.5rem' }}>Age</span>
+        {AGE_BRACKETS.map((b) => (
+          <label key={b.code} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8125rem' }}>
+            <input type="checkbox" name="age" value={b.code} defaultChecked={ages.includes(b.code)} />
+            {b.label}
+          </label>
+        ))}
+
+        <span style={{ flexBasis: '100%', height: 0 }} />
+
         <button type="submit" style={{ padding: '0.3rem 0.8rem', borderRadius: 6, border: '1px solid #111', background: '#111', color: '#fff', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>Apply</button>
         {anyFilter && (
           <Link href="/ops/creators" style={{ fontSize: '0.8125rem', color: '#2563eb', textDecoration: 'none' }}>Clear</Link>
+        )}
+        {placeFilterFailed && (
+          <span style={{ fontSize: '0.75rem', color: '#92400e' }}>
+            The state / age filter could not run on this database (migration 0515 not applied?), so it is matching nothing.
+          </span>
         )}
         {wantsUnanswered && wantsBands.length > 0 && (
           <span style={{ fontSize: '0.75rem', color: '#92400e' }}>
@@ -335,6 +381,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                 <th style={thStyle}>Handle</th>
                 <th style={thStyle}>Niches</th>
                 <th style={thStyle}>Audience</th>
+                <th style={thStyle}>Location</th>
               <th style={thStyle}>Shopfront</th>
                 <th style={thStyle}>Instagram</th>
                 <th style={thStyle}>Phone</th>
@@ -379,6 +426,15 @@ export default async function OpsCreatorsPage({ searchParams }: {
                     </td>
                     <td style={tdStyle}>{(c.niches as string[] | null)?.join(', ') || '-'}</td>
                     <td style={tdStyle}>{followerRangeOf(c.social_accounts) || '-'}</td>
+                    <td style={tdStyle}>
+                      {(() => {
+                        const p = placeByCreator.get(c.id)
+                        const where = [p?.city, p?.state].filter(Boolean).join(', ')
+                        const age = ageBracketLabel(p?.age_bracket)
+                        if (!where && !age) return <span style={{ color: '#bbb' }}>-</span>
+                        return <>{where || <span style={{ color: '#bbb' }}>-</span>}{age && <span style={{ color: '#6b7280' }}> &middot; {age}</span>}</>
+                      })()}
+                    </td>
                     <td style={tdStyle}>
                       {/* Links to the live page, so a shopfront can be looked at
                           without leaving the queue. A draft is named but not
