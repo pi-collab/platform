@@ -6620,3 +6620,14 @@ Run with a real brand session and a real creator session against PostgREST (anon
 - [ ] Generating twice → "Invoice already exists"; issuing a non-draft → refused
 - [ ] Brand: Accept invoice (issued → accepted, due date set); accepting twice → refused
 - [ ] Brand: Pay → paid → complete (mark_deal_paid RPC, unchanged)
+
+---
+
+## 90. SECURITY — orphaned-upload delete needs the owning creator (Phase 0, fix 3)
+
+`deleteOrphanedUpload` (creator/deals/[id]/upload-actions.ts) deletes with the service role.
+- [ ] Signed out → redirected to creator login, nothing deleted
+- [ ] A different creator, or a brand, passing another creator's path → "Not your upload", file still there
+- [ ] A path not shaped `{dealId}/{itemId}/v{n}` (e.g. `../x`, another folder) → refused
+- [ ] The path an item currently points to (its live `storage_path`) → "in use", not deleted
+- [ ] Real case still works: upload succeeds but the item save fails → the new file is cleaned up

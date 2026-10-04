@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
@@ -182,9 +183,34 @@ export async function getSignedUrl(dealId: string, itemId: string): Promise<Sign
  * Delete an orphaned upload if the DB write fails after successful storage upload.
  * Uses admin client (service-role) since there's no SELECT policy on the bucket.
  * If this itself fails, the file is a stray private file — not a data leak.
+ *
+ * A server action is a public endpoint, and this deletes with the service role.
+ * It took ANY path from ANY caller, signed in or not, so anyone could delete
+ * any creator's delivered work. Now it accepts only a path of the shape this
+ * file creates ({dealId}/{itemId}/v{n}), on a deal belonging to the signed-in
+ * creator, for an item of that deal — and never the file an item currently
+ * points to, which is by definition not an orphan.
  */
 export async function deleteOrphanedUpload(storagePath: string): Promise<SimpleResult> {
+  const ctx = await verifyCreator()
+
+  const m = /^([0-9a-f-]{36})\/([0-9a-f-]{36})\/v(\d+)$/i.exec(storagePath ?? '')
+  if (!m) return { status: 'error', message: 'Not an upload path.' }
+  const [, dealId, itemId] = m
+
   const admin = createAdminClient()
+  const { data: item } = await admin
+    .from('deal_deliverable_items')
+    .select('id, storage_path, deal_id, deals!inner(creator_id)')
+    .eq('id', itemId)
+    .eq('deal_id', dealId)
+    .eq('deals.creator_id', ctx.creatorId)
+    .maybeSingle()
+  if (!item) return { status: 'error', message: 'Not your upload.' }
+  if (item.storage_path === storagePath) {
+    return { status: 'error', message: 'That file is in use, not orphaned.' }
+  }
+
   const { error } = await admin.storage
     .from('deliverables')
     .remove([storagePath])
