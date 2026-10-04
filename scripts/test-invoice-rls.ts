@@ -1,11 +1,13 @@
 /**
  * Invoice RLS behavioral verification script.
  *
- * Tests that migration 019 correctly enforces:
- *   - Brand CANNOT insert an invoice (RLS rejects)
- *   - Creator CAN insert an invoice
- *   - Creator CAN update draft → issued
- *   - Brand CAN update issued → accepted
+ * Tests that migration 0521 correctly enforces (invoices are server-written):
+ *   - Brand CANNOT insert an invoice
+ *   - Creator CANNOT insert an invoice (generateInvoice writes it, service role)
+ *   - Creator CANNOT update an invoice (e.g. draft → issued, or its amounts)
+ *   - Brand CANNOT update an invoice (e.g. → accepted, or → paid)
+ * An UPDATE with no policy returns no error and changes 0 rows, so the update
+ * tests check the row is UNCHANGED rather than looking for an error.
  *
  * Run: npx tsx scripts/test-invoice-rls.ts
  * Requires: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in env or .env.local
@@ -258,81 +260,63 @@ async function run() {
     }
   }
 
-  // ── TEST 2: Creator INSERT → must SUCCEED ─────────────────────
+  // ── TEST 2: Creator INSERT → must be REJECTED (0521) ──────────
   console.log('\nTEST 2: Creator attempts to INSERT an invoice')
   const { data: creatorInsert, error: creatorInsertErr } = await creatorClient
     .from('invoices')
     .insert({
       deal_id: testDeal.id,
-      status: 'draft',
+      status: 'paid',
       base_paise: testDeal.price_paise,
       overage_paise: 0,
       fee_paise: 0,
       fee_percent: 0,
       fee_mode: 'on_top',
       brand_pays_paise: testDeal.price_paise,
-      creator_receives_paise: testDeal.price_paise
+      creator_receives_paise: testDeal.price_paise * 10
     })
     .select('id')
     .single()
 
   if (creatorInsertErr) {
-    fail('Creator INSERT rejected — should be allowed', creatorInsertErr.message)
+    pass('Creator INSERT rejected')
   } else {
-    pass('Creator INSERT succeeded')
-    testInvoiceId = creatorInsert!.id
-    console.log(`         Invoice ID: ${testInvoiceId}`)
+    fail('Creator INSERT succeeded — 0521 not applied?', `Created invoice ${creatorInsert?.id}`)
+    if (creatorInsert?.id) await admin.from('invoices').delete().eq('id', creatorInsert.id)
   }
 
-  if (!testInvoiceId) {
-    console.error('\nCannot continue — creator INSERT failed, no invoice to test updates on.')
-    process.exit(1)
-  }
-
-  // ── TEST 3: Creator UPDATE draft → issued ─────────────────────
-  console.log('\nTEST 3: Creator updates invoice draft → issued')
-  const { error: creatorUpdateErr } = await creatorClient
+  // A draft written the way the server writes it, to test updates against.
+  const { data: seeded, error: seedErr } = await admin
     .from('invoices')
-    .update({ status: 'issued', issued_at: new Date().toISOString() })
-    .eq('id', testInvoiceId)
+    .insert({
+      deal_id: testDeal.id, status: 'draft',
+      base_paise: testDeal.price_paise, overage_paise: 0, fee_paise: 0, fee_percent: 0, fee_mode: 'on_top',
+      brand_pays_paise: testDeal.price_paise, creator_receives_paise: testDeal.price_paise,
+    })
+    .select('id')
+    .single()
+  if (seedErr || !seeded) { console.error('\nCannot seed a test invoice:', seedErr?.message); process.exit(1) }
+  testInvoiceId = seeded.id
 
-  if (creatorUpdateErr) {
-    fail('Creator UPDATE rejected — should be allowed', creatorUpdateErr.message)
-  } else {
-    // Verify the status actually changed
-    const { data: check } = await admin
-      .from('invoices')
-      .select('status')
-      .eq('id', testInvoiceId)
-      .single()
-    if (check?.status === 'issued') {
-      pass('Creator UPDATE draft → issued succeeded')
-    } else {
-      fail('Creator UPDATE returned no error but status did not change', `status = ${check?.status}`)
-    }
+  async function unchanged(label: string, expectStatus: string, expectReceives: number) {
+    const { data: row } = await admin.from('invoices').select('status, creator_receives_paise').eq('id', testInvoiceId!).single()
+    if (row?.status === expectStatus && row?.creator_receives_paise === expectReceives) pass(label)
+    else fail(label, `status=${row?.status} creator_receives=${row?.creator_receives_paise}`)
   }
 
-  // ── TEST 4: Brand UPDATE issued → accepted ────────────────────
-  console.log('\nTEST 4: Brand updates invoice issued → accepted')
-  const { error: brandUpdateErr } = await brandClient
-    .from('invoices')
-    .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+  // ── TEST 3: Creator UPDATE → must change nothing ──────────────
+  console.log('\nTEST 3: Creator tries draft → issued and raising what they receive')
+  await creatorClient.from('invoices')
+    .update({ status: 'issued', creator_receives_paise: testDeal.price_paise * 10 })
     .eq('id', testInvoiceId)
+  await unchanged('Creator UPDATE changed nothing', 'draft', testDeal.price_paise)
 
-  if (brandUpdateErr) {
-    fail('Brand UPDATE rejected — should be allowed', brandUpdateErr.message)
-  } else {
-    const { data: check } = await admin
-      .from('invoices')
-      .select('status')
-      .eq('id', testInvoiceId)
-      .single()
-    if (check?.status === 'accepted') {
-      pass('Brand UPDATE issued → accepted succeeded')
-    } else {
-      fail('Brand UPDATE returned no error but status did not change', `status = ${check?.status}`)
-    }
-  }
+  // ── TEST 4: Brand UPDATE → must change nothing ────────────────
+  console.log('\nTEST 4: Brand tries → paid')
+  await brandClient.from('invoices')
+    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .eq('id', testInvoiceId)
+  await unchanged('Brand UPDATE changed nothing', 'draft', testDeal.price_paise)
 
   // ── Cleanup ────────────────────────────────────────────────────
   console.log('\n' + '─'.repeat(50))
@@ -355,9 +339,8 @@ async function run() {
   console.log("  WHERE tablename = 'invoices' ORDER BY policyname;")
   console.log('')
   console.log('  - invoices_deny_delete (DELETE)')
-  console.log('  - invoices_insert_creator (INSERT)')
   console.log('  - invoices_read (SELECT)')
-  console.log('  - invoices_update_brand (UPDATE)')
+  console.log('  (and nothing else: no insert or update policy, since 0521)')
   console.log('  - invoices_update_creator (UPDATE)')
 
   console.log('\n' + '─'.repeat(50))
