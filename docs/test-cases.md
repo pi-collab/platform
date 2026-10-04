@@ -6631,3 +6631,17 @@ Run with a real brand session and a real creator session against PostgREST (anon
 - [ ] A path not shaped `{dealId}/{itemId}/v{n}` (e.g. `../x`, another folder) → refused
 - [ ] The path an item currently points to (its live `storage_path`) → "in use", not deleted
 - [ ] Real case still works: upload succeeds but the item save fails → the new file is cleaned up
+
+---
+
+## 91. No "payment released" when nothing moved (Phase 0, fix 4)
+
+On Deals / Growth deals the brand pays the creator directly; Guapd moves no money. `markAsPaid` records the brand's confirmation.
+- [ ] Brand accepts an invoice → dialog "Paid {creator}?" says to pay directly by UPI/bank, that Guapd doesn't take the payment, then mark it paid. Buttons "Not yet" / "Mark as paid". No "redirected to complete the payment"
+- [ ] The accepted-invoice button reads "Mark as paid", not "Pay ₹X"
+- [ ] After marking: card says "Marked as paid on …", footer "Marked paid … · GD-####" — no "UTR", no "Paid in full"
+- [ ] Creator gets ONE in-app notice "Marked as paid: {deal}" / "The brand says it has paid you. Check your account"
+- [ ] **No WhatsApp is sent** (the `payment_released` template is no longer used anywhere)
+- [ ] Invoice-accepted notice reads "the brand pays you directly by the due date", not "payment is being processed"
+- [ ] Repeat mark-paid → no second notice (idempotent)
+- [ ] OPEN: the paid card's "{creator} received {net}" assumes a fee was taken; under direct pay nothing collects Guapd's fee (business decision pending)
