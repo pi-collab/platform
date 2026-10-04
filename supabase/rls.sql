@@ -441,10 +441,12 @@ CREATE POLICY events_read
 
 
 -- ── invoices ────────────────────────────────────────────────────────
--- MONEY TABLE — write policies are deliberately granular.
+-- MONEY TABLE.
 -- Both parties can READ invoices for their deals.
--- Only the CREATOR can INSERT (issue an invoice on an approved deal).
--- Both parties can UPDATE (creator: draft→issued; brand: issued→accepted).
+-- NO insert or update for signed-in users (migration 0521): generateInvoice,
+-- issueInvoice and acceptInvoice write with the service role after checking
+-- the caller is the deal's own creator / brand and the status is right.
+-- Paying is the SECURITY DEFINER function mark_deal_paid.
 -- No client-side delete ever.
 --
 -- NOTE: migration 009 created policies with _creator/_brand suffixes.
@@ -461,24 +463,6 @@ DROP POLICY IF EXISTS invoices_deny_delete    ON invoices;
 CREATE POLICY invoices_read
   ON invoices FOR SELECT
   USING (can_access_deal(deal_id));
-
-CREATE POLICY invoices_insert_creator
-  ON invoices FOR INSERT
-  WITH CHECK (
-    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
-  );
-
-CREATE POLICY invoices_update_creator
-  ON invoices FOR UPDATE
-  USING (
-    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
-  );
-
-CREATE POLICY invoices_update_brand
-  ON invoices FOR UPDATE
-  USING (
-    deal_id IN (SELECT id FROM deals WHERE brand_id = my_brand_id())
-  );
 
 CREATE POLICY invoices_deny_delete
   ON invoices FOR DELETE

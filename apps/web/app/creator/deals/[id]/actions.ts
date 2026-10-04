@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { revisionTerms, overagePaise } from '@/lib/revisions'
@@ -486,14 +487,17 @@ export async function submitDeliverable(dealId: string, formData: FormData): Pro
  * Creates the invoice in 'draft' status with snapshotted amounts.
  */
 export async function generateInvoice(dealId: string): Promise<DeliverableResult> {
+  // The deal's OWN creator, not merely someone signed in: the invoice is
+  // written with the service role below (migration 0521), so this check and
+  // the creator_id filter are the boundary.
+  const ctx = await verifyCreator()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { status: 'error', message: 'Not authenticated.' }
 
   const { data: deal } = await supabase
     .from('deals')
     .select('id, status, is_posted, price_paise, revisions_used, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, payment_terms')
     .eq('id', dealId)
+    .eq('creator_id', ctx.creatorId)
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
@@ -524,7 +528,7 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
   )
   const dueDays = parsePaymentTermsDays(deal.payment_terms)
 
-  const { error: insertErr } = await supabase
+  const { error: insertErr } = await createAdminClient()
     .from('invoices')
     .insert({
       deal_id: dealId,
@@ -634,15 +638,17 @@ export async function submitShippingAddress(dealId: string, address: string): Pr
 }
 
 export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
+  // The deal's own creator. A brand session could read this deal too, and the
+  // old check (any signed-in user) let it issue the creator's draft.
+  const ctx = await verifyCreator()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { status: 'error', message: 'Not authenticated.' }
 
   // Verify deal is posted before allowing invoice issue
   const { data: deal } = await supabase
     .from('deals')
     .select('is_posted')
     .eq('id', dealId)
+    .eq('creator_id', ctx.creatorId)
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
@@ -661,7 +667,7 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
     return { status: 'error', message: `Cannot issue an invoice that is "${invoice.status}".` }
   }
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await createAdminClient()
     .from('invoices')
     .update({
       status: 'issued',
@@ -669,6 +675,7 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
       updated_at: new Date().toISOString(),
     })
     .eq('id', invoice.id)
+    .eq('status', 'draft')
 
   if (updateErr) {
     return { status: 'error', message: `Failed to issue invoice: ${updateErr.message}` }

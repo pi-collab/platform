@@ -6600,3 +6600,23 @@ Run with a real brand session and a real creator session against PostgREST (anon
 - [ ] Brand pays (mark_deal_paid RPC) → paid → complete
 - [ ] Offer token accept/decline (service role) and ops fee override / release hold (service role) unaffected
 - [ ] An audit `events` row is still written for each real status change; a refused change writes none
+
+---
+
+## 89. SECURITY — invoices written only by the server (Phase 0, fix 2; migration 0521, run by hand)
+
+### Verify the migration landed
+- [ ] `SELECT policyname, cmd FROM pg_policies WHERE tablename = 'invoices';` → only `invoices_read` (SELECT) and `invoices_deny_delete` (DELETE)
+
+### Must FAIL over the API (user JWT + anon key)
+- [ ] Creator `POST invoices` with any amounts → refused
+- [ ] Creator `PATCH invoices {creator_receives_paise: …}` / `{fee_paise: 0}` → refused
+- [ ] Brand `PATCH invoices {status: 'paid'}` / `{brand_pays_paise: 1}` → refused
+- [ ] A BRAND session calling the `issueInvoice` server action on its own deal → refused (it checked only "signed in" before)
+- [ ] A creator calling `acceptInvoice` → refused
+
+### Real flow still works (UI)
+- [ ] Creator: approved + posted deal → Generate invoice (draft) → Issue → brand notified
+- [ ] Generating twice → "Invoice already exists"; issuing a non-draft → refused
+- [ ] Brand: Accept invoice (issued → accepted, due date set); accepting twice → refused
+- [ ] Brand: Pay → paid → complete (mark_deal_paid RPC, unchanged)

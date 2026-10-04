@@ -1,6 +1,7 @@
 'use server'
 
 import { verifyBrand } from '@/lib/brand-auth'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
@@ -14,8 +15,18 @@ type InvoiceResult =
  * Accept an invoice (issued → accepted). Sets due_date from payment_due_days.
  */
 export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
-  await verifyBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
+
+  // The deal's own brand. The invoice is written with the service role below
+  // (migration 0521), so this is the boundary, not RLS.
+  const { data: owned } = await supabase
+    .from('deals')
+    .select('id')
+    .eq('id', dealId)
+    .eq('brand_id', brand.brandId)
+    .maybeSingle()
+  if (!owned) return { status: 'error', message: 'Deal not found.' }
 
   const { data: invoice } = await supabase
     .from('invoices')
@@ -36,7 +47,7 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
     dueDate = due.toISOString().split('T')[0] // date only
   }
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await createAdminClient()
     .from('invoices')
     .update({
       status: 'accepted',
@@ -45,6 +56,7 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
       updated_at: now.toISOString(),
     })
     .eq('id', invoice.id)
+    .eq('status', 'issued')
 
   if (updateErr) {
     return { status: 'error', message: `Failed to accept invoice: ${updateErr.message}` }
