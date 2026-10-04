@@ -6565,3 +6565,38 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 - [ ] The draft fills the box and marks the page unsaved; nothing is stored until the page's own Save
 - [ ] Rewrite uses the creator's SAVED bio as input, not unsaved typing
 - [ ] Same 5-a-day cap as the dashboard task (they share it)
+
+---
+
+## 88. SECURITY — deal writes locked down (Phase 0, fix 1; migration 0520, run by hand)
+
+Run with a real brand session and a real creator session against PostgREST (anon key + user JWT), NOT the service role.
+
+### Verify the migration landed (information_schema / catalog)
+- [ ] `SELECT tgname FROM pg_trigger WHERE tgrelid = 'deals'::regclass AND NOT tgisinternal;` lists `t_deals_00_guard` (before `t_deals_audit_upd`)
+- [ ] `SELECT policyname FROM pg_policies WHERE tablename = 'deals';` has NO `deals_insert_brand`
+
+### Brand session — must FAIL (42501)
+- [ ] `PATCH deals?id=eq.<own held deal> {held_at: null}` → refused (the approval-hold bypass)
+- [ ] `{fee_percent: 0}`, `{fee_mode: 'on_top'}`, `{track: 'deals'}`, `{creator_id: …}` → refused
+- [ ] `{status: 'paid'}` / `{status: 'complete'}` / `{status: 'revision'}` → refused
+- [ ] `{price_paise: 1}` on an agreed deal → refused
+- [ ] `{campaign_id: <another brand's campaign>}` → refused
+- [ ] `POST deals` with any body → refused (no insert policy)
+
+### Creator session — must FAIL
+- [ ] `{price_paise: …}` without accepting, `{fee_percent: …}`, `{status: 'approved'}`, `{status: 'paid'}` → refused
+- [ ] `{is_posted: true}` while the deal is `agreed` → refused
+- [ ] `{title: …}`, `{internal_note: …}` → refused
+
+### Every real flow still works (UI, staging)
+- [ ] Brand sends an offer (DealForm) and a campaign bulk send → deal created, fee and hold as before; a held brand's deal is still held
+- [ ] Creator accepts (with and without a brand counter), declines, counters
+- [ ] Brand accepts a creator counter (price and agreed_at update)
+- [ ] Creator submits for review (agreed/revision → delivered); brand approves; brand requests a revision (RPC)
+- [ ] Brand marks shipped / delivered; creator saves shipping address
+- [ ] Creator marks posted after approval
+- [ ] Brand renames a deal, edits its internal note, assigns it to its own campaign
+- [ ] Brand pays (mark_deal_paid RPC) → paid → complete
+- [ ] Offer token accept/decline (service role) and ops fee override / release hold (service role) unaffected
+- [ ] An audit `events` row is still written for each real status change; a refused change writes none

@@ -233,8 +233,10 @@ CREATE POLICY creators_deny_delete
 -- ── deals ─────────────────────────────────────────────────────────
 -- SELECT: brand member sees deals for their brand; creator sees their deals.
 -- INSERT: brand members only, for their own brand (brand_id must match).
--- UPDATE: both parties can update (status changes, offer counters).
---         Field-level restrictions enforced in app code for v1.
+-- INSERT: none for signed-in users. createDeal inserts with the service role
+--         after computing the fee and the send gate itself (migration 0520).
+-- UPDATE: a party may update only their own deal (policy below), and only the
+--         columns / status moves the guard_deal_write trigger allows (0520).
 
 DROP POLICY IF EXISTS deals_read         ON deals;
 DROP POLICY IF EXISTS deals_insert_brand ON deals;
@@ -251,10 +253,6 @@ CREATE POLICY deals_read
     OR (creator_id = my_creator_id() AND held_at IS NULL)
   );
 
-CREATE POLICY deals_insert_brand
-  ON deals FOR INSERT
-  WITH CHECK (brand_id = my_brand_id());
-
 CREATE POLICY deals_update
   ON deals FOR UPDATE
   USING (
@@ -265,6 +263,99 @@ CREATE POLICY deals_update
 CREATE POLICY deals_deny_delete
   ON deals FOR DELETE
   USING (false);
+
+-- Column / status guard for signed-in users (0520). Kept here so a fresh
+-- database built from schema + migrations + rls.sql ends with it in place.
+CREATE OR REPLACE FUNCTION guard_deal_write()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  is_brand   boolean := OLD.brand_id = my_brand_id();
+  is_creator boolean := OLD.creator_id = my_creator_id();
+  -- Touched by other triggers or stamped on acceptance; never a user's lever.
+  always_ok  text[]  := ARRAY['updated_at', 'agreed_at', 'completed_at'];
+  allowed    text[];
+  ok_status  boolean;
+BEGIN
+  IF current_user NOT IN ('authenticated', 'anon') THEN
+    RETURN NEW;
+  END IF;
+
+  IF is_brand THEN
+    allowed := always_ok || ARRAY[
+      'title', 'internal_note', 'campaign_id',
+      'shipment_status', 'tracking_link', 'carrier_note', 'shipped_at',
+      'status', 'price_paise', 'rights_confirmed_at'
+    ];
+  ELSIF is_creator THEN
+    allowed := always_ok || ARRAY[
+      'shipping_address', 'is_posted', 'posted_url', 'posted_at',
+      'status', 'price_paise', 'rights_confirmed_at'
+    ];
+  ELSE
+    RAISE EXCEPTION 'Not a party to this deal' USING ERRCODE = '42501';
+  END IF;
+
+  IF (to_jsonb(NEW) - allowed) IS DISTINCT FROM (to_jsonb(OLD) - allowed) THEN
+    RAISE EXCEPTION 'This change is not allowed on a deal' USING ERRCODE = '42501';
+  END IF;
+
+  -- ── Status: only the moves the app makes ──
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    ok_status := CASE
+      WHEN is_brand THEN
+           (OLD.status = 'negotiating' AND NEW.status IN ('agreed', 'cancelled'))   -- accept counter; createDeal rollback
+        OR (OLD.status IN ('delivered', 'revision') AND NEW.status = 'approved')    -- approve all items
+      WHEN is_creator THEN
+           (OLD.status = 'negotiating' AND NEW.status IN ('agreed', 'declined'))    -- accept / decline
+        OR (OLD.status IN ('agreed', 'revision') AND NEW.status = 'delivered')      -- submit for review
+      ELSE false
+    END;
+    IF NOT ok_status THEN
+      RAISE EXCEPTION 'A deal cannot move from % to % this way', OLD.status, NEW.status
+        USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  -- ── Price: only by accepting a counter ──
+  IF NEW.price_paise IS DISTINCT FROM OLD.price_paise
+     AND NOT (OLD.status = 'negotiating' AND NEW.status = 'agreed') THEN
+    RAISE EXCEPTION 'The price changes only by accepting a counter offer' USING ERRCODE = '42501';
+  END IF;
+
+  -- ── Rights confirmation: only alongside acceptance ──
+  IF NEW.rights_confirmed_at IS DISTINCT FROM OLD.rights_confirmed_at
+     AND NOT (OLD.status = 'negotiating' AND NEW.status = 'agreed') THEN
+    RAISE EXCEPTION 'Rights are confirmed only when the deal is agreed' USING ERRCODE = '42501';
+  END IF;
+
+  -- ── Posted: once the work is approved, never before ──
+  IF (NEW.is_posted, NEW.posted_url, NEW.posted_at) IS DISTINCT FROM (OLD.is_posted, OLD.posted_url, OLD.posted_at)
+     AND OLD.status NOT IN ('approved', 'paid', 'complete') THEN
+    RAISE EXCEPTION 'Mark as posted only after the content is approved' USING ERRCODE = '42501';
+  END IF;
+
+  -- ── Campaign: only one of the brand's own ──
+  IF NEW.campaign_id IS DISTINCT FROM OLD.campaign_id AND NEW.campaign_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.id = NEW.campaign_id AND c.brand_id = OLD.brand_id) THEN
+    RAISE EXCEPTION 'That campaign does not belong to this brand' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION guard_deal_write() IS
+  'BEFORE UPDATE guard on deals for signed-in users: per-party column allowlist, '
+  'allowed status transitions, price only on counter acceptance. Service role and '
+  'SECURITY DEFINER functions bypass it. See migration 0520.';
+
+DROP TRIGGER IF EXISTS t_deals_00_guard ON deals;
+CREATE TRIGGER t_deals_00_guard
+  BEFORE UPDATE ON deals
+  FOR EACH ROW EXECUTE FUNCTION guard_deal_write();
+
 
 
 -- ── messages ──────────────────────────────────────────────────────
