@@ -539,7 +539,7 @@ export default async function DashboardPage({
               sub={<>{totalDeals} deal{totalDeals === 1 ? '' : 's'}{spendChangePct != null && <> &middot; <span style={{ color: 'var(--ink)', fontWeight: 700 }}>{spendChangePct >= 0 ? '\u25B2' : '\u25BC'} {Math.abs(spendChangePct)}%</span></>}</>}
             />
             <Kpi
-              label="Pending payouts"
+              label="Pending payments"
               value={formatRupees(pendingPayoutPaise)}
               sub={`${pendingInvoiceCount} invoice${pendingInvoiceCount === 1 ? '' : 's'}`}
               href="/deals?status=needs_you"

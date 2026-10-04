@@ -96,7 +96,7 @@ export const homePage = {
       {
         number: '04',
         title:  'Payment tracked to completion',
-        body:   'Razorpay payment link sent. Status updates automatically from link sent to paid. No chasing.',
+        body:   'The brand pays the creator directly, and both see the deal move from invoiced to paid. No chasing.',
       },
     ],
   },
@@ -175,7 +175,7 @@ export const brandPage = {
     {
       label:    'Payments',
       headline: 'Track payment status without chasing',
-      body:     'Send a Razorpay payment link and watch status update automatically: invoiced, link sent, paid. No spreadsheet, no follow-up DM asking "has it gone through?"',
+      body:     'See every deal move from invoiced to accepted to paid. No spreadsheet, no follow-up DM asking "has it gone through?"',
       visual:   'payment' as const,
     },
   ],
@@ -187,7 +187,7 @@ export const brandPage = {
       { icon: '📋', title: 'Structured briefs',       body: 'Define deliverables, timeline, and revision limits upfront. Both sides see the same terms.' },
       { icon: '🔒', title: 'Agreed terms on record',  body: 'No verbal misunderstandings. Every agreed term is written, locked, and auditable.' },
       { icon: '📁', title: 'Deliverable review',      body: 'Review files in one place. Approve or request a revision · it counts against the agreed limit.' },
-      { icon: '💳', title: 'Payment tracking',        body: 'Razorpay link → status updates automatically. Know exactly where your payment is.' },
+      { icon: '💳', title: 'Payment tracking',        body: 'Invoiced, accepted, paid: know exactly where every payment stands.' },
       { icon: '🔁', title: 'One-tap re-engagement',   body: 'Worked with a creator before? Re-engage in one tap, with previous terms pre-filled.' },
       { icon: '📊', title: 'Full deal timeline',      body: 'Every event logged from offer to payment. Your audit trail, automatically.' },
     ],

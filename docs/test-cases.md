@@ -6645,3 +6645,24 @@ On Deals / Growth deals the brand pays the creator directly; Guapd moves no mone
 - [ ] Invoice-accepted notice reads "the brand pays you directly by the due date", not "payment is being processed"
 - [ ] Repeat mark-paid → no second notice (idempotent)
 - [ ] OPEN: the paid card's "{creator} received {net}" assumes a fee was taken; under direct pay nothing collects Guapd's fee (business decision pending)
+
+---
+
+## 92. No copy implies Guapd holds funds or pays creators (Phase 0, fix 5)
+
+- [ ] Landing (desktop) "how it works" step 4 card: "Payment · direct to creator" → Terms agreed / Content approved / Invoice sent / Marked paid; footer "paid by the brand". No "escrow", no "Payout released", no "In your account"
+- [ ] Step 4 heading "Know where every payment stands"; copy says the brand pays the creator directly. The four-step scroll sequence still runs (card 3 still present)
+- [ ] Landing payment mini-card: "Invoice sent", not "Payout sent"
+- [ ] Landing desktop + mobile: "payments", not "payouts" ("offer to payment", "briefs, terms and payments")
+- [ ] /brands (desktop + mobile) marquee: "payment tracking", not "razorpay payouts"
+- [ ] /creators (desktop + mobile) marquee: "payment tracking", not "on-time payouts"; FAQ "from offer to paid"
+- [ ] Brand dashboard (populated + empty): "Pending payments"
+- [ ] Creator payments UPI row: brands pay directly; the UPI is for payments Guapd makes (e.g. Guapd-managed shoots)
+- [ ] Brand Settings → Payments: "Direct to creator", no "Razorpay · Payment links", no dead Edit button
+- [ ] `lib/content.ts`: no "Razorpay payment link … updates automatically" claims
+- [ ] Grep is clean: `escrow|razorpay payouts|payout released|payout sent|on-time payouts|payouts are sent|Razorpay link`
+
+### Flagged, NOT changed (need Palak / legal)
+- [ ] `content/playbook.ts` says "Creator's payout details visible on the deal" and "Razorpay payment-link integration is the next step": false; Playbook edits need Palak's explicit ask
+- [ ] `/privacy` lists Razorpay as an active processor; `/terms` §164-169 describe the brand paying an amount the creator receives "less the fee", which implies an intermediary. Legal text: for review
+- [ ] Brand Settings → Payments GST / billing / "Email a PDF" fields are non-functional mocks (made real in Phase 4)
