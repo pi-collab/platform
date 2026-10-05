@@ -115,11 +115,14 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
           </div>
         </div>
 
-        {/* Dark "You paid" bar */}
+        {/* Dark "Marked as paid" bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '20px 24px', margin: '24px 0 0', borderRadius: 16, background: 'var(--ink)', color: '#FFFFFF' }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>You paid</div>
-            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', marginTop: 3 }}>{creatorFirstName} received {formatRupees(invoice.creator_receives_paise)}</div>
+            {/* Only what is known. Nothing here verifies a payment (no payment
+                rail yet), so no "{creator} received ₹net" figure is asserted:
+                the brand paid the creator directly and marked it here. */}
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Marked as paid</div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', marginTop: 3 }}>You marked this paid to {creatorFirstName}</div>
           </div>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>{formatRupees(invoice.brand_pays_paise)}</span>
         </div>

@@ -84,7 +84,13 @@ export default function TermsOfServicePage() {
       <MarketingNav audience="home" />
       <main style={containerStyle}>
         <h1 style={h1Style}>Terms of Service</h1>
-        <p style={metaStyle}>Last updated: 23 July 2026</p>
+        <p style={metaStyle}>Last updated: 5 October 2026</p>
+        {/* Interim, factual text. A lawyer finalises both legal pages; until
+            then nothing here may assert a structure that is not true today. */}
+        <p style={{ ...pStyle, padding: '12px 14px', borderRadius: 10, border: '1px solid #E5D3A6', background: '#FBF6E9' }}>
+          <strong>Pending legal review.</strong> This is interim text kept to what is
+          true of the service today. It will be replaced by a reviewed version.
+        </p>
 
         <p style={pStyle}>
           GUAPD PRIVATE LIMITED. Registered office: Plot No 307, Kh. No. 137/9,
@@ -177,57 +183,16 @@ export default function TermsOfServicePage() {
         {/* 7A. Subscription plans */}
         <h2 style={h2Style}>7A. Subscription plans</h2>
         <p style={pStyle}>
-          Guapd offers paid subscription plans for brands. Plans differ in the
-          features and deal volumes they include; a free tier is available.
+          Paid subscription plans are not available yet, and no brand is charged a
+          subscription. If we introduce paid plans, their terms will be published
+          here before anyone can buy one.
         </p>
-        <ul style={ulStyle}>
-          <li style={liStyle}>
-            <strong>Charges and cycle.</strong> Your plan, price and billing cycle are
-            shown at the point of purchase and in your account settings. Subscriptions
-            renew automatically at the end of each cycle until cancelled.
-          </li>
-          <li style={liStyle}>
-            <strong>Relationship to platform fees.</strong> Subscription charges are
-            separate from and in addition to the platform fee on each deal.
-          </li>
-          <li style={liStyle}>
-            <strong>Price changes.</strong> We will give at least 30 days&rsquo;
-            notice before a subscription price change takes effect for you. Your
-            current billing cycle is unaffected.
-          </li>
-          <li style={liStyle}>
-            <strong>Cancellation.</strong> You may cancel at any time from your
-            account settings. Cancellation takes effect at the end of the current
-            billing cycle. We do not provide refunds for a partial cycle unless
-            required by law.
-          </li>
-          <li style={liStyle}>
-            <strong>What happens if your subscription ends.</strong> Deals created
-            while your subscription was active continue on the terms recorded on those
-            deals, including the fee, and you keep access to those deals and their
-            records. Plan features, including any deal volume above the free
-            tier, become unavailable.
-          </li>
-          <li style={liStyle}>
-            <strong>Failed payment.</strong> If a renewal payment fails we may suspend
-            plan features after notice and a reasonable opportunity to update payment
-            details. Deals already in progress are not cancelled.
-          </li>
-          <li style={liStyle}>
-            <strong>Taxes.</strong> Prices are exclusive of GST unless stated.
-            Applicable taxes are added and shown on your invoice.
-          </li>
-          <li style={liStyle}>
-            Subscription payments are processed by our payment processor. Guapd does
-            not store card or bank details.
-          </li>
-        </ul>
 
         {/* 8. Payments */}
         <h2 style={h2Style}>8. Payments</h2>
         <p style={pStyle}>
           Payments are made by the brand to the creator. Guapd does not hold funds. We
-          provide payment links, invoicing and status tracking, but the obligation to
+          provide invoicing and payment status tracking, but the obligation to
           pay is the brand&rsquo;s and it is owed to the creator. Tax deductions and
           compliance are the responsibility of the parties, though we may provide
           tools to assist.

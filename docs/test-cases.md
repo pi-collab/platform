@@ -6666,3 +6666,10 @@ On Deals / Growth deals the brand pays the creator directly; Guapd moves no mone
 - [ ] `content/playbook.ts` says "Creator's payout details visible on the deal" and "Razorpay payment-link integration is the next step": false; Playbook edits need Palak's explicit ask
 - [ ] `/privacy` lists Razorpay as an active processor; `/terms` §164-169 describe the brand paying an amount the creator receives "less the fee", which implies an intermediary. Legal text: for review
 - [ ] Brand Settings → Payments GST / billing / "Email a PDF" fields are non-functional mocks (made real in Phase 4)
+
+### Follow-ups to Phase 0 (2026-10-05)
+- [ ] Brand paid card: dark bar reads "Marked as paid" / "You marked this paid to {creator}", with the invoice amount; no "{creator} received ₹net"
+- [ ] /privacy and /terms show a "Pending legal review" note under "Last updated: 5 October 2026"
+- [ ] /privacy: no Razorpay; WhatsApp/SMS via MSG91 (not Interakt); Resend and Anthropic listed; UPI ID disclosed as stored (creator + Guapd only); no PAN, GSTIN, subscription or billing-history claims; city/state/age bracket and AI bio listed; "we do not process payments"
+- [ ] /terms §7A: paid plans not available yet, no one is charged; §8: no "payment links"
+- [ ] /terms §7 fee wording UNCHANGED (left for the lawyer)

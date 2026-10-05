@@ -84,7 +84,13 @@ export default function PrivacyPolicyPage() {
       <MarketingNav audience="home" />
       <main style={containerStyle}>
         <h1 style={h1Style}>Privacy Policy</h1>
-        <p style={metaStyle}>Last updated: 23 July 2026</p>
+        <p style={metaStyle}>Last updated: 5 October 2026</p>
+        {/* Interim, factual text. A lawyer finalises both legal pages; until
+            then nothing here may assert a structure that is not true today. */}
+        <p style={{ ...pStyle, padding: '12px 14px', borderRadius: 10, border: '1px solid #E5D3A6', background: '#FBF6E9' }}>
+          <strong>Pending legal review.</strong> This is interim text kept to what is
+          true of the service today. It will be replaced by a reviewed version.
+        </p>
 
         <p style={pStyle}>
           GUAPD PRIVATE LIMITED (&ldquo;Guap&rsquo;d&rdquo;, &ldquo;we&rdquo;).
@@ -109,8 +115,9 @@ export default function PrivacyPolicyPage() {
           <strong>Creators:</strong> name, phone number (used for OTP login), email,
           Instagram/YouTube handles and profile links, self-reported audience
           statistics, rate card and pricing, profile photo, content samples uploaded
-          to the platform, PAN (optional, required only for tax-compliant
-          payouts and TDS), deal history, messages sent through the platform, uploaded
+          to the platform, city, state and age bracket, a profile bio (including any
+          you ask our AI assistant to draft), a UPI ID if you add one to receive
+          payments, deal history, messages sent through the platform, uploaded
           deliverable files.
         </p>
         {/* Meta reads this against what the app actually requests at App
@@ -140,10 +147,9 @@ export default function PrivacyPolicyPage() {
           <a href="mailto:contact@guapd.com" style={{ color: 'inherit', fontWeight: 600 }}>contact@guapd.com</a>.
         </p>
         <p style={pStyle}>
-          <strong>Brands:</strong> name, work email, company name, GSTIN (optional,
-          required only to issue a GST-compliant invoice), team member names
-          and emails, deal history, messages, payment status records, subscription
-          plan, billing history and invoices.
+          <strong>Brands:</strong> name, work email, company name, team member names
+          and emails, deal history, messages, invoices and payment status records,
+          and the text of searches you run with AI creator search.
         </p>
         <p style={pStyle}>
           <strong>Anonymous visitors to a creator&rsquo;s shopfront:</strong> if you
@@ -156,9 +162,10 @@ export default function PrivacyPolicyPage() {
           pages viewed, and product analytics events (see Cookies).
         </p>
         <p style={pStyle}>
-          <strong>We do not collect or store:</strong> card numbers, bank account
-          details, or UPI IDs. All payment instruments are handled by our payment
-          processor and never reach our systems.
+          <strong>Payments:</strong> we do not process payments. Brands pay creators
+          directly, outside the platform, and we record the status. We do not collect
+          card numbers or bank account details. If a creator adds a UPI ID, we store
+          it; only that creator and Guapd can see it.
         </p>
 
         {/* Why we collect it */}
@@ -166,8 +173,7 @@ export default function PrivacyPolicyPage() {
         <p style={pStyle}>
           Operating the deal workflow; verifying identity and vetting creators;
           sending notifications about your deals over WhatsApp, email and push;
-          generating invoices and meeting tax obligations; managing subscriptions and
-          billing; maintaining an audit record of every change to a deal so that
+          generating invoices and meeting tax obligations; maintaining an audit record of every change to a deal so that
           disputes can be resolved fairly; improving the product; security and fraud
           prevention; complying with law.
         </p>
@@ -206,11 +212,17 @@ export default function PrivacyPolicyPage() {
             <strong>Vercel</strong>: application hosting and delivery.
           </li>
           <li style={liStyle}>
-            <strong>Razorpay</strong>: payment and subscription processing.
+            <strong>MSG91 / WhatsApp Business API (Meta)</strong>: login codes
+            and deal notifications sent to your phone number by WhatsApp and SMS.
           </li>
           <li style={liStyle}>
-            <strong>Interakt / WhatsApp Business API (Meta)</strong>: deal
-            notifications sent to your phone number.
+            <strong>Resend</strong>: email notifications about your deals.
+          </li>
+          <li style={liStyle}>
+            <strong>Anthropic</strong>: AI features. The text of a brand&rsquo;s AI
+            creator search, and, when a creator asks for a drafted bio, the profile
+            details used to draft it (name, niches, city, handles, Instagram bio and
+            recent captions). Processed in the United States.
           </li>
           <li style={liStyle}>
             <strong>Meta Platforms</strong>: if you connect an Instagram
@@ -237,7 +249,8 @@ export default function PrivacyPolicyPage() {
           Primarily in India (Mumbai). Some processors listed above may process data
           outside India; where they do, we rely on their contractual safeguards.
           Specifically, if you consent to analytics, PostHog stores that analytics
-          and session-replay data in the European Union (Frankfurt).
+          and session-replay data in the European Union (Frankfurt), and Anthropic
+          processes the AI requests described above in the United States.
         </p>
 
         {/* Retention and deletion */}
@@ -311,7 +324,7 @@ export default function PrivacyPolicyPage() {
         <p style={pStyle}>
           Access to data is restricted by row-level security policies enforced at the
           database layer; uploaded files are stored privately and served only through
-          short-lived signed links; payment instruments never touch our systems. No
+          short-lived signed links; we do not process card or bank payments. No
           system is perfectly secure, and we will notify affected users and the Data
           Protection Board of any personal data breach as required.
         </p>
