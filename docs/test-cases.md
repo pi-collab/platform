@@ -6320,3 +6320,15 @@ the filter stays selected but the list shows something else."
 - [ ] Previous / Next / numbered links / the last-page link all carry the filters
 - [ ] Also fixed on `/ops/brands` (search term) and `/ops/appeals` (`show=all`). `/ops/deals` and `/ops/offers` pass a bare path and were never affected
 - [ ] **The "Go to" jump box was always correct** — it is a GET form re-submitting the filters as hidden fields. So jumping to a page worked while clicking a page number did not, which is worth knowing when someone says "pagination is broken"
+
+## SECURITY (hotfix) — the brand's deal note is never readable by the creator (migration 0527, run by hand)
+
+Found 2026-10-05: `deals.internal_note` ("brand-only, never shown to creator", 0220) was readable by the creator on the deal through the API (and in realtime row payloads). A column grant cannot separate them (brand and creator are both `authenticated`), so the note moved to `deal_brand_notes`.
+
+Run order: 0527 piece A → deploy the app → piece B (drops `deals.internal_note`). B before the deploy breaks the brand campaign page.
+
+- [ ] `scripts/test-internal-note-rls.ts` passes (after piece B): the old column is gone; the creator gets 0 rows from `deal_brand_notes` for their own deal and cannot write one; the brand reads its own note and cannot write directly.
+- [ ] Brand: campaign roster → add / edit / clear a deal note → it persists after reload.
+- [ ] Brand: campaign send with a draft note → the deal's note shows on the roster.
+- [ ] Brand B cannot see Brand A's note (RLS: `deal_brand_notes_read_brand`).
+- [ ] Production: same order, same test, before the production release.

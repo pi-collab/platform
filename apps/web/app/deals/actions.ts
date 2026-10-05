@@ -221,7 +221,6 @@ export async function createDeal(input: CreateDealInput) {
       shipment_status: requires_shipment ? 'pending' : null,
       usage_rights_end_date: usage_rights_end_date || null,
       campaign_id: campaign_id || null,
-      internal_note: internal_note?.trim() || null,
       source: source || 'platform',
       brief_pitch: brief_pitch?.trim() || null,
       brief_guidelines: brief_guidelines?.trim() || null,
@@ -235,6 +234,14 @@ export async function createDeal(input: CreateDealInput) {
     .single()
 
   if (error) return { error: error.message }
+
+  // The brand's private note lives in deal_brand_notes (0527), which only the
+  // deal's brand can read. On deals it was readable by the creator.
+  if (internal_note?.trim()) {
+    const { error: noteErr } = await createAdminClient().from('deal_brand_notes')
+      .insert({ deal_id: data.id, note: internal_note.trim() })
+    if (noteErr) console.error('[createDeal] brand note not saved:', noteErr.message)
+  }
 
   // Stamp pair origin if this relationship has none. ignoreDuplicates means an
   // existing storefront origin always wins — a pair that began through a

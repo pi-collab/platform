@@ -313,13 +313,18 @@ export async function updateCampaignDraftNote(draftId: string, note: string) {
  * Update the internal note on a deal (brand-only, never shown to creator).
  */
 export async function updateDealInternalNote(dealId: string, note: string) {
-  await verifyBrand()
-  const supabase = createClient()
+  const brand = await verifyBrand()
+  const admin = createAdminClient()
 
-  const { error } = await supabase
-    .from('deals')
-    .update({ internal_note: note.trim() || null })
-    .eq('id', dealId)
+  // Written by the server (deal_brand_notes has no write policy), for a deal
+  // that belongs to the signed-in brand only.
+  const { data: deal } = await admin.from('deals').select('id, brand_id').eq('id', dealId).maybeSingle()
+  if (!deal || deal.brand_id !== brand.brandId) return { error: 'Deal not found' }
+
+  const text = note.trim()
+  const { error } = text
+    ? await admin.from('deal_brand_notes').upsert({ deal_id: dealId, note: text, updated_at: new Date().toISOString() })
+    : await admin.from('deal_brand_notes').delete().eq('deal_id', dealId)
 
   if (error) return { error: error.message }
 

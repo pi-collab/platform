@@ -41,7 +41,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .maybeSingle(),
     supabase
       .from('deals')
-      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, internal_note, created_at, creators(id, full_name, profile_photo_url)')
+      .select('id, title, deliverables, price_paise, fee_percent, fee_mode, price_per_extra_revision_paise, revisions_used, revision_limit, status, is_posted, created_at, creators(id, full_name, profile_photo_url)')
       .eq('campaign_id', params.id)
       .order('created_at', { ascending: false }),
     supabase
@@ -62,6 +62,11 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
   const st = STATUS_MAP[campaign.status] ?? STATUS_MAP.active
   const allDeals = deals ?? []
+  // Brand-only notes (0527): RLS returns rows only for this brand's deals.
+  const { data: notes } = allDeals.length
+    ? await supabase.from('deal_brand_notes').select('deal_id, note').in('deal_id', allDeals.map((d) => d.id))
+    : { data: [] as { deal_id: string; note: string }[] }
+  const noteByDeal = new Map((notes ?? []).map((n) => [n.deal_id, n.note]))
   const allDrafts = (drafts ?? []).map((d) => {
     const rawCreator = d.creators as unknown
     const creator = (Array.isArray(rawCreator) ? rawCreator[0] : rawCreator) as { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null } | null
@@ -229,7 +234,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       statusColor: derived.color,
       isPosted: d.is_posted,
       isPostable: POSTABLE.has(d.status),
-      internalNote: (d as Record<string, unknown>).internal_note as string | null ?? null,
+      internalNote: noteByDeal.get(d.id) ?? null,
     }
   })
 
