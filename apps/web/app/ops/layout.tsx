@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
+import OpsNavMenu from '@/components/ops/OpsNavMenu'
 import { resolveOpsActor } from '@/lib/ops-capabilities'
 import { createClient } from '@/lib/supabase/server'
 import { currentPath } from '@/lib/current-path'
@@ -66,25 +67,38 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
         <Link href="/ops" style={{ fontWeight: 700, fontSize: '1.125rem', color: '#111', textDecoration: 'none' }}>
           Ops Console
         </Link>
-        {/* Admin-only links are omitted rather than shown-and-refused. The page
+        {/* Grouped into one dropdown per category to keep the header short.
+            Admin-only links are omitted rather than shown-and-refused. The page
             gates are what actually enforce this; hiding them just stops the
             outreach team walking into dead ends all day. */}
-        <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
-          <Link href="/ops/creators" style={{ color: '#555', textDecoration: 'none' }}>Creators</Link>
-          {isAdmin && <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>}
-          <Link href="/ops/brands" style={{ color: '#555', textDecoration: 'none' }}>Brands</Link>
-          {isAdmin && <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>}
-          {isAdmin && <Link href="/ops/experiences" style={{ color: '#555', textDecoration: 'none' }}>Experiences</Link>}
-          {isAdmin && <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>}
-          <Link href="/ops/insights" style={{ color: '#555', textDecoration: 'none' }}>Insights</Link>
-          {isAdmin && <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>}
-          <Link href="/ops/pipeline" style={{ color: '#555', textDecoration: 'none' }}>Pipeline</Link>
-          {/* Admin only: mailing strangers from guapd.com spends the sending
-              domain's reputation that every transactional email depends on. */}
-          {isAdmin && <Link href="/ops/outreach" style={{ color: '#555', textDecoration: 'none' }}>Outreach</Link>}
-          {isAdmin && <Link href="/ops/settings" style={{ color: '#555', textDecoration: 'none' }}>Settings</Link>}
-          <Link href="/ops/playbook" style={{ color: '#555', textDecoration: 'none' }}>Playbook</Link>
-        </nav>
+        <OpsNavMenu groups={[
+          { title: 'Creators', items: [
+            { href: '/ops/creators', label: 'Creators', hint: 'Roster, vetting and profiles' },
+            ...(isAdmin ? [{ href: '/ops/appeals', label: 'Appeals', hint: 'Rejected creators asking again' }] : []),
+          ] },
+          { title: 'Brands & deals', items: [
+            { href: '/ops/brands', label: 'Brands', hint: 'Approvals and brand accounts' },
+            ...(isAdmin ? [
+              { href: '/ops/deals', label: 'Deals', hint: 'Every deal, fees and timelines' },
+              { href: '/ops/experiences', label: 'Experiences', hint: 'Done-for-you shoots Guapd runs' },
+              { href: '/ops/offers', label: 'Offer Links', hint: 'Links for open offers' },
+            ] : []),
+          ] },
+          { title: 'Growth', items: [
+            { href: '/ops/pipeline', label: 'Pipeline', hint: 'Leads and follow-ups' },
+            // Admin only: mailing strangers from guapd.com spends the sending
+            // domain's reputation that every transactional email depends on.
+            ...(isAdmin ? [{ href: '/ops/outreach', label: 'Outreach', hint: 'Cold email sent from guapd.com' }] : []),
+            { href: '/ops/insights', label: 'Insights', hint: 'Creator and Growth onboarding answers' },
+          ] },
+          { title: 'Team', items: [
+            { href: '/ops/playbook', label: 'Playbook', hint: 'What the team pitches from' },
+            ...(isAdmin ? [
+              { href: '/ops/careers', label: 'Careers', hint: 'Open roles, published and draft' },
+              { href: '/ops/settings', label: 'Settings', hint: 'Platform values and per-brand access' },
+            ] : []),
+          ] },
+        ]} />
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {!isAdmin && (
             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', border: '1px solid #e9d5ff', borderRadius: 999, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '.04em' }}>
