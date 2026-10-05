@@ -3,6 +3,7 @@ import SignInButton from '@/components/SignInButton'
 import SignOutButton from '@/components/SignOutButton'
 import { resolveOpsActor } from '@/lib/ops-capabilities'
 import { createClient } from '@/lib/supabase/server'
+import { currentPath } from '@/lib/current-path'
 
 export const metadata = { title: 'Ops Console', robots: { index: false, follow: false } }
 
@@ -47,6 +48,13 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
     )
   }
 
+  /* The Experience screens are in the brand portal's design and bring their
+     own frame (app/ops/experiences/layout.tsx). They are still inside this
+     layout, so the sign-in screen above still applies; only the classic ops
+     header is skipped. The path only chooses a header: every Experience page
+     runs its own gate (experienceOpsGate). */
+  if ((currentPath() ?? '').startsWith('/ops/experiences')) return <>{children}</>
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
       <header style={{
@@ -66,6 +74,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
           {isAdmin && <Link href="/ops/appeals" style={{ color: '#555', textDecoration: 'none' }}>Appeals</Link>}
           <Link href="/ops/brands" style={{ color: '#555', textDecoration: 'none' }}>Brands</Link>
           {isAdmin && <Link href="/ops/deals" style={{ color: '#555', textDecoration: 'none' }}>Deals</Link>}
+          {isAdmin && <Link href="/ops/experiences" style={{ color: '#555', textDecoration: 'none' }}>Experiences</Link>}
           {isAdmin && <Link href="/ops/careers" style={{ color: '#555', textDecoration: 'none' }}>Careers</Link>}
           <Link href="/ops/insights" style={{ color: '#555', textDecoration: 'none' }}>Insights</Link>
           {isAdmin && <Link href="/ops/offers" style={{ color: '#555', textDecoration: 'none' }}>Offer Links</Link>}

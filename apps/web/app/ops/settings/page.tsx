@@ -14,7 +14,7 @@ export default async function OpsSettingsPage() {
 
   const [minimum, { data: brands }, { data: entitlements }] = await Promise.all([
     getGrowthMinimum(),
-    admin.from('brands').select('id, name').order('name'),
+    admin.from('brands').select('id, name').eq('is_guapd', false).order('name'),
     admin.from('brand_entitlements').select('brand_id, key, value, source'),
   ])
 

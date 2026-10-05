@@ -63,7 +63,8 @@ export async function loadCandidates(): Promise<SearchCandidate[]> {
       admin
         .from('creators')
         .select('id, full_name, handle, profile_photo_url, bio, niche, niches, location, follower_band, primary_platform, social_accounts, worked_with')
-        .eq('is_vetted', true),
+        .eq('is_vetted', true)
+        .eq('is_guapd', false), // the Guapd house account is never a search result
       admin
         .from('creator_storefronts')
         .select('creator_id, slug, categories, bio')

@@ -52,7 +52,7 @@ export default async function OpsInsightsPage() {
       .from('creator_onboarding_responses')
       .select('creator_id, biggest_pains, pain_other, deal_handling, monthly_deals, anything_else, created_at')
       .order('created_at', { ascending: false }),
-    admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true),
+    admin.from('creators').select('id', { count: 'exact', head: true }).eq('is_vetted', true).eq('is_guapd', false),
   ])
 
   // The Guapd Growth quiz, counted separately. Growth creators are is_vetted
@@ -64,7 +64,7 @@ export default async function OpsInsightsPage() {
       .from('creator_growth_quiz_responses')
       .select('creator_id, posting_frequency, growth_goal, niche, niche_other, anything_else, created_at')
       .order('created_at', { ascending: false }),
-    admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth'),
+    admin.from('creators').select('id', { count: 'exact', head: true }).eq('vetting_status', 'growth').eq('is_guapd', false),
   ])
   const growth = (growthRows ?? []) as GrowthRow[]
 

@@ -1297,3 +1297,17 @@ GRANT SELECT ON deal_brand_notes TO authenticated;
 DROP POLICY IF EXISTS deal_brand_notes_read_brand ON deal_brand_notes;
 CREATE POLICY deal_brand_notes_read_brand ON deal_brand_notes FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM deals d WHERE d.id = deal_brand_notes.deal_id AND d.brand_id = my_brand_id()));
+
+-- ── 0528: Experience request columns, quote history ─────────────────────────
+GRANT SELECT (request_deliverables, request_affiliate, request_ad_rights, request_ad_rights_months,
+              request_boost, request_boost_months, request_location, request_date_from, request_date_to,
+              request_brief, request_channel, requested_at)
+  ON experiences TO authenticated;
+REVOKE ALL ON experience_quotes FROM anon, authenticated;
+GRANT SELECT (id, experience_id, version, proposed_by, per_video_paise, deliverable_count, misc_paise,
+              total_paise, deliverables, shoot_date, shoot_city, message, status, created_at, decided_at)
+  ON experience_quotes TO authenticated;
+DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
+CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_quotes.experience_id
+                 AND e.brand_id = my_brand_id() AND e.brand_id IS DISTINCT FROM guapd_brand_id()));

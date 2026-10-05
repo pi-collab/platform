@@ -75,6 +75,7 @@ export async function resolveBroadcastAudience(
     .from('creators')
     .select('id, full_name, vetting_status')
     .in('vetting_status', AUDIENCE_STATUS[audience])
+    .eq('is_guapd', false) // never broadcast to the Guapd house account
     .order('full_name')
 
   const sent = await alreadySent(campaignId)

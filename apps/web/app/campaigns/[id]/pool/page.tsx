@@ -54,6 +54,7 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
       .from('creators')
       .select('id, full_name, handle, profile_photo_url, niches, location, social_accounts')
       .eq('is_bookable', true)
+      .eq('is_guapd', false)
       .eq('vetting_status', 'growth')
       .order('full_name'),
     supabase

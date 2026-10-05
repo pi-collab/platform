@@ -176,7 +176,9 @@ export default async function OpsCreatorsPage({ searchParams }: {
     if (!wantsPlace) return q
     return placeIds && placeIds.length ? (q.in('id', placeIds) as T) : (q.eq('id', NO_MATCH) as T)
   }
-  const applyAll = <T extends Q>(q: T): T => applyPlace(applySearch(applyIgStatus(applyShopfront(applyStatus(applyBands(q))))))
+  // The Guapd house account (is_guapd) is never an ops list row or count.
+  const applyHouse = <T extends Q>(q: T): T => q.eq('is_guapd', false) as T
+  const applyAll = <T extends Q>(q: T): T => applyHouse(applyPlace(applySearch(applyIgStatus(applyShopfront(applyStatus(applyBands(q)))))))
 
   const listQuery = applyAll(
     admin

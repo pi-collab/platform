@@ -55,6 +55,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     supabase
       .from('creators')
       .select('id, full_name, handle, profile_photo_url, niches, vetting_status')
+      .eq('is_guapd', false)
       .order('full_name'),
   ])
 

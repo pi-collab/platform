@@ -31,6 +31,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
     .from('brands')
     .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at')
     .eq('brand_status', 'pending_review')
+    .eq('is_guapd', false)
     .order('created_at', { ascending: false })
 
   // The name a brand is known by, plus the person ops would actually be looking
@@ -39,6 +40,7 @@ export default async function OpsBrandsPage({ searchParams }: { searchParams: { 
   const brandsQuery = admin
     .from('brands')
     .select('id, name, category, company_size, website, contact_name, contact_email, contact_phone, brand_status, created_at', { count: 'exact' })
+    .eq('is_guapd', false) // the Guapd house account is never an ops list row
     .order('created_at', { ascending: false })
 
   const { data: brands, error, count } = await (

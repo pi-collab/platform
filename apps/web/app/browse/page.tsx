@@ -70,6 +70,7 @@ export default async function BrowsePage() {
     .from('creators')
     .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, rate_card, vetting_status')
     .eq('is_bookable', true)
+    .eq('is_guapd', false) // the Guapd house account is never listed
     .order('full_name', { ascending: true })
 
   if (error) {

@@ -6790,3 +6790,12 @@ Run order: 0527 piece A → deploy the app → piece B (drops `deals.internal_no
 - [ ] Brand: campaign send with a draft note → the deal's note shows on the roster.
 - [ ] Brand B cannot see Brand A's note (RLS: `deal_brand_notes_read_brand`).
 - [ ] Production: same order, same test, before the production release.
+
+## 98. Experiences ops, stage 1: house accounts, request + quotes, ops frame (migration 0528, run by hand)
+
+- [ ] `scripts/check-house-hidden.ts` passes: one house brand and one house creator; the house creator is never bookable (trigger-derived) and has no login; absent from browse, the Growth pool, AI search (`loadCandidates`), the ops creators list and every count, the ops brands list and approval queue, and every broadcast audience; a signed-in brand cannot read it at all.
+- [ ] `experience_quotes`: brand reads its own Experience's quotes only (not another brand's, not the house brand's); creators read none; nobody writes from a session. `total_paise = per_video × count + misc` (CHECK); at most one open and one accepted quote per Experience.
+- [ ] `deals.experience_brand_name` only on a creator leg (CHECK); neither party can write it (guard 0520).
+- [ ] `/ops/experiences`: an ops admin WITHOUT `staff_access.experiences_operational` sees "No access"; outreach sees "No access"; signed out sees the ops sign-in screen. With operational access: hero + counters, status board (every status with a count, click to filter), lane tabs, list rows with one status chip each.
+- [ ] `/ops/experiences` is in the brand design (`.brand-main`, brand top bar), not the classic ops header. Every other `/ops` page keeps the classic header and gains an "Experiences" link (admins).
+- [ ] The list selects no price, margin, cost or internal note.
