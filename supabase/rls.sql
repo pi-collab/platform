@@ -1091,8 +1091,9 @@ CREATE POLICY usage_events_read_own
 --   * brand reads ONLY its own experiences (granted columns), roster (no money
 --     columns exist there) and service invoices. Never creator terms, margin,
 --     cost lines, vendors, payouts, follow-ons or internal notes.
---   * creator reads ONLY their own leg's terms (margin column not granted),
---     payouts to themselves, and their own follow-ons (margin not granted).
+--   * creator reads ONLY their own leg's terms, payouts to themselves, and
+--     their own follow-ons. Margin is not stored anywhere (0525): it is
+--     derived for the ops P&L in apps/web/lib/experience-money.ts.
 --   * Leg rows themselves are deals: deals_read already scopes them, because
 --     Leg 1's creator is the Guapd house creator and Leg 2's brand is the Guapd
 --     house brand.
@@ -1143,7 +1144,8 @@ REVOKE ALL ON deal_templates, experiences, experience_finance, experience_creato
 
 GRANT SELECT (id, brand_id, title, status, brand_service_total_paise, shoot_date, shoot_city, created_at, updated_at)
   ON experiences TO authenticated;
-GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise, created_at, updated_at)
+GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise,
+              platform_track, locked_at, created_at, updated_at)
   ON experience_creator_terms TO authenticated;
 GRANT SELECT (id, experience_id, creator_id, added_by, brand_decision, locked, decided_at, created_at, updated_at)
   ON experience_roster TO authenticated;
@@ -1151,7 +1153,8 @@ GRANT SELECT (id, experience_id, brand_id, kind, number, status, issue_date, due
               gst_rate_pct, cgst_paise, sgst_paise, igst_paise, tds_paise, total_paise,
               supplier_gstin, supplier_gstin_provisional, supplier_arn,
               recipient_legal_name, recipient_gstin, recipient_state, place_of_supply,
-              payment_reference, paid_at, created_at, updated_at)
+              payment_reference, paid_at, created_at, updated_at,
+              per_video_paise, deliverable_count, misc_paise, source)
   ON service_invoices TO authenticated;
 GRANT SELECT (id, experience_id, deal_id, reason, amount_paise, tds_paise, net_amount_paise, status, external_ref, paid_at, created_at, updated_at)
   ON vendor_payouts TO authenticated;
