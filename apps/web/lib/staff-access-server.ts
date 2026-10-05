@@ -36,3 +36,11 @@ export async function setStaffAccess(
     financial_after: next.financial,
   })
 }
+
+/** Every staff_access row, for the ops access screen. ADMIN ONLY callers. */
+export async function listStaffAccess(admin: SupabaseClient): Promise<{ user_id: string; experiences_operational: boolean; experiences_financial: boolean; updated_at: string }[]> {
+  const { data, error } = await admin.from('staff_access')
+    .select('user_id, experiences_operational, experiences_financial, updated_at')
+  if (error) throw new Error(`Could not read access: ${error.message}`)
+  return data ?? []
+}

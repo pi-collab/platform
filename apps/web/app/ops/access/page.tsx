@@ -1,5 +1,8 @@
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { listStaffAccess } from '@/lib/staff-access-server'
+import ExperienceAccessControl from './ExperienceAccessControl'
 
 export default async function OpsAccessPage() {
   const user = await verifyOpsAccess()
@@ -41,6 +44,32 @@ export default async function OpsAccessPage() {
      they hold the narrow role when they do not. */
   const adminSet = new Set(emails.map((e) => e.toLowerCase()))
   const alsoAdmin = outreach.filter((e) => adminSet.has(e.toLowerCase()))
+
+  /* Guapd Experiences access (staff_access, 0526). One row per USER ROW, not
+     per email: an email can have more than one account (a creator login and a
+     brand login), and access belongs to the account that signs in. Rows held
+     by anyone NOT on the admin list are shown too, flagged, so a stray grant
+     is visible and can be removed here. */
+  const admin = createAdminClient()
+  const access = await listStaffAccess(admin)
+  const accessByUser = new Map(access.map((a) => [a.user_id, a]))
+  const { data: adminUsers } = emails.length
+    ? await admin.from('users').select('id, email, role, created_at').in('email', emails)
+    : { data: [] as { id: string; email: string; role: string; created_at: string }[] }
+  const listedIds = new Set((adminUsers ?? []).map((u) => u.id))
+  const strayIds = access.filter((a) => !listedIds.has(a.user_id) && (a.experiences_operational || a.experiences_financial)).map((a) => a.user_id)
+  const { data: strayUsers } = strayIds.length
+    ? await admin.from('users').select('id, email, role, created_at').in('id', strayIds)
+    : { data: [] as { id: string; email: string; role: string; created_at: string }[] }
+  const levelOf = (id: string): 'none' | 'operational' | 'financial' => {
+    const a = accessByUser.get(id)
+    return a?.experiences_financial ? 'financial' : a?.experiences_operational ? 'operational' : 'none'
+  }
+  const accessRows = [
+    ...(adminUsers ?? []).map((u) => ({ ...u, onAdminList: true })),
+    ...(strayUsers ?? []).map((u) => ({ ...u, onAdminList: false })),
+  ].sort((a, b) => Number(b.onAdminList) - Number(a.onAdminList)
+    || orderPriority.indexOf(String(a.email).toLowerCase()) - orderPriority.indexOf(String(b.email).toLowerCase()))
 
   return (
     <div>
@@ -124,8 +153,45 @@ export default async function OpsAccessPage() {
         </p>
       )}
 
+      <h2 style={{ ...sectionHead, marginTop: '2rem' }}>Guapd Experiences access</h2>
+      <p style={sectionNote}>
+        Who can open the Guapd Experiences console in the brand portal. <strong>Operational</strong>: run
+        Experiences, rosters, creator legs and payouts. <strong>Financial</strong>: also the margin and P&amp;L.
+        Off for everyone by default, admins included, and only people on the admin list can be given it.
+        Every change is recorded in <code>ops_events</code>.
+      </p>
+      <table style={{ ...tableStyle, maxWidth: 720 }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Name</th>
+            <th style={thStyle}>Account</th>
+            <th style={thStyle}>Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          {accessRows.length === 0 && (
+            <tr><td style={tdStyle} colSpan={3}>No admin has signed in yet, so there is no account to grant.</td></tr>
+          )}
+          {accessRows.map((u) => (
+            <tr key={u.id}>
+              <td style={tdStyle}><strong>{nameMap[String(u.email).toLowerCase()] ?? '-'}</strong></td>
+              <td style={tdStyle}>
+                {u.email}
+                <div style={{ fontSize: '0.6875rem', color: '#888', marginTop: 2 }}>
+                  {u.role === 'creator' ? 'Creator account' : u.role === 'brand_member' ? 'Brand account' : u.role}
+                  {!u.onAdminList && <span style={{ color: '#b91c1c', fontWeight: 600 }}> &middot; not on the admin list: remove this access</span>}
+                </div>
+              </td>
+              <td style={tdStyle}>
+                <ExperienceAccessControl userId={u.id} level={levelOf(u.id)} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
       <p style={{ marginTop: '1.5rem', fontSize: '0.75rem', color: '#999' }}>
-        To change access, update <code>OPS_ALLOWED_EMAILS</code> or <code>OPS_OUTREACH_EMAILS</code> and redeploy.
+        To change who is an admin or outreach, update <code>OPS_ALLOWED_EMAILS</code> or <code>OPS_OUTREACH_EMAILS</code> and redeploy. Experiences access is set above.
       </p>
     </div>
   )

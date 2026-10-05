@@ -4,7 +4,6 @@ import SignOutButton from '@/components/SignOutButton'
 import OpsNavMenu from '@/components/ops/OpsNavMenu'
 import { resolveOpsActor } from '@/lib/ops-capabilities'
 import { createClient } from '@/lib/supabase/server'
-import { currentPath } from '@/lib/current-path'
 
 export const metadata = { title: 'Ops Console', robots: { index: false, follow: false } }
 
@@ -49,13 +48,6 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
     )
   }
 
-  /* The Experience screens are in the brand portal's design and bring their
-     own frame (app/ops/experiences/layout.tsx). They are still inside this
-     layout, so the sign-in screen above still applies; only the classic ops
-     header is skipped. The path only chooses a header: every Experience page
-     runs its own gate (experienceOpsGate). */
-  if ((currentPath() ?? '').startsWith('/ops/experiences')) return <>{children}</>
-
   return (
     <div className="ops-shell" style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
       {/* A pasted link or long handle is one unbreakable string; without this
@@ -83,7 +75,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
             { href: '/ops/brands', label: 'Brands', hint: 'Approvals and brand accounts' },
             ...(isAdmin ? [
               { href: '/ops/deals', label: 'Deals', hint: 'Every deal, fees and timelines' },
-              { href: '/ops/experiences', label: 'Experiences', hint: 'Done-for-you shoots Guapd runs' },
+              { href: '/guapd/experiences', label: 'Guapd Experiences', hint: 'The staff console, in the brand portal' },
               { href: '/ops/offers', label: 'Offer Links', hint: 'Links for open offers' },
             ] : []),
           ] },

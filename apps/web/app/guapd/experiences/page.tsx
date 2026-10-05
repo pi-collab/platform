@@ -1,18 +1,22 @@
 import Link from 'next/link'
 import StatusChip from '@/components/StatusChip'
-import { experienceOpsGate } from '@/lib/experience-ops-auth'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { experienceStaffGate } from '@/lib/experience-staff-auth'
+import { listConsoleExperiences, type ConsoleExperienceRow } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus, type ExperienceStatus } from '@/lib/experience-status'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Experiences: the list and the status board. Statuses only; the detail
- * screens arrive in later stages.
+ * Guapd Experiences (STAFF console): every Experience across every brand, as a
+ * list and a status board. Statuses only; detail screens arrive in later stages.
  *
- * Read with the service role AFTER experienceOpsGate (ops admin + operational
- * access), with an explicit column list: no price, no margin, no cost and no
- * internal note is selected here, so nothing this page renders can leak them.
+ * Gated twice: experienceStaffGate (ops admin + operational access) decides
+ * whether to render, and the list itself comes from experience_console_list()
+ * (0529), which checks the caller's access again in the database. The function
+ * returns no price, margin, cost or internal note, so this page cannot leak one.
+ *
+ * The brand-facing view of a brand's own Experiences will live at /experiences;
+ * it is a different face with different scoping and does not use this page.
  */
 const LANES = [
   ['all', 'All'],
@@ -22,31 +26,16 @@ const LANES = [
 ] as const
 type Lane = (typeof LANES)[number][0]
 
-interface Row {
-  id: string
-  title: string
-  status: string
-  shoot_date: string | null
-  shoot_city: string | null
-  request_location: string | null
-  request_date_from: string | null
-  request_date_to: string | null
-  request_deliverables: { type?: string; count?: number }[] | null
-  created_at: string
-  brands: { name: string } | { name: string }[] | null
-}
+type Row = ConsoleExperienceRow
+const BASE = '/guapd/experiences'
 
 export default async function ExperiencesPage({ searchParams }: { searchParams: { lane?: string; status?: string } }) {
-  const gate = await experienceOpsGate()
+  const gate = await experienceStaffGate()
   if (!gate.ok) return <NoAccess reason={gate.reason} />
 
-  const { data, error } = await createAdminClient()
-    .from('experiences')
-    .select('id, title, status, shoot_date, shoot_city, request_location, request_date_from, request_date_to, request_deliverables, created_at, brands(name)')
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  const rows = (data ?? []) as Row[]
+  const list = await listConsoleExperiences()
+  const rows = list.ok ? list.rows : []
+  const error = list.ok ? null : { message: list.error }
   const lane = (LANES.some(([k]) => k === searchParams.lane) ? searchParams.lane : 'all') as Lane
   const statusFilter = EXPERIENCE_STATUSES.includes(searchParams.status as ExperienceStatus) ? searchParams.status : null
 
@@ -64,13 +53,13 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
             Guapd <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>experiences</span>
           </h1>
           <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
-            Done-for-you shoots Guapd runs for brands, newest first.
+            Every done-for-you shoot Guapd runs, across all brands, newest first.
           </p>
         </div>
 
         <div className="xp-kpis" style={kpiPlate}>
           {(['intake', 'in_flight', 'done'] as const).map((l, i) => (
-            <Link key={l} href={`/ops/experiences?lane=${l}`} style={{ ...kpiCell, borderLeft: i ? '1px solid var(--hair)' : 'none', textDecoration: 'none', color: 'inherit' }}>
+            <Link key={l} href={`${BASE}?lane=${l}`} style={{ ...kpiCell, borderLeft: i ? '1px solid var(--hair)' : 'none', textDecoration: 'none', color: 'inherit' }}>
               <div style={kpiLabel}>{LANES.find(([k]) => k === l)![1]}</div>
               <div style={kpiValue}>{laneCount(l)}</div>
             </Link>
@@ -87,7 +76,7 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
             const st = experienceStatus(s)
             const active = statusFilter === s
             return (
-              <Link key={s} href={active ? '/ops/experiences' : `/ops/experiences?status=${s}`} aria-pressed={active}
+              <Link key={s} href={active ? BASE : `${BASE}?status=${s}`} aria-pressed={active}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', borderRadius: 999, padding: 3, outline: active ? '2px solid var(--ink)' : 'none' }}>
                 <StatusChip label={st.label} tone={st.tone} />
                 <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums', paddingRight: 6 }}>
@@ -105,7 +94,7 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
           {LANES.map(([k, label]) => {
             const active = !statusFilter && lane === k
             return (
-              <Link key={k} href={k === 'all' ? '/ops/experiences' : `/ops/experiences?lane=${k}`}
+              <Link key={k} href={k === 'all' ? BASE : `${BASE}?lane=${k}`}
                 style={active ? { ...tab, background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' } : tab}>
                 {label} <span style={{ opacity: 0.6, marginLeft: 4 }}>{laneCount(k)}</span>
               </Link>
@@ -146,8 +135,8 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
 
 function ExperienceRow({ r, first }: { r: Row; first: boolean }) {
   const st = experienceStatus(r.status)
-  const brand = Array.isArray(r.brands) ? r.brands[0]?.name : r.brands?.name
-  const videos = (r.request_deliverables ?? []).reduce((n, d) => n + (Number(d.count) || 0), 0)
+  const brand = r.brand_name
+  const videos = r.requested_videos
   const where = r.shoot_city ?? r.request_location
   const when = r.shoot_date ? fmtDate(r.shoot_date)
     : r.request_date_from ? (r.request_date_to && r.request_date_to !== r.request_date_from ? `${fmtDate(r.request_date_from)} – ${fmtDate(r.request_date_to)}` : fmtDate(r.request_date_from))
@@ -175,7 +164,7 @@ function NoAccess({ reason }: { reason: 'not_ops' | 'no_operational_access' }) {
         <h1 style={{ ...h1, fontSize: 30 }}>No access to Experiences</h1>
         <p className="t-body" style={{ margin: '10px 0 0' }}>
           {reason === 'not_ops'
-            ? 'Experiences are run by the Guapd ops team.'
+            ? 'Guapd Experiences is for the Guapd team.'
             : 'Experience access is granted per person by a Guapd admin, and has not been turned on for your account.'}
         </p>
       </section>

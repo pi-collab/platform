@@ -6799,3 +6799,13 @@ Run order: 0527 piece A → deploy the app → piece B (drops `deals.internal_no
 - [ ] `/ops/experiences`: an ops admin WITHOUT `staff_access.experiences_operational` sees "No access"; outreach sees "No access"; signed out sees the ops sign-in screen. With operational access: hero + counters, status board (every status with a count, click to filter), lane tabs, list rows with one status chip each.
 - [ ] `/ops/experiences` is in the brand design (`.brand-main`, brand top bar), not the classic ops header. Every other `/ops` page keeps the classic header and gains an "Experiences" link (admins).
 - [ ] The list selects no price, margin, cost or internal note.
+
+## 99. Guapd Experiences staff console in the brand portal (migration 0529, run by hand)
+
+Two faces of Experiences: the STAFF console at `/guapd/experiences` (now) and the brand's own view at `/experiences` (later, brand RLS only). Access is set on `/ops/access`.
+
+- [ ] `scripts/test-experience-console-access.ts` passes: staff with operational access get the list (every brand), no money/cost/rate/note column; a user with no access, a real brand, a creator, anonymous and the service role are all refused by `experience_console_list()`; turning operational off refuses at once.
+- [ ] Brand nav: the "Guapd Experiences" tab shows only for an ops admin with operational access. A staff member with no brand sees only that tab (no Deals/Campaigns/Browse/inbox/bell/brand menu); a staff member with a brand sees both. Brands, signed-out visitors on /pricing and users mid-onboarding see the nav exactly as before.
+- [ ] A real brand opening `/guapd/experiences` directly sees "No access", and the list function refuses them if called directly.
+- [ ] `/ops/access` → "Guapd Experiences access": one row per account of each admin email (creator and brand accounts listed separately), None / Operational / Financial; Financial asks to confirm; a grant to someone not on the admin list is refused; any access held by a non-admin account is listed and flagged for removal; every change writes `staff_access.set` to `ops_events`.
+- [ ] `/ops/experiences` no longer exists; the ops menu "Guapd Experiences" opens `/guapd/experiences`.

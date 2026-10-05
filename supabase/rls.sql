@@ -1311,3 +1311,28 @@ DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
 CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_quotes.experience_id
                  AND e.brand_id = my_brand_id() AND e.brand_id IS DISTINCT FROM guapd_brand_id()));
+
+-- ── 0529: Guapd Experiences staff console list ──────────────────────────────
+CREATE OR REPLACE FUNCTION experience_console_list()
+RETURNS TABLE (id uuid, title text, status text, brand_name text, shoot_date date, shoot_city text,
+               request_location text, request_date_from date, request_date_to date,
+               requested_videos int, created_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  IF NOT has_experience_access('operational') THEN
+    RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT e.id, e.title, e.status, b.name, e.shoot_date, e.shoot_city,
+           e.request_location, e.request_date_from, e.request_date_to,
+           coalesce((SELECT sum(CASE WHEN (d ->> 'count') ~ '^[0-9]+$' THEN (d ->> 'count')::int ELSE 0 END)
+                     FROM jsonb_array_elements(e.request_deliverables) d), 0)::int,
+           e.created_at
+    FROM experiences e JOIN brands b ON b.id = e.brand_id
+    ORDER BY e.created_at DESC
+    LIMIT 500;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION experience_console_list() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_list() TO authenticated;
