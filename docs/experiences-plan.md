@@ -119,6 +119,44 @@ service invoice work (Phase 4), not with Razorpay:
 7. Per-day rate on packages page; city/state filter on `/browse`; age bracket on
    Experience creators.
 
+## Margin: definition (awaiting Palak's answer) and access (to build with it)
+
+**Definition, open:** Palak asked to store brand − Σ creator GROSS − Σ costs (₹42,500.02
+on the staging test data) as `guapd_margin`, AND specified a display where sub-total
+(that figure) + platform fee kept = Guapd margin, reconciling to brand − Σ creator NET −
+costs (₹81,500.02). The two conflict; asked which is "Guapd margin". Recommended: the
+display as written (sub-total ₹42,500.02 + fee kept ₹39,000 = margin ₹81,500.02). The
+platform fee is always summed PER LEG at each leg's own % (5 Growth + 2 Deals at ₹10k
+→ ₹18,000, never a blanket 30%). Also asked: "store" reverses Phase 2's "derived, never
+stored"; if stored, it is an ops-only P&L snapshot, never an invoice input.
+
+**Access: OPERATIONAL vs FINANCIAL, enforced in the database:**
+| Who | Sees |
+|---|---|
+| Brand, creator | never margin, payouts or costs (already enforced, Phase 1 RLS) |
+| Outreach (incl. the Cloutflow contractor) | nothing on Experiences (no capability) |
+| Operational, per person | deliverables, dates, roster, messages, creator payouts. NOT margin / P&L |
+| Financial, OPT-IN per person | the P&L: brand paid, costs, fee kept, margin. Never default-on, not even for admins or managers |
+
+Why a role check in app code is not enough: ops server code uses the service role,
+which bypasses every grant and policy, so "hide it in the UI" or "check the role in the
+action" both fail open to any future service-role query. Design:
+- `staff_access` table (user, `experiences_operational`, `experiences_financial`,
+  granted_by, granted_at), service-role-written by an admin action that writes
+  ops_events, no user access. Financial is false for everyone until set per person.
+- The P&L is reachable ONLY through a SECURITY DEFINER function (e.g.
+  `experience_pnl(experience_id)`) called with the CALLER's session, not the service
+  role. It checks `staff_access.experiences_financial` for `auth.uid()` in Postgres
+  and raises otherwise. Margin inputs/outputs are never selected by service-role code
+  paths for display.
+- Operational payout views go through the same pattern with `experiences_operational`.
+- Guard rail: a repo test fails if any app code selects margin/P&L tables or calls the
+  P&L maths outside that function's server action, so a new service-role read cannot
+  quietly reopen it. Honest limit: the service role can still read raw tables; this
+  makes doing so deliberate and visible, not impossible.
+- Tests: outreach session → refused; operational session → payouts yes, P&L refused;
+  financial session → P&L; brand/creator → refused.
+
 ## Phase 2.5 — brand-end Experience report (SCOPED, not built; awaits review)
 A read-only report for the brand on its Experience, with its own RLS surface:
 - **Shows:** the brand's service invoice(s) (number, kind, per-video × count + misc,
@@ -133,14 +171,23 @@ A read-only report for the brand on its Experience, with its own RLS surface:
 - **Tests:** the brand can read its report; the report payload contains no money field
   other than its own invoices; another brand gets nothing; a creator gets nothing.
 
+## Later phase — Experience budgeting (SCOPED ONLY, not scheduled)
+- Once the brand's fund is received, allocate it across categories on the Experience
+  portal (creators, travel, makeup, editing, buffer, …) as PROVISIONAL amounts; work
+  against them during the project; after finalisation enter FINAL actuals.
+- Show budget vs actual (variance) per category, and provisional vs final margin.
+- Same access rule: financial, opt-in per person.
+- **Schema flag (not changed now):** `experience_cost_lines` is FINAL-ONLY today: one
+  `quantity`, `unit_rate_paise`, `total_paise` per line. Provisional vs final needs
+  either a `stage` column (provisional | final) with a line per stage, or paired
+  `provisional_*` / `final_*` columns. Budgeting will need a migration for this; flagged
+  per Palak's instruction, not altered in Phase 2.
+
 ## Separate workstreams (not Experiences)
-- `lib/fee.ts calculateFee` float rounding: an exact half paisa can round DOWN on
-  non-integer rates (33.3% of 7,500p). Fixing it changes 2 baseline cases, so it needs a
-  deliberate decision and a re-baseline. Experiences use integer track rates and are
-  unaffected.
+- ✅ FIXED 2026-10-05: `calculateFee` float rounding (an exact half paisa rounded down on
+  fractional rates). One rule now in `lib/money-round.ts`, shared with Experience money;
+  baseline byte-identical without re-baselining.
 - Fee collection on marketplace (direct-pay) deals: nothing collects Guapd's fee today.
-- Margin definition: Palak specified brand − Σ creator gross − Σ costs; the cash view
-  (− Σ creator NET) is also computed. Confirm which is "margin" for the P&L.
 - Legal: lawyer finalises /privacy and /terms; /terms §7 fee wording.
 - Playbook copy (Palak).
 - Remaining pre-existing bugs from the investigation (counters dropping add-ons, campaign
