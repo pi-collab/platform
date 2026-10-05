@@ -1,0 +1,975 @@
+{
+  "calc:0:0:on_top": {
+    "base_paise": 0,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:0:deducted": {
+    "base_paise": 0,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:10:on_top": {
+    "base_paise": 0,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:10:deducted": {
+    "base_paise": 0,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:12.5:on_top": {
+    "base_paise": 0,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:12.5:deducted": {
+    "base_paise": 0,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:15:on_top": {
+    "base_paise": 0,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:15:deducted": {
+    "base_paise": 0,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:20:on_top": {
+    "base_paise": 0,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:20:deducted": {
+    "base_paise": 0,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:30:on_top": {
+    "base_paise": 0,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:30:deducted": {
+    "base_paise": 0,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:33.3:on_top": {
+    "base_paise": 0,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:0:33.3:deducted": {
+    "base_paise": 0,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 0,
+    "creator_receives_paise": 0
+  },
+  "calc:1:0:on_top": {
+    "base_paise": 1,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:0:deducted": {
+    "base_paise": 1,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:10:on_top": {
+    "base_paise": 1,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:10:deducted": {
+    "base_paise": 1,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:12.5:on_top": {
+    "base_paise": 1,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:12.5:deducted": {
+    "base_paise": 1,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:15:on_top": {
+    "base_paise": 1,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:15:deducted": {
+    "base_paise": 1,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:20:on_top": {
+    "base_paise": 1,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:20:deducted": {
+    "base_paise": 1,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:30:on_top": {
+    "base_paise": 1,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:30:deducted": {
+    "base_paise": 1,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:33.3:on_top": {
+    "base_paise": 1,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:1:33.3:deducted": {
+    "base_paise": 1,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1,
+    "creator_receives_paise": 1
+  },
+  "calc:99:0:on_top": {
+    "base_paise": 99,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 99
+  },
+  "calc:99:0:deducted": {
+    "base_paise": 99,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 99
+  },
+  "calc:99:10:on_top": {
+    "base_paise": 99,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 10,
+    "brand_pays_paise": 109,
+    "creator_receives_paise": 99
+  },
+  "calc:99:10:deducted": {
+    "base_paise": 99,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 10,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 89
+  },
+  "calc:99:12.5:on_top": {
+    "base_paise": 99,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 12,
+    "brand_pays_paise": 111,
+    "creator_receives_paise": 99
+  },
+  "calc:99:12.5:deducted": {
+    "base_paise": 99,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 12,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 87
+  },
+  "calc:99:15:on_top": {
+    "base_paise": 99,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 15,
+    "brand_pays_paise": 114,
+    "creator_receives_paise": 99
+  },
+  "calc:99:15:deducted": {
+    "base_paise": 99,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 15,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 84
+  },
+  "calc:99:20:on_top": {
+    "base_paise": 99,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 20,
+    "brand_pays_paise": 119,
+    "creator_receives_paise": 99
+  },
+  "calc:99:20:deducted": {
+    "base_paise": 99,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 20,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 79
+  },
+  "calc:99:30:on_top": {
+    "base_paise": 99,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 30,
+    "brand_pays_paise": 129,
+    "creator_receives_paise": 99
+  },
+  "calc:99:30:deducted": {
+    "base_paise": 99,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 30,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 69
+  },
+  "calc:99:33.3:on_top": {
+    "base_paise": 99,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 33,
+    "brand_pays_paise": 132,
+    "creator_receives_paise": 99
+  },
+  "calc:99:33.3:deducted": {
+    "base_paise": 99,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 33,
+    "brand_pays_paise": 99,
+    "creator_receives_paise": 66
+  },
+  "calc:100:0:on_top": {
+    "base_paise": 100,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 100
+  },
+  "calc:100:0:deducted": {
+    "base_paise": 100,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 100
+  },
+  "calc:100:10:on_top": {
+    "base_paise": 100,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 10,
+    "brand_pays_paise": 110,
+    "creator_receives_paise": 100
+  },
+  "calc:100:10:deducted": {
+    "base_paise": 100,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 10,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 90
+  },
+  "calc:100:12.5:on_top": {
+    "base_paise": 100,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 13,
+    "brand_pays_paise": 113,
+    "creator_receives_paise": 100
+  },
+  "calc:100:12.5:deducted": {
+    "base_paise": 100,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 13,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 87
+  },
+  "calc:100:15:on_top": {
+    "base_paise": 100,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 15,
+    "brand_pays_paise": 115,
+    "creator_receives_paise": 100
+  },
+  "calc:100:15:deducted": {
+    "base_paise": 100,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 15,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 85
+  },
+  "calc:100:20:on_top": {
+    "base_paise": 100,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 20,
+    "brand_pays_paise": 120,
+    "creator_receives_paise": 100
+  },
+  "calc:100:20:deducted": {
+    "base_paise": 100,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 20,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 80
+  },
+  "calc:100:30:on_top": {
+    "base_paise": 100,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 30,
+    "brand_pays_paise": 130,
+    "creator_receives_paise": 100
+  },
+  "calc:100:30:deducted": {
+    "base_paise": 100,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 30,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 70
+  },
+  "calc:100:33.3:on_top": {
+    "base_paise": 100,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 33,
+    "brand_pays_paise": 133,
+    "creator_receives_paise": 100
+  },
+  "calc:100:33.3:deducted": {
+    "base_paise": 100,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 33,
+    "brand_pays_paise": 100,
+    "creator_receives_paise": 67
+  },
+  "calc:333:0:on_top": {
+    "base_paise": 333,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 333
+  },
+  "calc:333:0:deducted": {
+    "base_paise": 333,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 333
+  },
+  "calc:333:10:on_top": {
+    "base_paise": 333,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 33,
+    "brand_pays_paise": 366,
+    "creator_receives_paise": 333
+  },
+  "calc:333:10:deducted": {
+    "base_paise": 333,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 33,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 300
+  },
+  "calc:333:12.5:on_top": {
+    "base_paise": 333,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 42,
+    "brand_pays_paise": 375,
+    "creator_receives_paise": 333
+  },
+  "calc:333:12.5:deducted": {
+    "base_paise": 333,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 42,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 291
+  },
+  "calc:333:15:on_top": {
+    "base_paise": 333,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 50,
+    "brand_pays_paise": 383,
+    "creator_receives_paise": 333
+  },
+  "calc:333:15:deducted": {
+    "base_paise": 333,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 50,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 283
+  },
+  "calc:333:20:on_top": {
+    "base_paise": 333,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 67,
+    "brand_pays_paise": 400,
+    "creator_receives_paise": 333
+  },
+  "calc:333:20:deducted": {
+    "base_paise": 333,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 67,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 266
+  },
+  "calc:333:30:on_top": {
+    "base_paise": 333,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 100,
+    "brand_pays_paise": 433,
+    "creator_receives_paise": 333
+  },
+  "calc:333:30:deducted": {
+    "base_paise": 333,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 100,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 233
+  },
+  "calc:333:33.3:on_top": {
+    "base_paise": 333,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 111,
+    "brand_pays_paise": 444,
+    "creator_receives_paise": 333
+  },
+  "calc:333:33.3:deducted": {
+    "base_paise": 333,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 111,
+    "brand_pays_paise": 333,
+    "creator_receives_paise": 222
+  },
+  "calc:1000000:0:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:0:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:10:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 100000,
+    "brand_pays_paise": 1100000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:10:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 100000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 900000
+  },
+  "calc:1000000:12.5:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 125000,
+    "brand_pays_paise": 1125000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:12.5:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 125000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 875000
+  },
+  "calc:1000000:15:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 150000,
+    "brand_pays_paise": 1150000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:15:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 150000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 850000
+  },
+  "calc:1000000:20:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 200000,
+    "brand_pays_paise": 1200000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:20:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 200000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 800000
+  },
+  "calc:1000000:30:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 300000,
+    "brand_pays_paise": 1300000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:30:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 300000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 700000
+  },
+  "calc:1000000:33.3:on_top": {
+    "base_paise": 1000000,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 333000,
+    "brand_pays_paise": 1333000,
+    "creator_receives_paise": 1000000
+  },
+  "calc:1000000:33.3:deducted": {
+    "base_paise": 1000000,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 333000,
+    "brand_pays_paise": 1000000,
+    "creator_receives_paise": 667000
+  },
+  "calc:2500050:0:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:0:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:10:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 250005,
+    "brand_pays_paise": 2750055,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:10:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 250005,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2250045
+  },
+  "calc:2500050:12.5:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 312506,
+    "brand_pays_paise": 2812556,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:12.5:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 312506,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2187544
+  },
+  "calc:2500050:15:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 375008,
+    "brand_pays_paise": 2875058,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:15:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 375008,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2125042
+  },
+  "calc:2500050:20:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 500010,
+    "brand_pays_paise": 3000060,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:20:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 500010,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 2000040
+  },
+  "calc:2500050:30:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 750015,
+    "brand_pays_paise": 3250065,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:30:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 750015,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 1750035
+  },
+  "calc:2500050:33.3:on_top": {
+    "base_paise": 2500050,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 832517,
+    "brand_pays_paise": 3332567,
+    "creator_receives_paise": 2500050
+  },
+  "calc:2500050:33.3:deducted": {
+    "base_paise": 2500050,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 832517,
+    "brand_pays_paise": 2500050,
+    "creator_receives_paise": 1667533
+  },
+  "calc:99999999:0:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 0,
+    "fee_mode": "on_top",
+    "fee_paise": 0,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:0:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 0,
+    "fee_mode": "deducted",
+    "fee_paise": 0,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:10:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 10,
+    "fee_mode": "on_top",
+    "fee_paise": 10000000,
+    "brand_pays_paise": 109999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:10:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 10,
+    "fee_mode": "deducted",
+    "fee_paise": 10000000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 89999999
+  },
+  "calc:99999999:12.5:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 12.5,
+    "fee_mode": "on_top",
+    "fee_paise": 12500000,
+    "brand_pays_paise": 112499999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:12.5:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 12.5,
+    "fee_mode": "deducted",
+    "fee_paise": 12500000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 87499999
+  },
+  "calc:99999999:15:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 15,
+    "fee_mode": "on_top",
+    "fee_paise": 15000000,
+    "brand_pays_paise": 114999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:15:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 15,
+    "fee_mode": "deducted",
+    "fee_paise": 15000000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 84999999
+  },
+  "calc:99999999:20:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 20,
+    "fee_mode": "on_top",
+    "fee_paise": 20000000,
+    "brand_pays_paise": 119999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:20:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 20,
+    "fee_mode": "deducted",
+    "fee_paise": 20000000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 79999999
+  },
+  "calc:99999999:30:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 30,
+    "fee_mode": "on_top",
+    "fee_paise": 30000000,
+    "brand_pays_paise": 129999999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:30:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 30,
+    "fee_mode": "deducted",
+    "fee_paise": 30000000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 69999999
+  },
+  "calc:99999999:33.3:on_top": {
+    "base_paise": 99999999,
+    "fee_percent": 33.3,
+    "fee_mode": "on_top",
+    "fee_paise": 33300000,
+    "brand_pays_paise": 133299999,
+    "creator_receives_paise": 99999999
+  },
+  "calc:99999999:33.3:deducted": {
+    "base_paise": 99999999,
+    "fee_percent": 33.3,
+    "fee_mode": "deducted",
+    "fee_paise": 33300000,
+    "brand_pays_paise": 99999999,
+    "creator_receives_paise": 66699999
+  },
+  "resolve:standard_deducted": {
+    "feePercent": 15,
+    "feeMode": "deducted",
+    "basis": "brand_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:standard_on_top": {
+    "feePercent": 15,
+    "feeMode": "on_top",
+    "basis": "brand_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:custom_brand_rate": {
+    "feePercent": 12,
+    "feeMode": "deducted",
+    "basis": "brand_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:ops_pair_rate": {
+    "feePercent": 8,
+    "feeMode": "on_top",
+    "basis": "ops_pair_rate",
+    "storefrontFirstDeal": false,
+    "opsOverride": true
+  },
+  "resolve:ops_pair_rate_zero": {
+    "feePercent": 0,
+    "feeMode": "deducted",
+    "basis": "ops_pair_rate",
+    "storefrontFirstDeal": false,
+    "opsOverride": true
+  },
+  "resolve:ops_pair_rate_beats_growth": {
+    "feePercent": 10,
+    "feeMode": "on_top",
+    "basis": "ops_pair_rate",
+    "storefrontFirstDeal": false,
+    "opsOverride": true
+  },
+  "resolve:storefront_first_deal": {
+    "feePercent": 0,
+    "feeMode": "deducted",
+    "basis": "storefront_first_deal",
+    "storefrontFirstDeal": true,
+    "opsOverride": false
+  },
+  "resolve:storefront_not_first": {
+    "feePercent": 15,
+    "feeMode": "deducted",
+    "basis": "brand_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:guapd_origin": {
+    "feePercent": 15,
+    "feeMode": "deducted",
+    "basis": "brand_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:growth_track": {
+    "feePercent": 30,
+    "feeMode": "deducted",
+    "basis": "growth_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  },
+  "resolve:growth_track_deducted_brand": {
+    "feePercent": 30,
+    "feeMode": "deducted",
+    "basis": "growth_standard",
+    "storefrontFirstDeal": false,
+    "opsOverride": false
+  }
+}
