@@ -50,6 +50,46 @@ Shown per audience:
   `RAZORPAYX_KEY_ID`, `RAZORPAYX_KEY_SECRET`, `RAZORPAYX_ACCOUNT_NUMBER`, webhook secret;
   a contact + fund account per vendor; webhook route; funded account.
 
+## Isolation: existing deals must not change
+- Experience margin code lives on the two-leg path only. Existing brand↔creator deals
+  never call `resolveDealFee` with Experience settings and never reach the two-leg branch;
+  the margin calculation is a separate function, not a new rung on the existing ladder.
+- **Guard:** `scripts/test-fee-golden.ts` holds a 123-case baseline of today's
+  `calculateFee` and `resolveDealFee`, captured 2026-10-05 before any Experience code.
+  It must pass, byte-identical, after Phase 2 and after every later phase. Re-baselining
+  is allowed only for a deliberate fee change, never to clear a diff.
+- **Guard:** `scripts/walk-deal-guard.ts` (45 transitions) re-runs on staging after each
+  phase; every legit move must still be allowed.
+
+## Razorpay is ADDITIVE; the manual flow stays
+- The `razorpayx` provider is built alongside, behind `PayoutProvider`. The existing
+  manual "mark as paid" flow (marketplace deals) and the manual payout provider
+  (Experiences) are NOT removed or altered. They keep working until Razorpay is live and
+  verified, and remain as the fallback after.
+- The real "paid" WhatsApp and reference fire from Razorpay's payout-success webhook only.
+  Until then the manual path stands, with its truthful wording.
+- **KYC:** done with Razorpay for each creator/vendor where required, as part of the
+  Razorpay integration (not before).
+
+## Two separate settings schemas (never merged)
+Brand settings are for INVOICING the brand. Creator settings are for PAYING the creator.
+
+**Brand company / tax settings: needed SOONER (we invoice Kiro now).** Build with the
+service invoice work (Phase 4), not with Razorpay:
+- legal entity name, billing address, state (drives IGST vs CGST+SGST), GSTIN, PAN;
+- optional verification uploads: GST certificate, certificate of incorporation. Stored,
+  non-blocking;
+- Guapd's own GSTIN on the invoice is marked provisional until our GST registration comes
+  through.
+- **Never collect brand bank-account details.** Money flows brand → Guapd → creator; we
+  never debit a brand to pay a creator. Holding brand bank details would be
+  payment-aggregator risk.
+
+**Creator payout settings: later, in the RazorpayX phase:**
+- bank account number, IFSC, PAN, GST-registered yes/no (and KYC via Razorpay);
+- today only `creators.upi_id` exists. It expands into `vendor_payout_details`
+  (service-role only, off `creators`) at that point.
+
 ## Phases (strict order; stop and review after each)
 0. ✅ Security + truth fixes (0520, 0521; copy; legal pages factual + "pending legal review").
 1. Schema + RLS, migrations 0520+ → actually **0522+**, run by hand, verified via
