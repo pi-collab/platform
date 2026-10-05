@@ -271,28 +271,30 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  is_brand   boolean := OLD.brand_id = my_brand_id();
-  is_creator boolean := OLD.creator_id = my_creator_id();
-  -- Touched by other triggers or stamped on acceptance; never a user's lever.
-  always_ok  text[]  := ARRAY['updated_at', 'agreed_at', 'completed_at'];
-  allowed    text[];
-  ok_status  boolean;
+  is_brand      boolean;
+  is_creator    boolean;
+  accepting     boolean;
+  ok_status     boolean;
+  posted_change boolean;
+  allowed       text[];
 BEGIN
   IF current_user NOT IN ('authenticated', 'anon') THEN
     RETURN NEW;
   END IF;
 
+  is_brand   := coalesce(OLD.brand_id = my_brand_id(), false);
+  is_creator := coalesce(OLD.creator_id = my_creator_id(), false);
+  accepting  := (OLD.status = 'negotiating' AND NEW.status = 'agreed');
+
   IF is_brand THEN
-    allowed := always_ok || ARRAY[
-      'title', 'internal_note', 'campaign_id',
-      'shipment_status', 'tracking_link', 'carrier_note', 'shipped_at',
-      'status', 'price_paise', 'rights_confirmed_at'
-    ];
+    allowed := ARRAY['updated_at', 'agreed_at', 'completed_at',
+                     'title', 'internal_note', 'campaign_id',
+                     'shipment_status', 'tracking_link', 'carrier_note', 'shipped_at',
+                     'status', 'price_paise', 'rights_confirmed_at'];
   ELSIF is_creator THEN
-    allowed := always_ok || ARRAY[
-      'shipping_address', 'is_posted', 'posted_url', 'posted_at',
-      'status', 'price_paise', 'rights_confirmed_at'
-    ];
+    allowed := ARRAY['updated_at', 'agreed_at', 'completed_at',
+                     'shipping_address', 'is_posted', 'posted_url', 'posted_at',
+                     'status', 'price_paise', 'rights_confirmed_at'];
   ELSE
     RAISE EXCEPTION 'Not a party to this deal' USING ERRCODE = '42501';
   END IF;
@@ -301,45 +303,43 @@ BEGIN
     RAISE EXCEPTION 'This change is not allowed on a deal' USING ERRCODE = '42501';
   END IF;
 
-  -- ── Status: only the moves the app makes ──
+  -- Status: only the moves the app makes
   IF NEW.status IS DISTINCT FROM OLD.status THEN
-    ok_status := CASE
-      WHEN is_brand THEN
-           (OLD.status = 'negotiating' AND NEW.status IN ('agreed', 'cancelled'))   -- accept counter; createDeal rollback
-        OR (OLD.status IN ('delivered', 'revision') AND NEW.status = 'approved')    -- approve all items
-      WHEN is_creator THEN
-           (OLD.status = 'negotiating' AND NEW.status IN ('agreed', 'declined'))    -- accept / decline
-        OR (OLD.status IN ('agreed', 'revision') AND NEW.status = 'delivered')      -- submit for review
-      ELSE false
-    END;
+    IF is_brand THEN
+      ok_status := accepting
+                OR (OLD.status = 'negotiating' AND NEW.status = 'cancelled')
+                OR (OLD.status IN ('delivered', 'revision') AND NEW.status = 'approved');
+    ELSE
+      ok_status := accepting
+                OR (OLD.status = 'negotiating' AND NEW.status = 'declined')
+                OR (OLD.status IN ('agreed', 'revision') AND NEW.status = 'delivered');
+    END IF;
     IF NOT ok_status THEN
-      RAISE EXCEPTION 'A deal cannot move from % to % this way', OLD.status, NEW.status
-        USING ERRCODE = '42501';
+      RAISE EXCEPTION 'A deal cannot move from % to % this way', OLD.status, NEW.status USING ERRCODE = '42501';
     END IF;
   END IF;
 
-  -- ── Price: only by accepting a counter ──
-  IF NEW.price_paise IS DISTINCT FROM OLD.price_paise
-     AND NOT (OLD.status = 'negotiating' AND NEW.status = 'agreed') THEN
+  -- Price and rights: only by accepting
+  IF NEW.price_paise IS DISTINCT FROM OLD.price_paise AND NOT accepting THEN
     RAISE EXCEPTION 'The price changes only by accepting a counter offer' USING ERRCODE = '42501';
   END IF;
-
-  -- ── Rights confirmation: only alongside acceptance ──
-  IF NEW.rights_confirmed_at IS DISTINCT FROM OLD.rights_confirmed_at
-     AND NOT (OLD.status = 'negotiating' AND NEW.status = 'agreed') THEN
+  IF NEW.rights_confirmed_at IS DISTINCT FROM OLD.rights_confirmed_at AND NOT accepting THEN
     RAISE EXCEPTION 'Rights are confirmed only when the deal is agreed' USING ERRCODE = '42501';
   END IF;
 
-  -- ── Posted: once the work is approved, never before ──
-  IF (NEW.is_posted, NEW.posted_url, NEW.posted_at) IS DISTINCT FROM (OLD.is_posted, OLD.posted_url, OLD.posted_at)
-     AND OLD.status NOT IN ('approved', 'paid', 'complete') THEN
+  -- Posted: once the work is approved, never before
+  posted_change := NEW.is_posted IS DISTINCT FROM OLD.is_posted
+                OR NEW.posted_url IS DISTINCT FROM OLD.posted_url
+                OR NEW.posted_at IS DISTINCT FROM OLD.posted_at;
+  IF posted_change AND OLD.status NOT IN ('approved', 'paid', 'complete') THEN
     RAISE EXCEPTION 'Mark as posted only after the content is approved' USING ERRCODE = '42501';
   END IF;
 
-  -- ── Campaign: only one of the brand's own ──
-  IF NEW.campaign_id IS DISTINCT FROM OLD.campaign_id AND NEW.campaign_id IS NOT NULL
-     AND NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.id = NEW.campaign_id AND c.brand_id = OLD.brand_id) THEN
-    RAISE EXCEPTION 'That campaign does not belong to this brand' USING ERRCODE = '42501';
+  -- Campaign: only one of the brand's own
+  IF NEW.campaign_id IS DISTINCT FROM OLD.campaign_id AND NEW.campaign_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.id = NEW.campaign_id AND c.brand_id = OLD.brand_id) THEN
+      RAISE EXCEPTION 'That campaign does not belong to this brand' USING ERRCODE = '42501';
+    END IF;
   END IF;
 
   RETURN NEW;
