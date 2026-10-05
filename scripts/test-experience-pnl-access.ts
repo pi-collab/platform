@@ -147,6 +147,8 @@ async function run() {
   await refusedRpc('creator: payouts refused', creator, 'experience_payouts')
   const sr = await admin.rpc('experience_pnl', { p_experience_id: expId })
   ok('SERVICE ROLE is refused too (no caller → no financial flag)', !!sr.error, sr.error?.message ?? 'RETURNED DATA')
+  const srDirect = await admin.rpc('compute_experience_pnl', { p_experience_id: expId })
+  ok('SERVICE ROLE cannot call the internal calculation either', !!srDirect.error, srDirect.error?.message ?? 'RETURNED DATA')
   const direct = await fin.rpc('compute_experience_pnl', { p_experience_id: expId })
   ok('even a financial user cannot call the internal calculation directly', !!direct.error, direct.error?.message ?? 'RETURNED DATA')
   for (const [who, c] of [['brand', brand], ['financial user', fin]] as const) {

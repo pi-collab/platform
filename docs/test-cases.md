@@ -6768,7 +6768,7 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] **Operational:** sees payouts (vendor names, amounts, status, reference), is REFUSED the P&L
 - [ ] **No staff_access row (outreach, contractor), brand, creator:** P&L and payouts refused
 - [ ] **Service role refused** (no caller → no flag): ops code cannot fetch margin on anyone's behalf
-- [ ] The internal `compute_experience_pnl` cannot be called by anyone, financial users included; `staff_access` and snapshots are unreadable directly
+- [ ] The internal `compute_experience_pnl` cannot be called by anyone, financial users AND the service role included; `staff_access` and snapshots are unreadable directly
 - [ ] **Snapshot:** completing the Experience snapshots the P&L; a later leg change does NOT move it; reopening drops it and the live P&L reflects the change; nothing stored while open
 - [ ] Turning a person's financial flag off refuses them at once
 - [ ] Granting access: admin only, via `setStaffAccess`, ops_events with before/after. Financial defaults to false for everyone, admins included

@@ -1280,8 +1280,8 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION compute_experience_pnl(uuid)  FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION snapshot_experience_pnl()     FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION compute_experience_pnl(uuid)  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION snapshot_experience_pnl()     FROM PUBLIC, anon, authenticated, service_role;
 REVOKE EXECUTE ON FUNCTION experience_pnl(uuid)          FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_payouts(uuid)      FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION has_experience_access(text)   FROM PUBLIC, anon;
