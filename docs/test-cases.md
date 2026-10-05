@@ -6740,3 +6740,4 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] P&L from the database = the pure margin function on the same figures; writes nothing
 - [ ] Payouts (manual): same idempotency key → one payout; paid before approval refused; paid without a reference refused; approve → record UTR → paid; **no notification sent**; ops_events written for each step
 - [ ] Regression: Phase 1 RLS test (`test-experience-rls.ts`) still passes after the margin columns are dropped; fee baseline byte-identical; walk 45/45
+- [ ] Staging 2026-10-05: 0525 applied in six pieces + ledger repaired; DB test **27/27**; pure 69/69; Phase 1 RLS 41/41; walk 45/45; invoice RLS 4/4; fee baseline byte-identical; no test rows left behind
