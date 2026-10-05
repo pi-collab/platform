@@ -60,22 +60,15 @@ group('rounding agrees with the existing fee maths (lib/fee.ts calculateFee)')
   }
   eq(`identical on all ${n} cases at the track rates (15%, 30%)`, trackMismatch, 0)
 
-  // Across other rates, every disagreement must be calculateFee's float error
-  // on an EXACT half paisa (the true value is k.5 and must round up). Known
-  // pre-existing bug in lib/fee.ts, left untouched so the fee baseline stays
-  // byte-identical; e.g. 33.3% of 7500p = 2497.5p exactly, float gives
-  // 2497.4999… → calculateFee 2497, correct half-up 2498.
-  let other = 0, explained = 0
-  for (const amt of amounts) for (const pct of [0, 10, 12.5, 20, 33.3]) {
-    const f = calculateFee(amt, pct, 'deducted').fee_paise, g = platformFeePaise(amt, pct)
-    if (f === g) continue
-    other++
-    const bp = Math.round(pct * 100)
-    const exactHalf = (BigInt(amt) * BigInt(bp)) % BigInt(10000) === BigInt(5000)
-    if (exactHalf && g === f + 1) explained++
+  // Fixed 2026-10-05: calculateFee now uses the same rule (lib/money-round.ts),
+  // so the two must agree on EVERY rate, fractional ones included. Before the
+  // fix, an exact half paisa rounded DOWN through float error (33.3% of 7500p).
+  let anyRate = 0
+  for (const amt of amounts) for (const pct of [0, 10, 12.5, 20, 33.3, 33.33, 7.25]) {
+    if (calculateFee(amt, pct, 'deducted').fee_paise !== platformFeePaise(amt, pct)) anyRate++
   }
-  eq('other rates: every disagreement is calculateFee rounding an exact half paisa DOWN (float bug)', explained, other)
-  eq('…the 33.3% of 7500p case is one of them', calculateFee(7_500, 33.3, 'deducted').fee_paise + 1, platformFeePaise(7_500, 33.3))
+  eq('identical on every rate, fractional included (the float bug is fixed)', anyRate, 0)
+  eq('33.3% of 7500p = 2497.5p → 2498p in BOTH (was 2497 in calculateFee)', [calculateFee(7_500, 33.3, 'deducted').fee_paise, platformFeePaise(7_500, 33.3)], [2_498, 2_498])
 }
 
 group('creator leg: gross → fee → net always reconciles')
@@ -101,6 +94,16 @@ eq('additional: 10 more at ₹3,500 + ₹5,000 edit', brandInvoiceSubtotal({ per
 throws('half a video refused', () => brandInvoiceSubtotal({ perVideoPaise: 350_000, deliverableCount: 1.5, miscPaise: 0 }))
 
 // ── Margin ──────────────────────────────────────────────────────────────────
+group('platform fee is per creator leg, at each leg\'s own %, then summed')
+{
+  const growth = () => creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' })
+  const deals = () => creatorLegTerms({ grossPaise: 1_000_000, track: 'deals' })
+  const all7 = experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: Array.from({ length: 7 }, growth), guapdCostsPaise: [] })
+  eq('7 Growth × ₹10,000 → platform fee ₹21,000', all7.platformFeeTotalPaise, 2_100_000)
+  const mixed = experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: [...Array.from({ length: 5 }, growth), deals(), deals()], guapdCostsPaise: [] })
+  eq('5 Growth + 2 Deals × ₹10,000 → ₹18,000 (NOT a blanket 30% = ₹21,000)', mixed.platformFeeTotalPaise, 1_800_000)
+}
+
 group('margin: derived, ops P&L only')
 {
   const legs = [1, 2, 3].map(() => creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' }))

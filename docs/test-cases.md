@@ -6741,3 +6741,14 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] Payouts (manual): same idempotency key → one payout; paid before approval refused; paid without a reference refused; approve → record UTR → paid; **no notification sent**; ops_events written for each step
 - [ ] Regression: Phase 1 RLS test (`test-experience-rls.ts`) still passes after the margin columns are dropped; fee baseline byte-identical; walk 45/45
 - [ ] Staging 2026-10-05: 0525 applied in six pieces + ledger repaired; DB test **27/27**; pure 69/69; Phase 1 RLS 41/41; walk 45/45; invoice RLS 4/4; fee baseline byte-identical; no test rows left behind
+
+---
+
+## 95. One rounding rule for fees and margin (calculateFee float fix, 2026-10-05)
+
+`lib/money-round.ts percentOfPaise` = amount × pct / 100, half UP to the paisa, in integers (pct read as an exact decimal). Used by `calculateFee` (every marketplace deal) AND `lib/experience-money.ts`.
+- [ ] Fee baseline (`scripts/test-fee-golden.ts`) byte-identical, 123/123, WITHOUT re-baselining: none of its cases sits on an exact half paisa
+- [ ] Old vs new across 1,950,013 amount × rate cases: 88 changed, every one an exact half paisa now rounding UP by exactly 1p (e.g. 33.3% of 7500p = 2497.5p: was 2497, now 2498); nothing at 15% or 30% moved
+- [ ] `calculateFee` and `platformFeePaise` agree on every rate, fractional included (pure test)
+- [ ] Non-whole or negative amounts in `calculateFee` (a half-typed form value) fall back to the old arithmetic instead of throwing mid-render
+- [ ] Per-leg platform fee: 7 Growth × ₹10,000 → ₹21,000; 5 Growth + 2 Deals → ₹18,000 (never a blanket % on pooled spend)

@@ -30,6 +30,7 @@
  */
 
 import { GROWTH_FEE_PERCENT, DEALS_STANDARD_FEE_PERCENT } from '@/lib/fee'
+import { percentOfPaise } from '@/lib/money-round'
 
 export type CreatorTrack = 'growth' | 'deals'
 
@@ -54,8 +55,8 @@ export function platformFeePaise(amountPaise: number, pct: number): number {
   if (!Number.isFinite(pct) || pct < 0 || pct > 100 || Math.abs(bp - pct * 100) > 1e-6) {
     throw new Error(`platform % must be 0–100 with at most two decimals, got ${pct}`)
   }
-  const fee = (BigInt(amountPaise) * BigInt(bp) + BigInt(5000)) / BigInt(10000)
-  return Number(fee)
+  // The shared rule, so a fee and a margin round identically everywhere.
+  return percentOfPaise(amountPaise, pct)
 }
 
 // ── Leg 1: Guapd's price to the brand ───────────────────────────────────────
