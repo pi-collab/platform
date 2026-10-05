@@ -57,7 +57,10 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   if ((currentPath() ?? '').startsWith('/ops/experiences')) return <>{children}</>
 
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
+    <div className="ops-shell" style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
+      {/* A pasted link or long handle is one unbreakable string; without this
+          it widens its table until the approve buttons scroll off screen. */}
+      <style>{`.ops-shell td, .ops-shell a, .ops-shell p, .ops-shell li, .ops-shell dd { overflow-wrap: anywhere; }`}</style>
       <header style={{
         display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap',
         borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem',

@@ -3,7 +3,7 @@ import VettingBadge from '@/components/ops/VettingBadge'
 import { readCreatorLocation } from '@/lib/creator-location-server'
 import { ageBracketLabel } from '@/lib/creator-location'
 import { followerRangeOf } from '@/lib/follower-range'
-import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
+import { handleFromInput, primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import { requireOps } from '@/lib/ops-capabilities'
 import IgConnectionBadge from '@/components/ops/IgConnectionBadge'
 import { igStatusOf, IG_BROKEN_STATUSES } from '@/lib/ig-connection-status'
@@ -162,7 +162,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
               if (channels.length > 0) {
                 return channels.map((a: { platform: string; handle: string; url: string | null }) => (
                   <span key={`${a.platform}-${a.handle}`}> &middot; <a href={a.url!} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
-                    {a.platform === 'youtube' ? 'YouTube' : a.platform === 'instagram' ? 'Instagram' : a.platform} @{a.handle.replace(/^@+/, '')} ↗
+                    {a.platform === 'youtube' ? 'YouTube' : a.platform === 'instagram' ? 'Instagram' : a.platform} @{handleFromInput(a.handle)} ↗
                   </a></span>
                 ))
               }
@@ -170,7 +170,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
               const url = socialProfileUrl(primaryAccount(creator.social_accounts).platform, creator.handle)
               return (
                 <> &middot; {url
-                  ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{creator.handle}</a>
+                  ? <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>{handleFromInput(creator.handle)}</a>
                   : creator.handle}</>
               )
             })()}

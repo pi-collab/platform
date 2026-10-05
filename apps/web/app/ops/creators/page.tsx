@@ -4,7 +4,7 @@ import { opsSearchTerm, opsSearchFilter, stripLeadingAt } from '@/lib/ops-search
 import VettingBadge from '@/components/ops/VettingBadge'
 import { VETTING_STATUSES, VETTING_LABEL, type VettingStatus } from '@/lib/vetting-status'
 import OpsPagination, { opsRange, OpsTableScroll } from '@/components/ops/OpsPagination'
-import { primaryAccount, socialProfileUrl } from '@/lib/social-url'
+import { handleFromInput, primaryAccount, socialProfileUrl } from '@/lib/social-url'
 import IgConnectionBadge from '@/components/ops/IgConnectionBadge'
 import { IG_STATUSES, IG_STATUS_LABEL, IG_STORED_STATUSES, igStatusOf, isIgStatus } from '@/lib/ig-connection-status'
 
@@ -407,7 +407,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                             that reads as broken. The record still has to be
                             reachable: these are exactly the ones worth looking at. */}
                         {c.full_name?.trim()
-                          || (c.handle ? `@${c.handle}` : null)
+                          || (c.handle ? `@${handleFromInput(c.handle)}` : null)
                           || <span style={{ color: '#9ca3af', fontStyle: 'italic', fontWeight: 500 }}>Signup incomplete</span>}
                       </Link>
                     </td>
@@ -418,7 +418,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                           than a link that would 404. */}
                       {(() => {
                         const acct = primaryAccount(c.social_accounts)
-                        const label = c.handle || acct.handle
+                        const label = handleFromInput(c.handle || acct.handle)
                         if (!label) return '-'
                         const url = socialProfileUrl(acct.platform, label)
                         return url
