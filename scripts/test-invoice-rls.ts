@@ -9,7 +9,8 @@
  * An UPDATE with no policy returns no error and changes 0 rows, so the update
  * tests check the row is UNCHANGED rather than looking for an error.
  *
- * Run: npx tsx scripts/test-invoice-rls.ts
+ * Run (from the repo root; supabase-js lives in apps/web):
+ *   NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx scripts/test-invoice-rls.ts
  * Requires: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in env or .env.local
  */
 
@@ -98,36 +99,24 @@ async function run() {
     .select('deal_id')
 
   const invoicedDealIds = new Set((existingInvoices ?? []).map(i => i.deal_id))
-  const testDeal = deals.find(d => !invoicedDealIds.has(d.id))
+  // The first un-invoiced deal where BOTH sides can sign in. A creator who is
+  // an unclaimed ops stub has no user row, so no session can be made for them;
+  // picking such a deal crashed the script on users(auth_id) = null.
+  let testDeal: (typeof deals)[number] | undefined
+  let brandAuthId = ''
+  let creatorAuthId = ''
+  for (const d of deals.filter(d => !invoicedDealIds.has(d.id))) {
+    const { data: bm } = await admin.from('brand_members').select('users(auth_id)').eq('brand_id', d.brand_id).limit(1).maybeSingle()
+    const { data: cr } = await admin.from('creators').select('users(auth_id)').eq('id', d.creator_id).maybeSingle()
+    const b = (bm?.users as any)?.auth_id as string | undefined
+    const c = (cr?.users as any)?.auth_id as string | undefined
+    if (b && c) { testDeal = d; brandAuthId = b; creatorAuthId = c; break }
+  }
 
-  if (!testDeal) { console.error('No deal without an invoice found for testing'); process.exit(1) }
+  if (!testDeal) { console.error('No un-invoiced deal where both brand and creator have logins'); process.exit(1) }
 
   testDealId = testDeal.id
   console.log(`Test deal: ${testDeal.id} (status: ${testDeal.status}, price: ${testDeal.price_paise})`)
-
-  // Get brand user's auth_id
-  const { data: brandMember } = await admin
-    .from('brand_members')
-    .select('user_id, users(auth_id)')
-    .eq('brand_id', testDeal.brand_id)
-    .limit(1)
-    .single()
-
-  // Get creator's user auth_id
-  const { data: creator } = await admin
-    .from('creators')
-    .select('user_id, users(auth_id)')
-    .eq('id', testDeal.creator_id)
-    .limit(1)
-    .single()
-
-  if (!brandMember || !creator) {
-    console.error('Could not find brand member or creator for the test deal')
-    process.exit(1)
-  }
-
-  const brandAuthId = (brandMember.users as any).auth_id as string
-  const creatorAuthId = (creator.users as any).auth_id as string
 
   console.log(`Brand auth_id:   ${brandAuthId}`)
   console.log(`Creator auth_id: ${creatorAuthId}`)
@@ -341,7 +330,6 @@ async function run() {
   console.log('  - invoices_deny_delete (DELETE)')
   console.log('  - invoices_read (SELECT)')
   console.log('  (and nothing else: no insert or update policy, since 0521)')
-  console.log('  - invoices_update_creator (UPDATE)')
 
   console.log('\n' + '─'.repeat(50))
   console.log(process.exitCode ? '\n⚠️  SOME TESTS FAILED' : '\n✅ ALL TESTS PASSED')
