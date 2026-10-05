@@ -255,7 +255,7 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
   - [ ] Server: re-fetches drafts — deleted ones skipped.
   - [ ] Existing-deal check: creator already has deal in campaign → draft skipped (not duplicated).
 - [ ] Fee re-snapshot at send time (not draft's stale fee).
-- [ ] Draft internal note carried to deal's internal_note on send.
+- [ ] Draft internal note carried to the deal's brand note (`deal_brand_notes`, 0527) on send.
 - [ ] Bulk remove: select drafts → Remove → confirm → deleted.
 
 ### Phase 2c — Campaign Brief
@@ -6596,7 +6596,7 @@ Run with a real brand session and a real creator session against PostgREST (anon
 - [ ] Creator submits for review (agreed/revision → delivered); brand approves; brand requests a revision (RPC)
 - [ ] Brand marks shipped / delivered; creator saves shipping address
 - [ ] Creator marks posted after approval
-- [ ] Brand renames a deal, edits its internal note, assigns it to its own campaign
+- [ ] Brand renames a deal, edits its note (via the server action; a direct session write to `deal_brand_notes` is refused, 0527), assigns it to its own campaign
 - [ ] Brand pays (mark_deal_paid RPC) → paid → complete
 - [ ] Offer token accept/decline (service role) and ops fee override / release hold (service role) unaffected
 - [ ] An audit `events` row is still written for each real status change; a refused change writes none
