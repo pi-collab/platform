@@ -119,8 +119,28 @@ service invoice work (Phase 4), not with Razorpay:
 7. Per-day rate on packages page; city/state filter on `/browse`; age bracket on
    Experience creators.
 
+## Phase 2.5 — brand-end Experience report (SCOPED, not built; awaits review)
+A read-only report for the brand on its Experience, with its own RLS surface:
+- **Shows:** the brand's service invoice(s) (number, kind, per-video × count + misc,
+  totals, status, payment reference); the roster as **names and profile links only**;
+  deliverables (visible items: label, status, delivered link); content analytics where
+  posted (views/reach from the creator's connected Instagram snapshot, aggregated).
+- **Never shows:** any creator rate, gross, platform %, net, payout, cost line, margin,
+  internal note, or Leg 2 row.
+- **Data surface:** a dedicated SECURITY DEFINER function (or view) returning exactly the
+  report columns for `my_brand_id()`, so roster names come through WITHOUT granting
+  brands broader read on `creators`; explicit column lists everywhere, no `select *`.
+- **Tests:** the brand can read its report; the report payload contains no money field
+  other than its own invoices; another brand gets nothing; a creator gets nothing.
+
 ## Separate workstreams (not Experiences)
+- `lib/fee.ts calculateFee` float rounding: an exact half paisa can round DOWN on
+  non-integer rates (33.3% of 7,500p). Fixing it changes 2 baseline cases, so it needs a
+  deliberate decision and a re-baseline. Experiences use integer track rates and are
+  unaffected.
 - Fee collection on marketplace (direct-pay) deals: nothing collects Guapd's fee today.
+- Margin definition: Palak specified brand − Σ creator gross − Σ costs; the cash view
+  (− Σ creator NET) is also computed. Confirm which is "margin" for the P&L.
 - Legal: lawyer finalises /privacy and /terms; /terms §7 fee wording.
 - Playbook copy (Palak).
 - Remaining pre-existing bugs from the investigation (counters dropping add-ons, campaign

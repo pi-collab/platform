@@ -106,8 +106,8 @@ async function run() {
   cleanup.push(() => admin.from('deals').delete().in('id', [leg1.id, leg2.id]))
 
   must(await admin.from('experience_creator_terms').insert({ deal_id: leg2.id, experience_id: exp.id, creator_id: C.id,
-    day_rate_paise: 1_000_000, days: 1, creator_gross_paise: 1_000_000, platform_pct: 30, creator_net_paise: 700_000, guapd_margin_paise: 300_000 }).select('deal_id').single(), 'terms')
-  must(await admin.from('experience_finance').insert({ experience_id: exp.id, vendor_cost_total_paise: 700_000, guapd_margin_total_paise: 23_800_000, internal_note: 'SECRET internal' }).select('experience_id').single(), 'finance')
+    day_rate_paise: 1_000_000, days: 1, creator_gross_paise: 1_000_000, platform_pct: 30, platform_track: 'growth', creator_net_paise: 700_000 }).select('deal_id').single(), 'terms')
+  must(await admin.from('experience_finance').insert({ experience_id: exp.id, internal_note: 'SECRET internal' }).select('experience_id').single(), 'finance')
   must(await admin.from('experience_roster').insert({ experience_id: exp.id, creator_id: C.id, added_by: 'guapd' }).select('id').single(), 'roster')
   const items = must(await admin.from('deal_deliverable_items').insert([
     { deal_id: leg2.id, label: 'Visible video', platform: 'instagram', handle: 'x', added_by: 'guapd', visible_to_creator: true },
@@ -128,7 +128,7 @@ async function run() {
   const inv = must(await admin.from('service_invoices').insert({ experience_id: exp.id, brand_id: brandId, kind: 'initial', status: 'issued',
     lines: [{ label: 'UGC production service', amount_paise: 24_500_000 }], subtotal_paise: 24_500_000, total_paise: 24_500_000 }).select('id, number').single(), 'invoice')
   const fo = must(await admin.from('deal_follow_ons').insert({ experience_id: exp.id, deal_id: leg2.id, creator_id: C.id, type: 'affiliate', trigger: 'sales_final',
-    basis: 'pct_of_sales', invoicer: 'creator', pct: 5, guapd_margin_paise: 999 }).select('id').single(), 'follow-on')
+    basis: 'pct_of_sales', invoicer: 'creator', pct: 5 }).select('id').single(), 'follow-on')
   const payout = must(await admin.from('vendor_payouts').insert({ experience_id: exp.id, deal_id: leg2.id, vendor_id: vendor.id, cost_line_id: line.id,
     reason: 'Day rate (net of 30%)', amount_paise: 700_000, net_amount_paise: 700_000, idempotency_key: `rls-test-${exp.id}` }).select('id').single(), 'payout')
   const hadPrivate = !!(await admin.from('creator_private').select('creator_id').eq('creator_id', C.id).maybeSingle()).data
@@ -151,8 +151,8 @@ async function run() {
   // ── BRAND: must never see creator money, margin, internal data or Leg 2 ────
   const G = 'brand: no creator money'
   await refused(G, 'creator terms (rate, gross, pct, net)', brand.from('experience_creator_terms').select('creator_gross_paise, platform_pct, creator_net_paise, day_rate_paise'))
-  await refused(G, 'guapd_margin_paise column', brand.from('experience_creator_terms').select('guapd_margin_paise'))
-  await refused(G, 'experience_finance (margin total, internal note)', brand.from('experience_finance').select('guapd_margin_total_paise, internal_note'))
+  await refused(G, 'margin: not stored anywhere (0525), so not readable', brand.from('experience_creator_terms').select('guapd_margin_paise'))
+  await refused(G, 'experience_finance (internal note)', brand.from('experience_finance').select('internal_note'))
   await refused(G, 'experiences.settings_snapshot (template internals)', brand.from('experiences').select('settings_snapshot').eq('id', exp.id))
   await refused(G, 'cost sheet', brand.from('experience_cost_lines').select('total_paise').eq('experience_id', exp.id))
   await refused(G, 'creator day rate (creator_private)', brand.from('creator_private').select('shoot_day_rate_paise'))
@@ -172,9 +172,9 @@ async function run() {
 
   // ── CREATOR: own rate / 30% / net only; never margin or Leg 1 ──────────────
   const GC = 'creator: no margin, no Leg 1'
-  await refused(GC, 'guapd_margin_paise on own terms', creator.from('experience_creator_terms').select('guapd_margin_paise'))
-  await refused(GC, 'experience_finance', creator.from('experience_finance').select('guapd_margin_total_paise'))
-  await refused(GC, 'margin on own follow-on', creator.from('deal_follow_ons').select('guapd_margin_paise'))
+  await refused(GC, 'margin on own terms: not stored (0525)', creator.from('experience_creator_terms').select('guapd_margin_paise'))
+  await refused(GC, 'experience_finance', creator.from('experience_finance').select('internal_note'))
+  await refused(GC, 'margin on own follow-on: not stored (0525)', creator.from('deal_follow_ons').select('guapd_margin_paise'))
   await refused(GC, 'Leg 1 deal row (cross-leg)', creator.from('deals').select('id, price_paise').eq('id', leg1.id))
   await refused(GC, 'experiences (brand price)', creator.from('experiences').select('brand_service_total_paise').eq('id', exp.id))
   await refused(GC, 'service invoices', creator.from('service_invoices').select('total_paise').eq('experience_id', exp.id))

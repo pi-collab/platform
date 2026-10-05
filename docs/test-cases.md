@@ -6709,3 +6709,34 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] `scripts/test-fee-golden.ts` byte-identical (123 cases)
 - [ ] `scripts/walk-deal-guard.ts` still 45/45 (existing deals unaffected by the new columns and the items policy)
 - [ ] Every existing deliverable item stays visible to its creator (`visible_to_creator` defaults true)
+
+---
+
+## 94. Experiences Phase 2 — two independent legs, derived margin, settings, payouts (migration 0525, run by hand)
+
+### Pure tests: `./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-money.ts` (69 cases)
+- [ ] Rounding defined once (`platformFeePaise`): integer paise, half UP, no float. 30% of 5p → 2p; 15% of 10p → 2p; 15% of 3p → 0p; 30% of 333,333p → 100,000p; 30% of 1,000,005p → 300,002p; 12.5% of 4p → 1p; 0% / 100% exact; bad inputs refused
+- [ ] Identical to `calculateFee` on every amount at the track rates (15%, 30%)
+- [ ] KNOWN pre-existing bug, NOT fixed (fee baseline must stay byte-identical): `calculateFee` rounds an exact half paisa DOWN on some non-integer rates through float error (33.3% of 7,500p = 2,497.5p → 2,497). Every disagreement the test finds is exactly this case
+- [ ] Creator leg: net + fee = gross always; Growth ₹10,000 → 30% → ₹7,000; Deals → 15% → ₹8,500; day rate × fractional days rounds half up
+- [ ] Brand leg: 70 × ₹3,500 + misc; half a video refused
+- [ ] Margin = brand revenue − Σ creator gross − Σ Guapd costs; cash view = − Σ creator NET (difference = platform fees kept); a loss shows negative
+- [ ] Independence (pure): creator rate ×5 → brand invoice unchanged; brand price halved → creator pay unchanged; the TYPES refuse cross-leg inputs (`@ts-expect-error` lines fail compilation if they ever type-check)
+- [ ] Validator accepts the Kiro template v2; REJECTS route_split, brand_pays_creator_direct, an Experience on any non-principal flow, cost-plus / markup / creator-pay-from-brand / split / pool / disburse / escrow / payer-payee keys (also nested in follow_on), any unknown key, unknown or missing payment_flow; `exposedOnly` refuses schema-valid but unoffered values
+- [ ] Deal flow: Kiro (`on_shoot_done`, `guapd` owner) → no creator upload, complete at shoot done, steps offer → agreed → shoot_scheduled → shoot_done → paid
+
+### Apply 0525 (staging, six pieces), then verify
+- [ ] `SELECT column_name FROM information_schema.columns WHERE table_name IN ('experience_creator_terms','deal_follow_ons','experience_finance') AND column_name LIKE '%margin%';` → **0 rows** (margin is not stored anywhere)
+- [ ] `SELECT version, settings ? 'platform_pct' FROM deal_templates WHERE slug='experience-ugc-day-shoot';` → `2`, `false`
+- [ ] `SELECT conname FROM pg_constraint WHERE conname IN ('experiences_brand_total_formula','si_source_check','si_additional_has_source','si_subtotal_formula','ect_platform_track_check','ect_net_formula');` → 6 rows
+- [ ] `SELECT tgname FROM pg_trigger WHERE tgname IN ('t_si_freeze','t_ect_freeze');` → 2 rows
+- [ ] `supabase migration repair --status applied 0525`
+
+### Database tests: `NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-legs-db.ts`
+- [ ] Platform % taken from the creator's track at send time, stored with the track, LOCKED; editing a locked leg refused (`t_ect_freeze`); re-locking refused; a net breaking the rounding rule refused (`ect_net_formula`)
+- [ ] **Independence (DB):** a new creator leg at a very different rate leaves the brand invoice unchanged; halving the brand price leaves every creator's pay unchanged; an Experience total that disagrees with per_video × count + misc is refused
+- [ ] Additional invoices: `existing_footage` creates its own numbered invoice and moves no creator leg; `new_shoot` is created independently; no source → refused by server AND database
+- [ ] Issued invoices frozen (`t_si_freeze`); recording payment with a reference allowed; paid without a reference refused
+- [ ] P&L from the database = the pure margin function on the same figures; writes nothing
+- [ ] Payouts (manual): same idempotency key → one payout; paid before approval refused; paid without a reference refused; approve → record UTR → paid; **no notification sent**; ops_events written for each step
+- [ ] Regression: Phase 1 RLS test (`test-experience-rls.ts`) still passes after the margin columns are dropped; fee baseline byte-identical; walk 45/45
