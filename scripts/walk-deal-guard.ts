@@ -100,8 +100,10 @@ async function run() {
 
   let r = await brand.from('deals').update({ title: '[guard-walk] A full lifecycle (renamed)' }).eq('id', A.id)
   record('brand renames deal', 'brand', 'allow', r.error)
-  r = await brand.from('deals').update({ internal_note: 'guard walk note' }).eq('id', A.id)
-  record('brand edits internal note', 'brand', 'allow', r.error)
+  // The brand's note left deals in 0527 (the creator could read it there); it
+  // is written by the server action only, never by the session directly.
+  r = await brand.from('deal_brand_notes').upsert({ deal_id: A.id, note: 'guard walk note' })
+  record('brand writes a deal note directly (0527: server action only)', 'brand', 'deny', r.error)
   const { data: camp } = await admin.from('campaigns').select('id').eq('brand_id', pick.brand_id).limit(1).maybeSingle()
   if (camp) {
     r = await brand.from('deals').update({ campaign_id: camp.id }).eq('id', A.id)
