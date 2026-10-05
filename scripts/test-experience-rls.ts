@@ -216,7 +216,12 @@ async function run() {
   r = await admin.from('deals').insert({ ...legBase, brand_id: brandId, creator_id: C.id, leg_role: 'creator_leg', title: 'bad leg', price_paise: 1 })
   results.push({ group: I, check: 'a leg putting brand and creator on one deal', ok: !!r.error, detail: r.error?.message ?? 'INSERTED' })
   r = await admin.from('deals').insert({ ...legBase, payment_flow: 'route_split', brand_id: houseBrand, creator_id: C.id, leg_role: 'creator_leg', title: 'route', price_paise: 1 })
-  results.push({ group: I, check: 'route_split stored', ok: !!r.error, detail: r.error?.message ?? 'INSERTED' })
+  results.push({ group: I, check: 'route_split on an Experience leg', ok: !!r.error, detail: r.error?.message ?? 'INSERTED' })
+  // And on an ordinary deal, so the dedicated CHECK is what refuses it, not the leg trigger.
+  r = await admin.from('deals').insert({ brand_id: brandId, creator_id: C.id, status: 'negotiating', title: 'route', deliverables: 'x',
+    price_paise: 1, payment_flow: 'route_split' })
+  results.push({ group: I, check: 'route_split on an ordinary deal (CHECK)', ok: !!r.error && /route_split_disabled/.test(r.error.message), detail: r.error?.message ?? 'INSERTED' })
+  if (!r.error) await admin.from('deals').delete().eq('title', 'route').is('experience_id', null).eq('brand_id', brandId)
   if (C2) {
     r = await admin.from('experience_creator_terms').insert({ deal_id: leg2.id, experience_id: exp.id, creator_id: C2.id })
     results.push({ group: I, check: "terms naming another creator on this leg", ok: !!r.error, detail: r.error?.message ?? 'INSERTED' })

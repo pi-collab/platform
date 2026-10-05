@@ -281,7 +281,7 @@ CREATE OR REPLACE FUNCTION check_service_invoice_brand()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM experiences e WHERE e.id = NEW.experience_id AND e.brand_id = NEW.brand_id) THEN
-    RAISE EXCEPTION 'A service invoice is addressed to its Experience''s own brand';
+    RAISE EXCEPTION 'A service invoice is addressed to its own Experience brand';
   END IF;
   RETURN NEW;
 END;
@@ -299,7 +299,7 @@ BEGIN
     WHERE d.id = NEW.deal_id AND d.leg_role = 'creator_leg'
       AND d.experience_id = NEW.experience_id AND d.creator_id = NEW.creator_id
   ) THEN
-    RAISE EXCEPTION 'A follow-on belongs to that creator''s own leg of this Experience';
+    RAISE EXCEPTION 'A follow-on belongs to that creator own leg of this Experience';
   END IF;
   RETURN NEW;
 END;

@@ -6701,7 +6701,9 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] Brand sees own Experience (service price only), own Leg 1 deal, own service invoice numbered `GUAPD/YY-YY/####`, own roster
 - [ ] A second creator can't read the first creator's terms or payout
 - [ ] Writes refused: brand inserts an Experience; brand marks its service invoice paid; creator raises own net
-- [ ] Integrity: a leg putting brand and creator on one deal → refused; `route_split` → refused; terms naming another creator → refused
+- [ ] Integrity: a leg putting brand and creator on one deal → refused; `route_split` on a leg AND on an ordinary deal (by `deals_payment_flow_route_split_disabled`) → refused; terms naming another creator → refused
+- [ ] Staging 2026-10-05: **41/41 passed**; walk 45/45; fee baseline byte-identical; invoice RLS 4/4
+- [ ] Applying by hand: the Supabase SQL editor mis-split a long block containing PL/pgSQL plus a `CREATE POLICY` (syntax error at `USING`) and rolled it back. Run long migrations in small pieces; never trust a HEAD/count request as proof a table exists (it returns success for missing tables)
 
 ### Regression
 - [ ] `scripts/test-fee-golden.ts` byte-identical (123 cases)
