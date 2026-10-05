@@ -94,4 +94,7 @@ CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO au
 ALTER TABLE deals ADD COLUMN IF NOT EXISTS experience_brand_name text;
 ALTER TABLE deals DROP CONSTRAINT IF EXISTS deals_experience_brand_name_leg;
 ALTER TABLE deals ADD CONSTRAINT deals_experience_brand_name_leg
-  CHECK (experience_brand_name IS NULL OR leg_role = 'creator_leg');
+  CHECK (experience_brand_name IS NULL OR leg_role IS NOT DISTINCT FROM 'creator_leg');
+-- IS NOT DISTINCT FROM, not "=": on an ordinary deal leg_role is NULL, so
+-- "leg_role = 'creator_leg'" is NULL, and a CHECK passes on NULL. The first
+-- staging run used "=" and scripts/test-experience-quotes-rls.ts caught it.
