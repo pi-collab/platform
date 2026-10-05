@@ -1,7 +1,7 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { trackForCreator } from '@/lib/deal-track'
-import { brandInvoiceSubtotal, creatorLegTerms, experienceMargin, type MarginBreakdown, type CreatorLegTerms } from '@/lib/experience-money'
+import { brandInvoiceSubtotal, creatorLegTerms, type CreatorLegTerms } from '@/lib/experience-money'
 
 /**
  * Server side of the two-leg money model. Service role, explicit columns,
@@ -11,8 +11,7 @@ import { brandInvoiceSubtotal, creatorLegTerms, experienceMargin, type MarginBre
  *   lockCreatorLegTerms   reads the creator and their track, writes their terms
  *   draftServiceInvoice   reads only the brand-leg price inputs it is given
  * so a creator's rate cannot reach a brand invoice and a brand price cannot
- * reach a creator's pay. experiencePnL reads both, for ops display only, and
- * writes nothing.
+ * reach a creator's pay.
  */
 
 // ── Leg 2: freeze a creator's terms when sent/agreed ────────────────────────
@@ -94,20 +93,8 @@ export async function draftServiceInvoice(admin: SupabaseClient, p: DraftInvoice
   return { id: data.id, number: data.number, subtotalPaise: subtotal }
 }
 
-// ── P&L: derived, ops only, writes nothing ──────────────────────────────────
-
-export async function experiencePnL(admin: SupabaseClient, experienceId: string): Promise<MarginBreakdown> {
-  const [inv, terms, costs] = await Promise.all([
-    admin.from('service_invoices').select('subtotal_paise, status').eq('experience_id', experienceId).neq('status', 'void'),
-    admin.from('experience_creator_terms').select('creator_gross_paise, creator_net_paise').eq('experience_id', experienceId),
-    admin.from('experience_cost_lines').select('total_paise, provided_by').eq('experience_id', experienceId).eq('provided_by', 'guapd'),
-  ])
-  for (const r of [inv, terms, costs]) if (r.error) throw new Error(`P&L read failed: ${r.error.message}`)
-  return experienceMargin({
-    brandInvoiceSubtotalsPaise: (inv.data ?? []).map((r: { subtotal_paise: number }) => Number(r.subtotal_paise)),
-    creatorLegs: (terms.data ?? []).map((r: { creator_gross_paise: number; creator_net_paise: number }) => ({
-      creatorGrossPaise: Number(r.creator_gross_paise), creatorNetPaise: Number(r.creator_net_paise),
-    })),
-    guapdCostsPaise: (costs.data ?? []).map((r: { total_paise: number }) => Number(r.total_paise)),
-  })
-}
+// ── P&L: NOT here ──────────────────────────────────────────────────────────
+// The P&L is served ONLY by the database function experience_pnl() (migration
+// 0526), called with the user's own session, which checks their financial
+// access in Postgres. A service-role P&L read here would bypass that, so none
+// exists. See lib/experience-pnl-server.ts and scripts/check-pnl-isolation.ts.

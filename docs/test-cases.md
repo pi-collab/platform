@@ -6752,3 +6752,29 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] `calculateFee` and `platformFeePaise` agree on every rate, fractional included (pure test)
 - [ ] Non-whole or negative amounts in `calculateFee` (a half-typed form value) fall back to the old arithmetic instead of throwing mid-render
 - [ ] Per-leg platform fee: 7 Growth × ₹10,000 → ₹21,000; 5 Growth + 2 Deals → ₹18,000 (never a blanket % on pooled spend)
+
+---
+
+## 96. Experience P&L: the margin, and who may see it (migration 0526, run by hand)
+
+**Margin** = brand revenue (issued + paid invoices, ex-tax) − Σ creator NET (agreed legs) − Σ Guapd costs. Shown as: brand − creator GROSS − costs = sub-total; + platform fee kept (Σ per leg) = margin. Staging example: ₹42,500.02 + ₹39,000.00 = ₹81,500.02.
+
+### Pure (`test-experience-money.ts`, 75)
+- [ ] Sub-total + fee kept = margin on every case; Palak's staging figures reproduce exactly; odd amounts stay whole paise; a loss shows negative
+- [ ] Platform fee is per leg at each leg's own %: 7 Growth → ₹21,000; 5 Growth + 2 Deals → ₹18,000
+
+### Access (`NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-pnl-access.ts`)
+- [ ] **Financial (opt-in per person):** gets the P&L; it equals `experienceMargin()` on the same figures; revenue counts issued + paid only (drafts excluded); received = paid only; costs = lines Guapd bears only; unagreed legs counted as pending; per-leg % and fee shown
+- [ ] **Operational:** sees payouts (vendor names, amounts, status, reference), is REFUSED the P&L
+- [ ] **No staff_access row (outreach, contractor), brand, creator:** P&L and payouts refused
+- [ ] **Service role refused** (no caller → no flag): ops code cannot fetch margin on anyone's behalf
+- [ ] The internal `compute_experience_pnl` cannot be called by anyone, financial users included; `staff_access` and snapshots are unreadable directly
+- [ ] **Snapshot:** completing the Experience snapshots the P&L; a later leg change does NOT move it; reopening drops it and the live P&L reflects the change; nothing stored while open
+- [ ] Turning a person's financial flag off refuses them at once
+- [ ] Granting access: admin only, via `setStaffAccess`, ops_events with before/after. Financial defaults to false for everyone, admins included
+
+### Guard rail
+- [ ] `./node_modules/.bin/tsx scripts/check-pnl-isolation.ts` passes: no app code reads snapshots, calls the internal calculation, calls the P&L/payout functions, computes margin or touches staff_access outside the gated modules (it fails on a planted read; verified)
+- [ ] Stated limit: the service role can still read the raw tables; this makes doing so a visible, reviewed exception
+
+### Apply 0526 in six pieces, then: `supabase migration repair --status applied 0526`

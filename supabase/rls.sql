@@ -1185,3 +1185,106 @@ CREATE POLICY vp_read_own_creator ON vendor_payouts FOR SELECT
 DROP POLICY IF EXISTS dfo_read_own_creator ON deal_follow_ons;
 CREATE POLICY dfo_read_own_creator ON deal_follow_ons FOR SELECT
   USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
+
+-- ── Experience P&L access (0526): operational vs financial, opt-in per person ──
+-- The P&L is reachable only through experience_pnl(), which checks the CALLER's
+-- staff_access.experiences_financial. The service role has no caller and is
+-- refused. Raw tables have no user access.
+ALTER TABLE staff_access             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_pnl_snapshots ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON staff_access, experience_pnl_snapshots FROM anon, authenticated;
+
+CREATE OR REPLACE FUNCTION has_experience_access(p_kind text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT coalesce((
+    SELECT CASE p_kind
+             WHEN 'financial'   THEN experiences_financial
+             WHEN 'operational' THEN experiences_operational OR experiences_financial
+             ELSE false
+           END
+    FROM staff_access WHERE user_id = my_user_id()
+  ), false)
+$$;
+
+CREATE OR REPLACE FUNCTION compute_experience_pnl(p_experience_id uuid)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  WITH inv AS (
+    SELECT coalesce(sum(subtotal_paise) FILTER (WHERE status IN ('issued', 'paid')), 0) AS billed,
+           coalesce(sum(subtotal_paise) FILTER (WHERE status = 'paid'), 0) AS received
+    FROM service_invoices WHERE experience_id = p_experience_id
+  ), legs AS (
+    SELECT coalesce(sum(creator_gross_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS gross,
+           coalesce(sum(creator_net_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS net,
+           count(*) FILTER (WHERE locked_at IS NULL) AS pending,
+           coalesce(jsonb_agg(jsonb_build_object(
+             'deal_id', deal_id, 'creator_id', creator_id, 'platform_track', platform_track,
+             'platform_pct', platform_pct, 'creator_gross_paise', creator_gross_paise,
+             'platform_fee_paise', creator_gross_paise - creator_net_paise, 'creator_net_paise', creator_net_paise
+           ) ORDER BY created_at) FILTER (WHERE locked_at IS NOT NULL), '[]'::jsonb) AS per_leg
+    FROM experience_creator_terms WHERE experience_id = p_experience_id
+  ), costs AS (
+    SELECT coalesce(sum(total_paise), 0) AS total
+    FROM experience_cost_lines WHERE experience_id = p_experience_id AND provided_by = 'guapd'
+  )
+  SELECT jsonb_build_object(
+    'experience_id', p_experience_id,
+    'brand_revenue_paise', inv.billed,
+    'brand_received_paise', inv.received,
+    'creator_gross_total_paise', legs.gross,
+    'creator_net_total_paise', legs.net,
+    'guapd_costs_total_paise', costs.total,
+    'subtotal_paise', inv.billed - legs.gross - costs.total,
+    'platform_fee_kept_paise', legs.gross - legs.net,
+    'guapd_margin_paise', inv.billed - legs.net - costs.total,
+    'legs_pending', legs.pending,
+    'per_leg', legs.per_leg
+  )
+  FROM inv, legs, costs
+$$;
+
+CREATE OR REPLACE FUNCTION experience_pnl(p_experience_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+DECLARE
+  snap_pnl jsonb;
+  snap_at  timestamptz;
+BEGIN
+  IF NOT has_experience_access('financial') THEN
+    RAISE EXCEPTION 'Financial access required' USING ERRCODE = '42501';
+  END IF;
+  SELECT pnl, captured_at INTO snap_pnl, snap_at FROM experience_pnl_snapshots WHERE experience_id = p_experience_id;
+  IF snap_pnl IS NOT NULL THEN
+    RETURN snap_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', snap_at);
+  END IF;
+  RETURN compute_experience_pnl(p_experience_id) || jsonb_build_object('source', 'live');
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION experience_payouts(p_experience_id uuid)
+RETURNS TABLE (id uuid, vendor_name text, deal_id uuid, reason text, amount_paise bigint, tds_paise bigint,
+               net_amount_paise bigint, status text, external_ref text, approved_at timestamptz, paid_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  IF NOT has_experience_access('operational') THEN
+    RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT p.id, v.display_name, p.deal_id, p.reason, p.amount_paise, p.tds_paise,
+           p.net_amount_paise, p.status, p.external_ref, p.approved_at, p.paid_at
+    FROM vendor_payouts p JOIN vendors v ON v.id = p.vendor_id
+    WHERE p.experience_id = p_experience_id
+    ORDER BY p.created_at;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION compute_experience_pnl(uuid)  FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION snapshot_experience_pnl()     FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION experience_pnl(uuid)          FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_payouts(uuid)      FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION has_experience_access(text)   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_pnl(uuid)          TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_payouts(uuid)      TO authenticated;
+GRANT  EXECUTE ON FUNCTION has_experience_access(text)   TO authenticated;

@@ -2,7 +2,7 @@
  * Experiences Phase 2, database tests against STAGING (needs migration 0525).
  *
  * Uses the real server functions (lockCreatorLegTerms, draftServiceInvoice,
- * experiencePnL, the payout service) with the service role, on a throwaway
+ * the payout service) with the service role, on a throwaway
  * Experience. Deletes everything it creates, including its ops_events rows.
  *
  * Run from the repo root:
@@ -18,9 +18,9 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL!.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
 import { createAdminClient } from '../apps/web/lib/supabase/admin'
-import { lockCreatorLegTerms, draftServiceInvoice, experiencePnL } from '../apps/web/lib/experience-legs-server'
+import { lockCreatorLegTerms, draftServiceInvoice } from '../apps/web/lib/experience-legs-server'
 import { requestVendorPayout, approveVendorPayout, recordManualPayment } from '../apps/web/lib/payouts/service'
-import { experienceMargin, creatorLegTerms } from '../apps/web/lib/experience-money'
+import { creatorLegTerms } from '../apps/web/lib/experience-money'
 
 const admin = createAdminClient()
 let passed = 0, failed = 0
@@ -112,12 +112,8 @@ async function run() {
   ok('recording the brand\'s payment on an issued invoice is allowed', paid.data?.status === 'paid', paid.error?.message)
   await refused('marking paid without a reference is refused (CHECK si_paid_has_reference)', () => admin.from('service_invoices').update({ status: 'paid' }).eq('id', add.id))
 
-  // ── P&L ──
-  group('P&L (derived, writes nothing)')
-  const pnl = await experiencePnL(admin, exp.id)
-  const terms = (await one(admin.from('experience_creator_terms').select('creator_gross_paise, creator_net_paise').eq('experience_id', exp.id), 'terms')).map((r: any) => ({ creatorGrossPaise: Number(r.creator_gross_paise), creatorNetPaise: Number(r.creator_net_paise) }))
-  const want = experienceMargin({ brandInvoiceSubtotalsPaise: [24_500_000, 4_000_000, 1_750_000], creatorLegs: terms, guapdCostsPaise: [] })
-  ok('margin from the database = the pure function on the same figures', JSON.stringify(pnl) === JSON.stringify(want), `margin ₹${(pnl.guapdMarginPaise / 100).toFixed(2)}, cash ₹${(pnl.cashMarginPaise / 100).toFixed(2)}`)
+  // ── P&L ── moved to scripts/test-experience-pnl-access.ts (migration 0526):
+  // it is served only by experience_pnl() to a user with financial access.
 
   // ── Payouts (manual provider) ──
   group('vendor payouts: manual provider, no message')

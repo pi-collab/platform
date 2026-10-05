@@ -99,24 +99,33 @@ group('platform fee is per creator leg, at each leg\'s own %, then summed')
   const growth = () => creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' })
   const deals = () => creatorLegTerms({ grossPaise: 1_000_000, track: 'deals' })
   const all7 = experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: Array.from({ length: 7 }, growth), guapdCostsPaise: [] })
-  eq('7 Growth × ₹10,000 → platform fee ₹21,000', all7.platformFeeTotalPaise, 2_100_000)
+  eq('7 Growth × ₹10,000 → platform fee ₹21,000', all7.platformFeeKeptPaise, 2_100_000)
   const mixed = experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: [...Array.from({ length: 5 }, growth), deals(), deals()], guapdCostsPaise: [] })
-  eq('5 Growth + 2 Deals × ₹10,000 → ₹18,000 (NOT a blanket 30% = ₹21,000)', mixed.platformFeeTotalPaise, 1_800_000)
+  eq('5 Growth + 2 Deals × ₹10,000 → ₹18,000 (NOT a blanket 30% = ₹21,000)', mixed.platformFeeKeptPaise, 1_800_000)
 }
 
-group('margin: derived, ops P&L only')
+group('margin = brand − Σ creator NET − costs; sub-total + fee kept reconciles')
 {
   const legs = [1, 2, 3].map(() => creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' }))
   const m = experienceMargin({ brandInvoiceSubtotalsPaise: [24_500_000], creatorLegs: legs, guapdCostsPaise: [150_000, 50_000] })
-  eq('Kiro: ₹2,45,000 − 3×₹10,000 gross − ₹2,000 costs = ₹2,13,000', m.guapdMarginPaise, 21_300_000)
-  eq('platform fees kept = 3 × ₹3,000', m.platformFeeTotalPaise, 900_000)
-  eq('cash view = ₹2,45,000 − 3×₹7,000 net − ₹2,000 = ₹2,22,000', m.cashMarginPaise, 22_200_000)
-  eq('cash = margin + platform fees', m.cashMarginPaise, m.guapdMarginPaise + m.platformFeeTotalPaise)
+  eq('Kiro sub-total = ₹2,45,000 − 3×₹10,000 gross − ₹2,000 = ₹2,13,000', m.subtotalPaise, 21_300_000)
+  eq('platform fee kept = 3 × ₹3,000 (per leg)', m.platformFeeKeptPaise, 900_000)
+  eq('Guapd margin = ₹2,45,000 − 3×₹7,000 net − ₹2,000 = ₹2,22,000', m.guapdMarginPaise, 22_200_000)
+  eq('sub-total + fee kept = margin (one number, two views)', m.subtotalPaise + m.platformFeeKeptPaise, m.guapdMarginPaise)
+
+  // Palak's staging figures, 2026-10-05
+  const deals = (g: number) => creatorLegTerms({ grossPaise: g, track: 'deals' })
+  const st = experienceMargin({ brandInvoiceSubtotalsPaise: [24_500_000, 4_000_000, 1_750_000], creatorLegs: [deals(1_000_000), deals(24_999_998)], guapdCostsPaise: [] })
+  eq('staging: sub-total ₹42,500.02', st.subtotalPaise, 4_250_002)
+  eq('staging: platform fee kept ₹39,000.00', st.platformFeeKeptPaise, 3_900_000)
+  eq('staging: Guapd margin ₹81,500.02', st.guapdMarginPaise, 8_150_002)
+  eq('staging: costs line shown as ₹0', st.guapdCostsTotalPaise, 0)
+
   const odd = experienceMargin({ brandInvoiceSubtotalsPaise: [333_333, 1], creatorLegs: [creatorLegTerms({ grossPaise: 333_333, track: 'growth' })], guapdCostsPaise: [1] })
-  eq('odd amounts stay whole paise (₹3,333.34 − ₹3,333.33 − 1p = 0)', odd.guapdMarginPaise, 0)
-  const loss = experienceMargin({ brandInvoiceSubtotalsPaise: [100_000], creatorLegs: [creatorLegTerms({ grossPaise: 200_000, track: 'deals' })], guapdCostsPaise: [] })
-  eq('a loss shows as negative, not hidden', loss.guapdMarginPaise, -100_000)
-  eq('no invoices yet → revenue 0', experienceMargin({ brandInvoiceSubtotalsPaise: [], creatorLegs: [], guapdCostsPaise: [] }).guapdMarginPaise, 0)
+  eq('odd amounts: sub-total 0, fee 100000p, margin 100000p, all whole paise', [odd.subtotalPaise, odd.platformFeeKeptPaise, odd.guapdMarginPaise], [0, 100_000, 100_000])
+  const loss = experienceMargin({ brandInvoiceSubtotalsPaise: [100_000], creatorLegs: [deals(200_000)], guapdCostsPaise: [] })
+  eq('a loss shows negative, not hidden (₹1,000 − ₹1,700 net = −₹700)', loss.guapdMarginPaise, -70_000)
+  eq('no invoices yet → margin 0', experienceMargin({ brandInvoiceSubtotalsPaise: [], creatorLegs: [], guapdCostsPaise: [] }).guapdMarginPaise, 0)
 }
 
 // ── Independence (pure) ─────────────────────────────────────────────────────

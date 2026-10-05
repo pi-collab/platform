@@ -118,41 +118,51 @@ export function creatorLegTerms(input: CreatorLegInput): CreatorLegTerms {
 // ── Margin: derived, ops P&L only ───────────────────────────────────────────
 
 export interface MarginInput {
-  /** Leg 1 revenue: subtotals (ex-tax) of the brand's non-void service invoices. */
+  /** Leg 1 revenue: subtotals (ex-tax) of the brand's ISSUED or PAID service invoices. */
   brandInvoiceSubtotalsPaise: number[]
-  /** Leg 2: each creator leg's locked terms. */
+  /** Leg 2: each AGREED (locked) creator leg's terms. */
   creatorLegs: Pick<CreatorLegTerms, 'creatorGrossPaise' | 'creatorNetPaise'>[]
   /** Guapd's own costs (cost lines Guapd bears: travel, makeup, editing, misc…). */
   guapdCostsPaise: number[]
 }
 
+/**
+ * The Experience P&L. One margin, two views of it (Palak, 2026-10-05):
+ *
+ *   brand revenue
+ *   − creator payouts at GROSS
+ *   − other costs                     (shown even when ₹0)
+ *   = sub-total
+ *   + platform fee kept               (Σ per leg, each at its own snapshotted %)
+ *   = Guapd margin                    = brand revenue − Σ creator NET − costs
+ *
+ * The fee line is the gross → net reconciliation, not an extra amount: the
+ * margin is what Guapd actually keeps (money in − money actually paid out).
+ */
 export interface MarginBreakdown {
   brandRevenuePaise: number
   creatorGrossTotalPaise: number
   creatorNetTotalPaise: number
-  platformFeeTotalPaise: number
   guapdCostsTotalPaise: number
-  /** As specified: brand_service_total − Σ creator_gross − Σ costs. */
+  /** brand − Σ creator GROSS − costs */
+  subtotalPaise: number
+  /** Σ (gross − net) per leg: never a blanket % on pooled creator spend */
+  platformFeeKeptPaise: number
+  /** THE margin: brand − Σ creator NET − costs  (= subtotal + fee kept) */
   guapdMarginPaise: number
-  /** Cash view: brand revenue − Σ creator_net actually paid − Σ costs
-   *  (= guapdMarginPaise + platform fees Guapd keeps). */
-  cashMarginPaise: number
 }
 
-/** The Experience P&L. Never stored; never shown to a brand or a creator. */
+/** The Experience P&L. Ops/financial only; never shown to a brand or a creator. */
 export function experienceMargin(m: MarginInput): MarginBreakdown {
   const sum = (xs: number[], what: string) => xs.reduce((a, x) => { assertPaise(x, what); return a + x }, 0)
   const brandRevenuePaise = sum(m.brandInvoiceSubtotalsPaise, 'brand invoice subtotal')
   const creatorGrossTotalPaise = sum(m.creatorLegs.map(l => l.creatorGrossPaise), 'creator gross')
   const creatorNetTotalPaise = sum(m.creatorLegs.map(l => l.creatorNetPaise), 'creator net')
+  // Per leg, then summed: each leg carries its own track's fee already.
+  const platformFeeKeptPaise = m.creatorLegs.reduce((a, l) => a + (l.creatorGrossPaise - l.creatorNetPaise), 0)
   const guapdCostsTotalPaise = sum(m.guapdCostsPaise, 'cost')
-  return {
-    brandRevenuePaise,
-    creatorGrossTotalPaise,
-    creatorNetTotalPaise,
-    platformFeeTotalPaise: creatorGrossTotalPaise - creatorNetTotalPaise,
-    guapdCostsTotalPaise,
-    guapdMarginPaise: brandRevenuePaise - creatorGrossTotalPaise - guapdCostsTotalPaise,
-    cashMarginPaise: brandRevenuePaise - creatorNetTotalPaise - guapdCostsTotalPaise,
-  }
+  const subtotalPaise = brandRevenuePaise - creatorGrossTotalPaise - guapdCostsTotalPaise
+  const guapdMarginPaise = brandRevenuePaise - creatorNetTotalPaise - guapdCostsTotalPaise
+  if (subtotalPaise + platformFeeKeptPaise !== guapdMarginPaise) throw new Error('P&L does not reconcile')
+  return { brandRevenuePaise, creatorGrossTotalPaise, creatorNetTotalPaise, guapdCostsTotalPaise, subtotalPaise, platformFeeKeptPaise, guapdMarginPaise }
 }
