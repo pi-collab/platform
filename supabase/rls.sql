@@ -1288,3 +1288,12 @@ REVOKE EXECUTE ON FUNCTION has_experience_access(text)   FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION experience_pnl(uuid)          TO authenticated;
 GRANT  EXECUTE ON FUNCTION experience_payouts(uuid)      TO authenticated;
 GRANT  EXECUTE ON FUNCTION has_experience_access(text)   TO authenticated;
+
+-- ── deal_brand_notes (0527): the brand's private deal note ──────────────────
+-- Moved off deals, where the creator on the deal could read it. Brand-only
+-- read; writes are server-only (updateDealInternalNote, createDeal).
+REVOKE ALL ON deal_brand_notes FROM anon, authenticated;
+GRANT SELECT ON deal_brand_notes TO authenticated;
+DROP POLICY IF EXISTS deal_brand_notes_read_brand ON deal_brand_notes;
+CREATE POLICY deal_brand_notes_read_brand ON deal_brand_notes FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM deals d WHERE d.id = deal_brand_notes.deal_id AND d.brand_id = my_brand_id()));

@@ -6778,3 +6778,15 @@ Builds a throwaway Experience between real staging logins, reads it back, delete
 - [ ] Stated limit: the service role can still read the raw tables; this makes doing so a visible, reviewed exception
 
 ### Apply 0526 in six pieces, then: `supabase migration repair --status applied 0526`
+
+## 97. SECURITY — the brand's deal note is never readable by the creator (migration 0527, run by hand)
+
+Found 2026-10-05: `deals.internal_note` ("brand-only, never shown to creator", 0220) was readable by the creator on the deal through the API (and in realtime row payloads). A column grant cannot separate them (brand and creator are both `authenticated`), so the note moved to `deal_brand_notes`.
+
+Run order: 0527 piece A → deploy the app → piece B (drops `deals.internal_note`). B before the deploy breaks the brand campaign page.
+
+- [ ] `scripts/test-internal-note-rls.ts` passes (after piece B): the old column is gone; the creator gets 0 rows from `deal_brand_notes` for their own deal and cannot write one; the brand reads its own note and cannot write directly.
+- [ ] Brand: campaign roster → add / edit / clear a deal note → it persists after reload.
+- [ ] Brand: campaign send with a draft note → the deal's note shows on the roster.
+- [ ] Brand B cannot see Brand A's note (RLS: `deal_brand_notes_read_brand`).
+- [ ] Production: same order, same test, before the production release.
