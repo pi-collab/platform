@@ -172,7 +172,7 @@ export default function PrivacyPolicyPage() {
         <h2 style={h2Style}>Why we collect it</h2>
         <p style={pStyle}>
           Operating the deal workflow; verifying identity and vetting creators;
-          sending notifications about your deals over WhatsApp, email and push;
+          sending notifications about your deals over WhatsApp, email and in the app;
           generating invoices and meeting tax obligations; maintaining an audit record of every change to a deal so that
           disputes can be resolved fairly; improving the product; security and fraud
           prevention; complying with law.
