@@ -481,9 +481,18 @@ DROP POLICY IF EXISTS deal_deliverable_items_update_creator  ON deal_deliverable
 DROP POLICY IF EXISTS deal_deliverable_items_update_brand    ON deal_deliverable_items;
 DROP POLICY IF EXISTS deal_deliverable_items_insert_brand    ON deal_deliverable_items;
 
+-- visible_to_creator (0522): a creator does not see items marked hidden;
+-- the brand sees all of its own. Default true leaves existing deals unchanged.
 CREATE POLICY deal_deliverable_items_read
   ON deal_deliverable_items FOR SELECT
-  USING (can_access_deal(deal_id));
+  USING (
+    EXISTS (
+      SELECT 1 FROM deals d
+      WHERE d.id = deal_id
+        AND (d.brand_id = my_brand_id()
+             OR (d.creator_id = my_creator_id() AND visible_to_creator))
+    )
+  );
 
 CREATE POLICY deal_deliverable_items_insert
   ON deal_deliverable_items FOR INSERT
@@ -1075,3 +1084,101 @@ CREATE POLICY usage_events_read_own
   ON usage_events FOR SELECT
   TO authenticated
   USING (brand_id = my_brand_id());
+
+-- ════════════════════════════════════════════════════════════════════════
+-- EXPERIENCES (migrations 0522–0524)
+-- Portal boundary at the data layer:
+--   * brand reads ONLY its own experiences (granted columns), roster (no money
+--     columns exist there) and service invoices. Never creator terms, margin,
+--     cost lines, vendors, payouts, follow-ons or internal notes.
+--   * creator reads ONLY their own leg's terms (margin column not granted),
+--     payouts to themselves, and their own follow-ons (margin not granted).
+--   * Leg rows themselves are deals: deals_read already scopes them, because
+--     Leg 1's creator is the Guapd house creator and Leg 2's brand is the Guapd
+--     house brand.
+--   * Every write is service role only (ops / server actions with explicit
+--     column lists). No INSERT/UPDATE/DELETE policy exists on any table here.
+-- Supabase grants ALL on new tables to anon/authenticated by default, so each
+-- table is REVOKEd first and only specific columns are granted back.
+-- ════════════════════════════════════════════════════════════════════════
+
+CREATE OR REPLACE FUNCTION guapd_brand_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT id FROM brands WHERE is_guapd LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION guapd_creator_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT id FROM creators WHERE is_guapd LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION is_my_vendor(p_vendor_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM vendors
+    WHERE id = p_vendor_id AND creator_id IS NOT NULL AND creator_id = my_creator_id()
+  )
+$$;
+
+ALTER TABLE deal_templates           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiences              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_finance       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_creator_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_roster        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_cost_lines    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_payout_details    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_private          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_invoices         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_payouts           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deal_follow_ons          ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON deal_templates, experiences, experience_finance, experience_creator_terms,
+              experience_roster, experience_cost_lines, vendors, vendor_payout_details,
+              creator_private, service_invoices, vendor_payouts, deal_follow_ons
+  FROM anon, authenticated;
+
+GRANT SELECT (id, brand_id, title, status, brand_service_total_paise, shoot_date, shoot_city, created_at, updated_at)
+  ON experiences TO authenticated;
+GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise, created_at, updated_at)
+  ON experience_creator_terms TO authenticated;
+GRANT SELECT (id, experience_id, creator_id, added_by, brand_decision, locked, decided_at, created_at, updated_at)
+  ON experience_roster TO authenticated;
+GRANT SELECT (id, experience_id, brand_id, kind, number, status, issue_date, due_date, lines, subtotal_paise,
+              gst_rate_pct, cgst_paise, sgst_paise, igst_paise, tds_paise, total_paise,
+              supplier_gstin, supplier_gstin_provisional, supplier_arn,
+              recipient_legal_name, recipient_gstin, recipient_state, place_of_supply,
+              payment_reference, paid_at, created_at, updated_at)
+  ON service_invoices TO authenticated;
+GRANT SELECT (id, experience_id, deal_id, reason, amount_paise, tds_paise, net_amount_paise, status, external_ref, paid_at, created_at, updated_at)
+  ON vendor_payouts TO authenticated;
+GRANT SELECT (id, experience_id, deal_id, creator_id, type, trigger, basis, invoicer, pct, fixed_paise, trigger_date,
+              sales_figure_paise, sales_verified_at, creator_gross_paise, platform_pct, creator_net_paise, status, created_at, updated_at)
+  ON deal_follow_ons TO authenticated;
+
+DROP POLICY IF EXISTS experiences_read_brand ON experiences;
+CREATE POLICY experiences_read_brand ON experiences FOR SELECT
+  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
+
+DROP POLICY IF EXISTS ect_read_own_creator ON experience_creator_terms;
+CREATE POLICY ect_read_own_creator ON experience_creator_terms FOR SELECT
+  USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
+
+DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
+CREATE POLICY roster_read_brand ON experience_roster FOR SELECT
+  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_id AND e.brand_id = my_brand_id()));
+
+DROP POLICY IF EXISTS si_read_brand ON service_invoices;
+CREATE POLICY si_read_brand ON service_invoices FOR SELECT
+  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
+
+DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
+CREATE POLICY vp_read_own_creator ON vendor_payouts FOR SELECT
+  USING (is_my_vendor(vendor_id));
+
+DROP POLICY IF EXISTS dfo_read_own_creator ON deal_follow_ons;
+CREATE POLICY dfo_read_own_creator ON deal_follow_ons FOR SELECT
+  USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());

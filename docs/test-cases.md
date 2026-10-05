@@ -6673,3 +6673,37 @@ On Deals / Growth deals the brand pays the creator directly; Guapd moves no mone
 - [ ] /privacy: no Razorpay; WhatsApp/SMS via MSG91 (not Interakt); Resend and Anthropic listed; UPI ID disclosed as stored (creator + Guapd only); no PAN, GSTIN, subscription or billing-history claims; city/state/age bracket and AI bio listed; "we do not process payments"
 - [ ] /terms §7A: paid plans not available yet, no one is charged; §8: no "payment links"
 - [ ] /terms §7 fee wording UNCHANGED (left for the lawyer)
+
+---
+
+## 93. SECURITY — Experiences schema + portal boundary (Phase 1; migrations 0522–0524, run by hand)
+
+Run 0522 → 0523 → 0524 in order, then `supabase migration repair --status applied 0522 0523 0524`.
+
+### Verify against information_schema (each query on its own)
+- [ ] All 12 tables exist:
+  `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('deal_templates','experiences','experience_finance','experience_creator_terms','experience_roster','experience_cost_lines','vendors','vendor_payout_details','creator_private','service_invoices','vendor_payouts','deal_follow_ons') ORDER BY 1;` → 12 rows
+- [ ] RLS on for all 12: `SELECT relname, relrowsecurity FROM pg_class WHERE relname IN (…same list…) ORDER BY 1;` → all `true`
+- [ ] **No user write grants anywhere:** `SELECT table_name, grantee, privilege_type FROM information_schema.role_table_grants WHERE grantee IN ('anon','authenticated') AND table_name IN (…same list…) AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE');` → 0 rows
+- [ ] **Margin never granted:** `SELECT table_name, column_name FROM information_schema.column_privileges WHERE grantee IN ('anon','authenticated') AND column_name LIKE '%margin%';` → 0 rows
+- [ ] No column of finance / cost lines / vendors / payout details / creator_private / templates granted: `SELECT DISTINCT table_name FROM information_schema.column_privileges WHERE grantee IN ('anon','authenticated') AND table_name IN ('experience_finance','experience_cost_lines','vendors','vendor_payout_details','creator_private','deal_templates');` → 0 rows
+- [ ] Deals backfill: `SELECT payment_flow, count(*) FROM deals GROUP BY 1;` → only `brand_pays_creator_direct`
+- [ ] Template seeded: `SELECT slug, version, settings->>'payment_flow' FROM deal_templates;` → `experience-ugc-day-shoot`, 1, `guapd_principal_vendor_payout`
+- [ ] Deal constraints present: `SELECT conname FROM pg_constraint WHERE conrelid='public.deals'::regclass AND conname IN ('deals_payment_flow_check','deals_payment_flow_route_split_disabled','deals_leg_role_check','deals_leg_pairing','deals_completion_trigger_check','deals_deliverables_owner_check','deals_pricing_basis_check');` → 7 rows
+- [ ] Triggers: `SELECT tgname FROM pg_trigger WHERE tgrelid='public.deals'::regclass AND NOT tgisinternal ORDER BY 1;` includes `t_deals_00_guard`, `t_deals_01_experience_leg`
+
+### Behaviour: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx scripts/test-experience-rls.ts`
+Builds a throwaway Experience between real staging logins, reads it back, deletes it.
+- [ ] **Brand can't see creator money:** creator terms (rate/gross/pct/net), `guapd_margin_paise`, `experience_finance`, `experiences.settings_snapshot`, cost sheet, `creator_private` day rate, vendors, payout details, vendor payouts, follow-ons → all refused
+- [ ] **Cross-leg:** brand can't read the Leg 2 deal or its items; creator can't read the Leg 1 deal, the Experience's service price, service invoices or roster → refused
+- [ ] **Creator can't see margin:** `guapd_margin_paise` on own terms and on own follow-on, `experience_finance` → refused
+- [ ] Creator sees own rate / 30% / net (₹10,000 → 30% → ₹7,000), own Leg 2 deal, visible items only (hidden item refused), own payout, own follow-on
+- [ ] Brand sees own Experience (service price only), own Leg 1 deal, own service invoice numbered `GUAPD/YY-YY/####`, own roster
+- [ ] A second creator can't read the first creator's terms or payout
+- [ ] Writes refused: brand inserts an Experience; brand marks its service invoice paid; creator raises own net
+- [ ] Integrity: a leg putting brand and creator on one deal → refused; `route_split` → refused; terms naming another creator → refused
+
+### Regression
+- [ ] `scripts/test-fee-golden.ts` byte-identical (123 cases)
+- [ ] `scripts/walk-deal-guard.ts` still 45/45 (existing deals unaffected by the new columns and the items policy)
+- [ ] Every existing deliverable item stays visible to its creator (`visible_to_creator` defaults true)
