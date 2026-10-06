@@ -44,14 +44,26 @@ function formatStepDate(iso: string): string {
   return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function StepperTimeline({ currentStepIndex, nextLabel, events }: { currentStepIndex: number; nextLabel: string; events: Event[] }) {
-  const stepDates = deriveStepDates(events)
+/**
+ * The deal progress stepper. A deal passes nothing but `events` and gets the
+ * deal's steps. Other flows in the same design (Guapd Experiences) pass their
+ * own `steps` and the `dates` each step was reached, and get the same control.
+ */
+export default function StepperTimeline({ currentStepIndex, nextLabel, events = [], steps = STEPS, dates }: {
+  currentStepIndex: number
+  nextLabel: string
+  events?: Event[]
+  steps?: readonly string[]
+  /** step index → ISO time it was reached (shown on hover). Overrides deriving from deal events. */
+  dates?: Record<number, string>
+}) {
+  const stepDates = dates ?? deriveStepDates(events)
   const [hoveredStep, setHoveredStep] = useState<number | null>(null)
 
   return (
     <div className="surface" style={{ padding: '18px 16px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-        {STEPS.map((label, i) => {
+        {steps.map((label, i) => {
           const done = i < currentStepIndex
           const current = i === currentStepIndex
           const dateStr = stepDates[i]
@@ -69,7 +81,7 @@ export default function StepperTimeline({ currentStepIndex, nextLabel, events }:
                 {i > 0 && (
                   <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: done || (i - 1) < currentStepIndex ? 'var(--neon-deep)' : 'var(--border-hairline)' }} />
                 )}
-                {i < STEPS.length - 1 && (
+                {i < steps.length - 1 && (
                   <span style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 'calc(50% - 15px)', height: 3, borderRadius: 3, background: done && i < currentStepIndex ? 'var(--neon-deep)' : 'var(--border-hairline)' }} />
                 )}
                 <span style={{

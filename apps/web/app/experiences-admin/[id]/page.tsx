@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import StatusChip, { toneDot } from '@/components/StatusChip'
+import StatusChip from '@/components/StatusChip'
+import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { getConsoleExperience, listConsoleQuotes } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
@@ -20,7 +21,8 @@ export const dynamic = 'force-dynamic'
  * Shows brand-side terms only: what the brand asked for and the price agreed
  * with the brand. No creator rate, cost, payout or margin exists on this page.
  */
-const FORWARD = EXPERIENCE_STATUSES.filter((s) => s !== 'cancelled')
+/* The stages shown in the stepper (draft and cancelled are not stages). */
+const STAGES = EXPERIENCE_STATUSES.filter((s) => s !== 'draft' && s !== 'cancelled')
 
 export default async function ExperienceDetailPage({ params }: { params: { id: string } }) {
   const gate = await experienceStaffGate()
@@ -32,7 +34,21 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   if (!exp.data) notFound()
   const e = exp.data
   const st = experienceStatus(e.status)
-  const stepIndex = FORWARD.indexOf(e.status as (typeof FORWARD)[number])
+  const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
+  const qs = quotes.ok ? quotes.data : []
+  const openQuote = qs.find((q) => q.status === 'open')
+  const acceptedQuote = qs.find((q) => q.status === 'accepted')
+  const nextLabel =
+    e.status === 'requested'
+      ? !openQuote ? 'Next: send the brand a quote'
+        : openQuote.proposed_by === 'guapd' ? 'Waiting on the brand to reply to the quote'
+        : "Next: answer the brand's counter"
+    : e.status === 'rostering' ? 'Next: build the creator roster'
+    : e.status === 'complete' ? 'Complete'
+    : `Next: ${experienceStatus(STAGES[stepIndex + 1] ?? e.status).label.toLowerCase()}`
+  const stepDates: Record<number, string> = {}
+  if (e.requested_at) stepDates[0] = e.requested_at
+  if (acceptedQuote?.decided_at) stepDates[1] = acceptedQuote.decided_at
   const creators = e.request_creator_count ?? 1
   const per = (n: number | null) => n == null ? 'all' : String(n)
   const rights = [
@@ -60,27 +76,31 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
           <StatusChip label={st.label} tone={st.tone} />
         </div>
 
-        {/* Where it is: the forward path, one step at a time. */}
-        <ol className="xp-steps" style={{ display: 'flex', gap: 6, listStyle: 'none', padding: 0, margin: '24px 0 0', flexWrap: 'wrap' }}>
-          {FORWARD.map((s, i) => {
-            const done = stepIndex >= 0 && i < stepIndex, here = i === stepIndex
-            const t = experienceStatus(s)
-            return (
-              <li key={s} aria-current={here ? 'step' : undefined} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 11px', borderRadius: 999,
-                fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: here ? 700 : 500,
-                background: here ? 'var(--neon)' : done ? '#F2F3EE' : 'transparent',
-                border: here ? '1px solid transparent' : '1px solid #EAEAE3',
-                color: here || done ? 'var(--ink)' : 'var(--wg-500)',
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: done || here ? toneDot(t.tone) : '#D5D6CE' }} />
-                {t.label}
-              </li>
-            )
-          })}
-        </ol>
         {e.status === 'cancelled' && <p className="t-body" style={{ margin: '12px 0 0' }}>This Experience was cancelled.</p>}
       </section>
+
+      {/* ══════ STAGE: the deal page's stepper, with this Experience's stages ══════ */}
+      {e.status !== 'cancelled' && (
+        <div style={{ marginTop: 20 }}>
+          <StepperTimeline steps={STAGES.map((x) => experienceStatus(x).label)} currentStepIndex={stepIndex} nextLabel={nextLabel} dates={stepDates} />
+        </div>
+      )}
+
+      {/* ══════ QUOTES: the main action while the price is open ══════ */}
+      <div style={{ marginTop: 20 }}>
+        {quotes.ok ? (
+          <QuotePanel
+            experienceId={e.id}
+            open={e.status === 'requested'}
+            quotes={quotes.data}
+            requested={e.request_deliverables ?? []}
+            defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
+            planVideos={e.plan_videos_total}
+            planLabel={`${creators} creator${creators === 1 ? '' : 's'} × ${e.plan_videos_per_creator} video${e.plan_videos_per_creator === 1 ? '' : 's'}`}
+          />
+        ) : <Failed message={quotes.error} inline />}
+      </div>
+
 
       <div className="xp-cols" style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20, marginTop: 20, alignItems: 'start' }}>
         {/* ══════ THE REQUEST ══════ */}
@@ -142,21 +162,6 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
             <p className="t-body" style={{ margin: '18px 0 0' }}>Nothing agreed yet. The price, date and city lock here when the brand accepts a quote.</p>
           )}
         </section>
-      </div>
-
-      {/* ══════ QUOTES ══════ */}
-      <div style={{ marginTop: 20 }}>
-        {quotes.ok ? (
-          <QuotePanel
-            experienceId={e.id}
-            open={e.status === 'requested'}
-            quotes={quotes.data}
-            requested={e.request_deliverables ?? []}
-            defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
-            planVideos={e.plan_videos_total}
-            planLabel={`${creators} creator${creators === 1 ? '' : 's'} × ${e.plan_videos_per_creator} video${e.plan_videos_per_creator === 1 ? '' : 's'}`}
-          />
-        ) : <Failed message={quotes.error} inline />}
       </div>
 
       <style>{`@media (max-width: 860px) { .xp-cols { grid-template-columns: 1fr !important; } }`}</style>

@@ -6823,7 +6823,7 @@ Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and th
   - every step writes its ops_events row in the same transaction.
 - [ ] `/experiences-admin`: "New experience" opens the request form; rows open the detail page.
 - [ ] `/experiences-admin/new`: brand picker (real brands only), title, deliverables (type + count rows), Affiliate / Ad rights (months) / Boost (months), location, date window, brief, "Arrived via". Saving opens the new Experience.
-- [ ] `/experiences-admin/[id]`: hero with brand, title, status chip and the forward path; "What the brand asked for"; "Agreed with the brand" (empty until accepted); Quotes with Send a quote / Record brand's counter, the total preview, history (v-number, who, status, total, breakdown, date, city, message, channel, who recorded it), and accept with a confirmation that names what gets locked.
+- [ ] `/experiences-admin/[id]`: hero with brand, title and status chip; the deal page stepper (`components/StepperTimeline`, the Experience stages, hover shows when a stage was reached, footer says what is next); then Quotes, the main action while the price is open, with Send a quote / Record brand's counter, the total preview, history (v-number, who, status, total, breakdown, date, city, message, channel, who recorded it), and accept with a confirmation that names what gets locked; then "What the brand asked for" and "Agreed with the brand". The brand deal page stepper is unchanged.
 - [ ] No creator rate, cost, payout or margin appears anywhere in the console.
 
 ## 101. Experience request is a per-creator plan (migration 0531, run by hand)
