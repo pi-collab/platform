@@ -2,7 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { acceptConsoleQuote, addConsoleQuote, createConsoleExperience, type ConsoleDeliverable } from '@/lib/experience-console-server'
+import {
+  acceptConsoleQuote, addConsoleQuote, createConsoleExperience,
+  rosterAdd, rosterDecide, rosterLock, rosterNote, rosterPlan, rosterRemove,
+  type ConsoleDeliverable,
+} from '@/lib/experience-console-server'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
 /**
@@ -142,6 +146,74 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
 export async function acceptQuote(experienceId: string, quoteId: string, channel: string | null): Promise<Out> {
   const refused = await gate(); if (refused) return refused
   const r = await acceptConsoleQuote(quoteId, isChannel(channel) ? channel : null)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  revalidatePath(BASE)
+  return r
+}
+
+// ── Stage 3a: roster ───────────────────────────────────────────────────────
+// The database enforces the rules (bookable creators only, never the house
+// account; locked entries frozen; lock needs every decision and a reconciled
+// total) and audits each change. These only check the gate and tidy inputs.
+
+const isUuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
+
+export async function addToRoster(experienceId: string, creatorIds: string[], addedBy: 'guapd' | 'brand', channel: string | null): Promise<{ error?: string | null }> {
+  const refused = await gate(); if (refused) return { error: refused.error }
+  if (!isUuid(experienceId) || !Array.isArray(creatorIds) || !creatorIds.every(isUuid)) return { error: 'Pick at least one creator.' }
+  if (addedBy === 'brand' && !isChannel(channel)) return { error: 'Say how the brand suggested them.' }
+  const r = await rosterAdd(experienceId, creatorIds, addedBy === 'brand' ? 'brand' : 'guapd', addedBy === 'brand' ? channel : null)
+  if (!r.ok) return { error: r.error }
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { error: null }
+}
+
+export async function recordRosterDecision(experienceId: string, rosterId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!['accepted', 'rejected', 'pending'].includes(decision)) return { ok: false, error: 'Unknown decision.' }
+  if (decision !== 'pending' && !isChannel(channel)) return { ok: false, error: 'Say how the brand told us.' }
+  const r = await rosterDecide(rosterId, decision, decision === 'pending' ? null : channel)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function setRosterPlan(experienceId: string, rosterId: string, items: { type: string; count: number | string }[]): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  const parsed: ConsoleDeliverable[] = []
+  for (const i of items ?? []) {
+    const count = Number(i.count)
+    if (!(DELIVERABLE_TYPES as readonly string[]).includes(i.type) || !Number.isInteger(count) || count < 0 || count > 1000) {
+      return { ok: false, error: 'Each deliverable needs a type and a whole-number count.' }
+    }
+    if (count > 0) parsed.push({ type: i.type, count })
+  }
+  const r = await rosterPlan(rosterId, parsed)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function setRosterNote(experienceId: string, rosterId: string, note: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  const r = await rosterNote(rosterId, String(note ?? '').slice(0, 4000))
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function removeFromRoster(experienceId: string, rosterId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  const r = await rosterRemove(rosterId)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function lockRoster(experienceId: string): Promise<Out<number>> {
+  const refused = await gate(); if (refused) return refused
+  const r = await rosterLock(experienceId)
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
   revalidatePath(BASE)

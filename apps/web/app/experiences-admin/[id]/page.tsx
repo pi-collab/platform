@@ -3,11 +3,12 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, listConsoleQuotes } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, listConsoleCreators, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
 import QuotePanel from './QuotePanel'
+import RosterPanel from './RosterPanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -33,6 +34,12 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   if (!exp.ok) return <Failed message={exp.error} />
   if (!exp.data) notFound()
   const e = exp.data
+  // The roster exists once the price is agreed (Building roster onward).
+  const hasRoster = !['draft', 'requested', 'cancelled'].includes(e.status)
+  const rosterEditable = e.status === 'rostering' || e.status === 'confirmed'
+  const [roster, reconcile, creatorOptions] = hasRoster
+    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), rosterEditable ? listConsoleCreators() : Promise.resolve({ ok: true as const, data: [] })])
+    : [null, null, null]
   const st = experienceStatus(e.status)
   const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
   const qs = quotes.ok ? quotes.data : []
@@ -43,7 +50,8 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       ? !openQuote ? 'Next: send the brand a quote'
         : openQuote.proposed_by === 'guapd' ? 'Waiting on the brand to reply to the quote'
         : "Next: answer the brand's counter"
-    : e.status === 'rostering' ? 'Next: build the creator roster'
+    : e.status === 'rostering' ? 'Next: build the creator roster, get the brand to approve it, and lock it'
+    : e.status === 'confirmed' ? 'Next: send each creator their deal'
     : e.status === 'complete' ? 'Complete'
     : `Next: ${experienceStatus(STAGES[stepIndex + 1] ?? e.status).label.toLowerCase()}`
   const stepDates: Record<number, string> = {}
@@ -83,6 +91,15 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       {e.status !== 'cancelled' && (
         <div style={{ marginTop: 20 }}>
           <StepperTimeline steps={STAGES.map((x) => experienceStatus(x).label)} currentStepIndex={stepIndex} nextLabel={nextLabel} dates={stepDates} />
+        </div>
+      )}
+
+      {/* ══════ ROSTER: the main action once the price is agreed ══════ */}
+      {hasRoster && (
+        <div style={{ marginTop: 20 }}>
+          {roster?.ok && reconcile?.ok && creatorOptions?.ok
+            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} creators={creatorOptions.data} />
+            : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || (creatorOptions && !creatorOptions.ok && creatorOptions.error) || 'Could not load the roster'} />}
         </div>
       )}
 

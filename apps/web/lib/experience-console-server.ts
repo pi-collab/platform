@@ -174,3 +174,81 @@ export async function acceptConsoleQuote(quoteId: string, channel: string | null
   const { error } = await createClient().rpc('experience_console_accept', { p_quote_id: quoteId, p_channel: channel })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+// ── Stage 3a: roster ───────────────────────────────────────────────────────
+
+export interface ConsoleCreatorOption { id: string; full_name: string; handle: string | null; profile_photo_url: string | null; niches: string[] | null }
+
+export interface ConsoleRosterRow {
+  id: string
+  creator_id: string
+  full_name: string
+  handle: string | null
+  profile_photo_url: string | null
+  added_by: 'guapd' | 'brand'
+  brand_decision: 'pending' | 'accepted' | 'rejected'
+  decision_channel: string | null
+  decided_at: string | null
+  locked: boolean
+  locked_at: string | null
+  /** This creator's planned deliverables. Starts as the agreed per-creator plan. No money. */
+  planned_deliverables: ConsoleDeliverable[]
+  /** Guapd-only note. Exists only in this staff read; no brand or creator path reaches it. */
+  note: string | null
+  created_at: string
+}
+
+export interface ConsoleReconcile {
+  ok: boolean
+  reason?: 'no_agreed_plan'
+  videos_sold?: number
+  videos_planned?: number
+  creators_counted?: number
+  creators_planned?: number | null
+  lines?: { type: string; target: number; planned: number; is_video: boolean }[]
+}
+
+export async function listConsoleCreators(): Promise<Result<ConsoleCreatorOption[]>> {
+  const { data, error } = await createClient().rpc('experience_console_creators')
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleCreatorOption[] }
+}
+
+export async function listConsoleRoster(experienceId: string): Promise<Result<ConsoleRosterRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_roster', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleRosterRow[] }
+}
+
+export async function getConsoleReconcile(experienceId: string): Promise<Result<ConsoleReconcile>> {
+  const { data, error } = await createClient().rpc('experience_console_reconcile', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleReconcile }
+}
+
+export async function rosterAdd(experienceId: string, creatorIds: string[], addedBy: 'guapd' | 'brand', channel: string | null): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_add', { p_experience_id: experienceId, p_creator_ids: creatorIds, p_added_by: addedBy, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: data as number }
+}
+
+export async function rosterDecide(rosterId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_roster_decide', { p_roster_id: rosterId, p_decision: decision, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function rosterPlan(rosterId: string, deliverables: ConsoleDeliverable[]): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_roster_plan', { p_roster_id: rosterId, p_deliverables: deliverables })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function rosterNote(rosterId: string, note: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_roster_note', { p_roster_id: rosterId, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function rosterRemove(rosterId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_roster_remove', { p_roster_id: rosterId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function rosterLock(experienceId: string): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_lock', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as number }
+}

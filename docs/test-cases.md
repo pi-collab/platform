@@ -6833,3 +6833,16 @@ Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and th
 - [ ] Form: "Creators wanted", "Each creator makes" rows, a live "In total" line, and per-creator counts on Affiliate / Ad rights / Boost ("of each creator's N videos").
 - [ ] Detail: Creators, Each creator makes, In total, Rights per creator; the quote composer starts from the plan's video count and flags a different count.
 - [ ] Stage 3 (not built yet): each creator leg starts from the per-creator template and may be adjusted; the reconciliation is the SUM of all legs against the locked totals, never per-creator uniformity.
+
+## 102. Experiences console, stage 3a: the roster (migration 0532, run by hand)
+
+- [ ] `scripts/test-experience-roster.ts` passes:
+  - every roster read and write is refused by the database for a no-access user, a brand, a creator, anonymous and the service role; the internal reconcile function is callable by nobody directly;
+  - the roster opens only once the price is agreed; the picker lists bookable creators only, never the house creator; the house creator and non-bookable creators cannot be added; a brand suggestion needs its channel; re-adding is a no-op;
+  - each creator starts from the agreed per-creator plan and awaits the brand;
+  - the contract check counts everyone not rejected, against what was sold: over-planned is flagged; uneven creators with a matching total pass (3 + 1 = 4); lock is refused while anyone awaits the brand or the total does not match;
+  - the Guapd note: staff read it; brand and creator cannot read or write the notes table; the brand still reads only its 0523 roster columns, never the channel or planned deliverables; the audit row records the note length, never the text;
+  - lock: locks accepted creators, moves rostering → confirmed exactly once; locked creators cannot be re-decided, re-planned or removed (note still editable); creators can be added after lock and are flagged against the sold total; status never moves back;
+  - every step writes its ops_events row.
+- [ ] `/experiences-admin/[id]` once agreed: the Roster panel (CampaignRoster layout) comes first, with Add creators, Add brand's picks (with "Brand suggested via"), the reconciliation strip (green when it adds up, amber with per-type numbers when not), per-row actions (Brand accepted / rejected with channel, Back to awaiting, Adjust plan, Note, Remove), the Locked chip, and Lock roster with a confirmation. Shows no rate, payout or amount.
+- [ ] Campaign roster's "Add creators" still works (the picker moved to `components/AddCreatorsModal.tsx`).

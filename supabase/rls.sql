@@ -1363,3 +1363,29 @@ REVOKE EXECUTE ON FUNCTION experience_plan_count(jsonb, boolean) FROM PUBLIC, an
 REVOKE EXECUTE ON FUNCTION experience_plan_totals(jsonb, int) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) TO authenticated;
+
+-- ── 0532: Experience roster (staff console) ─────────────────────────────────
+-- Guapd's per-creator notes: no session may read or write them; only the
+-- definer console functions. The brand reads its roster only through the 0523
+-- column grant, which includes none of the 0532 columns.
+ALTER TABLE experience_roster_notes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_roster_notes FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION experience_roster_reconcile(uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_creators() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_reconcile(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_add(uuid, uuid[], text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_decide(uuid, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_plan(uuid, jsonb) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_note(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_remove(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_lock(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION experience_console_creators() TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_reconcile(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_add(uuid, uuid[], text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_decide(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_plan(uuid, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_note(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_remove(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_lock(uuid) TO authenticated;
