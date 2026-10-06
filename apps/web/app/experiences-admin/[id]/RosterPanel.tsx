@@ -66,7 +66,8 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   const unlocked = roster.filter((r) => !r.locked)
   const pendingCount = unlocked.filter((r) => r.brand_decision === 'pending').length
   const toLock = unlocked.filter((r) => r.brand_decision === 'accepted').length
-  const lockBlocked = !reconcile?.ok ? 'The roster does not add up to what the brand bought yet.'
+  const lockBlocked = reconcile?.reason === 'no_agreed_plan' ? 'No agreed plan to lock against.'
+    : !reconcile?.ok ? 'The roster does not add up to what the brand bought yet.'
     : pendingCount ? `Record the brand's decision on ${pendingCount} creator${pendingCount === 1 ? '' : 's'} first.`
     : !toLock ? 'No newly accepted creators to lock.' : null
   const existing = roster.map((r) => r.creator_id)
@@ -119,6 +120,12 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
             ))}
           </div>
           {!reconcile.ok && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#8C6417', marginTop: 6 }}>Adjust a creator&apos;s plan, add or remove creators until the totals match. One creator may do more if another does fewer.</div>}
+        </div>
+      )}
+
+      {reconcile?.reason === 'no_agreed_plan' && (
+        <div role="status" style={{ marginTop: 18, padding: '14px 16px', borderRadius: 14, background: '#FCF6E4', border: '1px solid #C89A3C40', fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink)' }}>
+          <b>No agreed plan to check against.</b> This Experience was priced before requests carried a per-creator plan, so the roster cannot be reconciled or locked. Record the request again as a new Experience.
         </div>
       )}
 

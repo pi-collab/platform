@@ -92,7 +92,7 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
   const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = useRealtimeNotifications(initialUnread)
 
-  const initials = brandName ? brandName.slice(0, 2).toUpperCase() : 'BR'
+  const initials = brandName ? brandName.slice(0, 2).toUpperCase() : hasBrand ? 'BR' : 'GU'
 
   /* The brand's own mark, in the three places the sidebar shows it: the desktop
      avatar button, its dropdown header, and the mobile drawer. Falls back to
