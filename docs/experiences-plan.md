@@ -193,3 +193,7 @@ A read-only report for the brand on its Experience, with its own RLS surface:
 - Remaining pre-existing bugs from the investigation (counters dropping add-ons, campaign
   send losing add-on columns, client-trusted totals, fee-override reset, preview fee mode,
   Growth billing on held deals, held-deal offer links, audit actor, campaign FK).
+
+### Plan reconciliation rule (PJ, 2026-10-06), for Stage 3
+
+The request is a uniform per-creator plan ("N creators, each doing the same thing"), locked at quote acceptance as `experiences.agreed_plan` (0531): creators, per-creator rows, totals per type, plan videos and videos SOLD. Each creator leg STARTS from the per-creator template; staff may adjust an individual creator (one does 3 videos, another 1) without touching the agreed plan. The integrity check is against the agreed TOTAL: the sum of all creators' actual deliverables must equal what the brand bought (`videos_sold`, and the per-type totals). It must NOT require each creator to match the template. Mixed plans are handled per creator in Stage 3, not by request-level groups.

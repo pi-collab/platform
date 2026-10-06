@@ -4,7 +4,7 @@ import StatusChip, { toneDot } from '@/components/StatusChip'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { getConsoleExperience, listConsoleQuotes } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
-import { channelLabel, formatRupees } from '@/lib/experience-request'
+import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
 import QuotePanel from './QuotePanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
@@ -33,7 +33,13 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   const e = exp.data
   const st = experienceStatus(e.status)
   const stepIndex = FORWARD.indexOf(e.status as (typeof FORWARD)[number])
-  const totalAsked = (e.request_deliverables ?? []).reduce((n, d) => n + (Number(d.count) || 0), 0)
+  const creators = e.request_creator_count ?? 1
+  const per = (n: number | null) => n == null ? 'all' : String(n)
+  const rights = [
+    e.request_affiliate && `Affiliate on ${per(e.request_affiliate_per_creator)} of each creator's videos`,
+    e.request_ad_rights && `Ad rights on ${per(e.request_ad_rights_per_creator)}${e.request_ad_rights_months ? `, ${e.request_ad_rights_months} months` : ''}`,
+    e.request_boost && `Boost on ${per(e.request_boost_per_creator)}${e.request_boost_months ? `, ${e.request_boost_months} months` : ''}`,
+  ].filter(Boolean) as string[]
   const agreed = e.status !== 'requested' && e.status !== 'draft' && e.brand_per_video_paise != null
 
   return (
@@ -82,17 +88,18 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
           <h2 className="sect-head">What the brand asked for</h2>
           <div className="sect-rule" />
           <dl style={{ display: 'grid', gap: 16, margin: '18px 0 0' }}>
-            <Row label={`Deliverables${totalAsked ? ` · ${totalAsked}` : ''}`}>
+            <Row label="Creators">{e.request_creator_count ?? '—'}</Row>
+            <Row label="Each creator makes">
               {(e.request_deliverables ?? []).length
-                ? (e.request_deliverables ?? []).map((d, i) => <div key={i}>{d.count} × {d.type}</div>)
+                ? (e.request_deliverables ?? []).map((d, i) => <div key={i}>{countOf(Number(d.count), d.type)}</div>)
                 : '—'}
             </Row>
-            <Row label="Rights">
-              {[e.request_affiliate && 'Affiliate',
-                e.request_ad_rights && `Ad rights${e.request_ad_rights_months ? `, ${e.request_ad_rights_months} months` : ''}`,
-                e.request_boost && `Boost${e.request_boost_months ? `, ${e.request_boost_months} months` : ''}`,
-              ].filter(Boolean).join(' · ') || 'None asked'}
+            <Row label="In total">
+              {(e.plan_totals ?? []).length
+                ? <>{e.plan_totals.map((t) => countOf(t.total, t.type)).join(' · ')}<div style={{ color: 'var(--wg-500)', fontSize: 13 }}>{e.plan_videos_total} priced per video</div></>
+                : '—'}
             </Row>
+            <Row label="Rights">{rights.length ? rights.map((r) => <div key={r}>{r}</div>) : 'None asked'}</Row>
             <Row label="Where">{e.request_location ?? '—'}</Row>
             <Row label="When">
               {e.request_date_from
@@ -119,6 +126,16 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
               <dl style={{ display: 'grid', gap: 12, margin: '18px 0 0' }}>
                 <Row label="Shoot date">{e.shoot_date ? fmtDate(e.shoot_date) : '—'}</Row>
                 <Row label="City">{e.shoot_city ?? '—'}</Row>
+                {e.agreed_plan && (
+                  <Row label="Plan locked">
+                    {e.agreed_plan.creator_count ?? '—'} creators · {(e.agreed_plan.totals ?? []).map((t) => countOf(t.total, t.type)).join(' · ')}
+                    {e.agreed_plan.videos_sold !== e.agreed_plan.plan_videos && (
+                      <div style={{ color: '#8C6417', fontSize: 13, marginTop: 4 }}>
+                        Sold {e.agreed_plan.videos_sold} videos against a plan of {e.agreed_plan.plan_videos}. Creator legs must add up to {e.agreed_plan.videos_sold}.
+                      </div>
+                    )}
+                  </Row>
+                )}
               </dl>
             </div>
           ) : (
@@ -135,7 +152,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
             open={e.status === 'requested'}
             quotes={quotes.data}
             requested={e.request_deliverables ?? []}
-            defaults={{ count: totalAsked, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
+            defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
+            planVideos={e.plan_videos_total}
+            planLabel={`${creators} creator${creators === 1 ? '' : 's'} × ${e.plan_videos_per_creator} video${e.plan_videos_per_creator === 1 ? '' : 's'}`}
           />
         ) : <Failed message={quotes.error} inline />}
       </div>

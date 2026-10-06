@@ -46,7 +46,7 @@ async function run() {
 
   await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: false })
   cleanup.push(() => admin.from('staff_access').delete().eq('user_id', STAFF.id))
-  const { data: exp } = await admin.from('experiences').insert({ brand_id: B.brand_id, title: '[console-test] Experience', status: 'requested', request_deliverables: [{ type: 'ugc_video', count: 12 }, { type: 'ugc_video', count: 'x' }], brand_service_total_paise: 9_900_000 }).select('id').single()
+  const { data: exp } = await admin.from('experiences').insert({ brand_id: B.brand_id, title: '[console-test] Experience', status: 'requested', request_creator_count: 3, request_deliverables: [{ type: 'UGC video', count: 4 }, { type: 'Story', count: 2 }, { type: 'Reel', count: 'x' }], brand_service_total_paise: 9_900_000 }).select('id').single()
   cleanup.push(() => admin.from('experiences').delete().eq('id', exp!.id))
 
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
@@ -57,7 +57,7 @@ async function run() {
   const s = await staff.rpc('experience_console_list')
   const row = (s.data ?? []).find((r: any) => r.id === exp!.id)
   ok('sees the list, including every brand\'s Experiences', !s.error && !!row, s.error?.message ?? '')
-  ok('requested videos summed, junk counts ignored (12)', row?.requested_videos === 12, String(row?.requested_videos))
+  ok('requested videos = creators × videos each (3 × 4 = 12; stories and junk counts not counted)', row?.requested_videos === 12, String(row?.requested_videos))
   ok('brand name comes with the row', typeof row?.brand_name === 'string' && row.brand_name.length > 0)
   const keys = Object.keys(row ?? {})
   ok('no money, cost, rate or note column in the result', !keys.some((k) => MONEY.test(k)), keys.join(', '))

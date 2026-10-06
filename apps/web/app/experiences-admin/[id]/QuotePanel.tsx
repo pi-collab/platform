@@ -17,12 +17,15 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * through. The database enforces the rules (one open quote, totals, quotes
  * closed once one is accepted); this component only collects input.
  */
-export default function QuotePanel({ experienceId, open: quotesOpen, quotes, requested, defaults }: {
+export default function QuotePanel({ experienceId, open: quotesOpen, quotes, requested, defaults, planVideos, planLabel }: {
   experienceId: string
   open: boolean
   quotes: ConsoleQuote[]
   requested: ConsoleDeliverable[]
   defaults: { count: number; city: string; date: string }
+  /** Videos the plan implies (creators × videos per creator); a quote may differ, which is flagged. */
+  planVideos: number
+  planLabel: string
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -115,7 +118,10 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
             <div><label style={fieldLabel} htmlFor="q-pv">Price per video (₹)</label>
               <input id="q-pv" className="dinput" inputMode="decimal" placeholder="3,500" value={perVideo} onChange={(e) => setPerVideo(e.target.value)} /></div>
             <div><label style={fieldLabel} htmlFor="q-n">Videos</label>
-              <input id="q-n" className="dinput" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, ''))} /></div>
+              <input id="q-n" className="dinput" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value.replace(/\D/g, ''))} />
+              <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, marginTop: 6, color: Number(count) && Number(count) !== planVideos ? '#8C6417' : 'var(--wg-500)' }}>
+                {Number(count) && Number(count) !== planVideos ? `Plan is ${planVideos} (${planLabel}). Accepting this locks ${count}.` : `From the plan: ${planLabel}`}
+              </div></div>
             <div><label style={fieldLabel} htmlFor="q-misc">Extras (₹, optional)</label>
               <input id="q-misc" className="dinput" inputMode="decimal" placeholder="0" value={misc} onChange={(e) => setMisc(e.target.value)} /></div>
             <div><span style={fieldLabel}>Shoot date</span><DatePill value={date} onChange={setDate} id="q-date" /></div>

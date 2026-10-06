@@ -1354,3 +1354,12 @@ GRANT  EXECUTE ON FUNCTION experience_console_quotes(uuid)                      
 GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, jsonb, boolean, boolean, int, boolean, int, text, date, date, text, text) TO authenticated;
 GRANT  EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, bigint, jsonb, date, text, text, text) TO authenticated;
 GRANT  EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   TO authenticated;
+
+-- ── 0531: the per-creator request plan ──────────────────────────────────────
+GRANT SELECT (request_creator_count, request_affiliate_per_creator, request_ad_rights_per_creator,
+              request_boost_per_creator, agreed_plan)
+  ON experiences TO authenticated;
+REVOKE EXECUTE ON FUNCTION experience_plan_count(jsonb, boolean) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_plan_totals(jsonb, int) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) TO authenticated;

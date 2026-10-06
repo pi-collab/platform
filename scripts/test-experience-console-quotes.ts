@@ -33,9 +33,13 @@ async function sessionFor(authId: string): Promise<SupabaseClient> {
   return createClient(URL, ANON, { global: { headers: { Authorization: `Bearer ${s.access_token}` } }, auth: { persistSession: false } })
 }
 const refused = (r: { error: { message: string } | null }) => !!r.error
+// The plan: 10 creators, each making 2 UGC videos + 1 Story; affiliate on 1 of
+// each creator's 2 videos; ad rights on all of them for 3 months.
 const req = (brandId: string, over: Record<string, unknown> = {}) => ({
-  p_brand_id: brandId, p_title: '[console-quotes-test] Kiro day shoot', p_deliverables: [{ type: 'UGC video', count: 20 }],
-  p_affiliate: true, p_ad_rights: true, p_ad_rights_months: 3, p_boost: false, p_boost_months: null,
+  p_brand_id: brandId, p_title: '[console-quotes-test] Kiro day shoot', p_creator_count: 10,
+  p_deliverables: [{ type: 'UGC video', count: 2 }, { type: 'Story', count: 1 }],
+  p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: null, p_ad_rights_months: 3,
+  p_boost: false, p_boost_per_creator: null, p_boost_months: null,
   p_location: 'Mumbai', p_date_from: '2026-11-10', p_date_to: '2026-11-12', p_brief: 'Glow serum', p_channel: 'whatsapp', ...over,
 })
 const quote = (expId: string, over: Record<string, unknown> = {}) => ({
@@ -70,6 +74,12 @@ async function run() {
   ok('the Guapd house brand cannot be the brand', refused(await staff.rpc('experience_console_create', req(house.id))))
   ok('a request without a channel is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_channel: null }))))
   ok('a request with no deliverables is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_deliverables: [] }))))
+  ok('a request with no creator count is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_creator_count: null }))))
+  ok('a zero creator count is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_creator_count: 0 }))))
+  ok('affiliate without a per-creator count is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_affiliate_per_creator: null }))))
+  ok('affiliate on more videos than each creator makes (3 of 2) is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_affiliate_per_creator: 3 }))))
+  ok('ad rights on more videos than each creator makes is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_ad_rights_per_creator: 5 }))))
+  ok('boost on more videos than each creator makes is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_boost: true, p_boost_per_creator: 3, p_boost_months: 1 }))))
   const brands = await staff.rpc('experience_console_brands')
   ok('the brand picker never lists the house brand', !brands.error && !(brands.data ?? []).some((b: any) => b.id === house.id))
   ok('the brand picker is refused to a brand', refused(await brand.rpc('experience_console_brands')))
@@ -79,7 +89,14 @@ async function run() {
   const E = c1.data as string; made.push(E)
   const g1 = await staff.rpc('experience_console_get', { p_experience_id: E })
   ok('it starts as Request in (requested)', g1.data?.status === 'requested', g1.data?.status)
-  ok('request fields stored (20 videos, ad rights 3 months, Mumbai, WhatsApp)', g1.data?.request_deliverables?.[0]?.count === 20 && g1.data?.request_ad_rights_months === 3 && g1.data?.request_location === 'Mumbai' && g1.data?.request_channel === 'whatsapp')
+  ok('plan stored: 10 creators, 2 UGC video + 1 Story each', g1.data?.request_creator_count === 10 && g1.data?.request_deliverables?.length === 2)
+  const tot = Object.fromEntries((g1.data?.plan_totals ?? []).map((t: any) => [t.type, t.total]))
+  ok('totals computed by the database: 20 UGC videos, 10 Stories', tot['UGC video'] === 20 && tot['Story'] === 10, JSON.stringify(g1.data?.plan_totals))
+  ok('videos priced per video: 2 each, 20 in total (stories not counted)', g1.data?.plan_videos_per_creator === 2 && g1.data?.plan_videos_total === 20)
+  ok('rights per creator: affiliate on 1, ad rights on all (null) for 3 months', g1.data?.request_affiliate_per_creator === 1 && g1.data?.request_ad_rights_per_creator === null && g1.data?.request_ad_rights_months === 3)
+  ok('other request fields stored (Mumbai, WhatsApp)', g1.data?.request_location === 'Mumbai' && g1.data?.request_channel === 'whatsapp')
+  const lst = ((await staff.rpc('experience_console_list')).data ?? []).find((r: any) => r.id === E)
+  ok('the list shows 20 videos for it', lst?.requested_videos === 20, String(lst?.requested_videos))
   const a1 = await audit(E, 'experience.request_recorded')
   ok('audit: who and which channel', a1.length === 1 && (a1[0].detail as any).channel === 'whatsapp' && !!a1[0].actor_email)
   const keys = Object.keys(g1.data ?? {})
@@ -120,6 +137,10 @@ async function run() {
   const g2 = (await staff.rpc('experience_console_get', { p_experience_id: E })).data
   ok('agreed price locked: 20 × ₹3,000 = ₹60,000', g2.brand_service_total_paise === 6000000 && g2.brand_per_video_paise === 300000 && g2.brand_deliverable_count === 20 && g2.brand_misc_paise === 0)
   ok('shoot date and city locked', g2.shoot_date === '2026-11-11' && g2.shoot_city === 'Mumbai')
+  const ap = g2.agreed_plan
+  const apTot = Object.fromEntries((ap?.totals ?? []).map((t: any) => [t.type, t.total]))
+  ok('the plan is locked with it: 10 creators, 20 UGC videos, 10 Stories', ap?.creator_count === 10 && apTot['UGC video'] === 20 && apTot['Story'] === 10)
+  ok('locked plan records videos sold (20) against the plan (20)', ap?.videos_sold === 20 && ap?.plan_videos === 20)
   ok('status moved exactly one step: requested → rostering', g2.status === 'rostering', g2.status)
   ok('quotes are closed once agreed', refused(await staff.rpc('experience_console_quote', quote(E))))
   ok('a second accept is refused', refused(await staff.rpc('experience_console_accept', { p_quote_id: open[0].id, p_channel: null })))
@@ -128,12 +149,13 @@ async function run() {
 
   group('a Guapd quote accepted by the brand needs the channel')
   const c2 = await staff.rpc('experience_console_create', req(B.brand_id)); made.push(c2.data as string)
-  await staff.rpc('experience_console_quote', quote(c2.data as string))
+  await staff.rpc('experience_console_quote', quote(c2.data as string, { p_deliverable_count: 18, p_misc_paise: 0 }))
   const q = ((await staff.rpc('experience_console_quotes', { p_experience_id: c2.data })).data as any[])[0]
   ok('without the channel: refused', refused(await staff.rpc('experience_console_accept', { p_quote_id: q.id, p_channel: null })))
   const ok2 = await staff.rpc('experience_console_accept', { p_quote_id: q.id, p_channel: 'email' })
   const g3 = (await staff.rpc('experience_console_get', { p_experience_id: c2.data })).data
-  ok('with it: accepted, ₹75,000 locked, rostering', !ok2.error && g3.brand_service_total_paise === 7500000 && g3.status === 'rostering')
+  ok('with it: accepted, 18 × ₹3,500 = ₹63,000 locked, rostering', !ok2.error && g3.brand_service_total_paise === 6300000 && g3.status === 'rostering')
+  ok('a negotiated count is the contract: sold 18 against a plan of 20, both recorded', g3.agreed_plan?.videos_sold === 18 && g3.agreed_plan?.plan_videos === 20)
 
   group('revoking')
   await admin.from('staff_access').update({ experiences_operational: false }).eq('user_id', STAFF.id)

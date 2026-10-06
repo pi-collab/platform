@@ -6825,3 +6825,11 @@ Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and th
 - [ ] `/experiences-admin/new`: brand picker (real brands only), title, deliverables (type + count rows), Affiliate / Ad rights (months) / Boost (months), location, date window, brief, "Arrived via". Saving opens the new Experience.
 - [ ] `/experiences-admin/[id]`: hero with brand, title, status chip and the forward path; "What the brand asked for"; "Agreed with the brand" (empty until accepted); Quotes with Send a quote / Record brand's counter, the total preview, history (v-number, who, status, total, breakdown, date, city, message, channel, who recorded it), and accept with a confirmation that names what gets locked.
 - [ ] No creator rate, cost, payout or margin appears anywhere in the console.
+
+## 101. Experience request is a per-creator plan (migration 0531, run by hand)
+
+- [ ] `scripts/test-experience-console-quotes.ts` passes the plan checks: creators wanted is required and above zero; deliverable rows are per creator; totals are computed in the database (10 creators × 2 UGC video + 1 Story = 20 UGC videos, 10 Stories); only video types (UGC video, Reel) are priced per video; affiliate needs a per-creator count, and affiliate / ad rights / boost can never cover more videos than each creator makes (ad rights and boost blank = all); the list shows creators × videos each.
+- [ ] Accepting a quote locks the plan into `agreed_plan` (creators, per-creator rows, totals, plan videos, videos SOLD). If the quote's count was negotiated away from the plan (e.g. 18 against 20), both are recorded and the detail page says creator legs must add up to the sold number.
+- [ ] Form: "Creators wanted", "Each creator makes" rows, a live "In total" line, and per-creator counts on Affiliate / Ad rights / Boost ("of each creator's N videos").
+- [ ] Detail: Creators, Each creator makes, In total, Rights per creator; the quote composer starts from the plan's video count and flags a different count.
+- [ ] Stage 3 (not built yet): each creator leg starts from the per-creator template and may be adjusted; the reconciliation is the SUM of all legs against the locked totals, never per-creator uniformity.

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { acceptConsoleQuote, addConsoleQuote, createConsoleExperience, type ConsoleDeliverable } from '@/lib/experience-console-server'
-import { DELIVERABLE_TYPES, isChannel, rupeesToPaise } from '@/lib/experience-request'
+import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
 /**
  * Staff console writes. Each one passes experienceStaffGate (ops admin +
@@ -46,11 +46,17 @@ function deliverables(raw: unknown): ConsoleDeliverable[] | null {
 export interface NewRequestForm {
   brandId: string
   title: string
+  creatorCount: number | string
+  /** Per creator. */
   deliverables: { type: string; count: number | string }[]
   affiliate: boolean
+  affiliatePerCreator: number | string | null
   adRights: boolean
+  /** blank = all of each creator's videos */
+  adRightsPerCreator: number | string | null
   adRightsMonths: number | string | null
   boost: boolean
+  boostPerCreator: number | string | null
   boostMonths: number | string | null
   location: string
   dateFrom: string
@@ -62,7 +68,22 @@ export interface NewRequestForm {
 export async function recordExperienceRequest(f: NewRequestForm): Promise<Out<string>> {
   const refused = await gate(); if (refused) return refused
   const items = deliverables(f.deliverables)
-  if (!items || items.length === 0) return { ok: false, error: 'Add at least one deliverable, with a count above zero.' }
+  if (!items || items.length === 0) return { ok: false, error: 'Add at least one deliverable per creator, with a count above zero.' }
+  const creators = Number(f.creatorCount)
+  if (!Number.isInteger(creators) || creators <= 0 || creators > 500) return { ok: false, error: 'Say how many creators the brand wants.' }
+  const videos = items.filter((i) => isVideoType(i.type)).reduce((n, i) => n + i.count, 0)
+  const perCreator = (on: boolean, v: unknown, label: string, required: boolean): { ok: true; n: number | null } | { ok: false; error: string } => {
+    if (!on) return { ok: true, n: null }
+    const raw = String(v ?? '').trim()
+    if (!raw) return required ? { ok: false, error: `Say how many of each creator's videos ${label}.` } : { ok: true, n: null }
+    const n = Number(raw)
+    if (!Number.isInteger(n) || n <= 0) return { ok: false, error: `The number of videos ${label} must be a whole number above zero.` }
+    if (n > videos) return { ok: false, error: `Each creator makes ${videos} video${videos === 1 ? '' : 's'}, so at most ${videos} can be counted for this.` }
+    return { ok: true, n }
+  }
+  const aff = perCreator(!!f.affiliate, f.affiliatePerCreator, 'carry the affiliate link', true); if (!aff.ok) return aff
+  const ads = perCreator(!!f.adRights, f.adRightsPerCreator, 'the ad rights cover', false); if (!ads.ok) return ads
+  const bst = perCreator(!!f.boost, f.boostPerCreator, 'boost covers', false); if (!bst.ok) return bst
   if (!isChannel(f.channel)) return { ok: false, error: 'Say how the request arrived.' }
   const title = cleanText(f.title, 140)
   if (!title) return { ok: false, error: 'Give the Experience a title.' }
@@ -72,9 +93,10 @@ export async function recordExperienceRequest(f: NewRequestForm): Promise<Out<st
   if (dateFrom && dateTo && dateTo < dateFrom) return { ok: false, error: 'The date window ends before it starts.' }
 
   const r = await createConsoleExperience({
-    brandId: f.brandId, title, deliverables: items,
-    affiliate: !!f.affiliate, adRights: !!f.adRights, adRightsMonths: months(!!f.adRights, f.adRightsMonths),
-    boost: !!f.boost, boostMonths: months(!!f.boost, f.boostMonths),
+    brandId: f.brandId, title, creatorCount: creators, deliverables: items,
+    affiliate: !!f.affiliate, affiliatePerCreator: aff.n,
+    adRights: !!f.adRights, adRightsPerCreator: ads.n, adRightsMonths: months(!!f.adRights, f.adRightsMonths),
+    boost: !!f.boost, boostPerCreator: bst.n, boostMonths: months(!!f.boost, f.boostMonths),
     location: cleanText(f.location, 120), dateFrom, dateTo, brief: cleanText(f.brief, 4000), channel: f.channel,
   })
   if (!r.ok) return r

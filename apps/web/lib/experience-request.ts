@@ -7,6 +7,11 @@
  */
 
 export const DELIVERABLE_TYPES = ['UGC video', 'Reel', 'Story', 'Static post', 'Photo set'] as const
+/** The types priced per video. Others are in the plan and its totals but not
+    in the per-video count (they belong in a quote's extras). Same list as
+    experience_plan_count() in migration 0531. */
+export const VIDEO_TYPES: readonly string[] = ['UGC video', 'Reel']
+export const isVideoType = (t: string) => VIDEO_TYPES.includes(t)
 
 export const CHANNELS = [
   ['whatsapp', 'WhatsApp'],
@@ -43,4 +48,10 @@ export const QUOTE_STATUS: Record<string, { label: string; tone: ChipTone }> = {
   accepted:   { label: 'Accepted', tone: 'lime' },
   rejected:   { label: 'Declined', tone: 'red' },
   withdrawn:  { label: 'Withdrawn', tone: 'grey' },
+}
+
+/** "1 UGC video", "20 UGC videos", "10 Stories". */
+export function countOf(n: number, type: string): string {
+  if (n === 1) return `1 ${type}`
+  return `${n} ${type.endsWith('y') && !/[aeiou]y$/i.test(type) ? type.slice(0, -1) + 'ies' : type + 's'}`
 }

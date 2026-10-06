@@ -37,11 +37,20 @@ export interface ConsoleExperience {
   status: string
   brand_id: string
   brand_name: string
+  /** The plan is PER CREATOR: request_creator_count creators, each doing request_deliverables. */
+  request_creator_count: number | null
   request_deliverables: ConsoleDeliverable[]
+  plan_totals: { type: string; per_creator: number; total: number }[]
+  plan_videos_per_creator: number
+  plan_videos_total: number
   request_affiliate: boolean
+  request_affiliate_per_creator: number | null
   request_ad_rights: boolean
+  /** null = all of each creator's videos */
+  request_ad_rights_per_creator: number | null
   request_ad_rights_months: number | null
   request_boost: boolean
+  request_boost_per_creator: number | null
   request_boost_months: number | null
   request_location: string | null
   request_date_from: string | null
@@ -57,6 +66,14 @@ export interface ConsoleExperience {
   brand_service_total_paise: number
   shoot_date: string | null
   shoot_city: string | null
+  /** Locked on accept: the plan, its totals and the videos actually sold. The contract Stage 3 reconciles to. */
+  agreed_plan: {
+    creator_count: number | null
+    per_creator: ConsoleDeliverable[]
+    totals: { type: string; per_creator: number; total: number }[]
+    plan_videos: number
+    videos_sold: number
+  } | null
   created_at: string
   updated_at: string
 }
@@ -101,11 +118,17 @@ export async function listConsoleBrands(): Promise<Result<{ id: string; name: st
 export interface CreateRequestInput {
   brandId: string
   title: string
+  creatorCount: number
+  /** Per creator. */
   deliverables: ConsoleDeliverable[]
   affiliate: boolean
+  affiliatePerCreator: number | null
   adRights: boolean
+  /** null = all of each creator's videos */
+  adRightsPerCreator: number | null
   adRightsMonths: number | null
   boost: boolean
+  boostPerCreator: number | null
   boostMonths: number | null
   location: string | null
   dateFrom: string | null
@@ -116,9 +139,10 @@ export interface CreateRequestInput {
 
 export async function createConsoleExperience(p: CreateRequestInput): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_create', {
-    p_brand_id: p.brandId, p_title: p.title, p_deliverables: p.deliverables,
-    p_affiliate: p.affiliate, p_ad_rights: p.adRights, p_ad_rights_months: p.adRightsMonths,
-    p_boost: p.boost, p_boost_months: p.boostMonths, p_location: p.location,
+    p_brand_id: p.brandId, p_title: p.title, p_creator_count: p.creatorCount, p_deliverables: p.deliverables,
+    p_affiliate: p.affiliate, p_affiliate_per_creator: p.affiliatePerCreator,
+    p_ad_rights: p.adRights, p_ad_rights_per_creator: p.adRightsPerCreator, p_ad_rights_months: p.adRightsMonths,
+    p_boost: p.boost, p_boost_per_creator: p.boostPerCreator, p_boost_months: p.boostMonths, p_location: p.location,
     p_date_from: p.dateFrom, p_date_to: p.dateTo, p_brief: p.brief, p_channel: p.channel,
   })
   return error ? fail(error) : { ok: true, data: data as string }
