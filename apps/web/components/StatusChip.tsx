@@ -20,6 +20,9 @@ const TONES: Record<ChipTone, { dot: string; bg: string }> = {
   red:     { dot: '#C4494F', bg: '#FDF0F0' },
 }
 
+/** The dot colour for a tone, for places that show a status as a dot + label (the status board). */
+export function toneDot(tone: ChipTone): string { return TONES[tone].dot }
+
 function mixWithWhite(hex: string, tintPct: number): string {
   const n = parseInt(hex.slice(1), 16)
   const t = tintPct / 100

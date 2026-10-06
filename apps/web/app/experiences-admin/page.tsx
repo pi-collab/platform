@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import StatusChip from '@/components/StatusChip'
+import StatusChip, { toneDot } from '@/components/StatusChip'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { listConsoleExperiences, type ConsoleExperienceRow } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus, type ExperienceStatus } from '@/lib/experience-status'
@@ -46,43 +46,45 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
 
   return (
     <div style={container}>
-      {/* ══════ HERO: title, then the counters plate (the brand deals page's shape) ══════ */}
+      {/* ══════ HERO ══════ */}
       <section style={heroCard}>
-        <div style={{ flex: 1, minWidth: 240 }}>
-          <h1 style={h1}>
-            Guapd <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>experiences</span>
-          </h1>
-          <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
-            Every done-for-you shoot Guapd runs, across all brands, newest first.
-          </p>
-        </div>
+        <h1 style={h1}>
+          Guapd <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>experiences</span>
+        </h1>
+        <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
+          Every done-for-you shoot Guapd runs, across all brands, newest first.
+        </p>
 
-        <div className="xp-kpis" style={kpiPlate}>
-          {(['intake', 'in_flight', 'done'] as const).map((l, i) => (
-            <Link key={l} href={`${BASE}?lane=${l}`} style={{ ...kpiCell, borderLeft: i ? '1px solid var(--hair)' : 'none', textDecoration: 'none', color: 'inherit' }}>
-              <div style={kpiLabel}>{LANES.find(([k]) => k === l)![1]}</div>
-              <div style={kpiValue}>{laneCount(l)}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════ STATUS BOARD: every status with its count; click to filter ══════ */}
-      <section className="surface" style={{ marginTop: 20, padding: 'clamp(20px, 2.4vw, 28px)' }}>
-        <h2 className="sect-head">Status board</h2>
-        <div className="sect-rule" />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
-          {EXPERIENCE_STATUSES.map((s) => {
-            const st = experienceStatus(s)
-            const active = statusFilter === s
+        {/* ══════ STATUS BOARD ══════
+            One plate, three lanes (the brand deals page's counters plate,
+            divided the same way). Each lane: its total, then one line per
+            status with its count. Lane header filters by lane, a line by
+            status. This is the only place counts appear. */}
+        <div className="xp-board" style={boardPlate}>
+          {LANES.filter(([k]) => k !== 'all').map(([l, label], i) => {
+            const laneActive = !statusFilter && lane === l
             return (
-              <Link key={s} href={active ? BASE : `${BASE}?status=${s}`} aria-pressed={active}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', borderRadius: 999, padding: 3, outline: active ? '2px solid var(--ink)' : 'none' }}>
-                <StatusChip label={st.label} tone={st.tone} />
-                <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums', paddingRight: 6 }}>
-                  {counts.get(s) ?? 0}
-                </span>
-              </Link>
+              <div key={l} style={{ ...laneCol, borderLeft: i ? '1px solid var(--hair)' : 'none' }}>
+                <Link href={laneActive ? BASE : `${BASE}?lane=${l}`} aria-pressed={laneActive} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                  <div style={{ ...kpiLabel, color: laneActive ? 'var(--ink)' : 'var(--wg-500)' }}>{label}</div>
+                  <div style={kpiValue}>{laneCount(l as Lane)}</div>
+                </Link>
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {EXPERIENCE_STATUSES.filter((s) => experienceStatus(s).lane === l).map((s) => {
+                    const st = experienceStatus(s)
+                    const active = statusFilter === s
+                    const n = counts.get(s) ?? 0
+                    return (
+                      <Link key={s} href={active ? BASE : `${BASE}?status=${s}`} aria-pressed={active} className="xp-status"
+                        style={{ ...statusLine, background: active ? 'var(--neon)' : undefined }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: toneDot(st.tone) }} />
+                        <span style={{ flex: 1, color: n ? 'var(--ink)' : 'var(--wg-500)' }}>{st.label}</span>
+                        <span style={{ fontWeight: 600, color: n ? 'var(--ink)' : 'var(--wg-400)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
         </div>
@@ -90,16 +92,17 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
 
       {/* ══════ LIST ══════ */}
       <section style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-          {LANES.map(([k, label]) => {
-            const active = !statusFilter && lane === k
-            return (
-              <Link key={k} href={k === 'all' ? BASE : `${BASE}?lane=${k}`}
-                style={active ? { ...tab, background: 'var(--ink)', color: '#fff', borderColor: 'var(--ink)' } : tab}>
-                {label} <span style={{ opacity: 0.6, marginLeft: 4 }}>{laneCount(k)}</span>
-              </Link>
-            )
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div>
+            <h2 className="sect-head">
+              {statusFilter ? experienceStatus(statusFilter).label : lane === 'all' ? 'All Experiences' : LANES.find(([k]) => k === lane)![1]}
+              <span style={{ color: 'var(--wg-500)', fontWeight: 500, marginLeft: 8 }}>{shown.length}</span>
+            </h2>
+            <div className="sect-rule" />
+          </div>
+          {(statusFilter || lane !== 'all') && (
+            <Link href={BASE} style={clearLink}>Show all</Link>
+          )}
         </div>
 
         {error ? (
@@ -121,10 +124,11 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
       </section>
 
       <style>{`
+        .xp-status:hover { background: #F7F7F4; }
         @media (max-width: 640px) {
-          .xp-kpis { grid-template-columns: 1fr !important; }
-          .xp-kpis > a { border-left: none !important; border-top: 1px solid var(--hair); }
-          .xp-kpis > a:first-child { border-top: none; }
+          .xp-board { grid-template-columns: 1fr !important; }
+          .xp-board > div { border-left: none !important; border-top: 1px solid var(--hair); }
+          .xp-board > div:first-child { border-top: none; }
           .xp-row { flex-wrap: wrap; }
           .xp-row__chip { order: 3; }
         }
@@ -191,11 +195,6 @@ const h1: React.CSSProperties = {
   fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1,
   fontSize: 'clamp(34px, 4.4vw, 44px)', margin: 0, color: 'var(--ink)',
 }
-const kpiPlate: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginTop: 24,
-  borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden',
-}
-const kpiCell: React.CSSProperties = { padding: 'clamp(22px, 2.2vw, 30px)', display: 'flex', flexDirection: 'column' }
 const kpiLabel: React.CSSProperties = {
   fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--wg-500)',
 }
@@ -203,8 +202,17 @@ const kpiValue: React.CSSProperties = {
   fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 'clamp(34px, 3.6vw, 40px)', lineHeight: 1, letterSpacing: '-0.03em',
   color: 'var(--ink)', fontVariantNumeric: 'tabular-nums lining-nums', marginTop: 14,
 }
-const tab: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', height: 36, padding: '0 14px', borderRadius: 999,
-  border: '1px solid #EAEAE3', background: 'var(--card)', color: 'var(--ink-soft)',
+const boardPlate: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: '2fr 3fr 2fr', gap: 0, marginTop: 24,
+  borderRadius: 16, background: 'var(--card)', boxShadow: 'var(--sh-2)', overflow: 'hidden',
+}
+const laneCol: React.CSSProperties = { padding: 'clamp(20px, 2.2vw, 28px)', minWidth: 0 }
+const statusLine: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', margin: '0 -10px', borderRadius: 10,
+  fontFamily: 'var(--font-ui)', fontSize: 13.5, textDecoration: 'none',
+}
+const clearLink: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', height: 34, padding: '0 14px', borderRadius: 999,
+  border: '1px solid #EAEAE3', background: 'var(--card)', color: 'var(--ink)',
   fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, textDecoration: 'none',
 }
