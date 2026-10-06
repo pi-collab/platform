@@ -1336,3 +1336,21 @@ END;
 $$;
 REVOKE EXECUTE ON FUNCTION experience_console_list() FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION experience_console_list() TO authenticated;
+
+-- ── 0530: staff console request intake + quotes ─────────────────────────────
+-- The functions themselves live in migration 0530 (definer, operational check
+-- first, ops_events written in the same transaction). Grants, mirrored here:
+REVOKE EXECUTE ON FUNCTION experience_console_require()                            FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_audit(text, text, uuid, jsonb)       FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_brands()                             FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_get(uuid)                            FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_quotes(uuid)                         FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, jsonb, boolean, boolean, int, boolean, int, text, date, date, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, bigint, jsonb, date, text, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_brands()                             TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_get(uuid)                            TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_quotes(uuid)                         TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, jsonb, boolean, boolean, int, boolean, int, text, date, date, text, text) TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, bigint, jsonb, date, text, text, text) TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   TO authenticated;

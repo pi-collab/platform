@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import StatusChip, { toneDot } from '@/components/StatusChip'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
+import NoAccess from './NoAccess'
+import { neonBtn } from './ui'
 import { listConsoleExperiences, type ConsoleExperienceRow } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus, type ExperienceStatus } from '@/lib/experience-status'
 
@@ -48,12 +50,20 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
     <div style={container}>
       {/* ══════ HERO ══════ */}
       <section style={heroCard}>
-        <h1 style={h1}>
-          Guapd <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>experiences</span>
-        </h1>
-        <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
-          Every done-for-you shoot Guapd runs, across all brands, newest first.
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <h1 style={h1}>
+              Guapd <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', letterSpacing: 0 }}>experiences</span>
+            </h1>
+            <p style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--wg-600)', margin: '8px 0 0' }}>
+              Every done-for-you shoot Guapd runs, across all brands, newest first.
+            </p>
+          </div>
+          <Link href={`${BASE}/new`} className="neonbtn" style={neonBtn}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            New experience
+          </Link>
+        </div>
 
         {/* ══════ STATUS BOARD ══════
             One plate, three lanes (the brand deals page's counters plate,
@@ -113,7 +123,7 @@ export default async function ExperiencesPage({ searchParams }: { searchParams: 
               {rows.length === 0 ? 'No Experiences yet' : 'Nothing here'}
             </div>
             <p className="t-body" style={{ margin: '6px 0 0' }}>
-              {rows.length === 0 ? 'A brand request becomes an Experience here once ops records it.' : 'No Experience is in this status right now.'}
+              {rows.length === 0 ? 'Record a brand request with New experience, and it shows here.' : 'No Experience is in this status right now.'}
             </p>
           </div>
         ) : (
@@ -148,7 +158,7 @@ function ExperienceRow({ r, first }: { r: Row; first: boolean }) {
   const meta = [brand, where, when, videos ? `${videos} video${videos === 1 ? '' : 's'} asked` : null].filter(Boolean).join(' · ')
 
   return (
-    <div className="drow xp-row" style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '18px clamp(18px, 2.4vw, 26px)', borderTop: first ? 'none' : '1px solid var(--hair)' }}>
+    <Link href={`${BASE}/${r.id}`} className="drow xp-row" style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '18px clamp(18px, 2.4vw, 26px)', borderTop: first ? 'none' : '1px solid var(--hair)', textDecoration: 'none', color: 'inherit' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 15.5, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</div>
         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--wg-500)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -157,22 +167,8 @@ function ExperienceRow({ r, first }: { r: Row; first: boolean }) {
       </div>
       <span className="xp-row__chip"><StatusChip label={st.label} tone={st.tone} width={150} /></span>
       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--wg-500)', minWidth: 90, textAlign: 'right' }}>{fmtDate(r.created_at.slice(0, 10))}</div>
-    </div>
-  )
-}
-
-function NoAccess({ reason }: { reason: 'not_ops' | 'no_operational_access' }) {
-  return (
-    <div style={container}>
-      <section style={{ ...heroCard, maxWidth: 560 }}>
-        <h1 style={{ ...h1, fontSize: 30 }}>No access to Experiences</h1>
-        <p className="t-body" style={{ margin: '10px 0 0' }}>
-          {reason === 'not_ops'
-            ? 'Guapd Experiences is for the Guapd team.'
-            : 'Experience access is granted per person by a Guapd admin, and has not been turned on for your account.'}
-        </p>
-      </section>
-    </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="m9 18 6-6-6-6" /></svg>
+    </Link>
   )
 }
 

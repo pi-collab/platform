@@ -19,7 +19,7 @@ const RULES: { what: string; pattern: RegExp; allowed: string[] }[] = [
   { what: 'reads the P&L snapshot table', pattern: /experience_pnl_snapshots/, allowed: [] },
   { what: 'calls the internal P&L calculation', pattern: /compute_experience_pnl/, allowed: [] },
   { what: 'calls the P&L / payouts database functions', pattern: /rpc\(\s*['"]experience_(pnl|payouts)['"]/, allowed: ['lib/experience-pnl-server.ts'] },
-  { what: 'calls the staff console list function', pattern: /rpc\(\s*['"]experience_console_list['"]/, allowed: ['lib/experience-console-server.ts'] },
+  { what: 'calls the staff console database functions', pattern: /rpc\(\s*['"]experience_console_[a-z_]+['"]/, allowed: ['lib/experience-console-server.ts'] },
   { what: 'computes margin in app code', pattern: /\bexperienceMargin\s*\(/, allowed: ['lib/experience-money.ts'] },
   { what: 'reads or writes staff access', pattern: /from\(\s*['"]staff_access['"]\s*\)/, allowed: ['lib/staff-access-server.ts'] },
   { what: 'handles margin figures', pattern: /guapd_margin|platform_fee_kept|guapdMarginPaise|platformFeeKeptPaise/, allowed: ['lib/experience-pnl-server.ts', 'lib/experience-money.ts'] },

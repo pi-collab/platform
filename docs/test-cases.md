@@ -6809,3 +6809,19 @@ Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and th
 - [ ] A real brand opening `/experiences-admin` directly sees "No access", and the list function refuses them if called directly.
 - [ ] `/ops/access` → "Guapd Experiences access": one row per account of each admin email (creator and brand accounts listed separately), None / Operational / Financial; Financial asks to confirm; a grant to someone not on the admin list is refused; any access held by a non-admin account is listed and flagged for removal; every change writes `staff_access.set` to `ops_events`.
 - [ ] `/ops/experiences` no longer exists; the ops menu "Guapd Experiences" opens `/experiences-admin`.
+
+## 100. Guapd Experiences console, stage 2: request intake + quotes (migration 0530, run by hand)
+
+- [ ] `scripts/test-experience-console-quotes.ts` passes:
+  - only staff with operational access can create, read, quote or accept (brand, creator, no-access user, anonymous and the service role are refused by the database);
+  - the house brand cannot be an Experience brand, and the brand picker never lists it;
+  - a request needs a channel and at least one deliverable, starts as `requested`, and is audited with who and the channel;
+  - totals are computed in the database (per video × count + misc); zero price or count is refused; a brand counter needs a channel;
+  - a new quote or counter replaces the open one (one open at a time); a replaced quote cannot be accepted;
+  - accepting needs a date and city on the quote, locks price, date and city onto the Experience, and moves status exactly one step (requested → rostering); quotes close after that;
+  - a Guapd quote accepted by the brand needs the channel;
+  - every step writes its ops_events row in the same transaction.
+- [ ] `/experiences-admin`: "New experience" opens the request form; rows open the detail page.
+- [ ] `/experiences-admin/new`: brand picker (real brands only), title, deliverables (type + count rows), Affiliate / Ad rights (months) / Boost (months), location, date window, brief, "Arrived via". Saving opens the new Experience.
+- [ ] `/experiences-admin/[id]`: hero with brand, title, status chip and the forward path; "What the brand asked for"; "Agreed with the brand" (empty until accepted); Quotes with Send a quote / Record brand's counter, the total preview, history (v-number, who, status, total, breakdown, date, city, message, channel, who recorded it), and accept with a confirmation that names what gets locked.
+- [ ] No creator rate, cost, payout or margin appears anywhere in the console.
