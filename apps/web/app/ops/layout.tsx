@@ -75,7 +75,7 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
             { href: '/ops/brands', label: 'Brands', hint: 'Approvals and brand accounts' },
             ...(isAdmin ? [
               { href: '/ops/deals', label: 'Deals', hint: 'Every deal, fees and timelines' },
-              { href: '/guapd/experiences', label: 'Guapd Experiences', hint: 'The staff console, in the brand portal' },
+              { href: '/experiences-admin', label: 'Guapd Experiences', hint: 'The staff console, in the brand portal' },
               { href: '/ops/offers', label: 'Offer Links', hint: 'Links for open offers' },
             ] : []),
           ] },

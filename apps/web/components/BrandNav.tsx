@@ -90,7 +90,7 @@ export default async function BrandNav() {
 
   /* The "Guapd Experiences" tab is decided by WHO the user is (ops admin with
      Experience operational access), not by which brand they belong to. Hiding
-     it is a convenience only: /guapd/experiences runs the same gate itself and
+     it is a convenience only: /experiences-admin runs the same gate itself and
      reads through a database function that checks access again. */
   const guapdConsole = user ? (await experienceStaffGate()).ok : false
   // Only staff with no brand lose the brand tabs. Everyone else (brands,

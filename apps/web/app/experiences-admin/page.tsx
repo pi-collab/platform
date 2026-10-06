@@ -27,7 +27,7 @@ const LANES = [
 type Lane = (typeof LANES)[number][0]
 
 type Row = ConsoleExperienceRow
-const BASE = '/guapd/experiences'
+const BASE = '/experiences-admin'
 
 export default async function ExperiencesPage({ searchParams }: { searchParams: { lane?: string; status?: string } }) {
   const gate = await experienceStaffGate()

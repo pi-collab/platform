@@ -4,7 +4,7 @@ import { verifyOpsAccess } from '@/lib/ops-auth'
 import { createClient } from '@/lib/supabase/server'
 
 /**
- * The gate for the Guapd Experiences staff console (/guapd/experiences) and
+ * The gate for the Guapd Experiences staff console (/experiences-admin) and
  * every action behind it. Two checks, both required:
  *
  *   1. Ops ADMIN (OPS_ALLOWED_EMAILS, verifyOpsAccess). Outreach, including the
