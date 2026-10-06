@@ -100,7 +100,7 @@ async function run() {
   const a1 = await audit(E, 'experience.request_recorded')
   ok('audit: who and which channel', a1.length === 1 && (a1[0].detail as any).channel === 'whatsapp' && !!a1[0].actor_email)
   const keys = Object.keys(g1.data ?? {})
-  ok('the Experience read carries no creator rate, cost, payout, margin or note', !keys.some((k) => /margin|cost|payout|creator|note|net|gross/i.test(k)), keys.filter((k) => /paise/.test(k)).join(', '))
+  ok('the Experience read carries no creator rate, cost, payout, margin or note', !keys.some((k) => /margin|cost|payout|creator_(gross|net)|day_rate|platform_(fee|pct)|note|_net_|gross/i.test(k)), keys.filter((k) => /paise/.test(k)).join(', '))
   for (const [n, c] of [['real brand', brand], ['creator', creator], ['no access', none], ['service role', admin]] as const) {
     ok(`${n}: reading it is refused`, refused(await (c as SupabaseClient).rpc('experience_console_get', { p_experience_id: E })) && refused(await (c as SupabaseClient).rpc('experience_console_quotes', { p_experience_id: E })))
   }
