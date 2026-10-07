@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 
 /**
@@ -30,12 +31,15 @@ export default function AddCreatorsModal({
   onAdd,
   title = 'Add creators',
   buttonLabel = 'Add creators',
+  variant = 'primary',
 }: {
   creators: Creator[]
   existingCreatorIds: string[]
   onAdd: (creatorIds: string[]) => Promise<{ error?: string | null }>
   title?: string
   buttonLabel?: string
+  /** 'secondary' draws the launcher as the hairline pill, for a second add button beside a primary one. */
+  variant?: 'primary' | 'secondary'
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -83,9 +87,15 @@ export default function AddCreatorsModal({
   if (!open) {
     return (
       <button
-        className="neonbtn"
+        className={variant === 'secondary' ? 'pill' : 'neonbtn'}
         onClick={() => setOpen(true)}
-        style={{
+        style={variant === 'secondary' ? {
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          height: 44, padding: '0 18px', borderRadius: 12,
+          background: '#FFFFFF', border: '1px solid var(--hairline)',
+          fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 12.5,
+          color: 'var(--ink)', cursor: 'pointer', whiteSpace: 'nowrap',
+        } : {
           display: 'inline-flex', alignItems: 'center', gap: 7,
           height: 44, padding: '0 20px', borderRadius: 12,
           background: 'var(--neon)', border: 'none',
@@ -100,7 +110,9 @@ export default function AddCreatorsModal({
     )
   }
 
-  return (
+  // Rendered into <body>: inside a page wrapper with its own z-index the backdrop
+  // sat under the sticky top nav.
+  return createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -271,6 +283,7 @@ export default function AddCreatorsModal({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

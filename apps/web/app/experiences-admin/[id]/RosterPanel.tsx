@@ -85,7 +85,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
               <option value="">Brand suggested via…</option>
               {CHANNELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
-            <AddCreatorsModal creators={creators} existingCreatorIds={existing} title="Add the brand's suggestions" buttonLabel="Add brand's picks"
+            <AddCreatorsModal creators={creators} existingCreatorIds={existing} title="Add the brand's suggestions" buttonLabel="Add brand's picks" variant="secondary"
               onAdd={async (ids) => {
                 if (!suggestChannel) return { error: 'First pick how the brand suggested them.' }
                 const r = await addToRoster(experienceId, ids, 'brand', suggestChannel)
@@ -113,7 +113,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
             <span style={{ fontWeight: 500, color: 'var(--ink-soft)', marginLeft: 8 }}>{reconcile.videos_planned} of {reconcile.videos_sold} videos planned</span>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
-            {(reconcile.lines ?? []).map((l) => (
+            {(reconcile.lines ?? []).filter((l) => !l.is_video || (reconcile.lines ?? []).filter((x) => x.is_video).reduce((t, x) => t + x.target, 0) === reconcile.videos_sold).map((l) => (
               <span key={l.type} style={{ color: l.planned === l.target ? 'var(--ink-soft)' : '#8C6417' }}>
                 {l.type}: {l.planned} / {l.target}
               </span>
