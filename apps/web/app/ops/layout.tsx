@@ -51,8 +51,16 @@ export default async function OpsLayout({ children }: { children: React.ReactNod
   return (
     <div className="ops-shell" style={{ fontFamily: 'system-ui, sans-serif', maxWidth: 1200, margin: '0 auto', padding: '1rem' }}>
       {/* A pasted link or long handle is one unbreakable string; without this
-          it widens its table until the approve buttons scroll off screen. */}
-      <style>{`.ops-shell td, .ops-shell a, .ops-shell p, .ops-shell li, .ops-shell dd { overflow-wrap: anywhere; }`}</style>
+          it widens its table until the approve buttons scroll off screen.
+          Table cells wrap at words only: `anywhere` on every td let auto layout
+          shrink each column to one character, splitting names mid-word. Outbound
+          links (handles, shopfronts, profile URLs) are capped instead, so a short
+          one stays whole and only a long one wraps. */}
+      <style>{`
+        .ops-shell a, .ops-shell p, .ops-shell li, .ops-shell dd { overflow-wrap: anywhere; }
+        .ops-shell td, .ops-shell td a { overflow-wrap: break-word; }
+        .ops-shell td a[target="_blank"] { display: inline-block; max-width: 10rem; }
+      `}</style>
       <header style={{
         display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap',
         borderBottom: '1px solid #e5e5e5', paddingBottom: '0.75rem', marginBottom: '1.5rem',

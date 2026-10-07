@@ -392,7 +392,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                 {/* Vetting from the row. The detail page keeps its own copy: opening a
                     profile first is right when the decision is not obvious, and this is
                     for when it is. */}
-                {isAdmin && <th style={thStyle}>Decide</th>}
+                {isAdmin && <th style={{ ...thStyle, ...stickyEnd }}>Decide</th>}
               </tr>
             </thead>
             <tbody>
@@ -482,7 +482,7 @@ export default async function OpsCreatorsPage({ searchParams }: {
                       <VettingBadge row={c} />
                     </td>
                     <td style={tdStyle}>{new Date(c.created_at).toLocaleDateString()}</td>
-                    {isAdmin && <td style={tdStyle}><VettingActions creator={c} /></td>}
+                    {isAdmin && <td style={{ ...tdStyle, ...stickyEnd }}><VettingActions creator={c} /></td>}
                   </tr>
                 )
               })}
@@ -499,3 +499,6 @@ export default async function OpsCreatorsPage({ searchParams }: {
 const tableStyle: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }
 const thStyle: React.CSSProperties = { textAlign: 'left', padding: '0.5rem 0.75rem', borderBottom: '2px solid #e5e5e5', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#888' }
 const tdStyle: React.CSSProperties = { padding: '0.5rem 0.75rem', borderBottom: '1px solid #f0f0f0' }
+// Eleven columns of whole words are wider than the ops frame, so the table
+// scrolls. Pinning Decide keeps the approve buttons on screen while it does.
+const stickyEnd: React.CSSProperties = { position: 'sticky', right: 0, background: '#fff', boxShadow: '-6px 0 6px -6px rgba(0,0,0,0.15)' }

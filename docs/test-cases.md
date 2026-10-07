@@ -3660,6 +3660,14 @@ the only thing needed to change the page.
 - [ ] Index cards are in the same order as the nav
 - [ ] The ops header stays pinned while scrolling a long page — check on the
       Playbook, which is the longest
+- [ ] `/ops/creators` at desktop width: names, niches ("Finance, Crypto &
+      Investing"), phones and dates wrap only between words, never mid-word
+      ("Utkar / sh" was the bug: `overflow-wrap: anywhere` on every td let the
+      table shrink each column to one character)
+- [ ] A short handle or shopfront link stays on one line; one long unbroken
+      string (a pasted profile URL) wraps inside a capped-width cell
+- [ ] When the table is wider than the frame and scrolls sideways, the Decide
+      column (admins) stays pinned at the right edge with its buttons visible
 
 ### Bubble width follows the text (fixed)
 - [ ] A one-word message ("ok") is a small bubble; a long one grows to 76% and
