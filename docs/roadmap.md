@@ -678,3 +678,18 @@ empty-state CTAs that read from the same helper.
 
 **Watch:** the Growth list is four items and can reach 100%. Adding a fifth
 keeps that property only if `done` is genuinely reachable.
+
+---
+
+## PARKED (PJ, 6 Oct 2026): storefront "Selected work" with too few reels
+
+**Seen:** a creator with ONE featured reel gets a single card stretched across the full width of "Work <name> has picked out", with a blank thumbnail and only the "Product review" label. It reads as broken, not curated. (Rendered by `apps/web/app/creator/storefront/ShopfrontPreview.tsx`; the reel picker is in the creator storefront editor.)
+
+**PJ's direction:** require a minimum before the selection can be saved, probably **5 reels**.
+
+**To settle when picked up:**
+- The minimum (5?) and what a creator with fewer reels on Instagram sees: a clear message, and the section hidden until they reach it, rather than a blocked save with no explanation.
+- Existing storefronts already below the minimum: hide the section until they add more, not delete what they picked.
+- The layout should not stretch a lone card to full width even above the minimum (cap card width, fixed grid).
+- Why the thumbnail is blank: possibly the nightly re-download noted under "Instagram verified data: two known gaps", or a missing thumbnail on that reel. Check before assuming it is layout.
+- Mobile rendering is a separate component path; check both.

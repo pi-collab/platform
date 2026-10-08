@@ -63,14 +63,16 @@ export async function loadCandidates(): Promise<SearchCandidate[]> {
       admin
         .from('creators')
         .select('id, full_name, handle, profile_photo_url, bio, niche, niches, location, follower_band, primary_platform, social_accounts, worked_with')
-        .eq('is_vetted', true),
+        .eq('is_vetted', true)
+        .eq('is_guapd', false), // the Guapd house account is never a search result
       admin
         .from('creator_storefronts')
         .select('creator_id, slug, categories, bio')
         .eq('is_published', true),
       admin
         .from('creator_products')
-        .select('creator_id, price_paise, price_mode, display_price, is_active'),
+        .select('creator_id, price_paise, price_mode, display_price, is_active')
+        .eq('pricing_type', 'per_deliverable'),
       admin
         .from('creator_instagram_connections')
         .select('creator_id, snapshot')

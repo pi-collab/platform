@@ -43,6 +43,9 @@ const W = {
   /** Ready, and zero for everyone until deals complete. Deliberately left in:
    *  reliability then starts working without a code change. */
   reliability: 10,
+  /** Matched against the bio. Never excludes: most bios are short or empty,
+   *  and a missing word is not evidence a creator does not make that content. */
+  topics: 15,
   /** Small, and not a filter: a verified count is worth more than a typed one
    *  to a brand deciding, but it is not what they asked for. */
   verified: 5,
@@ -68,6 +71,20 @@ const looseMatch = (needle: string, hay: string): boolean => {
   return n.length > 0 && h.length > 0 && (h.includes(n) || n.includes(h))
 }
 
+const STOP = new Set(['and', 'the', 'for', 'with', 'about', 'content', 'creator', 'creators', 'videos', 'video', 'reels', 'posts'])
+
+/** A topic is in a bio when every meaningful word of it is: "mutual funds"
+ *  matches "I explain mutual funds and SIPs", without needing the exact phrase.
+ *  Words are matched as prefixes so "fund" finds "funds" and "explainer" finds
+ *  "explainers". */
+const mentions = (topic: string, text: string | null): boolean => {
+  if (!text) return false
+  const hay = norm(text)
+  const words = norm(topic).split(/[^a-z0-9]+/).filter(w => w.length >= 3 && !STOP.has(w))
+  if (words.length === 0) return false
+  return words.every(w => new RegExp(`\\b${w.replace(/s$/, '')}`).test(hay))
+}
+
 const coverage = (candidates: SearchCandidate[], has: (c: SearchCandidate) => boolean): number =>
   candidates.length === 0 ? 0 : candidates.filter(has).length / candidates.length
 
@@ -84,7 +101,10 @@ export function rankCandidates(
 ): RankOutcome {
   const softened: SkippedFilter[] = []
 
-  const wantsNiche = filters.niches.length > 0
+  // Listed niches and the brand's own words for unlisted ones are one
+  // question: does this creator's category match. Matched the same loose way.
+  const nicheTerms = [...filters.niches, ...(filters.otherNiches ?? [])]
+  const wantsNiche = nicheTerms.length > 0
   const wantsPlatform = filters.platforms.length > 0
   const wantsLocation = filters.locations.length > 0
   const wantsFollowers = filters.followersMin !== null || filters.followersMax !== null
@@ -187,10 +207,15 @@ export function rankCandidates(
         gaps.push('no category on file')
         if (hardNiche) excluded = true
       } else {
-        const hits = c.categories.filter(cat => filters.niches.some(n => looseMatch(n, cat)))
+        const hits = c.categories.filter(cat => nicheTerms.some(n => looseMatch(n, cat)))
+        // An unlisted niche ("astrology") may live only in the bio.
+        const bioHits = hits.length ? [] : (filters.otherNiches ?? []).filter(n => mentions(n, c.bio))
         if (hits.length > 0) {
           earned += W.niche
           reasons.push(hits.join(', '))
+        } else if (bioHits.length > 0) {
+          earned += W.niche
+          reasons.push(`bio mentions ${bioHits.join(', ')}`)
         } else if (hardNiche) {
           excluded = true
         }
@@ -271,6 +296,21 @@ export function rankCandidates(
         if (hits.length > 0) {
           earned += W.pastBrands
           reasons.push(`worked with ${hits.slice(0, 2).join(', ')}`)
+        }
+      }
+    }
+
+    /* ── Topics, from the bio ── */
+    const topics = filters.topics ?? []
+    if (topics.length > 0) {
+      applicable += W.topics
+      if (!c.bio) {
+        gaps.push('no bio')
+      } else {
+        const hits = topics.filter(t => mentions(t, c.bio))
+        if (hits.length > 0) {
+          earned += W.topics * (hits.length / topics.length)
+          reasons.push(`bio mentions ${hits.join(', ')}`)
         }
       }
     }

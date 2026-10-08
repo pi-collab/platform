@@ -27,6 +27,7 @@ export async function creatorGrowthState(creatorId: string): Promise<CreatorGrow
   const [{ count: packageCount }, { data: connection }] = await Promise.all([
     admin.from('creator_products')
       .select('id', { count: 'exact', head: true })
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', creatorId).eq('is_active', true),
     admin.from('creator_instagram_connections')
       .select('status').eq('creator_id', creatorId).maybeSingle(),

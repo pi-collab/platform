@@ -1,0 +1,57 @@
+import 'server-only'
+import type { SupabaseClient, User } from '@supabase/supabase-js'
+import { logOpsEvent } from '@/lib/ops-audit'
+
+/**
+ * Grant or revoke a team member's Experience access. ADMIN ONLY: callers must
+ * have passed verifyOpsAccess(). Writes ops_events with before/after; a failed
+ * audit fails the change.
+ *
+ * Financial access (the P&L) is opt-in per person and never implied by being
+ * an admin or an operational manager.
+ */
+export async function setStaffAccess(
+  admin: SupabaseClient,
+  actor: User,
+  userId: string,
+  next: { operational: boolean; financial: boolean },
+): Promise<void> {
+  const { data: before } = await admin.from('staff_access')
+    .select('experiences_operational, experiences_financial').eq('user_id', userId).maybeSingle()
+  const { data: grantor } = await admin.from('users').select('id').eq('auth_id', actor.id).maybeSingle()
+
+  const { error } = await admin.from('staff_access').upsert({
+    user_id: userId,
+    experiences_operational: next.operational,
+    experiences_financial: next.financial,
+    granted_by: (grantor as { id: string } | null)?.id ?? null,
+    updated_at: new Date().toISOString(),
+  })
+  if (error) throw new Error(`Could not set access: ${error.message}`)
+
+  await logOpsEvent(actor, 'staff_access.set', 'staff_access', userId, {
+    operational_before: (before as any)?.experiences_operational ?? false,
+    financial_before: (before as any)?.experiences_financial ?? false,
+    operational_after: next.operational,
+    financial_after: next.financial,
+  })
+}
+
+/** Every staff_access row, for the ops access screen. ADMIN ONLY callers. */
+export async function listStaffAccess(admin: SupabaseClient): Promise<{ user_id: string; experiences_operational: boolean; experiences_financial: boolean; updated_at: string }[]> {
+  const { data, error } = await admin.from('staff_access')
+    .select('user_id, experiences_operational, experiences_financial, updated_at')
+  if (error) throw new Error(`Could not read access: ${error.message}`)
+  return data ?? []
+}
+
+/**
+ * Who to tell about an Experience event (e.g. a creator answering their leg):
+ * everyone with operational access, financial included. Ids only.
+ */
+export async function experienceStaffUserIds(admin: SupabaseClient): Promise<string[]> {
+  const { data } = await admin.from('staff_access').select('user_id, experiences_operational, experiences_financial')
+  return (data ?? [])
+    .filter((r: { experiences_operational: boolean; experiences_financial: boolean }) => r.experiences_operational || r.experiences_financial)
+    .map((r: { user_id: string }) => r.user_id)
+}

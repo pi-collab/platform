@@ -1,7 +1,10 @@
 'use server'
 
+import { isCreatorLeg, CREATOR_LEG_REFUSAL } from '@/lib/creator-leg'
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
 import { calculateFee } from '@/lib/fee'
 import { revisionTerms, overagePaise } from '@/lib/revisions'
@@ -16,6 +19,7 @@ export type DeliverableResult =
  * Accept a deal offer — transitions negotiating → agreed.
  */
 export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
@@ -116,6 +120,7 @@ export async function acceptDeal(dealId: string): Promise<DeliverableResult> {
  * Decline a deal offer — transitions negotiating → declined.
  */
 export async function declineDeal(dealId: string, reason?: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
@@ -182,6 +187,7 @@ export async function counterOffer(
   counterItems: { id: string; label: string; price_paise: number }[],
   note?: string,
 ): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
@@ -273,6 +279,7 @@ function validateUrl(rawUrl: string): string | null {
  * Does NOT move the deal status — that requires explicit submitForReview.
  */
 export async function submitItem(dealId: string, itemId: string, externalUrl: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const rawUrl = externalUrl.trim()
   const urlError = validateUrl(rawUrl)
   if (urlError) return { status: 'error', message: urlError }
@@ -338,6 +345,7 @@ export async function submitItem(dealId: string, itemId: string, externalUrl: st
  * Only allowed when ALL items are 'submitted' or 'approved' (none pending/revision).
  */
 export async function submitForReview(dealId: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
@@ -399,6 +407,7 @@ export async function submitForReview(dealId: string): Promise<DeliverableResult
  * Kept for backwards compatibility with deals created before structured items.
  */
 export async function submitDeliverable(dealId: string, formData: FormData): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const rawUrl = (formData.get('external_url') as string)?.trim()
   const note = (formData.get('note') as string)?.trim() || null
 
@@ -486,14 +495,18 @@ export async function submitDeliverable(dealId: string, formData: FormData): Pro
  * Creates the invoice in 'draft' status with snapshotted amounts.
  */
 export async function generateInvoice(dealId: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
+  // The deal's OWN creator, not merely someone signed in: the invoice is
+  // written with the service role below (migration 0521), so this check and
+  // the creator_id filter are the boundary.
+  const ctx = await verifyCreator()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { status: 'error', message: 'Not authenticated.' }
 
   const { data: deal } = await supabase
     .from('deals')
     .select('id, status, is_posted, price_paise, revisions_used, revision_limit, price_per_extra_revision_paise, fee_percent, fee_mode, payment_terms')
     .eq('id', dealId)
+    .eq('creator_id', ctx.creatorId)
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
@@ -524,7 +537,7 @@ export async function generateInvoice(dealId: string): Promise<DeliverableResult
   )
   const dueDays = parsePaymentTermsDays(deal.payment_terms)
 
-  const { error: insertErr } = await supabase
+  const { error: insertErr } = await createAdminClient()
     .from('invoices')
     .insert({
       deal_id: dealId,
@@ -595,6 +608,7 @@ export async function getCampaignBriefForCreator(dealId: string): Promise<{
  * Creator-only action — RLS restricts to creator's own deals.
  */
 export async function submitShippingAddress(dealId: string, address: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const trimmed = address.trim()
   if (!trimmed) return { status: 'error', message: 'Please enter your shipping address.' }
   if (trimmed.length < 10) return { status: 'error', message: 'Address seems too short. Please include your full address.' }
@@ -634,15 +648,18 @@ export async function submitShippingAddress(dealId: string, address: string): Pr
 }
 
 export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
+  // The deal's own creator. A brand session could read this deal too, and the
+  // old check (any signed-in user) let it issue the creator's draft.
+  const ctx = await verifyCreator()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { status: 'error', message: 'Not authenticated.' }
 
   // Verify deal is posted before allowing invoice issue
   const { data: deal } = await supabase
     .from('deals')
     .select('is_posted')
     .eq('id', dealId)
+    .eq('creator_id', ctx.creatorId)
     .maybeSingle()
 
   if (!deal) return { status: 'error', message: 'Deal not found.' }
@@ -661,7 +678,7 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
     return { status: 'error', message: `Cannot issue an invoice that is "${invoice.status}".` }
   }
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await createAdminClient()
     .from('invoices')
     .update({
       status: 'issued',
@@ -669,6 +686,7 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
       updated_at: new Date().toISOString(),
     })
     .eq('id', invoice.id)
+    .eq('status', 'draft')
 
   if (updateErr) {
     return { status: 'error', message: `Failed to issue invoice: ${updateErr.message}` }
@@ -696,6 +714,7 @@ export async function issueInvoice(dealId: string): Promise<DeliverableResult> {
  * Rating is private — not shared directly with the brand.
  */
 export async function submitCreatorReview(dealId: string, rating: number, note: string | null): Promise<{ success: boolean; error?: string }> {
+  if (await isCreatorLeg(dealId)) return { success: false, error: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'Not authenticated.' }

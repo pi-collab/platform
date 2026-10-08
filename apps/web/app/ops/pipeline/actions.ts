@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireOps } from '@/lib/ops-capabilities'
 import { logOpsEvent } from '@/lib/ops-audit'
+import { canonicalNiche } from '@/lib/niches'
 import { LEAD_STAGES, isLeadStage, FEEDBACK_CATEGORIES, FEEDBACK_STATUSES } from '@/lib/pipeline'
 
 /**
@@ -57,7 +58,7 @@ export async function createLead(form: FormData): Promise<Result> {
       contact_phone: clean(form.get('contact_phone')),
       platform: clean(form.get('platform')),
       followers: followers === null ? null : Math.round(followers),
-      niche: clean(form.get('niche')),
+      niche: leadNiche(form.get('niche')),
       notes: clean(form.get('notes')),
       stage,
       owner_email: clean(form.get('owner_email')) ?? actor.user.email ?? null,
@@ -101,7 +102,7 @@ export async function updateLead(form: FormData): Promise<Result> {
     patch.stage = stage
   }
   for (const field of ['name', 'handle', 'contact_email', 'contact_phone', 'platform', 'niche', 'notes', 'owner_email', 'source'] as const) {
-    if (form.has(field)) patch[field] = clean(form.get(field))
+    if (form.has(field)) patch[field] = field === 'niche' ? leadNiche(form.get(field)) : clean(form.get(field))
   }
   if (form.has('followers')) {
     const raw = clean(form.get('followers'))
@@ -254,4 +255,10 @@ export async function setFeedbackStatus(id: string, status: string): Promise<Res
 /** Exported for the filter UI so the stage list has one definition. */
 export async function stageOptions() {
   return LEAD_STAGES
+}
+
+/** A known niche in its canonical spelling; anything else kept as typed. */
+function leadNiche(v: FormDataEntryValue | null): string | null {
+  const typed = clean(v)
+  return typed ? canonicalNiche(typed) ?? typed : null
 }

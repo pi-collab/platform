@@ -1,6 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { setCreatorBio } from '@/lib/creator-bio-server'
+import { setCreatorNiches, MAX_NICHES } from '@/lib/creator-niches-server'
+import { canonicalNiches } from '@/lib/niches'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyCreator } from '@/lib/creator-auth'
 import { revalidatePath } from 'next/cache'
@@ -231,8 +234,8 @@ export async function upsertStorefront(input: UpsertInput) {
   }
 
   // Validate categories
-  const categories = (input.categories ?? []).filter((c) => typeof c === 'string' && c.trim().length > 0)
-  if (categories.length > 10) {
+  const categories = canonicalNiches((input.categories ?? []).filter((c) => typeof c === 'string'))
+  if (categories.length > MAX_NICHES) {
     return { error: 'Maximum 10 categories allowed.' }
   }
 
@@ -253,6 +256,7 @@ export async function upsertStorefront(input: UpsertInput) {
     const { count } = await createAdminClient()
       .from('creator_products')
       .select('id', { count: 'exact', head: true })
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true)
 
@@ -346,6 +350,17 @@ export async function upsertStorefront(input: UpsertInput) {
       return { error: 'This slug is already taken. Choose a different one.' }
     }
     return { error: error.message }
+  }
+
+  // The niches belong to the CREATOR, not to this page: settings, ops and the
+  // profile brands see all read them. Written through the one writer so
+  // creators.niches follows what was just picked here.
+  const nicheRes = await setCreatorNiches(ctx.creatorId, categories)
+  if (nicheRes.error) return { error: nicheRes.error }
+  // Same for the bio: it is the creator's, and settings and ops show it too.
+  if (input.bio !== undefined) {
+    const bioRes = await setCreatorBio(ctx.creatorId, input.bio)
+    if (bioRes.error) return { error: bioRes.error }
   }
 
   /* ── Resolve newly chosen reels NOW, not tonight ────────────────────────

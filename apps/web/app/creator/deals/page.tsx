@@ -8,6 +8,7 @@ import CreatorDealsEmpty from './CreatorDealsEmpty'
 import CreatorDealsEmptyDesktop from './CreatorDealsEmptyDesktop'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import { unreadNotificationCount } from '@/lib/unread'
+import { overlayCreatorLegs } from '@/lib/creator-leg-list'
 
 export const metadata: Metadata = { title: 'My Deals · Guapd Creator' }
 
@@ -16,10 +17,12 @@ export default async function CreatorDealsPage() {
   const growth = await creatorGrowthState(ctx.creatorId)
   const supabase = createClient()
 
-  const { data: deals, error } = await supabase
+  const { data: rawDeals, error } = await supabase
     .from('deals')
-    .select('id, deal_ref, title, deliverables, price_paise, status, is_posted, created_at, brands(name, logo_url)')
+    .select('id, deal_ref, title, deliverables, price_paise, status, is_posted, created_at, leg_role, experience_brand_name, brands(name, logo_url)')
     .order('created_at', { ascending: false })
+  // Experience creator legs: their own frozen gross and "<brand> · Managed by Guapd".
+  const deals = rawDeals ? await overlayCreatorLegs(supabase, rawDeals) : rawDeals
 
   if (error) {
     return (

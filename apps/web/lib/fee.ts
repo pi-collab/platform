@@ -1,3 +1,5 @@
+import { percentOfPaise } from '@/lib/money-round'
+
 export interface FeeBreakdown {
   base_paise: number
   fee_percent: number
@@ -19,7 +21,16 @@ export function calculateFee(
   feePercent: number,
   feeMode: 'on_top' | 'deducted'
 ): FeeBreakdown {
-  const feePaise = Math.round(basePaise * feePercent / 100)
+  // Half up, in whole paise, in integers: the ONE rule (lib/money-round.ts).
+  // Was Math.round(base × pct / 100), whose float error rounded an exact half
+  // paisa down on fractional rates (33.3% of 7500p). Same results otherwise;
+  // the fee baseline (scripts/test-fee-golden.ts) confirms it.
+  // Only whole, non-negative paise are money; anything else (a half-typed
+  // amount in a form, say) keeps the old arithmetic rather than throwing in
+  // the middle of a render.
+  const feePaise = Number.isSafeInteger(basePaise) && basePaise >= 0 && Number(feePercent) >= 0
+    ? percentOfPaise(basePaise, Number(feePercent))
+    : Math.round(basePaise * feePercent / 100)
   return {
     base_paise: basePaise,
     fee_percent: feePercent,

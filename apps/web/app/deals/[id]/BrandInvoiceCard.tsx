@@ -109,26 +109,31 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
           <div>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Deal complete</h3>
             <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '4px 0 0' }}>
-              Paid in full{paidDateStr ? ` on ${paidDateStr.split(',')[0]}` : ''}.
+              Marked as paid{paidDateStr ? ` on ${paidDateStr.split(',')[0]}` : ''}.
               {rightsEndStr && ` Rights run through ${rightsEndStr}.`}
             </p>
           </div>
         </div>
 
-        {/* Dark "You paid" bar */}
+        {/* Dark "Marked as paid" bar */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '20px 24px', margin: '24px 0 0', borderRadius: 16, background: 'var(--ink)', color: '#FFFFFF' }}>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>You paid</div>
-            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', marginTop: 3 }}>{creatorFirstName} received {formatRupees(invoice.creator_receives_paise)}</div>
+            {/* Only what is known. Nothing here verifies a payment (no payment
+                rail yet), so no "{creator} received ₹net" figure is asserted:
+                the brand paid the creator directly and marked it here. */}
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Marked as paid</div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', marginTop: 3 }}>You marked this paid to {creatorFirstName}</div>
           </div>
           <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>{formatRupees(invoice.brand_pays_paise)}</span>
         </div>
 
-        {/* Footer: paid date + UTR */}
+        {/* Footer: when it was marked paid. No "UTR": none exists, Guapd does
+            not move this money, and the deal ref shown as one was a fake bank
+            reference on a receipt. */}
         <div style={{ marginTop: 20 }}>
           <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-            {paidDateStr ? `Paid ${paidDateStr}` : 'Paid'}
-            {dealRef && ` \u00B7 UTR ${dealRef}`}
+            {paidDateStr ? `Marked paid ${paidDateStr}` : 'Marked paid'}
+            {dealRef && ` \u00B7 ${dealRef}`}
           </span>
         </div>
       </>
@@ -137,9 +142,9 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
 
   // ── Issued / Accepted states ──
   const helperText = isPending
-    ? `${invoice.payment_terms ? invoice.payment_terms + '. ' : ''}Review the line items and accept the invoice to proceed to payment.`
+    ? `${invoice.payment_terms ? invoice.payment_terms + '. ' : ''}Review the line items and accept the invoice. You then pay ${creatorFirstName} directly.`
     : isAccepted
-      ? `Invoice accepted${dueDateFormatted ? ` \u2014 pay by ${dueDateFormatted}` : ''}. Complete the payment to close this deal.`
+      ? `Invoice accepted. Pay ${creatorFirstName} directly${dueDateFormatted ? ` by ${dueDateFormatted}` : ''}, then mark it paid here to close the deal.`
       : ''
 
   return (
@@ -228,7 +233,7 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
               style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 54, padding: '0 28px', borderRadius: 14, background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: 'pointer', boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', opacity: loading ? 0.6 : 1 }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
-              {loading ? 'Processing\u2026' : `Pay ${formatRupeesShort(invoice.brand_pays_paise)}`}
+              {loading ? 'Saving\u2026' : 'Mark as paid'}
             </button>
           </div>
         )}
@@ -240,10 +245,10 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)' }} onClick={() => setShowPayDialog(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20, background: 'var(--card, #fff)', boxShadow: '0 24px 64px rgba(0,0,0,.18)', padding: '32px 28px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Proceed to payment?</h3>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Paid {creatorFirstName}?</h3>
               <p style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink-soft)', margin: '10px 0 0' }}>
-                Invoice accepted. You&apos;ll be redirected to complete the payment of <b style={{ color: 'var(--ink)' }}>{formatRupees(invoice.brand_pays_paise)}</b>.
-                {dueDateFormatted && <> Payment is due by <b style={{ color: 'var(--ink)' }}>{dueDateFormatted}</b>.</>}
+                Pay <b style={{ color: 'var(--ink)' }}>{formatRupees(invoice.brand_pays_paise)}</b> to {creatorFirstName} directly, by UPI or bank transfer. Guapd doesn&apos;t take this payment.
+                {dueDateFormatted && <> It&apos;s due by <b style={{ color: 'var(--ink)' }}>{dueDateFormatted}</b>.</>} Once it&apos;s sent, mark it paid so you both have the record.
               </p>
             </div>
 
@@ -256,7 +261,7 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
                 onClick={() => setShowPayDialog(false)}
                 style={{ flex: 1, height: 50, borderRadius: 12, background: 'var(--sec-2, #F4F8FC)', border: '1px solid var(--hairline, #EAEAE3)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)', cursor: 'pointer' }}
               >
-                Pay later
+                Not yet
               </button>
               <button
                 onClick={handlePay}
@@ -265,7 +270,7 @@ export default function BrandInvoiceCard({ dealId, dealRef, invoice, lineItems, 
                 style={{ flex: 1, height: 50, borderRadius: 12, background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em', color: 'var(--ink)', cursor: 'pointer', boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.6 : 1 }}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
-                {loading ? 'Processing\u2026' : `Pay ${formatRupeesShort(invoice.brand_pays_paise)}`}
+                {loading ? 'Saving\u2026' : 'Mark as paid'}
               </button>
             </div>
           </div>

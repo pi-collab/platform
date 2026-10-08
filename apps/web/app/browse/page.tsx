@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
 import BrowseGrid from './BrowseGrid'
 import { aiSearchConfigured } from '@/lib/ai-search/parse'
+import { brandRosterAccess } from '@/lib/brand-review-gate'
+import RosterUnderReview from '@/components/brand/RosterUnderReview'
 
 interface SocialAccount {
   platform: string
@@ -29,6 +31,24 @@ export interface BrowseCreator {
 export default async function BrowsePage() {
   const brand = await verifyBrand()
 
+  /* ── The roster is the thing worth gating ─────────────────────────────────
+     Names, handles, past brands, rate cards, package prices and audience data,
+     all of it readable by any signup that cleared the free-email check. This
+     withholds it from the accounts whose own details do not line up — today,
+     a contact email on a domain unrelated to the website — until a person has
+     looked.
+
+     Deliberately NOT every unapproved brand: most of them are real, and a wall
+     in front of a real brand costs a customer. See lib/brand-review-gate.ts. */
+  const access = await brandRosterAccess(brand.brandId)
+  if (access.held) {
+    return (
+      <RosterUnderReview
+        originCreatorHref={access.originCreatorId ? `/browse/${access.originCreatorId}` : null}
+      />
+    )
+  }
+
   // Service role, and the is_vetted filter is now WRITTEN OUT rather than left
   // to RLS. rate_card is no longer readable by the anon key — migration 0470
   // withholds it, along with phone and contact_email, because creators_read
@@ -50,6 +70,7 @@ export default async function BrowsePage() {
     .from('creators')
     .select('id, full_name, niches, handle, bio, profile_photo_url, social_accounts, worked_with, rate_card, vetting_status')
     .eq('is_bookable', true)
+    .eq('is_guapd', false) // the Guapd house account is never listed
     .order('full_name', { ascending: true })
 
   if (error) {
@@ -98,6 +119,7 @@ export default async function BrowsePage() {
   const { data: products } = await admin
     .from('creator_products')
     .select('creator_id, price_paise, price_mode, display_price, is_active')
+    .eq('pricing_type', 'per_deliverable')
 
   const startingRates: Record<string, number> = {}
   for (const p of products ?? []) {

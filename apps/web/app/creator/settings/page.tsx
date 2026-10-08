@@ -1,5 +1,6 @@
 import { creatorGrowthState } from '@/lib/creator-growth-state'
 import { Suspense } from 'react'
+import { readCreatorLocation } from '@/lib/creator-location-server'
 import { getConnection } from '@/lib/instagram-sync'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
@@ -27,11 +28,13 @@ export default async function CreatorSettingsPage() {
   // Fetch creator details
   const { data: creator } = await admin
     .from('creators')
-    .select('id, full_name, handle, bio, niche, social_accounts, profile_photo_url, location, primary_platform, contact_email')
+    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email')
     .eq('id', ctx.creatorId)
     .single()
 
   const instagramConnection = await getConnection(ctx.creatorId)
+  // Separate read: see lib/creator-location-server.
+  const place = await readCreatorLocation(ctx.creatorId)
   const growth = await creatorGrowthState(ctx.creatorId)
   const socials = (creator?.social_accounts ?? []) as Array<{ platform: string; handle: string }>
   const prefs = (user?.preferences ?? {}) as Record<string, string>
@@ -41,8 +44,15 @@ export default async function CreatorSettingsPage() {
       creatorName={creator?.full_name ?? ctx.creatorName}
       creatorHandle={(creator as Record<string, unknown>)?.handle as string ?? ''}
       creatorBio={(creator as Record<string, unknown>)?.bio as string ?? ''}
-      creatorNiche={(creator as Record<string, unknown>)?.niche as string ?? ''}
-      creatorLocation={(creator as Record<string, unknown>)?.location as string ?? ''}
+      creatorNiches={
+        // niches is the list every other screen writes; niche is the legacy
+        // single value this page used to write on its own. Fall back to it so
+        // a creator who only ever set it here does not open to a blank field.
+        ((creator as Record<string, unknown>)?.niches as string[] | null)?.length
+          ? (creator as Record<string, unknown>).niches as string[]
+          : ((creator as Record<string, unknown>)?.niche ? [(creator as Record<string, unknown>).niche as string] : [])
+      }
+      creatorPlace={place}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}

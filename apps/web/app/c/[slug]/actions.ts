@@ -120,6 +120,7 @@ export async function getRichStorefront(slug: string): Promise<RichStorefrontDat
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, is_active')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', sf.creator_id)
       .eq('is_active', true),
     /* Per-channel collab and boosting rates, so the storefront can price the

@@ -126,6 +126,8 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     .from('deals')
     .select('id, title, price_paise, brands(name, logo_url)')
     .eq('creator_id', ctx.creatorId)
+    // A Guapd Experience creator leg is never invoiced by the creator here.
+    .is('leg_role', null)
     .eq('status', 'approved')
     .eq('is_posted', true)
 

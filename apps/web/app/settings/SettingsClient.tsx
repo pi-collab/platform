@@ -372,11 +372,13 @@ export default function SettingsClient({
                     <span style={{ ...iconBox, width: 44, height: 44, borderRadius: 12 }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" x2="22" y1="10" y2="10" /></svg>
                     </span>
+                    {/* Was "Razorpay · Payment links for each deal" with an Edit
+                        button: no Razorpay integration exists and the button did
+                        nothing. This is how payment actually works. */}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>Razorpay</div>
-                      <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 2 }}>Payment links for each deal</div>
+                      <div style={{ fontWeight: 700, fontSize: 13.5 }}>Direct to creator</div>
+                      <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 2, lineHeight: 1.5 }}>You pay each creator directly by UPI or bank transfer, then mark the deal paid. Guapd doesn&apos;t take payment for creator deals.</div>
                     </div>
-                    <span className="pill" onClick={markDirty} style={smallPill}>Edit</span>
                   </div>
                 </div>
 

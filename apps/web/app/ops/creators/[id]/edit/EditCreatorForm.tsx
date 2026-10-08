@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { editCreator } from '../../../actions'
 import { useRouter } from 'next/navigation'
-import { NICHES } from '@/lib/niches'
+import NichePicker from '@/components/NichePicker'
+import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 
 interface SocialEntry {
   platform: string
@@ -42,7 +43,7 @@ function emptySocial(): SocialEntry {
   return { platform: 'instagram', handle: '', url: '', follower_count: '' }
 }
 
-export default function EditCreatorForm({ creator }: { creator: Creator }) {
+export default function EditCreatorForm({ creator, place }: { creator: Creator; place: { city: string; state: string; ageBracket: string } }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,6 +55,12 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
   const [handle, setHandle] = useState(creator.handle ?? '')
   const [bio, setBio] = useState(creator.bio ?? '')
   const [photoUrl, setPhotoUrl] = useState(creator.profile_photo_url ?? '')
+  // Sent only once touched: an untouched form must not rewrite (or, on a
+  // database without 0515, fail on) three columns ops never looked at.
+  const [placeState, setPlaceState] = useState(place.state)
+  const [city, setCity] = useState(place.city)
+  const [ageBracket, setAgeBracket] = useState(place.ageBracket)
+  const [placeTouched, setPlaceTouched] = useState(false)
 
   const [socials, setSocials] = useState<SocialEntry[]>(toFormSocial(creator.social_accounts))
   const [workedWith, setWorkedWith] = useState<string[]>(creator.worked_with ?? [])
@@ -96,6 +103,7 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
       social_accounts: socialAccounts.length > 0 ? socialAccounts : undefined,
       worked_with: worked.length > 0 ? worked : undefined,
       portfolio_links: portfolio.length > 0 ? portfolio : undefined,
+      place: placeTouched ? { city, state: placeState, ageBracket } : undefined,
     })
 
     setLoading(false)
@@ -123,23 +131,31 @@ export default function EditCreatorForm({ creator }: { creator: Creator }) {
         <input style={inputStyle} type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
       </Field>
 
-      <Field label="Niches">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          {NICHES.map((n) => (
-            <label key={n} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8125rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={niches.includes(n)}
-                onChange={(e) => {
-                  if (e.target.checked) setNiches((prev) => [...prev, n])
-                  else setNiches((prev) => prev.filter((x) => x !== n))
-                }}
-              />
-              {n}
-            </label>
-          ))}
-        </div>
-      </Field>
+      {/* Not inside <Field>: that is a <label>, and a click anywhere in a
+          label fires its first button — here, the first niche chip. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Niches</span>
+        <span style={{ fontSize: '0.7rem', color: '#888' }}>Pick from the list. Other lets you type one the list does not cover.</span>
+        <NichePicker value={niches} onChange={setNiches} inputStyle={inputStyle} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+        <Field label="State">
+          <select style={inputStyle} value={placeState} onChange={(e) => { setPlaceState(e.target.value); setPlaceTouched(true) }}>
+            <option value="">Not given</option>
+            {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
+        <Field label="City">
+          <input style={inputStyle} value={city} maxLength={60} onChange={(e) => { setCity(e.target.value); setPlaceTouched(true) }} />
+        </Field>
+        <Field label="Age">
+          <select style={inputStyle} value={ageBracket} onChange={(e) => { setAgeBracket(e.target.value); setPlaceTouched(true) }}>
+            <option value="">Not given</option>
+            {AGE_BRACKETS.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
+          </select>
+        </Field>
+      </div>
 
       <Field label="Handle" hint="e.g. @rohanfinance">
         <input style={inputStyle} value={handle} onChange={(e) => setHandle(e.target.value)} />

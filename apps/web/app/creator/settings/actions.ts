@@ -1,9 +1,12 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { setCreatorBio } from '@/lib/creator-bio-server'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
+import { setCreatorNiches } from '@/lib/creator-niches-server'
+import { validateLocation } from '@/lib/creator-location'
 
 // ── Update Creator Profile ───────────────────────────────────────
 
@@ -11,8 +14,10 @@ interface ProfileUpdate {
   fullName?: string
   handle?: string
   bio?: string
-  niche?: string
-  location?: string
+  niches?: string[]
+  city?: string
+  state?: string
+  ageBracket?: string
   primaryPlatform?: string
   contactEmail?: string
   socials?: Array<{ platform: string; handle: string }>
@@ -25,9 +30,6 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
   const update: Record<string, unknown> = {}
   if (data.fullName !== undefined) update.full_name = data.fullName || null
   if (data.handle !== undefined) update.handle = data.handle || null
-  if (data.bio !== undefined) update.bio = data.bio || null
-  if (data.niche !== undefined) update.niche = data.niche || null
-  if (data.location !== undefined) update.location = data.location || null
   if (data.primaryPlatform !== undefined) update.primary_platform = data.primaryPlatform || null
   if (data.contactEmail !== undefined) update.contact_email = data.contactEmail || null
   if (data.socials !== undefined) {
@@ -46,6 +48,18 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
     update.social_accounts = mergeSocialAccounts(row?.social_accounts, cleaned)
   }
 
+  // City, state and age go together or not at all: all blank means the
+  // creator has not answered and is just editing something else; any one set
+  // means all three are checked. Written separately so a database without
+  // migration 0515 fails only this, not the rest of the profile.
+  const placeGiven = [data.city, data.state, data.ageBracket].some(v => (v ?? '').trim())
+  let placeRow: Record<string, unknown> | null = null
+  if (placeGiven) {
+    const place = validateLocation({ city: data.city ?? '', state: data.state ?? '', ageBracket: data.ageBracket ?? '' })
+    if (!place.ok) return { error: place.error }
+    placeRow = place.row
+  }
+
   if (Object.keys(update).length > 0) {
     const { error } = await admin
       .from('creators')
@@ -53,6 +67,25 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
       .eq('id', ctx.creatorId)
 
     if (error) return { error: error.message }
+  }
+
+  // Bio and niches through their one writers, so the storefront follows.
+  if (data.bio !== undefined) {
+    const res = await setCreatorBio(ctx.creatorId, data.bio)
+    if (res.error) return { error: res.error }
+  }
+  if (data.niches !== undefined) {
+    const res = await setCreatorNiches(ctx.creatorId, data.niches)
+    if (res.error) return { error: res.error }
+  }
+
+  if (placeRow) {
+    const { error } = await admin.from('creators').update(placeRow).eq('id', ctx.creatorId)
+    if (error) {
+      console.error(`[settings] city/state/age not saved creator=${ctx.creatorId}: ${error.message}`)
+      return { error: 'Your profile saved, but city, state and age did not. Try again in a moment.' }
+    }
+    revalidatePath('/creator/dashboard')
   }
 
   // Update user profile name/email if changed

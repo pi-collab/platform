@@ -36,8 +36,35 @@ export function primaryAccount(socialAccounts: unknown): PrimaryAccount {
  * Returns null rather than guessing when the platform is unknown — a link to a
  * URL that 404s is worse than plain text, because it looks checkable and is not.
  */
+/**
+ * The username inside whatever was typed into a handle field.
+ *
+ * Creators sometimes paste their whole profile link, share-tracking query and
+ * all ("https://www.instagram.com/bapu_ai?stkn=…&utm_source=qr"). Shown raw,
+ * that is one unbreakable string that widens an ops table until the approve
+ * buttons scroll off screen. For a profile link on a platform we know, this
+ * returns the username ("bapu_ai"); anything else comes back trimmed, without
+ * a leading @. Display only: the stored value is not changed.
+ */
+const PROFILE_HOSTS = /^(?:www\.|m\.)?(instagram\.com|youtube\.com|x\.com|twitter\.com|tiktok\.com|linkedin\.com)$/i
+
+export function handleFromInput(raw: string | null | undefined): string {
+  const v = (raw ?? '').trim().replace(/^@+/, '')
+  if (!/^(https?:\/\/|www\.)/i.test(v) && !PROFILE_HOSTS.test(v.split('/')[0] ?? '')) return v
+  try {
+    const u = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`)
+    if (!PROFILE_HOSTS.test(u.hostname)) return v
+    const parts = u.pathname.split('/').filter(Boolean)
+    // linkedin.com/in/<name>; youtube.com/@name or /c/<name>; the rest /<name>
+    const seg = (parts[0] === 'in' || parts[0] === 'c' || parts[0] === 'user') ? parts[1] : parts[0]
+    return seg ? decodeURIComponent(seg).replace(/^@+/, '') : v
+  } catch {
+    return v
+  }
+}
+
 export function socialProfileUrl(platform: string | null | undefined, handle: string | null | undefined): string | null {
-  const h = (handle ?? '').trim().replace(/^@/, '')
+  const h = handleFromInput(handle)
   if (!h) return null
 
   // A handle should not contain a slash or a space. If it does, someone pasted

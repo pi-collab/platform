@@ -54,6 +54,7 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
       .from('creators')
       .select('id, full_name, handle, profile_photo_url, niches, location, social_accounts')
       .eq('is_bookable', true)
+      .eq('is_guapd', false)
       .eq('vetting_status', 'growth')
       .order('full_name'),
     supabase
@@ -68,6 +69,7 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
     creatorIds.length
       ? admin.from('creator_products')
           .select('creator_id, product_type, price_paise, platform')
+          .eq('pricing_type', 'per_deliverable')
           .in('creator_id', creatorIds)
           .eq('is_active', true)
       : Promise.resolve({ data: [] as { creator_id: string; product_type: string; price_paise: number; platform: string }[] }),

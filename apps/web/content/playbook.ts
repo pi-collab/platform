@@ -140,9 +140,18 @@ We layer this in once brands are running repeat volume. It sits on top of commis
 
 #### Brand subscriptions
 
-- **Tiered by access:** Deals only, Guapd Growth only, or Deals and Guapd Growth.
-- **Tiered by volume:** the number of deals or campaigns per month, on a ladder of Starter, Growth, Pro and Scale.
-- **What a subscription unlocks:** access, higher volume caps and tooling. Commission still applies to every deal on top.
+The ladder brands can now see on the pricing page inside the product. Only Free is live; the three paid tiers are shown as "Launching soon" and their buttons open a contact form, not a checkout.
+
+- **Free — ₹0.** Up to 3 deals and 2 Guapd Growth campaigns a month, 1 seat, AI creator search, self-serve. Every brand on Guapd is on this today.
+- **Starter — ₹9,999 a month.** Up to 10 deals and 5 campaigns, 3 seats, campaigns and reporting.
+- **Scale — ₹24,999 a month.** Unlimited deals and campaigns, 5+ seats, full Guapd Growth and amplification, AI creator recommendations, advanced analytics, dedicated support.
+- **Enterprise — custom.** Everything unlimited, full campaign execution from sourcing to payment, custom seats and setup.
+
+Three things to keep straight when pitching this:
+
+- **The monthly limits are not enforced yet.** Nothing in the product counts a brand's deals or refuses the next one, and the pricing page says so out loud. Don't tell a brand they're capped at three — they aren't.
+- **A subscription is not a markup.** Commission still applies to every deal on top, and the brand still pays the creator's real rate. The plan buys access, volume and tooling.
+- **Don't promise a launch date.** "Launching soon" is what the page says because that is all we know.
 
 #### Guapd Growth+ for creators
 

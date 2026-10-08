@@ -18,6 +18,8 @@ import { MAX_SHOWCASE_ITEMS } from '@/lib/featured-reels'
 import { SAMPLE_CONTENT_ITEMS, isSampleItem } from '@/lib/showcase-samples'
 import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import { upsertStorefront, checkSlugAvailable, type StorefrontRow } from './actions'
+import NichePicker from '@/components/NichePicker'
+import BioAiAssist from '@/components/creator/BioAiAssist'
 
 interface Product {
   id: string
@@ -1293,7 +1295,6 @@ export default function StorefrontManager({
   // into men would overstate men by exactly that much.
   const genderWomenShown = igSnap?.gender ? igSnap.gender.womenPct : edit.genderWomen
   const genderMenShown = igSnap?.gender ? igSnap.gender.menPct : 100 - edit.genderWomen
-  const [nicheInput, setNicheInput] = useState('')
   const [newContentIdx, setNewContentIdx] = useState<number | null>(null)
   const [newCollabIdx, setNewCollabIdx] = useState<number | null>(null)
 
@@ -1502,12 +1503,6 @@ export default function StorefrontManager({
     window.location.href = '/api/instagram/connect?return=storefront'
   }
 
-  function addNiche() {
-    const v = nicheInput.trim()
-    if (v && !edit.niches.includes(v) && edit.niches.length < 5) {
-      set('niches', [...edit.niches, v]); setNicheInput('')
-    }
-  }
 
   function addContentItem() {
     const newItem: ContentItem = { title: '', type: 'Reel', brand: '', date: '', views: '', engagement: '', saves: '', embedUrl: '' }
@@ -1712,40 +1707,18 @@ export default function StorefrontManager({
                   <Field label="Display name">
                     <input type="text" value={edit.displayName} onChange={e => set('displayName', e.target.value)} placeholder="How brands will see your name" maxLength={100} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
-                  <Field label="Bio" hint="One or two lines telling brands what you bring to the table.">
+                  <Field label="Bio" hint="Brands and AI search find you by your bio. Mention your topics, the kind of content you make and who watches it.">
                     <textarea value={edit.bio} onChange={e => set('bio', e.target.value)} placeholder="Everyday money, style and slow travel for a young Indian audience that actually buys." maxLength={500} rows={3} style={dtextarea} />
+                    <BioAiAssist hasBio={edit.bio.trim().length > 0} onDraft={v => set('bio', v)} />
                   </Field>
                   <Field label="Reply time" hint="How fast you typically come back to a brand. Brands read this as a signal of how you work.">
                     <input type="text" value={edit.replyTime} onChange={e => set('replyTime', e.target.value)} placeholder="~4h" maxLength={20} onKeyDown={onFieldEnter} style={dinput} />
                   </Field>
-                  <Field label="Your niches" hint={edit.niches.length < 5 ? 'Type and press Enter or click Add. Up to 5.' : undefined}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: edit.niches.length > 0 ? 12 : 0 }}>
-                      {edit.niches.map(n => (
-                        <span key={n} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 7,
-                          padding: '5px 11px', borderRadius: 999,
-                          background: '#FAFAF7', border: `1px solid ${BHL}`,
-                          fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink)',
-                        }}>
-                          {n}
-                          <button onClick={() => set('niches', edit.niches.filter(x => x !== n))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', fontSize: 16, lineHeight: 1, padding: 0 }}>&times;</button>
-                        </span>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input type="text" value={nicheInput} onChange={e => setNicheInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNiche() } }}
-                        placeholder={edit.niches.length >= 5 ? 'Max 5 niches' : 'e.g. Personal finance'} maxLength={30}
-                        disabled={edit.niches.length >= 5} style={dinput} />
-                      <button onClick={addNiche} disabled={!nicheInput.trim() || edit.niches.length >= 5}
-                        style={{
-                          ...primaryBtn, height: 46, padding: '0 20px', borderRadius: 12, flexShrink: 0,
-                          opacity: !nicheInput.trim() || edit.niches.length >= 5 ? 0.25 : 1,
-                          cursor: !nicheInput.trim() || edit.niches.length >= 5 ? 'not-allowed' : 'pointer',
-                        }}>
-                        Add
-                      </button>
-                    </div>
+                  {/* The shared niche dropdown: the same control settings and ops
+                      use, so the creator sees one picker and one list wherever
+                      they set their niches. Other still opens a text box. */}
+                  <Field label="Your niches">
+                    <NichePicker value={edit.niches} onChange={v => set('niches', v)} max={5} />
                   </Field>
                 </Section>
               </div>
@@ -2426,3 +2399,5 @@ export default function StorefrontManager({
 function slugFromName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30)
 }
+
+/** An unpicked niche. Reads as something to add, not something selected. */

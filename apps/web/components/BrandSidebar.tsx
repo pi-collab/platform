@@ -13,6 +13,10 @@ const NAV_LINKS = [
   { label: 'Campaigns', href: '/campaigns', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg> },
 ]
 
+/* Staff only: shown when BrandNav's experienceStaffGate passes. Not a brand
+   link, so it is never in NAV_LINKS. */
+const GUAPD_CONSOLE_LINK = { label: 'Guapd Experiences', href: '/experiences-admin', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg> }
+
 const ALL_MOBILE_LINKS = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Deals', href: '/deals' },
@@ -71,7 +75,15 @@ interface NotifCreatorMap {
   [dealId: string]: { name: string; photo: string | null }
 }
 
-export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole = false, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; hasBrand?: boolean; guapdConsole?: boolean; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+  /* Guapd staff often belong to no brand. For them the brand tabs, inbox,
+     bell and brand menu would only bounce to /ops, so they see the staff
+     console alone. A staff member who also belongs to a brand sees both. */
+  const navLinks = [...(hasBrand ? NAV_LINKS : []), ...(guapdConsole ? [GUAPD_CONSOLE_LINK] : [])]
+  const mobileLinks = [...(guapdConsole ? [{ label: GUAPD_CONSOLE_LINK.label, href: GUAPD_CONSOLE_LINK.href }] : []), ...(hasBrand ? ALL_MOBILE_LINKS : [])]
+  const homeHref = hasBrand ? '/dashboard' : guapdConsole ? GUAPD_CONSOLE_LINK.href : '/dashboard'
+  const accountName = brandName || (hasBrand ? 'Brand' : 'Guapd')
+  const accountTag = hasBrand ? 'Brand' : 'Guapd team'
   const pathname = usePathname()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -80,7 +92,7 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
   const notifRef = useRef<HTMLDivElement>(null)
   const unreadCount = useRealtimeNotifications(initialUnread)
 
-  const initials = brandName ? brandName.slice(0, 2).toUpperCase() : 'BR'
+  const initials = brandName ? brandName.slice(0, 2).toUpperCase() : hasBrand ? 'BR' : 'GU'
 
   /* The brand's own mark, in the three places the sidebar shows it: the desktop
      avatar button, its dropdown header, and the mobile drawer. Falls back to
@@ -127,14 +139,14 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
       <header className="brand-topnav-desktop">
         <nav style={navBar}>
           {/* Left: logo */}
-          <Link href="/dashboard" style={logoLink}>
+          <Link href={homeHref} style={logoLink}>
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><defs><radialGradient id="lg" cx="40%" cy="35%" r="55%"><stop offset="0%" stopColor="#F4FFB0" /><stop offset="100%" stopColor="#D4EE2C" /></radialGradient></defs><circle cx="12" cy="12" r="10" fill="url(#lg)" /></svg>
             <span style={logoText}>guapd</span>
           </Link>
 
           {/* Center: nav links + browse pill */}
           <div style={navLinksWrap}>
-            {NAV_LINKS.map((link) => {
+            {navLinks.map((link) => {
               const active = isActive(link.href)
               return (
                 <Link key={link.href} href={link.href} style={active ? {
@@ -150,7 +162,7 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
                 </Link>
               )
             })}
-            {(() => {
+            {hasBrand && (() => {
               const browseActive = isActive('/browse')
               return (
                 <Link href="/browse" style={browseActive ? {
@@ -173,7 +185,7 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
 
           {/* Right: inbox + bell + avatar */}
           <div style={rightGroup}>
-            {/* Inbox / Messages */}
+            {hasBrand && <>{/* Inbox / Messages */}
             <Link href="/inbox" style={iconBtnStyle} title="Inbox">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               {unreadInbox > 0 && <span style={neonBadge}>{unreadInbox > 99 ? '99+' : unreadInbox}</span>}
@@ -284,15 +296,17 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
               )}
             </div>
 
+            </>}
+
             {/* Avatar dropdown */}
             <div ref={avatarRef} style={{ position: 'relative' }}>
               <button onClick={() => setAvatarOpen(!avatarOpen)} style={avatarBtn} aria-label="Account menu">
                 {brandMark(avatarSquare)}
                 <div style={{ lineHeight: 1.15 }}>
-                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{brandName || 'Brand'}</div>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{accountName}</div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 500, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-faint)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--neon-deep)' }} />
-                    Brand
+                    {accountTag}
                   </div>
                 </div>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2, transform: 'rotate(180deg)' }}><path d="m6 9 6 6 6-6" /></svg>
@@ -303,16 +317,16 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 12px 14px' }}>
                     {brandMark({ width: 44, height: 44, borderRadius: 13, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', background: 'linear-gradient(135deg,var(--sec-2),var(--sec-2))', border: '1px solid var(--frost-edge)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' })}
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5 }}>{brandName || 'Brand'}</div>
+                      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14.5 }}>{accountName}</div>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: 'var(--ink-faint)', marginTop: 2 }}>
-                        <span style={{ padding: '1px 7px', borderRadius: 999, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)', color: 'var(--sec-ink)', letterSpacing: '.03em', textTransform: 'uppercase' as const, fontSize: 9.5 }}>Brand</span>
+                        <span style={{ padding: '1px 7px', borderRadius: 999, background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2)', color: 'var(--sec-ink)', letterSpacing: '.03em', textTransform: 'uppercase' as const, fontSize: 9.5 }}>{accountTag}</span>
                       </div>
                       {userEmail && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} data-ph-mask>{userEmail}</div>}
                     </div>
                   </div>
                   <div style={{ height: 1, background: 'var(--border-hairline)', margin: '2px 6px 6px' }} />
 
-                  {/* Company profile */}
+                  {hasBrand && <>{/* Company profile */}
                   <Link href="/settings?tab=profile" onClick={() => setAvatarOpen(false)} className="pmi" style={pmiStyle}>
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></span>
                     <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Company profile</span><span style={pmiSub}>Your public brand page</span></span>
@@ -339,6 +353,7 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
                     <span style={pmiIconWrap}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span>
                     <span style={{ flex: 1, minWidth: 0 }}><span style={pmiLabel}>Team</span><span style={pmiSub}>Invite & manage members</span></span>
                   </Link>
+                  </>}
                   {/* Help & support — the contact DIALOG, not /settings, which
                       answers nothing and is already a row in this same menu.
                       Same fix and same control as the creator sidebar, so a
@@ -388,11 +403,11 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
         <button onClick={() => setDrawerOpen(!drawerOpen)} style={hamburgerBtn} aria-label="Menu">
           <span style={hamLine} /><span style={{ ...hamLine, marginTop: 4 }} /><span style={{ ...hamLine, marginTop: 4 }} />
         </button>
-        <Link href="/dashboard" style={{ ...logoText, fontSize: 16, textDecoration: 'none' }}>guapd</Link>
-        <Link href="/notifications" style={{ position: 'relative', padding: 4, color: '#1a1b16' }}>
+        <Link href={homeHref} style={{ ...logoText, fontSize: 16, textDecoration: 'none' }}>guapd</Link>
+        {hasBrand ? <Link href="/notifications" style={{ position: 'relative', padding: 4, color: '#1a1b16' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
           {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-        </Link>
+        </Link> : <span style={{ width: 28 }} />}
       </header>
 
       {/* ── Mobile drawer ─────────────────────────────── */}
@@ -403,12 +418,12 @@ export default function BrandSidebar({ brandName, brandLogoUrl = null, userEmail
             <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(26,27,22,0.08)' }}>
               {brandMark({ width: 36, height: 36, borderRadius: 999, background: '#1a1b16', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 })}
               <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1b16', margin: 0 }}>{brandName || 'Brand'}</p>
-                <span style={{ fontSize: 11, color: '#6a6c5f' }}>Brand</span>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#1a1b16', margin: 0 }}>{accountName}</p>
+                <span style={{ fontSize: 11, color: '#6a6c5f' }}>{accountTag}</span>
               </div>
             </div>
             <nav style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
-              {ALL_MOBILE_LINKS.map((link) => {
+              {mobileLinks.map((link) => {
                 const active = isActive(link.href)
                 return (
                   <Link key={link.href} href={link.href} onClick={() => setDrawerOpen(false)} style={{

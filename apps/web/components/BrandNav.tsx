@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { unreadMessageCount } from '@/lib/unread'
 import BrandSidebar from '@/components/BrandSidebar'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
+import { experienceStaffGate } from '@/lib/experience-staff-auth'
 
 export default async function BrandNav() {
   const supabase = createClient()
@@ -9,6 +10,7 @@ export default async function BrandNav() {
 
   let profileId: string | null = null
   let brandName: string | null = null
+  let isMember = false
   let brandLogoUrl: string | null = null
   let unreadCount = 0
   let unreadInbox = 0
@@ -30,6 +32,7 @@ export default async function BrandNav() {
         .eq('user_id', profile.id)
         .maybeSingle()
 
+      isMember = !!membership
       brandName = (membership as any)?.brands?.name ?? null
       brandLogoUrl = (membership as any)?.brands?.logo_url ?? null
 
@@ -85,11 +88,21 @@ export default async function BrandNav() {
     }
   }
 
+  /* The "Guapd Experiences" tab is decided by WHO the user is (ops admin with
+     Experience operational access), not by which brand they belong to. Hiding
+     it is a convenience only: /experiences-admin runs the same gate itself and
+     reads through a database function that checks access again. */
+  const guapdConsole = user ? (await experienceStaffGate()).ok : false
+  // Only staff with no brand lose the brand tabs. Everyone else (brands,
+  // signed-out visitors on /pricing, users mid-onboarding) sees exactly what
+  // they saw before.
+  const hasBrand = isMember || !guapdConsole
+
   return (
     <>
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profileId && <AnalyticsIdentify userId={profileId} role="brand" />}
-      <BrandSidebar brandName={brandName} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+      <BrandSidebar brandName={brandName} hasBrand={hasBrand} guapdConsole={guapdConsole} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
     </>
   )
 }

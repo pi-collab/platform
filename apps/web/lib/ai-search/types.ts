@@ -29,6 +29,13 @@ export type AgeBand = (typeof AGE_BANDS)[number]
  */
 export interface SearchFilters {
   niches: string[]
+  /** A content category the brand named that is NOT on the list ("astrology"),
+   *  as they wrote it. Matched loosely against what creators typed into Other,
+   *  which is the only place such a niche can live. */
+  otherNiches: string[]
+  /** Specific subjects or formats inside a niche ("mutual funds", "street food",
+   *  "unboxing"), matched against the creator's BIO. A boost, never a filter. */
+  topics: string[]
   platforms: SearchPlatform[]
   /** Free text as typed: "Mumbai", "metros", "south India". Matched loosely. */
   locations: string[]
@@ -51,6 +58,8 @@ export interface SearchFilters {
 
 export const EMPTY_FILTERS: SearchFilters = {
   niches: [],
+  otherNiches: [],
+  topics: [],
   platforms: [],
   locations: [],
   followersMin: null,

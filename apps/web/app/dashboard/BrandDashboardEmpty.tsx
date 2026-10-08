@@ -49,7 +49,7 @@ export default function BrandDashboardEmpty() {
                   <div className="t-meta" style={{color: 'var(--meta)', marginTop: '12px'}}>No deals yet</div>
                 </div>
                 <div style={{padding: 'clamp(22px,2.2vw,30px)', display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--hair)'}}>
-                  <div className="t-meta" style={{color: 'var(--meta)'}}>Pending payouts</div>
+                  <div className="t-meta" style={{color: 'var(--meta)'}}>Pending payments</div>
                   <div style={{fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: 'clamp(30px,3.2vw,40px)', lineHeight: '.9', letterSpacing: '-0.03em', color: 'var(--wg-400)', marginTop: '16px'}}>₹0</div>
                   <div className="t-meta" style={{color: 'var(--meta)', marginTop: '12px'}}>Nothing pending</div>
                 </div>

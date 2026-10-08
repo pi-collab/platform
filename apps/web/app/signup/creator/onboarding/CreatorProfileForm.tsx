@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FormError from '@/components/FormError'
 import { saveOnboarding } from './actions'
+import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 
 /**
  * Where you post. Two options, per the design.
@@ -67,6 +68,9 @@ export default function CreatorProfileForm() {
   const [handle, setHandle] = useState('')
   const [platform, setPlatform] = useState('Instagram')
   const [followerRange, setFollowerRange] = useState('')
+  const [state, setState] = useState('')
+  const [city, setCity] = useState('')
+  const [ageBracket, setAgeBracket] = useState('')
   const [terms, setTerms] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -74,7 +78,8 @@ export default function CreatorProfileForm() {
   // The button shows whether it can be pressed. `required` alone blocks the
   // submit but leaves the CTA looking live, so the only feedback is a browser
   // tooltip after a click that appeared to do nothing.
-  const canSubmit = Boolean(fullName.trim()) && Boolean(handle.trim()) && Boolean(followerRange) && terms
+  const canSubmit = Boolean(fullName.trim()) && Boolean(handle.trim()) && Boolean(followerRange)
+    && Boolean(state) && Boolean(city.trim()) && Boolean(ageBracket) && terms
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -87,6 +92,9 @@ export default function CreatorProfileForm() {
       platform,
       handle: handle.trim().replace(/^@/, ''),
       followerRange,
+      city: city.trim(),
+      state,
+      ageBracket,
       termsAccepted: terms,
     })
 
@@ -186,6 +194,53 @@ export default function CreatorProfileForm() {
           {FOLLOWER_RANGES.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
+        </select>
+      </div>
+
+      {/* Where they are and roughly how old. NOT in the export: added so a
+          brand can find creators by place, which nothing recorded before.
+          State is picked, city typed (too many to list). Age is a bracket,
+          never a date of birth. Same .onboard-select as the follower band. */}
+      <div className="onboard-field onboard-field--wide">
+        <label className="onboard-label" htmlFor="creator-state">State</label>
+        <select
+          id="creator-state"
+          value={state}
+          onChange={(e) => { setState(e.target.value); setError('') }}
+          required
+          className="fld-box onboard-select"
+        >
+          <option value="" disabled>Select your state</option>
+          {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+
+      <div className="onboard-field">
+        <div className="fld-box onboard-box">
+          <input
+            value={city}
+            onChange={(e) => { setCity(e.target.value); setError('') }}
+            placeholder="City"
+            aria-label="City"
+            autoComplete="address-level2"
+            maxLength={60}
+            required
+            className="onboard-input"
+          />
+        </div>
+      </div>
+
+      <div className="onboard-field onboard-field--wide">
+        <label className="onboard-label" htmlFor="age-bracket">Age</label>
+        <select
+          id="age-bracket"
+          value={ageBracket}
+          onChange={(e) => { setAgeBracket(e.target.value); setError('') }}
+          required
+          className="fld-box onboard-select"
+        >
+          <option value="" disabled>Select your age bracket</option>
+          {AGE_BRACKETS.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
         </select>
       </div>
 

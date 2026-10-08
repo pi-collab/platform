@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createLead, updateLead, deleteLead, linkLead } from './actions'
+import { NICHES } from '@/lib/niches'
 import {
   LEAD_STAGES, STAGE_LABEL, STAGE_TONE, LEAD_SOURCES, SOURCE_LABEL,
   daysSince, type LeadRow,
@@ -243,7 +244,10 @@ function LeadForm({
             <>
               <Field label="Platform" name="platform" defaultValue={lead?.platform ?? ''} placeholder="instagram" />
               <Field label="Followers" name="followers" defaultValue={lead?.followers != null ? String(lead.followers) : ''} />
-              <Field label="Niche" name="niche" defaultValue={lead?.niche ?? ''} />
+              <Field label="Niche" name="niche" defaultValue={lead?.niche ?? ''} list="lead-niches" placeholder="Pick or type" />
+              {/* Suggestions, not a lock: a lead can be a brand, whose
+                  category this list does not cover. Saving canonicalises. */}
+              <datalist id="lead-niches">{NICHES.map(n => <option key={n} value={n} />)}</datalist>
             </>
           )}
           <label style={fieldWrap}>
@@ -315,14 +319,14 @@ function LeadForm({
 }
 
 function Field({
-  label, name, defaultValue, type = 'text', required = false, placeholder,
+  label, name, defaultValue, type = 'text', required = false, placeholder, list,
 }: {
-  label: string; name: string; defaultValue?: string; type?: string; required?: boolean; placeholder?: string
+  label: string; name: string; defaultValue?: string; type?: string; required?: boolean; placeholder?: string; list?: string
 }) {
   return (
     <label style={fieldWrap}>
       <span style={fieldLabel}>{label}{required && <span style={{ color: '#dc2626' }}> *</span>}</span>
-      <input name={name} type={type} defaultValue={defaultValue} required={required} placeholder={placeholder} style={input} />
+      <input name={name} type={type} defaultValue={defaultValue} required={required} placeholder={placeholder} list={list} style={input} />
     </label>
   )
 }

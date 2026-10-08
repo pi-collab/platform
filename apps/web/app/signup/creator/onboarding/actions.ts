@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOpsCreatorPending } from '@/lib/account-emails'
+import { validateLocation } from '@/lib/creator-location'
 
 /** Must stay in step with FOLLOWER_RANGES in CreatorProfileForm. */
 const FOLLOWER_RANGES = [
@@ -33,6 +34,10 @@ export async function saveOnboarding(data: {
    *  parsed number: the answer is a band, and turning it into a fake precise
    *  count would invent data the creator never gave. */
   followerRange: string
+  city: string
+  state: string
+  /** A code from AGE_BRACKETS, never a date of birth. */
+  ageBracket: string
   /** The explicit tick on this form. Signup already recorded acceptance
    *  against the notice on the account screen; this upgrades that record to a
    *  deliberate act, which is why it overwrites rather than skips. */
@@ -53,6 +58,8 @@ export async function saveOnboarding(data: {
   if (!FOLLOWER_RANGES.includes(followerRange)) {
     return { status: 'error', message: 'Select your follower range.' }
   }
+  const place = validateLocation({ city: data.city ?? '', state: data.state ?? '', ageBracket: data.ageBracket ?? '' })
+  if (!place.ok) return { status: 'error', message: place.error }
   // Enforced here, not only by the checkbox. The brand action does the same:
   // without it, a directly-called action completes onboarding and writes an
   // acceptance timestamp for a tick that never happened.
@@ -113,6 +120,13 @@ export async function saveOnboarding(data: {
     .eq('id', creator.id)
 
   if (updateErr) return { status: 'error', message: 'Failed to save profile.' }
+
+  // A separate write on purpose. If migration 0515 has not reached this
+  // database, folding these into the update above would fail the whole signup
+  // over three optional-to-the-schema columns. Separately, a miss here only
+  // means the dashboard asks for them again.
+  const { error: placeErr } = await admin.from('creators').update(place.row).eq('id', creator.id)
+  if (placeErr) console.error('[saveOnboarding] city/state/age not saved:', placeErr.message)
 
   // Record the explicit acceptance over the implicit one taken at signup.
   await admin.from('users').update({

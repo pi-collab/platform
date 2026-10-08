@@ -111,7 +111,7 @@ export default function LandingMobileClient() {
           <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '40px', padding: '0 24px'}}>
             <div className="sr" style={{border: '1px solid rgba(255,255,255,.14)', borderRadius: '16px', padding: '20px 16px', '--sr-delay': '0s'}}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--neon)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z" /></svg>
-              <div style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '14.5px', color: '#fff', marginTop: '14px', lineHeight: '1.3'}}>One thread, offer to payout</div>
+              <div style={{fontFamily: 'var(--font-display)', fontWeight: '600', fontSize: '14.5px', color: '#fff', marginTop: '14px', lineHeight: '1.3'}}>One thread, offer to payment</div>
               <p style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', lineHeight: '1.5', color: '#9EA096', margin: '6px 0 0'}}>Same four steps, every deal.</p>
             </div>
             <div className="sr" style={{border: '1px solid rgba(255,255,255,.14)', borderRadius: '16px', padding: '20px 16px', '--sr-delay': '.08s'}}>
@@ -260,7 +260,7 @@ export default function LandingMobileClient() {
               <div style={{position: 'relative', zIndex: '2', maxWidth: '300px', textAlign: 'center', padding: '0 24px'}}>
                 <div id="cvEyebrow-m" style={{color: 'var(--ink)', fontFamily: 'var(--font-ui)', fontSize: '10px', fontWeight: '600', letterSpacing: '.12em', textTransform: 'uppercase', opacity: '0'}}>TWO SIDES</div>
                 <h2 id="cvHead-m" style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.03em', lineHeight: '1.15', fontSize: '26px', margin: '14px 0 0', color: 'var(--ink)', opacity: '0'}}>Get going. <span className="opit">Get guapd.</span></h2>
-                <p id="cvSub-m" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0'}}>One flow for briefs, terms and payouts, built for both sides of the deal.</p>
+                <p id="cvSub-m" style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.6', color: 'var(--ink)', maxWidth: '280px', margin: '14px auto 0', opacity: '0'}}>One flow for briefs, terms and payments, built for both sides of the deal.</p>
                 <div id="cvBtn-m" style={{marginTop: '22px', display: 'inline-flex', opacity: '0'}}>
                   <button type="button" onClick={() => setDemoOpen(true)} style={{display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--ink)', border: 'none', color: '#fff', borderRadius: '999px', padding: '12px 22px', fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13px', cursor: 'pointer'}}>Book demo</button>
                 </div>

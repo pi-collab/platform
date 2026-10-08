@@ -26,6 +26,8 @@ const MODEL = 'claude-opus-5'
  *  contract with the model, and a drift between the two is a silent filter. */
 const FiltersSchema = z.object({
   niches: z.array(z.enum(SEARCH_NICHES as unknown as [string, ...string[]])),
+  otherNiches: z.array(z.string()),
+  topics: z.array(z.string()),
   platforms: z.array(z.enum(['instagram', 'youtube'])),
   locations: z.array(z.string()),
   followersMin: z.number().nullable(),
@@ -45,7 +47,9 @@ const SYSTEM = `You turn a brand's plain-language request for influencer creator
 Return ONLY what the brand actually asked for. An empty array or null means "not asked for", and that is the correct answer whenever a field was not mentioned. Never fill a field with a plausible guess: every filter you emit narrows or reorders real search results, so an invented one hides creators the brand never excluded.
 
 Field rules:
-- niches: only from the allowed list. Map the brand's words onto it ("finfluencer" and "personal finance" are Finance; "gym" and "workout" are Fitness; "makeup" and "skincare" are Fashion / Beauty). If nothing in the list fits, leave it empty and put the brand's word in unusedTerms.
+- niches: only from the allowed list. Map the brand's words onto it ("finfluencer" and "personal finance" are Finance, Crypto & Investing; "gym" and "workout" are Fitness, Sports & Bodybuilding; "makeup" and "skincare" are Beauty & Skincare). Never choose Other / Not Listed.
+- otherNiches: a content category the brand named that genuinely has no home in the niches list ("astrology", "spirituality", "chess"), in the brand's own word, lowercase. Creators can type their own niche, so this is matched against what they wrote. Use it ONLY for a content category, never for a quality ("premium") or an audience trait; those go in unusedTerms. If a list niche fits, use niches instead and leave this empty.
+- topics: specific subjects or content formats the brand named that are narrower than a niche ("mutual funds", "street food", "explainer reels", "skincare for oily skin"), short, lowercase, in the brand's words. These are matched against what creators wrote in their bio. A topic can sit alongside its niche: "mutual fund explainers" is niches [Finance, Crypto & Investing] plus topics ["mutual funds", "explainers"]. Qualities ("premium", "authentic") are not topics; they go in unusedTerms.
 - platforms: only if named or strongly implied ("reels" implies instagram, "shorts" or "videos on YouTube" implies youtube).
 - locations: the place words as the brand wrote them ("Mumbai", "metros", "south India"). Do not expand a region into a list of cities.
 - followersMin / followersMax: absolute numbers, not text. "50k+" is followersMin 50000 and followersMax null. "between 10k and 50k" sets both. "micro creators" is roughly followersMax 100000; "nano" is roughly followersMax 10000.

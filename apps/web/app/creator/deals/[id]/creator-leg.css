@@ -1,0 +1,40 @@
+/* Guapd Experience creator leg (CreatorLegView). One responsive layout for
+   desktop and mobile; breakpoint at 760px. */
+.leg-page { padding: 0 0 48px; }
+.leg-frame { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.leg-hero { padding: 28px 30px; }
+.leg-back { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; color: var(--ink-soft); text-decoration: none; }
+.leg-hero-row { display: flex; align-items: flex-end; gap: 16px; margin-top: 16px; min-width: 0; }
+.leg-meta { font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ink-faint); letter-spacing: .02em; }
+.leg-h1 { font-family: var(--font-display); font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; letter-spacing: -0.025em; margin: 8px 0 0; color: var(--ink); }
+.leg-serif { font-family: var(--font-serif, Georgia, serif); font-style: italic; font-weight: 400; }
+.leg-managed { margin-top: 6px; font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.leg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.leg-card { padding: 22px 24px; }
+.leg-h2 { margin: 0 0 14px; font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.leg-rows { margin: 0; display: flex; flex-direction: column; }
+.leg-rows > div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid var(--hairline, rgba(0,0,0,.06)); font-family: var(--font-ui); font-size: 14px; }
+.leg-rows > div:first-child { border-top: none; }
+.leg-rows dt { color: var(--ink-soft); margin: 0; }
+.leg-rows dd { margin: 0; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.leg-total dt, .leg-total dd { font-weight: 700 !important; color: var(--ink) !important; font-size: 15.5px; }
+.leg-rows-plain { margin-top: 12px; }
+.leg-list { margin: 0 0 8px; padding-left: 18px; font-family: var(--font-ui); font-size: 14.5px; line-height: 1.7; color: var(--ink); }
+.leg-body { margin: 6px 0 0; font-family: var(--font-ui); font-size: 14px; line-height: 1.55; color: var(--ink); }
+.leg-note { margin: 14px 0 0; font-family: var(--font-ui); font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); }
+.leg-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.leg-accept { height: 46px; padding: 0 22px; border-radius: 12px; border: none; background: var(--neon); font-family: var(--font-ui); font-weight: 800; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.leg-decline { height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--hairline, rgba(0,0,0,.12)); background: var(--card, #fff); font-family: var(--font-ui); font-weight: 600; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.leg-decline-confirm { color: #9C4147; border-color: #C4494F40; }
+.leg-decline-box { display: flex; flex-direction: column; gap: 10px; }
+.leg-label { font-family: var(--font-ui); font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+.leg-textarea { width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--hairline, rgba(0,0,0,.12)); font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+.leg-error { margin: 10px 0 0; font-family: var(--font-ui); font-size: 13px; color: #9C4147; }
+@media (max-width: 760px) {
+  .leg-page { padding: 0 16px 40px; }
+  .leg-hero { padding: 22px 18px; }
+  .leg-hero-row { align-items: flex-start; }
+  .leg-grid { grid-template-columns: 1fr; }
+  .leg-card { padding: 20px 18px; }
+  .leg-actions > button { flex: 1 1 100%; }
+}

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import BrandMark from '@/components/BrandMark'
+import { hasCreatorLocation } from '@/lib/creator-location-server'
+import { hasCreatorBio } from '@/lib/creator-bio-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorDashboardEmptyDesktop from './CreatorDashboardEmptyDesktop'
 import CreatorDashboardMobile from '@/components/CreatorDashboardMobile'
@@ -26,6 +28,7 @@ import type { Metadata } from 'next'
 import CreatorDashboardEmpty from './CreatorDashboardEmpty'
 import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
+import { overlayCreatorLegs } from '@/lib/creator-leg-list'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
@@ -86,6 +89,9 @@ export default async function CreatorDashboardPage({
   // The same resolution the sender uses, so the task stops being outstanding
   // the moment an email would start working.
   const hasEmail = await hasCreatorEmail(creatorId)
+  // Own query: see lib/creator-location-server for why it is not folded in.
+  const hasLocation = await hasCreatorLocation(creatorId)
+  const hasBio = await hasCreatorBio(creatorId)
 
 
   const supabase = createClient()
@@ -96,10 +102,10 @@ export default async function CreatorDashboardPage({
   const periodFromISO = periodFrom.toISOString()
   const periodToISO = periodTo.toISOString()
 
-  const [{ data: deals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
+  const [{ data: rawDeals }, { data: invoices }, { data: storefront }, { data: creatorRow }, { count: packageCount }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, brands(id, name, logo_url)')
+      .select('id, title, status, price_paise, last_offer_by, created_at, timeline_date, leg_role, experience_brand_name, brands(id, name, logo_url)')
       .neq('status', 'cancelled')
       .neq('status', 'declined')
       .gte('created_at', periodFromISO)
@@ -121,9 +127,12 @@ export default async function CreatorDashboardPage({
     supabase
       .from('creator_products')
       .select('id', { count: 'exact', head: true })
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', creatorId)
       .eq('is_active', true),
   ])
+  // Experience creator legs: their own frozen gross and "<brand> · Managed by Guapd".
+  const deals = rawDeals ? await overlayCreatorLegs(supabase, rawDeals) : rawDeals
 
   /* ── Growth creators have no storefront ──────────────────────────────────
      Every CTA on this page said "Set up your shopfront", which for them is a
@@ -276,6 +285,8 @@ export default async function CreatorDashboardPage({
        same thing — which is the duplication this card exists to end. */
     hasInstagram: igConnection.status !== 'not_connected',
     hasEmail,
+    hasLocation,
+    hasBio,
     hasPackages: (packageCount ?? 0) > 0,
     hasShopfront: Boolean(storefront),
     hasShopfrontPublished: Boolean(storefront?.is_published),
@@ -326,11 +337,11 @@ export default async function CreatorDashboardPage({
      figure above is bounded by the ONE selected period. So this is its own
      unscoped read rather than a reuse that would quietly report the selected
      period four times under four different labels. */
-  const { data: lifetimeDeals } = await supabase
+  const { data: rawLifetimeDeals } = await supabase
     .from('deals')
-    .select('id, title, status, price_paise, created_at, timeline_date, brands(id, name, logo_url)')
+    .select('id, title, status, price_paise, created_at, timeline_date, leg_role, experience_brand_name, brands(id, name, logo_url)')
     .not('status', 'in', '(cancelled,declined)')
-  const lifetime = lifetimeDeals ?? []
+  const lifetime = await overlayCreatorLegs(supabase, rawLifetimeDeals ?? [])
 
   const { data: lifetimeInvoices } = await supabase
     .from('invoices')

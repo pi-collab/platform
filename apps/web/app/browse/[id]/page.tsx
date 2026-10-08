@@ -1,11 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { isSampleItem } from '@/lib/showcase-samples'
+import { atHandle } from '@/lib/handle'
+import { socialProfileUrl } from '@/lib/social-url'
 import { formatProductPrice, normalizePriceMode } from '@/lib/product-price'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPublicSnapshot } from '@/lib/instagram-sync'
 import TrackTag from '@/components/track/TrackTag'
 import { trackOfVettingStatus } from '@/lib/track'
 import { verifyBrand } from '@/lib/brand-auth'
+import { brandRosterAccess } from '@/lib/brand-review-gate'
+import RosterUnderReview from '@/components/brand/RosterUnderReview'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BrowseStorefront from './BrowseStorefront'
@@ -85,6 +89,20 @@ function VerifiedMark() {
 
 export default async function CreatorProfilePage({ params }: { params: { id: string } }) {
   const brand = await verifyBrand()
+
+  /* Same gate as the roster, with ONE exception: the creator whose storefront
+     link brought them. That creator sent this brand here personally, and
+     walling a brand off from the person who invited them is the one outcome
+     worse than showing them a rate early. Every other profile waits for
+     review. */
+  const access = await brandRosterAccess(brand.brandId)
+  if (access.held && access.originCreatorId !== params.id) {
+    return (
+      <RosterUnderReview
+        originCreatorHref={access.originCreatorId ? `/browse/${access.originCreatorId}` : null}
+      />
+    )
+  }
   const supabase = createClient()
   const admin = createAdminClient()
 
@@ -97,6 +115,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
     supabase
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', params.id),
     supabase
       .from('deals')
@@ -305,10 +324,12 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
               {/* Social handles */}
               {socials.length > 0 && (
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-                  {socials.filter(s => s.platform === 'instagram' || s.platform === 'youtube').map(s => (
+                  {/* Linked from the HANDLE. `url` is only ever set by ops, so
+                      linking to it sent nearly every brand to '#'. */}
+                  {socials.filter(s => (s.platform === 'instagram' || s.platform === 'youtube') && socialProfileUrl(s.platform, s.handle)).map(s => (
                     <a
                       key={`${s.platform}-${s.handle}`}
-                      href={s.url || '#'}
+                      href={socialProfileUrl(s.platform, s.handle)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -323,7 +344,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
                       ) : (
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="4" /><path d="m10 9.5 5 2.5-5 2.5z" /></svg>
                       )}
-                      @{(s.handle || '').replace(/^@/, '')}
+                      {atHandle(s.handle)}
                     </a>
                   ))}
                 </div>

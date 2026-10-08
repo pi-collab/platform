@@ -1,6 +1,7 @@
 'use server'
 
 import { trackForCreator } from '@/lib/deal-track'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
@@ -193,8 +194,12 @@ export async function createDeal(input: CreateDealInput) {
     resolvedFeeMode = resolved.feeMode
   }
 
-  // Insert via anon client (session-based) — RLS deals_insert_brand enforces brand_id = my_brand_id()
-  const { data, error } = await supabase
+  /* Inserted with the service role, NOT the brand's session (migration 0520).
+     A session insert let a brand call the API directly with any fee_percent
+     and no hold. Every value below is computed or checked above — brand_id
+     from verifyBrand, fee from the ladder, held_at from the send gate — so
+     this is the only path a deal can be created by. */
+  const { data, error } = await createAdminClient()
     .from('deals')
     .insert({
       brand_id: brand.brandId,

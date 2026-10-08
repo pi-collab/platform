@@ -233,8 +233,10 @@ CREATE POLICY creators_deny_delete
 -- ── deals ─────────────────────────────────────────────────────────
 -- SELECT: brand member sees deals for their brand; creator sees their deals.
 -- INSERT: brand members only, for their own brand (brand_id must match).
--- UPDATE: both parties can update (status changes, offer counters).
---         Field-level restrictions enforced in app code for v1.
+-- INSERT: none for signed-in users. createDeal inserts with the service role
+--         after computing the fee and the send gate itself (migration 0520).
+-- UPDATE: a party may update only their own deal (policy below), and only the
+--         columns / status moves the guard_deal_write trigger allows (0520).
 
 DROP POLICY IF EXISTS deals_read         ON deals;
 DROP POLICY IF EXISTS deals_insert_brand ON deals;
@@ -251,10 +253,6 @@ CREATE POLICY deals_read
     OR (creator_id = my_creator_id() AND held_at IS NULL)
   );
 
-CREATE POLICY deals_insert_brand
-  ON deals FOR INSERT
-  WITH CHECK (brand_id = my_brand_id());
-
 CREATE POLICY deals_update
   ON deals FOR UPDATE
   USING (
@@ -265,6 +263,99 @@ CREATE POLICY deals_update
 CREATE POLICY deals_deny_delete
   ON deals FOR DELETE
   USING (false);
+
+-- Column / status guard for signed-in users (0520). Kept here so a fresh
+-- database built from schema + migrations + rls.sql ends with it in place.
+CREATE OR REPLACE FUNCTION guard_deal_write()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  is_brand      boolean;
+  is_creator    boolean;
+  accepting     boolean;
+  ok_status     boolean;
+  posted_change boolean;
+  allowed       text[];
+BEGIN
+  IF current_user NOT IN ('authenticated', 'anon') THEN
+    RETURN NEW;
+  END IF;
+
+  is_brand   := coalesce(OLD.brand_id = my_brand_id(), false);
+  is_creator := coalesce(OLD.creator_id = my_creator_id(), false);
+  accepting  := (OLD.status = 'negotiating' AND NEW.status = 'agreed');
+
+  IF is_brand THEN
+    allowed := ARRAY['updated_at', 'agreed_at', 'completed_at',
+                     'title', 'internal_note', 'campaign_id',
+                     'shipment_status', 'tracking_link', 'carrier_note', 'shipped_at',
+                     'status', 'price_paise', 'rights_confirmed_at'];
+  ELSIF is_creator THEN
+    allowed := ARRAY['updated_at', 'agreed_at', 'completed_at',
+                     'shipping_address', 'is_posted', 'posted_url', 'posted_at',
+                     'status', 'price_paise', 'rights_confirmed_at'];
+  ELSE
+    RAISE EXCEPTION 'Not a party to this deal' USING ERRCODE = '42501';
+  END IF;
+
+  IF (to_jsonb(NEW) - allowed) IS DISTINCT FROM (to_jsonb(OLD) - allowed) THEN
+    RAISE EXCEPTION 'This change is not allowed on a deal' USING ERRCODE = '42501';
+  END IF;
+
+  -- Status: only the moves the app makes
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    IF is_brand THEN
+      ok_status := accepting
+                OR (OLD.status = 'negotiating' AND NEW.status = 'cancelled')
+                OR (OLD.status IN ('delivered', 'revision') AND NEW.status = 'approved');
+    ELSE
+      ok_status := accepting
+                OR (OLD.status = 'negotiating' AND NEW.status = 'declined')
+                OR (OLD.status IN ('agreed', 'revision') AND NEW.status = 'delivered');
+    END IF;
+    IF NOT ok_status THEN
+      RAISE EXCEPTION 'A deal cannot move from % to % this way', OLD.status, NEW.status USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  -- Price and rights: only by accepting
+  IF NEW.price_paise IS DISTINCT FROM OLD.price_paise AND NOT accepting THEN
+    RAISE EXCEPTION 'The price changes only by accepting a counter offer' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.rights_confirmed_at IS DISTINCT FROM OLD.rights_confirmed_at AND NOT accepting THEN
+    RAISE EXCEPTION 'Rights are confirmed only when the deal is agreed' USING ERRCODE = '42501';
+  END IF;
+
+  -- Posted: once the work is approved, never before
+  posted_change := NEW.is_posted IS DISTINCT FROM OLD.is_posted
+                OR NEW.posted_url IS DISTINCT FROM OLD.posted_url
+                OR NEW.posted_at IS DISTINCT FROM OLD.posted_at;
+  IF posted_change AND OLD.status NOT IN ('approved', 'paid', 'complete') THEN
+    RAISE EXCEPTION 'Mark as posted only after the content is approved' USING ERRCODE = '42501';
+  END IF;
+
+  -- Campaign: only one of the brand's own
+  IF NEW.campaign_id IS DISTINCT FROM OLD.campaign_id AND NEW.campaign_id IS NOT NULL THEN
+    IF NOT EXISTS (SELECT 1 FROM campaigns c WHERE c.id = NEW.campaign_id AND c.brand_id = OLD.brand_id) THEN
+      RAISE EXCEPTION 'That campaign does not belong to this brand' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION guard_deal_write() IS
+  'BEFORE UPDATE guard on deals for signed-in users: per-party column allowlist, '
+  'allowed status transitions, price only on counter acceptance. Service role and '
+  'SECURITY DEFINER functions bypass it. See migration 0520.';
+
+DROP TRIGGER IF EXISTS t_deals_00_guard ON deals;
+CREATE TRIGGER t_deals_00_guard
+  BEFORE UPDATE ON deals
+  FOR EACH ROW EXECUTE FUNCTION guard_deal_write();
+
 
 
 -- ── messages ──────────────────────────────────────────────────────
@@ -350,10 +441,12 @@ CREATE POLICY events_read
 
 
 -- ── invoices ────────────────────────────────────────────────────────
--- MONEY TABLE — write policies are deliberately granular.
+-- MONEY TABLE.
 -- Both parties can READ invoices for their deals.
--- Only the CREATOR can INSERT (issue an invoice on an approved deal).
--- Both parties can UPDATE (creator: draft→issued; brand: issued→accepted).
+-- NO insert or update for signed-in users (migration 0521): generateInvoice,
+-- issueInvoice and acceptInvoice write with the service role after checking
+-- the caller is the deal's own creator / brand and the status is right.
+-- Paying is the SECURITY DEFINER function mark_deal_paid.
 -- No client-side delete ever.
 --
 -- NOTE: migration 009 created policies with _creator/_brand suffixes.
@@ -370,24 +463,6 @@ DROP POLICY IF EXISTS invoices_deny_delete    ON invoices;
 CREATE POLICY invoices_read
   ON invoices FOR SELECT
   USING (can_access_deal(deal_id));
-
-CREATE POLICY invoices_insert_creator
-  ON invoices FOR INSERT
-  WITH CHECK (
-    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
-  );
-
-CREATE POLICY invoices_update_creator
-  ON invoices FOR UPDATE
-  USING (
-    deal_id IN (SELECT id FROM deals WHERE creator_id = my_creator_id())
-  );
-
-CREATE POLICY invoices_update_brand
-  ON invoices FOR UPDATE
-  USING (
-    deal_id IN (SELECT id FROM deals WHERE brand_id = my_brand_id())
-  );
 
 CREATE POLICY invoices_deny_delete
   ON invoices FOR DELETE
@@ -406,9 +481,18 @@ DROP POLICY IF EXISTS deal_deliverable_items_update_creator  ON deal_deliverable
 DROP POLICY IF EXISTS deal_deliverable_items_update_brand    ON deal_deliverable_items;
 DROP POLICY IF EXISTS deal_deliverable_items_insert_brand    ON deal_deliverable_items;
 
+-- visible_to_creator (0522): a creator does not see items marked hidden;
+-- the brand sees all of its own. Default true leaves existing deals unchanged.
 CREATE POLICY deal_deliverable_items_read
   ON deal_deliverable_items FOR SELECT
-  USING (can_access_deal(deal_id));
+  USING (
+    EXISTS (
+      SELECT 1 FROM deals d
+      WHERE d.id = deal_id
+        AND (d.brand_id = my_brand_id()
+             OR (d.creator_id = my_creator_id() AND visible_to_creator))
+    )
+  );
 
 CREATE POLICY deal_deliverable_items_insert
   ON deal_deliverable_items FOR INSERT
@@ -442,6 +526,10 @@ CREATE POLICY creator_products_read
       creator_id = my_creator_id()
       OR (
         is_active = true
+        -- 0533: a non-owner sees marketplace packages only. A shoot day rate
+        -- (per_day) prices an Experience creator leg and is never shown to a
+        -- brand; any future pricing type is hidden until listed here.
+        AND pricing_type = 'per_deliverable'
         AND EXISTS (
           SELECT 1 FROM creators
           WHERE creators.id = creator_products.creator_id
@@ -1001,6 +1089,210 @@ CREATE POLICY usage_events_read_own
   TO authenticated
   USING (brand_id = my_brand_id());
 
+-- ════════════════════════════════════════════════════════════════════════
+-- EXPERIENCES (migrations 0522–0524)
+-- Portal boundary at the data layer:
+--   * brand reads ONLY its own experiences (granted columns), roster (no money
+--     columns exist there) and service invoices. Never creator terms, margin,
+--     cost lines, vendors, payouts, follow-ons or internal notes.
+--   * creator reads ONLY their own leg's terms, payouts to themselves, and
+--     their own follow-ons. Margin is not stored anywhere (0525): it is
+--     derived for the ops P&L in apps/web/lib/experience-money.ts.
+--   * Leg rows themselves are deals: deals_read already scopes them, because
+--     Leg 1's creator is the Guapd house creator and Leg 2's brand is the Guapd
+--     house brand.
+--   * Every write is service role only (ops / server actions with explicit
+--     column lists). No INSERT/UPDATE/DELETE policy exists on any table here.
+-- Supabase grants ALL on new tables to anon/authenticated by default, so each
+-- table is REVOKEd first and only specific columns are granted back.
+-- ════════════════════════════════════════════════════════════════════════
+
+CREATE OR REPLACE FUNCTION guapd_brand_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT id FROM brands WHERE is_guapd LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION guapd_creator_id()
+RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT id FROM creators WHERE is_guapd LIMIT 1
+$$;
+
+CREATE OR REPLACE FUNCTION is_my_vendor(p_vendor_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM vendors
+    WHERE id = p_vendor_id AND creator_id IS NOT NULL AND creator_id = my_creator_id()
+  )
+$$;
+
+ALTER TABLE deal_templates           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experiences              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_finance       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_creator_terms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_roster        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_cost_lines    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_payout_details    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_private          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_invoices         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendor_payouts           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deal_follow_ons          ENABLE ROW LEVEL SECURITY;
+
+REVOKE ALL ON deal_templates, experiences, experience_finance, experience_creator_terms,
+              experience_roster, experience_cost_lines, vendors, vendor_payout_details,
+              creator_private, service_invoices, vendor_payouts, deal_follow_ons
+  FROM anon, authenticated;
+
+GRANT SELECT (id, brand_id, title, status, brand_service_total_paise, shoot_date, shoot_city, created_at, updated_at)
+  ON experiences TO authenticated;
+GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise,
+              platform_track, locked_at, created_at, updated_at)
+  ON experience_creator_terms TO authenticated;
+GRANT SELECT (id, experience_id, creator_id, added_by, brand_decision, locked, decided_at, created_at, updated_at)
+  ON experience_roster TO authenticated;
+GRANT SELECT (id, experience_id, brand_id, kind, number, status, issue_date, due_date, lines, subtotal_paise,
+              gst_rate_pct, cgst_paise, sgst_paise, igst_paise, tds_paise, total_paise,
+              supplier_gstin, supplier_gstin_provisional, supplier_arn,
+              recipient_legal_name, recipient_gstin, recipient_state, place_of_supply,
+              payment_reference, paid_at, created_at, updated_at,
+              per_video_paise, deliverable_count, misc_paise, source)
+  ON service_invoices TO authenticated;
+GRANT SELECT (id, experience_id, deal_id, reason, amount_paise, tds_paise, net_amount_paise, status, external_ref, paid_at, created_at, updated_at)
+  ON vendor_payouts TO authenticated;
+GRANT SELECT (id, experience_id, deal_id, creator_id, type, trigger, basis, invoicer, pct, fixed_paise, trigger_date,
+              sales_figure_paise, sales_verified_at, creator_gross_paise, platform_pct, creator_net_paise, status, created_at, updated_at)
+  ON deal_follow_ons TO authenticated;
+
+DROP POLICY IF EXISTS experiences_read_brand ON experiences;
+CREATE POLICY experiences_read_brand ON experiences FOR SELECT
+  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
+
+DROP POLICY IF EXISTS ect_read_own_creator ON experience_creator_terms;
+CREATE POLICY ect_read_own_creator ON experience_creator_terms FOR SELECT
+  USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
+
+DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
+CREATE POLICY roster_read_brand ON experience_roster FOR SELECT
+  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_id AND e.brand_id = my_brand_id()));
+
+DROP POLICY IF EXISTS si_read_brand ON service_invoices;
+CREATE POLICY si_read_brand ON service_invoices FOR SELECT
+  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
+
+DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
+CREATE POLICY vp_read_own_creator ON vendor_payouts FOR SELECT
+  USING (is_my_vendor(vendor_id));
+
+DROP POLICY IF EXISTS dfo_read_own_creator ON deal_follow_ons;
+CREATE POLICY dfo_read_own_creator ON deal_follow_ons FOR SELECT
+  USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
+
+-- ── Experience P&L access (0526): operational vs financial, opt-in per person ──
+-- The P&L is reachable only through experience_pnl(), which checks the CALLER's
+-- staff_access.experiences_financial. The service role has no caller and is
+-- refused. Raw tables have no user access.
+ALTER TABLE staff_access             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_pnl_snapshots ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON staff_access, experience_pnl_snapshots FROM anon, authenticated;
+
+CREATE OR REPLACE FUNCTION has_experience_access(p_kind text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT coalesce((
+    SELECT CASE p_kind
+             WHEN 'financial'   THEN experiences_financial
+             WHEN 'operational' THEN experiences_operational OR experiences_financial
+             ELSE false
+           END
+    FROM staff_access WHERE user_id = my_user_id()
+  ), false)
+$$;
+
+CREATE OR REPLACE FUNCTION compute_experience_pnl(p_experience_id uuid)
+RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  WITH inv AS (
+    SELECT coalesce(sum(subtotal_paise) FILTER (WHERE status IN ('issued', 'paid')), 0) AS billed,
+           coalesce(sum(subtotal_paise) FILTER (WHERE status = 'paid'), 0) AS received
+    FROM service_invoices WHERE experience_id = p_experience_id
+  ), legs AS (
+    SELECT coalesce(sum(creator_gross_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS gross,
+           coalesce(sum(creator_net_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS net,
+           count(*) FILTER (WHERE locked_at IS NULL) AS pending,
+           coalesce(jsonb_agg(jsonb_build_object(
+             'deal_id', deal_id, 'creator_id', creator_id, 'platform_track', platform_track,
+             'platform_pct', platform_pct, 'creator_gross_paise', creator_gross_paise,
+             'platform_fee_paise', creator_gross_paise - creator_net_paise, 'creator_net_paise', creator_net_paise
+           ) ORDER BY created_at) FILTER (WHERE locked_at IS NOT NULL), '[]'::jsonb) AS per_leg
+    FROM experience_creator_terms WHERE experience_id = p_experience_id
+  ), costs AS (
+    SELECT coalesce(sum(total_paise), 0) AS total
+    FROM experience_cost_lines WHERE experience_id = p_experience_id AND provided_by = 'guapd'
+  )
+  SELECT jsonb_build_object(
+    'experience_id', p_experience_id,
+    'brand_revenue_paise', inv.billed,
+    'brand_received_paise', inv.received,
+    'creator_gross_total_paise', legs.gross,
+    'creator_net_total_paise', legs.net,
+    'guapd_costs_total_paise', costs.total,
+    'subtotal_paise', inv.billed - legs.gross - costs.total,
+    'platform_fee_kept_paise', legs.gross - legs.net,
+    'guapd_margin_paise', inv.billed - legs.net - costs.total,
+    'legs_pending', legs.pending,
+    'per_leg', legs.per_leg
+  )
+  FROM inv, legs, costs
+$$;
+
+CREATE OR REPLACE FUNCTION experience_pnl(p_experience_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+DECLARE
+  snap_pnl jsonb;
+  snap_at  timestamptz;
+BEGIN
+  IF NOT has_experience_access('financial') THEN
+    RAISE EXCEPTION 'Financial access required' USING ERRCODE = '42501';
+  END IF;
+  SELECT pnl, captured_at INTO snap_pnl, snap_at FROM experience_pnl_snapshots WHERE experience_id = p_experience_id;
+  IF snap_pnl IS NOT NULL THEN
+    RETURN snap_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', snap_at);
+  END IF;
+  RETURN compute_experience_pnl(p_experience_id) || jsonb_build_object('source', 'live');
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION experience_payouts(p_experience_id uuid)
+RETURNS TABLE (id uuid, vendor_name text, deal_id uuid, reason text, amount_paise bigint, tds_paise bigint,
+               net_amount_paise bigint, status text, external_ref text, approved_at timestamptz, paid_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  IF NOT has_experience_access('operational') THEN
+    RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT p.id, v.display_name, p.deal_id, p.reason, p.amount_paise, p.tds_paise,
+           p.net_amount_paise, p.status, p.external_ref, p.approved_at, p.paid_at
+    FROM vendor_payouts p JOIN vendors v ON v.id = p.vendor_id
+    WHERE p.experience_id = p_experience_id
+    ORDER BY p.created_at;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION compute_experience_pnl(uuid)  FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION snapshot_experience_pnl()     FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_pnl(uuid)          FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_payouts(uuid)      FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION has_experience_access(text)   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_pnl(uuid)          TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_payouts(uuid)      TO authenticated;
+GRANT  EXECUTE ON FUNCTION has_experience_access(text)   TO authenticated;
+
 -- ── deal_brand_notes (0527): the brand's private deal note ──────────────────
 -- Moved off deals, where the creator on the deal could read it. Brand-only
 -- read; writes are server-only (updateDealInternalNote, createDeal).
@@ -1009,3 +1301,114 @@ GRANT SELECT ON deal_brand_notes TO authenticated;
 DROP POLICY IF EXISTS deal_brand_notes_read_brand ON deal_brand_notes;
 CREATE POLICY deal_brand_notes_read_brand ON deal_brand_notes FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM deals d WHERE d.id = deal_brand_notes.deal_id AND d.brand_id = my_brand_id()));
+
+-- ── 0528: Experience request columns, quote history ─────────────────────────
+GRANT SELECT (request_deliverables, request_affiliate, request_ad_rights, request_ad_rights_months,
+              request_boost, request_boost_months, request_location, request_date_from, request_date_to,
+              request_brief, request_channel, requested_at)
+  ON experiences TO authenticated;
+REVOKE ALL ON experience_quotes FROM anon, authenticated;
+GRANT SELECT (id, experience_id, version, proposed_by, per_video_paise, deliverable_count, misc_paise,
+              total_paise, deliverables, shoot_date, shoot_city, message, status, created_at, decided_at)
+  ON experience_quotes TO authenticated;
+DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
+CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_quotes.experience_id
+                 AND e.brand_id = my_brand_id() AND e.brand_id IS DISTINCT FROM guapd_brand_id()));
+
+-- ── 0529: Guapd Experiences staff console list ──────────────────────────────
+CREATE OR REPLACE FUNCTION experience_console_list()
+RETURNS TABLE (id uuid, title text, status text, brand_name text, shoot_date date, shoot_city text,
+               request_location text, request_date_from date, request_date_to date,
+               requested_videos int, created_at timestamptz)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public AS $$
+BEGIN
+  IF NOT has_experience_access('operational') THEN
+    RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
+  END IF;
+  RETURN QUERY
+    SELECT e.id, e.title, e.status, b.name, e.shoot_date, e.shoot_city,
+           e.request_location, e.request_date_from, e.request_date_to,
+           coalesce((SELECT sum(CASE WHEN (d ->> 'count') ~ '^[0-9]+$' THEN (d ->> 'count')::int ELSE 0 END)
+                     FROM jsonb_array_elements(e.request_deliverables) d), 0)::int,
+           e.created_at
+    FROM experiences e JOIN brands b ON b.id = e.brand_id
+    ORDER BY e.created_at DESC
+    LIMIT 500;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION experience_console_list() FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_list() TO authenticated;
+
+-- ── 0530: staff console request intake + quotes ─────────────────────────────
+-- The functions themselves live in migration 0530 (definer, operational check
+-- first, ops_events written in the same transaction). Grants, mirrored here:
+REVOKE EXECUTE ON FUNCTION experience_console_require()                            FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_audit(text, text, uuid, jsonb)       FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_brands()                             FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_get(uuid)                            FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_quotes(uuid)                         FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, jsonb, boolean, boolean, int, boolean, int, text, date, date, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, bigint, jsonb, date, text, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_brands()                             TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_get(uuid)                            TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_quotes(uuid)                         TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, jsonb, boolean, boolean, int, boolean, int, text, date, date, text, text) TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, bigint, jsonb, date, text, text, text) TO authenticated;
+GRANT  EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   TO authenticated;
+
+-- ── 0531: the per-creator request plan ──────────────────────────────────────
+GRANT SELECT (request_creator_count, request_affiliate_per_creator, request_ad_rights_per_creator,
+              request_boost_per_creator, agreed_plan)
+  ON experiences TO authenticated;
+REVOKE EXECUTE ON FUNCTION experience_plan_count(jsonb, boolean) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_plan_totals(jsonb, int) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) TO authenticated;
+
+-- ── 0532: Experience roster (staff console) ─────────────────────────────────
+-- Guapd's per-creator notes: no session may read or write them; only the
+-- definer console functions. The brand reads its roster only through the 0523
+-- column grant, which includes none of the 0532 columns.
+ALTER TABLE experience_roster_notes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_roster_notes FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION experience_roster_reconcile(uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION experience_console_creators() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_reconcile(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_add(uuid, uuid[], text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_decide(uuid, text, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_plan(uuid, jsonb) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_note(uuid, text) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_remove(uuid) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION experience_console_roster_lock(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION experience_console_creators() TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_reconcile(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_add(uuid, uuid[], text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_decide(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_plan(uuid, jsonb) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_note(uuid, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_remove(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION experience_console_roster_lock(uuid) TO authenticated;
+
+
+-- ── package_pricing_types (0533) ───────────────────────────────────
+-- Lookup of how a creator_products row is priced. Server-only: no session
+-- reads it; app code knows the types it handles.
+ALTER TABLE package_pricing_types ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON package_pricing_types FROM anon, authenticated;
+
+
+-- ── Experience creator legs (0534) ─────────────────────────────────
+-- No new policies. The new columns on experience_roster (leg_*) and
+-- experiences (creator_brief) are outside the 0523 column grants, so no
+-- session reads them; staff read them through experience_console_legs /
+-- experience_console_creator_brief, a creator reads their own leg through
+-- creator_leg_context. Session writes to a creator leg (deals, items,
+-- uploads, messages) are refused by trigger, invoices on a creator leg are
+-- refused for every role, and a creator leg cannot be marked paid
+-- (guard_creator_leg_*). See supabase/migrations/0534_experience_creator_legs.sql.
+

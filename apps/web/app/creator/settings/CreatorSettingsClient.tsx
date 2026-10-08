@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
+import NichePicker from '@/components/NichePicker'
+import BioAiAssist from '@/components/creator/BioAiAssist'
+import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateCreatorProfile, updateCreatorAccount } from './actions'
@@ -22,8 +25,8 @@ interface Props {
   creatorName: string
   creatorHandle: string
   creatorBio: string
-  creatorNiche: string
-  creatorLocation: string
+  creatorNiches: string[]
+  creatorPlace: { city: string; state: string; ageBracket: string }
   creatorPrimaryPlatform: string
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
@@ -48,7 +51,6 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitter', label: 'X (Twitter)', prefix: '@', placeholder: 'yourhandle' },
 ]
 
-const NICHE_OPTIONS = ['Tech & finance', 'Fashion', 'Beauty', 'Lifestyle', 'Food', 'Travel', 'Fitness', 'Education', 'Gaming', 'Other']
 const PLATFORM_OPTIONS = ['Instagram', 'YouTube', 'X', 'LinkedIn', 'TikTok']
 
 /* ── Section Config ─────────────────────────────────────────────── */
@@ -70,8 +72,8 @@ export default function CreatorSettingsClient({
   creatorName: initialName,
   creatorHandle: initialHandle,
   creatorBio: initialBio,
-  creatorNiche: initialNiche,
-  creatorLocation: initialLocation,
+  creatorNiches: initialNiches,
+  creatorPlace: initialPlace,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
   creatorPhotoUrl,
@@ -101,8 +103,10 @@ export default function CreatorSettingsClient({
   const [name, setName] = useState(initialName)
   const [handle, setHandle] = useState(initialHandle)
   const [bio, setBio] = useState(initialBio)
-  const [niche, setNiche] = useState(initialNiche)
-  const [location, setLocation] = useState(initialLocation)
+  const [niches, setNiches] = useState<string[]>(initialNiches)
+  const [city, setCity] = useState(initialPlace.city)
+  const [placeState, setPlaceState] = useState(initialPlace.state)
+  const [ageBracket, setAgeBracket] = useState(initialPlace.ageBracket)
   const [platform, setPlatform] = useState(initialPlatform)
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
 
@@ -138,8 +142,10 @@ export default function CreatorSettingsClient({
         fullName: name,
         handle,
         bio,
-        niche,
-        location,
+        niches,
+        city,
+        state: placeState,
+        ageBracket,
         primaryPlatform: platform,
         contactEmail,
         socials: socialArr,
@@ -169,8 +175,10 @@ export default function CreatorSettingsClient({
     setName(initialName)
     setHandle(initialHandle)
     setBio(initialBio)
-    setNiche(initialNiche)
-    setLocation(initialLocation)
+    setNiches(initialNiches)
+    setCity(initialPlace.city)
+    setPlaceState(initialPlace.state)
+    setAgeBracket(initialPlace.ageBracket)
     setPlatform(initialPlatform)
     setContactEmail(initialContactEmail)
     setSocials(socialsToMap(initialSocials))
@@ -288,12 +296,35 @@ export default function CreatorSettingsClient({
                       className="fld"
                       value={bio}
                       onChange={e => { setBio(e.target.value); markDirty() }}
-                      placeholder="Tell brands about yourself..."
+                      placeholder="What your content is about and who it is for, e.g. short explainers on mutual funds for young professionals in Pune."
+                      maxLength={500}
                       style={{ ...fldStyle, minHeight: 80, resize: 'vertical' }}
                     />
+                    <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 6 }}>
+                      Brands and AI search find you by your bio. Mention your topics, the kind of content you make and who watches it.
+                    </div>
+                    <BioAiAssist hasBio={bio.trim().length > 0} onDraft={v => { setBio(v); markDirty() }} />
                   </div>
-                  <FieldSelect label="Niche / category" value={niche} options={NICHE_OPTIONS} onChange={v => { setNiche(v); markDirty() }} placeholder="Select niche" />
-                  <FieldInput label="Location" value={location} onChange={v => { setLocation(v); markDirty() }} placeholder="Mumbai, India" />
+                  {/* Its own row: the chips need the width, and a <label> must
+                      not wrap them or a click anywhere in it fires the first chip. */}
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <div style={labelStyle}>Niches</div>
+                    <NichePicker value={niches} onChange={v => { setNiches(v); markDirty() }} max={5} inputStyle={fldStyle} />
+                  </div>
+                  <FieldSelect label="State" value={placeState} options={[...INDIAN_STATES]} onChange={v => { setPlaceState(v); markDirty() }} placeholder="Select state" />
+                  <FieldInput label="City" value={city} onChange={v => { setCity(v); markDirty() }} placeholder="Mumbai" />
+                  <div>
+                    <label style={labelStyle}>Age</label>
+                    <select
+                      className="fld"
+                      value={ageBracket}
+                      onChange={e => { setAgeBracket(e.target.value); markDirty() }}
+                      style={{ ...fldStyle, appearance: 'none', cursor: 'pointer', color: ageBracket ? 'var(--ink)' : 'var(--ink-faint)' }}
+                    >
+                      <option value="">Select age bracket</option>
+                      {AGE_BRACKETS.map(b => <option key={b.code} value={b.code}>{b.label}</option>)}
+                    </select>
+                  </div>
                   <FieldSelect label="Primary platform" value={platform} options={PLATFORM_OPTIONS} onChange={v => { setPlatform(v); markDirty() }} placeholder="Select platform" />
                   <FieldInput label="Contact email" value={contactEmail} onChange={v => { setContactEmail(v); markDirty() }} placeholder="you@email.com" />
                 </div>

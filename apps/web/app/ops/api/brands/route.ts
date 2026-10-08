@@ -10,6 +10,7 @@ export async function GET() {
   const { data, error } = await admin
     .from('brands')
     .select('id, name, platform_fee_percent')
+    .eq('is_guapd', false)
     .order('name')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

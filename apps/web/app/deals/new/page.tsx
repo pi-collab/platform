@@ -90,6 +90,7 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
     supabase
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', creatorId),
     supabase
       .from('brands')

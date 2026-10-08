@@ -3,6 +3,7 @@ import VettingBadge from '@/components/ops/VettingBadge'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { redirect, notFound } from 'next/navigation'
 import EditCreatorForm from './EditCreatorForm'
+import { readCreatorLocation } from '@/lib/creator-location-server'
 
 export default async function EditCreatorPage({ params }: { params: { id: string } }) {
   const user = await verifyOpsAccess()
@@ -16,6 +17,7 @@ export default async function EditCreatorPage({ params }: { params: { id: string
     .maybeSingle()
 
   if (error || !creator) notFound()
+  const place = await readCreatorLocation(creator.id)
 
   return (
     <div>
@@ -24,7 +26,7 @@ export default async function EditCreatorPage({ params }: { params: { id: string
         Editing: <strong>{creator.full_name}</strong>
         <span style={{ marginLeft: '0.5rem' }}><VettingBadge row={creator} /></span>
       </p>
-      <EditCreatorForm creator={creator} />
+      <EditCreatorForm creator={creator} place={place} />
     </div>
   )
 }

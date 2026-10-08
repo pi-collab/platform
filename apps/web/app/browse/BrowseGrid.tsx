@@ -386,6 +386,8 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   if (aiOutcome?.ok) {
     const f = aiOutcome.filters
     for (const n of f.niches) aiChips.push({ label: n, onRemove: () => dropAiFilter(x => ({ ...x, niches: x.niches.filter(v => v !== n) })) })
+    for (const t of f.topics ?? []) aiChips.push({ label: t, onRemove: () => dropAiFilter(x => ({ ...x, topics: (x.topics ?? []).filter(v => v !== t) })) })
+    for (const n of f.otherNiches ?? []) aiChips.push({ label: n, onRemove: () => dropAiFilter(x => ({ ...x, otherNiches: (x.otherNiches ?? []).filter(v => v !== n) })) })
     for (const pf of f.platforms) aiChips.push({ label: pf === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => dropAiFilter(x => ({ ...x, platforms: x.platforms.filter(v => v !== pf) })) })
     for (const l of f.locations) aiChips.push({ label: l, onRemove: () => dropAiFilter(x => ({ ...x, locations: x.locations.filter(v => v !== l) })) })
     if (f.followersMin !== null || f.followersMax !== null) {

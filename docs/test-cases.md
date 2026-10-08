@@ -255,7 +255,7 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
   - [ ] Server: re-fetches drafts — deleted ones skipped.
   - [ ] Existing-deal check: creator already has deal in campaign → draft skipped (not duplicated).
 - [ ] Fee re-snapshot at send time (not draft's stale fee).
-- [ ] Draft internal note carried to deal's internal_note on send.
+- [ ] Draft internal note carried to the deal's brand note (`deal_brand_notes`, 0527) on send.
 - [ ] Bulk remove: select drafts → Remove → confirm → deleted.
 
 ### Phase 2c — Campaign Brief
@@ -3660,6 +3660,14 @@ the only thing needed to change the page.
 - [ ] Index cards are in the same order as the nav
 - [ ] The ops header stays pinned while scrolling a long page — check on the
       Playbook, which is the longest
+- [ ] `/ops/creators` at desktop width: names, niches ("Finance, Crypto &
+      Investing"), phones and dates wrap only between words, never mid-word
+      ("Utkar / sh" was the bug: `overflow-wrap: anywhere` on every td let the
+      table shrink each column to one character)
+- [ ] A short handle or shopfront link stays on one line; one long unbroken
+      string (a pasted profile URL) wraps inside a capped-width cell
+- [ ] When the table is wider than the frame and scrolls sideways, the Decide
+      column (admins) stays pinned at the right edge with its buttons visible
 
 ### Bubble width follows the text (fixed)
 - [ ] A one-word message ("ok") is a small bubble; a long one grows to 76% and
@@ -6321,7 +6329,465 @@ the filter stays selected but the list shows something else."
 - [ ] Also fixed on `/ops/brands` (search term) and `/ops/appeals` (`show=all`). `/ops/deals` and `/ops/offers` pass a bare path and were never affected
 - [ ] **The "Go to" jump box was always correct** — it is a GET form re-submitting the filters as hidden fields. So jumping to a page worked while clicking a page number did not, which is worth knowing when someone says "pagination is broken"
 
-## SECURITY (hotfix) — the brand's deal note is never readable by the creator (migration 0527, run by hand)
+---
+
+## 79. The creator roster is held from brands whose own details don't line up
+
+Prompted by a real signup: brand "Try on", website `tryon.com`, contact
+`support@airquerai.com`, which reached the product and tried to send.
+
+### What was already right, and what wasn't
+- [ ] The SEND was already held — `lib/send-gate.ts` returns `hold` for `pending_review`, so that deal never reached the creator. The brand was in `pending_review` *because* it tried to send; that transition only fires on the first held send
+- [ ] What was NOT protected: `/browse`. Any signup past the free-email check could read the whole vetted roster — names, handles, past brands, **rate cards, package prices, Instagram audience data**. That is the supply side, and it was open before a human had looked at the account
+
+### The rule (`lib/brand-domain.ts`)
+- [ ] Compares the contact email's domain with the website's, **ignoring the TLD**: `nykaa.com` / `priya@nykaa.in` matches. Indian brands routinely hold both
+- [ ] Handles two-part suffixes (`tryon.co.in` → `tryon`, not `co`), `www.`, paths, ports and subdomains (`shop.mamaearth.in` → `mamaearth`)
+- [ ] Punctuation is dropped, so `try-on.com` and `tryon.com` are the same name
+- [ ] One name containing the other matches (`nykaa` / `nykaafashion`) but only when the shorter is ≥ 4 characters — below that containment is coincidence
+- [ ] A missing website or unusable email is **not** a match: there is nothing to check against, which is the same position a reviewer is in
+- [ ] An unknown two-part suffix fails CLOSED (the name comes out as `co`/`com`, the domains stop matching, the brand gets reviewed). Right direction for a list that can never be complete
+
+Verified: `tryon.com`/`airquerai.com` → review · `blinkit.com`/`grofers.com` → review · `nykaa.com`/`nykaafashion.com` → match · `nykaa.com`/`nykaa.in` → match · `tryon.co.in`/`tryon.com` → match · `shop.mamaearth.in`/`mamaearth.com` → match · `ab.com`/`abcdefg.com` → review
+
+### The gate (`lib/brand-review-gate.ts`)
+- [ ] **Not every unapproved brand** — only the ones with a mismatch. Most unapproved brands are real and a wall in front of a real brand costs a customer
+- [ ] **A mismatch HOLDS, it never rejects.** Blinkit's staff are on grofers.com and will be held; that is only acceptable because they wait for an approval a founder gives in minutes. If this ever becomes a block, the reasoning stops holding
+- [ ] Approved brands are never checked. The rule decides what happens *before* a human looks; once one has, it has no further say
+- [ ] Held brands see `RosterUnderReview` on `/browse` and on every `/browse/[id]` — **except the creator whose storefront link brought them**, who stays visible. That creator invited them personally
+- [ ] Not gated: signup, onboarding, their own dashboard, their own deals. Sending stays governed by `send-gate.ts` for every unapproved brand, mismatch or not
+- [ ] The screen does not say WHY. The commonest reason describes real businesses, and naming it would read as a charge to answer. It carries a route to a human and does not dead-end
+
+### Ops
+- [ ] `/ops/brands` shows "⚠ email domain does not match website (airquerai vs tryon)" under the contact email of any brand awaiting review, and nothing when the domains agree — a flag on every row is not a flag
+
+### Watch when deploying
+- [ ] Any brand already on production that is unapproved **and** has a mismatched domain loses `/browse` the moment this ships. At pilot scale that is checkable by eye in `/ops/brands`; approve the real ones first
+
+---
+
+## 80. Two small ones: the unenforced quotas, and the pricing crumb
+
+### The brand plan limits say what they are
+- [ ] Under the plan cards: "Monthly limits apply once paid plans launch. Nothing is capped today — run as many deals and campaigns as you like on Free."
+- [ ] Why it is a line and not enforcement: the counts describe the PLANS, nothing in the product counts a brand's deals or refuses the next one, and every brand is on Free. Without the line the page stated a cap to exactly the people it did not apply to
+- [ ] Deliberately NOT enforced. Capping a pilot brand at three deals a month would cost the pilot to make a page accurate — the page moves instead. When billing exists, the line goes and the enforcement arrives together
+- [ ] Shows above both the desktop grid and the phone accordion, so neither layout can lose it
+
+### Creator pricing crumb reads "Profile" again
+- [ ] Desktop crumb is **"Profile › Pricing & fees"**, linking to `/creator/profile` — what the design draws
+- [ ] It was changed to "Account" in §72 because at the time that link sent a desktop visitor to an uncapped phone screen. That is fixed (§70 capped `/creator/profile` at 560px and centred it), so the reason for the substitute is gone
+- [ ] The phone still gets the back arrow, not the crumb, honouring `?from=` — §72's real fix stands
+
+---
+
+## 81. One niche vocabulary on every form that asks for one
+
+The canonical list is `lib/niches.ts` (23 niches + Other / Not Listed since §84; was 12 + Other). `components/NichePicker.tsx` is the shared control; the storefront editor draws its own copy of it to its design.
+
+### Creator settings (`/creator/settings` → Profile)
+- [ ] "Niches" is the chip picker, not the old dropdown ("Tech & finance", "Gaming"… are gone)
+- [ ] Up to 5. At 5 the pick chips disappear and the line reads "That's 5, the most you can pick."
+- [ ] **+ Other** opens a text box. Typing "Astrology" and Add saves "Astrology" as typed. Typing "makeup" saves **Beauty & Skincare**, not a new value
+- [ ] Saves through `setCreatorNiches`: `creators.niches`, `creators.niche` (first pick) AND the storefront's categories (§85); clearing all sets `niche` null
+- [ ] A creator with only the legacy `niche` set opens with it shown as a chip, not a blank field
+- [ ] Clicking the label area above the chips adds nothing (the picker is not inside a `<label>`)
+- [ ] Discard restores the original chips
+
+### Ops add / edit creator
+- [ ] Same picker in place of the checkboxes; no limit
+- [ ] A creator carrying a non-canonical niche (e.g. "Astrology") shows it as a chip on edit and keeps it on save. The checkbox version silently kept it invisible
+- [ ] Clicking the "Niches" heading does not add the first niche
+- [ ] Server canonicalises: a niche posted as "finance" is stored as "Finance, Crypto & Investing"
+
+### Ops pipeline leads
+- [ ] Niche suggests the canonical list but still accepts free text (leads can be brands)
+- [ ] Saving "fitness" stores "Fitness, Sports & Bodybuilding"; saving "D2C skincare" stores it as typed
+
+### Resolved gap
+- [ ] ~~Settings and the storefront wrote niches to different columns~~. Fixed in §85: one list per creator, everywhere
+
+---
+
+## 82. Open a creator's Instagram / YouTube from their profile
+
+### Brand view, `/browse/[id]`
+- [ ] **Creator with a storefront:** hero handles and the platform cards already link out via `profileUrl()`. Unchanged; confirm both still open the right profile in a new tab
+- [ ] **Creator without a storefront:** the Instagram / YouTube chips under the name open `instagram.com/<handle>` / `youtube.com/@<handle>` in a new tab. They linked to `url`, which only ops ever sets, so for almost everyone they went to `#`
+- [ ] A handle stored with a leading "@" (17 of 21 on staging) shows one "@", and the link has none
+- [ ] A handle that is really a pasted URL or a sentence shows no chip rather than a broken link
+
+### Ops, `/ops/creators/[id]`
+- [ ] The header line shows one link per channel: "Instagram @x ↗" and "YouTube @y ↗", each from that channel's own handle
+- [ ] A creator with no usable channel falls back to the old single `creators.handle` link (or plain text)
+
+---
+
+## 83. City, state and age bracket
+
+Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket`; **0516** widens its CHECK to `under_18`, `18_24`, `25_34`, `35_44`, `45_plus`, or NULL. Lists live in `lib/creator-location.ts`. **Age is a bracket, never a date of birth.**
+
+### Environment
+- [ ] 0515 run on the database the app points at. It ends with `NOTIFY pgrst, 'reload schema'`, because without a reload a select naming a new column fails (see 0513)
+- [ ] **Constraint vs defaults (0485 trap):** after 0515, signup's `creators.insert({ user_id, full_name: '', phone, vetting_status })` still succeeds. The CHECK allows NULL, which is what an insert naming none of the three gets
+- [ ] Before 0515 is applied, nothing breaks: signup completes (the place write logs and moves on), the dashboard hides the task, and settings loads with the three fields blank
+
+### Signup, `/signup/creator/onboarding`
+- [ ] State (dropdown of 28 states + 8 UTs), City (typed), Age (Under 18 / 18–24 / 25–34 / 35–44 / 45+) appear after the follower range
+- [ ] **0516:** "Under 18" is accepted by the database (`under_18`) and appears in signup, the dashboard prompt, settings, and the ops filter and edit form
+- [ ] "Complete setup" stays disabled until all three are answered
+- [ ] Server refuses a missing or unknown state, a blank city, or an unknown age code (`saveOnboarding` is directly callable)
+- [ ] Saves `city`, `state`, `age_bracket`, and `location` = "City, State"
+- [ ] City is tidied: "  navi   mumbai " is stored as "navi mumbai" (spaces collapsed, not re-cased), max 60 characters
+
+### Existing creators: dashboard task card
+- [ ] A creator missing any of the three sees "Add your city and age" as a setup task, after "Add your email", on both the regular and the Growth list
+- [ ] "Set up" opens State / City / Age / Save beneath the row, full width, and wraps on a phone without crushing the title
+- [ ] Save is disabled until all three are set; on save it shows "Saved", refreshes, and the row ticks Done
+- [ ] Writes an `events` row `creator.location_added` with `source: 'dashboard_prompt'`
+- [ ] The card is foldable, not dismissible, just like email
+
+### Creator settings, Profile
+- [ ] The "Location" text box is replaced by State, City and Age, prefilled from the columns
+- [ ] Editing only the name with all three blank saves fine (nothing asked yet)
+- [ ] Filling one of the three without the others is refused with the specific message ("Enter your city." etc.)
+- [ ] Saving updates `location` to "City, State" too, so AI search's location match and the Growth pool's location filter pick it up
+
+### Privacy
+- [ ] No date of birth is collected anywhere
+- [ ] Vetted creator rows are readable by signed-in users under RLS, so a brand COULD read `age_bracket` via the API. That is acceptable for a bracket; it is the reason this is not a date of birth
+
+### Ops (added after §83's first cut)
+- [ ] `/ops/creators` has a **Location** column: "Pune, Maharashtra · 25–34", or "-" when nothing is given
+- [ ] Filter **State**: Any / Not answered / each state. "Not answered" lists creators with no state on file, which is the chase list
+- [ ] Filter **Age**: checkboxes, any of. Combines with State and every other filter, and the summary counts above the table follow it
+- [ ] Filters survive pagination (they are in `filterQuery`) and "Clear" resets them
+- [ ] `/ops/creators/[id]` header shows city, state and age, or "location not given" / "age not given" in grey
+- [ ] Edit form has State / City / Age. Leaving them untouched writes nothing to those columns
+- [ ] Setting one of the three without the others is refused with the specific message. Blanking all three clears them
+- [ ] An ops change writes `ops_events` `creator.edited` with `place_set_by_ops`, `state_after`, `age_bracket_after` (never the city)
+- [ ] **Before 0515 on a database:** `/ops/creators` and the creator page still load (the place reads are their own queries); the State/Age filter shows "could not run… matching nothing" instead of breaking the page
+
+---
+
+## 84. The 23-niche list
+
+`lib/niches.ts` now holds 23 niches + "Other / Not Listed" (Palak's list, 2026-10-02). Migration **0517** moves stored values onto it; its CASE is generated from `lib/niches.ts`, so regenerate rather than hand-edit if the list changes again.
+
+### Pickers
+- [ ] Settings, ops add/edit and the storefront show all 23 as chips, plus **+ Other / Not listed**, which opens a text box
+- [ ] What is typed into Other is stored as typed (e.g. "Astrology"), not as the label "Other / Not Listed", unless it matches a known word ("makeup" → Beauty & Skincare)
+- [ ] Ops pipeline suggestions list the 23 + Other
+
+### Migration 0517 (run on each database)
+- [ ] "Fashion / Beauty" becomes **both** "Fashion & Apparel" and "Beauty & Skincare" (we cannot tell which was meant; both keeps them findable)
+- [ ] "Finance / Investing", "Fintech" and "Crypto / Web3" become one "Finance, Crypto & Investing", with no duplicate in the array
+- [ ] Tech / Gadgets → Technology, AI & Gadgets · Business / Startups → Business, SaaS & Entrepreneurship · Education → Career & Education · Lifestyle → Lifestyle & Luxury · Fitness → Fitness, Sports & Bodybuilding · Food → Food, Beverage & Cooking · Travel → Travel, Hospitality & Adventure · Entertainment → Entertainment, Comedy & Pop Culture · Other → Other / Not Listed
+- [ ] Applies to `creators.niches`, `creators.niche` (first value), `creator_storefronts.categories` and `pipeline_leads.niche`
+- [ ] Unrecognised values survive as typed. Re-running 0517 changes nothing
+- [ ] Verified on staging 2026-10-02: all values now on the new list
+
+### Known loss from 0514 (production)
+- [ ] 0514 already folded gaming, music, dance and art into "Entertainment" on production, and parenting/home into "Lifestyle". Those creators now land in "Entertainment, Comedy & Pop Culture" / "Lifestyle & Luxury", not "Gaming & Esports" etc. The original words were overwritten in 0514 and cannot be recovered; those creators need to re-pick
+
+### AI search
+- [ ] Parser only returns niches from the new list, never "Other / Not Listed"; "makeup" maps to Beauty & Skincare
+
+### A niche typed into Other is findable (follows §84)
+- [ ] A creator who types "Astrology" into Other has "Astrology" stored as typed
+- [ ] `/browse` niche filter offers "Astrology" (options are built from creators' actual niches), and picking it shows that creator
+- [ ] AI search "astrology creators in Mumbai": the parser returns `otherNiches: ["astrology"]` (NOT in unusedTerms), the astrology creator ranks with "Astrology" as a reason, and an "astrology" chip appears that can be removed
+- [ ] "premium creators" still goes to unusedTerms, never otherNiches (qualities are not categories)
+- [ ] A query a list niche covers ("makeup creators") uses `niches: ["Beauty & Skincare"]` and leaves otherNiches empty
+- [ ] Searches cached before this change (no otherNiches key) still rank without error
+
+---
+
+## 85. One niche list per creator, the same everywhere
+
+`lib/creator-niches-server.ts` → `setCreatorNiches()` is the ONLY writer. It sets `creators.niches` (source of truth), `creators.niche` (first value, for AI search) and `creator_storefronts.categories` (if a storefront exists). Server ceiling 10; pickers stop at 5.
+
+### Every screen agrees
+- [ ] Change niches in **creator settings** → the storefront editor, `/browse` filter, `/browse/[id]`, AI search and ops all show the new list
+- [ ] Change niches in the **storefront editor** → settings and ops show the same list
+- [ ] Change niches in **ops edit** → settings, storefront and `/browse` follow
+- [ ] A niche typed into Other in settings ("Astrology") is now findable by brands even for a creator WITH a storefront (it was not before)
+- [ ] Ops "add creator" sets `niches` and `niche`; the storefront, when the creator makes one, starts from that list
+- [ ] If the storefront copy fails to update, the screen says so rather than reporting a clean save
+
+### Migration 0518 (run on each database)
+- [ ] Merges each creator's storefront categories + `niches` + legacy `niche`, storefront first, duplicates removed, max 10. Nothing a creator picked anywhere is dropped
+- [ ] Afterwards every storefront's categories equal its creator's `niches`, and `niche` = first value
+- [ ] Re-running it changes nothing
+- [ ] Verified on staging 2026-10-02: 6 of 6 storefronts consistent
+
+---
+
+## 86. Bio: one value, a dashboard task, an AI draft, and AI search reads it
+
+### One bio per creator
+- [ ] `setCreatorBio` (`lib/creator-bio-server.ts`) is the only writer: `creators.bio` + `creator_storefronts.bio`. Settings, ops edit and the storefront save all use it
+- [ ] Edit the bio in settings → the storefront editor, `/browse/[id]` and `/c/[slug]` show the new one (they did not, for creators with a storefront)
+- [ ] Migration **0519**: where both bios existed and differed, the storefront's wins, and the replaced `creators.bio` is saved in `events` as `creator.bio_replaced_0519` (`old_bio`, `new_bio`). Re-running logs and changes nothing. Staging 2026-10-02: 1 bio replaced and logged, 0 drift after
+
+### Dashboard task "Add your bio"
+- [ ] Shows for any creator whose bio is under 40 characters; after location in the regular and Growth lists
+- [ ] Subtitle explains brands search by bio and AI search uses it; the open panel says to mention topics, content type and audience, and offers AI for anyone unsure
+- [ ] Save is disabled under 40 characters; the server refuses under 40 too
+- [ ] Saving shows "Saved", the row ticks Done, and `events` gets `creator.bio_added`
+
+### "Write it with AI"
+- [ ] Puts a draft into the box; it is NEVER saved without the creator pressing Save
+- [ ] Draft is first person, 2–3 sentences, under ~350 characters, no emojis or hashtags
+- [ ] **No invented facts:** no follower numbers, brands, awards or years that are not in the profile. Try with a creator whose Instagram bio mentions a brand: the draft may use it; with one whose does not, no brand appears
+- [ ] Uses: name, niches, city/state, handles, Instagram bio + up to 8 recent captions (connected creators only). YouTube has no connection yet, so only the handle is used
+- [ ] With no Instagram and no existing bio, the note says it is a starting point and suggests connecting Instagram
+- [ ] 6th draft in 24h is refused with a message; each draft logs `creator.bio_drafted`
+- [ ] With `ANTHROPIC_API_KEY` unset, the button says AI is not available instead of failing silently
+- [ ] Model `claude-opus-5-5`, low effort, server-side fallback `"default"`; a refusal shows a plain message
+
+### AI search reads the bio
+- [ ] "mutual fund explainers": parser returns niches [Finance, Crypto & Investing] + topics ["mutual funds", "explainers"]; a creator whose bio says "I make short explainers on mutual funds" gets the reason "bio mentions …" and ranks above one whose bio does not
+- [ ] Topics never EXCLUDE a creator (most bios are short); no bio shows the gap "no bio"
+- [ ] An unlisted niche ("astrology") matches a creator whose bio mentions it even if their niches do not
+- [ ] Topic chips appear and can be removed; removing re-ranks without a new paid parse
+
+---
+
+## 87. Niche picker is a multi-select dropdown
+
+`components/NichePicker.tsx`, now used by settings, ops add/edit AND the storefront editor (its own chip copy is gone). Styled in `FilterDropdown`'s language.
+
+- [ ] Closed: a field showing chosen niches as black-outlined white chips with × (black and white only, no neon), plus "Select your niches" / "Add more" and a chevron. "Pick up to 5. Brands filter by these." beneath (settings, storefront)
+- [ ] Click anywhere in the field opens the panel; × on a chip removes that niche WITHOUT opening it
+- [ ] Panel: search box focused, 23 niches with a tick box; chosen rows light grey with a filled black tick; several can be ticked without the panel closing
+- [ ] Search "fit" shows only Fitness, Sports & Bodybuilding; a search matching nothing says to use Other
+- [ ] At 5, unchosen rows grey out and the footer reads "5 of 5, the most you can pick"; unticking frees a slot
+- [ ] "+ Other / Not listed" opens a text box in the panel; Enter or Add saves it as a chip ("makeup" → Beauty & Skincare; "Astrology" as typed)
+- [ ] Escape and clicking outside close the panel
+- [ ] **Not clipped:** the panel shows in full over the content below in creator settings, ops edit and the storefront editor (desktop AND phone widths)
+- [ ] Ops (no max): no counter, no limit
+
+### "Write it with AI" beside every bio field (follows §86)
+- [ ] Creator settings → Profile → Bio and the storefront editor's Bio both show "Write it with AI" (or "Rewrite with AI" when a bio exists), with the line "Brands and AI search find you by your bio…"
+- [ ] The draft fills the box and marks the page unsaved; nothing is stored until the page's own Save
+- [ ] Rewrite uses the creator's SAVED bio as input, not unsaved typing
+- [ ] Same 5-a-day cap as the dashboard task (they share it)
+
+---
+
+## 88. SECURITY — deal writes locked down (Phase 0, fix 1; migration 0520, run by hand)
+
+Run with a real brand session and a real creator session against PostgREST (anon key + user JWT), NOT the service role.
+
+### Verify the migration landed (information_schema / catalog)
+- [ ] `SELECT tgname FROM pg_trigger WHERE tgrelid = 'deals'::regclass AND NOT tgisinternal;` lists `t_deals_00_guard` (before `t_deals_audit_upd`)
+- [ ] `SELECT policyname FROM pg_policies WHERE tablename = 'deals';` has NO `deals_insert_brand`
+
+### Brand session — must FAIL (42501)
+- [ ] `PATCH deals?id=eq.<own held deal> {held_at: null}` → refused (the approval-hold bypass)
+- [ ] `{fee_percent: 0}`, `{fee_mode: 'on_top'}`, `{track: 'deals'}`, `{creator_id: …}` → refused
+- [ ] `{status: 'paid'}` / `{status: 'complete'}` / `{status: 'revision'}` → refused
+- [ ] `{price_paise: 1}` on an agreed deal → refused
+- [ ] `{campaign_id: <another brand's campaign>}` → refused
+- [ ] `POST deals` with any body → refused (no insert policy)
+
+### Creator session — must FAIL
+- [ ] `{price_paise: …}` without accepting, `{fee_percent: …}`, `{status: 'approved'}`, `{status: 'paid'}` → refused
+- [ ] `{is_posted: true}` while the deal is `agreed` → refused
+- [ ] `{title: …}`, `{internal_note: …}` → refused
+
+### Every real flow still works (UI, staging)
+- [ ] Brand sends an offer (DealForm) and a campaign bulk send → deal created, fee and hold as before; a held brand's deal is still held
+- [ ] Creator accepts (with and without a brand counter), declines, counters
+- [ ] Brand accepts a creator counter (price and agreed_at update)
+- [ ] Creator submits for review (agreed/revision → delivered); brand approves; brand requests a revision (RPC)
+- [ ] Brand marks shipped / delivered; creator saves shipping address
+- [ ] Creator marks posted after approval
+- [ ] Brand renames a deal, edits its note (via the server action; a direct session write to `deal_brand_notes` is refused, 0527), assigns it to its own campaign
+- [ ] Brand pays (mark_deal_paid RPC) → paid → complete
+- [ ] Offer token accept/decline (service role) and ops fee override / release hold (service role) unaffected
+- [ ] An audit `events` row is still written for each real status change; a refused change writes none
+
+---
+
+## 89. SECURITY — invoices written only by the server (Phase 0, fix 2; migration 0521, run by hand)
+
+### Verify the migration landed
+- [ ] `SELECT policyname, cmd FROM pg_policies WHERE tablename = 'invoices';` → only `invoices_read` (SELECT) and `invoices_deny_delete` (DELETE)
+
+### Must FAIL over the API (user JWT + anon key)
+- [ ] Creator `POST invoices` with any amounts → refused
+- [ ] Creator `PATCH invoices {creator_receives_paise: …}` / `{fee_paise: 0}` → refused
+- [ ] Brand `PATCH invoices {status: 'paid'}` / `{brand_pays_paise: 1}` → refused
+- [ ] A BRAND session calling the `issueInvoice` server action on its own deal → refused (it checked only "signed in" before)
+- [ ] A creator calling `acceptInvoice` → refused
+
+### Real flow still works (UI)
+- [ ] Creator: approved + posted deal → Generate invoice (draft) → Issue → brand notified
+- [ ] Generating twice → "Invoice already exists"; issuing a non-draft → refused
+- [ ] Brand: Accept invoice (issued → accepted, due date set); accepting twice → refused
+- [ ] Brand: Pay → paid → complete (mark_deal_paid RPC, unchanged)
+
+---
+
+## 90. SECURITY — orphaned-upload delete needs the owning creator (Phase 0, fix 3)
+
+`deleteOrphanedUpload` (creator/deals/[id]/upload-actions.ts) deletes with the service role.
+- [ ] Signed out → redirected to creator login, nothing deleted
+- [ ] A different creator, or a brand, passing another creator's path → "Not your upload", file still there
+- [ ] A path not shaped `{dealId}/{itemId}/v{n}` (e.g. `../x`, another folder) → refused
+- [ ] The path an item currently points to (its live `storage_path`) → "in use", not deleted
+- [ ] Real case still works: upload succeeds but the item save fails → the new file is cleaned up
+
+---
+
+## 91. No "payment released" when nothing moved (Phase 0, fix 4)
+
+On Deals / Growth deals the brand pays the creator directly; Guapd moves no money. `markAsPaid` records the brand's confirmation.
+- [ ] Brand accepts an invoice → dialog "Paid {creator}?" says to pay directly by UPI/bank, that Guapd doesn't take the payment, then mark it paid. Buttons "Not yet" / "Mark as paid". No "redirected to complete the payment"
+- [ ] The accepted-invoice button reads "Mark as paid", not "Pay ₹X"
+- [ ] After marking: card says "Marked as paid on …", footer "Marked paid … · GD-####" — no "UTR", no "Paid in full"
+- [ ] Creator gets ONE in-app notice "Marked as paid: {deal}" / "The brand says it has paid you. Check your account"
+- [ ] **No WhatsApp is sent** (the `payment_released` template is no longer used anywhere)
+- [ ] Invoice-accepted notice reads "the brand pays you directly by the due date", not "payment is being processed"
+- [ ] Repeat mark-paid → no second notice (idempotent)
+- [ ] OPEN: the paid card's "{creator} received {net}" assumes a fee was taken; under direct pay nothing collects Guapd's fee (business decision pending)
+
+---
+
+## 92. No copy implies Guapd holds funds or pays creators (Phase 0, fix 5)
+
+- [ ] Landing (desktop) "how it works" step 4 card: "Payment · direct to creator" → Terms agreed / Content approved / Invoice sent / Marked paid; footer "paid by the brand". No "escrow", no "Payout released", no "In your account"
+- [ ] Step 4 heading "Know where every payment stands"; copy says the brand pays the creator directly. The four-step scroll sequence still runs (card 3 still present)
+- [ ] Landing payment mini-card: "Invoice sent", not "Payout sent"
+- [ ] Landing desktop + mobile: "payments", not "payouts" ("offer to payment", "briefs, terms and payments")
+- [ ] /brands (desktop + mobile) marquee: "payment tracking", not "razorpay payouts"
+- [ ] /creators (desktop + mobile) marquee: "payment tracking", not "on-time payouts"; FAQ "from offer to paid"
+- [ ] Brand dashboard (populated + empty): "Pending payments"
+- [ ] Creator payments UPI row: brands pay directly; the UPI is for payments Guapd makes (e.g. Guapd-managed shoots)
+- [ ] Brand Settings → Payments: "Direct to creator", no "Razorpay · Payment links", no dead Edit button
+- [ ] `lib/content.ts`: no "Razorpay payment link … updates automatically" claims
+- [ ] Grep is clean: `escrow|razorpay payouts|payout released|payout sent|on-time payouts|payouts are sent|Razorpay link`
+
+### Flagged, NOT changed (need Palak / legal)
+- [ ] `content/playbook.ts` says "Creator's payout details visible on the deal" and "Razorpay payment-link integration is the next step": false; Playbook edits need Palak's explicit ask
+- [ ] `/privacy` lists Razorpay as an active processor; `/terms` §164-169 describe the brand paying an amount the creator receives "less the fee", which implies an intermediary. Legal text: for review
+- [ ] Brand Settings → Payments GST / billing / "Email a PDF" fields are non-functional mocks (made real in Phase 4)
+
+### Follow-ups to Phase 0 (2026-10-05)
+- [ ] Brand paid card: dark bar reads "Marked as paid" / "You marked this paid to {creator}", with the invoice amount; no "{creator} received ₹net"
+- [ ] /privacy and /terms show a "Pending legal review" note under "Last updated: 5 October 2026"
+- [ ] /privacy: no Razorpay; WhatsApp/SMS via MSG91 (not Interakt); Resend and Anthropic listed; UPI ID disclosed as stored (creator + Guapd only); no PAN, GSTIN, subscription or billing-history claims; city/state/age bracket and AI bio listed; "we do not process payments"
+- [ ] /terms §7A: paid plans not available yet, no one is charged; §8: no "payment links"
+- [ ] /terms §7 fee wording UNCHANGED (left for the lawyer)
+
+---
+
+## 93. SECURITY — Experiences schema + portal boundary (Phase 1; migrations 0522–0524, run by hand)
+
+Run 0522 → 0523 → 0524 in order, then `supabase migration repair --status applied 0522 0523 0524`.
+
+### Verify against information_schema (each query on its own)
+- [ ] All 12 tables exist:
+  `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('deal_templates','experiences','experience_finance','experience_creator_terms','experience_roster','experience_cost_lines','vendors','vendor_payout_details','creator_private','service_invoices','vendor_payouts','deal_follow_ons') ORDER BY 1;` → 12 rows
+- [ ] RLS on for all 12: `SELECT relname, relrowsecurity FROM pg_class WHERE relname IN (…same list…) ORDER BY 1;` → all `true`
+- [ ] **No user write grants anywhere:** `SELECT table_name, grantee, privilege_type FROM information_schema.role_table_grants WHERE grantee IN ('anon','authenticated') AND table_name IN (…same list…) AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE');` → 0 rows
+- [ ] **Margin never granted:** `SELECT table_name, column_name FROM information_schema.column_privileges WHERE grantee IN ('anon','authenticated') AND column_name LIKE '%margin%';` → 0 rows
+- [ ] No column of finance / cost lines / vendors / payout details / creator_private / templates granted: `SELECT DISTINCT table_name FROM information_schema.column_privileges WHERE grantee IN ('anon','authenticated') AND table_name IN ('experience_finance','experience_cost_lines','vendors','vendor_payout_details','creator_private','deal_templates');` → 0 rows
+- [ ] Deals backfill: `SELECT payment_flow, count(*) FROM deals GROUP BY 1;` → only `brand_pays_creator_direct`
+- [ ] Template seeded: `SELECT slug, version, settings->>'payment_flow' FROM deal_templates;` → `experience-ugc-day-shoot`, 1, `guapd_principal_vendor_payout`
+- [ ] Deal constraints present: `SELECT conname FROM pg_constraint WHERE conrelid='public.deals'::regclass AND conname IN ('deals_payment_flow_check','deals_payment_flow_route_split_disabled','deals_leg_role_check','deals_leg_pairing','deals_completion_trigger_check','deals_deliverables_owner_check','deals_pricing_basis_check');` → 7 rows
+- [ ] Triggers: `SELECT tgname FROM pg_trigger WHERE tgrelid='public.deals'::regclass AND NOT tgisinternal ORDER BY 1;` includes `t_deals_00_guard`, `t_deals_01_experience_leg`
+
+### Behaviour: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx scripts/test-experience-rls.ts`
+Builds a throwaway Experience between real staging logins, reads it back, deletes it.
+- [ ] **Brand can't see creator money:** creator terms (rate/gross/pct/net), `guapd_margin_paise`, `experience_finance`, `experiences.settings_snapshot`, cost sheet, `creator_private` day rate, vendors, payout details, vendor payouts, follow-ons → all refused
+- [ ] **Cross-leg:** brand can't read the Leg 2 deal or its items; creator can't read the Leg 1 deal, the Experience's service price, service invoices or roster → refused
+- [ ] **Creator can't see margin:** `guapd_margin_paise` on own terms and on own follow-on, `experience_finance` → refused
+- [ ] Creator sees own rate / 30% / net (₹10,000 → 30% → ₹7,000), own Leg 2 deal, visible items only (hidden item refused), own payout, own follow-on
+- [ ] Brand sees own Experience (service price only), own Leg 1 deal, own service invoice numbered `GUAPD/YY-YY/####`, own roster
+- [ ] A second creator can't read the first creator's terms or payout
+- [ ] Writes refused: brand inserts an Experience; brand marks its service invoice paid; creator raises own net
+- [ ] Integrity: a leg putting brand and creator on one deal → refused; `route_split` on a leg AND on an ordinary deal (by `deals_payment_flow_route_split_disabled`) → refused; terms naming another creator → refused
+- [ ] Staging 2026-10-05: **41/41 passed**; walk 45/45; fee baseline byte-identical; invoice RLS 4/4
+- [ ] Applying by hand: the Supabase SQL editor mis-split a long block containing PL/pgSQL plus a `CREATE POLICY` (syntax error at `USING`) and rolled it back. Run long migrations in small pieces; never trust a HEAD/count request as proof a table exists (it returns success for missing tables)
+
+### Regression
+- [ ] `scripts/test-fee-golden.ts` byte-identical (123 cases)
+- [ ] `scripts/walk-deal-guard.ts` still 45/45 (existing deals unaffected by the new columns and the items policy)
+- [ ] Every existing deliverable item stays visible to its creator (`visible_to_creator` defaults true)
+
+---
+
+## 94. Experiences Phase 2 — two independent legs, derived margin, settings, payouts (migration 0525, run by hand)
+
+### Pure tests: `./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-money.ts` (69 cases)
+- [ ] Rounding defined once (`platformFeePaise`): integer paise, half UP, no float. 30% of 5p → 2p; 15% of 10p → 2p; 15% of 3p → 0p; 30% of 333,333p → 100,000p; 30% of 1,000,005p → 300,002p; 12.5% of 4p → 1p; 0% / 100% exact; bad inputs refused
+- [ ] Identical to `calculateFee` on every amount at the track rates (15%, 30%)
+- [ ] KNOWN pre-existing bug, NOT fixed (fee baseline must stay byte-identical): `calculateFee` rounds an exact half paisa DOWN on some non-integer rates through float error (33.3% of 7,500p = 2,497.5p → 2,497). Every disagreement the test finds is exactly this case
+- [ ] Creator leg: net + fee = gross always; Growth ₹10,000 → 30% → ₹7,000; Deals → 15% → ₹8,500; day rate × fractional days rounds half up
+- [ ] Brand leg: 70 × ₹3,500 + misc; half a video refused
+- [ ] Margin = brand revenue − Σ creator gross − Σ Guapd costs; cash view = − Σ creator NET (difference = platform fees kept); a loss shows negative
+- [ ] Independence (pure): creator rate ×5 → brand invoice unchanged; brand price halved → creator pay unchanged; the TYPES refuse cross-leg inputs (`@ts-expect-error` lines fail compilation if they ever type-check)
+- [ ] Validator accepts the Kiro template v2; REJECTS route_split, brand_pays_creator_direct, an Experience on any non-principal flow, cost-plus / markup / creator-pay-from-brand / split / pool / disburse / escrow / payer-payee keys (also nested in follow_on), any unknown key, unknown or missing payment_flow; `exposedOnly` refuses schema-valid but unoffered values
+- [ ] Deal flow: Kiro (`on_shoot_done`, `guapd` owner) → no creator upload, complete at shoot done, steps offer → agreed → shoot_scheduled → shoot_done → paid
+
+### Apply 0525 (staging, six pieces), then verify
+- [ ] `SELECT column_name FROM information_schema.columns WHERE table_name IN ('experience_creator_terms','deal_follow_ons','experience_finance') AND column_name LIKE '%margin%';` → **0 rows** (margin is not stored anywhere)
+- [ ] `SELECT version, settings ? 'platform_pct' FROM deal_templates WHERE slug='experience-ugc-day-shoot';` → `2`, `false`
+- [ ] `SELECT conname FROM pg_constraint WHERE conname IN ('experiences_brand_total_formula','si_source_check','si_additional_has_source','si_subtotal_formula','ect_platform_track_check','ect_net_formula');` → 6 rows
+- [ ] `SELECT tgname FROM pg_trigger WHERE tgname IN ('t_si_freeze','t_ect_freeze');` → 2 rows
+- [ ] `supabase migration repair --status applied 0525`
+
+### Database tests: `NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-legs-db.ts`
+- [ ] Platform % taken from the creator's track at send time, stored with the track, LOCKED; editing a locked leg refused (`t_ect_freeze`); re-locking refused; a net breaking the rounding rule refused (`ect_net_formula`)
+- [ ] **Independence (DB):** a new creator leg at a very different rate leaves the brand invoice unchanged; halving the brand price leaves every creator's pay unchanged; an Experience total that disagrees with per_video × count + misc is refused
+- [ ] Additional invoices: `existing_footage` creates its own numbered invoice and moves no creator leg; `new_shoot` is created independently; no source → refused by server AND database
+- [ ] Issued invoices frozen (`t_si_freeze`); recording payment with a reference allowed; paid without a reference refused
+- [ ] P&L from the database = the pure margin function on the same figures; writes nothing
+- [ ] Payouts (manual): same idempotency key → one payout; paid before approval refused; paid without a reference refused; approve → record UTR → paid; **no notification sent**; ops_events written for each step
+- [ ] Regression: Phase 1 RLS test (`test-experience-rls.ts`) still passes after the margin columns are dropped; fee baseline byte-identical; walk 45/45
+- [ ] Staging 2026-10-05: 0525 applied in six pieces + ledger repaired; DB test **27/27**; pure 69/69; Phase 1 RLS 41/41; walk 45/45; invoice RLS 4/4; fee baseline byte-identical; no test rows left behind
+
+---
+
+## 95. One rounding rule for fees and margin (calculateFee float fix, 2026-10-05)
+
+`lib/money-round.ts percentOfPaise` = amount × pct / 100, half UP to the paisa, in integers (pct read as an exact decimal). Used by `calculateFee` (every marketplace deal) AND `lib/experience-money.ts`.
+- [ ] Fee baseline (`scripts/test-fee-golden.ts`) byte-identical, 123/123, WITHOUT re-baselining: none of its cases sits on an exact half paisa
+- [ ] Old vs new across 1,950,013 amount × rate cases: 88 changed, every one an exact half paisa now rounding UP by exactly 1p (e.g. 33.3% of 7500p = 2497.5p: was 2497, now 2498); nothing at 15% or 30% moved
+- [ ] `calculateFee` and `platformFeePaise` agree on every rate, fractional included (pure test)
+- [ ] Non-whole or negative amounts in `calculateFee` (a half-typed form value) fall back to the old arithmetic instead of throwing mid-render
+- [ ] Per-leg platform fee: 7 Growth × ₹10,000 → ₹21,000; 5 Growth + 2 Deals → ₹18,000 (never a blanket % on pooled spend)
+
+---
+
+## 96. Experience P&L: the margin, and who may see it (migration 0526, run by hand)
+
+**Margin** = brand revenue (issued + paid invoices, ex-tax) − Σ creator NET (agreed legs) − Σ Guapd costs. Shown as: brand − creator GROSS − costs = sub-total; + platform fee kept (Σ per leg) = margin. Staging example: ₹42,500.02 + ₹39,000.00 = ₹81,500.02.
+
+### Pure (`test-experience-money.ts`, 75)
+- [ ] Sub-total + fee kept = margin on every case; Palak's staging figures reproduce exactly; odd amounts stay whole paise; a loss shows negative
+- [ ] Platform fee is per leg at each leg's own %: 7 Growth → ₹21,000; 5 Growth + 2 Deals → ₹18,000
+
+### Access (`NODE_OPTIONS=--conditions=react-server ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-pnl-access.ts`)
+- [ ] **Financial (opt-in per person):** gets the P&L; it equals `experienceMargin()` on the same figures; revenue counts issued + paid only (drafts excluded); received = paid only; costs = lines Guapd bears only; unagreed legs counted as pending; per-leg % and fee shown
+- [ ] **Operational:** sees payouts (vendor names, amounts, status, reference), is REFUSED the P&L
+- [ ] **No staff_access row (outreach, contractor), brand, creator:** P&L and payouts refused
+- [ ] **Service role refused** (no caller → no flag): ops code cannot fetch margin on anyone's behalf
+- [ ] The internal `compute_experience_pnl` cannot be called by anyone, financial users AND the service role included; `staff_access` and snapshots are unreadable directly
+- [ ] **Snapshot:** completing the Experience snapshots the P&L; a later leg change does NOT move it; reopening drops it and the live P&L reflects the change; nothing stored while open
+- [ ] Turning a person's financial flag off refuses them at once
+- [ ] Granting access: admin only, via `setStaffAccess`, ops_events with before/after. Financial defaults to false for everyone, admins included
+
+### Guard rail
+- [ ] `./node_modules/.bin/tsx scripts/check-pnl-isolation.ts` passes: no app code reads snapshots, calls the internal calculation, calls the P&L/payout functions, computes margin or touches staff_access outside the gated modules (it fails on a planted read; verified)
+- [ ] Stated limit: the service role can still read the raw tables; this makes doing so a visible, reviewed exception
+
+### Apply 0526 in six pieces, then: `supabase migration repair --status applied 0526`
+
+## 97. SECURITY — the brand's deal note is never readable by the creator (migration 0527, run by hand)
 
 Found 2026-10-05: `deals.internal_note` ("brand-only, never shown to creator", 0220) was readable by the creator on the deal through the API (and in realtime row payloads). A column grant cannot separate them (brand and creator are both `authenticated`), so the note moved to `deal_brand_notes`.
 
@@ -6332,3 +6798,93 @@ Run order: 0527 piece A → deploy the app → piece B (drops `deals.internal_no
 - [ ] Brand: campaign send with a draft note → the deal's note shows on the roster.
 - [ ] Brand B cannot see Brand A's note (RLS: `deal_brand_notes_read_brand`).
 - [ ] Production: same order, same test, before the production release.
+
+## 98. Experiences ops, stage 1: house accounts, request + quotes, ops frame (migration 0528, run by hand)
+
+- [ ] `scripts/check-house-hidden.ts` passes: one house brand and one house creator; the house creator is never bookable (trigger-derived) and has no login; absent from browse, the Growth pool, AI search (`loadCandidates`), the ops creators list and every count, the ops brands list and approval queue, and every broadcast audience; a signed-in brand cannot read it at all.
+- [ ] `experience_quotes`: brand reads its own Experience's quotes only (not another brand's, not the house brand's); creators read none; nobody writes from a session. `total_paise = per_video × count + misc` (CHECK); at most one open and one accepted quote per Experience.
+- [ ] `deals.experience_brand_name` only on a creator leg (CHECK); neither party can write it (guard 0520).
+- [ ] `/ops/experiences`: an ops admin WITHOUT `staff_access.experiences_operational` sees "No access"; outreach sees "No access"; signed out sees the ops sign-in screen. With operational access: hero + counters, status board (every status with a count, click to filter), lane tabs, list rows with one status chip each.
+- [ ] `/ops/experiences` is in the brand design (`.brand-main`, brand top bar), not the classic ops header. Every other `/ops` page keeps the classic header and gains an "Experiences" link (admins).
+- [ ] The list selects no price, margin, cost or internal note.
+
+## 99. Guapd Experiences staff console in the brand portal (migration 0529, run by hand)
+
+Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and the brand's own view at `/experiences` (later, brand RLS only). Access is set on `/ops/access`.
+
+- [ ] `scripts/test-experience-console-access.ts` passes: staff with operational access get the list (every brand), no money/cost/rate/note column; a user with no access, a real brand, a creator, anonymous and the service role are all refused by `experience_console_list()`; turning operational off refuses at once.
+- [ ] Brand nav: the "Guapd Experiences" tab shows only for an ops admin with operational access. A staff member with no brand sees only that tab (no Deals/Campaigns/Browse/inbox/bell/brand menu); a staff member with a brand sees both. Brands, signed-out visitors on /pricing and users mid-onboarding see the nav exactly as before.
+- [ ] A real brand opening `/experiences-admin` directly sees "No access", and the list function refuses them if called directly.
+- [ ] `/ops/access` → "Guapd Experiences access": one row per account of each admin email (creator and brand accounts listed separately), None / Operational / Financial; Financial asks to confirm; a grant to someone not on the admin list is refused; any access held by a non-admin account is listed and flagged for removal; every change writes `staff_access.set` to `ops_events`.
+- [ ] `/ops/experiences` no longer exists; the ops menu "Guapd Experiences" opens `/experiences-admin`.
+
+## 100. Guapd Experiences console, stage 2: request intake + quotes (migration 0530, run by hand)
+
+- [ ] `scripts/test-experience-console-quotes.ts` passes:
+  - only staff with operational access can create, read, quote or accept (brand, creator, no-access user, anonymous and the service role are refused by the database);
+  - the house brand cannot be an Experience brand, and the brand picker never lists it;
+  - a request needs a channel and at least one deliverable, starts as `requested`, and is audited with who and the channel;
+  - totals are computed in the database (per video × count + misc); zero price or count is refused; a brand counter needs a channel;
+  - a new quote or counter replaces the open one (one open at a time); a replaced quote cannot be accepted;
+  - accepting needs a date and city on the quote, locks price, date and city onto the Experience, and moves status exactly one step (requested → rostering); quotes close after that;
+  - a Guapd quote accepted by the brand needs the channel;
+  - every step writes its ops_events row in the same transaction.
+- [ ] `/experiences-admin`: "New experience" opens the request form; rows open the detail page.
+- [ ] `/experiences-admin/new`: brand picker (real brands only), title, deliverables (type + count rows), Affiliate / Ad rights (months) / Boost (months), location, date window, brief, "Arrived via". Saving opens the new Experience.
+- [ ] `/experiences-admin/[id]`: hero with brand, title and status chip; the deal page stepper (`components/StepperTimeline`, the Experience stages, hover shows when a stage was reached, footer says what is next); then Quotes, the main action while the price is open, with Send a quote / Record brand's counter, the total preview, history (v-number, who, status, total, breakdown, date, city, message, channel, who recorded it), and accept with a confirmation that names what gets locked; then "What the brand asked for" and "Agreed with the brand". The brand deal page stepper is unchanged.
+- [ ] No creator rate, cost, payout or margin appears anywhere in the console.
+
+## 101. Experience request is a per-creator plan (migration 0531, run by hand)
+
+- [ ] `scripts/test-experience-console-quotes.ts` passes the plan checks: creators wanted is required and above zero; deliverable rows are per creator; totals are computed in the database (10 creators × 2 UGC video + 1 Story = 20 UGC videos, 10 Stories); only video types (UGC video, Reel) are priced per video; affiliate needs a per-creator count, and affiliate / ad rights / boost can never cover more videos than each creator makes (ad rights and boost blank = all); the list shows creators × videos each.
+- [ ] Accepting a quote locks the plan into `agreed_plan` (creators, per-creator rows, totals, plan videos, videos SOLD). If the quote's count was negotiated away from the plan (e.g. 18 against 20), both are recorded and the detail page says creator legs must add up to the sold number.
+- [ ] Form: "Creators wanted", "Each creator makes" rows, a live "In total" line, and per-creator counts on Affiliate / Ad rights / Boost ("of each creator's N videos").
+- [ ] Detail: Creators, Each creator makes, In total, Rights per creator; the quote composer starts from the plan's video count and flags a different count.
+- [ ] Stage 3 (not built yet): each creator leg starts from the per-creator template and may be adjusted; the reconciliation is the SUM of all legs against the locked totals, never per-creator uniformity.
+
+## 102. Experiences console, stage 3a: the roster (migration 0532, run by hand)
+
+- [ ] `scripts/test-experience-roster.ts` passes:
+  - every roster read and write is refused by the database for a no-access user, a brand, a creator, anonymous and the service role; the internal reconcile function is callable by nobody directly;
+  - the roster opens only once the price is agreed; the picker lists bookable creators only, never the house creator; the house creator and non-bookable creators cannot be added; a brand suggestion needs its channel; re-adding is a no-op;
+  - each creator starts from the agreed per-creator plan and awaits the brand;
+  - the contract check counts everyone not rejected, against what was sold: over-planned is flagged; uneven creators with a matching total pass (3 + 1 = 4); lock is refused while anyone awaits the brand or the total does not match;
+  - the Guapd note: staff read it; brand and creator cannot read or write the notes table; the brand still reads only its 0523 roster columns, never the channel or planned deliverables; the audit row records the note length, never the text;
+  - lock: locks accepted creators, moves rostering → confirmed exactly once; locked creators cannot be re-decided, re-planned or removed (note still editable); creators can be added after lock and are flagged against the sold total; status never moves back;
+  - every step writes its ops_events row.
+- [ ] `/experiences-admin/[id]` once agreed: the Roster panel (CampaignRoster layout) comes first, with Add creators, Add brand's picks (with "Brand suggested via"), the reconciliation strip (green when it adds up, amber with per-type numbers when not), per-row actions (Brand accepted / rejected with channel, Back to awaiting, Adjust plan, Note, Remove), the Locked chip, and Lock roster with a confirmation. Shows no rate, payout or amount.
+- [ ] Campaign roster's "Add creators" still works (the picker moved to `components/AddCreatorsModal.tsx`).
+
+## 103. Experiences stage 3b: creator shoot package + creator legs (migrations 0533, 0534, 0535, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-legs-send.ts` (89 checks) and `./node_modules/.bin/tsx scripts/check-package-gating.ts`. Regressions: `test-fee-golden.ts` byte-identical, `walk-deal-guard.ts` 45/45, `test-experience-roster.ts`, `check-house-hidden.ts`, `check-pnl-isolation.ts`.
+
+**Shoot package (creator_products, pricing_type per_day)**
+- [ ] `package_pricing_types` holds `per_deliverable` and `per_day`; every existing package reads `per_deliverable`. A new type is a row, not a migration.
+- [ ] A `per_day` row: product type "Shoot day", exact price > 0, no range, no revisions, no channel, never price-displayed; at most one active per creator. A `per_deliverable` row still needs platform + handle.
+- [ ] `/creator/packages` (desktop and 390px): order is channel packages (with collab & boosting) → Revisions → "+ Add a package" → then, set apart by a hairline, "Shoot day rate · managed shoots". Not set → input + worked example; set → "₹10,000 /day", "₹10,000 a day → 30% Growth fee → ₹7,000 to you" (15% Deals for a Deals creator), Edit, Pause; paused → "Turn back on". Shows even with no channel connected.
+- [ ] The creator-facing copy does NOT say brands can't see the rate (decision 2026-10-08: it reads as a lack of transparency). The data-layer gating is unchanged.
+- [ ] The shoot package is NOT in the per-channel package lists, the storefront editor/preview, or the "packages" setup task and dashboard counts.
+- [ ] Staff (Experiences operational) can set a creator's day rate from the console; each change is in `ops_events` with the rate before and after; the creator then sees it on their packages page.
+
+**Gating (SECURITY)**
+- [ ] A brand, another creator, outreach and anonymous never read a `per_day` package: RLS allowlists `per_deliverable` for non-owners; every service-role read filters explicitly (guard: `check-package-gating.ts`); `get_public_storefront` lists `per_deliverable` only (0535); `/ops/creators/[id]` lists marketplace packages only.
+- [ ] Every console leg function refuses no-access/outreach, brand, creator, anonymous and the service role. Internal helpers (`experience_legs_reconcile`, `experience_creator_track`) are callable by nobody.
+- [ ] The Experience brand (Kiro) cannot read any creator leg deal, `experience_creator_terms`, roster `leg_*` columns, `experiences.creator_brief`, or `creator_leg_context`.
+- [ ] A creator reads only their own leg, own terms row and own `creator_leg_context`: never the brand price, the brand's request brief, the roster, another creator's terms, costs or margin.
+
+**Creator legs (staff console, Confirmed only)**
+- [ ] "Creator deals" panel: one row per locked, accepted creator with track (Growth 30% / Deals 15%), scope, day rate → days → gross → % → net, status. Brief creators see: editable.
+- [ ] Leg gross = day rate × days (half-up), fee = gross × the creator's own track %, net = gross − fee (creatorLegTerms). The send function re-derives day rate and track itself and refuses a mismatch; `ect_gross_formula` and `ect_net_formula` prove the stored figures. `resolveDealFee` is never called for a leg.
+- [ ] Reconcile: a draft or send that takes the total past what was sold is refused (per type when the brand bought the plan's count, combined videos otherwise, affiliate against the agreed total). Under is allowed and shown ("N videos still to place"). Uneven creators with the right total pass.
+- [ ] Affiliate is a count of a leg's videos (≤ its videos), never a deliverable type. Days never scale deliverables.
+- [ ] Send creates a `negotiating` deal on the house brand with `experience_brand_name`, `price_paise` NULL, one item per unit (affiliate flagged on the first N videos), frozen terms, an `events` row and an `ops_events` row (gross/net before/after). Sent legs cannot be re-drafted or re-sent; a later day-rate change does not move them.
+- [ ] Notifications: creator in-app + email only ("<brand> · Managed by Guapd: a shoot offer, ₹X to you"). NO WhatsApp on legs. Creator's answer → in-app to Experiences staff.
+
+**Creator side (desktop and 390px)**
+- [ ] `/creator/deals/[leg]`: "Shoot offer from <brand>", "<brand> · Managed by Guapd", What you make (day rate, days, total, Guapd platform fee %, You take home), scope (deliverables, affiliate count, ad rights / boost), shoot date and city, the curated brief, Accept · ₹X to you / Decline (optional reason). No counter, invoice, upload, posting or shipping.
+- [ ] `/creator/deals` and the dashboard: the leg reads "<brand> · Managed by Guapd" with the creator's take-home; earnings count the take-home. Legs open no inbox thread and never appear as ready to invoice.
+- [ ] Every marketplace creator deal action (counter, submit, upload, post, invoice, shipping, review) refuses a leg on the server. In the database: session writes to a leg (deal, items, uploads, messages) are refused; invoices on a leg and `status = paid` on a leg are refused for every role.
+- [ ] Decline frees that creator's videos in the reconciliation.
+
+**Environment note:** 0533–0535 are applied on staging (ledger 0533/0534/0535), NOT on production. Run them on prod at release, in order, after confirming `supabase/.temp/linked-project.json`.

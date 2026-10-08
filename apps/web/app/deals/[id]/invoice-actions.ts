@@ -1,10 +1,10 @@
 'use server'
 
 import { verifyBrand } from '@/lib/brand-auth'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyDealParty } from '@/lib/notifications'
-import { formatAmountForMessage } from '@/lib/money'
 
 type InvoiceResult =
   | { status: 'success' }
@@ -14,8 +14,18 @@ type InvoiceResult =
  * Accept an invoice (issued → accepted). Sets due_date from payment_due_days.
  */
 export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
-  await verifyBrand()
+  const brand = await verifyBrand()
   const supabase = createClient()
+
+  // The deal's own brand. The invoice is written with the service role below
+  // (migration 0521), so this is the boundary, not RLS.
+  const { data: owned } = await supabase
+    .from('deals')
+    .select('id')
+    .eq('id', dealId)
+    .eq('brand_id', brand.brandId)
+    .maybeSingle()
+  if (!owned) return { status: 'error', message: 'Deal not found.' }
 
   const { data: invoice } = await supabase
     .from('invoices')
@@ -36,7 +46,7 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
     dueDate = due.toISOString().split('T')[0] // date only
   }
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await createAdminClient()
     .from('invoices')
     .update({
       status: 'accepted',
@@ -45,6 +55,7 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
       updated_at: now.toISOString(),
     })
     .eq('id', invoice.id)
+    .eq('status', 'issued')
 
   if (updateErr) {
     return { status: 'error', message: `Failed to accept invoice: ${updateErr.message}` }
@@ -61,19 +72,16 @@ export async function acceptInvoice(dealId: string): Promise<InvoiceResult> {
 /**
  * Mark an invoice as paid (accepted → paid) and complete the deal.
  *
- * STUBBED: No real payment. This is the single swap-point for Razorpay Route.
+ * NO MONEY MOVES HERE. On a Deals / Growth deal the brand pays the creator
+ * DIRECTLY (UPI / bank), off the platform; Guapd never collects or forwards
+ * that money (CLAUDE.md, and the payment guardrail: no pool-and-split, which
+ * is why Razorpay Route is not the plan). This records the brand's
+ * confirmation that it has paid, so the deal can close.
  *
- * TODO: RAZORPAY ROUTE INTEGRATION
- * ─────────────────────────────────────────────────────────────────
- * Replace the stub below with:
- * 1. Create a Razorpay Payment Link for invoice.brand_pays_paise
- * 2. Return the link URL to the brand (redirect or open in new tab)
- * 3. Listen for Razorpay webhook (payment.captured / payment_link.paid)
- * 4. On webhook confirmation → call the invoice/deal updates below
- * The status transitions (invoice → paid, deal → paid → complete) and
- * the UI (BrandInvoiceCard) stay identical — only the trigger changes
- * from an immediate button click to a webhook callback.
- * ─────────────────────────────────────────────────────────────────
+ * It used to be written as a payment stub, and it messaged the creator
+ * "payment released / sent to your linked account" on WhatsApp the moment the
+ * brand clicked, when nothing had been sent by anyone. The creator is now told
+ * the brand MARKED it paid, and to check their account.
  */
 export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
   await verifyBrand()
@@ -90,10 +98,7 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
     return { status: 'error', message: `Cannot mark as paid: invoice is "${invoice.status}".` }
   }
 
-  // ── STUB: simulate successful payment (no real money moves) ──
-  // In production, this block executes only after Razorpay webhook confirms payment.
-  //
-  // Atomic: invoice→paid + deal→paid + deal→complete in a single Postgres
+  // The brand's confirmation, recorded. Atomic: invoice→paid + deal→paid + deal→complete in a single Postgres
   // transaction via SECURITY DEFINER function (see 010_robustness_functions.sql).
 
   const { data: result, error: rpcErr } = await supabase.rpc('mark_deal_paid', {
@@ -117,21 +122,11 @@ export async function markAsPaid(dealId: string): Promise<InvoiceResult> {
     return { status: 'success' }
   }
 
-  // Notify creator: payment received (in-app + WhatsApp).
-  // `res.already` above short-circuits a repeat call, so one payment produces
-  // exactly one message. The amount is the invoice's authoritative
-  // creator_receives_paise — net of platform fee, what actually reaches them.
-  await notifyDealParty(dealId, 'creator', 'payment_paid', (t) => `Payment received for ${t}`, {
-    whatsapp: (ctx) => ({
-      template: 'payment_released',
-      bodyVars: [
-        ctx.creatorName,
-        formatAmountForMessage(invoice.creator_receives_paise),
-        ctx.dealLabel,
-      ],
-      buttonValue: dealId,
-    }),
-  })
+  // Tell the creator the brand says it has paid: in-app only. NOT the
+  // `payment_released` WhatsApp template, whose approved text says the money
+  // was released and sent, which nobody here can know. `res.already` above
+  // keeps this to one notice per deal.
+  await notifyDealParty(dealId, 'creator', 'payment_paid', (t) => `Marked as paid: ${t}`)
 
   revalidatePath(`/deals/${dealId}`)
   revalidatePath(`/creator/deals/${dealId}`)

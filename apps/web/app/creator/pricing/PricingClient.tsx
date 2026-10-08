@@ -57,7 +57,12 @@ export default function PricingClient({ isGrowth, backHref }: {
               other creator sub-page has, honouring ?from= so it returns to the
               profile menu the row was tapped in. */}
           <div className="pr-desktop-head" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-faint)' }}>
-            <Link href="/creator/dashboard" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Account</Link>
+            {/* "Profile", per the design, now that it is a real destination at
+                every width: /creator/profile is capped and centred rather than
+                a phone screen stretched across a desktop, and the phone gets
+                the back arrow below instead of this crumb. The earlier
+                "Account" was a stand-in for exactly that problem. */}
+            <Link href="/creator/profile" style={{ color: 'var(--ink-faint)', textDecoration: 'none' }}>Profile</Link>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
             <span style={{ color: 'var(--ink-soft)', fontWeight: 500 }}>Pricing &amp; fees</span>
           </div>

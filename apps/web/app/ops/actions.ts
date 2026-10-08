@@ -1,6 +1,10 @@
 'use server'
 
 import { isRejectionReason } from '@/lib/rejection-reasons'
+import { setCreatorBio } from '@/lib/creator-bio-server'
+import { setCreatorNiches, MAX_NICHES } from '@/lib/creator-niches-server'
+import { canonicalNiches } from '@/lib/niches'
+import { validateLocation, type LocationInput } from '@/lib/creator-location'
 import { verifyOpsAccess } from '@/lib/ops-auth'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { QUESTIONS_DUE_EVENT } from '@/lib/creator-onboarding'
@@ -87,7 +91,10 @@ export async function addCreator(input: AddCreatorInput) {
   const { data, error } = await admin.from('creators').insert({
     full_name: full_name.trim(),
     phone: phone?.trim() || null,
-    niches: niches ?? [],
+    // A new creator has no storefront yet, so the two creator columns are all
+    // there is to keep in step; the storefront seeds itself from these.
+    niches: canonicalNiches(niches ?? []).slice(0, MAX_NICHES),
+    niche: canonicalNiches(niches ?? [])[0] ?? null,
     handle: handle?.trim() || null,
     bio: bio?.trim() || null,
     profile_photo_url: profile_photo_url?.trim() || null,
@@ -304,6 +311,9 @@ interface EditCreatorInput {
   worked_with?: string[]
   portfolio_links?: string[]
   rate_card?: Record<string, number>
+  /** City, state, age bracket. Only sent when ops touched them. All blank
+   *  clears them; otherwise all three are required, as everywhere else. */
+  place?: LocationInput
 }
 
 export async function editCreator(input: EditCreatorInput) {
@@ -348,6 +358,20 @@ export async function editCreator(input: EditCreatorInput) {
     }
   }
 
+  // Validated BEFORE the main update, so a half-filled place cannot leave the
+  // profile saved and the place silently not.
+  let placeRow: Record<string, unknown> | null = null
+  if (input.place) {
+    const blank = ![input.place.city, input.place.state, input.place.ageBracket].some(v => (v ?? '').trim())
+    if (blank) {
+      placeRow = { city: null, state: null, age_bracket: null }
+    } else {
+      const v = validateLocation(input.place)
+      if (!v.ok) return { error: v.error }
+      placeRow = v.row
+    }
+  }
+
   const admin = createAdminClient()
   // MERGED, not replaced. SocialAccountEntry has no follower_range, so
   // writing this array straight over the column dropped it, and the
@@ -366,9 +390,7 @@ export async function editCreator(input: EditCreatorInput) {
       full_name: full_name.trim(),
       phone: phone?.trim() || null,
       contact_email: email,
-      niches: niches ?? [],
       handle: handle?.trim() || null,
-      bio: bio?.trim() || null,
       profile_photo_url: profile_photo_url?.trim() || null,
       social_accounts: mergedSocials,
       worked_with: worked_with ?? [],
@@ -398,6 +420,8 @@ export async function editCreator(input: EditCreatorInput) {
       .from('creator_products')
       .update({ handle: newHandle })
       .eq('creator_id', id)
+      // Only marketplace packages carry a channel handle; a shoot day rate has none.
+      .eq('pricing_type', 'per_deliverable')
       .eq('handle', oldHandle)
       .select('id')
 
@@ -410,12 +434,28 @@ export async function editCreator(input: EditCreatorInput) {
     productsRetagged = moved?.length ?? 0
   }
 
+  const bioRes = await setCreatorBio(id, bio)
+  if (bioRes.error) return { error: `Profile saved, but ${bioRes.error}` }
+
+  // Niches through the one writer, so the creator's storefront follows.
+  const nicheRes = await setCreatorNiches(id, niches ?? [])
+  if (nicheRes.error) return { error: `Profile saved, but ${nicheRes.error}` }
+
+  // Its own write, like everywhere else these columns are touched (0515).
+  if (placeRow) {
+    const { error: placeErr } = await admin.from('creators').update(placeRow).eq('id', id)
+    if (placeErr) return { error: `Profile saved, but city, state and age did not: ${placeErr.message}` }
+  }
+
   await logOpsEvent(user, 'creator.edited', 'creators', id, {
     full_name: full_name.trim(),
     // Whether ops set or cleared a contact address, not the address itself:
     // ops_events is read by people who do not need a creator's inbox, and the
     // question this answers is "did we start being able to reach them".
     has_contact_email: email !== null,
+    // State and age only, not the city: enough to answer "did ops change
+    // where this creator is", without copying more personal detail than that.
+    ...(placeRow ? { place_set_by_ops: true, state_after: placeRow.state ?? null, age_bracket_after: placeRow.age_bracket ?? null } : {}),
     /* Before and after, because a handle is an identity: it is what a brand
        clicks through to, and "which account was this?" is a question the
        audit log should answer without guesswork. */
@@ -755,6 +795,9 @@ export async function editProduct(input: EditProductInput) {
       price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
     })
     .eq('id', id)
+    // A shoot day rate (per_day) is set by the creator or through the
+    // Experiences console, never through this marketplace editor.
+    .eq('pricing_type', 'per_deliverable')
 
   if (error) return { error: error.message }
 

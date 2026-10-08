@@ -4,6 +4,9 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { saveContactEmail } from '@/app/creator/dashboard/contact-email-actions'
+import { saveCreatorLocation } from '@/app/creator/dashboard/location-actions'
+import { draftCreatorBio, saveCreatorBio } from '@/app/creator/dashboard/bio-actions'
+import { INDIAN_STATES, AGE_BRACKETS } from '@/lib/creator-location'
 import { taskHeading, taskProgress, type CreatorTask } from '@/lib/creator-tasks'
 
 /**
@@ -161,7 +164,7 @@ function Row({ task, first, onSaved }: { task: CreatorTask; first: boolean; onSa
 
      So the row looks exactly like every other row — icon, text, pill — and the
      field appears BENEATH it, full width, when the pill is pressed. */
-  if (task.action === 'email' && !task.done) {
+  if ((task.action === 'email' || task.action === 'location' || task.action === 'bio') && !task.done) {
     return (
       <div style={{ padding: '14px 0', borderTop: border }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -184,7 +187,7 @@ function Row({ task, first, onSaved }: { task: CreatorTask; first: boolean; onSa
         </div>
         {emailOpen && (
           <div style={{ marginTop: 12 }}>
-            <EmailField onSaved={onSaved} />
+            {task.action === 'email' ? <EmailField onSaved={onSaved} /> : task.action === 'bio' ? <BioField onSaved={onSaved} /> : <LocationField onSaved={onSaved} />}
           </div>
         )}
       </div>
@@ -279,6 +282,157 @@ function EmailField({ onSaved }: { onSaved: () => void }) {
   )
 }
 
+/** City, state and age, answered in place. Same shape as EmailField. */
+function LocationField({ onSaved }: { onSaved: () => void }) {
+  const [pending, startTransition] = useTransition()
+  const [state, setState] = useState('')
+  const [city, setCity] = useState('')
+  const [age, setAge] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const ready = Boolean(state && city.trim() && age)
+
+  function submit() {
+    if (pending || !ready) return
+    setError(null)
+    startTransition(async () => {
+      const res = await saveCreatorLocation({ city, state, ageBracket: age })
+      if (!res.ok) {
+        setError(res.message ?? 'Something went wrong.')
+        return
+      }
+      setSaved(true)
+      setTimeout(onSaved, 1100)
+    })
+  }
+
+  if (saved) {
+    return <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, color: '#166534', flexShrink: 0 }}>Saved</span>
+  }
+
+  const field: React.CSSProperties = {
+    flex: '1 1 140px', minWidth: 0, padding: '10px 12px', borderRadius: 10, fontSize: 14,
+    border: '1px solid rgba(24,28,36,.18)', background: '#fff', color: 'var(--ink, #181C24)',
+  }
+
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%' }}>
+      <select value={state} onChange={(e) => { setState(e.target.value); setError(null) }} aria-label="State" style={{ ...field, color: state ? field.color : '#8B90A0' }}>
+        <option value="" disabled>State</option>
+        {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
+      <input
+        value={city}
+        onChange={(e) => { setCity(e.target.value); setError(null) }}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
+        placeholder="City" aria-label="City" autoComplete="address-level2" maxLength={60}
+        style={field}
+      />
+      <select value={age} onChange={(e) => { setAge(e.target.value); setError(null) }} aria-label="Age bracket" style={{ ...field, color: age ? field.color : '#8B90A0' }}>
+        <option value="" disabled>Age</option>
+        {AGE_BRACKETS.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
+      </select>
+      <button
+        type="button" onClick={submit} disabled={pending || !ready}
+        style={{
+          padding: '9px 16px', borderRadius: 999, border: 'none', cursor: ready ? 'pointer' : 'not-allowed', flexShrink: 0,
+          background: 'var(--ink, #181C24)', color: '#fff',
+          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, opacity: pending || !ready ? 0.5 : 1,
+        }}
+      >
+        {pending ? 'Saving…' : 'Save'}
+      </button>
+      {error && <span style={{ fontSize: 12, fontWeight: 600, color: '#9B3030', width: '100%' }}>{error}</span>}
+    </span>
+  )
+}
+
+/**
+ * The bio, answered in place, with an AI draft for anyone unsure what to say.
+ * The draft lands in the box and is NEVER saved by itself: the creator reads
+ * it, fixes what is wrong, and presses Save.
+ */
+function BioField({ onSaved }: { onSaved: () => void }) {
+  const [pending, startTransition] = useTransition()
+  const [drafting, startDraft] = useTransition()
+  const [bio, setBio] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  const ready = bio.trim().length >= 40
+
+  function draft() {
+    setError(null)
+    setNote(null)
+    startDraft(async () => {
+      const res = await draftCreatorBio()
+      if (!res.ok) { setError(res.message); return }
+      setBio(res.bio)
+      setNote(res.thin
+        ? 'A starting point from your niche and city. Connect Instagram for a draft that knows your content, and edit this before saving.'
+        : 'Drafted from your profile. Check every line is true and sounds like you before saving.')
+    })
+  }
+
+  function submit() {
+    if (pending || !ready) return
+    setError(null)
+    startTransition(async () => {
+      const res = await saveCreatorBio(bio)
+      if (!res.ok) { setError(res.message ?? 'Something went wrong.'); return }
+      setSaved(true)
+      setTimeout(onSaved, 1100)
+    })
+  }
+
+  if (saved) {
+    return <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, color: '#166534', flexShrink: 0 }}>Saved</span>
+  }
+
+  const btn: React.CSSProperties = {
+    padding: '9px 16px', borderRadius: 999, flexShrink: 0,
+    fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+      <span style={{ fontSize: 12, color: 'var(--wg-500, #6B7280)', lineHeight: 1.45 }}>
+        Mention your topics, the kind of content you make and who watches it. Not sure what to write? Let AI draft one from your Instagram and YouTube profile, then make it yours.
+      </span>
+      <textarea
+        value={bio}
+        onChange={(e) => { setBio(e.target.value); setError(null) }}
+        placeholder="I make short explainers on mutual funds and first-salary money habits for young professionals in Pune."
+        aria-label="Your bio"
+        maxLength={500}
+        rows={4}
+        style={{
+          width: '100%', padding: '10px 12px', borderRadius: 10, fontSize: 14, lineHeight: 1.45, resize: 'vertical',
+          border: error ? '1px solid #D2545A' : '1px solid rgba(24,28,36,.18)', background: '#fff', color: 'var(--ink, #181C24)',
+          fontFamily: 'inherit',
+        }}
+      />
+      {note && <span style={{ fontSize: 12, color: '#92400e' }}>{note}</span>}
+      <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button" onClick={draft} disabled={drafting}
+          style={{ ...btn, border: '1px solid rgba(24,28,36,.18)', background: '#fff', color: 'var(--ink, #181C24)', cursor: drafting ? 'wait' : 'pointer', opacity: drafting ? 0.6 : 1 }}
+        >
+          {drafting ? 'Writing…' : bio ? 'Write another with AI' : '✨ Write it with AI'}
+        </button>
+        <button
+          type="button" onClick={submit} disabled={pending || !ready}
+          style={{ ...btn, border: 'none', background: 'var(--ink, #181C24)', color: '#fff', cursor: ready ? 'pointer' : 'not-allowed', opacity: pending || !ready ? 0.5 : 1 }}
+        >
+          {pending ? 'Saving…' : 'Save'}
+        </button>
+        <span style={{ fontSize: 11.5, color: 'var(--wg-500, #6B7280)', marginLeft: 'auto' }}>{bio.length}/500</span>
+      </span>
+      {error && <span style={{ fontSize: 12, fontWeight: 600, color: '#9B3030' }}>{error}</span>}
+    </div>
+  )
+}
+
 /** One glyph per task, so a row is recognisable before it is read. */
 function Icon({ k, done }: { k: string; done: boolean }) {
   const stroke = done ? '#166534' : 'var(--ink, #181C24)'
@@ -289,6 +443,12 @@ function Icon({ k, done }: { k: string; done: boolean }) {
   )
   if (k === 'email') return (
     <svg {...common}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 6 10-6" /></svg>
+  )
+  if (k === 'bio') return (
+    <svg {...common}><path d="M4 6h16M4 12h16M4 18h10" /></svg>
+  )
+  if (k === 'location') return (
+    <svg {...common}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
   )
   if (k === 'packages') return (
     <svg {...common}><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z" /><circle cx="7" cy="7" r="1.4" /></svg>
