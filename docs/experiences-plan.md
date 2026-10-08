@@ -513,3 +513,12 @@ Built in migration 0541 + the pool page's "Not on Guapd yet" section and a roste
 - Staff record a creator who is not on Guapd: name, Instagram handle, optional phone, expected cost (day rate × days or flat), status (contacted → agreed → onboarding) and the brand's answer with the channel. Not on the roster: no lock, no deal; the P&L shows an estimate, never the margin.
 - When they join and are vetted, "Link to their account" puts them on the roster carrying the brand's answer; from there it is the normal flow (day rate, lock, deal). The list flags when a handle now exists on Guapd.
 - Nothing messages them: staff copy the sign-up link and send it themselves. Operational only; the brand never sees the list; audit rows carry no amounts or phone numbers.
+
+## Phase 5 plan: creator screens (DRAFT 2026-10-09, awaiting Palak's review; staging only)
+Full plan delivered in chat. Headlines:
+- **Already there:** the leg page (offer, accept/decline, rate → fee → net, shoot, deliverables, payout statement), legs in the deals list and dashboard as "Brand · Managed by Guapd", the creator's own shoot day rate on /creator/packages (set, edit, pause; one active; no delete), UPI ID on Payments.
+- **Counter on a leg:** the creator proposes a day rate and/or days with a note; Guapd accepts (terms re-priced through one guarded path while the deal is still negotiating, then agreed), declines, or counters back; after agreement the leg is frozen as today. Counters never touch deliverables, so the reconcile guard is unchanged; stale-screen check on accept; in-app + email both ways.
+- **Payouts on their side:** a "Paid by Guapd" section on Payments (status, net, TDS, paid, date, reference) through a creator-own definer function.
+- **Day rate:** confirm self-service; fix the staff set-day-rate path so it never overrides a creator's pause.
+- **Bank details:** creator-entered, write-only for them (masked read-back), FINANCE-only full read (each view audited without values), never to brands, never in audit rows / events / notifications; account number and PAN encrypted at rest with a Vault-held key; a change after a payout is requested is flagged before approval and the creator is told.
+- **Deferred:** affiliate invoice (4b), RazorpayX.
