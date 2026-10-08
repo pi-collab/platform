@@ -416,6 +416,14 @@ For one creator leg:
 4. Accept / decline only in 3b; the creator counter is Phase 5.
 5. Leg offers: in-app + email only. WhatsApp OFF for legs.
 
+### Possible later: show the shoot day rate to brands (Palak, 2026-10-08)
+Hidden from brands for now. If that changes, the switch points are: the
+`creator_products_read` allowlist (0533, rls.sql), the explicit
+`pricing_type = 'per_deliverable'` filters on brand-facing reads (listed by
+`scripts/check-package-gating.ts`), and `get_public_storefront` (0535).
+Decide first whether brands may see it on Experiences only or on the
+marketplace too, since it reveals what Guapd pays a creator per day.
+
 ### To-do: leg WhatsApp template (MSG91)
 A leg-specific template ("<brand> · Managed by Guapd: a shoot offer, ₹<net> to you") needs drafting and MSG91/Meta approval. Until then `lib/experience-leg-notify.ts` sends no WhatsApp. Do not reuse the marketplace offer template: its amount is computed the marketplace way.
 
