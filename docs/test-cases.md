@@ -6959,7 +6959,7 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 
 **Readiness (sets up two-party completion)**
 - [ ] `ready` is true only when brand-approved releases cover everything sold (per type, and videos against videos sold); the console lists the gaps.
-- [ ] Complete is NOT gated on readiness yet; a Complete Experience refuses every deliverable change.
+- [ ] Since 0540 Complete IS gated on readiness (and invoices paid, creators paid, both sign-offs: §108); a Complete Experience refuses every deliverable change.
 
 **Audit**
 - [ ] Every staff action writes `ops_events` (shoot_scheduled, leg_shoot_outcome, leg_shoot_outcome_undone, leg_withdrawn, shoot_done, deliverable_attached, deliverable_reviewed, deliverable_released, delivering, deliverable_withdrawn, brand_deliverable_decision_recorded); none carries a price, rate, net or margin; notes are recorded by length. Creator submissions go to the deal's `events` (creators may have no email).
@@ -6987,3 +6987,75 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] Refused or empty: staff notes, releases (the brand's note), roster notes, quotes, cost lines, P&L snapshots, roster, experiences, another creator's terms, `ops_events`, another deal's events; own-deal events carry no notes.
 - [ ] Functions: another leg's context, upload slot and submit say "Not found"; brand view and brand file, every console reader, the P&L, readiness, the item-file path and the internal gate/put helpers are refused.
 - [ ] Files: another creator's file cannot be downloaded, signed or listed; no direct upload into another creator's folder, NOR into their own leg folder (0539); a Guapd-minted upload slot still works from the creator's session.
+
+## 107. Experiences Phase 4: brand invoices, paid offline (migration 0540, run by hand)
+
+Run: `NODE_OPTIONS=--conditions=react-server NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-invoices.ts` (112 checks, staging, real sessions; restores Guapd's billing settings and the test brand's billing profile).
+
+**Access (SECURITY)**
+- [ ] Invoices, payments, Guapd's billing settings and brand billing profiles are FINANCIAL only (an invoice is the brand price). Operational-only staff, no-access staff, brands, creators, anonymous and the service role are refused by every `experience_console_invoice*` / `_finance_settings` / `_brand_billing` function.
+- [ ] No user can read `service_invoices`, `service_invoice_payments`, `service_invoice_counters`, `brand_billing_profiles` or `guapd_billing_settings` directly (the 0524 brand read of invoices and its column grants are gone).
+- [ ] App code never touches these tables (`scripts/check-pnl-isolation.ts`).
+
+**Billing details**
+- [ ] Guapd's details (legal name, address, state, GSTIN, GST-registered yes/no, PAN, how to pay) are set by finance; a NULL "GST-registered" is refused; registered needs a GSTIN.
+- [ ] The brand's details (legal name, address, state, optional GSTIN / PAN / GST certificate) are set by finance; never bank details. A certificate path that was not uploaded is refused.
+
+**Drafts → Issued (numbered, frozen, PDF)**
+- [ ] Invoices exist once the price is agreed and before Complete. One clean service price per invoice (one line: description + amount); no platform fee, creator rate or per-video breakdown.
+- [ ] GST is entered, never computed. Not registered → no GST is allowed and the PDF says "GST not charged" with the provisional GSTIN. Registered → IGST, or CGST + SGST, never both.
+- [ ] Validation refuses: NULL kind, NULL or zero amount, a short description, an additional invoice without its source, a past due date.
+- [ ] A draft has no number, can be edited or discarded (deleted).
+- [ ] Issue needs Guapd's and the brand's billing details; snapshots both onto the invoice; numbers it `GPD/<FY>/<0001>` from a per-financial-year counter in the same transaction. A failed issue and a discarded draft use no number (no gaps).
+- [ ] A draft made under one GST registration cannot be issued after it changes.
+- [ ] Issued: no edit, no discard, not even the service role can change its amount (freeze trigger).
+- [ ] The PDF is rendered once from the frozen invoice (no dependency: `lib/simple-pdf.ts`), stored at a path the database names in the private `finance-docs` bucket, and recorded once; it cannot be swapped.
+- [ ] Issuing tells the brand's team in-app + by email (number, title, total, due date).
+
+**The brand's view (SECURITY)**
+- [ ] `/experiences/[id]` lists the brand's ISSUED and PAID invoices only: number, dates, description, amount, GST, total, Due / Part paid / Paid, and the PDF. Never drafts, voids, reasons, references, GSTINs, creators, payouts, costs or margin.
+- [ ] Another brand, the creator, staff who are not members, anonymous and the service role are refused.
+
+**Payments (paid offline)**
+- [ ] Recorded by finance with amount, TDS the brand withheld (0 must be entered), date (not future), method, reference and a proof file uploaded to the invoice's own unguessable path. Each NULL is refused; another invoice's proof is refused; more than is due is refused; the same reference twice on one invoice is refused.
+- [ ] Several payments until the total is met; then the invoice is Paid. A reversal (with a reason) puts it back to due; a reversed payment is final.
+
+**Void**
+- [ ] Only an issued, unpaid invoice with no live payment; a reason is required; the number is kept and never reused; void is final; the brand stops seeing it.
+
+**P&L flip**
+- [ ] Before an invoice is issued: revenue ₹0 "pending invoice". Issued and paid invoices count as revenue BEFORE GST; GST is shown as a liability, never revenue; drafts and voids count for nothing.
+- [ ] Cash: received, TDS withheld, outstanding; invoiced vs agreed is flagged.
+
+**Audit**
+- [ ] Every finance action writes `ops_events` (settings, brand billing, drafted, edited, discarded, issued, PDF stored, payment recorded, payment reversed, voided); none carries an amount.
+
+## 108. Experiences Phase 4: creator payouts and the completion gate (migration 0540, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-payouts.ts` (86 checks, staging, real sessions).
+
+**Payouts (operational, manual)**
+- [ ] Only operational staff reach payouts; no-access staff, brands, creators, anonymous and the service role are refused. No user reads `vendor_payouts`, `vendors` or `vendor_payout_details` directly (the 0524 creator read is gone).
+- [ ] Eligible only when the creator accepted, SHOT, and their part is complete (Guapd provides: shoot done; creator submits: every item approved by Guapd). Did not shoot → never paid.
+- [ ] The amount is the creator's LOCKED net; the database refuses any payout that is not exactly their locked terms. TDS is a field (NULL refused, 0 by default in the screen, not above the net), editable only while requested.
+- [ ] One live payout per creator deal (a unique index); a cancelled one (with a reason) allows a new request whose duplicate key names attempt 2.
+- [ ] Maker-checker: the requester cannot approve; the database refuses it even from the service role.
+- [ ] Paid needs an approval, a date (not future), a method (bank transfer / UPI / other), a reference and a proof file uploaded to the payout's own path. Paid and cancelled are final. A paid payout is on the creator's deal timeline (reference, no amount).
+- [ ] The creator is told in-app + by email when it is recorded paid ("Guapd paid you ₹X · ref …").
+- [ ] The other staff are told in-app that a payout needs approving (never the requester).
+
+**The creator's statement (SECURITY)**
+- [ ] On their own deal page: gross → Guapd platform fee (their %) → net → TDS → paid, the date and the bank reference. Never the proof file, who requested or approved it, or vendor details. Another creator's deal stays "Not found".
+
+**Completion gate**
+- [ ] Complete only from Delivering, and only when: the brand has approved what was sold, at least one invoice is issued and every one is paid with no draft left, every creator who shot is paid, and the brand's sign-off is recorded (staff, with the channel; NULL or "portal" refused; cleared only with a reason). Completing is Guapd's sign-off (who and when are recorded).
+- [ ] The refusal lists what is missing. Brands, creators and no-access staff can neither sign off nor complete.
+- [ ] Complete freezes the P&L. Reopen is finance-only, needs a reason and clears BOTH sign-offs, so completing again needs the brand's sign-off again.
+
+**P&L**
+- [ ] Paid out to creators, TDS withheld from them, paid count and still-to-pay count are shown beside the margin; operational staff still cannot read the P&L.
+
+**Audit**
+- [ ] Every payout and sign-off action writes `ops_events` (requested, TDS set, approved, paid, cancelled, brand sign-off recorded / cleared, completed, reopened); none carries an amount.
+
+**Environment:** 0540 is on STAGING only (`experience_completion_check` re-applied by hand after a `text[] || 'literal'` fix, and the invoices / payouts / completion readers after a name-or-email fallback; the file matches). The `finance-docs` bucket is private with no user policies. Not on production.

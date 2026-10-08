@@ -1,8 +1,9 @@
 /**
  * Experiences Phase 2, database tests against STAGING (needs migration 0525).
  *
- * Uses the real server functions (lockCreatorLegTerms, draftServiceInvoice,
- * the payout service) with the service role, on a throwaway
+ * Uses the real server function lockCreatorLegTerms with the service role, and
+ * invoice fixtures (0540: invoices and payouts go through the access-checked
+ * console functions, tested in test-experience-invoices / -payouts), on a throwaway
  * Experience. Deletes everything it creates, including its ops_events rows.
  *
  * Run from the repo root:
@@ -18,8 +19,8 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL!.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
 import { createAdminClient } from '../apps/web/lib/supabase/admin'
-import { lockCreatorLegTerms, draftServiceInvoice } from '../apps/web/lib/experience-legs-server'
-import { requestVendorPayout, approveVendorPayout, recordManualPayment } from '../apps/web/lib/payouts/service'
+import { lockCreatorLegTerms } from '../apps/web/lib/experience-legs-server'
+import { fixtureInvoice, issuedFields } from './fixture-invoice'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 
 const admin = createAdminClient()
@@ -78,8 +79,8 @@ async function run() {
 
   // ── Independence in the database ──
   group('two-leg independence (database)')
-  const inv = await draftServiceInvoice(admin, { experienceId: exp.id, brandId, kind: 'initial', perVideoPaise: 350_000, deliverableCount: 70 })
-  ok('initial invoice = 70 × ₹3,500', inv.subtotalPaise === 24_500_000, inv.number)
+  const inv = await fixtureInvoice(admin, { experienceId: exp.id, brandId, kind: 'initial', subtotalPaise: 24_500_000 })
+  ok('initial invoice = ₹2,45,000 (one clean service price)', inv.subtotalPaise === 24_500_000)
   // creator rate changes: add a leg at a very different rate
   await lockCreatorLegTerms(admin, { dealId: legB, experienceId: exp.id, creatorId: C2.id, dayRatePaise: 9_999_999, days: 2.5 })
   const invAfter = await one(admin.from('service_invoices').select('subtotal_paise, total_paise').eq('id', inv.id).single(), 'invoice')
@@ -95,18 +96,17 @@ async function run() {
   // ── Follow-on / additional invoices ──
   group('additional invoices (more videos later)')
   const legsBefore = (await admin.from('deals').select('id', { count: 'exact' }).eq('experience_id', exp.id).eq('leg_role', 'creator_leg')).count
-  const add = await draftServiceInvoice(admin, { experienceId: exp.id, brandId, kind: 'additional', source: 'existing_footage', perVideoPaise: 350_000, deliverableCount: 10, miscPaise: 500_000 })
-  ok('existing_footage: 10 × ₹3,500 + ₹5,000 = ₹40,000, its own invoice', add.subtotalPaise === 4_000_000 && add.number !== inv.number, add.number)
+  const add = await fixtureInvoice(admin, { experienceId: exp.id, brandId, kind: 'additional', source: 'existing_footage', subtotalPaise: 4_000_000 })
+  ok('existing_footage: ₹40,000, its own invoice', add.subtotalPaise === 4_000_000 && add.id !== inv.id)
   const legsAfter = (await admin.from('deals').select('id', { count: 'exact' }).eq('experience_id', exp.id).eq('leg_role', 'creator_leg')).count
   ok('existing_footage moved no creator leg', legsBefore === legsAfter)
-  await refused('an additional invoice without a source is refused (server)', () => draftServiceInvoice(admin, { experienceId: exp.id, brandId, kind: 'additional', perVideoPaise: 1, deliverableCount: 1 }))
-  await refused('…and by the database (CHECK si_additional_has_source)', () => admin.from('service_invoices').insert({ experience_id: exp.id, brand_id: brandId, kind: 'additional', subtotal_paise: 0, total_paise: 0 }))
-  const ns = await draftServiceInvoice(admin, { experienceId: exp.id, brandId, kind: 'additional', source: 'new_shoot', perVideoPaise: 350_000, deliverableCount: 5 })
+  await refused('an additional invoice without a source is refused by the database (CHECK si_additional_has_source)', () => admin.from('service_invoices').insert({ experience_id: exp.id, brand_id: brandId, kind: 'additional', description: 'Extra videos', subtotal_paise: 0, total_paise: 0 }))
+  const ns = await fixtureInvoice(admin, { experienceId: exp.id, brandId, kind: 'additional', source: 'new_shoot', subtotalPaise: 1_750_000 })
   ok('new_shoot invoice is created independently of any creator leg', ns.subtotalPaise === 1_750_000)
 
   // ── Issued invoices are frozen ──
   group('issued invoices are frozen')
-  await admin.from('service_invoices').update({ status: 'issued', issue_date: new Date().toISOString().slice(0, 10) }).eq('id', inv.id)
+  await admin.from('service_invoices').update(issuedFields()).eq('id', inv.id)
   await refused('changing an issued invoice\'s amount is refused (t_si_freeze)', () => admin.from('service_invoices').update({ subtotal_paise: 1, total_paise: 1, per_video_paise: null }).eq('id', inv.id))
   const paid = await admin.from('service_invoices').update({ status: 'paid', payment_reference: 'UTR-TEST-1', paid_at: new Date().toISOString() }).eq('id', inv.id).select('status').single()
   ok('recording the brand\'s payment on an issued invoice is allowed', paid.data?.status === 'paid', paid.error?.message)
@@ -115,28 +115,9 @@ async function run() {
   // ── P&L ── moved to scripts/test-experience-pnl-access.ts (migration 0526):
   // it is served only by experience_pnl() to a user with financial access.
 
-  // ── Payouts (manual provider) ──
-  group('vendor payouts: manual provider, no message')
-  let vendor = (await admin.from('vendors').select('id').eq('creator_id', C1.id).maybeSingle()).data as { id: string } | null
-  if (!vendor) { vendor = await one(admin.from('vendors').insert({ kind: 'creator', creator_id: C1.id, display_name: '[p2-test] vendor' }).select('id').single(), 'vendor'); const vid = vendor!.id; cleanup.push(() => admin.from('vendors').delete().eq('id', vid)) }
-  const actor = { id: '00000000-0000-0000-0000-000000000002', email: 'p2-test@guapd.internal' } as any
-  const notesBefore = (await admin.from('notifications').select('id', { count: 'exact', head: true })).count
-  const key = `p2-test-${exp.id}`
-  const p1 = await requestVendorPayout(admin, actor, { experienceId: exp.id, dealId: legA, vendorId: vendor!.id, amountPaise: tA.creatorNetPaise, reason: 'Day rate net of platform fee', idempotencyKey: key })
-  const p2 = await requestVendorPayout(admin, actor, { experienceId: exp.id, dealId: legA, vendorId: vendor!.id, amountPaise: tA.creatorNetPaise, reason: 'retry', idempotencyKey: key })
-  cleanup.push(() => admin.from('vendor_payouts').delete().eq('idempotency_key', key))
-  ok('same idempotency key twice → one payout', p1.id === p2.id)
-  await refused('recording payment before approval is refused', () => recordManualPayment(admin, actor, p1.id, 'UTR-X'))
-  const ap = await approveVendorPayout(admin, actor, p1.id)
-  ok('approved, with a timestamp', ap.status === 'approved' && !!ap.approved_at)
-  await refused('recording payment without a reference is refused', () => recordManualPayment(admin, actor, p1.id, '  '))
-  const pd = await recordManualPayment(admin, actor, p1.id, 'UTR123456789')
-  ok('paid with its reference', pd.status === 'paid' && pd.external_ref === 'UTR123456789' && !!pd.paid_at)
-  const notesAfter = (await admin.from('notifications').select('id', { count: 'exact', head: true })).count
-  ok('NO notification was sent for the manual payout', notesBefore === notesAfter, `${notesBefore} → ${notesAfter}`)
-  const audit = (await admin.from('ops_events').select('action').eq('target_table', 'vendor_payouts').eq('target_id', p1.id)).data ?? []
-  ok('ops_events written for request, approve and paid', ['vendor_payout.requested', 'vendor_payout.approved', 'vendor_payout.paid_manual'].every(a => audit.some((r: any) => r.action === a)))
-  cleanup.push(() => admin.from('ops_events').delete().eq('actor_email', 'p2-test@guapd.internal'))
+  // ── Payouts ── moved to scripts/test-experience-payouts.ts (0540): they go
+  // through access-checked database functions (maker-checker, proof), never the
+  // service role, so the Phase 2 payout service was retired.
 }
 
 run()

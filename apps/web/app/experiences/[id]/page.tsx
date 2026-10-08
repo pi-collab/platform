@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import ViewFile from './ViewFile'
+import InvoicePdf from './InvoicePdf'
+import { formatRupees } from '@/lib/experience-request'
 import './brand-experience.css'
 
 export const dynamic = 'force-dynamic'
@@ -17,6 +19,11 @@ export const dynamic = 'force-dynamic'
  * the link or file, when it was shared and the decision on record. Never other
  * versions, unreleased items, who submitted, Guapd's notes, handles, ids or
  * any money. Decisions are recorded by Guapd (brand self-service is Phase 6).
+ *
+ * Invoices (0540) come from brand_experience_invoices: the brand's own ISSUED
+ * and PAID invoices only (number, dates, the one service price, GST, total,
+ * whether it is paid) and the PDF. Never drafts, voids, notes, Guapd's costs,
+ * creator pay or anything about payouts.
  */
 interface BrandItem {
   release_id: string
@@ -30,6 +37,11 @@ interface BrandItem {
   decided_at: string | null
 }
 interface BrandView { title: string; brand_name: string; shoot_date: string | null; shoot_city: string | null; items: BrandItem[] }
+interface BrandInvoice {
+  invoice_id: string; number: string; issue_date: string; due_date: string | null; description: string
+  subtotal_paise: number; gst_paise: number; total_paise: number; paid_paise: number
+  status: 'due' | 'part_paid' | 'paid'; has_pdf: boolean
+}
 
 export default async function BrandExperiencePage({ params }: { params: { id: string } }) {
   await verifyBrand()
@@ -37,6 +49,8 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
   const { data, error } = await createClient().rpc('brand_experience_deliverables', { p_experience_id: params.id })
   if (error || !data) notFound()
   const v = data as BrandView
+  const inv = await createClient().rpc('brand_experience_invoices', { p_experience_id: params.id })
+  const invoices = (inv.error ? [] : ((inv.data as { invoices: BrandInvoice[] } | null)?.invoices ?? [])) as BrandInvoice[]
 
   const groups = new Map<string, BrandItem[]>()
   for (const i of v.items) {
@@ -85,6 +99,32 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
           ))
         )}
       </section>
+
+      {invoices.length > 0 && (
+        <section className="surface bx-card" aria-labelledby="bx-inv">
+          <h2 id="bx-inv" className="bx-h2">Invoices</h2>
+          <p className="bx-note">Guapd&apos;s invoices for this Experience. Pay by the details on the invoice; Guapd records your payment and marks it paid.</p>
+          {invoices.map((i) => (
+            <div key={i.invoice_id} className="bx-row">
+              <div>
+                <div className="bx-label">{i.number}</div>
+                <div className="bx-when">Issued {fmt(`${i.issue_date}T00:00:00`)}{i.due_date ? ` · due ${fmt(`${i.due_date}T00:00:00`)}` : ''}</div>
+                <div className="bx-when">{i.description}</div>
+              </div>
+              <div>
+                <div className="bx-label">{formatRupees(i.total_paise)}</div>
+                <div className="bx-when">{i.gst_paise ? `${formatRupees(i.subtotal_paise)} + ${formatRupees(i.gst_paise)} GST` : 'No GST charged'}{i.status === 'part_paid' ? ` · ${formatRupees(i.paid_paise)} received` : ''}</div>
+                {i.has_pdf && <div style={{ marginTop: 6 }}><InvoicePdf invoiceId={i.invoice_id} /></div>}
+              </div>
+              <div>
+                {i.status === 'paid' ? <span className="bx-chip bx-ok">Paid</span>
+                  : i.status === 'part_paid' ? <span className="bx-chip bx-new">Part paid</span>
+                  : <span className="bx-chip bx-chg">Due</span>}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
     </div>
   )
 }

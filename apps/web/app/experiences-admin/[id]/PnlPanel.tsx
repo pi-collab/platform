@@ -13,7 +13,7 @@ import { card, fieldLabel, formError, kpiLabel, pillBtn } from '../ui'
  * access, and fed only by experience_pnl(), which checks that access again in
  * Postgres (0537). One margin, two ways:
  *
- *   brand revenue (INVOICED; ₹0 and "pending invoice" until Phase 4)
+ *   brand revenue (INVOICED before GST; ₹0 and "pending invoice" until one is issued)
  *   − creator payouts at gross   (accepted legs only)
  *   − Guapd costs
  *   = sub-total
@@ -64,8 +64,13 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
 
       <div style={{ marginTop: 12 }}>
         {line('Brand revenue', pnl.revenue_pending_invoice ? '₹0' : formatRupees(n(pnl.brand_revenue_paise)), {
-          sub: pnl.revenue_pending_invoice ? 'Revenue pending invoice: counted once a service invoice is issued' : `Invoiced (${pnl.invoices_counted} invoice${pnl.invoices_counted === 1 ? '' : 's'}) · received ${formatRupees(n(pnl.brand_received_paise))}`,
+          sub: pnl.revenue_pending_invoice ? 'Revenue pending invoice: counted once a service invoice is issued' : `Invoiced before GST (${pnl.invoices_counted} invoice${pnl.invoices_counted === 1 ? '' : 's'})`,
         })}
+        {pnl.invoiced_vs_agreed_paise != null && n(pnl.invoiced_vs_agreed_paise) !== 0 && (
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#8C6417', padding: '0 0 6px 14px' }}>
+            Invoiced {n(pnl.invoiced_vs_agreed_paise) > 0 ? 'more' : 'less'} than agreed by {formatRupees(Math.abs(n(pnl.invoiced_vs_agreed_paise)))}
+          </div>
+        )}
         {pnl.brand_agreed_paise != null && line('Agreed with the brand', formatRupees(n(pnl.brand_agreed_paise)), { sub: 'Context only, not revenue until invoiced', muted: true, indent: true })}
         {line('Creator payouts (gross)', neg(n(pnl.creator_gross_total_paise)), { sub: `${pnl.legs_counted} accepted creator${pnl.legs_counted === 1 ? '' : 's'}` })}
         {line('Guapd costs', neg(n(pnl.guapd_costs_total_paise)))}
@@ -78,6 +83,17 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
         </div>
         <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 6 }}>= revenue − what Guapd pays creators (net) − costs</div>
       </div>
+
+      {pnl.invoiced_total_paise != null && (
+        <div style={{ marginTop: 16 }}>
+          <div style={kpiLabel}>Cash</div>
+          {line('Received from the brand', formatRupees(n(pnl.brand_received_paise)), { sub: `Of ${formatRupees(n(pnl.invoiced_total_paise))} invoiced incl. GST${n(pnl.brand_tds_withheld_paise) ? ` · TDS withheld ${formatRupees(n(pnl.brand_tds_withheld_paise))}` : ''}` })}
+          {line('Outstanding', formatRupees(n(pnl.brand_outstanding_paise)), { muted: !n(pnl.brand_outstanding_paise), indent: true })}
+          {n(pnl.gst_liability_paise) > 0 && line('GST billed', formatRupees(n(pnl.gst_liability_paise)), { sub: 'Collected for the government: a liability, not revenue', muted: true, indent: true })}
+          {line('Paid to creators', formatRupees(n(pnl.creator_paid_out_paise)), { sub: `${pnl.creator_payouts_paid ?? 0} paid · ${pnl.creator_payouts_due ?? 0} still to pay${n(pnl.creator_tds_withheld_paise) ? ` · TDS withheld ${formatRupees(n(pnl.creator_tds_withheld_paise))}` : ''}` })}
+          {(pnl.invoices_draft ?? 0) > 0 && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-soft)' }}>{pnl.invoices_draft} draft invoice{pnl.invoices_draft === 1 ? '' : 's'}: not counted until issued.</div>}
+        </div>
+      )}
 
       {(pnl.per_leg ?? []).length > 0 && (
         <div style={{ marginTop: 18 }}>
@@ -101,7 +117,7 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
 
       {status === 'complete' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline)', flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>Frozen at Complete. A late cost needs a reopen.</span>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>Frozen at Complete. A late cost needs a reopen, which clears both sign-offs.</span>
           <button type="button" style={pillBtn} onClick={() => { setReason(''); setError(null); setConfirm(true) }}>Reopen</button>
         </div>
       )}

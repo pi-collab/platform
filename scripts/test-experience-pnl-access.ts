@@ -21,7 +21,8 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '../apps/web/lib/supabase/admin'
-import { lockCreatorLegTerms, draftServiceInvoice } from '../apps/web/lib/experience-legs-server'
+import { lockCreatorLegTerms } from '../apps/web/lib/experience-legs-server'
+import { fixtureInvoice } from './fixture-invoice'
 import { experienceMargin } from '../apps/web/lib/experience-money'
 
 const admin = createAdminClient()
@@ -88,6 +89,7 @@ async function run() {
   cleanup.push(async () => {
     await admin.from('vendor_payouts').delete().eq('experience_id', expId)
     await admin.from('experience_cost_lines').delete().eq('experience_id', expId)
+    await admin.from('service_invoice_payments').delete().eq('experience_id', expId)
     await admin.from('service_invoices').delete().eq('experience_id', expId)
     await admin.from('experience_creator_terms').delete().eq('experience_id', expId)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', expId)
@@ -99,19 +101,20 @@ async function run() {
   await admin.from('deals').update({ status: 'negotiating' }).eq('id', legB)
   await one(admin.from('experience_creator_terms').insert({ deal_id: legB, experience_id: expId, creator_id: c2!.id, creator_gross_paise: 0, platform_pct: 30, creator_net_paise: 0 }).select('deal_id').single(), 'pending terms')
 
-  const inv1 = await draftServiceInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'initial', perVideoPaise: 350_000, deliverableCount: 70 })
-  await admin.from('service_invoices').update({ status: 'issued' }).eq('id', inv1.id)
-  const inv2 = await draftServiceInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'additional', source: 'existing_footage', perVideoPaise: 350_000, deliverableCount: 10, miscPaise: 500_000 })
-  await admin.from('service_invoices').update({ status: 'issued' }).eq('id', inv2.id)
-  await admin.from('service_invoices').update({ status: 'paid', payment_reference: 'UTR-PNL', paid_at: new Date().toISOString() }).eq('id', inv2.id)
-  await draftServiceInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'additional', source: 'new_shoot', perVideoPaise: 350_000, deliverableCount: 5 }) // stays draft: excluded
+  // 0540: invoices are written as fixtures (production drafts and issues them only through the console functions).
+  await fixtureInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'initial', subtotalPaise: 24_500_000, status: 'issued' })
+  const paidInv = await fixtureInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'additional', source: 'existing_footage', subtotalPaise: 4_000_000, status: 'paid' })
+  // 0540: "received" is the payments recorded against live invoices, not an invoice's status.
+  await one(admin.from('service_invoice_payments').insert({ invoice_id: paidInv.id, experience_id: expId, amount_paise: 4_000_000, tds_paise: 0,
+    received_on: new Date().toISOString().slice(0, 10), method: 'bank_transfer', reference: 'UTR-PNL', proof_path: `invoice-payment/${paidInv.id}/fixture/proof.png` }).select('id').single(), 'payment')
+  await fixtureInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'additional', source: 'new_shoot', subtotalPaise: 1_750_000 }) // stays draft: excluded
   await one(admin.from('experience_cost_lines').insert([
     { experience_id: expId, label: 'Travel', category: 'travel', basis: 'flat_total', total_paise: 150_000, provided_by: 'guapd' },
     { experience_id: expId, label: 'Makeup (brand provides)', category: 'makeup', basis: 'flat_total', total_paise: 50_000, provided_by: 'brand' },
   ]).select('id'), 'costs')
   let vendor = (await admin.from('vendors').select('id').eq('creator_id', C.id).maybeSingle()).data as any
   if (!vendor) { vendor = await one(admin.from('vendors').insert({ kind: 'creator', creator_id: C.id, display_name: '[pnl-test] vendor' }).select('id').single(), 'v'); const vid = vendor.id; cleanup.push(() => admin.from('vendors').delete().eq('id', vid)) }
-  await one(admin.from('vendor_payouts').insert({ experience_id: expId, deal_id: legA, vendor_id: vendor.id, reason: 'Day rate', amount_paise: tA.creatorNetPaise, net_amount_paise: tA.creatorNetPaise, idempotency_key: `pnl-test-${expId}` }).select('id').single(), 'payout')
+  await one(admin.from('vendor_payouts').insert({ experience_id: expId, deal_id: legA, vendor_id: vendor.id, reason: 'creator_fee', gross_paise: tA.creatorGrossPaise, platform_pct: tA.platformPct, platform_fee_paise: tA.creatorGrossPaise - tA.creatorNetPaise, amount_paise: tA.creatorNetPaise, net_amount_paise: tA.creatorNetPaise, idempotency_key: `pnl-test-${expId}` }).select('id').single(), 'payout')
 
   const fin = await sessionFor(FIN.auth_id), ops = await sessionFor(OPS.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(brandM.users.auth_id), creator = await sessionFor(C.users.auth_id)
@@ -125,7 +128,7 @@ async function run() {
   ok('margin = brand − Σ NET − costs, and equals the code\'s experienceMargin()', Number(p?.guapd_margin_paise) === want.guapdMarginPaise, `₹${(Number(p?.guapd_margin_paise) / 100).toFixed(2)}`)
   ok('sub-total (at gross) and fee kept match too, and reconcile', Number(p?.subtotal_paise) === want.subtotalPaise && Number(p?.platform_fee_kept_paise) === want.platformFeeKeptPaise && Number(p?.subtotal_paise) + Number(p?.platform_fee_kept_paise) === Number(p?.guapd_margin_paise))
   ok('revenue counts issued + paid invoices only (draft excluded): ₹2,85,000', Number(p?.brand_revenue_paise) === 28_500_000)
-  ok('received = paid invoices only: ₹40,000', Number(p?.brand_received_paise) === 4_000_000)
+  ok('received = payments recorded on live invoices (0540): ₹40,000', Number(p?.brand_received_paise) === 4_000_000)
   ok('costs = lines Guapd bears only (brand-provided makeup excluded): ₹1,500', Number(p?.guapd_costs_total_paise) === 150_000)
   ok('unagreed leg counted as pending, not as cost', Number(p?.legs_pending) === 1 && p?.per_leg?.length === 1)
   ok('per-leg breakdown carries that leg\'s own % and fee', Number(p?.per_leg?.[0]?.platform_pct) === tA.platformPct && Number(p?.per_leg?.[0]?.platform_fee_paise) === tA.platformFeePaise)

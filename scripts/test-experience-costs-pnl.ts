@@ -18,11 +18,13 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms, costLineTotalPaise, experienceMargin } from '../apps/web/lib/experience-money'
+import { fixtureInvoice } from './fixture-invoice'
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 let passed = 0, failed = 0
 const ok = (n: string, c: boolean, d = '') => { c ? passed++ : failed++; console.log(`  ${c ? '✅' : '❌'} ${n}${d ? ' — ' + d : ''}`) }
 const group = (g: string) => console.log(`\n${g}`)
 const refused = (r: { error: { message: string } | null }) => !!r.error
+const said = (r: { error: { message: string } | null }, re: RegExp) => !!r.error && re.test(r.error.message)
 let E = '', startedAt = ''
 const grants: string[] = []
 const legDeals: string[] = []
@@ -163,11 +165,11 @@ async function run() {
   ok('every cost write is audited', audits.filter((a) => a === 'experience.cost_added').length === 4 && audits.includes('experience.cost_removed'), audits.join(','))
 
   group('the margin: one number, two ways, stored while open')
-  const { data: inv1, error: invErr } = await admin.from('service_invoices').insert({ experience_id: E, brand_id: B.brand_id, kind: 'initial', status: 'issued', per_video_paise: 2500000, deliverable_count: 4, misc_paise: 0, lines: [], subtotal_paise: 10000000, total_paise: 10000000 }).select('id').single()
-  if (invErr) throw new Error('invoice: ' + invErr.message)
-  invoices.push(inv1!.id)
-  const { data: inv2 } = await admin.from('service_invoices').insert({ experience_id: E, brand_id: B.brand_id, kind: 'additional', source: 'existing_footage', status: 'draft', per_video_paise: 2500000, deliverable_count: 2, misc_paise: 0, lines: [], subtotal_paise: 5000000, total_paise: 5000000 }).select('id').single()
-  if (inv2) invoices.push(inv2.id)
+  // 0540: invoice fixtures (production issues them only through the finance console functions).
+  const inv1 = await fixtureInvoice(admin, { experienceId: E, brandId: B.brand_id, kind: 'initial', subtotalPaise: 10000000, status: 'issued' })
+  invoices.push(inv1.id)
+  const inv2 = await fixtureInvoice(admin, { experienceId: E, brandId: B.brand_id, kind: 'additional', source: 'existing_footage', subtotalPaise: 5000000 })
+  invoices.push(inv2.id)
   p = await pnlOf(fin)
   const costTotal = 900000 + perUnit
   const m = experienceMargin({ brandInvoiceSubtotalsPaise: [10000000], creatorLegs: [G.id, D.id].map((id) => ({ creatorGrossPaise: gross[id], creatorNetPaise: net[id] })), guapdCostsPaise: [costTotal] })
@@ -183,7 +185,11 @@ async function run() {
 
   group('complete freezes; late costs need an audited reopen (decision d)')
   await admin.from('experiences').update({ status: 'delivering' }).eq('id', E)
-  ok('operational staff can mark it Complete', !refused(await op.rpc('experience_console_complete', { p_experience_id: E })))
+  // 0540: Complete is gated (deliverables approved, invoices paid, creators paid, both sign-offs):
+  // tested in test-experience-payouts.ts. Here the freeze itself is what is tested, so the
+  // status is set directly once the gate is shown to refuse.
+  ok('Complete is refused until everything is delivered, invoiced, paid and signed off (0540)', said(await op.rpc('experience_console_complete', { p_experience_id: E }), /Not ready to complete/))
+  await admin.from('experiences').update({ status: 'complete' }).eq('id', E)
   st = await stored()
   const frozen = Number(st.guapd_margin_paise)
   ok('the P&L is now final', st.is_final === true && (await pnlOf(fin)).source === 'snapshot')
@@ -197,7 +203,8 @@ async function run() {
   ok('reopen un-freezes and recomputes (the declined creator drops out)', st.is_final === false && Number(st.guapd_margin_paise) === 10000000 - (net[G.id] + net[D.id]) - costTotal)
   ok('the late cost can now be added', !refused(await add(op, { p_label: 'Late makeup invoice', p_total_paise: 150000 })))
   ok('…and it reaches the stored margin', Number((await stored()).guapd_margin_paise) === 10000000 - (net[G.id] + net[D.id]) - costTotal - 150000)
-  ok('complete again re-freezes', !refused(await op.rpc('experience_console_complete', { p_experience_id: E })) && (await stored()).is_final === true)
+  await admin.from('experiences').update({ status: 'complete' }).eq('id', E)
+  ok('complete again re-freezes', (await stored()).is_final === true)
   const ra = (await admin.from('ops_events').select('detail').eq('target_id', E).eq('action', 'experience.reopened')).data ?? []
   ok('the reopen is audited with its reason, and no margin figure in the audit row', ra.length === 1 && (ra[0].detail as any).reason === 'Makeup invoice arrived late' && !JSON.stringify(ra[0].detail).includes('margin'))
 

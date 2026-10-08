@@ -566,3 +566,175 @@ export async function decideConsoleRelease(releaseId: string, decision: 'approve
   const { error } = await createClient().rpc('experience_console_release_decide', { p_release_id: releaseId, p_decision: decision, p_channel: channel, p_note: note })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+
+// ── 0540: invoices (FINANCIAL), payouts (operational), completion ──────────
+// Every call runs with the signed-in user's session; the database checks
+// financial access for invoices, payments and billing details, operational
+// access for payouts and completion. The service role is used by the actions
+// only to sign storage links and upload slots for paths these functions return.
+
+export interface FinanceSettings {
+  legal_name: string; address: string; state: string; gstin: string | null; gst_registered: boolean
+  pan: string | null; payment_instructions: string | null; updated_at: string
+}
+export interface BrandBilling {
+  brand_id: string; legal_name: string; address: string; state: string; gstin: string | null; pan: string | null
+  has_certificate: boolean; updated_at: string
+}
+export interface InvoicePayment {
+  id: string; amount_paise: number; tds_paise: number; received_on: string; method: string; reference: string
+  recorded_at: string; recorded_by_name: string | null; reversed_at: string | null; reversed_reason: string | null
+}
+export interface ConsoleInvoice {
+  id: string; kind: 'initial' | 'additional' | 'follow_on'; source: string | null; number: string | null
+  status: 'draft' | 'issued' | 'paid' | 'void'; description: string
+  subtotal_paise: number; gst_rate_pct: number | null; cgst_paise: number | null; sgst_paise: number | null; igst_paise: number | null
+  total_paise: number; gst_registered: boolean | null; issue_date: string | null; due_date: string | null; issued_at: string | null
+  has_pdf: boolean; void_reason: string | null; voided_at: string | null; paid_paise: number; outstanding_paise: number
+  updated_at: string; payments: InvoicePayment[]
+}
+export interface ConsoleInvoices {
+  experience_id: string; status: string; title: string; brand_id: string; brand_name: string; agreed_paise: number | null
+  settings: FinanceSettings | null; billing: BrandBilling | null; invoices: ConsoleInvoice[]
+}
+export interface InvoiceDraftInput {
+  kind: 'initial' | 'additional'; source: 'existing_footage' | 'new_shoot' | null; description: string
+  subtotalPaise: number; gstRatePct: number | null; cgstPaise: number | null; sgstPaise: number | null; igstPaise: number | null
+  dueDate: string | null
+}
+
+export async function getConsoleInvoices(experienceId: string): Promise<Result<ConsoleInvoices>> {
+  const { data, error } = await createClient().rpc('experience_console_invoices', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleInvoices }
+}
+export async function setFinanceSettings(s: { legalName: string; address: string; state: string; gstin: string | null; gstRegistered: boolean; pan: string | null; paymentInstructions: string | null }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_set_finance_settings', {
+    p_legal_name: s.legalName, p_address: s.address, p_state: s.state, p_gstin: s.gstin, p_gst_registered: s.gstRegistered,
+    p_pan: s.pan, p_payment_instructions: s.paymentInstructions,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function setBrandBilling(brandId: string, b: { legalName: string; address: string; state: string; gstin: string | null; pan: string | null; certificatePath: string | null }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_set_brand_billing', {
+    p_brand_id: brandId, p_legal_name: b.legalName, p_address: b.address, p_state: b.state, p_gstin: b.gstin, p_pan: b.pan, p_certificate_path: b.certificatePath,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+const draftArgs = (d: InvoiceDraftInput) => ({
+  p_kind: d.kind, p_source: d.source, p_description: d.description, p_subtotal_paise: d.subtotalPaise,
+  p_gst_rate_pct: d.gstRatePct, p_cgst_paise: d.cgstPaise, p_sgst_paise: d.sgstPaise, p_igst_paise: d.igstPaise, p_due_date: d.dueDate,
+})
+export async function draftConsoleInvoice(experienceId: string, d: InvoiceDraftInput): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_draft', { p_experience_id: experienceId, ...draftArgs(d) })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function updateConsoleInvoice(invoiceId: string, d: InvoiceDraftInput): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_update', { p_invoice_id: invoiceId, ...draftArgs(d) })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function discardConsoleInvoice(invoiceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_discard', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function issueConsoleInvoice(invoiceId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_issue', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleInvoiceDoc(invoiceId: string): Promise<Result<Record<string, unknown>>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_doc', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as Record<string, unknown> }
+}
+export async function consoleInvoicePdfPath(invoiceId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_pdf_path', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function setConsoleInvoicePdf(invoiceId: string, path: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_set_pdf', { p_invoice_id: invoiceId, p_path: path })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function voidConsoleInvoice(invoiceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_void', { p_invoice_id: invoiceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function addInvoicePayment(invoiceId: string, p: { amountPaise: number; tdsPaise: number; receivedOn: string; method: string; reference: string; proofPath: string }): Promise<Result<{ payment_id: string; settled: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_payment_add', {
+    p_invoice_id: invoiceId, p_amount_paise: p.amountPaise, p_tds_paise: p.tdsPaise, p_received_on: p.receivedOn,
+    p_method: p.method, p_reference: p.reference, p_proof_path: p.proofPath,
+  })
+  return error ? fail(error) : { ok: true, data: data as { payment_id: string; settled: boolean } }
+}
+export async function reverseInvoicePayment(paymentId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_payment_reverse', { p_payment_id: paymentId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export type FinanceUploadKind = 'invoice-payment' | 'brand-certificate' | 'payout-proof'
+export type FinanceFileKind = 'invoice-pdf' | 'invoice-payment' | 'brand-certificate' | 'payout-proof'
+export async function financeUploadSlot(kind: FinanceUploadKind, targetId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_finance_upload_slot', { p_kind: kind, p_target_id: targetId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleFinanceFile(kind: FinanceFileKind, id: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_finance_file', { p_kind: kind, p_id: id })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export interface ConsolePayout {
+  id: string; status: 'requested' | 'approved' | 'processing' | 'paid' | 'failed'
+  amount_paise: number; tds_paise: number; net_amount_paise: number
+  requested_by_name: string | null; requested_at: string; approved_by_name: string | null; approved_at: string | null
+  paid_on: string | null; method: string | null; reference: string | null; has_proof: boolean; i_requested: boolean
+}
+export interface ConsolePayoutLeg {
+  deal_id: string; creator_id: string; full_name: string | null; deal_status: string; shoot_outcome: string | null
+  work_complete: boolean; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  upi_id: string | null; cancelled_before: number; payout: ConsolePayout | null
+}
+export interface ConsolePayouts { experience_id: string; status: string; legs: ConsolePayoutLeg[] }
+
+export async function getConsolePayouts(experienceId: string): Promise<Result<ConsolePayouts>> {
+  const { data, error } = await createClient().rpc('experience_console_payouts', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsolePayouts }
+}
+export async function requestPayout(dealId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_payout_request', { p_deal_id: dealId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function setPayoutTds(payoutId: string, tdsPaise: number): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_set_tds', { p_payout_id: payoutId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function approvePayout(payoutId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_approve', { p_payout_id: payoutId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function markPayoutPaid(payoutId: string, p: { paidOn: string; method: string; reference: string; proofPath: string }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_paid', {
+    p_payout_id: payoutId, p_paid_on: p.paidOn, p_method: p.method, p_reference: p.reference, p_proof_path: p.proofPath,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function cancelPayout(payoutId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_cancel', { p_payout_id: payoutId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export interface ConsoleCompletion {
+  status: string; deliverables_ok: boolean; invoices_ok: boolean; payouts_ok: boolean; brand_signed_off: boolean
+  invoices_live: number; invoices_unpaid: number; invoices_draft: number; creators_to_pay: number; creators_paid: number
+  can_complete: boolean; blockers: string[]
+  brand_signoff_at: string | null; brand_signoff_channel: string | null; brand_signoff_note: string | null; brand_signoff_by_name: string | null
+  guapd_signoff_at: string | null; guapd_signoff_by_name: string | null
+}
+export async function getConsoleCompletion(experienceId: string): Promise<Result<ConsoleCompletion>> {
+  const { data, error } = await createClient().rpc('experience_console_completion', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleCompletion }
+}
+export async function recordBrandSignoff(experienceId: string, channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_brand_signoff', { p_experience_id: experienceId, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function clearBrandSignoff(experienceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_brand_signoff_clear', { p_experience_id: experienceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}

@@ -17,8 +17,8 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * which approved items to SHARE with the brand. The brand sees only what is
  * shared, at the version shared (brand_experience_deliverables, 0538).
  *
- * The readiness box is the check the two-party completion piece will gate
- * Complete on. It does not gate anything yet. No money here.
+ * The readiness box is one of the checks Complete is gated on (0540, see
+ * CompletionPanel). No money here.
  */
 const ITEM: Record<string, { label: string; tone: ChipTone }> = {
   pending:   { label: 'Waiting for content', tone: 'neutral' },
@@ -148,7 +148,7 @@ export default function DeliverablesPanel({ experienceId, data }: { experienceId
           {progress.over_shared && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#8C6417', marginTop: 6 }}>More shared than the brand bought. That is allowed (a bonus), just make sure it is meant.</div>}
           <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: progress.ready ? 'var(--ink)' : 'var(--ink-soft)', marginTop: 6 }}>
             {progress.ready ? 'Ready for sign-off: everything sold is approved by the brand.' : `Not ready for sign-off yet${progress.gaps.length ? `: ${progress.gaps.map((g) => `${g.type} ${g.approved} of ${g.sold} approved`).join(', ')}` : ''}.`}
-            {' '}This does not block Complete yet; the sign-off step will.
+            {' '}Complete waits for this (see Completion).
           </div>
         </div>
       )}

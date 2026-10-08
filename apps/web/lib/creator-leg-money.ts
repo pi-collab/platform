@@ -41,11 +41,26 @@ export interface CreatorLegContext {
   shoot_outcome?: 'done' | 'did_not_shoot' | null
   /** Who provides the deliverables on this shoot: Guapd, or the creator. */
   deliverables_owner?: 'guapd' | 'creator'
-  /** The creator's part is done (payable by Guapd; payouts are Phase 4). */
+  /** The creator's part is done: Guapd can pay them (0540 payouts). */
   work_complete?: boolean
   /** Creator-submit shoots: the creator can submit now. */
   can_submit?: boolean
   items?: CreatorLegItem[]
+  /** 0540: the live payout to them for this deal, as their statement. Null until Guapd requests it. */
+  payout?: CreatorLegPayout | null
+}
+
+/** gross → platform fee → net → TDS → paid. Reference only once paid; never the proof or who approved it. */
+export interface CreatorLegPayout {
+  status: 'requested' | 'approved' | 'processing' | 'paid'
+  gross_paise: number
+  platform_pct: number
+  platform_fee_paise: number
+  net_paise: number
+  tds_paise: number
+  paid_paise: number
+  paid_on: string | null
+  reference: string | null
 }
 
 /** One of the creator's own deliverables. Link, file and note only on creator-submit shoots. */

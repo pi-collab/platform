@@ -110,12 +110,28 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
           </section>
         )}
 
+        {accepted && shot && ctx.payout && (
+          <section className="surface leg-card" aria-labelledby="leg-payout">
+            <h2 id="leg-payout" className="leg-h2">Your payout</h2>
+            <div className="leg-statement">
+              <div><span>Your rate</span><span>{formatPaiseINR(ctx.payout.gross_paise)}</span></div>
+              <div><span>Guapd platform fee ({Number(ctx.payout.platform_pct)}%)</span><span>−{formatPaiseINR(ctx.payout.platform_fee_paise)}</span></div>
+              <div className="leg-statement-sub"><span>Your net</span><span>{formatPaiseINR(ctx.payout.net_paise)}</span></div>
+              <div><span>TDS withheld</span><span>{ctx.payout.tds_paise ? `−${formatPaiseINR(ctx.payout.tds_paise)}` : formatPaiseINR(0)}</span></div>
+              <div className="leg-statement-total"><span>{ctx.payout.status === 'paid' ? 'Paid to you' : 'To be paid to you'}</span><span>{formatPaiseINR(ctx.payout.paid_paise)}</span></div>
+            </div>
+            {ctx.payout.status === 'paid'
+              ? <p className="leg-status-done">Paid{ctx.payout.paid_on ? ` on ${new Date(`${ctx.payout.paid_on}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}. Bank reference: {ctx.payout.reference}.</p>
+              : <p className="leg-body">{ctx.payout.status === 'requested' ? 'Guapd is preparing your payout.' : 'Approved. Guapd is sending your payout.'}</p>}
+          </section>
+        )}
+
         <section className="surface leg-card" id="decision" aria-labelledby="leg-decision">
           <h2 id="leg-decision" className="leg-h2">{open ? 'Your answer' : 'Status'}</h2>
           {open && <LegRespond dealId={dealId} netLabel={m ? formatPaiseINR(m.netPaise) : null} />}
           {accepted && !ctx.shoot_outcome && <p className="leg-body">You accepted this shoot. Guapd will confirm the details with you before the day.</p>}
           {accepted && shot && (ctx.work_complete
-            ? <p className="leg-status-done">Shoot done. Your part is complete. Guapd tells you when your payout is sent.</p>
+            ? <p className="leg-status-done">Shoot done. Your part is complete. {ctx.payout?.status === 'paid' ? 'Your payout has been sent.' : 'Guapd tells you when your payout is sent.'}</p>
             : <p className="leg-body">Shoot done. Your part is complete once Guapd approves your deliverables.</p>)}
           {accepted && noShoot && <p className="leg-body">This shoot did not go ahead for you.</p>}
           {declined && <p className="leg-body">You declined this offer.</p>}

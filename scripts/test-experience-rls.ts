@@ -126,12 +126,15 @@ async function run() {
   const line = must(await admin.from('experience_cost_lines').insert({ experience_id: exp.id, creator_leg_deal_id: leg2.id, label: 'Makeup artist', category: 'makeup',
     // 0537: vendor linking / re-billing are Phase 4 and refused by ecl_not_billed_yet; creator pay lives on legs.
     basis: 'per_unit', quantity: 1, unit_rate_paise: 1_000_000, total_paise: 1_000_000, provided_by: 'guapd', billable_to_brand: false }).select('id').single(), 'cost line')
+  // 0540: invoices are numbered at issue by experience_console_invoice_issue; this fixture writes an issued row directly.
   const inv = must(await admin.from('service_invoices').insert({ experience_id: exp.id, brand_id: brandId, kind: 'initial', status: 'issued',
-    lines: [{ label: 'UGC production service', amount_paise: 24_500_000 }], subtotal_paise: 24_500_000, total_paise: 24_500_000 }).select('id, number').single(), 'invoice')
+    number: `GPD/99-00/${String(Date.now()).slice(-4)}`, issue_date: new Date().toISOString().slice(0, 10), issued_at: new Date().toISOString(),
+    supplier_legal_name: '[rls-test] Guapd', recipient_legal_name: '[rls-test] Brand', description: 'UGC production service',
+    lines: [{ description: 'UGC production service', amount_paise: 24_500_000 }], subtotal_paise: 24_500_000, total_paise: 24_500_000 }).select('id, number').single(), 'invoice')
   const fo = must(await admin.from('deal_follow_ons').insert({ experience_id: exp.id, deal_id: leg2.id, creator_id: C.id, type: 'affiliate', trigger: 'sales_final',
     basis: 'pct_of_sales', invoicer: 'creator', pct: 5 }).select('id').single(), 'follow-on')
   const payout = must(await admin.from('vendor_payouts').insert({ experience_id: exp.id, deal_id: leg2.id, vendor_id: vendor.id, cost_line_id: line.id,
-    reason: 'Day rate (net of 30%)', amount_paise: 700_000, net_amount_paise: 700_000, idempotency_key: `rls-test-${exp.id}` }).select('id').single(), 'payout')
+    reason: 'cost_line', amount_paise: 700_000, net_amount_paise: 700_000, idempotency_key: `rls-test-${exp.id}` }).select('id').single(), 'payout')
   const hadPrivate = !!(await admin.from('creator_private').select('creator_id').eq('creator_id', C.id).maybeSingle()).data
   if (!hadPrivate) must(await admin.from('creator_private').insert({ creator_id: C.id, shoot_day_rate_paise: 1_000_000, pan: 'ABCDE1234F' }).select('creator_id').single(), 'creator_private')
   cleanup.push(async () => {
@@ -167,8 +170,8 @@ async function run() {
   await allowed(GB, 'own Experience (service price only)', brand.from('experiences').select('id, title, status, brand_service_total_paise').eq('id', exp.id), 1,
     r => r[0].brand_service_total_paise === 24_500_000 ? null : 'wrong service price')
   await allowed(GB, 'own Leg 1 deal', brand.from('deals').select('id, price_paise').eq('id', leg1.id))
-  await allowed(GB, 'own service invoice', brand.from('service_invoices').select('id, number, total_paise').eq('id', inv.id), 1,
-    r => /^GUAPD\/\d\d-\d\d\/\d{4}$/.test(r[0].number) ? null : `bad number ${r[0].number}`)
+  // 0540: no direct invoice read for anyone; the brand reads issued invoices through brand_experience_invoices (§107).
+  await refused(GB, 'own service invoice, read directly (0540: through brand_experience_invoices only)', brand.from('service_invoices').select('id, number, total_paise').eq('id', inv.id))
   await allowed(GB, 'own roster (profiles, no money columns exist)', brand.from('experience_roster').select('creator_id, brand_decision, locked').eq('experience_id', exp.id))
 
   // ── CREATOR: own rate / 30% / net only; never margin or Leg 1 ──────────────
@@ -189,7 +192,8 @@ async function run() {
     r => r[0].creator_gross_paise === 1_000_000 && Number(r[0].platform_pct) === 30 && r[0].creator_net_paise === 700_000 ? null : JSON.stringify(r[0]))
   await allowed(GCO, 'own Leg 2 deal', creator.from('deals').select('id').eq('id', leg2.id))
   await allowed(GCO, 'visible item on own leg', creator.from('deal_deliverable_items').select('id').eq('deal_id', leg2.id))
-  await allowed(GCO, 'own payout (status)', creator.from('vendor_payouts').select('net_amount_paise, status').eq('id', payout.id))
+  // 0540: the creator reads their payout statement through creator_leg_context only.
+  await refused(GCO, 'own payout, read directly (0540: through creator_leg_context only)', creator.from('vendor_payouts').select('net_amount_paise, status').eq('id', payout.id))
   await allowed(GCO, 'own follow-on (pct)', creator.from('deal_follow_ons').select('pct, status').eq('id', fo.id))
 
   // ── Cross-creator ──────────────────────────────────────────────────────────

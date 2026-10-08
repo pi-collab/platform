@@ -10,12 +10,20 @@ import {
   scheduleConsoleShoot, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
   itemUploadSlot, attachConsoleItem, reviewConsoleItem, consoleItemFile,
   releaseConsoleItems, withdrawConsoleRelease, decideConsoleRelease,
+  setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
+  draftConsoleInvoice, updateConsoleInvoice, discardConsoleInvoice, issueConsoleInvoice, consoleInvoiceDoc,
+  consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
+  getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout,
+  recordBrandSignoff, clearBrandSignoff,
+  type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
+import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove } from '@/lib/experience-money-notify'
+import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
@@ -540,5 +548,288 @@ export async function recordBrandDecision(experienceId: string, releaseId: strin
   const r = await decideConsoleRelease(releaseId, decision, channel, n)
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`)
+  return r
+}
+
+
+// ── 0540: invoices (finance), payouts (operational), completion ───────────
+// The database decides access on every call: financial for invoices, payments
+// and billing details; operational for payouts, sign-offs and Complete. The
+// service role is used only for storage: to sign an upload slot or a short
+// link for a path a database function has just returned to this caller, and to
+// store the invoice PDF at the path the database names.
+
+const FINANCE_BUCKET = 'finance-docs'
+const PAY_METHODS = ['bank_transfer', 'upi', 'cheque', 'cash', 'other'] as const
+const PAYOUT_METHODS = ['bank_transfer', 'upi', 'other'] as const
+const SIGNOFF_CHANNELS = ['whatsapp', 'email', 'call', 'in_person'] as const
+const money = (v: unknown, allowZero = false): number | null => {
+  const p = rupeesToPaise(typeof v === 'number' ? String(v) : (v as string))
+  return p == null || (!allowZero && p <= 0) ? null : p
+}
+const pastOrToday = (v: unknown) => {
+  const d = isoDate(v)
+  if (!d) return null
+  const today = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
+  return d <= today ? d : null
+}
+const refresh = (experienceId: string) => { revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`) }
+
+export interface FinanceSettingsForm { legalName: string; address: string; state: string; gstin: string; gstRegistered: boolean; pan: string; paymentInstructions: string }
+export async function saveFinanceSettings(experienceId: string, f: FinanceSettingsForm): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  const legalName = cleanText(f.legalName, 200), address = cleanText(f.address, 500), state = cleanText(f.state, 60)
+  if (!legalName || !address || !state) return { ok: false, error: 'Legal name, address and state are required.' }
+  if (typeof f.gstRegistered !== 'boolean') return { ok: false, error: 'Say whether Guapd is GST-registered.' }
+  const gstin = cleanText(f.gstin, 15)?.toUpperCase() ?? null
+  if (f.gstRegistered && !gstin) return { ok: false, error: 'A GST-registered business has a GSTIN.' }
+  const r = await setFinanceSettings({ legalName, address, state, gstin, gstRegistered: f.gstRegistered, pan: cleanText(f.pan, 10)?.toUpperCase() ?? null, paymentInstructions: cleanText(f.paymentInstructions, 1000) })
+  if (r.ok && isUuid(experienceId)) refresh(experienceId)
+  return r
+}
+
+export interface BrandBillingForm { legalName: string; address: string; state: string; gstin: string; pan: string; certificatePath?: string | null }
+export async function saveBrandBilling(experienceId: string, brandId: string, f: BrandBillingForm): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(brandId)) return { ok: false, error: 'Unknown brand.' }
+  const legalName = cleanText(f.legalName, 200), address = cleanText(f.address, 500), state = cleanText(f.state, 60)
+  if (!legalName || !address || !state) return { ok: false, error: 'Legal name, address and state are required.' }
+  const r = await setBrandBilling(brandId, { legalName, address, state, gstin: cleanText(f.gstin, 15)?.toUpperCase() ?? null, pan: cleanText(f.pan, 10)?.toUpperCase() ?? null, certificatePath: cleanText(f.certificatePath, 600) })
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+/** An upload slot for a proof or certificate: the database names the path; the service role signs an upload for exactly it. */
+export async function startFinanceUpload(kind: FinanceUploadKind, targetId: string, fileName: string): Promise<Out<{ path: string; token: string }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!['invoice-payment', 'brand-certificate', 'payout-proof'].includes(kind) || !isUuid(targetId) || typeof fileName !== 'string') return { ok: false, error: 'Unknown upload.' }
+  const slot = await financeUploadSlot(kind, targetId, fileName.slice(0, 200))
+  if (!slot.ok) return slot
+  const { data, error } = await createAdminClient().storage.from(FINANCE_BUCKET).createSignedUploadUrl(slot.data)
+  if (error || !data) return { ok: false, error: 'Could not start the upload. Try again.' }
+  return { ok: true, data: { path: data.path, token: data.token } }
+}
+
+/** A 10-minute link to an invoice PDF, payment proof, certificate or payout proof, after the database checks the caller. */
+export async function openFinanceFile(kind: FinanceFileKind, id: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!['invoice-pdf', 'invoice-payment', 'brand-certificate', 'payout-proof'].includes(kind) || !isUuid(id)) return { ok: false, error: 'Unknown file.' }
+  const f = await consoleFinanceFile(kind, id)
+  if (!f.ok) return f
+  const { data, error } = await createAdminClient().storage.from(FINANCE_BUCKET).createSignedUrl(f.data, 600)
+  if (error || !data) return { ok: false, error: 'Could not open the file.' }
+  return { ok: true, data: data.signedUrl }
+}
+
+export interface InvoiceForm {
+  kind: 'initial' | 'additional'; source: string | null; description: string; amount: string
+  gstMode: 'none' | 'igst' | 'cgst_sgst'; gstRatePct: string; cgst: string; sgst: string; igst: string; dueDate: string
+}
+function invoiceInput(f: InvoiceForm): InvoiceDraftInput | string {
+  if (f.kind !== 'initial' && f.kind !== 'additional') return 'Pick the invoice type.'
+  const source = f.kind === 'additional' ? (f.source === 'existing_footage' || f.source === 'new_shoot' ? f.source : null) : null
+  if (f.kind === 'additional' && !source) return 'Say what the additional invoice is for.'
+  const description = cleanText(f.description, 300)
+  if (!description || description.length < 3) return 'Describe the service.'
+  const subtotalPaise = money(f.amount)
+  if (subtotalPaise == null) return 'Enter the amount (before GST).'
+  const rate = f.gstMode === 'none' ? null : Number(f.gstRatePct)
+  if (rate != null && (!Number.isFinite(rate) || rate < 0 || rate > 28)) return 'Enter the GST rate.'
+  const igst = f.gstMode === 'igst' ? money(f.igst) : null
+  const cgst = f.gstMode === 'cgst_sgst' ? money(f.cgst) : null
+  const sgst = f.gstMode === 'cgst_sgst' ? money(f.sgst) : null
+  if (f.gstMode === 'igst' && igst == null) return 'Enter the IGST amount.'
+  if (f.gstMode === 'cgst_sgst' && (cgst == null || sgst == null)) return 'Enter the CGST and SGST amounts.'
+  const dueDate = f.dueDate ? isoDate(f.dueDate) : null
+  if (f.dueDate && !dueDate) return 'Enter a valid due date.'
+  return { kind: f.kind, source, description, subtotalPaise, gstRatePct: rate, cgstPaise: cgst, sgstPaise: sgst, igstPaise: igst, dueDate }
+}
+
+export async function draftInvoice(experienceId: string, f: InvoiceForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const input = invoiceInput(f)
+  if (typeof input === 'string') return { ok: false, error: input }
+  const r = await draftConsoleInvoice(experienceId, input)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function editInvoice(experienceId: string, invoiceId: string, f: InvoiceForm): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const input = invoiceInput(f)
+  if (typeof input === 'string') return { ok: false, error: input }
+  const r = await updateConsoleInvoice(invoiceId, input)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function discardInvoice(experienceId: string, invoiceId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const r = await discardConsoleInvoice(invoiceId)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+/** Render the frozen invoice and store it as its PDF (once). */
+async function storeInvoicePdf(invoiceId: string): Promise<{ ok: true; doc: InvoiceDoc } | { ok: false; error: string }> {
+  const doc = await consoleInvoiceDoc(invoiceId)
+  if (!doc.ok) return doc
+  const path = await consoleInvoicePdfPath(invoiceId)
+  if (!path.ok) return path
+  const bytes = renderInvoicePdf(doc.data as unknown as InvoiceDoc)
+  const up = await createAdminClient().storage.from(FINANCE_BUCKET).upload(path.data, bytes, { contentType: 'application/pdf', upsert: false })
+  if (up.error) return { ok: false, error: 'The invoice is issued, but its PDF could not be stored. Use "Create PDF" to try again.' }
+  const set = await setConsoleInvoicePdf(invoiceId, path.data)
+  if (!set.ok) return set
+  return { ok: true, doc: doc.data as unknown as InvoiceDoc }
+}
+
+/** Issue: the database numbers and freezes it; then the PDF is stored and the brand is told. */
+export async function issueInvoice(experienceId: string, invoiceId: string): Promise<Out<{ number: string; pdf: boolean; pdfError?: string }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const r = await issueConsoleInvoice(invoiceId)
+  if (!r.ok) return r
+  const pdf = await storeInvoicePdf(invoiceId)
+  if (pdf.ok) {
+    await notifyBrandInvoiceIssued(experienceId, { number: r.data, totalPaise: Number(pdf.doc.total_paise), dueDate: pdf.doc.due_date, title: pdf.doc.experience_title })
+  }
+  refresh(experienceId)
+  return { ok: true, data: { number: r.data, pdf: pdf.ok, pdfError: pdf.ok ? undefined : pdf.error } }
+}
+
+/** Retry storing the PDF of an issued invoice that has none (and tell the brand then). */
+export async function createInvoicePdf(experienceId: string, invoiceId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const pdf = await storeInvoicePdf(invoiceId)
+  if (!pdf.ok) return pdf
+  await notifyBrandInvoiceIssued(experienceId, { number: pdf.doc.number, totalPaise: Number(pdf.doc.total_paise), dueDate: pdf.doc.due_date, title: pdf.doc.experience_title })
+  refresh(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function voidInvoice(experienceId: string, invoiceId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const w = why(reason)
+  if (!w) return { ok: false, error: 'Say why it is being voided.' }
+  const r = await voidConsoleInvoice(invoiceId, w)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export interface PaymentForm { amount: string; tds: string; receivedOn: string; method: string; reference: string; proofPath: string }
+export async function recordInvoicePayment(experienceId: string, invoiceId: string, f: PaymentForm): Promise<Out<{ settled: boolean }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  const amountPaise = money(f.amount || '0', true), tdsPaise = money(f.tds || '0', true)
+  if (amountPaise == null || tdsPaise == null || amountPaise + tdsPaise <= 0) return { ok: false, error: 'Enter the amount received (and TDS withheld, 0 if none).' }
+  const receivedOn = pastOrToday(f.receivedOn)
+  if (!receivedOn) return { ok: false, error: 'Enter the date it was received (not in the future).' }
+  if (!(PAY_METHODS as readonly string[]).includes(f.method)) return { ok: false, error: 'Say how it was paid.' }
+  const reference = cleanText(f.reference, 100)
+  if (!reference || reference.length < 3) return { ok: false, error: 'Enter the payment reference (UTR, cheque number).' }
+  const proofPath = cleanText(f.proofPath, 600)
+  if (!proofPath) return { ok: false, error: 'Attach the payment proof.' }
+  const r = await addInvoicePayment(invoiceId, { amountPaise, tdsPaise, receivedOn, method: f.method, reference, proofPath })
+  if (!r.ok) return r
+  refresh(experienceId)
+  return { ok: true, data: { settled: r.data.settled } }
+}
+
+export async function reverseInvoicePaymentAction(experienceId: string, paymentId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(paymentId)) return { ok: false, error: 'Unknown payment.' }
+  const w = why(reason)
+  if (!w) return { ok: false, error: 'Say why it is being reversed.' }
+  const r = await reverseInvoicePayment(paymentId, w)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function requestCreatorPayout(experienceId: string, dealId: string, tds: string): Promise<Out<string>> {
+  const g = await experienceStaffGate()
+  if (!g.ok) return { ok: false, error: 'Guapd Experiences is for the Guapd team.' }
+  if (!isUuid(experienceId) || !isUuid(dealId)) return { ok: false, error: 'Unknown creator deal.' }
+  const tdsPaise = money(tds || '0', true)
+  if (tdsPaise == null) return { ok: false, error: 'Enter the TDS to withhold (0 if none).' }
+  const r = await requestPayout(dealId, tdsPaise)
+  if (!r.ok) return r
+  const list = await getConsolePayouts(experienceId)
+  const leg = list.ok ? list.data.legs.find((l) => l.deal_id === dealId) : null
+  const { data: me } = await createAdminClient().from('users').select('id').eq('auth_id', g.user.id).maybeSingle()
+  await notifyStaffPayoutToApprove(experienceId, leg?.full_name ?? 'a creator', me?.id ?? null)
+  refresh(experienceId)
+  return r
+}
+
+export async function setCreatorPayoutTds(experienceId: string, payoutId: string, tds: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
+  const tdsPaise = money(tds || '0', true)
+  if (tdsPaise == null) return { ok: false, error: 'Enter the TDS to withhold (0 if none).' }
+  const r = await setPayoutTds(payoutId, tdsPaise)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function approveCreatorPayout(experienceId: string, payoutId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
+  const r = await approvePayout(payoutId)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export interface PayoutPaidForm { paidOn: string; method: string; reference: string; proofPath: string }
+export async function recordCreatorPayoutPaid(experienceId: string, payoutId: string, f: PayoutPaidForm): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
+  const paidOn = pastOrToday(f.paidOn)
+  if (!paidOn) return { ok: false, error: 'Enter the date it was paid (not in the future).' }
+  if (!(PAYOUT_METHODS as readonly string[]).includes(f.method)) return { ok: false, error: 'Say how it was paid.' }
+  const reference = cleanText(f.reference, 100)
+  if (!reference || reference.length < 3) return { ok: false, error: 'Enter the payment reference (UTR).' }
+  const proofPath = cleanText(f.proofPath, 600)
+  if (!proofPath) return { ok: false, error: 'Attach the payment proof.' }
+  const r = await markPayoutPaid(payoutId, { paidOn, method: f.method, reference, proofPath })
+  if (!r.ok) return r
+  const list = await getConsolePayouts(experienceId)
+  const leg = list.ok ? list.data.legs.find((l) => l.payout?.id === payoutId) : null
+  if (leg?.payout) await notifyCreatorPaid(leg.deal_id, { paidPaise: Number(leg.payout.net_amount_paise), reference, payoutId })
+  refresh(experienceId)
+  return r
+}
+
+export async function cancelCreatorPayout(experienceId: string, payoutId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
+  const w = why(reason)
+  if (!w) return { ok: false, error: 'Say why it is being cancelled.' }
+  const r = await cancelPayout(payoutId, w)
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function saveBrandSignoff(experienceId: string, channel: string, note: string | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  if (!(SIGNOFF_CHANNELS as readonly string[]).includes(channel)) return { ok: false, error: 'Say how the brand told us.' }
+  const r = await recordBrandSignoff(experienceId, channel, cleanText(note, 500))
+  if (r.ok) refresh(experienceId)
+  return r
+}
+
+export async function clearBrandSignoffAction(experienceId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const w = why(reason)
+  if (!w) return { ok: false, error: 'Say why it is being cleared.' }
+  const r = await clearBrandSignoff(experienceId, w)
+  if (r.ok) refresh(experienceId)
   return r
 }

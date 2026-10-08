@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleDeliverables, getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleCompletion, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -15,6 +15,9 @@ import CostSheetPanel from './CostSheetPanel'
 import PnlPanel from './PnlPanel'
 import ShootPanel from './ShootPanel'
 import DeliverablesPanel from './DeliverablesPanel'
+import InvoicesPanel from './InvoicesPanel'
+import PayoutsPanel from './PayoutsPanel'
+import CompletionPanel from './CompletionPanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +62,12 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   // Cost sheet (operational) and P&L (financial only, decided in Postgres) once the price is agreed.
   const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
   const pnl = hasRoster && financial ? await getExperiencePnl(e.id) : null
+  // 0540: invoices (financial only), creator payouts (after the shoot), completion (Delivering onward).
+  const [invoices, payouts, completion] = await Promise.all([
+    hasRoster && financial ? getConsoleInvoices(e.id) : Promise.resolve(null),
+    hasDeliverables ? getConsolePayouts(e.id) : Promise.resolve(null),
+    e.status === 'delivering' || e.status === 'complete' ? getConsoleCompletion(e.id) : Promise.resolve(null),
+  ])
   const st = experienceStatus(e.status)
   const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
   const qs = quotes.ok ? quotes.data : []
@@ -73,7 +82,7 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
     : e.status === 'confirmed' ? 'Next: send each creator their deal, then confirm the shoot'
     : e.status === 'shoot_scheduled' ? "Next: after the shoot, record each creator's outcome"
     : e.status === 'shoot_done' ? 'Next: review the deliverables and share them with the brand'
-    : e.status === 'delivering' ? "Next: record the brand's answer on each deliverable, then complete"
+    : e.status === 'delivering' ? 'Next: brand approvals, invoices paid, creators paid, then both sign-offs'
     : e.status === 'complete' ? 'Complete'
     : `Next: ${experienceStatus(STAGES[stepIndex + 1] ?? e.status).label.toLowerCase()}`
   const stepDates: Record<number, string> = {}
@@ -146,6 +155,11 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
             </>
           ))
         : <div style={{ marginTop: 20 }}><Failed inline message={deliverables.error} /></div>)}
+
+      {/* ══════ MONEY + COMPLETION (0540) ══════ */}
+      {payouts && <div style={{ marginTop: 20 }}>{payouts.ok ? <PayoutsPanel experienceId={e.id} data={payouts.data} /> : <Failed inline message={payouts.error} />}</div>}
+      {invoices && <div style={{ marginTop: 20 }}>{invoices.ok ? <InvoicesPanel data={invoices.data} /> : <Failed inline message={invoices.error} />}</div>}
+      {completion && <div style={{ marginTop: 20 }}>{completion.ok ? <CompletionPanel experienceId={e.id} data={completion.data} /> : <Failed inline message={completion.error} />}</div>}
 
       {/* ══════ COSTS + P&L ══════ */}
       {hasRoster && costs && (

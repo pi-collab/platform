@@ -1178,13 +1178,8 @@ DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
 CREATE POLICY roster_read_brand ON experience_roster FOR SELECT
   USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_id AND e.brand_id = my_brand_id()));
 
-DROP POLICY IF EXISTS si_read_brand ON service_invoices;
-CREATE POLICY si_read_brand ON service_invoices FOR SELECT
-  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
-
-DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
-CREATE POLICY vp_read_own_creator ON vendor_payouts FOR SELECT
-  USING (is_my_vendor(vendor_id));
+-- si_read_brand (service_invoices) and vp_read_own_creator (vendor_payouts)
+-- were removed in 0540: see "Experience money loop (0540)" below.
 
 DROP POLICY IF EXISTS dfo_read_own_creator ON deal_follow_ons;
 CREATE POLICY dfo_read_own_creator ON deal_follow_ons FOR SELECT
@@ -1496,3 +1491,33 @@ CREATE POLICY storage_deliverables_insert
     )
   );
 -- See supabase/migrations/0539_experience_null_means_no.sql.
+
+
+-- ── Experience money loop (0540) ────────────────────────────────────────
+-- service_invoices, service_invoice_payments, service_invoice_counters,
+-- vendor_payouts, vendors, vendor_payout_details, brand_billing_profiles and
+-- guapd_billing_settings have NO policies and NO grants for users: REVOKEd
+-- from anon/authenticated. The 0524 brand read of service_invoices
+-- (si_read_brand + column grants) and the creator read of vendor_payouts
+-- (vp_read_own_creator + column grants) were DROPPED. Staff reach invoices,
+-- payments and billing details only through experience_console_invoice* /
+-- _finance_settings / _brand_billing (FINANCIAL access), payouts through
+-- experience_console_payout* (OPERATIONAL, maker-checker in Postgres). The
+-- brand reads its ISSUED and PAID invoices through brand_experience_invoices /
+-- brand_experience_invoice_file (membership checked); the creator reads their
+-- own payout statement through creator_leg_context. The finance-docs bucket is
+-- private with no user policies (service-role signed links only, after a
+-- database function authorises the path). See
+-- supabase/migrations/0540_experience_invoices_payouts.sql.
+DROP POLICY IF EXISTS si_read_brand ON service_invoices;
+DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
+REVOKE ALL ON service_invoices FROM anon, authenticated;
+REVOKE ALL ON vendor_payouts FROM anon, authenticated;
+ALTER TABLE service_invoice_payments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON service_invoice_payments FROM anon, authenticated;
+ALTER TABLE service_invoice_counters ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON service_invoice_counters FROM anon, authenticated;
+ALTER TABLE brand_billing_profiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_billing_profiles FROM anon, authenticated;
+ALTER TABLE guapd_billing_settings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON guapd_billing_settings FROM anon, authenticated;

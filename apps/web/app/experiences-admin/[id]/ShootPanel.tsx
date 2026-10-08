@@ -89,7 +89,7 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
               <div className="t-body" style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
                 {l.shoot_outcome === 'did_not_shoot' && <div>Why: {l.shoot_outcome_reason}. Not counted as a creator payout.</div>}
                 {l.shoot_outcome === 'done' && (l.work_complete
-                  ? <div>Their part is done. Payable once payouts are built (Phase 4).</div>
+                  ? <div>Their part is done: they can be paid (see Creator payouts).</div>
                   : <div>Shot. Their part is done once Guapd approves their deliverables.</div>)}
                 {!l.shoot_outcome && l.deal_status === 'agreed' && <div>{outcomesOpen ? (dateReached ? 'Did they shoot?' : `From ${date}.`) : 'Recorded after the shoot is confirmed.'}</div>}
                 {l.deal_status === 'negotiating' && <div>Has not answered the offer.</div>}

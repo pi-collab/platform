@@ -301,7 +301,8 @@ async function run() {
   ok('shared past what was sold is flagged (allowed, a warning)', dv.progress.over_shared === true)
   await admin.from('experiences').update({ agreed_plan: plan }).eq('id', E)
   dv = (await op.rpc('experience_console_deliverables', { p_experience_id: E })).data as any
-  ok('Complete is NOT gated on readiness yet: completes while not ready', dv.progress.ready === false && !refused(await op.rpc('experience_console_complete', { p_experience_id: E })))
+  ok('Complete is gated (0540): refused while the brand has not approved what was sold', dv.progress.ready === false && said(await op.rpc('experience_console_complete', { p_experience_id: E }), /Not ready to complete/))
+  await admin.from('experiences').update({ status: 'complete' }).eq('id', E)  // to test what a Complete Experience refuses
   ok('a Complete Experience refuses deliverable changes', said(await op.rpc('experience_console_release', { p_experience_id: E, p_item_ids: [gStory.id] }), /Complete/)
     && said(await op.rpc('experience_console_release_withdraw', { p_release_id: relOf(dStory.id).id, p_reason: 'test test' }), /Complete|approved/))
 

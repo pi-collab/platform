@@ -30,9 +30,10 @@ export interface ExperiencePnl {
   stored_margin_paise?: number | null
   brand_revenue_paise: number
   revenue_basis: 'invoiced'
-  /** No issued invoice yet: revenue is an honest ₹0 until Phase 4 invoicing. */
+  /** No issued invoice yet: revenue is an honest ₹0 until an invoice is issued (0540). */
   revenue_pending_invoice: boolean
   invoices_counted: number
+  /** Cash received on live invoices (0540: from recorded payments, incl. GST, excl. TDS withheld). */
   brand_received_paise: number
   /** Context only, never revenue. */
   brand_agreed_paise: number | null
@@ -51,6 +52,20 @@ export interface ExperiencePnl {
   /** Accepted, but recorded as not shooting (0538): not counted. Absent on snapshots frozen before 0538. */
   legs_did_not_shoot?: number
   per_leg: ExperiencePnlLeg[]
+  // 0540: the money loop. Absent on snapshots frozen before 0540.
+  /** Issued + paid invoices INCLUDING GST. Revenue (brand_revenue_paise) is before GST. */
+  invoiced_total_paise?: number
+  /** GST billed: collected for the government, a liability, never revenue. */
+  gst_liability_paise?: number
+  brand_tds_withheld_paise?: number
+  brand_outstanding_paise?: number
+  invoices_draft?: number
+  /** Invoiced (before GST) minus the agreed price; null until something is invoiced. */
+  invoiced_vs_agreed_paise?: number | null
+  creator_paid_out_paise?: number
+  creator_tds_withheld_paise?: number
+  creator_payouts_paid?: number
+  creator_payouts_due?: number
 }
 
 export async function getExperiencePnl(experienceId: string): Promise<{ ok: true; pnl: ExperiencePnl } | { ok: false; error: string }> {

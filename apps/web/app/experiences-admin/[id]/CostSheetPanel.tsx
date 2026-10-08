@@ -6,13 +6,13 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { costLineTotalPaise } from '@/lib/experience-money'
 import { formatRupees, rupeesToPaise } from '@/lib/experience-request'
 import type { ConsoleCostLine, ConsoleCosts } from '@/lib/experience-console-server'
-import { addCost, completeExperience, editCost, removeCost, type CostForm } from '../actions'
+import { addCost, editCost, removeCost, type CostForm } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
 /**
  * The cost sheet (staff console, operational access): what Guapd spends
  * running this Experience. Recording only: nothing is paid from here
- * (payouts are Phase 4). Creator pay is never a cost line; it lives on the
+ * (creator payouts are the Payouts panel; Complete is the Completion panel, 0540). Creator pay is never a cost line; it lives on the
  * creator deals, so the database refuses per-video / day-rate / retainer
  * categories here. Lines are removed with a reason, never erased.
  *
@@ -39,7 +39,6 @@ export default function CostSheetPanel({ experienceId, costs, creators }: {
   const [d, setD] = useState<Draft>(empty(costs.categories[0] ?? 'misc'))
   const [removing, setRemoving] = useState<ConsoleCostLine | null>(null)
   const [reason, setReason] = useState('')
-  const [confirmComplete, setConfirmComplete] = useState(false)
 
   const open = ['rostering', 'confirmed', 'shoot_scheduled', 'shoot_done', 'delivering'].includes(costs.status)
   const complete = costs.status === 'complete'
@@ -191,13 +190,6 @@ export default function CostSheetPanel({ experienceId, costs, creators }: {
         </div>
       )}
 
-      {costs.status === 'delivering' && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline)', flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>Everything delivered and every cost in? Completing freezes the P&amp;L.</span>
-          <button type="button" style={pillBtn} disabled={pending} onClick={() => setConfirmComplete(true)}>Mark Complete</button>
-        </div>
-      )}
-
       <ConfirmDialog open={!!removing} title={`Remove "${removing?.label ?? ''}"`} tone="danger"
         body="It comes off the cost sheet and out of the P&L. The line is kept on record with your reason."
         detail={<div style={{ marginTop: 12 }}><label style={fieldLabel} htmlFor="cost-why">Why</label>
@@ -205,11 +197,6 @@ export default function CostSheetPanel({ experienceId, costs, creators }: {
         confirmLabel="Remove" busy={pending}
         onConfirm={() => removing && run(() => removeCost(experienceId, removing.id, reason, removing.updated_at), () => setRemoving(null))}
         onCancel={() => setRemoving(null)} />
-      <ConfirmDialog open={confirmComplete} title="Mark this Experience Complete"
-        body="This freezes its P&L. A cost that arrives later needs finance to reopen it, add the cost and complete it again. All of that is recorded."
-        confirmLabel="Mark Complete" busy={pending}
-        onConfirm={() => run(() => completeExperience(experienceId), () => setConfirmComplete(false))}
-        onCancel={() => setConfirmComplete(false)} />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 860px) {

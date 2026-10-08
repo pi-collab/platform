@@ -10,9 +10,16 @@
  *              reference (UTR). The app only records what a person did.
  *   razorpayx  STUB until RazorpayX is set up and verified (docs/experiences-plan.md).
  *
- * A provider never sends the creator a "paid" message. That message is sent
- * only from a real success callback (RazorpayX payout.processed), and the
- * manual provider has none, so manual payouts notify nobody.
+ * A provider never sends the creator a "paid" message itself. Under the manual
+ * provider the app tells the creator when a person RECORDS a real transfer
+ * with its bank reference and proof (experience_console_payout_paid, 0540),
+ * and the message says exactly that ("Guapd paid you ₹X · ref …"). Under
+ * RazorpayX it will fire only from the payout-success callback.
+ *
+ * The payout lifecycle itself (request → approve by a different person →
+ * record paid) lives in access-checked database functions (0540), called with
+ * the staff member's own session: the Phase 2 service-role payout service was
+ * retired.
  */
 
 export type ProviderName = 'manual' | 'razorpayx'

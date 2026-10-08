@@ -19,6 +19,7 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLI
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
+import { fixtureInvoice } from './fixture-invoice'
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 const TITLE = '[visual-3c] Festive UGC shoot'
 const STATE = path.resolve(__dirname, '../scratch/fixture-costs-visual.json')
@@ -103,7 +104,7 @@ async function create() {
   await cost('Makeup artist, day 1', 'makeup', { p_total_paise: 900000 })
   await cost('Studio, Bandra', 'studio', { p_basis: 'per_unit', p_quantity: 2, p_unit_rate_paise: 450000, p_total_paise: 900000 })
   await cost('Festive outfits', 'styling', { p_total_paise: 300000, p_provided_by: 'brand', p_note: 'Brand sends their range' })
-  await admin.from('service_invoices').insert({ experience_id: E, brand_id: B.brand_id, kind: 'initial', status: 'issued', per_video_paise: 3500000, deliverable_count: 6, misc_paise: 0, lines: [], subtotal_paise: 21000000, total_paise: 21000000 })
+  await fixtureInvoice(admin, { experienceId: E, brandId: B.brand_id, kind: 'initial', subtotalPaise: 21000000, status: 'issued' })
   console.log(JSON.stringify({ experience: E, fin: { id: FIN.id, email: FIN.email }, op: { id: OP.id, email: OP.email } }))
 }
 
