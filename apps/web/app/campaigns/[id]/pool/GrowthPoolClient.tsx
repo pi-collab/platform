@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { addCreatorsToCampaign, removeCampaignDraft } from '../draft-actions'
+import CreatorPoolCard, { inr, PoolSelect } from '@/components/CreatorPoolCard'
 
 export interface PoolCreator {
   id: string
@@ -29,7 +30,6 @@ export interface PoolCreator {
   sellsUniformType: boolean
 }
 
-const inr = (paise: number) => '₹' + Math.round(paise / 100).toLocaleString('en-IN')
 
 /* The design's own filter sets. Follower bands and locations are fixed lists
    rather than derived from the roster: a band that appears only once someone
@@ -233,76 +233,37 @@ function Card({ c, busy, uniformType, onToggle }: {
   c: PoolCreator; busy: boolean; uniformType: string | null; onToggle: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const initials = c.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
   /* A creator who does not sell this campaign's deliverable cannot be added,
      and is told rather than silently filtered away — a brand who deliberately
      looked for them would otherwise think they had left the roster. */
   const blocked = !c.sellsUniformType
 
   return (
-    <div className="ccard surface" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-        <div style={{ position: 'relative', width: 104, height: 104, flexShrink: 0, borderRadius: 14, background: 'var(--sec-2, #F7F4FB)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {c.photo
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={c.photo} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 24, color: 'var(--ink-soft)' }}>{initials || '?'}</span>}
-          {c.added && (
-            <span style={{ position: 'absolute', bottom: 6, left: 6, display: 'inline-flex', alignItems: 'center', gap: 3, fontFamily: 'var(--font-ui)', fontSize: 9.5, fontWeight: 700, color: '#fff', background: 'rgba(24,28,36,.72)', borderRadius: 999, padding: '3px 8px' }}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-              Added
-            </span>
-          )}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
-            {/* Only a live Instagram connection earns this, the same rule the
-                storefront follows. */}
-            {c.verified && (
-              <svg width="12" height="12" viewBox="0 0 24 24" style={{ flexShrink: 0 }} aria-label="Verified from Instagram">
-                <circle cx="12" cy="12" r="10" fill="var(--neon-deep, #D2F04A)" />
-                <path d="m7.5 12 2.8 2.8L16.5 8.6" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--ink)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {c.handle}{c.followersLabel ? ` · ${c.followersLabel}` : ''}
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 4, lineHeight: 1.4 }}>
-            {c.niches.join(' · ') || '—'}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 'auto', paddingTop: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
-              {c.ratePaise != null ? inr(c.ratePaise) : '—'}
-            </span>
-            {/* Named, never a bare number. ₹50,000 says nothing about whether
-                that buys a reel or a story, and the two are not close. */}
-            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-              {c.rateType ? c.rateType.replace(/^Instagram /, '').toLowerCase() : 'rate'}
-            </span>
-            {/* Mixed campaigns only: there any package is buyable, so the rest
-                are worth opening. In a uniform campaign they are not, and
-                listing them would only mislead. */}
-            {!uniformType && c.packages.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                style={{
-                  marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', padding: 0,
-                  fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, color: 'var(--ink-soft)',
-                  textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
-                }}
-              >
-                {open ? 'Hide' : 'View more'}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {open && !uniformType && (
+    <CreatorPoolCard
+      c={c}
+      added={c.added}
+      busy={busy}
+      disabled={blocked}
+      /* Named, never a bare number. ₹50,000 says nothing about whether that
+         buys a reel or a story, and the two are not close. */
+      rate={{ paise: c.ratePaise, label: c.rateType ? c.rateType.replace(/^Instagram /, '').toLowerCase() : 'rate' }}
+      /* Mixed campaigns only: there any package is buyable, so the rest are
+         worth opening. In a uniform campaign they are not, and listing them
+         would only mislead. */
+      rateAction={!uniformType && c.packages.length > 1 ? (
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          style={{
+            marginLeft: 'auto', border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 700, color: 'var(--ink-soft)',
+            textDecoration: 'underline', textUnderlineOffset: 3, whiteSpace: 'nowrap',
+          }}
+        >
+          {open ? 'Hide' : 'View more'}
+        </button>
+      ) : null}
+      extra={open && !uniformType ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {c.packages.map((p) => (
             <div key={p.type} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 12 }}>
@@ -314,74 +275,14 @@ function Card({ c, busy, uniformType, onToggle }: {
             Pick which one on the campaign roster after adding them.
           </p>
         </div>
-      )}
-
-      {/* Three figures, and a dash where there is no measurement. A blank would
-          read as zero, and a guess would read as verified. */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', padding: '12px 0', borderTop: '1px solid var(--border-hairline, #EAEAE3)', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
-        <Stat value={c.avgReachLabel} label="Avg reach" />
-        <Stat value={c.engagementLabel} label="Engagement" divided />
-        <Stat value={c.interactionsLabel} label="Interactions" divided />
-      </div>
-
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={busy || blocked}
-        className={c.added ? 'inkbtn' : 'addedbtn'}
-        title={blocked && uniformType ? `Doesn't offer ${uniformType}` : undefined}
-        style={{
-          width: '100%', height: 38, borderRadius: 10, cursor: busy || blocked ? 'not-allowed' : 'pointer',
-          fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          background: c.added ? 'var(--ink)' : '#FFFFFF',
-          color: c.added ? '#FFFFFF' : 'var(--ink)',
-          border: c.added ? 'none' : '1.5px solid var(--border-hairline, #EAEAE3)',
-          opacity: blocked ? 0.45 : 1,
-        }}
-      >
-        {busy ? 'Working…' : blocked && uniformType ? `No ${uniformType}` : c.added ? (
-          <>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            Added &middot; remove
-          </>
-        ) : (
-          <>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-            Add to campaign
-          </>
-        )}
-      </button>
-    </div>
+      ) : null}
+      button={{ add: 'Add to campaign', added: 'Added · remove', disabled: uniformType ? `No ${uniformType}` : undefined }}
+      buttonTitle={blocked && uniformType ? `Doesn't offer ${uniformType}` : undefined}
+      onToggle={onToggle}
+    />
   )
 }
 
-function Stat({ value, label, divided }: { value: string | null; label: string; divided?: boolean }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, ...(divided ? { paddingLeft: 12, borderLeft: '1px solid var(--border-hairline, #EAEAE3)' } : {}) }}>
-      <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 700, fontSize: 15, color: value ? 'var(--ink)' : 'var(--ink-faint)' }}>
-        {value ?? '—'}
-      </span>
-      <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{label}</span>
-    </div>
-  )
-}
-
-function Select({ value, onChange, options }: {
-  value: string; onChange: (v: string) => void; options: { value: string; label: string }[]
-}) {
-  return (
-    <select
-      className="selctrl"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        minWidth: 0, boxSizing: 'border-box', padding: '8px 26px 8px 9px', flex: '1.5 1 180px',
-        border: '1px solid var(--border-edge, rgba(24,28,36,.14))', borderRadius: 10, background: '#FFFFFF',
-        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink-soft)',
-      }}
-    >
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  )
+function Select(props: { value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  return <PoolSelect {...props} />
 }
