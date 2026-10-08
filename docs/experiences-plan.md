@@ -457,3 +457,17 @@ A leg-specific template ("<brand> · Managed by Guapd: a shoot offer, ₹<net> t
 5. The existing WhatsApp offer template states an amount worked out the marketplace way.
    Should leg offers notify **in-app and by email only** until a leg-specific template is
    approved?
+
+## Release 2026-10-08: the send-deals slice is on production
+- Code: `main` = `c5839cb` (staging merged; creator-pool branch and 0536 held; storefront build-a-deal files held, identical to the previous production copy). Deployment `dpl_2BS2vzHjnxv9hidNmmvzMnoCbKhz`.
+- Prod migrations 0515–0535 applied by hand, in order, each verified: niches/bio backup re-verified by checksum immediately before 0517–0519; 0527 recorded as applied without re-running (its objects were already live); 0520/0521 applied ~2 minutes after the deploy went live.
+- Rollback kit (outside the repo): `~/guapd-backups/prod-2026-10-08/` (backup.json, restore-prod.sql, rollback-0520-0521.sql). Previous good deployment: `dpl_DWh3spE38ufNHEGo9NVEMNvruVKX` (`0ab1960`).
+- Post-deploy: prod schema matches staging (except held 0536); deal guard tested on all 3 live deals as their real brand and creator, inside rolled-back transactions (24/24); brands and other creators see no shoot day rate; every staff function refuses non-staff.
+- Before the first real send: grant Experiences access on prod, then the creator-leg visual check on prod (needs one test leg).
+
+## Stage 3c plan: cost sheet + margin / P&L view (DRAFT 2026-10-08, awaiting Palak's review; not built)
+Full plan delivered in chat on 2026-10-08. Headlines:
+- **Bug to fix first (from 3b):** `compute_experience_pnl` counts legs with `locked_at IS NOT NULL`; since 0534 a leg is locked at SEND, so unanswered and declined legs are subtracted from the margin. Count only legs the creator accepted (deal status agreed onward); show awaiting and declined as footnotes.
+- Migration 0537: cost-line soft delete + shape checks (Phase 4 columns blocked); a generated `guapd_margin_paise` on `experience_pnl_snapshots`, refreshed by triggers on every input and frozen at Complete; costs summed in one helper; categories `per_video`/`day_rate`/`retainer` refused on cost lines (creator pay lives on legs).
+- Staff-gated cost functions (operational) with audit; P&L only via `experience_pnl()` (financial). No budgeting stage column yet.
+- Open questions: revenue basis for "brand_paid" (invoiced / received / agreed until Phase 4); awaiting legs out of the margin; operational staff can compute margin by hand; late costs after Complete.
