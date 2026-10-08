@@ -27,12 +27,14 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
 }
 const COLS = '40px 1.5fr 1.4fr 150px 34px'
 
-export default function RosterPanel({ experienceId, editable, roster, reconcile }: {
+export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects }: {
   experienceId: string
   /** Building roster or Confirmed: creators can still be added (add-after-lock). */
   editable: boolean
   roster: ConsoleRosterRow[]
   reconcile: ConsoleReconcile | null
+  /** 0541: creators not on Guapd yet (not on the roster until linked). */
+  prospects?: { open: number; accepted: number }
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -115,6 +117,13 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile 
       )}
 
       {error && <div role="alert" style={{ ...formError, marginTop: 14 }}>{error}</div>}
+
+      {prospects && prospects.open > 0 && (
+        <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 12, background: '#F4F4EF', fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)' }}>
+          {prospects.open} not on Guapd yet{prospects.accepted ? ` (${prospects.accepted} accepted by the brand)` : ''}: not on the roster until you link their account.{' '}
+          <Link href={`/experiences-admin/${experienceId}/pool#not-on-guapd`} style={{ color: 'var(--ink)', fontWeight: 700 }}>Manage them</Link>
+        </div>
+      )}
 
       {roster.length === 0 ? (
         <p className="t-body" style={{ margin: '18px 0 0' }}>No creators yet. Add creators, or the brand&apos;s suggestions; each one starts from the agreed per-creator plan.</p>

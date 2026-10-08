@@ -506,3 +506,10 @@ Built in migration 0540 + console InvoicesPanel / PayoutsPanel / CompletionPanel
 - **Completion gate:** Complete (Guapd's sign-off) only from Delivering with deliverables approved as sold + every invoice paid (none draft) + every creator who shot paid + the brand's sign-off (staff-recorded with the channel). Reopen (finance) clears both sign-offs.
 - **Security:** every new table unreadable by users; the 0524 direct brand read of invoices and creator read of payouts were removed; finance / operational split kept (no brand price in payouts, no creator pay in invoices); audit rows carry ids, statuses and references, never amounts; NULL means no on every new gate.
 - **Out of scope (unchanged):** Razorpay / RazorpayX, payment links, computed GST / TDS, brand in-app pay, creator bank details, the affiliate follow-on (4b).
+
+## Roster step: the creator pool + creators not on Guapd yet (BUILT 2026-10-08, staging only)
+Order per Palak: after Phase 4. The held `experiences-creator-pool` branch (0536, its DB function already on staging) is merged into `staging`: "Add creators" / "Add brand's picks" open the pool with each creator's shoot day rate (staff only). The brand's Growth pool shares the card and still shows only its deliverable prices.
+Built in migration 0541 + the pool page's "Not on Guapd yet" section and a roster summary; tests in scripts/test-experience-prospects.ts (docs/test-cases.md §109).
+- Staff record a creator who is not on Guapd: name, Instagram handle, optional phone, expected cost (day rate × days or flat), status (contacted → agreed → onboarding) and the brand's answer with the channel. Not on the roster: no lock, no deal; the P&L shows an estimate, never the margin.
+- When they join and are vetted, "Link to their account" puts them on the roster carrying the brand's answer; from there it is the normal flow (day rate, lock, deal). The list flags when a handle now exists on Guapd.
+- Nothing messages them: staff copy the sign-up link and send it themselves. Operational only; the brand never sees the list; audit rows carry no amounts or phone numbers.

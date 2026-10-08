@@ -15,6 +15,7 @@ import {
   consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
   getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout,
   recordBrandSignoff, clearBrandSignoff,
+  addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
@@ -831,5 +832,88 @@ export async function clearBrandSignoffAction(experienceId: string, reason: stri
   if (!w) return { ok: false, error: 'Say why it is being cleared.' }
   const r = await clearBrandSignoff(experienceId, w)
   if (r.ok) refresh(experienceId)
+  return r
+}
+
+
+// ── 0541: creators not on Guapd yet ────────────────────────────────────────
+// Recorded on the "Add creators" page; on the roster only once linked to their
+// Guapd account. Nothing here messages anyone.
+
+export interface ProspectForm { fullName: string; handle: string; phone: string; costBasis: string; dayRate: string; days: string; flat: string; note: string }
+function prospectInput(f: ProspectForm): ProspectInput | string {
+  const fullName = cleanText(f.fullName, 120)
+  if (!fullName || fullName.length < 2) return 'Enter their name.'
+  const handle = cleanText(f.handle, 100)
+  if (!handle) return 'Enter their Instagram handle.'
+  if (f.costBasis !== 'per_day' && f.costBasis !== 'flat') return 'Say how they are paid: a day rate or a flat fee.'
+  let dayRatePaise: number | null = null, days: number | null = null, flatPaise: number | null = null
+  if (f.costBasis === 'per_day') {
+    dayRatePaise = rupeesToPaise(f.dayRate)
+    days = Number(f.days)
+    if (dayRatePaise == null || dayRatePaise <= 0) return 'Enter their expected day rate.'
+    if (!Number.isFinite(days) || days <= 0 || days > 365) return 'Enter the number of days.'
+  } else {
+    flatPaise = rupeesToPaise(f.flat)
+    if (flatPaise == null || flatPaise <= 0) return 'Enter their expected fee.'
+  }
+  return { fullName, handle, phone: cleanText(f.phone, 20), costBasis: f.costBasis, dayRatePaise, days, flatPaise, note: cleanText(f.note, 1000) }
+}
+const poolPath = (experienceId: string) => { revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`${BASE}/${experienceId}/pool`) }
+
+export async function addProspectAction(experienceId: string, f: ProspectForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const input = prospectInput(f)
+  if (typeof input === 'string') return { ok: false, error: input }
+  const r = await addProspect(experienceId, input)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+export async function editProspectAction(experienceId: string, prospectId: string, f: ProspectForm): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(prospectId)) return { ok: false, error: 'Unknown entry.' }
+  const input = prospectInput(f)
+  if (typeof input === 'string') return { ok: false, error: input }
+  const r = await updateProspect(prospectId, input)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+export async function setProspectStatusAction(experienceId: string, prospectId: string, status: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(prospectId)) return { ok: false, error: 'Unknown entry.' }
+  if (status !== 'contacted' && status !== 'agreed' && status !== 'onboarding') return { ok: false, error: 'Contacted, agreed or onboarding.' }
+  const r = await setProspectStatus(prospectId, status)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+export async function decideProspectAction(experienceId: string, prospectId: string, decision: string, channel: string | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(prospectId)) return { ok: false, error: 'Unknown entry.' }
+  if (decision !== 'accepted' && decision !== 'rejected' && decision !== 'pending') return { ok: false, error: 'Unknown decision.' }
+  if (decision !== 'pending' && !['whatsapp', 'email', 'call', 'in_person'].includes(channel ?? '')) return { ok: false, error: 'Say how the brand told us.' }
+  const r = await decideProspect(prospectId, decision, decision === 'pending' ? null : channel)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+export async function dropProspectAction(experienceId: string, prospectId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(prospectId)) return { ok: false, error: 'Unknown entry.' }
+  const w = why(reason)
+  if (!w) return { ok: false, error: 'Say why they are dropped.' }
+  const r = await dropProspect(prospectId, w)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+export async function linkProspectAction(experienceId: string, prospectId: string, creatorId: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(prospectId) || !isUuid(creatorId)) return { ok: false, error: 'Pick their Guapd account.' }
+  const r = await linkProspect(prospectId, creatorId)
+  if (r.ok) poolPath(experienceId)
   return r
 }

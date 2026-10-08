@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleCompletion, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleCompletion, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -48,9 +48,13 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   // The roster exists once the price is agreed (Building roster onward).
   const hasRoster = !['draft', 'requested', 'cancelled'].includes(e.status)
   const rosterEditable = e.status === 'rostering' || e.status === 'confirmed'
-  const [roster, reconcile] = hasRoster
-    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id)])
-    : [null, null]
+  const [roster, reconcile, prospects] = hasRoster
+    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), listConsoleProspects(e.id)])
+    : [null, null, null]
+  const prospectSummary = prospects?.ok
+    ? { open: prospects.data.filter((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status)).length,
+        accepted: prospects.data.filter((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status) && p.brand_decision === 'accepted').length }
+    : undefined
   // Creator deals exist once the roster is locked (Confirmed onward).
   const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
   const [legs, legsReconcile, creatorBrief] = hasLegs
@@ -131,7 +135,7 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       {hasRoster && (
         <div style={{ marginTop: 20 }}>
           {roster?.ok && reconcile?.ok
-            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} />
+            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} prospects={prospectSummary} />
             : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || 'Could not load the roster'} />}
         </div>
       )}

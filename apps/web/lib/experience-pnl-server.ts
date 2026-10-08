@@ -66,6 +66,9 @@ export interface ExperiencePnl {
   creator_tds_withheld_paise?: number
   creator_payouts_paid?: number
   creator_payouts_due?: number
+  /** 0541: creators not on Guapd yet (not rejected): an estimate, never in the margin. */
+  prospects_pending?: number
+  prospects_estimate_paise?: number
 }
 
 export async function getExperiencePnl(experienceId: string): Promise<{ ok: true; pnl: ExperiencePnl } | { ok: false; error: string }> {

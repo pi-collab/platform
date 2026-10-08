@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, listConsoleCreatorPool, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, listConsoleCreatorPool, listConsoleProspects, listConsoleRoster } from '@/lib/experience-console-server'
 import { compactNumber } from '@/lib/compact-number'
 import NoAccess from '../../NoAccess'
 import ExperiencePoolClient, { type ExperiencePoolCreator } from './ExperiencePoolClient'
+import ProspectsSection from './ProspectsSection'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Creator pool · Guapd Experiences' }
@@ -29,8 +30,8 @@ export default async function ExperiencePoolPage({ params, searchParams }: {
   if (!gate.ok) return <NoAccess reason={gate.reason} />
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
 
-  const [exp, roster, pool, reconcile] = await Promise.all([
-    getConsoleExperience(params.id), listConsoleRoster(params.id), listConsoleCreatorPool(), getConsoleReconcile(params.id),
+  const [exp, roster, pool, reconcile, prospects] = await Promise.all([
+    getConsoleExperience(params.id), listConsoleRoster(params.id), listConsoleCreatorPool(), getConsoleReconcile(params.id), listConsoleProspects(params.id),
   ])
   if (!exp.ok || !exp.data) notFound()
   if (!roster.ok || !pool.ok) throw new Error((!roster.ok && roster.error) || (!pool.ok && pool.error) || 'Could not load the pool')
@@ -82,6 +83,11 @@ export default async function ExperiencePoolPage({ params, searchParams }: {
       creators={creators}
       initialMode={searchParams.as === 'brand' ? 'brand' : 'guapd'}
       initialChannel={typeof searchParams.via === 'string' ? searchParams.via : ''}
-    />
+    >
+      {prospects.ok
+        ? <ProspectsSection experienceId={e.id} editable={e.status === 'rostering' || e.status === 'confirmed'} prospects={prospects.data}
+            linkable={creators.filter((c) => !c.rosterId).map((c) => ({ id: c.id, name: c.name, handle: c.handle }))} />
+        : <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: '#9B3030', marginTop: 20 }}>Could not load creators not on Guapd yet: {prospects.error}</p>}
+    </ExperiencePoolClient>
   )
 }

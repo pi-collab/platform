@@ -771,3 +771,58 @@ export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreato
     day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
   })) }
 }
+
+// ── 0541: creators not on Guapd yet, on the roster's "Add creators" page ───
+// Staff only (operational). Not on the roster until linked to their account.
+
+export interface ConsoleProspect {
+  id: string; full_name: string; instagram_handle: string; phone: string | null
+  cost_basis: 'per_day' | 'flat'; expected_day_rate_paise: number | null; expected_days: number | null; expected_total_paise: number
+  status: 'contacted' | 'agreed' | 'onboarding' | 'linked' | 'dropped'
+  brand_decision: 'pending' | 'accepted' | 'rejected'; decision_channel: string | null; note: string | null
+  linked_creator_id: string | null; linked_creator_name: string | null; linked_at: string | null; dropped_reason: string | null
+  created_at: string; updated_at: string
+  match: { creator_id: string; full_name: string; bookable: boolean; on_roster: boolean } | null
+}
+export interface ProspectInput {
+  fullName: string; handle: string; phone: string | null; costBasis: 'per_day' | 'flat'
+  dayRatePaise: number | null; days: number | null; flatPaise: number | null; note: string | null
+}
+const prospectArgs = (p: ProspectInput) => ({
+  p_full_name: p.fullName, p_handle: p.handle, p_phone: p.phone, p_cost_basis: p.costBasis,
+  p_day_rate_paise: p.dayRatePaise, p_days: p.days, p_flat_paise: p.flatPaise, p_note: p.note,
+})
+
+export async function listConsoleProspects(experienceId: string): Promise<Result<ConsoleProspect[]>> {
+  const { data, error } = await createClient().rpc('experience_console_prospects', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: (((data as { prospects: Record<string, unknown>[] }).prospects) ?? []).map((r) => ({
+    ...(r as unknown as ConsoleProspect),
+    expected_day_rate_paise: n(r.expected_day_rate_paise), expected_days: n(r.expected_days), expected_total_paise: Number(r.expected_total_paise),
+  })) }
+}
+export async function addProspect(experienceId: string, p: ProspectInput): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_prospect_add', { p_experience_id: experienceId, ...prospectArgs(p) })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function updateProspect(prospectId: string, p: ProspectInput): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_update', { p_prospect_id: prospectId, ...prospectArgs(p) })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function setProspectStatus(prospectId: string, status: 'contacted' | 'agreed' | 'onboarding'): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_status', { p_prospect_id: prospectId, p_status: status })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function decideProspect(prospectId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_decide', { p_prospect_id: prospectId, p_decision: decision, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function dropProspect(prospectId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_drop', { p_prospect_id: prospectId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function linkProspect(prospectId: string, creatorId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_prospect_link', { p_prospect_id: prospectId, p_creator_id: creatorId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}

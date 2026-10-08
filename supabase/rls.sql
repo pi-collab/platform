@@ -1521,3 +1521,12 @@ ALTER TABLE brand_billing_profiles ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON brand_billing_profiles FROM anon, authenticated;
 ALTER TABLE guapd_billing_settings ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON guapd_billing_settings FROM anon, authenticated;
+
+
+-- ── Creators not on Guapd yet (0541) ────────────────────────────────────
+-- experience_roster_prospects has NO policies and NO grants for users: staff
+-- reach it only through experience_console_prospect* (operational). The brand
+-- never sees it (only the roster, once someone is linked to their account).
+-- See supabase/migrations/0541_experience_roster_prospects.sql.
+ALTER TABLE experience_roster_prospects ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_roster_prospects FROM anon, authenticated;

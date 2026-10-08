@@ -44,7 +44,7 @@ const FOLLOWER_BANDS = [
  * roster itself.
  */
 export default function ExperiencePoolClient({
-  experienceId, title, brandName, editable, creatorsPlanned, videosSold, creators, initialMode, initialChannel,
+  experienceId, title, brandName, editable, creatorsPlanned, videosSold, creators, initialMode, initialChannel, children,
 }: {
   experienceId: string
   title: string
@@ -55,6 +55,8 @@ export default function ExperiencePoolClient({
   creators: ExperiencePoolCreator[]
   initialMode: 'guapd' | 'brand'
   initialChannel: string
+  /** Below the grid: creators not on Guapd yet (0541). */
+  children?: React.ReactNode
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -232,6 +234,8 @@ export default function ExperiencePoolClient({
             </p>
           </div>
         )}
+
+        {children}
       </div>
 
       {/* ===== STICKY BAR ===== */}

@@ -113,6 +113,7 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
         {pnl.legs_awaiting > 0 && <span>{pnl.legs_awaiting} offer{pnl.legs_awaiting === 1 ? '' : 's'} awaiting an answer ({formatRupees(n(pnl.awaiting_net_paise))} net if accepted). Not counted.</span>}
         {pnl.legs_declined > 0 && <span>{pnl.legs_declined} declined or withdrawn. Not counted.</span>}
         {(pnl.legs_did_not_shoot ?? 0) > 0 && <span>{pnl.legs_did_not_shoot} accepted but did not shoot. Not counted.</span>}
+        {(pnl.prospects_pending ?? 0) > 0 && <span>{pnl.prospects_pending} not on Guapd yet (about {formatRupees(n(pnl.prospects_estimate_paise))} expected). Not counted until they join and accept a deal.</span>}
       </div>
 
       {status === 'complete' && (
