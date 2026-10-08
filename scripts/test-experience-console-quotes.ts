@@ -61,7 +61,7 @@ async function run() {
   const { data: house } = await admin.from('brands').select('id').eq('is_guapd', true).single()
   if (!B || !C || !STAFF || !NONE || !house) throw new Error('missing test actors')
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id), creator = await sessionFor(C.users.auth_id)
@@ -158,7 +158,7 @@ async function run() {
   ok('a negotiated count is the contract: sold 18 against a plan of 20, both recorded', g3.agreed_plan?.videos_sold === 18 && g3.agreed_plan?.plan_videos === 20)
 
   group('revoking')
-  await admin.from('staff_access').update({ experiences_operational: false }).eq('user_id', STAFF.id)
+  await admin.from('staff_access').update({ experiences_operational: false, experiences_financial: false }).eq('user_id', STAFF.id)  // financial includes operational, so revoke both
   ok('operational off → every console function refused at once', refused(await staff.rpc('experience_console_get', { p_experience_id: E })) && refused(await staff.rpc('experience_console_create', req(B.brand_id))))
 }
 

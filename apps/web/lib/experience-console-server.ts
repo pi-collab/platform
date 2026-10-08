@@ -58,12 +58,14 @@ export interface ConsoleExperience {
   request_brief: string | null
   request_channel: string | null
   requested_at: string | null
-  /** The agreed brand price, set when a quote is accepted. Brand-side money,
-      never a creator rate, cost or margin. */
+  /** The agreed brand price, set when a quote is accepted. FINANCIAL ACCESS
+      ONLY (0537): null for operational staff, so they cannot derive margin.
+      can_see_brand_price says which. */
+  can_see_brand_price: boolean
   brand_per_video_paise: number | null
   brand_deliverable_count: number | null
   brand_misc_paise: number | null
-  brand_service_total_paise: number
+  brand_service_total_paise: number | null
   shoot_date: string | null
   shoot_city: string | null
   /** Locked on accept: the plan, its totals and the videos actually sold. The contract Stage 3 reconciles to. */
@@ -82,10 +84,11 @@ export interface ConsoleQuote {
   id: string
   version: number
   proposed_by: 'guapd' | 'brand'
-  per_video_paise: number
+  /** Amounts and message are null without financial access (0537). */
+  per_video_paise: number | null
   deliverable_count: number
-  misc_paise: number
-  total_paise: number
+  misc_paise: number | null
+  total_paise: number | null
   deliverables: ConsoleDeliverable[]
   shoot_date: string | null
   shoot_city: string | null
@@ -347,3 +350,83 @@ export async function setCreatorBrief(experienceId: string, brief: string): Prom
   const { error } = await createClient().rpc('experience_console_set_creator_brief', { p_experience_id: experienceId, p_brief: brief })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+// ── Stage 3c: the cost sheet (operational) and the freeze points ────────────
+// Costs are what Guapd spends running the shoot. Creator pay is never a cost
+// line (it lives on the creator legs). Soft-deleted with a reason. The P&L
+// itself is NOT here: it is financial-only, read via lib/experience-pnl-server.ts.
+
+export interface ConsoleCostLine {
+  id: string
+  label: string
+  category: string
+  basis: 'per_unit' | 'flat_total'
+  quantity: number | null
+  unit_rate_paise: number | null
+  total_paise: number
+  provided_by: 'guapd' | 'brand' | 'creator'
+  creator_leg_deal_id: string | null
+  creator_name: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsoleCosts {
+  status: string
+  categories: string[]
+  lines: ConsoleCostLine[]
+  /** Σ of Guapd-provided, not-removed lines: the figure the P&L subtracts. */
+  guapd_total_paise: number
+}
+
+export interface CostInput {
+  label: string
+  category: string
+  basis: 'per_unit' | 'flat_total'
+  quantity: number | null
+  unitRatePaise: number | null
+  totalPaise: number
+  providedBy: 'guapd' | 'brand' | 'creator'
+  creatorLegDealId: string | null
+  note: string | null
+}
+
+export async function listConsoleCosts(experienceId: string): Promise<Result<ConsoleCosts>> {
+  const { data, error } = await createClient().rpc('experience_console_costs', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const c = data as ConsoleCosts
+  return { ok: true, data: { ...c, guapd_total_paise: Number(c.guapd_total_paise),
+    lines: (c.lines ?? []).map((l) => ({ ...l, total_paise: Number(l.total_paise), quantity: l.quantity == null ? null : Number(l.quantity), unit_rate_paise: l.unit_rate_paise == null ? null : Number(l.unit_rate_paise) })) } }
+}
+
+const costArgs = (c: CostInput) => ({
+  p_label: c.label, p_category: c.category, p_basis: c.basis, p_quantity: c.quantity, p_unit_rate_paise: c.unitRatePaise,
+  p_total_paise: c.totalPaise, p_provided_by: c.providedBy, p_creator_leg_deal_id: c.creatorLegDealId, p_note: c.note,
+})
+
+export async function addConsoleCost(experienceId: string, c: CostInput): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_cost_add', { p_experience_id: experienceId, ...costArgs(c) })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function updateConsoleCost(costId: string, c: CostInput, expectedUpdatedAt: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_cost_update', { p_cost_id: costId, ...costArgs(c), p_expected_updated_at: expectedUpdatedAt })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function removeConsoleCost(costId: string, reason: string, expectedUpdatedAt: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_cost_remove', { p_cost_id: costId, p_reason: reason, p_expected_updated_at: expectedUpdatedAt })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function completeConsoleExperience(experienceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_complete', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function reopenConsoleExperience(experienceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_reopen', { p_experience_id: experienceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+

@@ -22,7 +22,11 @@ const RULES: { what: string; pattern: RegExp; allowed: string[] }[] = [
   { what: 'calls the staff console database functions', pattern: /rpc\(\s*['"]experience_console_[a-z_]+['"]/, allowed: ['lib/experience-console-server.ts'] },
   { what: 'computes margin in app code', pattern: /\bexperienceMargin\s*\(/, allowed: ['lib/experience-money.ts'] },
   { what: 'reads or writes staff access', pattern: /from\(\s*['"]staff_access['"]\s*\)/, allowed: ['lib/staff-access-server.ts'] },
-  { what: 'handles margin figures', pattern: /guapd_margin|platform_fee_kept|guapdMarginPaise|platformFeeKeptPaise/, allowed: ['lib/experience-pnl-server.ts', 'lib/experience-money.ts'] },
+  // PnlPanel is the one reviewed exception: it DISPLAYS the figures experience_pnl() returned to a financial caller.
+  { what: 'handles margin figures', pattern: /guapd_margin|platform_fee_kept|guapdMarginPaise|platformFeeKeptPaise/, allowed: ['lib/experience-pnl-server.ts', 'lib/experience-money.ts', 'app/experiences-admin/[id]/PnlPanel.tsx'] },
+  // 0537: costs and the stored margin are reached only through database functions.
+  { what: 'reads cost lines directly', pattern: /from\(\s*['"]experience_cost_lines['"]\s*\)/, allowed: [] },
+  { what: 'asks for financial access outside the P&L module', pattern: /has_experience_access['"]\s*,\s*\{\s*p_kind:\s*['"]financial/, allowed: ['lib/experience-pnl-server.ts'] },
 ]
 
 function walk(dir: string, out: string[] = []): string[] {

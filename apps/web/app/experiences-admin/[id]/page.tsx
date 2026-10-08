@@ -3,13 +3,16 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
 import QuotePanel from './QuotePanel'
 import RosterPanel from './RosterPanel'
 import CreatorLegsPanel from './CreatorLegsPanel'
+import CostSheetPanel from './CostSheetPanel'
+import PnlPanel from './PnlPanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -48,6 +51,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   const [legs, legsReconcile, creatorBrief] = hasLegs
     ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id)])
     : [null, null, null]
+  // Cost sheet (operational) and P&L (financial only, decided in Postgres) once the price is agreed.
+  const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
+  const pnl = hasRoster && financial ? await getExperiencePnl(e.id) : null
   const st = experienceStatus(e.status)
   const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
   const qs = quotes.ok ? quotes.data : []
@@ -72,7 +78,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
     e.request_ad_rights && `Ad rights on ${per(e.request_ad_rights_per_creator)}${e.request_ad_rights_months ? `, ${e.request_ad_rights_months} months` : ''}`,
     e.request_boost && `Boost on ${per(e.request_boost_per_creator)}${e.request_boost_months ? `, ${e.request_boost_months} months` : ''}`,
   ].filter(Boolean) as string[]
-  const agreed = e.status !== 'requested' && e.status !== 'draft' && e.brand_per_video_paise != null
+  // Agreed = a quote was accepted (the plan locks then). Not the brand price:
+  // that is financial-only (0537) and null for operational staff.
+  const agreed = e.status !== 'requested' && e.status !== 'draft' && (e.agreed_plan != null || e.brand_per_video_paise != null)
 
   return (
     <div style={container}>
@@ -121,12 +129,24 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
         </div>
       )}
 
+      {/* ══════ COSTS + P&L ══════ */}
+      {hasRoster && costs && (
+        <div className="xp-cols" style={{ display: 'grid', gridTemplateColumns: financial ? '3fr 2fr' : '1fr', gap: 20, marginTop: 20, alignItems: 'start' }}>
+          {costs.ok
+            ? <CostSheetPanel experienceId={e.id} costs={costs.data}
+                creators={(legs?.ok ? legs.data : []).filter((l) => l.leg_deal_id).map((l) => ({ dealId: l.leg_deal_id as string, name: l.full_name }))} />
+            : <Failed inline message={costs.error} />}
+          {financial && pnl && (pnl.ok ? <PnlPanel experienceId={e.id} status={e.status} pnl={pnl.pnl} /> : <Failed inline message={pnl.error} />)}
+        </div>
+      )}
+
       {/* ══════ QUOTES: the main action while the price is open ══════ */}
       <div style={{ marginTop: 20 }}>
         {quotes.ok ? (
           <QuotePanel
             experienceId={e.id}
             open={e.status === 'requested'}
+            canSeePrice={e.can_see_brand_price}
             quotes={quotes.data}
             requested={e.request_deliverables ?? []}
             defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
@@ -172,12 +192,18 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
           {agreed ? (
             <div style={{ marginTop: 18 }}>
               <div style={kpiLabel}>Service price</div>
-              <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 34, letterSpacing: '-0.03em', color: 'var(--ink)', marginTop: 10, fontVariantNumeric: 'tabular-nums' }}>
-                {formatRupees(e.brand_service_total_paise)}
-              </div>
-              <p className="t-body" style={{ margin: '6px 0 0' }}>
-                {e.brand_deliverable_count} × {formatRupees(e.brand_per_video_paise)}{e.brand_misc_paise ? ` + ${formatRupees(e.brand_misc_paise)} extras` : ''}
-              </p>
+              {e.can_see_brand_price ? (
+                <>
+                  <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 34, letterSpacing: '-0.03em', color: 'var(--ink)', marginTop: 10, fontVariantNumeric: 'tabular-nums' }}>
+                    {formatRupees(e.brand_service_total_paise)}
+                  </div>
+                  <p className="t-body" style={{ margin: '6px 0 0' }}>
+                    {e.brand_deliverable_count} × {formatRupees(e.brand_per_video_paise)}{e.brand_misc_paise ? ` + ${formatRupees(e.brand_misc_paise)} extras` : ''}
+                  </p>
+                </>
+              ) : (
+                <p className="t-body" style={{ margin: '10px 0 0' }}>Agreed{e.brand_deliverable_count ? ` for ${e.brand_deliverable_count} videos` : ''}. The price is visible to finance only.</p>
+              )}
               <dl style={{ display: 'grid', gap: 12, margin: '18px 0 0' }}>
                 <Row label="Shoot date">{e.shoot_date ? fmtDate(e.shoot_date) : '—'}</Row>
                 <Row label="City">{e.shoot_city ?? '—'}</Row>

@@ -289,12 +289,12 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
         })}
         onCancel={() => setConfirm(null)} />
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 720px) {
           .xp-lrow { grid-template-columns: 1fr !important; }
           .xp-lrow > :last-child { align-items: flex-start !important; }
         }
-      `}</style>
+      ` }} />
     </section>
   )
 }

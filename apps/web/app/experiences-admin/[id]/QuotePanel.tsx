@@ -17,9 +17,11 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * through. The database enforces the rules (one open quote, totals, quotes
  * closed once one is accepted); this component only collects input.
  */
-export default function QuotePanel({ experienceId, open: quotesOpen, quotes, requested, defaults, planVideos, planLabel }: {
+export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice, quotes, requested, defaults, planVideos, planLabel }: {
   experienceId: string
   open: boolean
+  /** The brand price is financial-only (0537). Without it: no amounts, no messages, no quoting. */
+  canSeePrice: boolean
   quotes: ConsoleQuote[]
   requested: ConsoleDeliverable[]
   defaults: { count: number; city: string; date: string }
@@ -47,7 +49,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
     setError(null)
     setMode(m)
     if (latest) {
-      setPerVideo(String(latest.per_video_paise / 100))
+      setPerVideo(latest.per_video_paise != null ? String(latest.per_video_paise / 100) : '')
       setCount(String(latest.deliverable_count))
       setMisc(latest.misc_paise ? String(latest.misc_paise / 100) : '')
       setDate(latest.shoot_date ?? defaults.date)
@@ -92,7 +94,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
           <h2 className="sect-head">Quotes</h2>
           <div className="sect-rule" />
         </div>
-        {quotesOpen && !mode && (
+        {quotesOpen && canSeePrice && !mode && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="button" style={pillBtn} onClick={() => openComposer('brand')} disabled={!current}
               title={current ? '' : 'The brand counters a quote, so send one first'}>
@@ -106,6 +108,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
       </div>
 
       {!quotesOpen && <p className="t-body" style={{ margin: '14px 0 0' }}>The price is agreed, so quotes are closed.</p>}
+      {!canSeePrice && (
+        <p className="t-body" style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-soft)' }}>
+          The brand&apos;s price and the quotes are visible to finance only. You can see each quote&apos;s status, videos, date and city.
+        </p>
+      )}
 
       {/* ── Composer ── */}
       {mode && (
@@ -167,10 +174,10 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <span style={kpiLabel}>v{q.version} · {q.proposed_by === 'guapd' ? 'Guapd quote' : 'Brand counter'}</span>
                   <StatusChip label={st.label} tone={st.tone} />
-                  <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{formatRupees(q.total_paise)}</span>
+                  <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{q.total_paise != null ? formatRupees(q.total_paise) : <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--wg-500)' }}>Finance only</span>}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 6 }}>
-                  {q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}
+                  {q.per_video_paise != null ? <>{q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}</> : <>{q.deliverable_count} video{q.deliverable_count === 1 ? '' : 's'}</>}
                   {(q.shoot_date || q.shoot_city) && <> · {[q.shoot_city, q.shoot_date ? fmt(q.shoot_date) : null].filter(Boolean).join(', ')}</>}
                 </div>
                 {q.message && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>“{q.message}”</p>}
@@ -179,7 +186,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
                   {' · '}{new Date(q.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
                   {q.status === 'accepted' && q.decided_at && <> · accepted {new Date(q.decided_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{q.proposed_by === 'guapd' && q.recorded_channel ? ` via ${channelLabel(q.recorded_channel)}` : ''}</>}
                 </div>
-                {isOpen && quotesOpen && !mode && (
+                {isOpen && quotesOpen && canSeePrice && !mode && (
                   <div style={{ marginTop: 12 }}>
                     <button type="button" style={pillBtn} onClick={() => { setAcceptChannel(''); setAcceptErr(null); setConfirming(true) }}>
                       {q.proposed_by === 'guapd' ? 'Brand accepted this' : 'Accept their counter'}
@@ -195,7 +202,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
       <ConfirmDialog
         open={confirming && !!current}
         title={brandAccepts ? 'Record that the brand accepted' : "Accept the brand's counter"}
-        body={current ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
+        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
         detail={brandAccepts ? (
           <div style={{ marginTop: 12 }}>
             <label style={fieldLabel} htmlFor="acc-ch">They accepted via</label>

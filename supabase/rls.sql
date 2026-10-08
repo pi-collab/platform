@@ -1211,58 +1211,87 @@ SET search_path = public AS $$
   ), false)
 $$;
 
+-- 0537: accepted legs only, revenue = invoiced, reconciliation enforced.
 CREATE OR REPLACE FUNCTION compute_experience_pnl(p_experience_id uuid)
-RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  WITH inv AS (
-    SELECT coalesce(sum(subtotal_paise) FILTER (WHERE status IN ('issued', 'paid')), 0) AS billed,
-           coalesce(sum(subtotal_paise) FILTER (WHERE status = 'paid'), 0) AS received
-    FROM service_invoices WHERE experience_id = p_experience_id
-  ), legs AS (
-    SELECT coalesce(sum(creator_gross_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS gross,
-           coalesce(sum(creator_net_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS net,
-           count(*) FILTER (WHERE locked_at IS NULL) AS pending,
-           coalesce(jsonb_agg(jsonb_build_object(
-             'deal_id', deal_id, 'creator_id', creator_id, 'platform_track', platform_track,
-             'platform_pct', platform_pct, 'creator_gross_paise', creator_gross_paise,
-             'platform_fee_paise', creator_gross_paise - creator_net_paise, 'creator_net_paise', creator_net_paise
-           ) ORDER BY created_at) FILTER (WHERE locked_at IS NOT NULL), '[]'::jsonb) AS per_leg
-    FROM experience_creator_terms WHERE experience_id = p_experience_id
-  ), costs AS (
-    SELECT coalesce(sum(total_paise), 0) AS total
-    FROM experience_cost_lines WHERE experience_id = p_experience_id AND provided_by = 'guapd'
-  )
-  SELECT jsonb_build_object(
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_billed bigint; v_received bigint; v_invoices int; v_agreed bigint;
+  v_gross bigint; v_net bigint; v_per_leg jsonb;
+  v_awaiting int; v_awaiting_net bigint; v_declined int;
+  v_costs bigint; v_by_cat jsonb;
+  v_subtotal bigint; v_fee_kept bigint; v_margin bigint;
+BEGIN
+  SELECT coalesce(sum(si.subtotal_paise) FILTER (WHERE si.status IN ('issued', 'paid')), 0)::bigint,
+         coalesce(sum(si.subtotal_paise) FILTER (WHERE si.status = 'paid'), 0)::bigint,
+         count(*) FILTER (WHERE si.status IN ('issued', 'paid'))::int
+    INTO v_billed, v_received, v_invoices
+    FROM service_invoices si WHERE si.experience_id = p_experience_id;
+  SELECT e.brand_service_total_paise INTO v_agreed FROM experiences e WHERE e.id = p_experience_id;
+
+  -- Accepted legs only: the creator said yes (agreed onward).
+  SELECT coalesce(sum(t.creator_gross_paise), 0)::bigint, coalesce(sum(t.creator_net_paise), 0)::bigint,
+         coalesce(jsonb_agg(jsonb_build_object(
+           'deal_id', t.deal_id, 'creator_id', t.creator_id, 'full_name', c.full_name, 'deal_status', d.status::text,
+           'platform_track', t.platform_track, 'platform_pct', t.platform_pct,
+           'day_rate_paise', t.day_rate_paise, 'days', t.days,
+           'creator_gross_paise', t.creator_gross_paise, 'platform_fee_paise', t.creator_gross_paise - t.creator_net_paise,
+           'creator_net_paise', t.creator_net_paise) ORDER BY t.created_at), '[]'::jsonb)
+    INTO v_gross, v_net, v_per_leg
+    FROM experience_creator_terms t
+    JOIN deals d ON d.id = t.deal_id
+    JOIN creators c ON c.id = t.creator_id
+    WHERE t.experience_id = p_experience_id AND t.locked_at IS NOT NULL
+      AND d.status IN ('agreed', 'delivered', 'revision', 'approved', 'paid', 'complete');
+
+  SELECT count(*) FILTER (WHERE d.status = 'negotiating')::int,
+         coalesce(sum(t.creator_net_paise) FILTER (WHERE d.status = 'negotiating'), 0)::bigint,
+         count(*) FILTER (WHERE d.status IN ('declined', 'cancelled'))::int
+    INTO v_awaiting, v_awaiting_net, v_declined
+    FROM experience_creator_terms t JOIN deals d ON d.id = t.deal_id
+    WHERE t.experience_id = p_experience_id;
+
+  v_costs := experience_cost_total(p_experience_id);
+  SELECT coalesce(jsonb_agg(jsonb_build_object('category', x.category, 'total_paise', x.total) ORDER BY x.category), '[]'::jsonb)
+    INTO v_by_cat
+    FROM (SELECT cl.category, sum(cl.total_paise)::bigint AS total FROM experience_cost_lines cl
+          WHERE cl.experience_id = p_experience_id AND cl.provided_by = 'guapd' AND cl.removed_at IS NULL
+          GROUP BY cl.category) x;
+
+  v_subtotal := v_billed - v_gross - v_costs;
+  v_fee_kept := v_gross - v_net;
+  v_margin := v_billed - v_net - v_costs;
+  IF v_subtotal + v_fee_kept <> v_margin THEN
+    RAISE EXCEPTION 'P&L does not reconcile: sub-total % + fee kept % <> margin %', v_subtotal, v_fee_kept, v_margin;
+  END IF;
+
+  RETURN jsonb_build_object(
     'experience_id', p_experience_id,
-    'brand_revenue_paise', inv.billed,
-    'brand_received_paise', inv.received,
-    'creator_gross_total_paise', legs.gross,
-    'creator_net_total_paise', legs.net,
-    'guapd_costs_total_paise', costs.total,
-    'subtotal_paise', inv.billed - legs.gross - costs.total,
-    'platform_fee_kept_paise', legs.gross - legs.net,
-    'guapd_margin_paise', inv.billed - legs.net - costs.total,
-    'legs_pending', legs.pending,
-    'per_leg', legs.per_leg
-  )
-  FROM inv, legs, costs
+    'brand_revenue_paise', v_billed, 'revenue_basis', 'invoiced', 'revenue_pending_invoice', v_invoices = 0,
+    'invoices_counted', v_invoices, 'brand_received_paise', v_received, 'brand_agreed_paise', v_agreed,
+    'creator_gross_total_paise', v_gross, 'creator_net_total_paise', v_net,
+    'guapd_costs_total_paise', v_costs, 'costs_by_category', v_by_cat,
+    'subtotal_paise', v_subtotal, 'platform_fee_kept_paise', v_fee_kept, 'guapd_margin_paise', v_margin,
+    'legs_counted', jsonb_array_length(v_per_leg), 'legs_awaiting', v_awaiting, 'awaiting_net_paise', v_awaiting_net,
+    'legs_declined', v_declined, 'legs_pending', v_awaiting,
+    'per_leg', v_per_leg);
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION experience_pnl(p_experience_id uuid)
-RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public AS $$
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  snap_pnl jsonb;
-  snap_at  timestamptz;
+  v_pnl jsonb; v_at timestamptz; v_final boolean; v_stored bigint;
 BEGIN
   IF NOT has_experience_access('financial') THEN
     RAISE EXCEPTION 'Financial access required' USING ERRCODE = '42501';
   END IF;
-  SELECT pnl, captured_at INTO snap_pnl, snap_at FROM experience_pnl_snapshots WHERE experience_id = p_experience_id;
-  IF snap_pnl IS NOT NULL THEN
-    RETURN snap_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', snap_at);
+  SELECT s.pnl, s.captured_at, s.is_final, s.guapd_margin_paise INTO v_pnl, v_at, v_final, v_stored
+    FROM experience_pnl_snapshots s WHERE s.experience_id = p_experience_id;
+  IF v_final THEN
+    RETURN v_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', v_at);
   END IF;
-  RETURN compute_experience_pnl(p_experience_id) || jsonb_build_object('source', 'live');
+  RETURN compute_experience_pnl(p_experience_id)
+         || jsonb_build_object('source', 'live', 'stored_at', v_at, 'stored_margin_paise', v_stored);
 END;
 $$;
 
@@ -1411,4 +1440,15 @@ REVOKE ALL ON package_pricing_types FROM anon, authenticated;
 -- uploads, messages) are refused by trigger, invoices on a creator leg are
 -- refused for every role, and a creator leg cannot be marked paid
 -- (guard_creator_leg_*). See supabase/migrations/0534_experience_creator_legs.sql.
+
+
+-- ── Experience cost sheet + P&L (0537) ─────────────────────────────────
+-- experience_cost_lines and experience_pnl_snapshots have NO policies by design:
+-- REVOKEd from anon/authenticated, reached only through staff-gated definer
+-- functions (experience_console_costs / _cost_add / _cost_update / _cost_remove
+-- for operational staff; experience_pnl for financial staff). The stored margin
+-- refreshes by trigger while an Experience is open and freezes at Complete;
+-- reopening is financial-only and audited. The brand price is masked from
+-- operational staff in experience_console_get / experience_console_quotes, and
+-- quoting requires financial access. See supabase/migrations/0537_experience_costs_pnl.sql.
 

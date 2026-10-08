@@ -123,8 +123,9 @@ async function run() {
     cleanup.push(() => admin.from('vendors').delete().eq('id', vid))
     must(await admin.from('vendor_payout_details').insert({ vendor_id: vid, upi_vpa: 'secret@upi', pan: 'ABCDE1234F' }).select('vendor_id').single(), 'payout details')
   }
-  const line = must(await admin.from('experience_cost_lines').insert({ experience_id: exp.id, creator_leg_deal_id: leg2.id, label: 'Day rate', category: 'day_rate',
-    basis: 'per_unit', quantity: 1, unit_rate_paise: 1_000_000, total_paise: 1_000_000, provided_by: 'creator', billable_to_brand: false, payable_to_vendor_id: vendor.id }).select('id').single(), 'cost line')
+  const line = must(await admin.from('experience_cost_lines').insert({ experience_id: exp.id, creator_leg_deal_id: leg2.id, label: 'Makeup artist', category: 'makeup',
+    // 0537: vendor linking / re-billing are Phase 4 and refused by ecl_not_billed_yet; creator pay lives on legs.
+    basis: 'per_unit', quantity: 1, unit_rate_paise: 1_000_000, total_paise: 1_000_000, provided_by: 'guapd', billable_to_brand: false }).select('id').single(), 'cost line')
   const inv = must(await admin.from('service_invoices').insert({ experience_id: exp.id, brand_id: brandId, kind: 'initial', status: 'issued',
     lines: [{ label: 'UGC production service', amount_paise: 24_500_000 }], subtotal_paise: 24_500_000, total_paise: 24_500_000 }).select('id, number').single(), 'invoice')
   const fo = must(await admin.from('deal_follow_ons').insert({ experience_id: exp.id, deal_id: leg2.id, creator_id: C.id, type: 'affiliate', trigger: 'sales_final',

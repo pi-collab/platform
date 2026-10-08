@@ -56,7 +56,7 @@ async function run() {
   const [STAFF, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   if (!B || !G || !D || !STAFF || !NONE) throw new Error('missing test actors (need a brand, a Growth and a Deals creator with logins)')
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id)

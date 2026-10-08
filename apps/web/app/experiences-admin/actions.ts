@@ -6,9 +6,11 @@ import {
   acceptConsoleQuote, addConsoleQuote, createConsoleExperience,
   rosterAdd, rosterDecide, rosterLock, rosterNote, rosterPlan, rosterRemove,
   listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
+  addConsoleCost, updateConsoleCost, removeConsoleCost, completeConsoleExperience, reopenConsoleExperience,
+  type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
-import { creatorLegTerms } from '@/lib/experience-money'
+import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
@@ -305,6 +307,99 @@ export async function saveCreatorBrief(experienceId: string, brief: string): Pro
   const r = await setCreatorBrief(experienceId, typeof brief === 'string' ? brief : '')
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+// ── Stage 3c: cost sheet, complete, reopen ─────────────────────────────────
+// The database validates every field, computes a per-unit total itself and
+// refuses a different one, refuses creator-pay categories, refuses changes to
+// a Complete Experience, and audits each write. These tidy inputs and check
+// the gate. Reopen additionally needs financial access, checked in Postgres.
+
+export interface CostForm {
+  label: string
+  category: string
+  basis: 'per_unit' | 'flat_total'
+  quantity: string | number | null
+  unitRate: string | number | null
+  total: string | number | null
+  providedBy: 'guapd' | 'brand' | 'creator'
+  creatorLegDealId: string | null
+  note: string | null
+}
+
+function costInput(f: CostForm): CostInput | string {
+  const label = cleanText(f.label, 120)
+  if (!label) return 'Give the cost a label.'
+  if (typeof f.category !== 'string' || !f.category) return 'Pick a category.'
+  if (f.providedBy !== 'guapd' && f.providedBy !== 'brand' && f.providedBy !== 'creator') return 'Say who provides it.'
+  if (f.creatorLegDealId !== null && !isUuid(f.creatorLegDealId)) return 'Unknown creator.'
+  const note = cleanText(f.note, 1000)
+  if (f.basis === 'per_unit') {
+    const quantity = Number(f.quantity)
+    const unitRatePaise = rupeesToPaise(String(f.unitRate ?? ''))
+    if (!(quantity > 0) || Math.abs(Math.round(quantity * 100) - quantity * 100) > 1e-6) return 'Quantity must be more than 0, with at most two decimals.'
+    if (unitRatePaise === null) return 'Enter the rate in rupees.'
+    let totalPaise: number
+    try { totalPaise = costLineTotalPaise({ quantity, unitRatePaise }) } catch { return 'Check the quantity and rate.' }
+    return { label, category: f.category, basis: 'per_unit', quantity, unitRatePaise, totalPaise, providedBy: f.providedBy, creatorLegDealId: f.creatorLegDealId, note }
+  }
+  if (f.basis === 'flat_total') {
+    const totalPaise = rupeesToPaise(String(f.total ?? ''))
+    if (totalPaise === null) return 'Enter the amount in rupees.'
+    return { label, category: f.category, basis: 'flat_total', quantity: null, unitRatePaise: null, totalPaise, providedBy: f.providedBy, creatorLegDealId: f.creatorLegDealId, note }
+  }
+  return 'Pick per unit or a flat amount.'
+}
+
+export async function addCost(experienceId: string, f: CostForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const c = costInput(f); if (typeof c === 'string') return { ok: false, error: c }
+  const r = await addConsoleCost(experienceId, c)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function editCost(experienceId: string, costId: string, f: CostForm, expectedUpdatedAt: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(costId)) return { ok: false, error: 'Unknown cost line.' }
+  const c = costInput(f); if (typeof c === 'string') return { ok: false, error: c }
+  const r = await updateConsoleCost(costId, c, String(expectedUpdatedAt))
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function removeCost(experienceId: string, costId: string, reason: string, expectedUpdatedAt: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(costId)) return { ok: false, error: 'Unknown cost line.' }
+  const why = cleanText(reason, 300)
+  if (!why || why.length < 3) return { ok: false, error: 'Say why it is being removed.' }
+  const r = await removeConsoleCost(costId, why, String(expectedUpdatedAt))
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function completeExperience(experienceId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const r = await completeConsoleExperience(experienceId)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return r
+}
+
+export async function reopenExperience(experienceId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const why = cleanText(reason, 300)
+  if (!why || why.length < 3) return { ok: false, error: 'Say why it is being reopened.' }
+  const r = await reopenConsoleExperience(experienceId, why)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
   return r
 }
 

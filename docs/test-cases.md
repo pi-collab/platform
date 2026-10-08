@@ -6888,3 +6888,39 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] Decline frees that creator's videos in the reconciliation.
 
 **Environment note:** 0533–0535 are applied on staging (ledger 0533/0534/0535), NOT on production. Run them on prod at release, in order, after confirming `supabase/.temp/linked-project.json`.
+
+## 104. Experiences stage 3c: cost sheet + margin / P&L; brand price finance-only (migration 0537, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-costs-pnl.ts` (58 checks). Regressions: fee golden byte-identical, walk-deal-guard 45/45, legs-send, roster, console-quotes, console-access, quotes-rls, experience-rls, legs-db, pnl-access, house-hidden, pnl-isolation, package-gating.
+
+**Brand price is finance only (decision c, SECURITY)**
+- [ ] Operational-only staff: `experience_console_get` returns `can_see_brand_price: false` and NULL brand money fields; `experience_console_quotes` returns NULL amounts and NULL message (people type prices into it); creating or accepting a quote is refused ("Financial access required").
+- [ ] Financial staff see and send quotes and see the agreed price.
+- [ ] Console: "Agreed with the brand" shows "The price is visible to finance only" for operational staff; the quote history shows "Finance only" instead of amounts and offers no quote or accept buttons.
+- [ ] With the brand price hidden, operational staff (creator nets + costs) cannot work out the margin.
+
+**Margin (financial only)**
+- [ ] margin = brand INVOICED (issued + paid service invoices; drafts and voids never) − Σ creator NET of ACCEPTED legs − Σ Guapd costs; sub-total + platform fee kept = margin (the database refuses a P&L that does not reconcile).
+- [ ] No issued invoice: revenue ₹0, "Revenue pending invoice"; the agreed price shows only as a context line, never as revenue.
+- [ ] Unanswered (negotiating) and declined legs are NOT counted; they appear as footnotes ("N awaiting… not counted", "N declined").
+- [ ] Platform fee kept is summed per creator at each creator's own snapshotted %.
+- [ ] The stored margin (`experience_pnl_snapshots.guapd_margin_paise`, generated from the jsonb) equals the live figure after every cost add/edit/remove, leg send, accept, decline and invoice change while open.
+
+**Cost sheet (operational)**
+- [ ] Add (flat or quantity × rate), edit, remove with a reason; removed lines stay on record and drop out of totals; a stale edit is refused.
+- [ ] Per-unit totals are computed by the database (half up); a different total from the screen is refused.
+- [ ] Categories per_video / day_rate / retainer are refused (creator pay lives on the legs).
+- [ ] Brand- or creator-provided items are noted at their value but are not Guapd costs.
+- [ ] Linking a cost to a creator only accepts this Experience's creator legs.
+- [ ] Phase 4 columns (billable to brand, vendor, invoice) cannot be set, even by the service role (`ecl_not_billed_yet`).
+- [ ] Every write writes one `ops_events` row with before/after money fields.
+
+**Complete and reopen (decision d)**
+- [ ] "Mark Complete" (from Delivering, operational) freezes the P&L (`is_final`); costs on a Complete Experience are refused; later input changes do not move the frozen margin.
+- [ ] Reopen is financial only, needs a reason, is audited (reason recorded, no margin figure in the audit row), moves to Delivering and recomputes; a late cost can then be added; completing again re-freezes.
+
+**Gating**
+- [ ] Brand, creator, outreach/no-access, anonymous and the service role are refused every cost function and `experience_pnl`; no session can read `experience_cost_lines` or `experience_pnl_snapshots` directly.
+- [ ] A creator's leg context carries no brand price, cost or margin.
+
+**Environment:** 0537 is on STAGING only (applied from a scratch folder because staging's DB also holds the held 0536). Not on production.

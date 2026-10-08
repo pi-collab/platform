@@ -261,13 +261,13 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
         onConfirm={() => removing && run(() => removeFromRoster(experienceId, removing.id), () => setRemoving(null))}
         onCancel={() => setRemoving(null)} />
 
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 720px) {
           .xp-rhead { display: none !important; }
           .xp-rrow { grid-template-columns: 40px 1fr 34px !important; }
           .xp-rrow > :nth-child(3), .xp-rrow > :nth-child(4) { grid-column: 2 / 3; }
         }
-      `}</style>
+      ` }} />
     </section>
   )
 }

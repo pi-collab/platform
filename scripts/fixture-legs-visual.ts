@@ -67,7 +67,7 @@ async function create() {
   const busy = new Set([G.user_id, D.user_id, ...(access ?? []).map((a) => a.user_id)])
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(120)
   const STAFF = (users ?? []).find((u: any) => !busy.has(u.id)) as any
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   const staff = await sessionFor(STAFF.auth_id)
 
   const { data: had } = await admin.from('creator_products').select('id, price_paise, is_active').in('creator_id', [G.id, D.id]).eq('pricing_type', 'per_day')

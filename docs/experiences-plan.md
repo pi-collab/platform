@@ -465,7 +465,9 @@ A leg-specific template ("<brand> · Managed by Guapd: a shoot offer, ₹<net> t
 - Post-deploy: prod schema matches staging (except held 0536); deal guard tested on all 3 live deals as their real brand and creator, inside rolled-back transactions (24/24); brands and other creators see no shoot day rate; every staff function refuses non-staff.
 - Before the first real send: grant Experiences access on prod, then the creator-leg visual check on prod (needs one test leg).
 
-## Stage 3c plan: cost sheet + margin / P&L view (DRAFT 2026-10-08, awaiting Palak's review; not built)
+## Stage 3c: cost sheet + margin / P&L view (APPROVED + BUILT 2026-10-08, staging only)
+Answers (Palak): (a) revenue = INVOICED (issued; honest ₹0 "revenue pending invoice" until Phase 4, the agreed price never substituted); (b) only ACCEPTED legs count, unanswered/declined are footnotes; (c) the BRAND PRICE is financial-only, so operational staff (creator payouts + costs) cannot derive the margin — quoting therefore needs financial access; (d) costs after Complete need an explicit, audited reopen (finance) → add → complete again.
+Built in migration 0537 + console CostSheetPanel / PnlPanel; tests in scripts/test-experience-costs-pnl.ts (docs/test-cases.md §104).
 Full plan delivered in chat on 2026-10-08. Headlines:
 - **Bug to fix first (from 3b):** `compute_experience_pnl` counts legs with `locked_at IS NOT NULL`; since 0534 a leg is locked at SEND, so unanswered and declined legs are subtracted from the margin. Count only legs the creator accepted (deal status agreed onward); show awaiting and declined as footnotes.
 - Migration 0537: cost-line soft delete + shape checks (Phase 4 columns blocked); a generated `guapd_margin_paise` on `experience_pnl_snapshots`, refreshed by triggers on every input and frozen at Complete; costs summed in one helper; categories `per_video`/`day_rate`/`retainer` refused on cost lines (creator pay lives on legs).

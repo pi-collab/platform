@@ -50,7 +50,7 @@ async function run() {
   if (!B || !C || !STAFF || !NONE || (bookable ?? []).length < 4 || !house) throw new Error('missing test actors (need 4 bookable creators)')
   const [K1, K2, K3, K4] = bookable!.map((b) => b.id)
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id), creator = await sessionFor(C.users.auth_id)
@@ -171,7 +171,7 @@ async function run() {
   }
 
   group('revoking')
-  await admin.from('staff_access').update({ experiences_operational: false }).eq('user_id', STAFF.id)
+  await admin.from('staff_access').update({ experiences_operational: false, experiences_financial: false }).eq('user_id', STAFF.id)  // financial includes operational, so revoke both
   ok('operational off → roster refused at once', refused(await staff.rpc('experience_console_roster', { p_experience_id: E })))
 }
 

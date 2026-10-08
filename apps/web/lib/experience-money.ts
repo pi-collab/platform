@@ -120,7 +120,9 @@ export function creatorLegTerms(input: CreatorLegInput): CreatorLegTerms {
 export interface MarginInput {
   /** Leg 1 revenue: subtotals (ex-tax) of the brand's ISSUED or PAID service invoices. */
   brandInvoiceSubtotalsPaise: number[]
-  /** Leg 2: each AGREED (locked) creator leg's terms. */
+  /** Leg 2: each creator leg the creator ACCEPTED (deal status agreed onward).
+   *  Not "locked": since 0534 terms lock at SEND, so an unanswered or declined
+   *  leg is locked too and must not be counted (0537). */
   creatorLegs: Pick<CreatorLegTerms, 'creatorGrossPaise' | 'creatorNetPaise'>[]
   /** Guapd's own costs (cost lines Guapd bears: travel, makeup, editing, misc…). */
   guapdCostsPaise: number[]
@@ -166,3 +168,19 @@ export function experienceMargin(m: MarginInput): MarginBreakdown {
   if (subtotalPaise + platformFeeKeptPaise !== guapdMarginPaise) throw new Error('P&L does not reconcile')
   return { brandRevenuePaise, creatorGrossTotalPaise, creatorNetTotalPaise, guapdCostsTotalPaise, subtotalPaise, platformFeeKeptPaise, guapdMarginPaise }
 }
+
+/**
+ * A per-unit cost line's total: quantity (up to two decimals) × unit rate,
+ * rounded half up to the paisa. Mirrors the database exactly
+ * (experience_cost_validate: round(quantity × unit_rate_paise)), so the form's
+ * preview is the figure the database stores; the database refuses any other.
+ */
+export function costLineTotalPaise(input: { quantity: number; unitRatePaise: number }): number {
+  assertPaise(input.unitRatePaise, 'unit rate')
+  const q = input.quantity
+  if (!(q > 0) || Math.abs(Math.round(q * 100) - q * 100) > 1e-6) throw new Error('quantity must be > 0 with at most two decimals')
+  const total = Number((BigInt(input.unitRatePaise) * BigInt(Math.round(q * 100)) + BigInt(50)) / BigInt(100))
+  assertPaise(total, 'cost total')
+  return total
+}
+

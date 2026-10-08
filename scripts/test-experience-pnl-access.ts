@@ -95,6 +95,8 @@ async function run() {
     await admin.from('deals').delete().in('id', [leg1, legA, legB])
   })
   const tA = await lockCreatorLegTerms(admin, { dealId: legA, experienceId: expId, creatorId: C.id, dayRatePaise: 1_000_000, days: 1 })
+  // 0537: a leg counts only once the creator ACCEPTS (deal agreed onward); B is still awaiting their answer.
+  await admin.from('deals').update({ status: 'negotiating' }).eq('id', legB)
   await one(admin.from('experience_creator_terms').insert({ deal_id: legB, experience_id: expId, creator_id: c2!.id, creator_gross_paise: 0, platform_pct: 30, creator_net_paise: 0 }).select('deal_id').single(), 'pending terms')
 
   const inv1 = await draftServiceInvoice(admin, { experienceId: expId, brandId: brandM.brand_id, kind: 'initial', perVideoPaise: 350_000, deliverableCount: 70 })
@@ -167,13 +169,15 @@ async function run() {
   // the pending leg gets agreed afterwards at a big rate: live would change, snapshot must not
   await admin.from('experience_creator_terms').delete().eq('deal_id', legB)
   await lockCreatorLegTerms(admin, { dealId: legB, experienceId: expId, creatorId: c2!.id, grossPaise: 5_000_000 })
+  await admin.from('deals').update({ status: 'agreed' }).eq('id', legB)   // the creator accepts (0537: only accepted legs count)
   const snap2 = (await fin.rpc('experience_pnl', { p_experience_id: expId })).data as any
   ok('a later leg change does NOT move the completed P&L', Number(snap2?.guapd_margin_paise) === want.guapdMarginPaise && snap2?.source === 'snapshot')
   await admin.from('experiences').update({ status: 'delivering' }).eq('id', expId)
   const live = (await fin.rpc('experience_pnl', { p_experience_id: expId })).data as any
-  ok('reopening drops the snapshot; live P&L now includes the new leg', live?.source === 'live' && Number(live?.guapd_margin_paise) < want.guapdMarginPaise)
-  const left = (await admin.from('experience_pnl_snapshots').select('experience_id').eq('experience_id', expId)).data ?? []
-  ok('no snapshot stored while open', left.length === 0)
+  ok('reopening un-freezes the snapshot; live P&L now includes the new leg', live?.source === 'live' && Number(live?.guapd_margin_paise) < want.guapdMarginPaise)
+  // 0537: while open the margin is STORED (refreshed by trigger), not final, and equal to the live figure.
+  const left = (await admin.from('experience_pnl_snapshots').select('is_final, guapd_margin_paise').eq('experience_id', expId)).data ?? []
+  ok('while open, the stored margin is live (not final) and equals the live P&L', left.length === 1 && left[0].is_final === false && Number(left[0].guapd_margin_paise) === Number(live?.guapd_margin_paise))
 
   // ── Revoking takes effect immediately ──
   group('revoking access')
