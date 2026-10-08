@@ -63,6 +63,7 @@ async function run() {
   const cg = await sessionFor(G.users.auth_id), cd = await sessionFor(D.users.auth_id)
   const anon = createClient(URL, ANON)
   const houseBrand = (await admin.from('brands').select('id').eq('is_guapd', true).single()).data!.id
+  const houseCreator = (await admin.from('creators').select('id').eq('is_guapd', true).single()).data?.id
 
   // Remember any day rate these creators already had, to restore it after.
   const { data: had } = await admin.from('creator_products').select('id, price_paise, is_active').in('creator_id', [G.id, D.id]).eq('pricing_type', 'per_day')
@@ -104,6 +105,7 @@ async function run() {
       await cl.rpc('experience_console_set_day_rate', { p_creator_id: G.id, p_day_rate_paise: 1000000 }),
       await cl.rpc('experience_console_set_creator_brief', { p_experience_id: E, p_brief: 'x' }),
       await cl.rpc('experience_console_creator_brief', { p_experience_id: E }),
+      await cl.rpc('experience_console_creator_pool'),
     ]
     ok(`${n}: every leg read and write refused`, all.every(refused))
   }
@@ -134,6 +136,9 @@ async function run() {
   legs = ((await staff.rpc('experience_console_legs', { p_experience_id: E })).data ?? []) as any[]
   const PG = leg(RG).day_rate_product_id, PD = leg(RD).day_rate_product_id
   ok('the console sees each creator\'s active day rate', Number(leg(RG).day_rate_paise) === 1000000 && Number(leg(RD).day_rate_paise) === 800000)
+  const pool = ((await staff.rpc('experience_console_creator_pool')).data ?? []) as any[]
+  ok('the creator pool (0536) shows staff each creator\'s day rate and track', Number(pool.find((p) => p.id === G.id)?.day_rate_paise) === 1000000 && pool.find((p) => p.id === D.id)?.track === 'deals')
+  ok('the creator pool never lists the house creator', !pool.some((p) => p.id === (houseCreator ?? '')))
 
   group('reconcile on adjust: the total can never go past what was sold')
   const over = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
@@ -40,9 +40,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   // The roster exists once the price is agreed (Building roster onward).
   const hasRoster = !['draft', 'requested', 'cancelled'].includes(e.status)
   const rosterEditable = e.status === 'rostering' || e.status === 'confirmed'
-  const [roster, reconcile, creatorOptions] = hasRoster
-    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), rosterEditable ? listConsoleCreators() : Promise.resolve({ ok: true as const, data: [] })])
-    : [null, null, null]
+  const [roster, reconcile] = hasRoster
+    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id)])
+    : [null, null]
   // Creator deals exist once the roster is locked (Confirmed onward).
   const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
   const [legs, legsReconcile, creatorBrief] = hasLegs
@@ -105,9 +105,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       {/* ══════ ROSTER: the main action once the price is agreed ══════ */}
       {hasRoster && (
         <div style={{ marginTop: 20 }}>
-          {roster?.ok && reconcile?.ok && creatorOptions?.ok
-            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} creators={creatorOptions.data} />
-            : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || (creatorOptions && !creatorOptions.ok && creatorOptions.error) || 'Could not load the roster'} />}
+          {roster?.ok && reconcile?.ok
+            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} />
+            : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || 'Could not load the roster'} />}
         </div>
       )}
 

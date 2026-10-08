@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import AddCreatorsModal from '@/components/AddCreatorsModal'
+import Link from 'next/link'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { CHANNELS, DELIVERABLE_TYPES, channelLabel, countOf } from '@/lib/experience-request'
-import type { ConsoleCreatorOption, ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
-import { addToRoster, lockRoster, recordRosterDecision, removeFromRoster, setRosterNote, setRosterPlan } from '../actions'
+import type { ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
+import { lockRoster, recordRosterDecision, removeFromRoster, setRosterNote, setRosterPlan } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
 /**
@@ -27,13 +27,12 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
 }
 const COLS = '40px 1.5fr 1.4fr 150px 34px'
 
-export default function RosterPanel({ experienceId, editable, roster, reconcile, creators }: {
+export default function RosterPanel({ experienceId, editable, roster, reconcile }: {
   experienceId: string
   /** Building roster or Confirmed: creators can still be added (add-after-lock). */
   editable: boolean
   roster: ConsoleRosterRow[]
   reconcile: ConsoleReconcile | null
-  creators: ConsoleCreatorOption[]
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -45,7 +44,6 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   const [note, setNote] = useState('')
   const [confirmLock, setConfirmLock] = useState(false)
   const [removing, setRemoving] = useState<ConsoleRosterRow | null>(null)
-  const [suggestChannel, setSuggestChannel] = useState('')
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string } | { error?: string | null }>, after?: () => void) => {
     setError(null)
@@ -70,7 +68,6 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
     : !reconcile?.ok ? 'The roster does not add up to what the brand bought yet.'
     : pendingCount ? `Record the brand's decision on ${pendingCount} creator${pendingCount === 1 ? '' : 's'} first.`
     : !toLock ? 'No newly accepted creators to lock.' : null
-  const existing = roster.map((r) => r.creator_id)
 
   return (
     <section className="surface" style={card}>
@@ -81,23 +78,11 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
         </div>
         {editable && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <select className="dinput" aria-label="How the brand suggested them" value={suggestChannel} onChange={(e) => setSuggestChannel(e.target.value)} style={{ width: 'auto', height: 44 }}>
-              <option value="">Brand suggested via…</option>
-              {CHANNELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-            </select>
-            <AddCreatorsModal creators={creators} existingCreatorIds={existing} title="Add the brand's suggestions" buttonLabel="Add brand's picks" variant="secondary"
-              onAdd={async (ids) => {
-                if (!suggestChannel) return { error: 'First pick how the brand suggested them.' }
-                const r = await addToRoster(experienceId, ids, 'brand', suggestChannel)
-                if (!r.error) router.refresh()
-                return r
-              }} />
-            <AddCreatorsModal creators={creators} existingCreatorIds={existing} title="Add creators to the roster" buttonLabel="Add creators"
-              onAdd={async (ids) => {
-                const r = await addToRoster(experienceId, ids, 'guapd', null)
-                if (!r.error) router.refresh()
-                return r
-              }} />
+            {/* Both open the creator pool (the Growth pool's layout, with each
+                creator's shoot day rate on the card). The brand's picks are
+                recorded with the channel they came through, chosen there. */}
+            <Link href={`/experiences-admin/${experienceId}/pool?as=brand`} style={{ ...pillBtn, height: 44 }}>Add brand&apos;s picks</Link>
+            <Link href={`/experiences-admin/${experienceId}/pool`} className="neonbtn" style={{ ...neonBtn, height: 44 }}>Add creators</Link>
           </div>
         )}
       </div>

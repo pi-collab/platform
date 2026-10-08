@@ -347,3 +347,36 @@ export async function setCreatorBrief(experienceId: string, brief: string): Prom
   const { error } = await createClient().rpc('experience_console_set_creator_brief', { p_experience_id: experienceId, p_brief: brief })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+// ── Creator pool (0536): the roster's "Add creators" page ──────────────────
+// Includes each creator's SHOOT DAY RATE, which is staff-only (never shown to
+// brands), so it is read only through this staff-gated function.
+
+export interface ConsolePoolCreator {
+  id: string
+  full_name: string
+  handle: string | null
+  profile_photo_url: string | null
+  niches: string[] | null
+  city: string | null
+  state: string | null
+  location: string | null
+  social_accounts: unknown
+  track: 'growth' | 'deals'
+  day_rate_product_id: string | null
+  day_rate_paise: number | null
+  ig_connected: boolean | null
+  ig_followers: number | null
+  ig_reach_30: number | null
+  ig_interactions_30: number | null
+}
+
+export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreator[]>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_pool')
+  if (error) return fail(error)
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...(r as unknown as ConsolePoolCreator),
+    day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
+  })) }
+}
