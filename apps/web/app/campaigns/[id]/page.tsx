@@ -93,6 +93,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     const { data: products } = await supabase
       .from('creator_products')
       .select('id, creator_id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active')
+      .eq('pricing_type', 'per_deliverable')
       .in('creator_id', draftCreatorIds)
       .eq('is_active', true)
 
@@ -159,6 +160,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         ((await supabase
           .from('creator_products')
           .select('creator_id')
+          .eq('pricing_type', 'per_deliverable')
           .eq('product_type', uniformType)
           .eq('is_active', true)).data ?? []).map((r) => r.creator_id),
       )

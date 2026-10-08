@@ -85,6 +85,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     const { data: offering } = await supabase
       .from('creator_products')
       .select('creator_id')
+      .eq('pricing_type', 'per_deliverable')
       .in('creator_id', creatorIds)
       .eq('product_type', campaign.uniform_product_type)
       .eq('is_active', true)
@@ -166,6 +167,7 @@ export async function addCreatorsToCampaign(campaignId: string, creatorIds: stri
     const { data: products } = await supabase
       .from('creator_products')
       .select('id, creator_id')
+      .eq('pricing_type', 'per_deliverable')
       .in('creator_id', creatorIds)
       .eq('product_type', campaign.uniform_product_type)
       .eq('is_active', true)
@@ -776,6 +778,7 @@ export async function setGrowthDraftItems(
   const { data: products } = await supabase
     .from('creator_products')
     .select('id, platform, handle, product_type, price_paise, is_active')
+    .eq('pricing_type', 'per_deliverable')
     .eq('creator_id', draft.creator_id)
     .in('id', wanted.map((i) => i.productId))
 

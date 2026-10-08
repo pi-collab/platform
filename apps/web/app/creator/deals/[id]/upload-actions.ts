@@ -1,5 +1,7 @@
 'use server'
 
+import { isCreatorLeg, CREATOR_LEG_REFUSAL } from '@/lib/creator-leg'
+
 import { createClient } from '@/lib/supabase/server'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -30,6 +32,7 @@ type SimpleResult =
  * Called BEFORE upload starts so the client knows where to upload.
  */
 export async function getUploadPath(dealId: string, itemId: string): Promise<UploadResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }
@@ -80,6 +83,7 @@ export async function submitItemWithUpload(
   fileName: string,
   version: number,
 ): Promise<SimpleResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   // Server-side file type check
   const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
   if (!ALLOWED_EXTENSIONS.has(ext)) {
@@ -151,6 +155,7 @@ export async function submitItemWithUpload(
  * Validates deal access via RLS before minting the URL.
  */
 export async function getSignedUrl(dealId: string, itemId: string): Promise<SignedUrlResult> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { status: 'error', message: 'Not authenticated.' }

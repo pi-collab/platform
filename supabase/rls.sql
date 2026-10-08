@@ -526,6 +526,10 @@ CREATE POLICY creator_products_read
       creator_id = my_creator_id()
       OR (
         is_active = true
+        -- 0533: a non-owner sees marketplace packages only. A shoot day rate
+        -- (per_day) prices an Experience creator leg and is never shown to a
+        -- brand; any future pricing type is hidden until listed here.
+        AND pricing_type = 'per_deliverable'
         AND EXISTS (
           SELECT 1 FROM creators
           WHERE creators.id = creator_products.creator_id
@@ -1389,3 +1393,22 @@ GRANT EXECUTE ON FUNCTION experience_console_roster_plan(uuid, jsonb) TO authent
 GRANT EXECUTE ON FUNCTION experience_console_roster_note(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION experience_console_roster_remove(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION experience_console_roster_lock(uuid) TO authenticated;
+
+
+-- ── package_pricing_types (0533) ───────────────────────────────────
+-- Lookup of how a creator_products row is priced. Server-only: no session
+-- reads it; app code knows the types it handles.
+ALTER TABLE package_pricing_types ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON package_pricing_types FROM anon, authenticated;
+
+
+-- ── Experience creator legs (0534) ─────────────────────────────────
+-- No new policies. The new columns on experience_roster (leg_*) and
+-- experiences (creator_brief) are outside the 0523 column grants, so no
+-- session reads them; staff read them through experience_console_legs /
+-- experience_console_creator_brief, a creator reads their own leg through
+-- creator_leg_context. Session writes to a creator leg (deals, items,
+-- uploads, messages) are refused by trigger, invoices on a creator leg are
+-- refused for every role, and a creator leg cannot be marked paid
+-- (guard_creator_leg_*). See supabase/migrations/0534_experience_creator_legs.sql.
+

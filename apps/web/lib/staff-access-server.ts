@@ -44,3 +44,14 @@ export async function listStaffAccess(admin: SupabaseClient): Promise<{ user_id:
   if (error) throw new Error(`Could not read access: ${error.message}`)
   return data ?? []
 }
+
+/**
+ * Who to tell about an Experience event (e.g. a creator answering their leg):
+ * everyone with operational access, financial included. Ids only.
+ */
+export async function experienceStaffUserIds(admin: SupabaseClient): Promise<string[]> {
+  const { data } = await admin.from('staff_access').select('user_id, experiences_operational, experiences_financial')
+  return (data ?? [])
+    .filter((r: { experiences_operational: boolean; experiences_financial: boolean }) => r.experiences_operational || r.experiences_financial)
+    .map((r: { user_id: string }) => r.user_id)
+}

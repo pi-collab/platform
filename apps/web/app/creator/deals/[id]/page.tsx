@@ -27,6 +27,8 @@ import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
 import ShippingAddressForm from './ShippingAddressForm'
 import CreatorStepper from './CreatorStepper'
 import CreatorReviewCard from './CreatorReviewCard'
+import CreatorLegView from './CreatorLegView'
+import type { CreatorLegContext } from '@/lib/creator-leg-money'
 
 // ── Stage definitions (mirrors the deals list) ──
 const STATUS_META: Record<string, { label: string; dot: string; glow: string }> = {
@@ -87,7 +89,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   const [{ data: deal, error: dealError }, { data: deliverables }, { data: items }, { data: invoice }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from('deals')
-      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, brands(name, logo_url)')
+      .select('id, deal_ref, title, deliverables, price_paise, price_per_extra_revision_paise, fee_percent, fee_mode, fee_basis, status, timeline_date, go_live_date, revision_limit, revisions_used, usage_rights, payment_terms, agreed_at, created_at, requires_shipment, shipment_status, tracking_link, carrier_note, shipped_at, shipping_address, is_posted, posted_url, posted_at, usage_rights_end_date, rights_confirmed_at, completed_at, brief_pitch, brief_guidelines, brief_avoid, brief_attachments, leg_role, brands(name, logo_url)')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -120,6 +122,16 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   ])
 
   if (dealError || !deal) notFound()
+
+  /* A Guapd Experience creator leg is its own screen: the brand "· Managed by
+     Guapd", the creator's frozen day-rate terms and scope, accept / decline.
+     None of the marketplace money, counter, invoice, upload or posting below
+     applies to it. creator_leg_context returns this creator's own leg only. */
+  if ((deal as { leg_role?: string | null }).leg_role === 'creator_leg') {
+    const { data: legCtx, error: legErr } = await supabase.rpc('creator_leg_context', { p_deal_id: params.id })
+    if (legErr || !legCtx) notFound()
+    return <CreatorLegView dealId={params.id} ctx={legCtx as CreatorLegContext} />
+  }
 
   // Fetch creator's own review (if any) — table may not exist yet pre-migration
   let existingReview: { rating: number; note: string | null } | null = null

@@ -256,6 +256,7 @@ export async function upsertStorefront(input: UpsertInput) {
     const { count } = await createAdminClient()
       .from('creator_products')
       .select('id', { count: 'exact', head: true })
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true)
 

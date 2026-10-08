@@ -5,8 +5,11 @@ import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import {
   acceptConsoleQuote, addConsoleQuote, createConsoleExperience,
   rosterAdd, rosterDecide, rosterLock, rosterNote, rosterPlan, rosterRemove,
-  type ConsoleDeliverable,
+  listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
+  type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
+import { creatorLegTerms } from '@/lib/experience-money'
+import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
 /**
@@ -219,3 +222,89 @@ export async function lockRoster(experienceId: string): Promise<Out<number>> {
   revalidatePath(BASE)
   return r
 }
+
+// ── Stage 3b: creator legs ─────────────────────────────────────────────────
+// The database enforces every rule (Confirmed only; locked, accepted creators
+// only; the creator's own active day rate; the ceiling against what was sold,
+// including affiliate; frozen once sent) and audits each change. Money is
+// computed HERE by the money module (creatorLegTerms) and passed in as the
+// expected figures; the send function re-derives day rate, track and every
+// amount itself and refuses a mismatch, so neither side can drift alone.
+
+const legDays = (v: unknown): number | null => {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 && n <= 365 && Math.abs(Math.round(n * 100) - n * 100) < 1e-6 ? n : null
+}
+
+export interface LegDraftForm {
+  rosterId: string
+  productId: string | null
+  days: number | string | null
+  deliverables: { type: string; count: number | string }[]
+  affiliateCount: number | string
+}
+
+export async function draftCreatorLeg(experienceId: string, f: LegDraftForm): Promise<Out<ConsoleLegsReconcile>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(f.rosterId)) return { ok: false, error: 'Unknown creator.' }
+  if (f.productId !== null && !isUuid(f.productId)) return { ok: false, error: 'Pick the creator\'s shoot day rate.' }
+  const days = f.days === null || f.days === '' ? null : legDays(f.days)
+  if (f.days !== null && f.days !== '' && days === null) return { ok: false, error: 'Days must be more than 0, at most 365, with at most two decimals (e.g. 1.5).' }
+  const items = deliverables(f.deliverables)
+  if (!items || items.length === 0) return { ok: false, error: 'Give this creator at least one deliverable.' }
+  const aff = Number(f.affiliateCount)
+  if (!Number.isInteger(aff) || aff < 0) return { ok: false, error: 'Affiliate is a count of this creator\'s videos (0 for none).' }
+  const r = await legDraft(f.rosterId, f.productId, days, items, aff)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+/** Send one creator their deal, or several ("Send all ready"). */
+export async function sendCreatorLegs(experienceId: string, rosterIds: string[]): Promise<Out<{ sent: number; failed: { rosterId: string; error: string }[] }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !Array.isArray(rosterIds) || rosterIds.length === 0 || !rosterIds.every(isUuid)) return { ok: false, error: 'Pick a creator to send.' }
+  const legs = await listConsoleLegs(experienceId)
+  if (!legs.ok) return legs
+  let sent = 0
+  const failed: { rosterId: string; error: string }[] = []
+  for (const id of rosterIds) {
+    const row = legs.data.find((l) => l.roster_id === id)
+    if (!row) { failed.push({ rosterId: id, error: 'Not a locked, accepted creator on this Experience.' }); continue }
+    if (row.leg_deal_id) { failed.push({ rosterId: id, error: 'Already sent.' }); continue }
+    if (!row.leg_product_id || row.day_rate_paise == null || row.leg_days == null) {
+      failed.push({ rosterId: id, error: `${row.full_name}: pick the day rate and days first.` }); continue
+    }
+    if (row.leg_product_id !== row.day_rate_product_id) {
+      failed.push({ rosterId: id, error: `${row.full_name}: their day rate changed. Pick it again.` }); continue
+    }
+    const t = creatorLegTerms({ dayRatePaise: row.day_rate_paise, days: row.leg_days, track: row.track })
+    const r = await legSend(id, { grossPaise: t.creatorGrossPaise, platformPct: t.platformPct, netPaise: t.creatorNetPaise })
+    if (!r.ok) { failed.push({ rosterId: id, error: `${row.full_name}: ${r.error}` }); continue }
+    sent++
+    await notifyCreatorLegOffer(r.data)
+  }
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: { sent, failed } }
+}
+
+export async function setDayRateForCreator(experienceId: string, creatorId: string, rupees: number | string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(creatorId)) return { ok: false, error: 'Unknown creator.' }
+  const paise = rupeesToPaise(String(rupees))
+  if (!paise || paise <= 0 || paise % 100 !== 0) return { ok: false, error: 'Enter the day rate in whole rupees.' }
+  const r = await setCreatorDayRateAsStaff(creatorId, paise)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
+}
+
+export async function saveCreatorBrief(experienceId: string, brief: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const r = await setCreatorBrief(experienceId, typeof brief === 'string' ? brief : '')
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+

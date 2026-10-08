@@ -69,6 +69,7 @@ export default async function GrowthPoolPage({ params }: { params: { id: string 
     creatorIds.length
       ? admin.from('creator_products')
           .select('creator_id, product_type, price_paise, platform')
+          .eq('pricing_type', 'per_deliverable')
           .in('creator_id', creatorIds)
           .eq('is_active', true)
       : Promise.resolve({ data: [] as { creator_id: string; product_type: string; price_paise: number; platform: string }[] }),

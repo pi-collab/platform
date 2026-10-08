@@ -71,7 +71,8 @@ export async function loadCandidates(): Promise<SearchCandidate[]> {
         .eq('is_published', true),
       admin
         .from('creator_products')
-        .select('creator_id, price_paise, price_mode, display_price, is_active'),
+        .select('creator_id, price_paise, price_mode, display_price, is_active')
+        .eq('pricing_type', 'per_deliverable'),
       admin
         .from('creator_instagram_connections')
         .select('creator_id, snapshot')

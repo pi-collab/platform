@@ -252,3 +252,98 @@ export async function rosterLock(experienceId: string): Promise<Result<number>> 
   const { data, error } = await createClient().rpc('experience_console_roster_lock', { p_experience_id: experienceId })
   return error ? fail(error) : { ok: true, data: data as number }
 }
+
+// ── Stage 3b: creator legs (Leg 2) ─────────────────────────────────────────
+// Operational staff see each creator's day rate and, once sent, their frozen
+// gross → platform % → net (their payout terms). Never the margin or P&L:
+// that stays behind financial access (experience_pnl, 0526).
+
+export interface ConsoleLegRow {
+  roster_id: string
+  creator_id: string
+  full_name: string
+  handle: string | null
+  profile_photo_url: string | null
+  track: 'growth' | 'deals'
+  /** What the roster locked (the brand's accepted plan for this creator). */
+  planned_deliverables: ConsoleDeliverable[]
+  /** The leg draft; null until staff adjust it (then the plan above counts). */
+  leg_deliverables: ConsoleDeliverable[] | null
+  leg_affiliate_count: number | null
+  leg_days: number | null
+  leg_product_id: string | null
+  /** The creator's active shoot day rate, if they (or staff) set one. */
+  day_rate_product_id: string | null
+  day_rate_paise: number | null
+  leg_deal_id: string | null
+  leg_sent_at: string | null
+  deal_status: string | null
+  deal_ref: string | null
+  /** Frozen at send. */
+  sent_day_rate_paise: number | null
+  sent_days: number | null
+  sent_gross_paise: number | null
+  sent_platform_pct: number | null
+  sent_net_paise: number | null
+}
+
+export interface ConsoleLegsReconcile {
+  ok: boolean
+  over: boolean
+  reason?: 'no_agreed_plan'
+  per_type?: boolean
+  videos_sold?: number
+  videos_placed?: number
+  affiliate_target?: number
+  affiliate_placed?: number
+  creators_counted?: number
+  lines?: { type: string; target: number; placed: number; is_video: boolean }[]
+}
+
+export async function listConsoleLegs(experienceId: string): Promise<Result<ConsoleLegRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_legs', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const num = (v: unknown) => (v == null ? null : Number(v))
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...(r as unknown as ConsoleLegRow),
+    leg_days: num(r.leg_days), day_rate_paise: num(r.day_rate_paise),
+    sent_day_rate_paise: num(r.sent_day_rate_paise), sent_days: num(r.sent_days),
+    sent_gross_paise: num(r.sent_gross_paise), sent_platform_pct: num(r.sent_platform_pct), sent_net_paise: num(r.sent_net_paise),
+  }))
+  return { ok: true, data: rows }
+}
+
+export async function getLegsReconcile(experienceId: string): Promise<Result<ConsoleLegsReconcile>> {
+  const { data, error } = await createClient().rpc('experience_console_legs_reconcile', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
+}
+
+export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number): Promise<Result<ConsoleLegsReconcile>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_draft', {
+    p_roster_id: rosterId, p_product_id: productId, p_days: days, p_deliverables: deliverables, p_affiliate_count: affiliateCount,
+  })
+  return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
+}
+
+export async function legSend(rosterId: string, expected: { grossPaise: number; platformPct: number; netPaise: number }): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_send', {
+    p_roster_id: rosterId, p_expected_gross_paise: expected.grossPaise,
+    p_expected_platform_pct: expected.platformPct, p_expected_net_paise: expected.netPaise,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function setCreatorDayRateAsStaff(creatorId: string, dayRatePaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_set_day_rate', { p_creator_id: creatorId, p_day_rate_paise: dayRatePaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function getCreatorBrief(experienceId: string): Promise<Result<string | null>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_brief', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? null) as string | null }
+}
+
+export async function setCreatorBrief(experienceId: string, brief: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_set_creator_brief', { p_experience_id: experienceId, p_brief: brief })
+  return error ? fail(error) : { ok: true, data: null }
+}

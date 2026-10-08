@@ -39,6 +39,9 @@ export default async function CreatorInboxPage({ searchParams }: {
       .from('deals')
       .select('id, title, status, is_posted, price_paise, brands(name, logo_url)')
       .not('status', 'in', '(cancelled,declined)')
+      // Experience creator legs have no chat in this stage (messages on a leg
+      // are refused by trigger, 0534), so they open no thread here.
+      .is('leg_role', null)
       .order('created_at', { ascending: false }),
   ])
 

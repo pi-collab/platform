@@ -119,6 +119,7 @@ export default async function BrowsePage() {
   const { data: products } = await admin
     .from('creator_products')
     .select('creator_id, price_paise, price_mode, display_price, is_active')
+    .eq('pricing_type', 'per_deliverable')
 
   const startingRates: Record<string, number> = {}
   for (const p of products ?? []) {

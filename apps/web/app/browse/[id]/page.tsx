@@ -115,6 +115,7 @@ export default async function CreatorProfilePage({ params }: { params: { id: str
     supabase
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', params.id),
     supabase
       .from('deals')

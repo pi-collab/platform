@@ -6854,3 +6854,36 @@ Two faces of Experiences: the STAFF console at `/experiences-admin` (now) and th
   - every step writes its ops_events row.
 - [ ] `/experiences-admin/[id]` once agreed: the Roster panel (CampaignRoster layout) comes first, with Add creators, Add brand's picks (with "Brand suggested via"), the reconciliation strip (green when it adds up, amber with per-type numbers when not), per-row actions (Brand accepted / rejected with channel, Back to awaiting, Adjust plan, Note, Remove), the Locked chip, and Lock roster with a confirmation. Shows no rate, payout or amount.
 - [ ] Campaign roster's "Add creators" still works (the picker moved to `components/AddCreatorsModal.tsx`).
+
+## 103. Experiences stage 3b: creator shoot package + creator legs (migrations 0533, 0534, 0535, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-legs-send.ts` (89 checks) and `./node_modules/.bin/tsx scripts/check-package-gating.ts`. Regressions: `test-fee-golden.ts` byte-identical, `walk-deal-guard.ts` 45/45, `test-experience-roster.ts`, `check-house-hidden.ts`, `check-pnl-isolation.ts`.
+
+**Shoot package (creator_products, pricing_type per_day)**
+- [ ] `package_pricing_types` holds `per_deliverable` and `per_day`; every existing package reads `per_deliverable`. A new type is a row, not a migration.
+- [ ] A `per_day` row: product type "Shoot day", exact price > 0, no range, no revisions, no channel, never price-displayed; at most one active per creator. A `per_deliverable` row still needs platform + handle.
+- [ ] `/creator/packages` (desktop and 390px): "Shoot day rate" section. Not set → input + worked example; set → "₹10,000 /day", "₹10,000 a day → 30% Growth fee → ₹7,000 to you" (15% Deals for a Deals creator), Edit, Pause; paused → "Turn back on". Shows even with no channel connected.
+- [ ] The shoot package is NOT in the per-channel package lists, the storefront editor/preview, or the "packages" setup task and dashboard counts.
+- [ ] Staff (Experiences operational) can set a creator's day rate from the console; each change is in `ops_events` with the rate before and after; the creator then sees it on their packages page.
+
+**Gating (SECURITY)**
+- [ ] A brand, another creator, outreach and anonymous never read a `per_day` package: RLS allowlists `per_deliverable` for non-owners; every service-role read filters explicitly (guard: `check-package-gating.ts`); `get_public_storefront` lists `per_deliverable` only (0535); `/ops/creators/[id]` lists marketplace packages only.
+- [ ] Every console leg function refuses no-access/outreach, brand, creator, anonymous and the service role. Internal helpers (`experience_legs_reconcile`, `experience_creator_track`) are callable by nobody.
+- [ ] The Experience brand (Kiro) cannot read any creator leg deal, `experience_creator_terms`, roster `leg_*` columns, `experiences.creator_brief`, or `creator_leg_context`.
+- [ ] A creator reads only their own leg, own terms row and own `creator_leg_context`: never the brand price, the brand's request brief, the roster, another creator's terms, costs or margin.
+
+**Creator legs (staff console, Confirmed only)**
+- [ ] "Creator deals" panel: one row per locked, accepted creator with track (Growth 30% / Deals 15%), scope, day rate → days → gross → % → net, status. Brief creators see: editable.
+- [ ] Leg gross = day rate × days (half-up), fee = gross × the creator's own track %, net = gross − fee (creatorLegTerms). The send function re-derives day rate and track itself and refuses a mismatch; `ect_gross_formula` and `ect_net_formula` prove the stored figures. `resolveDealFee` is never called for a leg.
+- [ ] Reconcile: a draft or send that takes the total past what was sold is refused (per type when the brand bought the plan's count, combined videos otherwise, affiliate against the agreed total). Under is allowed and shown ("N videos still to place"). Uneven creators with the right total pass.
+- [ ] Affiliate is a count of a leg's videos (≤ its videos), never a deliverable type. Days never scale deliverables.
+- [ ] Send creates a `negotiating` deal on the house brand with `experience_brand_name`, `price_paise` NULL, one item per unit (affiliate flagged on the first N videos), frozen terms, an `events` row and an `ops_events` row (gross/net before/after). Sent legs cannot be re-drafted or re-sent; a later day-rate change does not move them.
+- [ ] Notifications: creator in-app + email only ("<brand> · Managed by Guapd: a shoot offer, ₹X to you"). NO WhatsApp on legs. Creator's answer → in-app to Experiences staff.
+
+**Creator side (desktop and 390px)**
+- [ ] `/creator/deals/[leg]`: "Shoot offer from <brand>", "<brand> · Managed by Guapd", What you make (day rate, days, total, Guapd platform fee %, You take home), scope (deliverables, affiliate count, ad rights / boost), shoot date and city, the curated brief, Accept · ₹X to you / Decline (optional reason). No counter, invoice, upload, posting or shipping.
+- [ ] `/creator/deals` and the dashboard: the leg reads "<brand> · Managed by Guapd" with the creator's take-home; earnings count the take-home. Legs open no inbox thread and never appear as ready to invoice.
+- [ ] Every marketplace creator deal action (counter, submit, upload, post, invoice, shipping, review) refuses a leg on the server. In the database: session writes to a leg (deal, items, uploads, messages) are refused; invoices on a leg and `status = paid` on a leg are refused for every role.
+- [ ] Decline frees that creator's videos in the reconciliation.
+
+**Environment note:** 0533–0535 are applied on staging (ledger 0533/0534/0535), NOT on production. Run them on prod at release, in order, after confirming `supabase/.temp/linked-project.json`.

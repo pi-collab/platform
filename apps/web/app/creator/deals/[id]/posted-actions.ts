@@ -1,5 +1,7 @@
 'use server'
 
+import { isCreatorLeg, CREATOR_LEG_REFUSAL } from '@/lib/creator-leg'
+
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -33,6 +35,7 @@ function validateUrl(raw: string): { ok: true; url: string } | { ok: false; mess
  * When all items are posted, the deal-level is_posted is also set.
  */
 export async function markItemPosted(dealId: string, itemId: string, postedUrl: string): Promise<Result> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   await verifyCreator()
 
   const v = validateUrl(postedUrl)
@@ -135,6 +138,7 @@ export async function markItemPosted(dealId: string, itemId: string, postedUrl: 
  * Used for deals without structured items.
  */
 export async function markPosted(dealId: string, postedUrl: string): Promise<Result> {
+  if (await isCreatorLeg(dealId)) return { status: 'error', message: CREATOR_LEG_REFUSAL }
   await verifyCreator()
 
   const v = validateUrl(postedUrl)

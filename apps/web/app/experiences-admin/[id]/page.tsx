@@ -3,12 +3,13 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, listConsoleCreators, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
 import QuotePanel from './QuotePanel'
 import RosterPanel from './RosterPanel'
+import CreatorLegsPanel from './CreatorLegsPanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +20,10 @@ export const dynamic = 'force-dynamic'
  *
  * Gated by experienceStaffGate, and every read is a database function that
  * checks operational access again (experience_console_get / _quotes, 0530).
- * Shows brand-side terms only: what the brand asked for and the price agreed
- * with the brand. No creator rate, cost, payout or margin exists on this page.
+ * Shows what the brand asked for and the price agreed with the brand, and,
+ * from Confirmed, each creator's deal (Leg 2): their day rate, days and what
+ * Guapd will pay them (operational access, experience_console_legs, 0534).
+ * Never the margin or P&L: that is financial access only (experience_pnl).
  */
 /* The stages shown in the stepper (draft and cancelled are not stages). */
 const STAGES = EXPERIENCE_STATUSES.filter((s) => s !== 'draft' && s !== 'cancelled')
@@ -39,6 +42,11 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   const rosterEditable = e.status === 'rostering' || e.status === 'confirmed'
   const [roster, reconcile, creatorOptions] = hasRoster
     ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), rosterEditable ? listConsoleCreators() : Promise.resolve({ ok: true as const, data: [] })])
+    : [null, null, null]
+  // Creator deals exist once the roster is locked (Confirmed onward).
+  const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
+  const [legs, legsReconcile, creatorBrief] = hasLegs
+    ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id)])
     : [null, null, null]
   const st = experienceStatus(e.status)
   const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
@@ -100,6 +108,16 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
           {roster?.ok && reconcile?.ok && creatorOptions?.ok
             ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} creators={creatorOptions.data} />
             : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || (creatorOptions && !creatorOptions.ok && creatorOptions.error) || 'Could not load the roster'} />}
+        </div>
+      )}
+
+      {/* ══════ CREATOR DEALS: the main action once the roster is locked ══════ */}
+      {hasLegs && (
+        <div style={{ marginTop: 20 }}>
+          {legs?.ok && legsReconcile?.ok && creatorBrief?.ok
+            ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
+                brief={creatorBrief.data} affiliateSold={e.request_affiliate && (e.request_affiliate_per_creator ?? 0) > 0} />
+            : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || (creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the creator deals'} />}
         </div>
       )}
 

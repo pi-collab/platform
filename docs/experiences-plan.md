@@ -29,7 +29,7 @@ Stored per creator (Leg 2) and rolled up per Experience:
 | `creator_gross_paise` | Leg 2: the creator's rate (e.g. day rate × days) |
 | `platform_pct` | Leg 2: 30 (default), snapshotted |
 | `creator_net_paise` | `creator_gross − round(creator_gross × platform_pct / 100)` = the vendor payout |
-| `guapd_margin_paise` | per creator: `creator_gross − creator_net`; Experience total also includes `brand_service_total − Σ creator_gross − Σ other vendor costs` |
+| `guapd_margin_paise` | per creator: `creator_gross − creator_net` (the platform fee kept). Experience total = `brand_service_total − Σ creator_net − Σ other vendor costs` (DECIDED 2026-10-07, see "Margin: definition"); `brand_service_total − Σ creator_gross − Σ costs` is only the sub-total |
 
 Shown per audience:
 - **Brand (Leg 1 invoice):** ONE service price. No Guapd fee / 30% line, no creator rates.
@@ -119,16 +119,25 @@ service invoice work (Phase 4), not with Razorpay:
 7. Per-day rate on packages page; city/state filter on `/browse`; age bracket on
    Experience creators.
 
-## Margin: definition (awaiting Palak's answer) and access (to build with it)
+## Margin: definition (DECIDED, Palak 2026-10-07) and access (to build with it)
 
-**Definition, open:** Palak asked to store brand − Σ creator GROSS − Σ costs (₹42,500.02
-on the staging test data) as `guapd_margin`, AND specified a display where sub-total
-(that figure) + platform fee kept = Guapd margin, reconciling to brand − Σ creator NET −
-costs (₹81,500.02). The two conflict; asked which is "Guapd margin". Recommended: the
-display as written (sub-total ₹42,500.02 + fee kept ₹39,000 = margin ₹81,500.02). The
-platform fee is always summed PER LEG at each leg's own % (5 Growth + 2 Deals at ₹10k
-→ ₹18,000, never a blanket 30%). Also asked: "store" reverses Phase 2's "derived, never
-stored"; if stored, it is an ops-only P&L snapshot, never an invoice input.
+**Definition, decided:** `guapd_margin = brand_paid − Σ creator NET − Σ costs`. This is
+the true cash Guapd keeps. On the staging test data: ₹3,02,500 in, ₹2,20,999.98 paid out
+to creators, ₹0 costs → **margin ₹81,500.02**.
+
+- **₹42,500.02 is the SUB-TOTAL only:** brand_paid − Σ creator GROSS − Σ costs. It is
+  never called margin.
+- **The P&L shows one margin, two ways, both reconciling to the same number:**
+  sub-total ₹42,500.02 + platform fee kept ₹39,000 = **margin ₹81,500.02**. The fee kept
+  is a reconciling line between the sub-total and the margin. It is NEVER added to a
+  separate total, and no screen shows a second "margin" figure.
+- The platform fee kept is always summed PER LEG at each leg's own % (5 Growth + 2 Deals
+  at ₹10k → ₹18,000, never a blanket 30%).
+- **Stored:** the single net-based value (₹81,500.02 here) as `guapd_margin`, gated
+  behind financial access (below). This replaces Phase 2's "derived, never stored" for
+  margin only: the stored value is an ops-only P&L snapshot, never an invoice input.
+  Sub-total and fee kept stay derived for display.
+- This unblocks the P&L view (Phase 3).
 
 **Access: OPERATIONAL vs FINANCIAL, enforced in the database:**
 | Who | Sees |
@@ -197,3 +206,236 @@ A read-only report for the brand on its Experience, with its own RLS surface:
 ### Plan reconciliation rule (PJ, 2026-10-06), for Stage 3
 
 The request is a uniform per-creator plan ("N creators, each doing the same thing"), locked at quote acceptance as `experiences.agreed_plan` (0531): creators, per-creator rows, totals per type, plan videos and videos SOLD. Each creator leg STARTS from the per-creator template; staff may adjust an individual creator (one does 3 videos, another 1) without touching the agreed plan. The integrity check is against the agreed TOTAL: the sum of all creators' actual deliverables must equal what the brand bought (`videos_sold`, and the per-type totals). It must NOT require each creator to match the template. Mixed plans are handled per creator in Stage 3, not by request-level groups.
+
+## Stage 3b: creator shoot package + creator legs (APPROVED 2026-10-07; BUILT 2026-10-08, staging)
+
+**Scope:** the two are built together because a leg's price comes from the package.
+1. The creator sets a per-day shoot package on their rate card and sees it on their own
+   side.
+2. Staff send each locked, accepted creator their own creator leg (Leg 2), priced from
+   that package, with that leg's deliverable scope.
+
+Built end to end, desktop and mobile. **No money moves:** no payout, no invoice and no paid
+state; those are Phase 4. Affiliate is scope only: the affiliate follow-on invoice is
+Phase 4 and nothing here touches it.
+
+This pulls two items forward: Phase 7's "per-day rate on packages page", and the creator
+leg screens from Phase 5. Phase 5 keeps payout details, the affiliate invoice and the
+real paid status.
+
+### 1. Schema: migrations 0533 and 0534, run by hand
+**0533: the shoot package on `creator_products`**
+- New lookup table `package_pricing_types (id text PRIMARY KEY, label, created_at)`,
+  seeded with `per_deliverable` (every existing package) and `per_day`.
+- New column `creator_products.pricing_type text NOT NULL DEFAULT 'per_deliverable'
+  REFERENCES package_pricing_types (id)`. Existing rows backfill to `per_deliverable` via
+  the default (not a CHECK plus backfill; see the 0516 trap).
+- **A new pricing type is then a row, not a migration.** The app handles types with an
+  exhaustive switch, and anything it doesn't recognise is treated as "not sendable, not
+  shown to brands".
+- `price_paise` keeps its meaning: the price per unit of the pricing type. For `per_day`
+  that is the day rate (₹10,000/day = 10,00,000 paise).
+- Shape rules, written as constraints that apply only to `per_day`, so existing rows are
+  untouched:
+  - `price_mode = 'exact'`, `price_max_paise IS NULL`, `revisions_enabled = false`,
+    `price_paise > 0`;
+  - `platform` and `handle` become nullable, with a CHECK that `per_deliverable` rows
+    still require both. A shoot day isn't tied to one platform;
+  - `product_type` is fixed to `'Shoot day'`;
+  - at most one active `per_day` package per creator (partial unique index).
+- Packages are never deleted (`creator_products_deny_delete`), so a leg can point at its
+  package for provenance.
+
+**0534: the creator legs**
+- `experience_creator_terms` gets:
+  - `product_id` (FK to `creator_products`), `pricing_type`, `day_rate_paise` and `days`.
+    `days` already exists; all of these are frozen by `t_ect_freeze`;
+  - a new CHECK `ect_gross_formula`: when `pricing_type = 'per_day'`,
+    `creator_gross_paise = round(day_rate_paise × days)`. The database then proves gross
+    as well as net (`ect_net_formula` already does net).
+- `experience_roster` gets the leg draft: `leg_product_id`, `leg_days`,
+  `leg_deliverables` (starts as a copy of `planned_deliverables`), `leg_affiliate_count`,
+  `leg_deal_id`, `leg_sent_at`. None of these go into the brand's 0523 column grant.
+- The staff-gated functions in §4, the reconciliation in §5, and the creator-leg guards.
+- `rls.sql` is updated in the same commits.
+
+### 2. How the package shows on the creator's side
+- `/creator/packages` gets a "Shoot day rate" section, separate from the per-deliverable
+  packages: set a day rate, edit it, pause it. The text says plainly that it is used when
+  Guapd books them for a managed shoot, that **brands never see it**, and that Guapd keeps
+  the platform fee for their track. A worked example uses their own figures: "₹10,000 a
+  day → 30% Growth fee → ₹7,000 to you".
+- The page is one responsive component (`PackagesClient`, with breakpoints in
+  `packages.css`). Desktop and mobile are both checked.
+- Creator surfaces that preview what brands see leave the shoot package out: the
+  storefront editor and `ShopfrontPreview`, plus the "packages" setup task and dashboard
+  CTA. A day rate doesn't make a creator bookable in the marketplace.
+- Ops admin sees it on `/ops/creators/[id]` and can set it for a creator who has no login
+  (a stub), with an `ops_events` entry. Outreach never sees it (§6).
+
+### 3. Leg money: one maths path, the existing one
+For one creator leg:
+- `track = trackForCreator(creatorId)`: Growth → 30, Deals → 15, read at send.
+- `creatorLegTerms({ dayRatePaise, days, track })` in `lib/experience-money.ts`:
+  - `gross = round_half_up(dayRate × days)`, with days > 0 and at most two decimals;
+  - `fee = platformFeePaise(gross, pct)`, using `percentOfPaise` from
+    `lib/money-round.ts`;
+  - `net = gross − fee`.
+- Example: ₹10,000 × 2 days = ₹20,000; Growth 30% = ₹6,000; net ₹14,000.
+- No new fee code. `resolveDealFee` and `calculateFee` are never called for a leg, and
+  `test-fee-golden.ts` stays byte-identical.
+- The send function re-derives the track inside Postgres from `creators.vetting_status`,
+  reads the day rate itself from the package row, and refuses if the server action's
+  computed figures differ. The browser never supplies a price, a % or a track.
+- The database checks the result twice: `ect_gross_formula` and `ect_net_formula`.
+- Frozen at send: changing the package or the track later never moves a sent leg
+  (`t_ect_freeze`).
+
+### 4. Leg actions when the house brand has no members
+- A creator leg is a `deals` row on the house brand. The house brand has **no members**
+  (`check-house-hidden.ts`), so `can_access_deal` is false for everyone on the brand
+  side, and no session can act "as the brand".
+- **Every Guapd-side leg action is a staff-gated `SECURITY DEFINER` function**, called
+  from the staff member's own session. It is gated by `experience_console_require()`
+  (Experiences operational access) and audited to `ops_events`. Brand membership is
+  never consulted. This is 3a's pattern:
+  - `experience_console_leg_options(roster_id)`: the creator's active `per_day` package
+    and track, for the send form. Explicit columns;
+  - `experience_console_leg_draft(roster_id, product_id, days, deliverables,
+    affiliate_count)`: save the draft, subject to the reconciliation in §5;
+  - `experience_console_leg_send(roster_id)`, one transaction:
+    1. insert the leg deal (status `negotiating`, house brand,
+       `guapd_principal_vendor_payout`);
+    2. insert its `deal_deliverable_items` (`added_by = 'guapd'`, visible to the creator,
+       no per-item price);
+    3. write and lock the terms;
+    4. set `leg_deal_id` and `leg_sent_at`;
+    5. write `ops_events` and a deal-scoped `events` row.
+- **"Reuse the normal deal-send flow"** means the same deal row, the same deliverable
+  items, the same `events` trigger, the same creator notification path and the same
+  creator accept/decline screen. Only the sender changes: a staff function instead of a
+  brand-session action. The brand offer builder (`/deals/new`) is not used, because it
+  needs a brand member.
+- Later on the same pattern, not in 3b: staff chat on a leg (thread read and write
+  functions, messages shown as "Guapd", the audit logs message length only) and staff
+  marking deliverables done.
+- Notifications that would go to "the brand" on a leg go to staff with Experiences access
+  instead, never into an empty member list.
+
+### 5. Reconciliation when one creator is adjusted
+- The count moves from the roster to the legs. For each creator not declined: their
+  `leg_deliverables`, or the frozen items once sent. The 3a roster plan stays as the
+  record of what the brand accepted.
+- **A hard ceiling inside the draft and send functions:** an edit or send that would make
+  the total exceed what was sold is refused:
+  - per type when the brand bought the plan's count;
+  - combined videos when the sold count was negotiated away from the plan (the 3a /
+    `c1c4d80` rule);
+  - the affiliate total against the agreed affiliate total.
+- On each leg, affiliate can't exceed that leg's videos (the 0531 rule, applied per
+  creator).
+- **Below the total is allowed while drafting, and shown** ("2 videos still to place").
+  To move a video from A to B, lower A, then raise B.
+- **Days don't count toward deliverables:** changing one creator's days changes only
+  their own gross.
+- **Sent is frozen.** In 3b a sent leg changes only by the creator declining; change
+  orders are later. A decline frees that creator's videos for someone else (3a already
+  allows adding a creator after lock).
+- The Experience can't move past Confirmed until the creators who accepted add up exactly
+  to what was sold.
+
+### 6. Data-layer gating: who is refused what
+- **Brands (including Kiro), other creators and the public** cannot read `per_day`
+  packages:
+  - `creator_products_read` is rewritten so a non-owner sees only
+    `pricing_type = 'per_deliverable'`. It is an allowlist, so a future type is hidden by
+    default;
+  - most readers use the admin client, which skips row security, so each brand-facing
+    and public read also filters explicitly: `/browse`, `/browse/[id]`, `/c/[slug]`,
+    `/deals/new`, the campaign page, pool and draft actions, AI search `loadCandidates`,
+    and growth-state counts;
+  - the brand offer and campaign server actions refuse a `per_day` product id, so a
+    hand-edited URL or form fails;
+  - new guard `scripts/check-package-gating.ts` fails if any `creator_products` read
+    lacks the filter, except the named exceptions: the creator's own packages page, ops
+    admin, and the leg functions.
+- **Kiro cannot see creator legs at all:** a leg's `brand_id` is the house brand. Nor can
+  it see roster leg columns (no grant), terms or margin.
+- **Creators** read only their own leg, their own terms row and their own
+  `creator_leg_context(deal_id)`. That function returns only the Experience brand's name
+  and logo, the shoot date and city, and the brief. Never `experiences`, the brand
+  price, the roster, other creators' terms, costs or margin.
+- **Outreach:** has no Experiences capability, and `/ops/creators/[id]` filters
+  `per_day` out unless the viewer is an admin.
+- **Direct URLs:** `/experiences-admin/*` is staff-gated in the layout and again in every
+  function. A creator opening another creator's leg URL gets not-found (row security). A
+  brand opening a leg deal URL gets not-found.
+- **No `select *`:** explicit column lists everywhere, including inside definer
+  functions.
+
+### 7. What the creator sees on a leg (deal page, list, dashboard; desktop and mobile)
+- "**Kiro Beauty · Managed by Guapd**", from `creator_leg_context`.
+- Money from their own terms: "₹10,000/day × 2 days = ₹20,000 → 30% Growth fee →
+  ₹14,000 to you", then "Guapd pays you after the shoot". No paid state.
+- Their scope: deliverable types and counts, how many carry the affiliate link, and
+  ad-rights and boost months. Shoot date and city.
+- Accept / decline. Hidden on a leg: counter, invoice and GST invoice, PaymentBreakup, the
+  posted card, the shipping address, and upload/submit. The last two are refused on the
+  server as well.
+- One helper, `creatorLegMoney`, feeds every surface: the deal page, the inbox and list,
+  the dashboard cards and notification text. No creator screen can fall through to the
+  marketplace fee maths.
+
+### 8. Tests and checks
+- **`scripts/test-creator-shoot-package.ts`:**
+  - a creator creates, edits and pauses their own day rate;
+  - the shape rules hold, and only one active day rate is allowed;
+  - another creator, a brand, outreach and anonymous are refused, both through row
+    security and through every brand-facing page path;
+  - a brand offer or campaign carrying a `per_day` id is refused;
+  - the gating guard passes.
+- **`scripts/test-experience-legs-send.ts`:**
+  - every function is refused for no-access, a brand, a creator, anonymous and the
+    service role;
+  - send writes exactly the leg, items and locked terms, and both formula CHECKs hold;
+  - the track % comes from the creator; a tampered figure is refused;
+  - an over-sold or over-affiliate edit is refused; uneven creators with the right total
+    pass;
+  - a decline frees its videos;
+  - the creator sees only their own context and terms;
+  - every step writes `ops_events`.
+- **Regressions:** `test-fee-golden.ts` byte-identical, `walk-deal-guard.ts` 45/45, the
+  3a roster tests, `check-house-hidden.ts` and `check-pnl-isolation.ts`.
+- **`docs/test-cases.md`:** functional, security, desktop and mobile checks, in the same
+  commits.
+
+### Answers (Palak, 2026-10-07), as built
+1. Affiliate is a FLAG ON VIDEOS: a leg has N videos and `affiliate_count ≤ N` carry the link. Never a separate deliverable.
+2. Leg deliverables are the LEG TOTAL, never multiplied by days. Days drive money only.
+3. Every creator can set a shoot day rate (normal rate-card item); staff with Experiences access can set or edit it on a creator's behalf, audited.
+4. Accept / decline only in 3b; the creator counter is Phase 5.
+5. Leg offers: in-app + email only. WhatsApp OFF for legs.
+
+### To-do: leg WhatsApp template (MSG91)
+A leg-specific template ("<brand> · Managed by Guapd: a shoot offer, ₹<net> to you") needs drafting and MSG91/Meta approval. Until then `lib/experience-leg-notify.ts` sends no WhatsApp. Do not reuse the marketplace offer template: its amount is computed the marketplace way.
+
+### Deviations from the plan, as built
+- Migration 0535 added: `get_public_storefront` lists `per_deliverable` packages only and skips Experience legs in past collabs; a `per_day` package can never be price-displayed (CHECK).
+- Creator lists show a leg at the creator's take-home (net), not gross: they label the figure as what the creator receives and sum it as earnings.
+- Staff chat on legs is not in 3b; creator messages on a leg are refused by trigger until it lands.
+
+### Original open questions (answered above)
+1. Does "per day shoot: 5 UGC + 5 affiliate" mean **5 UGC videos, all 5 carrying the
+   affiliate link** (5 deliverables)? That is how the agreed plan already models
+   affiliate: a count of videos that carry the link. Or are they 10 separate
+   deliverables?
+2. Is a leg's deliverable scope the **total for the leg**, set by staff, rather than
+   automatically multiplied by the number of days?
+3. Can **every creator** set a shoot day rate, or only creators staff invite to
+   Experiences? And if a creator has no day rate when staff want to send, should staff
+   ask them to add one, or may an ops admin set it for them?
+4. Should creators only **accept or decline** in 3b, with the day-rate counter in a
+   later stage?
+5. The existing WhatsApp offer template states an amount worked out the marketplace way.
+   Should leg offers notify **in-app and by email only** until a leg-specific template is
+   approved?

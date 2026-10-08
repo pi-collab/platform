@@ -129,7 +129,7 @@ export async function savePackage(input: SavePackageInput): Promise<PackageResul
   // creator_id is part of the match, so a guessed id belonging to someone else
   // matches no row rather than editing theirs.
   const { error } = input.id
-    ? await admin.from('creator_products').update(row).eq('id', input.id).eq('creator_id', ctx.creatorId)
+    ? await admin.from('creator_products').update(row).eq('id', input.id).eq('creator_id', ctx.creatorId).eq('pricing_type', 'per_deliverable')
     : await admin.from('creator_products').insert(row)
 
   if (error) {
@@ -157,6 +157,7 @@ export async function deletePackage(id: string): Promise<PackageResult> {
     .update({ is_active: false })
     .eq('id', id)
     .eq('creator_id', ctx.creatorId)
+    .eq('pricing_type', 'per_deliverable')
 
   if (error) {
     console.error(`[packages] delete failed creator=${ctx.creatorId}: ${error.message}`)
@@ -322,5 +323,82 @@ export async function saveRevisionPolicy(input: SaveRevisionPolicyInput): Promis
   // The shopfront editor lists the same packages; without this it keeps
   // showing the set from before the save.
   revalidatePath('/creator/storefront')
+  return { ok: true }
+}
+
+/* ── Shoot day rate (pricing_type 'per_day', migration 0533) ────────────────
+   What the creator charges Guapd for one day of a managed shoot (a Guapd
+   Experience). Priced per day; deliverables are not priced here, they are
+   the scope Guapd sets on each deal. Never shown to brands: the read policy
+   and every brand-facing query filter to per_deliverable.
+
+   One active day rate per creator (partial unique index). Pausing keeps the
+   row; setting it again re-activates the same row rather than adding another.
+   A deal already sent is unaffected by either: its rate is frozen onto
+   experience_creator_terms at send. */
+
+export async function saveDayRate(input: { rupees: number }): Promise<PackageResult> {
+  const ctx = await verifyCreator()
+  const rupees = Number(input.rupees)
+  if (!Number.isFinite(rupees) || !Number.isInteger(rupees) || rupees <= 0) {
+    return { ok: false, message: 'Enter your day rate in whole rupees.' }
+  }
+  if (rupees > MAX_RUPEES) {
+    return { ok: false, message: 'That rate looks too high. Check the number.' }
+  }
+  const admin = createAdminClient()
+
+  const { data: existing } = await admin
+    .from('creator_products')
+    .select('id, is_active')
+    .eq('creator_id', ctx.creatorId)
+    .eq('pricing_type', 'per_day')
+    .order('is_active', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const fields = { price_paise: rupees * 100, is_active: true }
+  const { error } = existing
+    ? await admin.from('creator_products').update(fields)
+        .eq('id', existing.id).eq('creator_id', ctx.creatorId).eq('pricing_type', 'per_day')
+    : await admin.from('creator_products').insert({
+        creator_id: ctx.creatorId,
+        pricing_type: 'per_day',
+        platform: null,
+        handle: null,
+        product_type: 'Shoot day',
+        description: null,
+        price_mode: 'exact',
+        price_max_paise: null,
+        display_price: false,
+        revisions_enabled: false,
+        included_revisions: 0,
+        price_per_extra_revision_paise: 0,
+        ...fields,
+      })
+
+  if (error) {
+    console.error(`[packages] day rate save failed creator=${ctx.creatorId}: ${error.message}`)
+    return { ok: false, message: 'Could not save your day rate. Please try again.' }
+  }
+  revalidatePath('/creator/packages')
+  return { ok: true }
+}
+
+export async function pauseDayRate(): Promise<PackageResult> {
+  const ctx = await verifyCreator()
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('creator_products')
+    .update({ is_active: false })
+    .eq('creator_id', ctx.creatorId)
+    .eq('pricing_type', 'per_day')
+    .eq('is_active', true)
+  if (error) {
+    console.error(`[packages] day rate pause failed creator=${ctx.creatorId}: ${error.message}`)
+    return { ok: false, message: 'Could not pause your day rate. Please try again.' }
+  }
+  revalidatePath('/creator/packages')
   return { ok: true }
 }

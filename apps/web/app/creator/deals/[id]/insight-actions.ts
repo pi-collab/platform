@@ -1,5 +1,7 @@
 'use server'
 
+import { isCreatorLeg, CREATOR_LEG_REFUSAL } from '@/lib/creator-leg'
+
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -79,6 +81,7 @@ export async function recheckPostInsights(
   dealId: string,
   itemId: string,
 ): Promise<{ ok: boolean; status?: string; message?: string }> {
+  if (await isCreatorLeg(dealId)) return { ok: false, message: CREATOR_LEG_REFUSAL }
   const ctx = await verifyCreator()
   const admin = createAdminClient()
 

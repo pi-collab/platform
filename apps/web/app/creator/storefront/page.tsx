@@ -33,6 +33,7 @@ export default async function StorefrontPage() {
     supabase
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', ctx.creatorId)
       .eq('is_active', true),
     // The same per-channel add-on rates and per-creator revision policy the

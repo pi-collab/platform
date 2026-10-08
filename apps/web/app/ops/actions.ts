@@ -420,6 +420,8 @@ export async function editCreator(input: EditCreatorInput) {
       .from('creator_products')
       .update({ handle: newHandle })
       .eq('creator_id', id)
+      // Only marketplace packages carry a channel handle; a shoot day rate has none.
+      .eq('pricing_type', 'per_deliverable')
       .eq('handle', oldHandle)
       .select('id')
 
@@ -793,6 +795,9 @@ export async function editProduct(input: EditProductInput) {
       price_per_extra_revision_paise: price_per_extra_revision_paise ?? 0,
     })
     .eq('id', id)
+    // A shoot day rate (per_day) is set by the creator or through the
+    // Experiences console, never through this marketplace editor.
+    .eq('pricing_type', 'per_deliverable')
 
   if (error) return { error: error.message }
 

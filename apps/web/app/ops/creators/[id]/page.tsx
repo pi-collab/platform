@@ -78,6 +78,7 @@ export default async function CreatorDetailPage({ params }: { params: { id: stri
     admin
       .from('creator_products')
       .select('id, platform, handle, product_type, description, price_paise, price_mode, price_max_paise, display_price, is_active, included_revisions, price_per_extra_revision_paise, created_at')
+      .eq('pricing_type', 'per_deliverable')
       .eq('creator_id', params.id)
       .order('created_at', { ascending: false }),
     // Per-channel collab / boosting rates, so ops can see and seed what a

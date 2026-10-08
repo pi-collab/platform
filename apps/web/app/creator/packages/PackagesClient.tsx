@@ -11,6 +11,7 @@ import {
 import { savePackage, deletePackage, saveAddonRates, saveRevisionPolicy } from './actions'
 import { percentToBasisPoints } from '@/lib/addons'
 import PackageFeeNote from '@/components/creator/PackageFeeNote'
+import ShootDayRate from './ShootDayRate'
 import './packages.css'
 
 export interface Channel { platform: string; handle: string }
@@ -465,13 +466,20 @@ export default function PackagesClient({
   revisionPolicy,
   packages,
   isGrowth = false,
+  dayRate = null,
+  dayRateFeePct,
 }: {
   channels: Channel[]
   addonRates?: AddonRateRow[]
   revisionPolicy?: { enabled: boolean; included: number; perExtraPaise: number }
   packages: PackageRow[]
   isGrowth?: boolean
+  /** The shoot day rate (pricing_type per_day), active or paused. */
+  dayRate?: { paise: number; active: boolean } | null
+  /** The creator's own track % for the worked example. */
+  dayRateFeePct: number
 }) {
+  const shootDay = <ShootDayRate dayRate={dayRate} feePct={dayRateFeePct} isGrowth={isGrowth} />
   const [editing, setEditing] = useState<PackageRow | 'new' | null>(null)
   const orphans = packages.filter(
     (p) => !channels.some((ch) => p.platform.trim().toLowerCase() === ch.platform && sameHandle(p.handle, ch.handle)),
@@ -502,6 +510,8 @@ export default function PackagesClient({
             Add your channels
           </Link>
         </div>
+        {/* A shoot day is not tied to a channel, so it can be set without one. */}
+        {shootDay}
       </div>
     )
   }
@@ -613,6 +623,11 @@ export default function PackagesClient({
       <button type="button" className="pk-btn pk-btn-primary pk-add" onClick={() => setEditing('new')}>
         + Add a package
       </button>
+
+      {/* A different kind of rate: priced per shoot day, for managed shoots
+          Guapd books. Kept apart from the per-deliverable packages above
+          because brands see those and never see this. */}
+      {shootDay}
 
       {/* Below the packages, not above them. This is a setting that applies
           once; the packages are what the page is for, and putting a rarely
