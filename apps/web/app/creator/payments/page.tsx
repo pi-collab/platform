@@ -7,6 +7,8 @@ import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
 import CreatorPaymentsMobile from '@/components/CreatorPaymentsMobile'
 import { unreadNotificationCount } from '@/lib/unread'
+import GuapdPayoutsSection, { type GuapdPayout } from './GuapdPayoutsSection'
+import type { PayoutDetailsView } from './payout-details-actions'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
 
@@ -48,16 +50,32 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   const now = new Date()
 
   // Summary
+  // 0542: Guapd-managed shoots. Their own payouts and their masked bank
+  // details, each through a definer function that returns only their own.
+  const [{ data: guapdPayoutsRaw }, { data: payoutDetailsRaw }, { count: legCount }] = await Promise.all([
+    supabase.rpc('creator_payouts'),
+    supabase.rpc('creator_payout_details'),
+    supabase.from('deals').select('id', { count: 'exact', head: true }).eq('leg_role', 'creator_leg'),
+  ])
+  const guapdPayouts = ((guapdPayoutsRaw ?? []) as GuapdPayout[]).map((p) => ({ ...p, net_paise: Number(p.net_paise), tds_paise: Number(p.tds_paise), paid_paise: Number(p.paid_paise) }))
+  const payoutDetails = (payoutDetailsRaw ?? { on_file: false }) as PayoutDetailsView
+  const showGuapd = (legCount ?? 0) > 0 || guapdPayouts.length > 0 || payoutDetails.on_file
+
+  // Earned = paid invoices + what Guapd paid them for shoots, at their NET
+  // (the figure on their statement; TDS withheld is still their income).
   const totalEarnedPaise = all
     .filter((inv) => inv.status === 'paid')
     .reduce((sum, inv) => sum + (inv.creator_receives_paise ?? 0), 0)
+    + guapdPayouts.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.net_paise, 0)
 
   // Pending = issued or accepted (not yet paid)
   const pendingInvoices = all.filter((inv) => inv.status === 'issued' || inv.status === 'accepted')
+  // …plus Guapd payouts not yet paid (requested / approved / on their way), at net.
+  const guapdPending = guapdPayouts.filter((p) => p.status !== 'paid')
   const pendingAmountPaise = pendingInvoices.reduce(
     (sum, inv) => sum + (inv.creator_receives_paise ?? 0),
     0
-  )
+  ) + guapdPending.reduce((sum, p) => sum + p.net_paise, 0)
 
   const pending = pendingInvoices.map((inv) => {
     const deal = inv.deals as any
@@ -84,7 +102,20 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       dueDateStr,
       isOverdue: Boolean(isOverdue),
     }
-  })
+  }).concat(guapdPending.map((p) => ({
+    id: `guapd-${p.deal_id}`,
+    dealId: p.deal_id,
+    dealTitle: p.title || 'Guapd shoot',
+    brandName: p.brand_label,
+    brandInitials: getInitials(p.brand_label),
+    brandLogo: null,
+    amountPaise: p.net_paise,
+    status: p.status === 'requested' ? 'Being prepared' : 'On its way',
+    meta: 'Paid by Guapd after the shoot',
+    dueDateStr: null,
+    isOverdue: false,
+    byGuapd: true,
+  })))
 
   // History = paid invoices
   const paidInvoices = all.filter((inv) => inv.status === 'paid')
@@ -150,7 +181,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   // Both render when there are no invoices; the width decides which is visible.
   // Returning the mobile design early fired at every width, so a creator on a
   // desktop never reached the payments screen.
-  const isEmpty = all.length === 0 && readyToInvoice.length === 0
+  const isEmpty = all.length === 0 && readyToInvoice.length === 0 && guapdPayouts.length === 0
 
   // Service role: upi_id is withheld from the client roles as PII, so the
   // session client cannot read it back. Only needed for the empty screen.
@@ -185,13 +216,14 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       <PaymentsClient
         totalEarnedPaise={totalEarnedPaise}
         pendingAmountPaise={pendingAmountPaise}
-        pendingCount={pendingInvoices.length}
+        pendingCount={pending.length}
         pending={pending}
         history={history}
         readyToInvoice={readyToInvoice}
         upiId={upiId}
       />
     </main>
+    {showGuapd && <GuapdPayoutsSection payouts={guapdPayouts} details={payoutDetails} />}
     </>
   )
 }

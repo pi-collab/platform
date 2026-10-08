@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleCompletion, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -57,9 +57,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
     : undefined
   // Creator deals exist once the roster is locked (Confirmed onward).
   const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
-  const [legs, legsReconcile, creatorBrief] = hasLegs
-    ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id)])
-    : [null, null, null]
+  const [legs, legsReconcile, creatorBrief, counters] = hasLegs
+    ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id), getConsoleCounters(e.id)])
+    : [null, null, null, null]
   // The shoot (from Confirmed) and deliverables (from Shoot scheduled), 0538. Operational.
   const deliverables = hasLegs ? await getConsoleDeliverables(e.id) : null
   const hasDeliverables = ['shoot_scheduled', 'shoot_done', 'delivering', 'complete'].includes(e.status)
@@ -145,7 +145,8 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
         <div style={{ marginTop: 20 }}>
           {legs?.ok && legsReconcile?.ok && creatorBrief?.ok
             ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
-                brief={creatorBrief.data} affiliateSold={e.request_affiliate && (e.request_affiliate_per_creator ?? 0) > 0} />
+                brief={creatorBrief.data} affiliateSold={e.request_affiliate && (e.request_affiliate_per_creator ?? 0) > 0}
+                counters={counters?.ok ? counters.data.counters : []} canRaise={counters?.ok ? counters.data.can_raise : false} />
             : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || (creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the creator deals'} />}
         </div>
       )}

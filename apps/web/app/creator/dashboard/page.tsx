@@ -144,7 +144,12 @@ export default async function CreatorDashboardPage({
   const isGrowth = creatorRow?.vetting_status === 'growth'
 
   const allDeals = deals ?? []
-  const rawInvoices = (invoices ?? []) as InvoiceRow[]
+  // 0542: Guapd payouts for shoots count as earnings, at the creator's NET (their
+  // statement's figure), shaped like a paid invoice so every total below adds them.
+  const { data: guapdPayoutsRaw } = await supabase.rpc('creator_payouts')
+  const guapdAsInvoices: InvoiceRow[] = ((guapdPayoutsRaw ?? []) as { deal_id: string; status: string; net_paise: number; paid_at: string | null }[])
+    .map((p) => ({ deal_id: p.deal_id, status: p.status === 'paid' ? 'paid' : 'accepted', due_date: null, creator_receives_paise: Number(p.net_paise), paid_at: p.status === 'paid' ? p.paid_at : null }))
+  const rawInvoices = [...((invoices ?? []) as InvoiceRow[]), ...guapdAsInvoices]
 
   // Scope invoices to only deals within the selected period
   const dealIds = new Set(allDeals.map(d => d.id))
@@ -343,10 +348,11 @@ export default async function CreatorDashboardPage({
     .not('status', 'in', '(cancelled,declined)')
   const lifetime = await overlayCreatorLegs(supabase, rawLifetimeDeals ?? [])
 
-  const { data: lifetimeInvoices } = await supabase
+  const { data: lifetimeInvoicesRaw } = await supabase
     .from('invoices')
     .select('deal_id, status, creator_receives_paise, paid_at')
     .eq('status', 'paid')
+  const lifetimeInvoices = [...(lifetimeInvoicesRaw ?? []), ...guapdAsInvoices.filter((g) => g.status === 'paid')]
 
   const nowD = new Date()
   const startOfMonth = new Date(nowD.getFullYear(), nowD.getMonth(), 1)

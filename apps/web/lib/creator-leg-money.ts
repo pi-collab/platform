@@ -48,6 +48,16 @@ export interface CreatorLegContext {
   items?: CreatorLegItem[]
   /** 0540: the live payout to them for this deal, as their statement. Null until Guapd requests it. */
   payout?: CreatorLegPayout | null
+  /** 0542: counters on this offer (both sides), oldest first, and how many the creator has left. */
+  counters?: CreatorLegCounter[]
+  counters_left?: number
+}
+
+export interface CreatorLegCounter {
+  id: string; round: number; proposed_by: 'creator' | 'guapd'
+  day_rate_paise: number; days: number; gross_paise: number; platform_pct: number; net_paise: number
+  note: string | null; status: 'open' | 'accepted' | 'declined' | 'withdrawn' | 'superseded'
+  created_at: string; decided_at: string | null; decision_note: string | null
 }
 
 /** gross → platform fee → net → TDS → paid. Reference only once paid; never the proof or who approved it. */

@@ -288,6 +288,12 @@ export interface ConsoleLegRow {
   sent_gross_paise: number | null
   sent_platform_pct: number | null
   sent_net_paise: number | null
+  /** 0542: a rate entered on this deal while the creator has no active rate (paused or never set). */
+  leg_entered_rate_paise: number | null
+  /** 0542: the creator's paused package rate, when they have no active one. */
+  paused_rate_paise: number | null
+  /** 0542: where the sent rate came from. */
+  sent_rate_source: 'package' | 'entered' | null
 }
 
 export interface ConsoleLegsReconcile {
@@ -312,6 +318,7 @@ export async function listConsoleLegs(experienceId: string): Promise<Result<Cons
     leg_days: num(r.leg_days), day_rate_paise: num(r.day_rate_paise),
     sent_day_rate_paise: num(r.sent_day_rate_paise), sent_days: num(r.sent_days),
     sent_gross_paise: num(r.sent_gross_paise), sent_platform_pct: num(r.sent_platform_pct), sent_net_paise: num(r.sent_net_paise),
+    leg_entered_rate_paise: num(r.leg_entered_rate_paise), paused_rate_paise: num(r.paused_rate_paise),
   }))
   return { ok: true, data: rows }
 }
@@ -321,9 +328,10 @@ export async function getLegsReconcile(experienceId: string): Promise<Result<Con
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
 
-export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number): Promise<Result<ConsoleLegsReconcile>> {
+export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number, enteredRatePaise: number | null = null): Promise<Result<ConsoleLegsReconcile>> {
   const { data, error } = await createClient().rpc('experience_console_leg_draft', {
     p_roster_id: rosterId, p_product_id: productId, p_days: days, p_deliverables: deliverables, p_affiliate_count: affiliateCount,
+    p_entered_rate_paise: enteredRatePaise,
   })
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
@@ -684,13 +692,16 @@ export interface ConsolePayout {
   amount_paise: number; tds_paise: number; net_amount_paise: number
   requested_by_name: string | null; requested_at: string; approved_by_name: string | null; approved_at: string | null
   paid_on: string | null; method: string | null; reference: string | null; has_proof: boolean; i_requested: boolean
+  details_changed_after_request: boolean
 }
 export interface ConsolePayoutLeg {
   deal_id: string; creator_id: string; full_name: string | null; deal_status: string; shoot_outcome: string | null
   work_complete: boolean; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
-  upi_id: string | null; cancelled_before: number; payout: ConsolePayout | null
+  /** 0542: masked only; full details are finance's (getPayoutAccount). */
+  payment_details: { bank_on_file: boolean; account_masked: string | null; upi_on_file: boolean; changed_at: string | null }
+  cancelled_before: number; payout: ConsolePayout | null
 }
-export interface ConsolePayouts { experience_id: string; status: string; legs: ConsolePayoutLeg[] }
+export interface ConsolePayouts { experience_id: string; status: string; legs: ConsolePayoutLeg[]; can_pay: boolean }
 
 export async function getConsolePayouts(experienceId: string): Promise<Result<ConsolePayouts>> {
   const { data, error } = await createClient().rpc('experience_console_payouts', { p_experience_id: experienceId })
@@ -704,8 +715,8 @@ export async function setPayoutTds(payoutId: string, tdsPaise: number): Promise<
   const { error } = await createClient().rpc('experience_console_payout_set_tds', { p_payout_id: payoutId, p_tds_paise: tdsPaise })
   return error ? fail(error) : { ok: true, data: null }
 }
-export async function approvePayout(payoutId: string): Promise<Result<null>> {
-  const { error } = await createClient().rpc('experience_console_payout_approve', { p_payout_id: payoutId })
+export async function approvePayout(payoutId: string, confirmDetailsChanged = false): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_approve', { p_payout_id: payoutId, p_confirm_details_changed: confirmDetailsChanged })
   return error ? fail(error) : { ok: true, data: null }
 }
 export async function markPayoutPaid(payoutId: string, p: { paidOn: string; method: string; reference: string; proofPath: string }): Promise<Result<null>> {
@@ -825,4 +836,51 @@ export async function dropProspect(prospectId: string, reason: string): Promise<
 export async function linkProspect(prospectId: string, creatorId: string): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_prospect_link', { p_prospect_id: prospectId, p_creator_id: creatorId })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+
+
+// ── 0542: counters on a creator leg; finance-only bank details ─────────────
+
+export interface ConsoleCounter {
+  id: string; deal_id: string; round: number; proposed_by: 'creator' | 'guapd'
+  day_rate_paise: number; days: number; gross_paise: number; platform_pct: number; net_paise: number
+  note: string | null; status: 'open' | 'accepted' | 'declined' | 'withdrawn' | 'superseded'
+  created_at: string; decided_at: string | null; decision_note: string | null
+  /** Against the deal's current terms: a raise needs financial access to accept or send. */
+  direction: 'raises' | 'lowers' | 'holds'
+}
+export async function getConsoleCounters(experienceId: string): Promise<Result<{ counters: ConsoleCounter[]; can_raise: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_counters', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const d = data as { counters: Record<string, unknown>[]; can_raise: boolean }
+  return { ok: true, data: { can_raise: d.can_raise, counters: (d.counters ?? []).map((c) => ({
+    ...(c as unknown as ConsoleCounter), day_rate_paise: Number(c.day_rate_paise), days: Number(c.days), gross_paise: Number(c.gross_paise),
+    platform_pct: Number(c.platform_pct), net_paise: Number(c.net_paise),
+  })) } }
+}
+export async function acceptCounter(counterId: string, expectedGrossPaise: number): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_accept', { p_counter_id: counterId, p_expected_gross_paise: expectedGrossPaise })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function declineCounter(counterId: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_decline', { p_counter_id: counterId, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function sendCounter(dealId: string, dayRatePaise: number, days: number, note: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_counter_send', { p_deal_id: dealId, p_day_rate_paise: dayRatePaise, p_days: days, p_note: note })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function withdrawGuapdCounter(counterId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_withdraw', { p_counter_id: counterId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export interface PayoutAccount {
+  account_holder_name: string | null; account_number: string | null; ifsc: string | null; pan: string | null
+  gst_registered: boolean | null; changed_at: string | null; changed_after_request: boolean; upi_id: string | null
+}
+/** FINANCE only, for paying one payout; every call is audited (no values). */
+export async function getPayoutAccount(payoutId: string): Promise<Result<PayoutAccount>> {
+  const { data, error } = await createClient().rpc('experience_console_payout_account', { p_payout_id: payoutId })
+  return error ? fail(error) : { ok: true, data: data as PayoutAccount }
 }

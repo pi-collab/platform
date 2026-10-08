@@ -7040,7 +7040,8 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] The amount is the creator's LOCKED net; the database refuses any payout that is not exactly their locked terms. TDS is a field (NULL refused, 0 by default in the screen, not above the net), editable only while requested.
 - [ ] One live payout per creator deal (a unique index); a cancelled one (with a reason) allows a new request whose duplicate key names attempt 2.
 - [ ] Maker-checker: the requester cannot approve; the database refuses it even from the service role.
-- [ ] Paid needs an approval, a date (not future), a method (bank transfer / UPI / other), a reference and a proof file uploaded to the payout's own path. Paid and cancelled are final. A paid payout is on the creator's deal timeline (reference, no amount).
+- [ ] (0542) Operational staff REQUEST; only FINANCE approves, records paid, attaches or opens the proof, and cancels an approved payout. Finance cannot approve a payout they requested themselves.
+- [ ] Paid (finance) needs an approval, a date (not future), a method (bank transfer / UPI / other), a reference and a proof file uploaded to the payout's own path. Paid and cancelled are final. A paid payout is on the creator's deal timeline (reference, no amount).
 - [ ] The creator is told in-app + by email when it is recorded paid ("Guapd paid you ₹X · ref …").
 - [ ] The other staff are told in-app that a payout needs approving (never the requester).
 
@@ -7079,3 +7080,37 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] Every action writes `ops_events` with no amount and no phone number. Nothing messages anyone; "Copy sign-up link" is for staff to send themselves.
 
 **Environment:** 0536 + 0541 are on STAGING only.
+
+## 110. Experiences Phase 5: counters on a creator leg, the paused day rate, bank details, payouts on the creator's side (migration 0542)
+
+Run (staging, real sessions, ~200 s apart for the auth rate limit):
+`NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-counters.ts` and `scripts/test-experience-bank-details.ts`; `test-experience-payouts.ts` covers finance-only paying.
+
+**Counters (SECURITY + functional)**
+- [ ] Only the leg's own creator counters; another creator, the brand, staff, anonymous and the service role are refused. No user reads `experience_leg_counters` directly; the creator sees their leg's counters on the deal page only.
+- [ ] A counter is a day rate (whole rupees) and/or days with an optional note; NULLs, part-rupees and "the current offer" are refused. One open counter at a time per side; 3 counters each way (a withdrawn one counts); the full history stays.
+- [ ] A counter changes the PROPOSED gross only. The fee % snapshotted at send, the track, the package, the rate source, the lock time, the deliverable items, the roster scope and `experience_legs_reconcile` are identical before and after a counter and after it is accepted.
+- [ ] Direction: a counter that RAISES the cost needs financial access to accept or send (operational staff are refused in the database, and the button is disabled with the reason); lowering or holding is operational. A stale screen (expected gross changed) is refused.
+- [ ] Guapd's counter supersedes the creator's open one (and vice versa). While Guapd's counter is open the creator cannot accept the original offer; they accept Guapd's, counter or decline. Accepting or declining closes the creator's own open counter.
+- [ ] On accept the leg is agreed and FROZEN: no counter from either side, no direct terms write (even the service role), no re-price. The fee % never changes even while open, and open terms change only through the counter path.
+- [ ] Withdrawing the offer closes an open counter. The creator is told in-app + by email when Guapd counters, accepts or declines; staff in-app when the creator counters.
+- [ ] Every counter action is audited (`experience.leg_counter_*`) and on the deal timeline, with no amounts.
+
+**Paused day rate**
+- [ ] Staff "Set day rate" is refused while the creator's rate is paused, and no second active rate ever exists. The console shows the paused rate and offers "enter a rate on the deal"; a package AND an entered rate is refused, and an entered rate is refused while the creator has an active one.
+- [ ] A leg sent on an entered rate records `rate_source = 'entered'` with no package.
+
+**Bank details (SECURITY)**
+- [ ] Only a creator saves or reads payout details, their own; staff, brands, anonymous and the service role are refused. Validation: holder name, 9–18 digit account entered twice, IFSC shape, optional PAN shape, GST-registered yes/no (NULL refused); refused attempts store nothing.
+- [ ] Account number and PAN are encrypted with the Vault key; the stored bytes do not contain them; the plaintext columns stay empty and the database refuses them; only the last 4 are kept in the clear.
+- [ ] The creator reads back masked (••••1234, PAN ••••••234Q); another creator never sees them. No user reads `vendor_payout_details` or `vendor_payout_detail_changes` directly.
+- [ ] Operational staff see "bank on file ••••1234" only, on requested AND approved payouts; finance's payouts screen is masked too. Only finance opens the full details ("Bank details"), for a requested or approved payout; ops, the creator, the brand, anonymous and the service role are refused; each view is audited (`finance.payout_details_viewed`) with no values.
+- [ ] A change after the payout was requested is flagged on the payout and blocks approval until finance confirms the new details; finance then reads the new number. The creator gets a security notice (in-app + email, never the details) when saved details change.
+- [ ] The change log holds field names only. No account number, PAN or bank field reaches `ops_events`, deal events or notifications.
+
+**The creator's side**
+- [ ] Payments shows "Guapd-managed shoots": each payout's status, net, TDS, paid amount, date and reference (paid only), their own only; and the bank-details card (masked, Add / Change).
+- [ ] Paid and pending Guapd payouts count in dashboard earnings at their NET (paid → paid, otherwise expected).
+- [ ] On Payments, an unpaid Guapd payout counts in Pending (amount and a row, desktop and mobile) with "View deal" and NO "Send reminder" (there is no invoice); paid ones count in Total earned. A creator with only Guapd payouts does not get the empty state.
+
+**Environment:** 0542 is on STAGING only; the Vault secret `guapd_payout_details_key` must exist on any project it is applied to (the migration creates it if missing; production needs its own, never copied). pgcrypto lives in the `extensions` schema. Test rows in `experience_leg_counters` are removed by the service role before their deal (a cascade runs as the owner and is refused by design).

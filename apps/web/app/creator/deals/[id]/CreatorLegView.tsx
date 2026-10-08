@@ -128,7 +128,9 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
 
         <section className="surface leg-card" id="decision" aria-labelledby="leg-decision">
           <h2 id="leg-decision" className="leg-h2">{open ? 'Your answer' : 'Status'}</h2>
-          {open && <LegRespond dealId={dealId} netLabel={m ? formatPaiseINR(m.netPaise) : null} />}
+          {open && <LegRespond dealId={dealId} netLabel={m ? formatPaiseINR(m.netPaise) : null} counters={ctx.counters ?? []} countersLeft={ctx.counters_left ?? 0}
+            dayRatePaise={ctx.day_rate_paise != null ? Number(ctx.day_rate_paise) : null} days={ctx.days != null ? Number(ctx.days) : null} platformPct={ctx.platform_pct != null ? Number(ctx.platform_pct) : null} />}
+          {!open && (ctx.counters ?? []).some((c) => c.status === 'accepted') && <p className="leg-note">Agreed after a counter: the terms above are the ones you both accepted.</p>}
           {accepted && !ctx.shoot_outcome && <p className="leg-body">You accepted this shoot. Guapd will confirm the details with you before the day.</p>}
           {accepted && shot && (ctx.work_complete
             ? <p className="leg-status-done">Shoot done. Your part is complete. {ctx.payout?.status === 'paid' ? 'Your payout has been sent.' : 'Guapd tells you when your payout is sent.'}</p>

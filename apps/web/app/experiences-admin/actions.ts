@@ -16,6 +16,7 @@ import {
   getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout,
   recordBrandSignoff, clearBrandSignoff,
   addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
+  acceptCounter, declineCounter, sendCounter, withdrawGuapdCounter, getPayoutAccount, type PayoutAccount,
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
@@ -25,6 +26,7 @@ import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
 import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
+import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
@@ -258,19 +260,24 @@ export interface LegDraftForm {
   days: number | string | null
   deliverables: { type: string; count: number | string }[]
   affiliateCount: number | string
+  /** 0542: a day rate entered on this deal (rupees) while the creator has no active rate. */
+  enteredRate?: number | string | null
 }
 
 export async function draftCreatorLeg(experienceId: string, f: LegDraftForm): Promise<Out<ConsoleLegsReconcile>> {
   const refused = await gate(); if (refused) return refused
   if (!isUuid(experienceId) || !isUuid(f.rosterId)) return { ok: false, error: 'Unknown creator.' }
   if (f.productId !== null && !isUuid(f.productId)) return { ok: false, error: 'Pick the creator\'s shoot day rate.' }
+  const enteredPaise = f.enteredRate == null || f.enteredRate === '' ? null : rupeesToPaise(String(f.enteredRate))
+  if (f.enteredRate != null && f.enteredRate !== '' && (enteredPaise == null || enteredPaise <= 0 || enteredPaise % 100 !== 0)) return { ok: false, error: 'Enter the day rate in whole rupees.' }
+  if (enteredPaise != null && f.productId) return { ok: false, error: 'Use their day rate or enter one, not both.' }
   const days = f.days === null || f.days === '' ? null : legDays(f.days)
   if (f.days !== null && f.days !== '' && days === null) return { ok: false, error: 'Days must be more than 0, at most 365, with at most two decimals (e.g. 1.5).' }
   const items = deliverables(f.deliverables)
   if (!items || items.length === 0) return { ok: false, error: 'Give this creator at least one deliverable.' }
   const aff = Number(f.affiliateCount)
   if (!Number.isInteger(aff) || aff < 0) return { ok: false, error: 'Affiliate is a count of this creator\'s videos (0 for none).' }
-  const r = await legDraft(f.rosterId, f.productId, days, items, aff)
+  const r = await legDraft(f.rosterId, enteredPaise != null ? null : f.productId, days, items, aff, enteredPaise)
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
   return r
@@ -288,13 +295,15 @@ export async function sendCreatorLegs(experienceId: string, rosterIds: string[])
     const row = legs.data.find((l) => l.roster_id === id)
     if (!row) { failed.push({ rosterId: id, error: 'Not a locked, accepted creator on this Experience.' }); continue }
     if (row.leg_deal_id) { failed.push({ rosterId: id, error: 'Already sent.' }); continue }
-    if (!row.leg_product_id || row.day_rate_paise == null || row.leg_days == null) {
-      failed.push({ rosterId: id, error: `${row.full_name}: pick the day rate and days first.` }); continue
+    // 0542: their active package rate, or a rate entered on this deal while they have none active.
+    const rateP = row.leg_entered_rate_paise != null ? row.leg_entered_rate_paise : row.leg_product_id ? row.day_rate_paise : null
+    if (rateP == null || row.leg_days == null) {
+      failed.push({ rosterId: id, error: `${row.full_name}: pick the day rate (or enter one) and days first.` }); continue
     }
-    if (row.leg_product_id !== row.day_rate_product_id) {
+    if (row.leg_entered_rate_paise == null && row.leg_product_id !== row.day_rate_product_id) {
       failed.push({ rosterId: id, error: `${row.full_name}: their day rate changed. Pick it again.` }); continue
     }
-    const t = creatorLegTerms({ dayRatePaise: row.day_rate_paise, days: row.leg_days, track: row.track })
+    const t = creatorLegTerms({ dayRatePaise: rateP, days: row.leg_days, track: row.track })
     const r = await legSend(id, { grossPaise: t.creatorGrossPaise, platformPct: t.platformPct, netPaise: t.creatorNetPaise })
     if (!r.ok) { failed.push({ rosterId: id, error: `${row.full_name}: ${r.error}` }); continue }
     sent++
@@ -778,10 +787,10 @@ export async function setCreatorPayoutTds(experienceId: string, payoutId: string
   return r
 }
 
-export async function approveCreatorPayout(experienceId: string, payoutId: string): Promise<Out> {
+export async function approveCreatorPayout(experienceId: string, payoutId: string, confirmDetailsChanged = false): Promise<Out> {
   const refused = await gate(); if (refused) return refused
   if (!isUuid(experienceId) || !isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
-  const r = await approvePayout(payoutId)
+  const r = await approvePayout(payoutId, confirmDetailsChanged === true)
   if (r.ok) refresh(experienceId)
   return r
 }
@@ -916,4 +925,60 @@ export async function linkProspectAction(experienceId: string, prospectId: strin
   const r = await linkProspect(prospectId, creatorId)
   if (r.ok) poolPath(experienceId)
   return r
+}
+
+
+// ── 0542: counters on a creator leg; finance-only bank details ─────────────
+// Direction decides who may act (in Postgres): lowering or holding Guapd's
+// cost, operational staff; raising it, financial staff only.
+
+const counterRate = (v: unknown) => { const p = rupeesToPaise(String(v ?? '')); return p != null && p > 0 && p % 100 === 0 ? p : null }
+
+export async function acceptCreatorCounter(experienceId: string, counterId: string, dealId: string, expectedGrossPaise: number): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(counterId) || !isUuid(dealId) || !Number.isSafeInteger(expectedGrossPaise)) return { ok: false, error: 'Unknown counter.' }
+  const r = await acceptCounter(counterId, expectedGrossPaise)
+  if (!r.ok) return r
+  await notifyCreatorCounter(dealId, 'accepted', counterId)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function declineCreatorCounter(experienceId: string, counterId: string, dealId: string, note: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(counterId) || !isUuid(dealId)) return { ok: false, error: 'Unknown counter.' }
+  const r = await declineCounter(counterId, cleanText(note, 500))
+  if (!r.ok) return r
+  await notifyCreatorCounter(dealId, 'declined', counterId)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function sendGuapdCounter(experienceId: string, dealId: string, rate: string, days: string, note: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(dealId)) return { ok: false, error: 'Unknown creator deal.' }
+  const ratePaise = counterRate(rate)
+  if (ratePaise == null) return { ok: false, error: 'Enter the day rate in whole rupees.' }
+  const d = legDays(days)
+  if (d == null) return { ok: false, error: 'Days must be more than 0, at most 365, with at most two decimals.' }
+  const r = await sendCounter(dealId, ratePaise, d, cleanText(note, 500))
+  if (!r.ok) return r
+  await notifyCreatorCounter(dealId, 'guapd_counter', r.data)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function withdrawGuapdCounterAction(experienceId: string, counterId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(counterId)) return { ok: false, error: 'Unknown counter.' }
+  const r = await withdrawGuapdCounter(counterId)
+  if (r.ok) revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+/** FINANCE only (the database decides): the full bank details for paying one payout. Audited. */
+export async function showPayoutAccount(payoutId: string): Promise<Out<PayoutAccount>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
+  return getPayoutAccount(payoutId)
 }

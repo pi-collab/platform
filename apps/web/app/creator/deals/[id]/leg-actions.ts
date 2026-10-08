@@ -5,6 +5,7 @@ import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
 import { notifyStaffLegAnswer } from '@/lib/experience-leg-notify'
 import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
+import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
@@ -24,7 +25,8 @@ export async function respondToLeg(dealId: string, accept: boolean, reason?: str
     p_deal_id: dealId, p_accept: accept, p_reason: typeof reason === 'string' ? reason.slice(0, 500) : null,
   })
   if (error) {
-    return { ok: false, message: /already answered/i.test(error.message) ? 'You have already answered this offer.' : 'Could not save your answer. Please try again.' }
+    return { ok: false, message: /already answered/i.test(error.message) ? 'You have already answered this offer.'
+      : /new offer/i.test(error.message) ? 'Guapd sent you a new offer. Accept it, counter it, or decline.' : 'Could not save your answer. Please try again.' }
   }
   await notifyStaffLegAnswer(dealId, accept)
   revalidatePath(`/creator/deals/${dealId}`)
@@ -86,4 +88,46 @@ export async function openLegItemFile(dealId: string, itemId: string): Promise<L
   const { data, error } = await createAdminClient().storage.from('deliverables').createSignedUrl(item.storage_path, 600)
   if (error || !data) return { ok: false, message: 'Could not open the file.' }
   return { ok: true, data: data.signedUrl }
+}
+
+
+// ── 0542: counter an offer (rate and/or days), 3 times at most ─────────────
+// creator_leg_counter / _counter_withdraw / _counter_accept run with the
+// creator's own session: their own open leg only. A counter never changes the
+// fee % or the deliverables; once both sides agree, the deal is frozen.
+const plain = (m: string) => m.replace(/^.*?: /, '')
+
+export async function counterLeg(dealId: string, rateRupees: string, days: string, note: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId)) return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  const rate = Number(String(rateRupees).replace(/[,\s₹]/g, ''))
+  const d = Number(days)
+  if (!Number.isInteger(rate) || rate <= 0) return { ok: false, message: 'Enter your day rate in whole rupees.' }
+  if (!Number.isFinite(d) || d <= 0 || d > 365) return { ok: false, message: 'Enter the number of days.' }
+  const { error } = await createClient().rpc('creator_leg_counter', {
+    p_deal_id: dealId, p_day_rate_paise: rate * 100, p_days: Math.round(d * 100) / 100, p_note: typeof note === 'string' ? note.slice(0, 500) : null,
+  })
+  if (error) return { ok: false, message: plain(error.message) }
+  await notifyStaffCreatorCountered(dealId)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true }
+}
+
+export async function withdrawMyCounter(dealId: string, counterId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(counterId)) return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  const { error } = await createClient().rpc('creator_leg_counter_withdraw', { p_counter_id: counterId })
+  if (error) return { ok: false, message: plain(error.message) }
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true }
+}
+
+export async function acceptGuapdCounter(dealId: string, counterId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(counterId)) return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  const { error } = await createClient().rpc('creator_leg_counter_accept', { p_counter_id: counterId })
+  if (error) return { ok: false, message: plain(error.message) }
+  await notifyStaffLegAnswer(dealId, true)
+  revalidatePath(`/creator/deals/${dealId}`); revalidatePath('/creator/deals'); revalidatePath('/creator/dashboard')
+  return { ok: true }
 }

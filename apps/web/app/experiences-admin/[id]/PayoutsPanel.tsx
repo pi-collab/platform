@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatRupees } from '@/lib/experience-request'
-import type { ConsolePayoutLeg, ConsolePayouts } from '@/lib/experience-console-server'
-import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, setCreatorPayoutTds } from '../actions'
+import type { ConsolePayoutLeg, ConsolePayouts, PayoutAccount } from '@/lib/experience-console-server'
+import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, setCreatorPayoutTds, showPayoutAccount } from '../actions'
 import { openFinanceFileInTab, uploadFinanceFile } from './finance-upload'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
@@ -14,9 +14,13 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * Creator payouts (staff console, operational). Manual for now: Guapd pays
  * outside the app, then records the transfer here with its reference and proof.
  *
- *   eligible (shot, their part complete) → request (TDS entered, 0 by default)
- *   → approve (by a DIFFERENT person: maker-checker, enforced in Postgres)
- *   → record paid (date, method, UTR, proof) → the creator is told.
+ *   eligible (shot, their part complete) → request (operational; TDS entered, 0 by default)
+ *   → approve (FINANCE, and a DIFFERENT person: maker-checker, in Postgres)
+ *   → record paid (finance: date, method, UTR, proof) → the creator is told.
+ *
+ * Bank details (0542): operational staff see them masked (••••1234); only
+ * finance opens them in full, to pay, and each view is recorded. If the
+ * creator changed them after the request, approval asks for a confirmation.
  *
  * The amount is the creator's locked net from their deal and cannot be edited.
  * Each row is the creator's statement: gross → platform fee → net → TDS → paid.
@@ -40,17 +44,20 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
   const [paying, setPaying] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState<ConsolePayoutLeg | null>(null)
   const [reason, setReason] = useState('')
+  const [approving, setApproving] = useState<ConsolePayoutLeg | null>(null)
+  const [account, setAccount] = useState<{ name: string; a: PayoutAccount } | null>(null)
+  const canPay = data.can_pay
 
   const open = ['shoot_scheduled', 'shoot_done', 'delivering'].includes(data.status)
   const paid = data.legs.filter((l) => l.payout?.status === 'paid').length
   const toPay = data.legs.filter((l) => l.shoot_outcome === 'done').length
 
-  const run = (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void) => {
+  const run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (d: unknown) => void) => {
     setError(null); setNotice(null)
     start(async () => {
       const r = await fn()
       if (!r.ok) { setError(r.error ?? 'Something went wrong'); return }
-      after?.(); router.refresh()
+      after?.(r.data); router.refresh()
     })
   }
 
@@ -64,7 +71,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
         <span style={{ ...kpiLabel, fontSize: 10.5 }}>{paid} of {toPay} paid · manual</span>
       </div>
       <p className="t-body" style={{ margin: '10px 0 0', fontSize: 13.5 }}>
-        Pay each creator outside the app, then record it here with the bank reference and proof. Someone other than the person who requests a payout approves it.
+        Pay each creator outside the app, then record it here with the bank reference and proof. The team requests a payout; finance (someone other than the requester) approves it, pays and records it.
       </p>
 
       <div style={{ marginTop: 14 }}>
@@ -81,7 +88,8 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{l.full_name ?? 'Creator'}</div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 3 }}>
-                    {l.upi_id ? `UPI ${l.upi_id}` : 'No UPI ID on file'}{l.cancelled_before ? ` · ${l.cancelled_before} cancelled before` : ''}
+                    {l.payment_details.bank_on_file ? `Bank ${l.payment_details.account_masked}` : 'No bank details yet'}
+                    {l.payment_details.upi_on_file ? ' · UPI on file' : ''}{l.cancelled_before ? ` · ${l.cancelled_before} cancelled before` : ''}
                   </div>
                 </div>
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink)', display: 'grid', gap: 2 }}>
@@ -108,17 +116,22 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                         <input className="dinput" style={{ width: 90, height: 30 }} inputMode="decimal" value={tds[p.id] ?? String(Number(p.tds_paise) / 100)} onChange={(e) => setTds({ ...tds, [p.id]: e.target.value })} />
                       </label>
                       {tds[p.id] != null && <button type="button" style={smallBtn} disabled={pending} onClick={() => run(() => setCreatorPayoutTds(experienceId, p.id, tds[p.id]))}>Save TDS</button>}
-                      <button type="button" style={{ ...smallBtn, background: p.i_requested ? 'var(--card)' : 'var(--lime-400)', borderColor: p.i_requested ? '#EAEAE3' : 'var(--lime-400)', opacity: p.i_requested ? 0.5 : 1 }}
+                      {canPay && <button type="button" style={{ ...smallBtn, background: p.i_requested ? 'var(--card)' : 'var(--lime-400)', borderColor: p.i_requested ? '#EAEAE3' : 'var(--lime-400)', opacity: p.i_requested ? 0.5 : 1 }}
                         disabled={pending || p.i_requested} title={p.i_requested ? 'You requested it: someone else approves' : undefined}
-                        onClick={() => run(() => approveCreatorPayout(experienceId, p.id), () => setNotice('Approved. Pay it, then record the transfer.'))}>Approve</button>
+                        onClick={() => p.details_changed_after_request ? setApproving(l) : run(() => approveCreatorPayout(experienceId, p.id), () => setNotice('Approved. Pay it, then record the transfer.'))}>Approve</button>}
                     </>}
-                    {p?.status === 'approved' && open && (
+                    {canPay && p && (p.status === 'requested' || p.status === 'approved') && (
+                      <button type="button" style={smallBtn} disabled={pending}
+                        onClick={() => run(() => showPayoutAccount(p.id), (d) => setAccount({ name: l.full_name ?? 'Creator', a: d as PayoutAccount }))}>Bank details</button>
+                    )}
+                    {canPay && p?.status === 'approved' && open && (
                       <button type="button" style={{ ...smallBtn, background: 'var(--lime-400)', borderColor: 'var(--lime-400)' }} onClick={() => { setError(null); setPaying(p.id) }}>Record paid</button>
                     )}
-                    {p && p.status !== 'paid' && open && <button type="button" style={{ ...smallBtn, color: '#9C4147' }} onClick={() => { setReason(''); setCancelling(l) }}>Cancel</button>}
-                    {p?.has_proof && <button type="button" style={smallBtn} onClick={async () => { const e = await openFinanceFileInTab('payout-proof', p.id); if (e) setError(e) }}>Proof</button>}
+                    {p && open && (p.status === 'requested' || (p.status === 'approved' && canPay)) && <button type="button" style={{ ...smallBtn, color: '#9C4147' }} onClick={() => { setReason(''); setCancelling(l) }}>Cancel</button>}
+                    {canPay && p?.has_proof && <button type="button" style={smallBtn} onClick={async () => { const e = await openFinanceFileInTab('payout-proof', p.id); if (e) setError(e) }}>Proof</button>}
                   </div>
-                  {p?.status === 'requested' && p.i_requested && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>You requested it; someone else approves.</span>}
+                  {p?.status === 'requested' && (p.i_requested || !canPay) && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>{p.i_requested ? 'You requested it; finance (someone else) approves.' : 'Finance approves and pays.'}</span>}
+                  {p && p.status !== 'paid' && p.details_changed_after_request && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11.5, color: '#9C4147' }}>Bank details changed after this was requested.</span>}
                 </div>
               </div>
               {paying === p?.id && p && (
@@ -140,6 +153,27 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
         confirmLabel="Cancel payout" busy={pending}
         onConfirm={() => cancelling?.payout && run(() => cancelCreatorPayout(experienceId, cancelling.payout!.id, reason), () => setCancelling(null))}
         onCancel={() => setCancelling(null)} />
+
+      <ConfirmDialog open={!!approving} title={`Approve the payout to ${approving?.full_name ?? 'this creator'}`} tone="danger"
+        body="The creator changed their bank details after this payout was requested. Confirm the new details with them (on a call or WhatsApp you started, not a reply to a message) before approving."
+        confirmLabel="I confirmed them, approve" busy={pending}
+        onConfirm={() => approving?.payout && run(() => approveCreatorPayout(experienceId, approving.payout!.id, true), () => { setApproving(null); setNotice('Approved. Pay it, then record the transfer.') })}
+        onCancel={() => setApproving(null)} />
+      <ConfirmDialog open={!!account} title={`Pay ${account?.name ?? ''}`}
+        body="Finance only. This view is recorded (who and when, never the details). Do not copy these anywhere else."
+        detail={account && <div style={{ marginTop: 12, display: 'grid', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 13.5 }}>
+          {account.a.account_number
+            ? <>
+                <div><span style={fieldLabel}>Account holder</span>{account.a.account_holder_name}</div>
+                <div><span style={fieldLabel}>Account number</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{account.a.account_number}</span></div>
+                <div><span style={fieldLabel}>IFSC</span>{account.a.ifsc}</div>
+                {account.a.pan && <div><span style={fieldLabel}>PAN</span>{account.a.pan}</div>}
+              </>
+            : <div>No bank details on file.</div>}
+          {account.a.upi_id && <div><span style={fieldLabel}>UPI</span>{account.a.upi_id}</div>}
+          {account.a.changed_after_request && <div style={{ color: '#9C4147' }}>Changed after this payout was requested: confirm with the creator before paying.</div>}
+        </div>}
+        confirmLabel="Done" onConfirm={() => setAccount(null)} onCancel={() => setAccount(null)} />
 
       <style dangerouslySetInnerHTML={{ __html: `@media (max-width: 860px) { .xp-pay-row, .xp-pay-form { grid-template-columns: 1fr !important; } .xp-pay-row > :last-child { align-items: flex-start !important; } }` }} />
     </section>

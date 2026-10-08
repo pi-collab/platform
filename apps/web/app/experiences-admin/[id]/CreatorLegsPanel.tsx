@@ -7,8 +7,8 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { DELIVERABLE_TYPES, countOf, isVideoType } from '@/lib/experience-request'
 import { creatorLegTerms } from '@/lib/experience-money'
 import { formatPaiseINR } from '@/lib/money'
-import type { ConsoleLegRow, ConsoleLegsReconcile } from '@/lib/experience-console-server'
-import { draftCreatorLeg, saveCreatorBrief, sendCreatorLegs, setDayRateForCreator } from '../actions'
+import type { ConsoleCounter, ConsoleLegRow, ConsoleLegsReconcile } from '@/lib/experience-console-server'
+import { acceptCreatorCounter, declineCreatorCounter, draftCreatorLeg, saveCreatorBrief, sendCreatorLegs, sendGuapdCounter, setDayRateForCreator, withdrawGuapdCounterAction } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
 /**
@@ -21,6 +21,13 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  *
  * Money previews use creatorLegTerms, the same function the send action uses;
  * the database re-derives every figure at send and refuses a mismatch.
+ *
+ * 0542: while a creator's own rate is paused (or never set) staff ENTER a
+ * rate on the deal, never a second package rate. Once sent and still open,
+ * the creator may counter (rate and/or days, 3 rounds each way) and Guapd may
+ * accept, decline or counter back. A counter that RAISES what Guapd pays needs
+ * financial access (the database refuses otherwise); lowering or holding,
+ * operational. The fee % and the deliverables never change; once agreed, frozen.
  */
 const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
   negotiating: { label: 'Awaiting creator', tone: 'amber' },
@@ -31,7 +38,7 @@ const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
 
 type Row = { type: string; count: string }
 
-export default function CreatorLegsPanel({ experienceId, editable, legs, reconcile, brief, affiliateSold }: {
+export default function CreatorLegsPanel({ experienceId, editable, legs, reconcile, brief, affiliateSold, counters = [], canRaise = false }: {
   experienceId: string
   /** Confirmed: legs can be drafted and sent. */
   editable: boolean
@@ -40,6 +47,10 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
   brief: string | null
   /** Did the brand buy affiliate links at all? */
   affiliateSold: boolean
+  /** 0542: counters on sent, open deals. */
+  counters?: ConsoleCounter[]
+  /** Financial access: may accept or send a counter that raises the cost. */
+  canRaise?: boolean
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -54,6 +65,13 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
   const [confirm, setConfirm] = useState<ConsoleLegRow[] | null>(null)
   const [briefText, setBriefText] = useState(brief ?? '')
   const [briefOpen, setBriefOpen] = useState(false)
+  const [entered, setEntered] = useState('')
+  const [counterFor, setCounterFor] = useState<string | null>(null)
+  const [cRate, setCRate] = useState('')
+  const [cDays, setCDays] = useState('')
+  const [cNote, setCNote] = useState('')
+  const [declining, setDeclining] = useState<ConsoleCounter | null>(null)
+  const [declineNote, setDeclineNote] = useState('')
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (data: unknown) => void) => {
     setError(null); setNotice(null)
@@ -74,9 +92,12 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
     setDays(l.leg_days != null ? String(l.leg_days) : '1')
     setRows(effective(l).map((d) => ({ type: d.type, count: String(d.count) })))
     setAff(String(l.leg_affiliate_count ?? 0))
+    setEntered(l.leg_entered_rate_paise != null ? String(l.leg_entered_rate_paise / 100) : l.paused_rate_paise != null ? String(l.paused_rate_paise / 100) : '')
   }
+  const draftRate = (l: ConsoleLegRow) => l.leg_entered_rate_paise ?? (l.leg_product_id && l.leg_product_id === l.day_rate_product_id ? l.day_rate_paise : null)
 
-  const ready = legs.filter((l) => !l.leg_deal_id && l.leg_product_id && l.leg_product_id === l.day_rate_product_id && l.leg_days != null)
+  const ready = legs.filter((l) => !l.leg_deal_id && l.leg_days != null
+    && ((l.leg_product_id && l.leg_product_id === l.day_rate_product_id) || (l.leg_entered_rate_paise != null && l.day_rate_product_id == null)))
   const sentCount = legs.filter((l) => l.leg_deal_id).length
   const toPlace = reconcile && reconcile.videos_sold != null && reconcile.videos_placed != null ? reconcile.videos_sold - reconcile.videos_placed : 0
   const affToPlace = reconcile?.affiliate_target != null && reconcile.affiliate_placed != null ? reconcile.affiliate_target - reconcile.affiliate_placed : 0
@@ -183,11 +204,11 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                   </div>
                   <div className="t-body" style={{ fontSize: 13 }}>
                     {sent && l.sent_day_rate_paise != null && l.sent_days != null
-                      ? termsLine(l.sent_day_rate_paise, l.sent_days, l.track)
-                      : l.day_rate_paise == null
-                        ? <span style={{ color: '#8C6417' }}>No shoot day rate set</span>
-                        : l.leg_days != null && !rateStale
-                          ? termsLine(l.day_rate_paise, l.leg_days, l.track)
+                      ? <>{termsLine(l.sent_day_rate_paise, l.sent_days, l.track)}{l.sent_rate_source === 'entered' && <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 2 }}>Rate entered for this deal</div>}</>
+                      : draftRate(l) != null && l.leg_days != null
+                        ? <>{termsLine(draftRate(l) as number, l.leg_days, l.track)}{l.leg_entered_rate_paise != null && <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 2 }}>Rate entered for this deal</div>}</>
+                        : l.day_rate_paise == null
+                          ? <span style={{ color: '#8C6417' }}>{l.paused_rate_paise != null ? `Their day rate (${formatPaiseINR(l.paused_rate_paise)}) is paused. Enter a rate for this deal.` : 'No shoot day rate set'}</span>
                           : <span style={{ color: 'var(--ink-soft)' }}>Day rate {formatPaiseINR(l.day_rate_paise)}. {rateStale ? 'It changed; pick it again.' : 'Set the days.'}</span>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
@@ -195,10 +216,12 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                     {sent && l.deal_ref && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)' }}>{l.deal_ref}</span>}
                     {editable && !sent && (
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => { setEditing(null); setRateFor(l.roster_id); setRate(l.day_rate_paise ? String(l.day_rate_paise / 100) : '') }}>
-                          {l.day_rate_paise == null ? 'Set day rate' : 'Day rate'}
-                        </button>
-                        {l.day_rate_paise != null && <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => openEditor(l)}>Prepare</button>}
+                        {l.paused_rate_paise == null && (
+                          <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => { setEditing(null); setRateFor(l.roster_id); setRate(l.day_rate_paise ? String(l.day_rate_paise / 100) : '') }}>
+                            {l.day_rate_paise == null ? 'Set day rate' : 'Day rate'}
+                          </button>
+                        )}
+                        <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => openEditor(l)}>Prepare</button>
                         {ready.includes(l) && (
                           <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, padding: '0 14px' }} disabled={pending} onClick={() => setConfirm([l])}>Send</button>
                         )}
@@ -206,6 +229,57 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                     )}
                   </div>
                 </div>
+
+                {/* ── 0542: counters on an open, sent deal ── */}
+                {sent && (() => {
+                  const mine = counters.filter((c) => c.deal_id === l.leg_deal_id)
+                  if (mine.length === 0 && l.deal_status !== 'negotiating') return null
+                  const open = mine.find((c) => c.status === 'open')
+                  const guapdUsed = mine.filter((c) => c.proposed_by === 'guapd').length
+                  const negotiating = l.deal_status === 'negotiating'
+                  return (
+                    <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: '#F7F7F4' }}>
+                      {mine.length > 0 && (
+                        <div style={{ display: 'grid', gap: 6 }}>
+                          {mine.map((c) => (
+                            <div key={c.id} style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: c.status === 'open' ? 'var(--ink)' : 'var(--ink-soft)' }}>
+                              <b>{c.proposed_by === 'creator' ? `${l.full_name.split(' ')[0]}'s counter` : "Guapd's counter"} {c.round}</b>: {formatPaiseINR(c.day_rate_paise)}/day × {c.days} = {formatPaiseINR(c.gross_paise)} → {Number(c.platform_pct)}% → {formatPaiseINR(c.net_paise)}
+                              {' · '}{c.status === 'open' ? 'waiting' : c.status}{c.note ? ` · “${c.note}”` : ''}
+                              {c.status === 'open' && c.direction === 'raises' && <span style={{ color: '#9C4147' }}> · raises what Guapd pays{canRaise ? '' : ' (finance only)'}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {negotiating && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: mine.length ? 10 : 0 }}>
+                          {open?.proposed_by === 'creator' && <>
+                            <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, padding: '0 14px', opacity: open.direction === 'raises' && !canRaise ? 0.45 : 1 }}
+                              disabled={pending || (open.direction === 'raises' && !canRaise)} title={open.direction === 'raises' && !canRaise ? 'Raising the cost needs finance' : undefined}
+                              onClick={() => run(() => acceptCreatorCounter(experienceId, open.id, l.leg_deal_id as string, open.gross_paise), () => setNotice(`${l.full_name}'s counter accepted: their deal is agreed at those terms.`))}>Accept counter</button>
+                            <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => { setDeclineNote(''); setDeclining(open) }}>Decline</button>
+                          </>}
+                          {open?.proposed_by === 'guapd' && <button type="button" style={{ ...pillBtn, height: 34 }} disabled={pending} onClick={() => run(() => withdrawGuapdCounterAction(experienceId, open.id))}>Withdraw Guapd&apos;s counter</button>}
+                          {open?.proposed_by !== 'guapd' && guapdUsed < 3 && (
+                            <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => { setCounterFor(l.roster_id); setCRate(String((l.sent_day_rate_paise ?? 0) / 100)); setCDays(String(l.sent_days ?? 1)); setCNote('') }}>
+                              Counter ({3 - guapdUsed} left)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {counterFor === l.roster_id && negotiating && (
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
+                          <label style={{ width: 150 }}><span style={fieldLabel}>Day rate (₹)</span><input className="dinput" inputMode="numeric" value={cRate} onChange={(e) => setCRate(e.target.value.replace(/\D/g, ''))} /></label>
+                          <label style={{ width: 110 }}><span style={fieldLabel}>Days</span><input className="dinput" inputMode="decimal" value={cDays} onChange={(e) => setCDays(e.target.value.replace(/[^0-9.]/g, ''))} /></label>
+                          <label style={{ flex: 1, minWidth: 200 }}><span style={fieldLabel}>Note (optional)</span><input className="dinput" maxLength={500} value={cNote} onChange={(e) => setCNote(e.target.value)} /></label>
+                          <button type="button" style={pillBtn} onClick={() => setCounterFor(null)}>Cancel</button>
+                          <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40 }} disabled={pending}
+                            onClick={() => run(() => sendGuapdCounter(experienceId, l.leg_deal_id as string, cRate, cDays, cNote), () => { setCounterFor(null); setNotice('Counter sent. The creator is told.') })}>Send counter</button>
+                          {Number(cRate) * Number(cDays) * 100 > (l.sent_gross_paise ?? 0) && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#9C4147', width: '100%' }}>This raises what Guapd pays{canRaise ? '.' : ': it needs finance.'}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* ── Staff set the day rate on the creator's behalf (audited) ── */}
                 {rateFor === l.roster_id && (
@@ -225,10 +299,17 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                 {isEditing && (
                   <div style={{ marginTop: 12, padding: 16, borderRadius: 14, background: '#F7F7F4' }}>
                     <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                      <div>
-                        <span style={fieldLabel}>Shoot day rate</span>
-                        <div className="t-body" style={{ fontSize: 14, height: 46, display: 'flex', alignItems: 'center' }}>{formatPaiseINR(l.day_rate_paise ?? 0)}/day</div>
-                      </div>
+                      {l.day_rate_paise != null ? (
+                        <div>
+                          <span style={fieldLabel}>Shoot day rate</span>
+                          <div className="t-body" style={{ fontSize: 14, height: 46, display: 'flex', alignItems: 'center' }}>{formatPaiseINR(l.day_rate_paise)}/day</div>
+                        </div>
+                      ) : (
+                        <div style={{ width: 200 }}>
+                          <label style={fieldLabel} htmlFor={`entered-${l.roster_id}`}>Day rate for this deal (₹)</label>
+                          <input id={`entered-${l.roster_id}`} className="dinput" inputMode="numeric" value={entered} onChange={(e) => setEntered(e.target.value.replace(/\D/g, ''))} />
+                        </div>
+                      )}
                       <div style={{ width: 140 }}>
                         <label style={fieldLabel} htmlFor={`days-${l.roster_id}`}>Days</label>
                         <input id={`days-${l.roster_id}`} className="dinput" inputMode="decimal" value={days} onChange={(e) => setDays(e.target.value.replace(/[^0-9.]/g, ''))} />
@@ -236,7 +317,8 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                       <div style={{ flex: 1, minWidth: 220, alignSelf: 'flex-end', paddingBottom: 12, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
                         {(() => {
                           const d = Number(days)
-                          try { return d > 0 && l.day_rate_paise ? termsLine(l.day_rate_paise, d, l.track) : 'Days drive the money only, never the deliverables.' }
+                          const rp = l.day_rate_paise ?? (Number(entered) > 0 ? Number(entered) * 100 : null)
+                          try { return d > 0 && rp ? termsLine(rp, d, l.track) : 'Days drive the money only, never the deliverables.' }
                           catch { return 'Days need at most two decimals.' }
                         })()}
                       </div>
@@ -267,7 +349,8 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                       <button type="button" style={pillBtn} onClick={() => setEditing(null)}>Cancel</button>
                       <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40 }} disabled={pending}
                         onClick={() => run(() => draftCreatorLeg(experienceId, {
-                          rosterId: l.roster_id, productId: l.day_rate_product_id, days, deliverables: rows, affiliateCount: affiliateSold ? aff : 0,
+                          rosterId: l.roster_id, productId: l.day_rate_paise != null ? l.day_rate_product_id : null, days, deliverables: rows, affiliateCount: affiliateSold ? aff : 0,
+                          enteredRate: l.day_rate_paise == null ? entered : null,
                         }), () => setEditing(null))}>{pending ? 'Saving…' : 'Save'}</button>
                     </div>
                   </div>
@@ -288,6 +371,14 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
           if (res.sent) setNotice(`${res.sent} deal${res.sent === 1 ? '' : 's'} sent.`)
         })}
         onCancel={() => setConfirm(null)} />
+
+      <ConfirmDialog open={!!declining} title="Decline the creator's counter" tone="danger"
+        body="The offer as sent stays open: they can accept it, counter again or decline. They are told in the app and by email."
+        detail={<div style={{ marginTop: 12 }}><label style={fieldLabel} htmlFor="decline-note">Note for the creator (optional)</label>
+          <input id="decline-note" className="dinput" maxLength={500} value={declineNote} onChange={(e) => setDeclineNote(e.target.value)} placeholder="The brand's budget is fixed for this shoot" /></div>}
+        confirmLabel="Decline counter" busy={pending}
+        onConfirm={() => declining && run(() => declineCreatorCounter(experienceId, declining.id, declining.deal_id, declineNote), () => setDeclining(null))}
+        onCancel={() => setDeclining(null)} />
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 720px) {

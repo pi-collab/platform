@@ -1530,3 +1530,21 @@ REVOKE ALL ON guapd_billing_settings FROM anon, authenticated;
 -- See supabase/migrations/0541_experience_roster_prospects.sql.
 ALTER TABLE experience_roster_prospects ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_roster_prospects FROM anon, authenticated;
+
+-- ═════ 0542: counters on a creator leg + creator bank details ═════
+-- experience_leg_counters has NO policies and NO grants for users. The creator
+-- reads their own leg's counters through creator_leg_context and acts through
+-- creator_leg_counter* (own leg only); staff through experience_console_counter*
+-- (operational; a counter that RAISES the cost needs financial access). A
+-- counter is never deleted (trigger), and a decided one never changes.
+ALTER TABLE experience_leg_counters ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_leg_counters FROM anon, authenticated;
+-- vendor_payout_details (above) now holds the account number and PAN only
+-- ENCRYPTED with the Vault key 'guapd_payout_details_key' (the plaintext
+-- columns are held empty by CHECK vpd_no_plaintext). The creator writes and
+-- reads their own MASKED through creator_set_payout_details /
+-- creator_payout_details; operational staff see ••••last4 only; FINANCE reads
+-- in full through experience_console_payout_account (audited, no values).
+-- vendor_payout_detail_changes records which FIELD NAMES changed, never values.
+ALTER TABLE vendor_payout_detail_changes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON vendor_payout_detail_changes FROM anon, authenticated;
