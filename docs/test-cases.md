@@ -6967,3 +6967,23 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 **Also in 0538:** the seven 3a functions (create + six roster actions) rewritten without `SELECT *`; no function in `public` uses `SELECT *` (checked on staging).
 
 **Environment:** 0538 is on STAGING only (applied from the scratch folder; `creator_leg_context` and `experience_console_leg_shoot_outcome` re-applied by hand after two NULL fixes, the file matches). Not on production.
+
+## 106. Experiences: NULL means no, and the creator boundary (migration 0539, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-creator-boundary.ts` (63 checks, staging, real sessions; cleans up after itself).
+
+**NULL means no (every Experience gate and transition)**
+- [ ] Access gates read `has_experience_access(..) IS NOT TRUE`; no function in `public` still has `IF NOT has_experience_access`.
+- [ ] Guards use `IS DISTINCT FROM` / `x IS NULL OR x NOT IN (..)`: a NULL decision, outcome, "added by", "proposed by", "provided by" or cost category is refused on its own.
+- [ ] A deliverable with no type is refused (planning and sending).
+- [ ] An agreed plan missing "videos sold" never reconciles as ok: the roster cannot be locked and no leg can be drafted or sent past it; readiness is "not ready".
+- [ ] Payment eligibility (`experience_leg_work_complete`) is false unless every visible item is positively `approved` (creator-submit) or the trigger is exactly `on_shoot_done`.
+- [ ] Flags block unless FALSE (`locked`, `is_guapd`); the item gate refuses an unknown actor and treats an unknown visibility as hidden.
+
+**The creator boundary (SECURITY)**
+- [ ] A creator reads deliverable items on their OWN leg only, visible ones only, through every query shape: unfiltered, by id, by deal id, OR across legs, embedded through `deals`, by filtering on another creator's link text, or on `visible_to_creator=false`.
+- [ ] Own items carry no Guapd staff note (Guapd-provides: notes live in `experience_item_staff_notes`); the creator CAN read the link Guapd attached to their own item (accepted).
+- [ ] No direct write: own item, another creator's item, a hidden item, a new item on either leg, a release row.
+- [ ] Refused or empty: staff notes, releases (the brand's note), roster notes, quotes, cost lines, P&L snapshots, roster, experiences, another creator's terms, `ops_events`, another deal's events; own-deal events carry no notes.
+- [ ] Functions: another leg's context, upload slot and submit say "Not found"; brand view and brand file, every console reader, the P&L, readiness, the item-file path and the internal gate/put helpers are refused.
+- [ ] Files: another creator's file cannot be downloaded, signed or listed; no direct upload into another creator's folder, NOR into their own leg folder (0539); a Guapd-minted upload slot still works from the creator's session.

@@ -489,3 +489,18 @@ Built in migration 0538 + console ShootPanel / DeliverablesPanel, the creator's 
 - **Also:** the seven 3a functions rewritten without `SELECT *` (none left in `public`); ships to prod with this stage.
 - **Still deferred:** leg WhatsApp template (in-app + email cover every message here); staff chat on legs (review notes cover deliverable feedback; creators still have no message channel on a leg); re-sending a declined or withdrawn offer; Guapd-made extras not tied to one creator.
 - **Ships to prod** in a later release together with 3c (0537), the creator pool (0536) and the storefront.
+
+## 0539: NULL means no + the creator boundary (BUILT 2026-10-08, staging only)
+Asked by Palak after the third three-valued-logic slip (0528 CHECK, the commented-out revoke filter, the 0538 `can_submit` predicate): audit every security-critical boolean in the Experience DB functions and make each DENY on NULL; verify a creator reads only their own leg.
+- **Audited:** all 82 Experience functions and triggers on staging, plus the RLS policies on the Experience tables and the `deliverables` bucket policy. WHERE / FILTER / EXISTS already deny on NULL; the risk was IF / CASE / RETURN / CHECK.
+- **Hardened (39 functions, migration 0539):** gates `IS NOT TRUE`; guards `IS DISTINCT FROM` and `x IS NULL OR x NOT IN`; roster/legs reconcile and readiness no longer ok-by-default on a missing plan number (`coalesce(v_ok, true)` and `bool_and` skipping NULL rows were the real fail-opens); untyped deliverables refused; cost category NULL is a no; locked / is_guapd block unless FALSE; payment eligibility needs positive approval. Bodies otherwise identical; grants unchanged.
+- **Creator boundary:** holds at the data layer (63-check live test, §106). One tightening: creators can no longer upload straight into the bucket under an Experience leg (only via the service-role slot).
+- **House style from here** (memory `sql-null-boolean-trap`): gates `IS NOT TRUE`, guards `IS DISTINCT FROM`, computed ok/ready default false, and a "the NULL alone is refused" test per new gate.
+
+## Phase 4 plan: brand invoices + creator payouts (DRAFT 2026-10-08, awaiting Palak's review; staging only)
+Full plan delivered in chat. Headlines:
+- **Brand invoice** (financial access only): staff-entered brand billing profile (legal name, address, state, GSTIN, PAN; optional certificates), snapshotted at issue. Draft → Issued (gapless number per financial year, frozen, PDF stored) → Paid; void with a reason (never a paid one; numbers never reused). Payments recorded offline (date, method, UTR, amount, TDS deducted by the brand, proof file in a private bucket); many payments per invoice. The brand sees its issued invoices on `/experiences/[id]`.
+- **Creator payouts** (manual provider): eligible = `experience_leg_work_complete` and the creator shot; amount = the locked creator net (not editable); TDS field editable, not computed. Request → approve → record paid outside (date, method, UTR, proof) → creator told in-app + email "Guapd paid you ₹X · ref …". Moves into staff-gated definer functions (today's `lib/payouts/service.ts` uses the admin client).
+- **The 30% fee:** a line on the creator's payout statement (gross → platform fee → net), never on the brand invoice (locked decision), unless Palak decides otherwise.
+- **P&L flip:** revenue = Σ issued + paid invoice subtotals ex-GST (already the 3c rule), so "revenue pending invoice" ends when the first invoice is issued; GST shown as a liability, never revenue; received / outstanding and paid-out / due shown beside the accrual margin.
+- **Out of scope:** Razorpay / RazorpayX, payment links, computed GST/TDS, brand self-pay (Phase 6), creator bank details (Phase 5); affiliate follow-on proposed as 4b.

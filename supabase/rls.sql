@@ -1264,7 +1264,7 @@ BEGIN
   v_subtotal := v_billed - v_gross - v_costs;
   v_fee_kept := v_gross - v_net;
   v_margin := v_billed - v_net - v_costs;
-  IF v_subtotal + v_fee_kept <> v_margin THEN
+  IF v_subtotal + v_fee_kept IS DISTINCT FROM v_margin THEN
     RAISE EXCEPTION 'P&L does not reconcile: sub-total % + fee kept % <> margin %', v_subtotal, v_fee_kept, v_margin;
   END IF;
 
@@ -1286,7 +1286,7 @@ RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public 
 DECLARE
   v_pnl jsonb; v_at timestamptz; v_final boolean; v_stored bigint;
 BEGIN
-  IF NOT has_experience_access('financial') THEN
+  IF has_experience_access('financial') IS NOT TRUE THEN
     RAISE EXCEPTION 'Financial access required' USING ERRCODE = '42501';
   END IF;
   SELECT s.pnl, s.captured_at, s.is_final, s.guapd_margin_paise INTO v_pnl, v_at, v_final, v_stored
@@ -1305,7 +1305,7 @@ RETURNS TABLE (id uuid, vendor_name text, deal_id uuid, reason text, amount_pais
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public AS $$
 BEGIN
-  IF NOT has_experience_access('operational') THEN
+  IF has_experience_access('operational') IS NOT TRUE THEN
     RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
   END IF;
   RETURN QUERY
@@ -1357,7 +1357,7 @@ RETURNS TABLE (id uuid, title text, status text, brand_name text, shoot_date dat
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public AS $$
 BEGIN
-  IF NOT has_experience_access('operational') THEN
+  IF has_experience_access('operational') IS NOT TRUE THEN
     RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
   END IF;
   RETURN QUERY
@@ -1474,3 +1474,25 @@ ALTER TABLE experience_deliverable_releases ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_deliverable_releases FROM anon, authenticated;
 ALTER TABLE experience_item_staff_notes ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_item_staff_notes FROM anon, authenticated;
+
+
+-- ── NULL means no (0539) ────────────────────────────────────────────────
+-- Every Experience gate and transition check refuses on an UNKNOWN: gates read
+-- `has_experience_access(..) IS NOT TRUE`, guards use IS DISTINCT FROM and
+-- `x IS NULL OR x NOT IN (..)`, reconcile/readiness treat a missing number as
+-- "not ok". Creators can no longer upload straight into the deliverables
+-- bucket under an Experience leg (only through the service-role upload slot):
+DROP POLICY IF EXISTS storage_deliverables_insert ON storage.objects;
+CREATE POLICY storage_deliverables_insert
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'deliverables'
+    AND EXISTS (
+      SELECT 1 FROM deals
+      WHERE deals.id = (string_to_array(name, '/'))[1]::uuid
+        AND deals.creator_id = my_creator_id()
+        AND deals.leg_role IS NULL
+    )
+  );
+-- See supabase/migrations/0539_experience_null_means_no.sql.
