@@ -416,8 +416,18 @@ For one creator leg:
 4. Accept / decline only in 3b; the creator counter is Phase 5.
 5. Leg offers: in-app + email only. WhatsApp OFF for legs.
 
-### Possible later: show the shoot day rate to brands (Palak, 2026-10-08)
-Hidden from brands for now. If that changes, the switch points are: the
+### DECIDED: the shoot day rate is never shown to brands (Palak, 2026-10-08)
+Hidden on Experiences AND across the marketplace. Experiences: it is what
+Guapd pays the creator, so showing it exposes the margin and invites going
+direct (non-negotiable). Marketplace: also hidden, because a brand that saw a
+creator's shoot rate there could later back into what Guapd pays them on an
+Experience. The shoot package stays non-bookable and off the storefront.
+If a creator day-rate product for direct marketplace bookings is ever wanted,
+it is a NEW pricing type with its own price, never the Experience shoot rate
+exposed. Keep the two distinct.
+
+Kept on file only, NOT to be actioned: the places that would have to change
+to show it are the
 `creator_products_read` allowlist (0533, rls.sql), the explicit
 `pricing_type = 'per_deliverable'` filters on brand-facing reads (listed by
 `scripts/check-package-gating.ts`), and `get_public_storefront` (0535).
