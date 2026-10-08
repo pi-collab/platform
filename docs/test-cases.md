@@ -6862,7 +6862,8 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 **Shoot package (creator_products, pricing_type per_day)**
 - [ ] `package_pricing_types` holds `per_deliverable` and `per_day`; every existing package reads `per_deliverable`. A new type is a row, not a migration.
 - [ ] A `per_day` row: product type "Shoot day", exact price > 0, no range, no revisions, no channel, never price-displayed; at most one active per creator. A `per_deliverable` row still needs platform + handle.
-- [ ] `/creator/packages` (desktop and 390px): "Shoot day rate" section. Not set → input + worked example; set → "₹10,000 /day", "₹10,000 a day → 30% Growth fee → ₹7,000 to you" (15% Deals for a Deals creator), Edit, Pause; paused → "Turn back on". Shows even with no channel connected.
+- [ ] `/creator/packages` (desktop and 390px): order is channel packages (with collab & boosting) → Revisions → "+ Add a package" → then, set apart by a hairline, "Shoot day rate · managed shoots". Not set → input + worked example; set → "₹10,000 /day", "₹10,000 a day → 30% Growth fee → ₹7,000 to you" (15% Deals for a Deals creator), Edit, Pause; paused → "Turn back on". Shows even with no channel connected.
+- [ ] The creator-facing copy does NOT say brands can't see the rate (decision 2026-10-08: it reads as a lack of transparency). The data-layer gating is unchanged.
 - [ ] The shoot package is NOT in the per-channel package lists, the storefront editor/preview, or the "packages" setup task and dashboard counts.
 - [ ] Staff (Experiences operational) can set a creator's day rate from the console; each change is in `ops_events` with the rate before and after; the creator then sees it on their packages page.
 

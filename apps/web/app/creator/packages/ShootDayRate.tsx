@@ -8,7 +8,8 @@ import { saveDayRate, pauseDayRate } from './actions'
 /**
  * The creator's shoot day rate: what they charge Guapd for one day of a
  * managed shoot (a Guapd Experience). A rate-card item like any package, but
- * priced per day, and never shown to brands.
+ * priced per day. Not shown to brands (enforced in the data layer, 0533); the
+ * copy does not say so, by decision: it read as a lack of transparency.
  *
  * The worked example runs the same maths as a real Experience deal
  * (creatorLegTerms: day rate × days → the creator's own track % → net), so the
@@ -63,9 +64,9 @@ export default function ShootDayRate({
   const showForm = editing || !dayRate
 
   return (
-    <section className="pk-channel" aria-labelledby="pk-day-title">
+    <section className="pk-channel pk-day-section" aria-labelledby="pk-day-title">
       <div className="pk-channel-head">
-        <span id="pk-day-title" className="pk-channel-handle">Shoot day rate</span>
+        <span id="pk-day-title" className="pk-channel-handle">Shoot day rate · managed shoots</span>
         <span className="pk-channel-count">
           {!dayRate ? 'Not set' : dayRate.active ? 'Active' : 'Paused'}
         </span>
@@ -74,9 +75,8 @@ export default function ShootDayRate({
       <div className="pk-card">
         <p className="pk-day-intro">
           What you charge for one day when Guapd books you for a managed shoot. Guapd
-          sets what you make on each shoot when it sends you the deal. <strong>Brands
-          never see this rate.</strong> Guapd keeps the {feePct}% {trackName} fee, the
-          same as your other deals.
+          sets what you make on each shoot when it sends you the deal, and keeps
+          the {feePct}% {trackName} fee, the same as your other deals.
         </p>
 
         {showForm ? (

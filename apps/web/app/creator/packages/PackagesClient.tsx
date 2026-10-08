@@ -620,19 +620,18 @@ export default function PackagesClient({
         </section>
       )}
 
+      {/* With the packages and collab/boosting it modifies, above the add
+          button: it is a term on every deliverable, like collab. Kept above
+          the shoot day rate so it never reads as part of it. */}
+      <RevisionPolicyEditor initial={revisionPolicy} />
+
       <button type="button" className="pk-btn pk-btn-primary pk-add" onClick={() => setEditing('new')}>
         + Add a package
       </button>
 
       {/* A different kind of rate: priced per shoot day, for managed shoots
-          Guapd books. Kept apart from the per-deliverable packages above
-          because brands see those and never see this. */}
+          Guapd books, so it sits last and set apart from the packages. */}
       {shootDay}
-
-      {/* Below the packages, not above them. This is a setting that applies
-          once; the packages are what the page is for, and putting a rarely
-          touched policy first gave it a priority it has not earned. */}
-      <RevisionPolicyEditor initial={revisionPolicy} />
 
       {editing && (
         <PackageForm

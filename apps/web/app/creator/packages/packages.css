@@ -699,7 +699,6 @@ select.pk-input {
   line-height: 1.55;
   color: var(--wg-500, #565C68);
 }
-.pk-day-intro strong { color: var(--ink, #12151C); font-weight: 600; }
 
 .pk-day-form {
   display: flex;
@@ -724,3 +723,12 @@ select.pk-input {
 }
 
 .pk-day-error { margin: 0 16px 14px; }
+
+/* The shoot day rate is a different kind of rate from the packages above, so
+   it starts a new section: a hairline and extra space, never adjacent to a
+   package card or the revisions setting. */
+.pk-day-section {
+  margin-top: 10px;
+  padding-top: 22px;
+  border-top: 1px solid var(--hair, rgba(60, 80, 30, .12));
+}
