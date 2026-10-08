@@ -7,11 +7,16 @@ import {
   rosterAdd, rosterDecide, rosterLock, rosterNote, rosterPlan, rosterRemove,
   listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
   addConsoleCost, updateConsoleCost, removeConsoleCost, completeConsoleExperience, reopenConsoleExperience,
+  scheduleConsoleShoot, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
+  itemUploadSlot, attachConsoleItem, reviewConsoleItem, consoleItemFile,
+  releaseConsoleItems, withdrawConsoleRelease, decideConsoleRelease,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
+import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 
 /**
@@ -403,3 +408,137 @@ export async function reopenExperience(experienceId: string, reason: string): Pr
   return r
 }
 
+
+// ── 0538: the shoot, deliverables, releasing them to the brand ────────────
+// Every rule (status, who provides, versions, what the brand may see) is in
+// the database functions, called with the staff member's own session. The
+// service role is used only to sign storage URLs for a path the database has
+// just authorised for this caller.
+
+const why = (v: unknown) => { const t = cleanText(v, 300); return t && t.length >= 3 ? t : null }
+
+export async function scheduleShoot(experienceId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const r = await scheduleConsoleShoot(experienceId)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return r
+}
+
+export async function setShootOutcome(experienceId: string, rosterId: string, outcome: 'done' | 'did_not_shoot', reason: string | null): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId)) return { ok: false, error: 'Unknown creator.' }
+  if (outcome !== 'done' && outcome !== 'did_not_shoot') return { ok: false, error: 'Say whether they shot.' }
+  const reasonText = outcome === 'did_not_shoot' ? why(reason) : null
+  if (outcome === 'did_not_shoot' && !reasonText) return { ok: false, error: 'Say why they did not shoot.' }
+  const r = await recordShootOutcome(rosterId, outcome, reasonText)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return r
+}
+
+export async function undoShoot(experienceId: string, rosterId: string, reason: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId)) return { ok: false, error: 'Unknown creator.' }
+  const reasonText = why(reason); if (!reasonText) return { ok: false, error: 'Say why it is being undone.' }
+  const r = await undoShootOutcome(rosterId, reasonText)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return r
+}
+
+export async function withdrawLeg(experienceId: string, rosterId: string, dealId: string, reason: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId) || !isUuid(dealId)) return { ok: false, error: 'Unknown creator.' }
+  const reasonText = why(reason); if (!reasonText) return { ok: false, error: 'Say why it is being withdrawn.' }
+  const r = await withdrawConsoleLeg(rosterId, reasonText)
+  if (!r.ok) return r
+  await notifyCreatorLegWithdrawn(dealId)
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return r
+}
+
+/** Where to upload a file for a deliverable: the database picks the path, the service role signs an upload for exactly that path. */
+export async function startItemUpload(itemId: string, fileName: string): Promise<Out<{ path: string; token: string }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(itemId) || typeof fileName !== 'string') return { ok: false, error: 'Unknown deliverable.' }
+  const slot = await itemUploadSlot(itemId, fileName.slice(0, 200))
+  if (!slot.ok) return slot
+  const { data, error } = await createAdminClient().storage.from('deliverables').createSignedUploadUrl(slot.data)
+  if (error || !data) return { ok: false, error: 'Could not start the upload. Try again.' }
+  return { ok: true, data: { path: data.path, token: data.token } }
+}
+
+export async function attachItem(experienceId: string, itemId: string, c: { url?: string | null; storagePath?: string | null; fileName?: string | null }): Promise<Out<number>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(itemId)) return { ok: false, error: 'Unknown deliverable.' }
+  const url = cleanText(c.url, 2000)
+  const storagePath = cleanText(c.storagePath, 600)
+  if (!url === !storagePath) return { ok: false, error: 'Add a link or a file.' }
+  if (url && !/^https?:\/\/\S+$/i.test(url)) return { ok: false, error: 'The link must start with https://' }
+  const r = await attachConsoleItem(itemId, { url, storagePath, fileName: storagePath ? cleanText(c.fileName, 200) : null })
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+export async function reviewItem(experienceId: string, itemId: string, decision: 'approve' | 'revision', note: string | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(itemId)) return { ok: false, error: 'Unknown deliverable.' }
+  if (decision !== 'approve' && decision !== 'revision') return { ok: false, error: 'Approve, or ask for changes.' }
+  const n = cleanText(note, 1000)
+  if (decision === 'revision' && (!n || n.length < 3)) return { ok: false, error: 'Say what needs to change.' }
+  const r = await reviewConsoleItem(itemId, decision, decision === 'revision' ? n : null)
+  if (!r.ok) return r
+  const { data: item } = await createAdminClient().from('deal_deliverable_items').select('deal_id, label').eq('id', itemId).maybeSingle()
+  if (item) await notifyCreatorItemReviewed(item.deal_id, item.label, decision)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+/** A short-lived link to the file on a deliverable, for staff to check it. */
+export async function openItemFile(itemId: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(itemId)) return { ok: false, error: 'Unknown deliverable.' }
+  const f = await consoleItemFile(itemId)
+  if (!f.ok) return f
+  const { data, error } = await createAdminClient().storage.from('deliverables').createSignedUrl(f.data.storage_path, 600)
+  if (error || !data) return { ok: false, error: 'Could not open the file.' }
+  return { ok: true, data: data.signedUrl }
+}
+
+export async function releaseItems(experienceId: string, itemIds: string[]): Promise<Out<{ released: number }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !Array.isArray(itemIds) || itemIds.length === 0 || itemIds.length > 200 || !itemIds.every(isUuid)) {
+    return { ok: false, error: 'Pick what to share.' }
+  }
+  const r = await releaseConsoleItems(experienceId, Array.from(new Set(itemIds)))
+  if (!r.ok) return r
+  await notifyBrandDeliverablesShared(experienceId, r.data.released)
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE); revalidatePath(`/experiences/${experienceId}`)
+  return { ok: true, data: { released: r.data.released } }
+}
+
+export async function withdrawRelease(experienceId: string, releaseId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(releaseId)) return { ok: false, error: 'Unknown deliverable.' }
+  const reasonText = why(reason); if (!reasonText) return { ok: false, error: 'Say why it is being withdrawn.' }
+  const r = await withdrawConsoleRelease(releaseId, reasonText)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`)
+  return r
+}
+
+export async function recordBrandDecision(experienceId: string, releaseId: string, decision: 'approved' | 'changes_requested', channel: string, note: string | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(releaseId)) return { ok: false, error: 'Unknown deliverable.' }
+  if (decision !== 'approved' && decision !== 'changes_requested') return { ok: false, error: 'Approved, or changes requested.' }
+  if (!isChannel(channel) || channel === 'portal') return { ok: false, error: 'Say how the brand told us.' }
+  const n = cleanText(note, 1000)
+  if (decision === 'changes_requested' && (!n || n.length < 3)) return { ok: false, error: 'Write down what the brand asked to change.' }
+  const r = await decideConsoleRelease(releaseId, decision, channel, n)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`)
+  return r
+}

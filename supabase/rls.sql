@@ -1212,12 +1212,13 @@ SET search_path = public AS $$
 $$;
 
 -- 0537: accepted legs only, revenue = invoiced, reconciliation enforced.
+-- 0538: a creator recorded as not shooting is not counted.
 CREATE OR REPLACE FUNCTION compute_experience_pnl(p_experience_id uuid)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
   v_billed bigint; v_received bigint; v_invoices int; v_agreed bigint;
   v_gross bigint; v_net bigint; v_per_leg jsonb;
-  v_awaiting int; v_awaiting_net bigint; v_declined int;
+  v_awaiting int; v_awaiting_net bigint; v_declined int; v_no_shoot int;
   v_costs bigint; v_by_cat jsonb;
   v_subtotal bigint; v_fee_kept bigint; v_margin bigint;
 BEGIN
@@ -1228,7 +1229,7 @@ BEGIN
     FROM service_invoices si WHERE si.experience_id = p_experience_id;
   SELECT e.brand_service_total_paise INTO v_agreed FROM experiences e WHERE e.id = p_experience_id;
 
-  -- Accepted legs only: the creator said yes (agreed onward).
+  -- Accepted legs only (agreed onward), minus any creator recorded as not shooting.
   SELECT coalesce(sum(t.creator_gross_paise), 0)::bigint, coalesce(sum(t.creator_net_paise), 0)::bigint,
          coalesce(jsonb_agg(jsonb_build_object(
            'deal_id', t.deal_id, 'creator_id', t.creator_id, 'full_name', c.full_name, 'deal_status', d.status::text,
@@ -1241,13 +1242,16 @@ BEGIN
     JOIN deals d ON d.id = t.deal_id
     JOIN creators c ON c.id = t.creator_id
     WHERE t.experience_id = p_experience_id AND t.locked_at IS NOT NULL
-      AND d.status IN ('agreed', 'delivered', 'revision', 'approved', 'paid', 'complete');
+      AND d.status IN ('agreed', 'delivered', 'revision', 'approved', 'paid', 'complete')
+      AND NOT EXISTS (SELECT 1 FROM experience_roster r WHERE r.leg_deal_id = t.deal_id AND r.leg_shoot_outcome = 'did_not_shoot');
 
   SELECT count(*) FILTER (WHERE d.status = 'negotiating')::int,
          coalesce(sum(t.creator_net_paise) FILTER (WHERE d.status = 'negotiating'), 0)::bigint,
-         count(*) FILTER (WHERE d.status IN ('declined', 'cancelled'))::int
-    INTO v_awaiting, v_awaiting_net, v_declined
+         count(*) FILTER (WHERE d.status IN ('declined', 'cancelled'))::int,
+         count(*) FILTER (WHERE r.leg_shoot_outcome = 'did_not_shoot')::int
+    INTO v_awaiting, v_awaiting_net, v_declined, v_no_shoot
     FROM experience_creator_terms t JOIN deals d ON d.id = t.deal_id
+    LEFT JOIN experience_roster r ON r.leg_deal_id = t.deal_id
     WHERE t.experience_id = p_experience_id;
 
   v_costs := experience_cost_total(p_experience_id);
@@ -1272,7 +1276,7 @@ BEGIN
     'guapd_costs_total_paise', v_costs, 'costs_by_category', v_by_cat,
     'subtotal_paise', v_subtotal, 'platform_fee_kept_paise', v_fee_kept, 'guapd_margin_paise', v_margin,
     'legs_counted', jsonb_array_length(v_per_leg), 'legs_awaiting', v_awaiting, 'awaiting_net_paise', v_awaiting_net,
-    'legs_declined', v_declined, 'legs_pending', v_awaiting,
+    'legs_declined', v_declined, 'legs_pending', v_awaiting, 'legs_did_not_shoot', v_no_shoot,
     'per_leg', v_per_leg);
 END;
 $$;
@@ -1452,3 +1456,21 @@ REVOKE ALL ON package_pricing_types FROM anon, authenticated;
 -- operational staff in experience_console_get / experience_console_quotes, and
 -- quoting requires financial access. See supabase/migrations/0537_experience_costs_pnl.sql.
 
+
+-- ── Experience shoot + deliverables (0538) ──────────────────────────────
+-- experience_deliverable_releases (what Guapd has given the brand, versioned)
+-- and experience_item_staff_notes (Guapd's notes on its own content) have NO
+-- policies by design: REVOKEd from anon/authenticated. Staff reach them
+-- through experience_console_* functions (operational); the brand ONLY
+-- through brand_experience_deliverables / brand_experience_release_file,
+-- which check brand membership in Postgres and return live releases with the
+-- creator's name only. A creator reads their own leg's items through the
+-- existing deal_deliverable_items_read policy and creator_leg_context; their
+-- writes go through creator_leg_item_submit (creator-submit legs only), as the
+-- 0534 trigger still refuses direct session writes to a creator leg. The new
+-- experience_roster shoot-outcome columns are outside the 0523 brand column
+-- grant. See supabase/migrations/0538_experience_deliverables.sql.
+ALTER TABLE experience_deliverable_releases ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_deliverable_releases FROM anon, authenticated;
+ALTER TABLE experience_item_staff_notes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_item_staff_notes FROM anon, authenticated;

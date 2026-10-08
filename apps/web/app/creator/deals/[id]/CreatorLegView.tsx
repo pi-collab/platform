@@ -5,6 +5,7 @@ import { countOf } from '@/lib/experience-request'
 import type { CreatorLegContext } from '@/lib/creator-leg-money'
 import { creatorLegMoney } from '@/lib/creator-leg-money'
 import LegRespond from './LegRespond'
+import LegDeliverables from './LegDeliverables'
 import './creator-leg.css'
 
 /**
@@ -22,6 +23,11 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
   const open = ctx.status === 'negotiating'
   const accepted = ctx.status === 'agreed'
   const declined = ctx.status === 'declined' || ctx.status === 'cancelled'
+  const creatorSubmits = ctx.deliverables_owner === 'creator'
+  const shot = ctx.shoot_outcome === 'done'
+  const noShoot = ctx.shoot_outcome === 'did_not_shoot'
+  const items = ctx.items ?? []
+  const GUAPD_ITEM: Record<string, string> = { pending: 'Guapd is preparing it', submitted: 'Guapd is preparing it', revision: 'Guapd is preparing it', approved: 'Ready' }
   const date = ctx.shoot_date ? new Date(`${ctx.shoot_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : null
 
   return (
@@ -60,7 +66,7 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
                 <div className="leg-total"><dt>You take home</dt><dd>{formatPaiseINR(m.netPaise)}</dd></div>
               </dl>
             ) : <p className="leg-body">Your terms are being prepared.</p>}
-            <p className="leg-note">Guapd pays you after the shoot. Nothing is paid through this page yet; Guapd records your payout and tells you when it is sent.</p>
+            <p className="leg-note">{creatorSubmits ? 'Guapd pays you once your deliverables are approved.' : 'Guapd pays you after the shoot.'} Nothing is paid through this page yet; Guapd records your payout and tells you when it is sent.</p>
           </section>
 
           <section className="surface leg-card" aria-labelledby="leg-scope">
@@ -75,7 +81,9 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
               <div><dt>Shoot date</dt><dd>{date ?? 'To be confirmed'}</dd></div>
               <div><dt>City</dt><dd>{ctx.shoot_city ?? 'To be confirmed'}</dd></div>
             </dl>
-            <p className="leg-note">Guapd runs the shoot and delivers the content to the brand. There is nothing for you to upload here.</p>
+            <p className="leg-note">{creatorSubmits
+              ? 'After the shoot, you submit your deliverables to Guapd here. Guapd reviews them before the brand sees anything.'
+              : 'Guapd runs the shoot and delivers the content to the brand. There is nothing for you to upload here.'}</p>
           </section>
         </div>
 
@@ -86,10 +94,30 @@ export default function CreatorLegView({ dealId, ctx }: { dealId: string; ctx: C
           </section>
         )}
 
+        {accepted && items.length > 0 && (shot || creatorSubmits) && !noShoot && (
+          <section className="surface leg-card" aria-labelledby="leg-deliverables">
+            <h2 id="leg-deliverables" className="leg-h2">Your deliverables</h2>
+            {creatorSubmits ? (
+              <>
+                {!shot && <p className="leg-body">You can submit once Guapd marks your shoot done.</p>}
+                <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} />
+              </>
+            ) : (
+              <ul className="leg-list" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                {items.map((i) => <li key={i.id}>{i.label} <span style={{ color: 'var(--ink-soft)', fontSize: 13 }}>· {GUAPD_ITEM[i.item_status] ?? 'Guapd is preparing it'}</span></li>)}
+              </ul>
+            )}
+          </section>
+        )}
+
         <section className="surface leg-card" id="decision" aria-labelledby="leg-decision">
           <h2 id="leg-decision" className="leg-h2">{open ? 'Your answer' : 'Status'}</h2>
           {open && <LegRespond dealId={dealId} netLabel={m ? formatPaiseINR(m.netPaise) : null} />}
-          {accepted && <p className="leg-body">You accepted this shoot. Guapd will confirm the details with you before the day.</p>}
+          {accepted && !ctx.shoot_outcome && <p className="leg-body">You accepted this shoot. Guapd will confirm the details with you before the day.</p>}
+          {accepted && shot && (ctx.work_complete
+            ? <p className="leg-status-done">Shoot done. Your part is complete. Guapd tells you when your payout is sent.</p>
+            : <p className="leg-body">Shoot done. Your part is complete once Guapd approves your deliverables.</p>)}
+          {accepted && noShoot && <p className="leg-body">This shoot did not go ahead for you.</p>}
           {declined && <p className="leg-body">You declined this offer.</p>}
           {!open && !accepted && !declined && <p className="leg-body">This shoot is under way with Guapd.</p>}
           <p className="leg-note">Questions about this shoot? Write to contact@guapd.com.</p>

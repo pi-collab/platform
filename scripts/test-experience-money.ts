@@ -190,6 +190,10 @@ reject('missing payment_flow', { ...kiro, payment_flow: undefined })
   eq('schema-valid but unexposed value refused when exposedOnly', r.ok, false)
   eq('…and accepted without exposedOnly (schema stays flexible)', validateDealSettings({ ...kiro, completion_trigger: 'on_content_posted' }).ok, true)
 }
+group('settings validator: who provides the deliverables decides when the creator is done (0538)')
+eq('a creator-submit Experience template (creator + on_delivery_accepted) is valid and offered', validateDealSettings({ ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_delivery_accepted' }, { exposedOnly: true }).ok, true)
+reject('creator submits but is "done" at shoot done (would be payable before Guapd approves)', { ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_shoot_done' })
+reject('creator submits but is "done" when posted', { ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_content_posted' })
 throws('resolveDealSettings throws on an invalid template', () => resolveDealSettings({ id: 't', version: 1, settings: { ...kiro, payment_flow: 'route_split' } }))
 
 // ── Deal flow ───────────────────────────────────────────────────────────────
@@ -199,6 +203,9 @@ eq('Kiro: creator does not upload', creatorUploadsDeliverables(kiroFlow), false)
 eq('Kiro: creator work complete once the shoot is done', isCreatorWorkComplete(kiroFlow, { shootDone: true, isPosted: false, deliveryAccepted: false }), true)
 eq('Kiro: not complete before the shoot', isCreatorWorkComplete(kiroFlow, { shootDone: false, isPosted: true, deliveryAccepted: true }), false)
 eq('Kiro steps: no deliver/review step', creatorSteps(kiroFlow), ['offer', 'agreed', 'shoot_scheduled', 'shoot_done', 'paid'])
+eq('creator-submit: shot but not approved is NOT complete', isCreatorWorkComplete({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: false }), false)
+eq('creator-submit: complete once Guapd approved', isCreatorWorkComplete({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: true }), true)
+eq('creator uploads, whatever the trigger: approval still required', isCreatorWorkComplete({ completion_trigger: 'on_shoot_done', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: false }), false)
 eq('creator-owned, on_delivery_accepted: uploads + review', creatorSteps({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }), ['offer', 'agreed', 'deliver', 'review', 'paid'])
 
 console.log(failed ? `\n${failed} FAILED, ${passed} passed` : `\nALL ${passed} PASSED`)

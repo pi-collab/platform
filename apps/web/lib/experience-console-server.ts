@@ -430,3 +430,139 @@ export async function reopenConsoleExperience(experienceId: string, reason: stri
   return error ? fail(error) : { ok: true, data: null }
 }
 
+
+// ── 0538: the shoot, deliverables, and releasing them to the brand ─────────
+// Operational access, checked again in Postgres. Nothing here carries a price,
+// rate, net or margin. Who provides the deliverables (Guapd attaches, or the
+// creator submits) comes from the Experience's snapshotted template settings.
+
+export interface ConsoleRelease {
+  id: string
+  item_version: number
+  released_at: string
+  brand_decision: 'approved' | 'changes_requested' | null
+  brand_decision_channel: string | null
+  brand_decided_at: string | null
+  brand_decision_note: string | null
+}
+
+export interface ConsoleItem {
+  id: string
+  label: string
+  type: string | null
+  affiliate_link: boolean
+  visible_to_creator: boolean
+  item_status: 'pending' | 'submitted' | 'revision' | 'approved'
+  version: number
+  external_url: string | null
+  file_name: string | null
+  has_file: boolean
+  submitted_at: string | null
+  submitted_via: 'creator' | 'guapd' | null
+  approved_at: string | null
+  /** Guapd's note: to the creator (creator-submit) or staff-only (Guapd provides). */
+  note: string | null
+  /** The live release to the brand, if any. */
+  release: ConsoleRelease | null
+  /** Withdrawn or superseded releases of this item. */
+  releases_before: number
+}
+
+export interface ConsoleShootLeg {
+  roster_id: string
+  deal_id: string
+  creator_id: string
+  full_name: string
+  handle: string | null
+  deal_status: string
+  owner: 'guapd' | 'creator'
+  shoot_outcome: 'done' | 'did_not_shoot' | null
+  shoot_outcome_at: string | null
+  shoot_outcome_reason: string | null
+  /** The creator's part is done: payment eligibility (paid in Phase 4). */
+  work_complete: boolean
+  items: ConsoleItem[]
+}
+
+export interface DeliverablesProgress {
+  ready: boolean
+  over_shared: boolean
+  per_type?: boolean
+  videos_sold?: number
+  videos_shared?: number
+  videos_approved?: number
+  awaiting_brand?: number
+  reason?: string
+  lines: { type: string; sold: number; shared: number; approved: number; is_video: boolean }[]
+  gaps: { type: string; sold: number; approved: number }[]
+}
+
+export interface ConsoleDeliverables {
+  status: string
+  shoot_date: string | null
+  today: string
+  owner: 'guapd' | 'creator'
+  completion_trigger: string
+  legs: ConsoleShootLeg[]
+  progress: DeliverablesProgress
+}
+
+export async function getConsoleDeliverables(experienceId: string): Promise<Result<ConsoleDeliverables>> {
+  const { data, error } = await createClient().rpc('experience_console_deliverables', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleDeliverables }
+}
+
+export async function scheduleConsoleShoot(experienceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_schedule_shoot', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function recordShootOutcome(rosterId: string, outcome: 'done' | 'did_not_shoot', reason: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_shoot_outcome', { p_roster_id: rosterId, p_outcome: outcome, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function undoShootOutcome(rosterId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_shoot_undo', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function withdrawConsoleLeg(rosterId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_withdraw', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function itemUploadSlot(itemId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_item_upload_slot', { p_item_id: itemId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function attachConsoleItem(itemId: string, c: { url: string | null; storagePath: string | null; fileName: string | null }): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_item_attach', { p_item_id: itemId, p_url: c.url, p_storage_path: c.storagePath, p_file_name: c.fileName })
+  return error ? fail(error) : { ok: true, data: Number(data) }
+}
+
+export async function reviewConsoleItem(itemId: string, decision: 'approve' | 'revision', note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_item_review', { p_item_id: itemId, p_decision: decision, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function consoleItemFile(itemId: string): Promise<Result<{ storage_path: string; file_name: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_item_file', { p_item_id: itemId })
+  return error ? fail(error) : { ok: true, data: data as { storage_path: string; file_name: string } }
+}
+
+export async function releaseConsoleItems(experienceId: string, itemIds: string[]): Promise<Result<{ released: number; progress: DeliverablesProgress }>> {
+  const { data, error } = await createClient().rpc('experience_console_release', { p_experience_id: experienceId, p_item_ids: itemIds })
+  return error ? fail(error) : { ok: true, data: data as { released: number; progress: DeliverablesProgress } }
+}
+
+export async function withdrawConsoleRelease(releaseId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_release_withdraw', { p_release_id: releaseId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function decideConsoleRelease(releaseId: string, decision: 'approved' | 'changes_requested', channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_release_decide', { p_release_id: releaseId, p_decision: decision, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}

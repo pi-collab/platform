@@ -38,3 +38,16 @@
   .leg-card { padding: 20px 18px; }
   .leg-actions > button { flex: 1 1 100%; }
 }
+/* Deliverables (0538) */
+.leg-items { display: flex; flex-direction: column; }
+.leg-item { padding: 12px 0; border-top: 1px solid var(--hairline, rgba(0,0,0,.06)); }
+.leg-item:first-child { border-top: none; }
+.leg-item-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.leg-item-name { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--ink); }
+.leg-item-status { font-family: var(--font-ui); font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+.leg-st-approved { color: #4F7A12; }
+.leg-st-revision { color: #9C4147; }
+.leg-item-link { display: block; margin-top: 6px; font-family: var(--font-ui); font-size: 12.5px; color: var(--ink); word-break: break-all; }
+.leg-linkbtn { background: none; border: none; padding: 0; text-align: left; text-decoration: underline; cursor: pointer; }
+.leg-item-note { margin: 6px 0 0; font-family: var(--font-ui); font-size: 13px; color: #9C4147; }
+.leg-status-done { margin: 6px 0 0; padding: 10px 12px; border-radius: 12px; background: #F4FBDC; font-family: var(--font-ui); font-size: 13.5px; color: var(--ink); }

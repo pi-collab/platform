@@ -6924,3 +6924,46 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] A creator's leg context carries no brand price, cost or margin.
 
 **Environment:** 0537 is on STAGING only (applied from a scratch folder because staging's DB also holds the held 0536). Not on production.
+
+## 105. Experiences: the shoot, deliverables, and the brand seeing only what Guapd releases (migration 0538, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-deliverables.ts` (127 checks; runs two Experiences: the approved Guapd-provides template, and a creator-submit one). Validator and deal-flow cases are in `scripts/test-experience-money.ts`. Regressions: fee golden byte-identical, walk-deal-guard 45/45, and every Experience suite from §98–§104.
+
+**The shoot (operational)**
+- [ ] "Confirm the shoot" (Confirmed → Shoot scheduled) needs every locked creator's deal sent, no roster creator still undecided or unlocked, and at least one creator accepted; unanswered offers are allowed. No creators can be added afterwards.
+- [ ] A shoot outcome (Shot / Did not shoot) is recorded only for an accepted creator, only while Shoot scheduled, and only from the shoot date (India time); "Did not shoot" needs a reason; recording twice is refused.
+- [ ] The Experience moves to Shoot done BY ITSELF once every accepted creator has an outcome, no offer is unanswered, and at least one creator shot.
+- [ ] Withdraw an unanswered offer (reason required; the deal becomes cancelled; the creator is told in-app + email); an accepted offer cannot be withdrawn.
+- [ ] Undo an outcome (reason required) until anything from that creator has been shared with the brand; from Shoot done it goes back to Shoot scheduled.
+- [ ] "Did not shoot" takes the creator out of the counted P&L creators (footnote "accepted but did not shoot. Not counted."), and the stored margin refreshes.
+
+**Who provides the deliverables (the template decides)**
+- [ ] Kiro / the approved template (`deliverables_owner: guapd`, `on_shoot_done`): staff attach a link or a file per item; the creator cannot submit and their deal page shows status only (no link, file or note); their part is done at shoot done.
+- [ ] Creator-submit template (`deliverables_owner: creator`, `on_delivery_accepted`): the creator submits a link or file on their own deal page once their shoot is marked done; staff cannot attach for them; Guapd's "ask for changes" note shows to the creator; a resubmission after changes is a new version; their part is done only when Guapd has approved every item.
+- [ ] The validator refuses an Experience template where the creator submits but is "done" at anything other than `on_delivery_accepted`.
+- [ ] Files: the database names the path (`{deal}/{item}/v{version}/{name}`, allowed types only); the file must be in the private bucket before it attaches; a different path is refused. Every file opens through a 10-minute signed link.
+- [ ] Guapd-provides: Guapd's notes on its own content are staff-only (`experience_item_staff_notes`), never on the creator-readable item.
+
+**Releasing to the brand (versioned)**
+- [ ] Only Guapd-approved items from creators who shot can be shared, and only once the Experience is Shoot done or Delivering. The first share moves it to Delivering.
+- [ ] Staff pick which items to share (e.g. 4 of N); the panel shows "Shared X · sold Y videos" and a warning (not a block) when more is shared than sold.
+- [ ] A release snapshots the version: after a new version is attached, the brand still sees the old one until Guapd shares the new one, which supersedes it (kept on record).
+- [ ] Withdraw a release with a reason until the brand approves it; the brand stops seeing it.
+- [ ] Staff record the brand's answer with the channel (WhatsApp / email / call / in person, never "portal"; self-service is Phase 6); "changes requested" needs what they asked. Approval is final: no withdraw, no re-decide, no new version, no outcome undo for that creator.
+
+**The brand page `/experiences/[id]` (SECURITY)**
+- [ ] A member of the Experience's brand sees ONLY live releases: creator name, label, link or "View file", shared date, decision. Never unreleased items, other versions, who submitted, Guapd's or the brand's notes, handles, storage paths, deal/item/creator ids, or any money.
+- [ ] Another brand, the creator, staff who are not brand members, anonymous and the service role are refused (`brand_experience_deliverables`, `brand_experience_release_file`).
+- [ ] No session can read `experience_deliverable_releases` or `experience_item_staff_notes` directly.
+- [ ] The brand's team is told in-app + by email when items are shared (count only). No WhatsApp.
+
+**Readiness (sets up two-party completion)**
+- [ ] `ready` is true only when brand-approved releases cover everything sold (per type, and videos against videos sold); the console lists the gaps.
+- [ ] Complete is NOT gated on readiness yet; a Complete Experience refuses every deliverable change.
+
+**Audit**
+- [ ] Every staff action writes `ops_events` (shoot_scheduled, leg_shoot_outcome, leg_shoot_outcome_undone, leg_withdrawn, shoot_done, deliverable_attached, deliverable_reviewed, deliverable_released, delivering, deliverable_withdrawn, brand_deliverable_decision_recorded); none carries a price, rate, net or margin; notes are recorded by length. Creator submissions go to the deal's `events` (creators may have no email).
+
+**Also in 0538:** the seven 3a functions (create + six roster actions) rewritten without `SELECT *`; no function in `public` uses `SELECT *` (checked on staging).
+
+**Environment:** 0538 is on STAGING only (applied from the scratch folder; `creator_leg_context` and `experience_console_leg_shoot_outcome` re-applied by hand after two NULL fixes, the file matches). Not on production.

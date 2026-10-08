@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleDeliverables, getConsoleExperience, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreators, listConsoleLegs, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -13,6 +13,8 @@ import RosterPanel from './RosterPanel'
 import CreatorLegsPanel from './CreatorLegsPanel'
 import CostSheetPanel from './CostSheetPanel'
 import PnlPanel from './PnlPanel'
+import ShootPanel from './ShootPanel'
+import DeliverablesPanel from './DeliverablesPanel'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -51,6 +53,9 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   const [legs, legsReconcile, creatorBrief] = hasLegs
     ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id)])
     : [null, null, null]
+  // The shoot (from Confirmed) and deliverables (from Shoot scheduled), 0538. Operational.
+  const deliverables = hasLegs ? await getConsoleDeliverables(e.id) : null
+  const hasDeliverables = ['shoot_scheduled', 'shoot_done', 'delivering', 'complete'].includes(e.status)
   // Cost sheet (operational) and P&L (financial only, decided in Postgres) once the price is agreed.
   const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
   const pnl = hasRoster && financial ? await getExperiencePnl(e.id) : null
@@ -65,7 +70,10 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
         : openQuote.proposed_by === 'guapd' ? 'Waiting on the brand to reply to the quote'
         : "Next: answer the brand's counter"
     : e.status === 'rostering' ? 'Next: build the creator roster, get the brand to approve it, and lock it'
-    : e.status === 'confirmed' ? 'Next: send each creator their deal'
+    : e.status === 'confirmed' ? 'Next: send each creator their deal, then confirm the shoot'
+    : e.status === 'shoot_scheduled' ? "Next: after the shoot, record each creator's outcome"
+    : e.status === 'shoot_done' ? 'Next: review the deliverables and share them with the brand'
+    : e.status === 'delivering' ? "Next: record the brand's answer on each deliverable, then complete"
     : e.status === 'complete' ? 'Complete'
     : `Next: ${experienceStatus(STAGES[stepIndex + 1] ?? e.status).label.toLowerCase()}`
   const stepDates: Record<number, string> = {}
@@ -128,6 +136,16 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
             : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || (creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the creator deals'} />}
         </div>
       )}
+
+      {/* ══════ THE SHOOT + DELIVERABLES (0538) ══════ */}
+      {hasLegs && deliverables && (deliverables.ok
+        ? (deliverables.data.legs.length > 0 && (
+            <>
+              <div style={{ marginTop: 20 }}><ShootPanel experienceId={e.id} data={deliverables.data} shootCity={e.shoot_city} /></div>
+              {hasDeliverables && <div style={{ marginTop: 20 }}><DeliverablesPanel experienceId={e.id} data={deliverables.data} /></div>}
+            </>
+          ))
+        : <div style={{ marginTop: 20 }}><Failed inline message={deliverables.error} /></div>)}
 
       {/* ══════ COSTS + P&L ══════ */}
       {hasRoster && costs && (

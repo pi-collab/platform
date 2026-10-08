@@ -37,6 +37,28 @@ export interface CreatorLegContext {
   platform_pct: number | null
   platform_track: 'growth' | 'deals' | null
   net_paise: number | null
+  /** 0538: the shoot and deliverables. Absent before 0538 is applied. */
+  shoot_outcome?: 'done' | 'did_not_shoot' | null
+  /** Who provides the deliverables on this shoot: Guapd, or the creator. */
+  deliverables_owner?: 'guapd' | 'creator'
+  /** The creator's part is done (payable by Guapd; payouts are Phase 4). */
+  work_complete?: boolean
+  /** Creator-submit shoots: the creator can submit now. */
+  can_submit?: boolean
+  items?: CreatorLegItem[]
+}
+
+/** One of the creator's own deliverables. Link, file and note only on creator-submit shoots. */
+export interface CreatorLegItem {
+  id: string
+  label: string
+  affiliate_link: boolean
+  item_status: 'pending' | 'submitted' | 'revision' | 'approved'
+  version: number
+  external_url: string | null
+  file_name: string | null
+  revision_note: string | null
+  submitted_at: string | null
 }
 
 export interface CreatorLegMoney {

@@ -95,7 +95,8 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
 
       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-soft)', marginTop: 14, display: 'grid', gap: 4 }}>
         {pnl.legs_awaiting > 0 && <span>{pnl.legs_awaiting} offer{pnl.legs_awaiting === 1 ? '' : 's'} awaiting an answer ({formatRupees(n(pnl.awaiting_net_paise))} net if accepted). Not counted.</span>}
-        {pnl.legs_declined > 0 && <span>{pnl.legs_declined} declined. Not counted.</span>}
+        {pnl.legs_declined > 0 && <span>{pnl.legs_declined} declined or withdrawn. Not counted.</span>}
+        {(pnl.legs_did_not_shoot ?? 0) > 0 && <span>{pnl.legs_did_not_shoot} accepted but did not shoot. Not counted.</span>}
       </div>
 
       {status === 'complete' && (

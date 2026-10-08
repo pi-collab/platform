@@ -14,7 +14,11 @@
  * 3. payment_flow 'brand_pays_creator_direct' on any template: schema-only, the
  *    value existing marketplace deals carry; it is never configured.
  * 4. An Experience with any flow other than guapd_principal_vendor_payout.
- * 5. Anything that names a link between the legs' money or brand → creator
+ * 5. An Experience whose CREATOR provides the deliverables but whose creator
+ *    work ends at anything other than Guapd accepting them
+ *    (on_delivery_accepted). Who provides decides when the creator's part is
+ *    done (0538): Guapd provides → shoot done; creator submits → approved.
+ * 6. Anything that names a link between the legs' money or brand → creator
  *    routing (split / pool / disburse / escrow / cost-plus / markup / derived
  *    pricing…), with an explicit message, even if a future schema change lets
  *    such a key through the strict shape.
@@ -36,8 +40,8 @@ export const FOLLOW_ON_INVOICERS = ['creator', 'brand', 'ops'] as const
 
 /** What v1 actually offers. Other enum values are valid but not exposed. */
 export const EXPOSED_V1 = {
-  completion_trigger: ['on_shoot_done'],
-  deliverables_owner: ['guapd'],
+  completion_trigger: ['on_shoot_done', 'on_delivery_accepted'],
+  deliverables_owner: ['guapd', 'creator'],
   pricing_basis: ['per_deliverable'],
   payment_flow: ['guapd_principal_vendor_payout'],
   follow_on_type: ['none', 'affiliate'],
@@ -99,6 +103,9 @@ export function validateDealSettings(raw: unknown, opts: { exposedOnly?: boolean
   }
   if (s.kind === 'experience' && s.payment_flow !== 'guapd_principal_vendor_payout') {
     errors.push('an Experience runs only as guapd_principal_vendor_payout: brand pays Guapd, Guapd pays creators')
+  }
+  if (s.kind === 'experience' && s.deliverables_owner === 'creator' && s.completion_trigger !== 'on_delivery_accepted') {
+    errors.push('when the creator submits the deliverables, their work ends when Guapd accepts them: use completion_trigger on_delivery_accepted')
   }
 
   if (opts.exposedOnly) {

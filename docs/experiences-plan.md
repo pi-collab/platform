@@ -473,3 +473,19 @@ Full plan delivered in chat on 2026-10-08. Headlines:
 - Migration 0537: cost-line soft delete + shape checks (Phase 4 columns blocked); a generated `guapd_margin_paise` on `experience_pnl_snapshots`, refreshed by triggers on every input and frozen at Complete; costs summed in one helper; categories `per_video`/`day_rate`/`retainer` refused on cost lines (creator pay lives on legs).
 - Staff-gated cost functions (operational) with audit; P&L only via `experience_pnl()` (financial). No budgeting stage column yet.
 - Open questions: revenue basis for "brand_paid" (invoiced / received / agreed until Phase 4); awaiting legs out of the margin; operational staff can compute margin by hand; late costs after Complete.
+
+## Stage 3d: the shoot, deliverables, deliverables → brand (APPROVED + BUILT 2026-10-08, staging only)
+Answers (Palak, 2026-10-08):
+1. **Kiro = Guapd provides the deliverables** (staff attach); the creator's work ends at shoot done. The approved template is unchanged. BOTH paths are built and the template decides: `deliverables_owner: guapd` → staff attach; `deliverables_owner: creator` (+ `completion_trigger: on_delivery_accepted`, enforced by the validator) → the creator submits on their deal page. A future creator-submit Experience is a new template version, not a rebuild.
+2. **Minimal brand page `/experiences/[id]`**, released deliverables only, enforced in the database (`brand_experience_deliverables`). The first piece of the brand-facing side; the full brand portal stays Phase 6.
+3. **Brand decisions recorded by staff** with the channel (as the roster); brand self-service is Phase 6.
+4. **Creator payment eligibility** (`experience_leg_work_complete`, mirrored in `lib/deal-flow.ts`): Guapd provides → shoot done; creator submits → shoot done AND Guapd approved every item on their leg. Nothing pays in this stage (Phase 4 reads it).
+
+Built in migration 0538 + console ShootPanel / DeliverablesPanel, the creator's LegDeliverables, and the brand page; tests in scripts/test-experience-deliverables.ts (docs/test-cases.md §105).
+- **Shoot:** confirm (Confirmed → Shoot scheduled, staff) → per-creator outcome from the shoot date (Shot / Did not shoot + reason; undo with a reason until that creator's content is shared) → Shoot done automatically → Delivering on the first release → Complete (3c, unchanged). Unanswered offers can be withdrawn (reason; creator told in-app + email). "Did not shoot" leaves the counted P&L creators (operational outcome, not a financial edit).
+- **Deliverables:** one item per unit from 3b; Guapd reviews (approve / ask for changes). Files go to the private `deliverables` bucket at a path the database names; signed links only. Guapd's notes on its own content are staff-only; in creator-submit mode the note is the creator's revision note.
+- **Releases:** `experience_deliverable_releases`, no user access. Staff choose which approved items to share ("shared X · sold Y", over-share warned, not blocked). A release snapshots the version; a newer version supersedes it on re-share; withdraw with a reason until the brand approves; approval is final.
+- **Readiness:** `experience_deliverables_progress` = brand-approved releases cover what was sold. Shown on the console; does NOT gate Complete. The later completion piece gates Complete on it + invoices cleared (Phase 4) + the brand's "mark done" (new), with the 3c Complete as Guapd's half.
+- **Also:** the seven 3a functions rewritten without `SELECT *` (none left in `public`); ships to prod with this stage.
+- **Still deferred:** leg WhatsApp template (in-app + email cover every message here); staff chat on legs (review notes cover deliverable feedback; creators still have no message channel on a leg); re-sending a declined or withdrawn offer; Guapd-made extras not tied to one creator.
+- **Ships to prod** in a later release together with 3c (0537), the creator pool (0536) and the storefront.

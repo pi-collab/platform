@@ -48,6 +48,8 @@ export interface ExperiencePnl {
   awaiting_net_paise: number
   legs_declined: number
   legs_pending: number
+  /** Accepted, but recorded as not shooting (0538): not counted. Absent on snapshots frozen before 0538. */
+  legs_did_not_shoot?: number
   per_leg: ExperiencePnlLeg[]
 }
 
