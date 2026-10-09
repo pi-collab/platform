@@ -365,9 +365,12 @@ CREATE TRIGGER t_deals_00_guard
 DROP POLICY IF EXISTS messages_read   ON messages;
 DROP POLICY IF EXISTS messages_insert ON messages;
 
+-- 0546: an Experience creator leg's thread is readable under RLS by its own
+-- creator ONLY (staff read through experience_console_leg_thread; the real
+-- brand is never a party to a leg). Marketplace deals: either party, as before.
 CREATE POLICY messages_read
   ON messages FOR SELECT
-  USING (can_access_deal(deal_id));
+  USING (can_read_deal_messages(deal_id));
 
 CREATE POLICY messages_insert
   ON messages FOR INSERT
@@ -1550,3 +1553,11 @@ DROP POLICY IF EXISTS experiences_read_brand ON experiences;
 DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
 DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
 
+
+-- ═══ 0550: the brand <-> Guapd thread on an Experience ═══
+-- Functions only (brand_experience_messages / _message_send through the brand
+-- gate; experience_console_brand_* through the staff gate). RLS on with NO
+-- policy, and every grant revoked, so no session reads or writes directly.
+ALTER TABLE experience_brand_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_brand_message_reads ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_brand_messages, experience_brand_message_reads FROM anon, authenticated;
