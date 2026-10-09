@@ -31,7 +31,7 @@ const BRAND: Record<string, { label: string; tone: ChipTone }> = {
   approved:          { label: 'Brand approved', tone: 'green' },
   changes_requested: { label: 'Brand asked for changes', tone: 'red' },
 }
-const DECISION_CHANNELS = CHANNELS.filter(([k]) => k !== 'portal')
+const DECISION_CHANNELS = CHANNELS
 
 type Ask =
   | { kind: 'revision'; item: ConsoleItem }

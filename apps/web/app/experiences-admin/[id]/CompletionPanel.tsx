@@ -21,7 +21,7 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * Complete freezes the P&L. Reopening is finance-only and clears BOTH
  * sign-offs, so they are given again.
  */
-const SIGNOFF_CHANNELS = CHANNELS.filter(([k]) => k !== 'portal')
+const SIGNOFF_CHANNELS = CHANNELS
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
 export default function CompletionPanel({ experienceId, data }: { experienceId: string; data: ConsoleCompletion }) {

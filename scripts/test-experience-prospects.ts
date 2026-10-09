@@ -154,8 +154,8 @@ async function run() {
     && refused(await op.rpc('experience_console_prospect_drop', { p_prospect_id: P1, p_reason: 'test test' }))
     && refused(await op.rpc('experience_console_prospect_link', { p_prospect_id: P1, p_creator_id: M.id })))
   ok('linking another entry to a creator already on the roster is refused', said(await op.rpc('experience_console_prospect_link', { p_prospect_id: P2, p_creator_id: L.id }), /already on this roster/))
-  const bRoster = await brand.from('experience_roster').select('creator_id').eq('experience_id', E)
-  ok('the brand sees the linked creator on its roster, and nothing of the list', (bRoster.data ?? []).some((r: any) => r.creator_id === L.id) && !JSON.stringify(bRoster.data).includes('kabir'))
+  const bRoster = await brand.rpc('brand_experience_roster', { p_experience_id: E })
+  ok('the brand sees the linked creator on its roster, and nothing of the list', ((bRoster.data as any)?.creators ?? []).some((r: any) => r.full_name === L.full_name) && !JSON.stringify(bRoster.data).includes('kabir'), bRoster.error?.message ?? '')
   ok('the P&L estimate drops the linked one', ((await fin.rpc('experience_pnl', { p_experience_id: E })).data as any).prospects_pending === 2)
 
   group('drop')

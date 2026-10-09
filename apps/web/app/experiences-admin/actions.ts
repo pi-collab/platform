@@ -27,8 +27,10 @@ import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreator
 import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
+import { notifyBrandWaiting } from '@/lib/experience-brand-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
+import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
 
 /**
  * Staff console writes. Each one passes experienceStaffGate (ops admin +
@@ -68,62 +70,16 @@ function deliverables(raw: unknown): ConsoleDeliverable[] | null {
   return out
 }
 
-export interface NewRequestForm {
-  brandId: string
-  title: string
-  creatorCount: number | string
-  /** Per creator. */
-  deliverables: { type: string; count: number | string }[]
-  affiliate: boolean
-  affiliatePerCreator: number | string | null
-  adRights: boolean
-  /** blank = all of each creator's videos */
-  adRightsPerCreator: number | string | null
-  adRightsMonths: number | string | null
-  boost: boolean
-  boostPerCreator: number | string | null
-  boostMonths: number | string | null
-  location: string
-  dateFrom: string
-  dateTo: string
-  brief: string
-  channel: string
-}
+/** The request form's fields plus, for staff, the brand and how it arrived. */
+export interface NewRequestForm extends RequestFormFields { brandId?: string; channel?: string }
 
 export async function recordExperienceRequest(f: NewRequestForm): Promise<Out<string>> {
   const refused = await gate(); if (refused) return refused
-  const items = deliverables(f.deliverables)
-  if (!items || items.length === 0) return { ok: false, error: 'Add at least one deliverable per creator, with a count above zero.' }
-  const creators = Number(f.creatorCount)
-  if (!Number.isInteger(creators) || creators <= 0 || creators > 500) return { ok: false, error: 'Say how many creators the brand wants.' }
-  const videos = items.filter((i) => isVideoType(i.type)).reduce((n, i) => n + i.count, 0)
-  const perCreator = (on: boolean, v: unknown, label: string, required: boolean): { ok: true; n: number | null } | { ok: false; error: string } => {
-    if (!on) return { ok: true, n: null }
-    const raw = String(v ?? '').trim()
-    if (!raw) return required ? { ok: false, error: `Say how many of each creator's videos ${label}.` } : { ok: true, n: null }
-    const n = Number(raw)
-    if (!Number.isInteger(n) || n <= 0) return { ok: false, error: `The number of videos ${label} must be a whole number above zero.` }
-    if (n > videos) return { ok: false, error: `Each creator makes ${videos} video${videos === 1 ? '' : 's'}, so at most ${videos} can be counted for this.` }
-    return { ok: true, n }
-  }
-  const aff = perCreator(!!f.affiliate, f.affiliatePerCreator, 'carry the affiliate link', true); if (!aff.ok) return aff
-  const ads = perCreator(!!f.adRights, f.adRightsPerCreator, 'the ad rights cover', false); if (!ads.ok) return ads
-  const bst = perCreator(!!f.boost, f.boostPerCreator, 'boost covers', false); if (!bst.ok) return bst
+  const parsed = parseExperienceRequest(f)
+  if (!parsed.ok) return parsed
   if (!isChannel(f.channel)) return { ok: false, error: 'Say how the request arrived.' }
-  const title = cleanText(f.title, 140)
-  if (!title) return { ok: false, error: 'Give the Experience a title.' }
-  if (f.adRights && months(true, f.adRightsMonths) === null) return { ok: false, error: 'Ad rights need a number of months.' }
-  if (f.boost && months(true, f.boostMonths) === null) return { ok: false, error: 'Boost needs a number of months.' }
-  const dateFrom = isoDate(f.dateFrom), dateTo = isoDate(f.dateTo)
-  if (dateFrom && dateTo && dateTo < dateFrom) return { ok: false, error: 'The date window ends before it starts.' }
-
-  const r = await createConsoleExperience({
-    brandId: f.brandId, title, creatorCount: creators, deliverables: items,
-    affiliate: !!f.affiliate, affiliatePerCreator: aff.n,
-    adRights: !!f.adRights, adRightsPerCreator: ads.n, adRightsMonths: months(!!f.adRights, f.adRightsMonths),
-    boost: !!f.boost, boostPerCreator: bst.n, boostMonths: months(!!f.boost, f.boostMonths),
-    location: cleanText(f.location, 120), dateFrom, dateTo, brief: cleanText(f.brief, 4000), channel: f.channel,
-  })
+  if (!isUuid(f.brandId)) return { ok: false, error: 'Pick the brand.' }
+  const r = await createConsoleExperience({ brandId: f.brandId, ...parsed.value, channel: f.channel })
   if (!r.ok) return r
   revalidatePath(BASE)
   return r
@@ -161,6 +117,8 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
   })
   if (!r.ok) return r
   revalidatePath(`${BASE}/${f.experienceId}`)
+  // Guapd's price waits on the brand (0544): they answer it on Guapd.
+  if (f.proposedBy === 'guapd') await notifyBrandWaiting(f.experienceId, 'quote')
   return r
 }
 
@@ -187,6 +145,8 @@ export async function addToRoster(experienceId: string, creatorIds: string[], ad
   const r = await rosterAdd(experienceId, creatorIds, addedBy === 'brand' ? 'brand' : 'guapd', addedBy === 'brand' ? channel : null)
   if (!r.ok) return { error: r.error }
   revalidatePath(`${BASE}/${experienceId}`)
+  // Guapd's picks wait on the brand's review (0544); at most one nudge an hour.
+  if (addedBy !== 'brand') await notifyBrandWaiting(experienceId, 'roster', creatorIds.length)
   return { error: null }
 }
 
@@ -552,7 +512,7 @@ export async function recordBrandDecision(experienceId: string, releaseId: strin
   const refused = await gate(); if (refused) return refused
   if (!isUuid(experienceId) || !isUuid(releaseId)) return { ok: false, error: 'Unknown deliverable.' }
   if (decision !== 'approved' && decision !== 'changes_requested') return { ok: false, error: 'Approved, or changes requested.' }
-  if (!isChannel(channel) || channel === 'portal') return { ok: false, error: 'Say how the brand told us.' }
+  if (!isChannel(channel)) return { ok: false, error: 'Say how the brand told us.' }
   const n = cleanText(note, 1000)
   if (decision === 'changes_requested' && (!n || n.length < 3)) return { ok: false, error: 'Write down what the brand asked to change.' }
   const r = await decideConsoleRelease(releaseId, decision, channel, n)

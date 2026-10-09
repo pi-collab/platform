@@ -11,6 +11,8 @@ const NAV_LINKS = [
   { label: 'Dashboard', href: '/dashboard', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg> },
   { label: 'Deals', href: '/deals', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> },
   { label: 'Campaigns', href: '/campaigns', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg> },
+  // Guapd Experiences, the brand's own (0544). Not the staff console below.
+  { label: 'Experiences', href: '/experiences', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg> },
 ]
 
 /* Staff only: shown when BrandNav's experienceStaffGate passes. Not a brand
@@ -21,6 +23,7 @@ const ALL_MOBILE_LINKS = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Deals', href: '/deals' },
   { label: 'Campaigns', href: '/campaigns' },
+  { label: 'Experiences', href: '/experiences' },
   { label: 'Browse Creators', href: '/browse' },
   { label: 'Inbox', href: '/inbox' },
   { label: 'Notifications', href: '/notifications' },

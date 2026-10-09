@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { listConsoleBrands } from '@/lib/experience-console-server'
 import NoAccess from '../NoAccess'
-import NewExperienceForm from './NewExperienceForm'
+import ExperienceRequestForm from '@/components/ExperienceRequestForm'
+import { recordExperienceRequest } from '../actions'
 import { container, h1, heroCard, lede, serifAccent } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,7 @@ export default async function NewExperiencePage() {
         <p style={lede}>Record what the brand asked for, and how it reached us. It starts as a request; the price comes next, as a quote.</p>
       </section>
       {brands.ok
-        ? <NewExperienceForm brands={brands.data} />
+        ? <ExperienceRequestForm mode="staff" brands={brands.data} submit={recordExperienceRequest} doneBase="/experiences-admin" cancelHref="/experiences-admin" />
         : <div className="surface" style={{ padding: 24, marginTop: 20 }}><p className="t-body" style={{ margin: 0 }}>Could not load brands: {brands.error}</p></div>}
     </div>
   )

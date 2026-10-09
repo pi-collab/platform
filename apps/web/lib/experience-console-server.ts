@@ -89,6 +89,8 @@ export interface ConsoleQuote {
   deliverable_count: number
   misc_paise: number | null
   total_paise: number | null
+  /** The brand's note when they declined on Guapd (0544); financial only, like the message. */
+  brand_note?: string | null
   deliverables: ConsoleDeliverable[]
   shoot_date: string | null
   shoot_city: string | null

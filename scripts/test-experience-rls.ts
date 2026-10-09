@@ -167,12 +167,17 @@ async function run() {
   await refused(G, 'Leg 2 deal row (cross-leg)', brand.from('deals').select('id, price_paise').eq('id', leg2.id))
   await refused(G, 'Leg 2 items (cross-leg)', brand.from('deal_deliverable_items').select('id').eq('deal_id', leg2.id))
   const GB = 'brand: sees its own'
-  await allowed(GB, 'own Experience (service price only)', brand.from('experiences').select('id, title, status, brand_service_total_paise').eq('id', exp.id), 1,
-    r => r[0].brand_service_total_paise === 24_500_000 ? null : 'wrong service price')
+  // 0544: the brand reads its Experience through brand_experience() only; the table is closed to it.
+  await refused(GB, 'own Experience, read directly (0544: through brand_experience only)', brand.from('experiences').select('id, title').eq('id', exp.id))
+  {
+    const r = await brand.rpc('brand_experience', { p_experience_id: exp.id })
+    const good = !r.error && Number((r.data as any)?.agreed_total_paise) === 24_500_000
+    results.push({ group: GB, check: 'own Experience through brand_experience (service price only)', ok: good, detail: r.error?.message ?? String((r.data as any)?.agreed_total_paise) })
+  }
   await allowed(GB, 'own Leg 1 deal', brand.from('deals').select('id, price_paise').eq('id', leg1.id))
   // 0540: no direct invoice read for anyone; the brand reads issued invoices through brand_experience_invoices (§107).
   await refused(GB, 'own service invoice, read directly (0540: through brand_experience_invoices only)', brand.from('service_invoices').select('id, number, total_paise').eq('id', inv.id))
-  await allowed(GB, 'own roster (profiles, no money columns exist)', brand.from('experience_roster').select('creator_id, brand_decision, locked').eq('experience_id', exp.id))
+  await refused(GB, 'own roster, read directly (0544: through brand_experience_roster only)', brand.from('experience_roster').select('creator_id').eq('experience_id', exp.id))
 
   // ── CREATOR: own rate / 30% / net only; never margin or Leg 1 ──────────────
   const GC = 'creator: no margin, no Leg 1'

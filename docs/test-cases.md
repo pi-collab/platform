@@ -7115,3 +7115,41 @@ Run (staging, real sessions, ~200 s apart for the auth rate limit):
 - [ ] On Payments, an unpaid Guapd payout counts in Pending (amount and a row, desktop and mobile) with "View deal" and NO "Send reminder" (there is no invoice); paid ones count in Total earned. A creator with only Guapd payouts does not get the empty state.
 
 **Environment:** 0542 is on STAGING only; the Vault secret `guapd_payout_details_key` must exist on any project it is applied to (the migration creates it if missing; production needs its own, never copied). pgcrypto lives in the `extensions` schema. Test rows in `experience_leg_counters` are removed by the service role before their deal (a cascade runs as the owner and is refused by design).
+
+## 111. Experiences Phase 6: the brand's own screens on /experiences (migration 0544)
+
+Run (staging, real brand logins; ~200 s after any other suite for the auth rate limit):
+`NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-brand-portal.ts`
+
+**The gate (SECURITY)**
+- [ ] One gate, `brand_experience_require`: a member of THIS Experience's brand. Another brand, a creator, staff who are not members, the service role and NULL / unknown ids all get the same "Not found" (anonymous cannot call it at all). The Guapd house brand is refused even for its own member.
+- [ ] Admin-only: answering the price and signing off. A plain member reads everything and decides creators and deliverables.
+- [ ] Brands have NO direct read on `experiences`, `experience_roster` or `experience_quotes` (no grant, no policy); creators and anonymous neither. Every brand read is a `brand_experience*` function returning named fields.
+- [ ] Every brand read (list, Experience, roster, deliverables, invoices, report) is scanned at every depth: no rate, gross, net, %, payout, cost, margin, fee, note, counter, prospect, bank, phone, email, creator id, deal id or leg field; no planted roster note, cost line, creator brief or prospect; no creator money value.
+- [ ] No brand function selects `*`; every per-Experience brand function calls the gate.
+
+**The report (Phase 2.5, folded in)**
+- [ ] Only at Complete (refused before, saying why). Exactly: title, brand, requested / shoot / completed dates, city; creators = the LOCKED roster who shot (name, Instagram handle, profile link; never the rejected or "did not shoot"); items = shared deliverables (label, kind, link or file name, shared at, the brand's decision); the brand's own issued and paid invoices.
+- [ ] Its source joins no money table (deals, creator terms, finance, cost lines, payouts, counters, P&L, day rates) and reads no money column. Creator names come through `experience_roster` → `creators` (name, handle).
+- [ ] No analytics section (Experience content is Guapd-produced, not posted from the creator's account; there is no honest metric).
+
+**Brand actions, alongside staff (functional)**
+- [ ] Request (`/experiences/new`): any member of an APPROVED brand; same fields and checks as the staff form (NULL title / count / no deliverables refused); recorded as channel "portal", by them. A pending brand is refused with a clear message. Staff still record requests for a brand (WhatsApp, email, call, in person) and can never choose "portal".
+- [ ] Price: a brand admin accepts Guapd's open quote (→ Building roster at that price, "portal"), or declines with a note (3 to 1,000 characters; NULL accept refused). Finance sees the brand's note on the console (operational staff do not: financial, like the message). A declined or replaced quote cannot be accepted (stale). A brand counter recorded by staff is Guapd's to answer, not the brand's. No counter-price on Guapd.
+- [ ] Creators: names, handles, Instagram links, photo, each creator's planned deliverables, decision. Any member accepts or rejects until the creator is locked; each call carries the decision the screen showed (stale refused). Staff can record a different answer (with the channel) and the brand can change it back: the latest stands; both are in the history. Locked = no change.
+- [ ] Deliverables: any member approves or asks for changes (with a note) on shared items; stale screens refused; approval is final (staff or brand). The brand sees who decided ("you" or "via Guapd") and its OWN words back when it asked on Guapd; a note staff recorded for the brand is never shown to the brand (0538 rule: "changes asked" only).
+- [ ] Sign-off: a brand admin, while Delivering; twice refused; staff can still clear it with a reason, and the brand signs off again.
+- [ ] Every brand action writes an `ops_events` row (`experience.*_by_brand`); staff are told in-app. The brand is told in-app + by email when Guapd's price is ready and when Guapd adds creators (at most one creator nudge an hour).
+
+**Screens**
+- [ ] Brand nav has "Experiences" (desktop and mobile); it is active on `/experiences/*` and not on the staff console.
+- [ ] `/experiences`: own Experiences with the brand-facing stage and "Waiting on you"; "Request an Experience" only for an approved brand.
+- [ ] `/experiences/[id]`: stepper (Requested → Price agreed → Creators → Shoot → Deliverables → Complete), Price, Creators, Deliverables, Sign-off, Invoices, Your request; "Your report" at Complete.
+- [ ] Phone width (390px): no sideways scroll on the list, the request form or the Experience page; buttons full width.
+- [ ] The shared stepper wraps its labels on phones instead of widening the page (staff Experience page, brand Experience page AND the brand deal page).
+
+**Regression to watch**
+- [ ] Removing the brand's direct reads breaks no existing brand screen (dashboard, deals, deal page, campaigns, browse, inbox): none of them reads these three tables.
+- [ ] The older suites that read these tables as a brand now assert the refusal and read through the functions (quotes-rls, exp-rls, roster, prospects); `brand_experience_deliverables` carries the 0544 fields (deliverables test).
+
+**Environment:** 0544 is on STAGING only.

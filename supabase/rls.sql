@@ -1146,13 +1146,11 @@ REVOKE ALL ON deal_templates, experiences, experience_finance, experience_creato
               creator_private, service_invoices, vendor_payouts, deal_follow_ons
   FROM anon, authenticated;
 
-GRANT SELECT (id, brand_id, title, status, brand_service_total_paise, shoot_date, shoot_city, created_at, updated_at)
-  ON experiences TO authenticated;
+-- experiences: NO user grant since 0544 (brands read through brand_experience*).
 GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise,
               platform_track, locked_at, created_at, updated_at)
   ON experience_creator_terms TO authenticated;
-GRANT SELECT (id, experience_id, creator_id, added_by, brand_decision, locked, decided_at, created_at, updated_at)
-  ON experience_roster TO authenticated;
+-- experience_roster: NO user grant since 0544 (brands read through brand_experience_roster).
 GRANT SELECT (id, experience_id, brand_id, kind, number, status, issue_date, due_date, lines, subtotal_paise,
               gst_rate_pct, cgst_paise, sgst_paise, igst_paise, tds_paise, total_paise,
               supplier_gstin, supplier_gstin_provisional, supplier_arn,
@@ -1166,17 +1164,15 @@ GRANT SELECT (id, experience_id, deal_id, creator_id, type, trigger, basis, invo
               sales_figure_paise, sales_verified_at, creator_gross_paise, platform_pct, creator_net_paise, status, created_at, updated_at)
   ON deal_follow_ons TO authenticated;
 
+-- Removed in 0544: brands read only through the brand_experience* functions.
 DROP POLICY IF EXISTS experiences_read_brand ON experiences;
-CREATE POLICY experiences_read_brand ON experiences FOR SELECT
-  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
 
 DROP POLICY IF EXISTS ect_read_own_creator ON experience_creator_terms;
 CREATE POLICY ect_read_own_creator ON experience_creator_terms FOR SELECT
   USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
 
+-- Removed in 0544: brands read only through brand_experience_roster.
 DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
-CREATE POLICY roster_read_brand ON experience_roster FOR SELECT
-  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_id AND e.brand_id = my_brand_id()));
 
 -- si_read_brand (service_invoices) and vp_read_own_creator (vendor_payouts)
 -- were removed in 0540: see "Experience money loop (0540)" below.
@@ -1331,18 +1327,10 @@ CREATE POLICY deal_brand_notes_read_brand ON deal_brand_notes FOR SELECT TO auth
   USING (EXISTS (SELECT 1 FROM deals d WHERE d.id = deal_brand_notes.deal_id AND d.brand_id = my_brand_id()));
 
 -- ── 0528: Experience request columns, quote history ─────────────────────────
-GRANT SELECT (request_deliverables, request_affiliate, request_ad_rights, request_ad_rights_months,
-              request_boost, request_boost_months, request_location, request_date_from, request_date_to,
-              request_brief, request_channel, requested_at)
-  ON experiences TO authenticated;
+-- The request columns and quotes: NO user grant since 0544; the brand reads
+-- its request and Guapd's price through brand_experience().
 REVOKE ALL ON experience_quotes FROM anon, authenticated;
-GRANT SELECT (id, experience_id, version, proposed_by, per_video_paise, deliverable_count, misc_paise,
-              total_paise, deliverables, shoot_date, shoot_city, message, status, created_at, decided_at)
-  ON experience_quotes TO authenticated;
 DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
-CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_quotes.experience_id
-                 AND e.brand_id = my_brand_id() AND e.brand_id IS DISTINCT FROM guapd_brand_id()));
 
 -- ── 0529: Guapd Experiences staff console list ──────────────────────────────
 CREATE OR REPLACE FUNCTION experience_console_list()
@@ -1388,9 +1376,7 @@ GRANT  EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, big
 GRANT  EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   TO authenticated;
 
 -- ── 0531: the per-creator request plan ──────────────────────────────────────
-GRANT SELECT (request_creator_count, request_affiliate_per_creator, request_ad_rights_per_creator,
-              request_boost_per_creator, agreed_plan)
-  ON experiences TO authenticated;
+-- (The plan columns' user grant was removed in 0544: read through brand_experience().)
 REVOKE EXECUTE ON FUNCTION experience_plan_count(jsonb, boolean) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_plan_totals(jsonb, int) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) FROM PUBLIC, anon;
@@ -1548,3 +1534,19 @@ REVOKE ALL ON experience_leg_counters FROM anon, authenticated;
 -- vendor_payout_detail_changes records which FIELD NAMES changed, never values.
 ALTER TABLE vendor_payout_detail_changes ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON vendor_payout_detail_changes FROM anon, authenticated;
+
+-- ═════ 0544: the brand's own Experience screens (Phase 6) ═════
+-- Brands read Experiences ONLY through SECURITY DEFINER functions, each behind
+-- brand_experience_require (a member of THIS Experience's brand; never the
+-- house brand; NULL / no session / not a member = "Not found"; admin-only for
+-- the price and sign-off): brand_experiences, brand_experience,
+-- brand_experience_roster, brand_experience_deliverables (+ _release_file),
+-- brand_experience_invoices (+ _invoice_file), brand_experience_report.
+-- Brand writes: brand_experience_request / _quote_answer / _roster_decide /
+-- _release_decide / _signoff, each writing channel 'portal' (staff functions
+-- refuse 'portal'). No direct user grant or policy on these three tables:
+REVOKE ALL ON experiences, experience_roster, experience_quotes FROM anon, authenticated;
+DROP POLICY IF EXISTS experiences_read_brand ON experiences;
+DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
+DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
+

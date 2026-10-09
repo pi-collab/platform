@@ -35,7 +35,7 @@ const STATUS: Record<string, { label: string; tone: ChipTone }> = {
   dropped:    { label: 'Dropped', tone: 'red' },
 }
 const BRAND: Record<string, string> = { pending: 'Brand: no answer yet', accepted: 'Brand accepted', rejected: 'Brand rejected' }
-const DECISION_CHANNELS = CHANNELS.filter(([k]) => k !== 'portal')
+const DECISION_CHANNELS = CHANNELS
 const SIGNUP = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://guapd.com').replace(/\/+$/, '')}/signup/creator`
 const OPEN = ['not_contacted', 'contacted', 'agreed', 'onboarding'] as const
 const empty: ProspectForm = { fullName: '', handle: '', phone: '', costBasis: 'per_day', dayRate: '', days: '1', flat: '', note: '', status: 'not_contacted' }

@@ -181,9 +181,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
                   {(q.shoot_date || q.shoot_city) && <> · {[q.shoot_city, q.shoot_date ? fmt(q.shoot_date) : null].filter(Boolean).join(', ')}</>}
                 </div>
                 {q.message && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>“{q.message}”</p>}
+                {q.brand_note && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', color: '#8C6417' }}>The brand: “{q.brand_note}”</p>}
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--wg-500)', marginTop: 8 }}>
                   {q.proposed_by === 'brand' ? `Recorded by ${q.created_by_name ?? 'Guapd'}${q.recorded_channel ? `, received via ${channelLabel(q.recorded_channel)}` : ''}` : `Sent by ${q.created_by_name ?? 'Guapd'}`}
                   {' · '}{new Date(q.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                  {q.status === 'rejected' && q.decided_at && <> · declined {new Date(q.decided_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{q.recorded_channel === 'portal' ? ' by the brand on Guapd' : ''}</>}
                   {q.status === 'accepted' && q.decided_at && <> · accepted {new Date(q.decided_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{q.proposed_by === 'guapd' && q.recorded_channel ? ` via ${channelLabel(q.recorded_channel)}` : ''}</>}
                 </div>
                 {isOpen && quotesOpen && canSeePrice && !mode && (

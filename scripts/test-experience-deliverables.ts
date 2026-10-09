@@ -207,8 +207,8 @@ async function run() {
   const bitems = ((bv.data as any)?.items ?? []) as any[]
   ok('the brand sees exactly the 3 released items', !bv.error && bitems.length === 3, bv.error?.message ?? String(bitems.length))
   ok('…never D\'s unreleased story', !bitems.some((i) => i.label === 'Story' && i.creator_name !== bitems.find((x) => x.label === 'Story')?.creator_name) && !JSON.stringify(bv.data).includes('d-story'))
-  const KEYS = ['creator_name', 'decided_at', 'decision', 'file_name', 'kind', 'label', 'release_id', 'shared_at', 'url'].join(',')
-  ok('each item carries exactly: release id, creator name, label, kind, link/file name, shared at, decision', bitems.every((i) => Object.keys(i).sort().join(',') === KEYS), Object.keys(bitems[0] ?? {}).sort().join(','))
+  const KEYS = ['can_decide', 'changes_asked', 'creator_name', 'decided_at', 'decided_on_guapd', 'decision', 'file_name', 'kind', 'label', 'release_id', 'shared_at', 'url'].join(',')
+  ok('each item carries exactly: release id, creator name, label, kind, link/file name, shared at, decision (+ 0544: who decided, what they asked to change, whether they can still decide)', bitems.every((i) => Object.keys(i).sort().join(',') === KEYS), Object.keys(bitems[0] ?? {}).sort().join(','))
   ok('top level: title, brand name, shoot date and city, items only', Object.keys(bv.data as object).sort().join(',') === 'brand_name,items,shoot_city,shoot_date,title')
   const raw = JSON.stringify(bv.data)
   const { data: handles } = await admin.from('creators').select('handle').in('id', [G.id, D.id])

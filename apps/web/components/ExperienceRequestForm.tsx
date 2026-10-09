@@ -5,15 +5,30 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { DatePill } from '@/components/DealOptionPills'
 import { CHANNELS, DELIVERABLE_TYPES, countOf, isVideoType } from '@/lib/experience-request'
-import { recordExperienceRequest } from '../actions'
-import { card, fieldLabel, formError, neonBtn, pillBtn } from '../ui'
+import type { RequestFormFields } from '@/lib/experience-request-validate'
+import { card, fieldLabel, formError, neonBtn, pillBtn } from '@/app/experiences-admin/ui'
 
 /**
- * Staff record a brand's Experience request ON THE BRAND'S BEHALF (it arrived
- * on WhatsApp, email or a call). The brand-facing request form comes later and
- * will write the same fields.
+ * The Experience request form, two ways (0544):
+ *   - staff record a brand's request ON THE BRAND'S BEHALF (it arrived on
+ *     WhatsApp, email or a call): pick the brand and how it arrived;
+ *   - the brand requests one themselves on /experiences/new: no brand or
+ *     channel to pick (it is their brand, on Guapd).
+ * Both send the same fields, checked by parseExperienceRequest and again by
+ * the database.
  */
-export default function NewExperienceForm({ brands }: { brands: { id: string; name: string; brand_status: string }[] }) {
+type Out<T> = { ok: true; data: T } | { ok: false; error: string }
+export type RequestSubmit = RequestFormFields & { brandId?: string; channel?: string }
+
+export default function ExperienceRequestForm({ mode, brands = [], submit, doneBase, cancelHref }: {
+  mode: 'staff' | 'brand'
+  brands?: { id: string; name: string; brand_status: string }[]
+  submit: (f: RequestSubmit) => Promise<Out<string>>
+  /** Where to go after: `${doneBase}/${id}`. */
+  doneBase: string
+  cancelHref: string
+}) {
+  const staff = mode === 'staff'
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -43,16 +58,16 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
   const videosPer = items.filter((i) => isVideoType(i.type)).reduce((t, i) => t + (Number(i.count) || 0), 0)
   const totalsLine = n > 0 ? Array.from(byType).filter(([, c]) => c > 0).map(([t, c]) => countOf(c * n, t)).join(' · ') : ''
 
-  const submit = () => {
+  const send = () => {
     setError(null)
-    if (!brandId) return setError('Pick the brand.')
+    if (staff && !brandId) return setError('Pick the brand.')
     start(async () => {
-      const r = await recordExperienceRequest({
+      const r = await submit({
         brandId, title, creatorCount: creators, deliverables: items.map((i) => ({ type: i.type, count: i.count })),
         affiliate, affiliatePerCreator: affPer, adRights, adRightsPerCreator: adPer, adRightsMonths: adMonths,
         boost, boostPerCreator: boostPer, boostMonths, location, dateFrom, dateTo, brief, channel,
       })
-      if (r.ok) router.push(`/experiences-admin/${r.data}`)
+      if (r.ok) router.push(`${doneBase}/${r.data}`)
       else setError(r.error)
     })
   }
@@ -61,9 +76,10 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
     <div style={{ display: 'grid', gap: 20, marginTop: 20 }}>
       {/* ── Who and how ── */}
       <section className="surface" style={card}>
-        <h2 className="sect-head">The request</h2>
+        <h2 className="sect-head">{staff ? 'The request' : 'Your Experience'}</h2>
         <div className="sect-rule" />
         <div className="xp-grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginTop: 18 }}>
+          {staff && <>
           <div>
             <label style={fieldLabel} htmlFor="xp-brand">Brand</label>
             <select id="xp-brand" className="dinput" value={brandId} onChange={(e) => setBrandId(e.target.value)}>
@@ -80,9 +96,10 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
               {CHANNELS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
             </select>
           </div>
+          </>}
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={fieldLabel} htmlFor="xp-title">Title</label>
-            <input id="xp-title" className="dinput" placeholder="e.g. Kiro Beauty · Diwali UGC day shoot" value={title} maxLength={140} onChange={(e) => setTitle(e.target.value)} />
+            <input id="xp-title" className="dinput" placeholder={staff ? 'e.g. Kiro Beauty · Diwali UGC day shoot' : 'e.g. Diwali UGC day shoot'} value={title} maxLength={140} onChange={(e) => setTitle(e.target.value)} />
           </div>
         </div>
       </section>
@@ -91,7 +108,7 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
       <section className="surface" style={card}>
         <h2 className="sect-head">The plan</h2>
         <div className="sect-rule" />
-        <p className="t-body" style={{ margin: '12px 0 0' }}>How many creators, and what each one makes. Every creator starts from this; individual creators can be adjusted later, as long as the total still matches what the brand buys.</p>
+        <p className="t-body" style={{ margin: '12px 0 0' }}>How many creators, and what each one makes. Every creator starts from this; individual creators can be adjusted later, as long as the total still matches what {staff ? 'the brand buys' : 'you buy'}.</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, marginTop: 18, flexWrap: 'wrap' }}>
           <div style={{ width: 180 }}>
             <label style={fieldLabel} htmlFor="xp-creators">Creators wanted</label>
@@ -126,9 +143,9 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
         <div style={{ display: 'grid', gap: 12, marginTop: 22 }}>
           <Toggle label="Affiliate" hint="The creators also earn on sales" on={affiliate} onChange={setAffiliate}
             per={affPer} onPer={setAffPer} perRequired videosPer={videosPer} />
-          <Toggle label="Ad rights" hint="The brand runs the videos as paid ads" on={adRights} onChange={setAdRights}
+          <Toggle label="Ad rights" hint={staff ? 'The brand runs the videos as paid ads' : 'You run the videos as paid ads'} on={adRights} onChange={setAdRights}
             per={adPer} onPer={setAdPer} videosPer={videosPer} months={adMonths} onMonths={setAdMonths} />
-          <Toggle label="Boost" hint="The brand boosts the creators' own posts" on={boost} onChange={setBoost}
+          <Toggle label="Boost" hint={staff ? "The brand boosts the creators' own posts" : "You boost the creators' own posts"} on={boost} onChange={setBoost}
             per={boostPer} onPer={setBoostPer} videosPer={videosPer} months={boostMonths} onMonths={setBoostMonths} />
         </div>
       </section>
@@ -152,7 +169,7 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={fieldLabel} htmlFor="xp-brief">Brief</label>
-            <textarea id="xp-brief" className="dinput" rows={5} maxLength={4000} placeholder="What the brand told us: the product, the look, the audience, anything to avoid."
+            <textarea id="xp-brief" className="dinput" rows={5} maxLength={4000} placeholder={staff ? 'What the brand told us: the product, the look, the audience, anything to avoid.' : 'The product, the look, the audience, anything to avoid.'}
               value={brief} onChange={(e) => setBrief(e.target.value)} style={{ height: 'auto', padding: '12px 14px', lineHeight: 1.5 }} />
           </div>
         </div>
@@ -160,9 +177,9 @@ export default function NewExperienceForm({ brands }: { brands: { id: string; na
 
       {error && <div role="alert" style={formError}>{error}</div>}
       <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        <Link href="/experiences-admin" style={{ ...pillBtn, height: 46 }}>Cancel</Link>
-        <button type="button" className="neonbtn" style={{ ...neonBtn, opacity: pending ? 0.6 : 1 }} disabled={pending} onClick={submit}>
-          {pending ? 'Saving…' : 'Record request'}
+        <Link href={cancelHref} style={{ ...pillBtn, height: 46 }}>Cancel</Link>
+        <button type="button" className="neonbtn" style={{ ...neonBtn, opacity: pending ? 0.6 : 1 }} disabled={pending} onClick={send}>
+          {pending ? (staff ? 'Saving…' : 'Sending…') : staff ? 'Record request' : 'Send request to Guapd'}
         </button>
       </div>
 

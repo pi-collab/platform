@@ -523,7 +523,11 @@ Built in migration 0542 + the console's counters block and entered-rate path (Cr
 - **Payouts on the creator's side:** "Paid by Guapd" on Payments (status, net, TDS, paid, date, reference) and in dashboard earnings at net.
 - **Deferred:** affiliate invoice (4b), RazorpayX.
 
-## Phase 6: brand screens (DRAFT 2026-10-09, awaiting review; nothing built)
+## Phase 6: brand screens (APPROVED + BUILT 2026-10-09, staging only)
+Decisions (Palak, 2026-10-09): every approved brand can request; the brand accepts or declines-with-note (no counter-price on Guapd; staff record a counter); brand ADMINS accept the price and sign off, any member decides creators and deliverables; brands lose direct table reads (functions only); the report ships WITHOUT analytics (Guapd-produced content has no honest metric), which resolves Phase 2.5 as invoice + locked-roster names + delivered items; a brand can change a staff-recorded decision until lock / approval / sign-off. The shared StepperTimeline phone fix folds in here.
+Built in migration 0544 (`brand_experience_require` gate, `brand_experiences` / `brand_experience` / `_roster` / `_report` reads, the four 0538/0540 reads moved onto the gate, `brand_experience_request` / `_quote_answer` / `_roster_decide` / `_release_decide` / `_signoff`; shared internals `experience_request_insert` and `experience_quote_accept_apply`; staff functions refuse 'portal'), `/experiences`, `/experiences/new`, `/experiences/[id]`, the brand nav link; tests in scripts/test-experience-brand-portal.ts (docs/test-cases.md §111).
+
+The draft as reviewed:
 The last build phase: the brand-facing version of everything staff have recorded on the brand's behalf, on `/experiences` (reserved in `lib/experience-staff-auth.ts` for the brand, `verifyBrand`, never the staff gate). Migration 0543, staging only.
 
 **Screens**

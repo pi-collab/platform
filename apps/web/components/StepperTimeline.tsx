@@ -72,7 +72,7 @@ export default function StepperTimeline({ currentStepIndex, nextLabel, events = 
           return (
             <div
               key={label}
-              style={{ position: 'relative', flex: '1 1 0%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}
+              style={{ position: 'relative', flex: '1 1 0%', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 9 }}
               onMouseEnter={() => setHoveredStep(i)}
               onMouseLeave={() => setHoveredStep(null)}
             >
@@ -99,11 +99,12 @@ export default function StepperTimeline({ currentStepIndex, nextLabel, events = 
                   {current && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ink)' }} />}
                 </span>
               </div>
-              <span style={{
+              <span className="stp-label" data-current={current ? 'true' : 'false'} style={{
                 fontFamily: 'var(--font-ui)',
                 fontSize: 11.5,
                 fontWeight: done || current ? 700 : 600,
                 whiteSpace: 'nowrap',
+                textAlign: 'center',
                 color: done || current ? 'var(--ink)' : 'var(--ink-faint)',
               }}>
                 {label}
@@ -149,6 +150,10 @@ export default function StepperTimeline({ currentStepIndex, nextLabel, events = 
       </div>
 
       {/* Tooltip animation */}
+      {/* Phones: six or seven labels do not fit one line each, and wrapping
+          breaks words. Only the current step is named (centred on its dot);
+          the ticks show progress and the line below says what is next. */}
+      <style dangerouslySetInnerHTML={{ __html: '@media (max-width: 560px) { .stp-label[data-current=false] { display: none; } .stp-label[data-current=true] { font-size: 11px !important; } }' }} />
       <style>{`@keyframes stepTooltipIn { from { opacity: 0; transform: translateX(-50%) translateY(4px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }`}</style>
 
       {/* Footer */}

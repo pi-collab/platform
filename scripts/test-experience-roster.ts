@@ -134,10 +134,11 @@ async function run() {
   ok('the brand cannot read the notes table', refused(bn), bn.error?.message ?? `${bn.data?.length} rows`)
   ok('the creator cannot read the notes table', refused(cn), cn.error?.message ?? `${cn.data?.length} rows`)
   ok('the brand cannot write a note', refused(await brand.from('experience_roster_notes').insert({ roster_id: row(K1).id, note: 'x' })))
-  const br = await brand.from('experience_roster').select('id, brand_decision').eq('experience_id', E)
-  ok('the brand still reads its own roster basics (for its future view)', !br.error && (br.data ?? []).length === 3, br.error?.message ?? '')
-  const bp = await brand.from('experience_roster').select('id, decision_channel').eq('experience_id', E)
-  ok('…but not the columns added here (channel, planned deliverables)', refused(bp) && refused(await brand.from('experience_roster').select('planned_deliverables').eq('experience_id', E)))
+  // 0544: the brand reads its roster through brand_experience_roster only.
+  const br = await brand.rpc('brand_experience_roster', { p_experience_id: E })
+  ok('the brand reads its own roster (names, plan, decision) through brand_experience_roster', !br.error && ((br.data as any)?.creators ?? []).length === 3, br.error?.message ?? '')
+  ok('…and nothing from the table directly (0544)', refused(await brand.from('experience_roster').select('id').eq('experience_id', E)) && refused(await brand.from('experience_roster').select('planned_deliverables').eq('experience_id', E)))
+  ok('…with no note, channel, creator id or leg column in it', !/note|creator_id|leg_|channel/.test(JSON.stringify(Object.keys(((br.data as any)?.creators ?? [])[0] ?? {}))))
   const cr = await creator.from('experience_roster').select('id').eq('experience_id', E)
   ok('the creator reads no roster at all', !!cr.error || (cr.data ?? []).length === 0)
   const nAudit = (await admin.from('ops_events').select('detail').eq('target_id', row(K1).id).eq('action', 'experience.roster_note_set')).data ?? []
