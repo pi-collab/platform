@@ -7071,12 +7071,13 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 
 **Creators not on Guapd yet (0541, SECURITY + functional)**
 - [ ] Operational staff only: no-access staff, brands, creators, anonymous and the service role are refused; no user reads `experience_roster_prospects` directly; the brand sees only the roster, never this list.
-- [ ] Added on the pool page with name, Instagram handle (stored clean: no @, lower case, URL accepted), optional phone, expected cost (day rate × days, or flat) and a note. NULL basis, missing days, zero fee, bad handle, bad phone are refused. A handle already bookable on Guapd is refused ("add them from the pool"); a live duplicate is refused.
+- [ ] Added from the Experience page: "Add someone not on Guapd" sits in the roster header beside "Add creators" and opens the form under the roster (two rows of three fields, Cancel/Add right-aligned). Name, Instagram handle (stored clean: no @, lower case, URL accepted), optional phone, expected cost (day rate × days, or flat) and a note. NULL basis, missing days, zero fee, bad handle, bad phone are refused. A handle already bookable on Guapd is refused ("add them from the pool"); a live duplicate is refused.
 - [ ] Status contacted → agreed → onboarding; "linked" cannot be set by hand. The brand's answer needs the channel ("portal" refused).
 - [ ] They are not on the roster (cannot be locked or sent a deal); the P&L shows them as "not on Guapd yet (about ₹X expected)", never in the margin.
 - [ ] When their handle is on Guapd now, the list says so. "Link to their account" (vetted, bookable only) puts them on the roster carrying the brand's answer and channel, planned from the agreed per-creator plan; a linked entry no longer changes; a creator already on the roster cannot be linked again.
 - [ ] Drop needs a reason and is final; the handle can be added again after a drop. Nothing changes once the shoot is scheduled.
-- [ ] The roster panel says how many are not on Guapd yet (and how many the brand accepted), linking to them.
+- [ ] They list INSIDE the roster panel, under the roster rows, in the same columns (avatar, name + handle + "Not on Guapd", expected cost, status + the brand's answer, a ⋯ menu: link, brand's answer, mark status, edit, drop). Not counted in the roster number. Linked ones leave this list (they are on the roster above); dropped ones show as one line. The creator pool page no longer carries this section.
+- [ ] Phone width: each row stacks like a roster row (status and menu under the name); no sideways scroll from these rows.
 - [ ] Every action writes `ops_events` with no amount and no phone number. Nothing messages anyone; "Copy sign-up link" is for staff to send themselves.
 
 **Environment:** 0536 + 0541 are on STAGING only.

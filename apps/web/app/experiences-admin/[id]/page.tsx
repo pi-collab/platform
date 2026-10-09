@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -51,10 +51,14 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   const [roster, reconcile, prospects] = hasRoster
     ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), listConsoleProspects(e.id)])
     : [null, null, null]
-  const prospectSummary = prospects?.ok
-    ? { open: prospects.data.filter((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status)).length,
-        accepted: prospects.data.filter((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status) && p.brand_decision === 'accepted').length }
-    : undefined
+  // Not-on-Guapd entries list under the roster; linking one needs the vetted
+  // creators not on it yet, so the pool is read only when there is one to link.
+  const prospectRows = prospects?.ok ? prospects.data : []
+  const pool = rosterEditable && prospectRows.some((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status)) ? await listConsoleCreatorPool() : null
+  const onRoster = new Set(roster?.ok ? roster.data.map((r) => r.creator_id) : [])
+  const linkable = pool?.ok
+    ? pool.data.filter((c) => !onRoster.has(c.id)).map((c) => ({ id: c.id, name: c.full_name, handle: c.handle ? (c.handle.startsWith('@') ? c.handle : `@${c.handle}`) : '' }))
+    : []
   // Creator deals exist once the roster is locked (Confirmed onward).
   const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
   const [legs, legsReconcile, creatorBrief, counters] = hasLegs
@@ -135,7 +139,7 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       {hasRoster && (
         <div style={{ marginTop: 20 }}>
           {roster?.ok && reconcile?.ok
-            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} prospects={prospectSummary} />
+            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} prospects={prospectRows} linkable={linkable} />
             : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || 'Could not load the roster'} />}
         </div>
       )}

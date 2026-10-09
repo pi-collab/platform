@@ -9,6 +9,9 @@ import { CHANNELS, DELIVERABLE_TYPES, channelLabel, countOf } from '@/lib/experi
 import type { ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
 import { lockRoster, recordRosterDecision, removeFromRoster, setRosterNote, setRosterPlan } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
+import type { ConsoleProspect } from '@/lib/experience-console-server'
+import ProspectsSection from './ProspectsSection'
+import { Avatar, MenuItem, kebab, menuBox, ROSTER_COLS } from './roster-bits'
 
 /**
  * The Experience roster (staff console). Names, each creator's planned
@@ -25,16 +28,18 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
   accepted: { label: 'Brand accepted', tone: 'lime' },
   rejected: { label: 'Brand rejected', tone: 'red' },
 }
-const COLS = '40px 1.5fr 1.4fr 150px 34px'
+const COLS = ROSTER_COLS
 
-export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects }: {
+export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects, linkable }: {
   experienceId: string
   /** Building roster or Confirmed: creators can still be added (add-after-lock). */
   editable: boolean
   roster: ConsoleRosterRow[]
   reconcile: ConsoleReconcile | null
-  /** 0541: creators not on Guapd yet (not on the roster until linked). */
-  prospects?: { open: number; accepted: number }
+  /** 0541: creators not on Guapd yet, listed under the roster (not on it until linked). */
+  prospects: ConsoleProspect[]
+  /** Vetted creators not on this roster, to link a not-on-Guapd entry to. */
+  linkable: { id: string; name: string; handle: string }[]
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -46,6 +51,8 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   const [note, setNote] = useState('')
   const [confirmLock, setConfirmLock] = useState(false)
   const [removing, setRemoving] = useState<ConsoleRosterRow | null>(null)
+  const [addingProspect, setAddingProspect] = useState(false)
+  const openProspects = prospects.filter((p) => p.status !== 'dropped' && p.status !== 'linked').length
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string } | { error?: string | null }>, after?: () => void) => {
     setError(null)
@@ -84,6 +91,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                 creator's shoot day rate on the card). The brand's picks are
                 recorded with the channel they came through, chosen there. */}
             <Link href={`/experiences-admin/${experienceId}/pool?as=brand`} style={{ ...pillBtn, height: 44 }}>Add brand&apos;s picks</Link>
+            <button type="button" style={{ ...pillBtn, height: 44 }} onClick={() => setAddingProspect(true)}>Add someone not on Guapd</button>
             <Link href={`/experiences-admin/${experienceId}/pool`} className="neonbtn" style={{ ...neonBtn, height: 44 }}>Add creators</Link>
           </div>
         )}
@@ -118,15 +126,8 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
 
       {error && <div role="alert" style={{ ...formError, marginTop: 14 }}>{error}</div>}
 
-      {prospects && prospects.open > 0 && (
-        <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 12, background: '#F4F4EF', fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)' }}>
-          {prospects.open} not on Guapd yet{prospects.accepted ? ` (${prospects.accepted} accepted by the brand)` : ''}: not on the roster until you link their account.{' '}
-          <Link href={`/experiences-admin/${experienceId}/pool#not-on-guapd`} style={{ color: 'var(--ink)', fontWeight: 700 }}>Manage them</Link>
-        </div>
-      )}
-
       {roster.length === 0 ? (
-        <p className="t-body" style={{ margin: '18px 0 0' }}>No creators yet. Add creators, or the brand&apos;s suggestions; each one starts from the agreed per-creator plan.</p>
+        <p className="t-body" style={{ margin: '18px 0 0' }}>{openProspects ? 'No one on the roster yet.' : 'No creators yet.'} Add creators, or the brand&apos;s suggestions; each one starts from the agreed per-creator plan.</p>
       ) : (
         <div style={{ marginTop: 18 }}>
           <div className="xp-rhead" style={{ display: 'grid', gridTemplateColumns: COLS, gap: 16, alignItems: 'center', padding: '0 4px 12px', borderBottom: '1px solid var(--hairline)' }}>
@@ -233,6 +234,9 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
         </div>
       )}
 
+      <ProspectsSection experienceId={experienceId} editable={editable} prospects={prospects} linkable={linkable}
+        adding={addingProspect} onAddingChange={setAddingProspect} />
+
       {editable && roster.length > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline)', flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: lockBlocked ? 'var(--wg-500)' : 'var(--ink)' }}>
@@ -264,29 +268,4 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
       ` }} />
     </section>
   )
-}
-
-function Avatar({ name, url }: { name: string; url: string | null }) {
-  const initials = name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-  // eslint-disable-next-line @next/next/no-img-element
-  return url ? <img src={url} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
-    : <span style={{ width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--ink-soft)', background: '#F7F4FB' }}>{initials}</span>
-}
-
-function MenuItem({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
-  return (
-    <button type="button" onClick={onClick} className="pmi" style={{
-      display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: 'none',
-      fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500, color: danger ? '#C4494F' : 'var(--ink)', cursor: 'pointer',
-    }}>{children}</button>
-  )
-}
-
-const kebab = (open: boolean): React.CSSProperties => ({
-  width: 34, height: 34, borderRadius: 9, background: open ? 'var(--sec-2)' : 'transparent', border: 'none',
-  cursor: 'pointer', color: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-})
-const menuBox: React.CSSProperties = {
-  position: 'absolute', top: 'calc(100% + 6px)', right: 0, width: 190, borderRadius: 12, background: '#FFFFFF',
-  boxShadow: '0 4px 16px rgba(22,23,15,.12)', border: '1px solid var(--hairline)', padding: 6, zIndex: 10,
 }
