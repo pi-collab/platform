@@ -27,8 +27,9 @@ import { Avatar, MenuItem, kebab, menuBox, ROSTER_COLS } from './roster-bits'
  * themselves. Staff only; the brand never sees this list.
  */
 const STATUS: Record<string, { label: string; tone: ChipTone }> = {
-  contacted:  { label: 'Contacted', tone: 'neutral' },
-  agreed:     { label: 'Agreed', tone: 'blue' },
+  not_contacted: { label: 'Not contacted yet', tone: 'neutral' },
+  contacted:  { label: 'Contacted', tone: 'blue' },
+  agreed:     { label: 'Agreed', tone: 'lime' },
   onboarding: { label: 'Onboarding', tone: 'amber' },
   linked:     { label: 'On the roster', tone: 'green' },
   dropped:    { label: 'Dropped', tone: 'red' },
@@ -36,7 +37,8 @@ const STATUS: Record<string, { label: string; tone: ChipTone }> = {
 const BRAND: Record<string, string> = { pending: 'Brand: no answer yet', accepted: 'Brand accepted', rejected: 'Brand rejected' }
 const DECISION_CHANNELS = CHANNELS.filter(([k]) => k !== 'portal')
 const SIGNUP = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://guapd.com').replace(/\/+$/, '')}/signup/creator`
-const empty: ProspectForm = { fullName: '', handle: '', phone: '', costBasis: 'per_day', dayRate: '', days: '1', flat: '', note: '' }
+const OPEN = ['not_contacted', 'contacted', 'agreed', 'onboarding'] as const
+const empty: ProspectForm = { fullName: '', handle: '', phone: '', costBasis: 'per_day', dayRate: '', days: '1', flat: '', note: '', status: 'not_contacted' }
 
 export default function ProspectsSection({ experienceId, editable, prospects, linkable, adding, onAddingChange }: {
   experienceId: string
@@ -101,10 +103,16 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
           onSave={(f) => run(() => addProspectAction(experienceId, f), () => onAddingChange(false), `${f.fullName} added. Send them the sign-up link.`)} />
       )}
 
+      {open.length > 0 && (
+        <div className="xp-rhead" style={{ display: 'grid', gridTemplateColumns: ROSTER_COLS, gap: 16, alignItems: 'center', padding: '12px 4px' }}>
+          <span /><span className="t-meta">Creator</span><span className="t-meta">Expected cost</span><span className="t-meta">Status</span><span />
+        </div>
+      )}
+
       {open.map((p) => {
         const st = STATUS[p.status]
         return (
-          <div key={p.id} style={{ borderBottom: '1px solid var(--hairline)', opacity: p.brand_decision === 'rejected' ? 0.55 : 1 }}>
+          <div key={p.id} style={{ borderTop: '1px solid var(--hairline)', opacity: p.brand_decision === 'rejected' ? 0.55 : 1 }}>
             <div className="xp-rrow" style={{ display: 'grid', gridTemplateColumns: ROSTER_COLS, gap: 16, alignItems: 'center', padding: '16px 4px' }}>
               <Avatar name={p.full_name} url={null} />
               <div style={{ minWidth: 0 }}>
@@ -124,7 +132,12 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
                 )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                <StatusChip label={st.label} tone={st.tone} />
+                {editable
+                  ? <select aria-label={`Where things stand with ${p.full_name}`} className="xp-status-select" data-tone={st.tone} value={p.status} disabled={pending}
+                      onChange={(e) => run(() => setProspectStatusAction(experienceId, p.id, e.target.value))}>
+                      {OPEN.map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}
+                    </select>
+                  : <StatusChip label={st.label} tone={st.tone} />}
                 <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: p.brand_decision === 'accepted' ? '#3F6212' : p.brand_decision === 'rejected' ? '#9C4147' : 'var(--ink-faint)' }}>
                   {BRAND[p.brand_decision]}{p.decision_channel ? ` · ${CHANNELS.find(([k]) => k === p.decision_channel)?.[1] ?? p.decision_channel}` : ''}
                 </span>
@@ -139,9 +152,6 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
                   <div style={{ ...menuBox, width: 220 }}>
                     <MenuItem onClick={() => { setMenu(null); setLinkTo(p.match?.bookable && !p.match.on_roster ? p.match.creator_id : ''); setLinking(p) }}>Link to their account…</MenuItem>
                     <MenuItem onClick={() => { setMenu(null); setDecision(p.brand_decision === 'rejected' ? 'rejected' : 'accepted'); setChannel(p.decision_channel ?? 'whatsapp'); setDeciding(p) }}>Brand&rsquo;s answer…</MenuItem>
-                    {(['contacted', 'agreed', 'onboarding'] as const).filter((s) => s !== p.status).map((s) => (
-                      <MenuItem key={s} onClick={() => run(() => setProspectStatusAction(experienceId, p.id, s))}>Mark {STATUS[s].label.toLowerCase()}</MenuItem>
-                    ))}
                     <MenuItem onClick={() => { setMenu(null); setError(null); setEditing(p.id) }}>Edit</MenuItem>
                     <MenuItem danger onClick={() => { setMenu(null); setReason(''); setDropping(p) }}>Drop…</MenuItem>
                   </div>
@@ -190,6 +200,7 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
         confirmLabel="Link and add to the roster" busy={pending}
         onConfirm={() => linking && run(() => linkProspectAction(experienceId, linking.id, linkTo), () => setLinking(null), 'Linked: they are on the roster now.')}
         onCancel={() => setLinking(null)} />
+      <style dangerouslySetInnerHTML={{ __html: STATUS_SELECT_CSS }} />
     </div>
   )
 }
@@ -203,7 +214,7 @@ function Editor({ initial, busy, onSave, onCancel }: { initial?: ConsoleProspect
   const set = (k: keyof ProspectForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value })
   const field = (text: string, el: React.ReactNode) => <label style={{ minWidth: 0 }}><span style={fieldLabel}>{text}</span>{el}</label>
   return (
-    <div style={{ margin: '14px 4px 16px', padding: 16, borderRadius: 14, background: '#F7F7F4', display: 'grid', gap: 12 }}>
+    <div style={{ margin: '14px 0 16px', padding: 16, borderRadius: 14, background: '#F7F7F4', display: 'grid', gap: 12 }}>
       <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{initial ? `Edit ${initial.full_name}` : 'Add someone not on Guapd'}</div>
       {/* Two rows of three, always: who they are, then what they cost. */}
       <div className="xp-prospect-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
@@ -216,7 +227,14 @@ function Editor({ initial, busy, onSave, onCancel }: { initial?: ConsoleProspect
           {field('Days', <input className="dinput" value={f.days} onChange={set('days')} inputMode="decimal" />)}
         </> : <div className="xp-prospect-span2" style={{ gridColumn: 'span 2' }}>{field('Fee (₹)', <input className="dinput" value={f.flat} onChange={set('flat')} inputMode="decimal" />)}</div>}
       </div>
-      {field('Note (optional)', <input className="dinput" value={f.note} onChange={set('note')} maxLength={1000} placeholder="Found via the brand's tags; agreed over DM" />)}
+      <div className="xp-prospect-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        {!initial && field('Where things stand', <select className="dinput" value={f.status} onChange={set('status')}>
+          {OPEN.map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}
+        </select>)}
+        <div className="xp-prospect-span2" style={{ gridColumn: initial ? '1 / -1' : 'span 2' }}>
+          {field('Note (optional)', <input className="dinput" value={f.note} onChange={set('note')} maxLength={1000} placeholder="Found via the brand's tags; agreed over DM" />)}
+        </div>
+      </div>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         <button type="button" onClick={onCancel} style={pillBtn}>Cancel</button>
         <button type="button" className="neonbtn" disabled={busy} onClick={() => onSave(f)} style={{ ...neonBtn, height: 40 }}>{busy ? 'Saving…' : initial ? 'Save' : 'Add'}</button>
@@ -225,3 +243,15 @@ function Editor({ initial, busy, onSave, onCancel }: { initial?: ConsoleProspect
     </div>
   )
 }
+
+/* The row's status as a chip-shaped dropdown: same height, radius and type as
+   StatusChip, the chevron inside the right padding. */
+const STATUS_SELECT_CSS = `
+.xp-status-select { appearance: none; -webkit-appearance: none; height: 28px; border-radius: 999px; border: 1px solid var(--hairline, #EAEAE3);
+  padding: 0 28px 0 12px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; max-width: 100%;
+  background: var(--card, #fff) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A4F58' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 11px 11px; }
+.xp-status-select[data-tone="blue"] { background-color: #EEF3FC; border-color: #D5E1F5; }
+.xp-status-select[data-tone="lime"] { background-color: #F4FBDC; border-color: #DCEBA8; }
+.xp-status-select[data-tone="amber"] { background-color: #FCF6E4; border-color: #EEDDB0; }
+.xp-status-select:disabled { opacity: .6; cursor: default; }
+`

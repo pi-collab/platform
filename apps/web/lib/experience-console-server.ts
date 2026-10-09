@@ -789,7 +789,7 @@ export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreato
 export interface ConsoleProspect {
   id: string; full_name: string; instagram_handle: string; phone: string | null
   cost_basis: 'per_day' | 'flat'; expected_day_rate_paise: number | null; expected_days: number | null; expected_total_paise: number
-  status: 'contacted' | 'agreed' | 'onboarding' | 'linked' | 'dropped'
+  status: 'not_contacted' | 'contacted' | 'agreed' | 'onboarding' | 'linked' | 'dropped'
   brand_decision: 'pending' | 'accepted' | 'rejected'; decision_channel: string | null; note: string | null
   linked_creator_id: string | null; linked_creator_name: string | null; linked_at: string | null; dropped_reason: string | null
   created_at: string; updated_at: string
@@ -813,15 +813,16 @@ export async function listConsoleProspects(experienceId: string): Promise<Result
     expected_day_rate_paise: n(r.expected_day_rate_paise), expected_days: n(r.expected_days), expected_total_paise: Number(r.expected_total_paise),
   })) }
 }
-export async function addProspect(experienceId: string, p: ProspectInput): Promise<Result<string>> {
-  const { data, error } = await createClient().rpc('experience_console_prospect_add', { p_experience_id: experienceId, ...prospectArgs(p) })
+export type ProspectStatus = 'not_contacted' | 'contacted' | 'agreed' | 'onboarding'
+export async function addProspect(experienceId: string, p: ProspectInput, status: ProspectStatus): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_prospect_add', { p_experience_id: experienceId, ...prospectArgs(p), p_status: status })
   return error ? fail(error) : { ok: true, data: data as string }
 }
 export async function updateProspect(prospectId: string, p: ProspectInput): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_prospect_update', { p_prospect_id: prospectId, ...prospectArgs(p) })
   return error ? fail(error) : { ok: true, data: null }
 }
-export async function setProspectStatus(prospectId: string, status: 'contacted' | 'agreed' | 'onboarding'): Promise<Result<null>> {
+export async function setProspectStatus(prospectId: string, status: ProspectStatus): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_prospect_status', { p_prospect_id: prospectId, p_status: status })
   return error ? fail(error) : { ok: true, data: null }
 }

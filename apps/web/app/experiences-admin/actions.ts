@@ -849,7 +849,9 @@ export async function clearBrandSignoffAction(experienceId: string, reason: stri
 // Recorded on the "Add creators" page; on the roster only once linked to their
 // Guapd account. Nothing here messages anyone.
 
-export interface ProspectForm { fullName: string; handle: string; phone: string; costBasis: string; dayRate: string; days: string; flat: string; note: string }
+export interface ProspectForm { fullName: string; handle: string; phone: string; costBasis: string; dayRate: string; days: string; flat: string; note: string; status?: string }
+const PROSPECT_STATUSES = ['not_contacted', 'contacted', 'agreed', 'onboarding'] as const
+const isProspectStatus = (s: unknown): s is (typeof PROSPECT_STATUSES)[number] => typeof s === 'string' && (PROSPECT_STATUSES as readonly string[]).includes(s)
 function prospectInput(f: ProspectForm): ProspectInput | string {
   const fullName = cleanText(f.fullName, 120)
   if (!fullName || fullName.length < 2) return 'Enter their name.'
@@ -875,7 +877,8 @@ export async function addProspectAction(experienceId: string, f: ProspectForm): 
   if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
   const input = prospectInput(f)
   if (typeof input === 'string') return { ok: false, error: input }
-  const r = await addProspect(experienceId, input)
+  if (!isProspectStatus(f.status)) return { ok: false, error: 'Pick where things stand.' }
+  const r = await addProspect(experienceId, input, f.status)
   if (r.ok) poolPath(experienceId)
   return r
 }
@@ -893,7 +896,7 @@ export async function editProspectAction(experienceId: string, prospectId: strin
 export async function setProspectStatusAction(experienceId: string, prospectId: string, status: string): Promise<Out> {
   const refused = await gate(); if (refused) return refused
   if (!isUuid(experienceId) || !isUuid(prospectId)) return { ok: false, error: 'Unknown entry.' }
-  if (status !== 'contacted' && status !== 'agreed' && status !== 'onboarding') return { ok: false, error: 'Contacted, agreed or onboarding.' }
+  if (!isProspectStatus(status)) return { ok: false, error: 'Not contacted yet, contacted, agreed or onboarding.' }
   const r = await setProspectStatus(prospectId, status)
   if (r.ok) poolPath(experienceId)
   return r

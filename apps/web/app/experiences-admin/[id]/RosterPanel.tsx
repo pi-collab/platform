@@ -80,13 +80,13 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
 
   return (
     <section className="surface" style={card}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h2 className="sect-head">Roster <span style={{ color: 'var(--wg-500)', fontWeight: 500, marginLeft: 6 }}>{roster.filter((r) => r.brand_decision !== 'rejected').length}{reconcile?.creators_planned ? ` of ${reconcile.creators_planned} planned` : ''}</span></h2>
           <div className="sect-rule" />
         </div>
         {editable && (
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="xp-roster-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Both open the creator pool (the Growth pool's layout, with each
                 creator's shoot day rate on the card). The brand's picks are
                 recorded with the channel they came through, chosen there. */}
@@ -262,6 +262,8 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 720px) {
           .xp-rhead { display: none !important; }
+          .xp-roster-actions { width: 100%; }
+          .xp-roster-actions > * { flex: 1 1 100%; justify-content: center; }
           .xp-rrow { grid-template-columns: 40px 1fr 34px !important; }
           .xp-rrow > :nth-child(3), .xp-rrow > :nth-child(4) { grid-column: 2 / 3; }
         }

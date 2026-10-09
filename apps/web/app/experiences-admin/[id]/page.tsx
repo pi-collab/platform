@@ -54,7 +54,7 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
   // Not-on-Guapd entries list under the roster; linking one needs the vetted
   // creators not on it yet, so the pool is read only when there is one to link.
   const prospectRows = prospects?.ok ? prospects.data : []
-  const pool = rosterEditable && prospectRows.some((p) => ['contacted', 'agreed', 'onboarding'].includes(p.status)) ? await listConsoleCreatorPool() : null
+  const pool = rosterEditable && prospectRows.some((p) => ['not_contacted', 'contacted', 'agreed', 'onboarding'].includes(p.status)) ? await listConsoleCreatorPool() : null
   const onRoster = new Set(roster?.ok ? roster.data.map((r) => r.creator_id) : [])
   const linkable = pool?.ok
     ? pool.data.filter((c) => !onRoster.has(c.id)).map((c) => ({ id: c.id, name: c.full_name, handle: c.handle ? (c.handle.startsWith('@') ? c.handle : `@${c.handle}`) : '' }))

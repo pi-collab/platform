@@ -7063,7 +7063,7 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 
 ## 109. Experiences roster: the creator pool + creators not on Guapd yet (migrations 0536, 0541)
 
-Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-prospects.ts` (56 checks, staging, real sessions). The pool (0536) is covered by `test-experience-legs-send.ts`.
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-prospects.ts` (58 checks, staging, real sessions). The pool (0536) is covered by `test-experience-legs-send.ts`.
 
 **The pool ("Add creators", 0536)**
 - [ ] "Add creators" and "Add brand's picks" open the creator pool (Growth pool layout): every bookable creator with their figures and SHOOT DAY RATE; adding puts them on the roster (Guapd's pick, or the brand's with the channel). Staff only; the day rate never reaches a brand.
@@ -7072,7 +7072,7 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 **Creators not on Guapd yet (0541, SECURITY + functional)**
 - [ ] Operational staff only: no-access staff, brands, creators, anonymous and the service role are refused; no user reads `experience_roster_prospects` directly; the brand sees only the roster, never this list.
 - [ ] Added from the Experience page: "Add someone not on Guapd" sits in the roster header beside "Add creators" and opens the form under the roster (two rows of three fields, Cancel/Add right-aligned). Name, Instagram handle (stored clean: no @, lower case, URL accepted), optional phone, expected cost (day rate × days, or flat) and a note. NULL basis, missing days, zero fee, bad handle, bad phone are refused. A handle already bookable on Guapd is refused ("add them from the pool"); a live duplicate is refused.
-- [ ] Status contacted → agreed → onboarding; "linked" cannot be set by hand. The brand's answer needs the channel ("portal" refused).
+- [ ] Status not contacted yet → contacted → agreed → onboarding (0543). The add form says where things stand (default "Not contacted yet"; NULL refused, never defaulted; "linked"/"dropped" refused as a start). Each row's status is a dropdown in the Status column; "linked" cannot be set by hand. The brand's answer needs the channel ("portal" refused).
 - [ ] They are not on the roster (cannot be locked or sent a deal); the P&L shows them as "not on Guapd yet (about ₹X expected)", never in the margin.
 - [ ] When their handle is on Guapd now, the list says so. "Link to their account" (vetted, bookable only) puts them on the roster carrying the brand's answer and channel, planned from the agreed per-creator plan; a linked entry no longer changes; a creator already on the roster cannot be linked again.
 - [ ] Drop needs a reason and is final; the handle can be added again after a drop. Nothing changes once the shoot is scheduled.
@@ -7080,7 +7080,7 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] Phone width: each row stacks like a roster row (status and menu under the name); no sideways scroll from these rows.
 - [ ] Every action writes `ops_events` with no amount and no phone number. Nothing messages anyone; "Copy sign-up link" is for staff to send themselves.
 
-**Environment:** 0536 + 0541 are on STAGING only.
+**Environment:** 0536 + 0541 + 0543 are on STAGING only.
 
 ## 110. Experiences Phase 5: counters on a creator leg, the paused day rate, bank details, payouts on the creator's side (migration 0542)
 

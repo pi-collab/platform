@@ -73,7 +73,7 @@ async function run() {
   const E = c.data as string; exps.push(E)
   const tag = String(Date.now()).slice(-6)
   const add = (s: SupabaseClient, o: Record<string, unknown> = {}) => s.rpc('experience_console_prospect_add', { p_experience_id: E, p_full_name: 'Riya Kapoor',
-    p_handle: `@riya.makeup_${tag}`, p_phone: '+91 98765 43210', p_cost_basis: 'per_day', p_day_rate_paise: 1200000, p_days: 1.5, p_flat_paise: null, p_note: 'Agreed over DM', ...o })
+    p_handle: `@riya.makeup_${tag}`, p_phone: '+91 98765 43210', p_cost_basis: 'per_day', p_day_rate_paise: 1200000, p_days: 1.5, p_flat_paise: null, p_note: 'Agreed over DM', p_status: 'not_contacted', ...o })
   const list = async (s: SupabaseClient = op) => ((await s.rpc('experience_console_prospects', { p_experience_id: E })).data as any)?.prospects as any[]
 
   group('before the price is agreed: refused')
@@ -92,6 +92,8 @@ async function run() {
 
   group('adding: name, handle, expected cost; NULL means no')
   ok('NULL cost basis is refused', said(await add(op, { p_cost_basis: null }), /day rate or a flat fee/))
+  ok('NULL "where things stand" is refused, never defaulted', said(await add(op, { p_status: null }), /where things stand/))
+  ok('"linked" or "dropped" cannot be the starting state', refused(await add(op, { p_status: 'linked' })) && refused(await add(op, { p_status: 'dropped' })))
   ok('a day rate without days is refused', refused(await add(op, { p_days: null })))
   ok('a flat fee of zero is refused', refused(await add(op, { p_cost_basis: 'flat', p_flat_paise: 0, p_day_rate_paise: null, p_days: null })))
   ok('a bad handle is refused', refused(await add(op, { p_handle: 'not a handle!' })))
@@ -104,16 +106,18 @@ async function run() {
   let rows = await list()
   let p1 = rows.find((r) => r.id === P1)
   ok('the handle is stored clean (no @, lower case); the expected total is computed (₹18,000)', p1.instagram_handle === `riya.makeup_${tag}` && Number(p1.expected_total_paise) === 1800000)
-  ok('it starts Contacted, brand answer pending', p1.status === 'contacted' && p1.brand_decision === 'pending')
+  ok('it starts where staff said (Not contacted yet), brand answer pending', p1.status === 'not_contacted' && p1.brand_decision === 'pending')
   ok('the same handle twice is refused (an Instagram URL counts as the same)', said(await add(op, { p_handle: `https://instagram.com/riya.makeup_${tag}` }), /already on this list/))
-  const a2 = await add(fin, { p_full_name: 'Kabir Shah', p_handle: `kabir.films_${tag}`, p_phone: null, p_cost_basis: 'flat', p_day_rate_paise: null, p_days: null, p_flat_paise: 900000, p_note: null })
-  ok('a flat fee entry (₹9,000)', !a2.error && Number((await list()).find((r) => r.id === a2.data).expected_total_paise) === 900000)
+  const a2 = await add(fin, { p_full_name: 'Kabir Shah', p_handle: `kabir.films_${tag}`, p_phone: null, p_cost_basis: 'flat', p_day_rate_paise: null, p_days: null, p_flat_paise: 900000, p_note: null, p_status: 'agreed' })
+  const r2 = (await list()).find((r) => r.id === a2.data)
+  ok('a flat fee entry (₹9,000), added as Agreed', !a2.error && Number(r2.expected_total_paise) === 900000 && r2.status === 'agreed')
   const P2 = a2.data as string
 
   group('status and the brand\'s answer')
   ok('NULL status is refused', refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: null })))
   ok('"linked" is not a status you set by hand', refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: 'linked' })))
-  ok('contacted → agreed → onboarding', !refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: 'agreed' }))
+  ok('not contacted yet → contacted → agreed → onboarding', !refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: 'contacted' }))
+    && !refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: 'agreed' }))
     && !refused(await op.rpc('experience_console_prospect_status', { p_prospect_id: P1, p_status: 'onboarding' })))
   ok('NULL decision is refused', refused(await op.rpc('experience_console_prospect_decide', { p_prospect_id: P1, p_decision: null, p_channel: 'email' })))
   ok('a decision without the channel is refused (and "portal" is not one)', refused(await op.rpc('experience_console_prospect_decide', { p_prospect_id: P1, p_decision: 'accepted', p_channel: null }))
