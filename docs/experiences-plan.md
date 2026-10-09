@@ -561,3 +561,67 @@ The last build phase: the brand-facing version of everything staff have recorded
 - `scripts/test-experience-brand-portal.ts`: brand A reads and acts on its own; brand B, a creator, anon and the service role get nothing for A's ids on every function; NULL ids refused; the house brand refused; direct table reads refused after the revoke; every response scanned for forbidden keys (rate, gross, net, pct, payout, cost, margin, note, counter, prospect, bank).
 - Coexistence: staff decides then brand changes, brand decides then staff changes; both refused after lock / approval / sign-off; staff can't write `'portal'`; stale screen refused.
 - Regression: the full Experience suite, fee-golden byte-identical, marketplace untouched. Teardown records every id, deletes child-first in `finally`, and asserts zero leftovers.
+
+## Phase 6.1: campaign brief, per-creator scope, Guapd ↔ creator messages, Deals tab (PROPOSED 2026-10-09, held for review)
+
+Shipped ahead of it (8c81ae4, 0545): Send always visible with what's missing; affiliate split shown whenever the brand bought affiliate; legacy "all" backfilled.
+
+### What exists today (checked, not assumed)
+- A creator leg is a real `deals` row: `leg_role = 'creator_leg'`, `brand_id = guapd_brand_id()` (the house brand, **0 members** on staging), `price_paise` NULL. The real brand is never a party to it.
+- `can_access_deal` = the deal's brand member OR its creator. So on a leg only the creator passes; the real brand never does.
+- Messages on a leg are refused by a 0534 trigger; the creator inbox filters legs out (`leg_role IS NULL`). The creator deals list already shows legs.
+- The leg brief is one text column (`experiences.creator_brief`), the same for everyone, shown as plain text in `CreatorLegView`.
+- Per creator only the affiliate count is set (`experience_roster.leg_affiliate_count`). Ad rights and boost exist only per request.
+
+### A. Campaign brief (shared by default, per creator if needed)
+- **Staff:** the brief card in Creator deals becomes the campaign brief editor (`CampaignBrief.tsx`): brief, attachments, creative guidelines, what to avoid. Its save and upload actions are parameterised so Experience saves go through `experience_console_*` functions (staff gate), not the campaign actions (brand gate). Attachments go in the same `deal-files` bucket under `experience-briefs/<experience_id>/…`.
+- **Per creator:** each row gets "Same brief as everyone / Own brief". "Own" copies the shared brief to start from, then edits only that creator's.
+- **Storage:** `experiences.creator_brief_*` (pitch, guidelines, avoid, attachments) for the shared brief; `experience_roster.brief_override jsonb` (NULL = use the shared one: an empty override is "no override", never "an empty brief").
+- **Creator:** `CreatorLegView` renders the brief with the component campaign deals use (`BriefDetailsToggle`), same layout. `creator_leg_context` returns the effective brief for THIS creator only (override, else the shared brief). Attachment links are signed server-side, only for paths in that creator's effective brief.
+- **When it freezes (needs your call):** I propose the brief stays editable until the shoot is confirmed, like a campaign brief (live, shared), and each edit notifies the affected creators and is audited. Money, days and deliverables stay frozen at send as today. Alternative: snapshot the brief at send and freeze it too.
+
+### B. Per-creator scope: affiliate, ad rights, boost
+- New `experience_roster.leg_ad_rights_count`, `leg_boost_count` (int, NULL = not drafted). Same rule as affiliate: ≤ that creator's videos; only allowed if the brand bought it (NULL means no); months come from the agreed plan.
+- Prepare shows three counts side by side: "Videos with the affiliate link / with ad rights (N months) / boosted (N months)".
+- **Reconcile** gains ad-rights and boost placed-vs-target next to the affiliate line. The send gate refuses a mismatch only where it already does for affiliate.
+- **Frozen at send:** the three counts are written into the sent leg snapshot; the creator's offer lists them. Not money: the creator is paid day rate × days, so the fee maths is untouched.
+- Legacy fix: an Experience locked without `creator_count` (e.g. "Test brand") has affiliate target 0, so the placed-vs-target line never shows. 6.1 derives the target from the locked roster when the plan has no count.
+
+### C. Guapd ↔ creator messages on each sent leg
+- Uses the deal `messages` table and the normal thread component (`CreatorThread`). Guapd's messages are `sender_party = 'brand'` on a deal whose brand IS the house brand, so they read "Guapd" with no enum change. The thread header on a leg is set to "Guapd" explicitly, never the experience brand's name.
+- **Who can read or send:**
+  - creator: their own leg, via RLS (`can_access_deal`, creator side).
+  - staff: through new gated functions `experience_console_leg_messages` / `experience_console_leg_message_send`; any staff member with Experience access, operational or financial.
+  - The 0534 "no messages on legs" trigger is replaced by one that allows a leg message only from the leg's creator or the gated staff function.
+- **The brand can never see it:** the brand is not a party to the leg deal (house brand, 0 members). No brand_experience_* function reads `messages`. A test asserts a brand member, a second brand, another creator, logged-out and service role… get nothing.
+  - One guard is new: the house brand must stay memberless. A test asserts 0 members, and brand_member inserts for the house brand are refused (trigger), so nobody can ever gain RLS access to legs that way.
+- Messaging closes when the leg is declined, cancelled or complete (the existing insert rule).
+- **Notifications:**
+  - creator message → staff with Experience access (in-app), never the brand.
+  - Guapd message → creator, in-app and email.
+  - WhatsApp stays off for legs.
+
+### D. Deals: both sides
+- **Console:** a "Deals" tab or section on the Experience page, one row per sent leg: deal ref, creator, status (Awaiting / Accepted / Declined), open counter, last message and unread count. The row opens the thread in a side panel. Staff-only reads go through the gated functions above; no money columns beyond what Creator deals already shows operational staff.
+- **Creator:** legs already appear in their deals list; the inbox drops the `leg_role IS NULL` filter for legs that are sent. A leg thread shows "Guapd · <Experience title>". The amount shown is the creator's own net (from their own leg), never a brand price.
+
+### Holds (each gets a test)
+- No brand price, margin, P&L or cost on any creator- or brand-readable surface. The brief, thread and inbox rows carry none. The inbox amount for a leg is the creator's own net from `creator_leg_context`, never `deals.price_paise`.
+- No cross-leg data: brief, attachments, messages and scope are per leg. A creator gets 0 rows for another creator's leg (messages, brief override, attachment signing).
+- Deny on NULL (`IS NOT TRUE` / `IS DISTINCT FROM`); no `SELECT *` in any new function; explicit field lists.
+- Frozen on accept: money, days, deliverables and the three scope counts are snapshotted at send; a counter changes rate and days only (0542 unchanged).
+- Fee snapshot and reconcile unchanged except the new ad-rights and boost targets. The fee golden baseline stays byte-identical (no fee code touched).
+- Ops audit: brief edits (lengths, not text), scope drafts, staff messages (`ops_events`, body length only) and deal `events`.
+- Staging only. Migrations 0546+ are copied to staglink and pushed linked; prod untouched.
+
+### Tests
+- New `test-experience-brief-messages.ts`:
+  - brief: effective per creator; override isolation; attachment signing scoped.
+  - messages: creator ↔ staff both ways; brand, second brand, other creator, operational vs financial staff, logged-out and service role; house brand membership refused.
+  - scope: counts ≤ videos, refused when not sold, frozen at send, reconcile.
+- Rerun the 23-suite regression plus the new suite. Visual: creator offer (brief, scope, thread) at desktop and 390px; console Deals tab.
+
+### Open for you
+1. Brief freeze: live until the shoot is confirmed (proposed) or frozen at send?
+2. Can a creator start a thread before accepting (to ask a question about the offer)? Proposed: yes, as soon as it is sent.
+3. Deals: a separate tab on the console, or a section under Creator deals? Proposed: a section (the console has no tabs today).
