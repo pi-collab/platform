@@ -522,3 +522,38 @@ Built in migration 0542 + the console's counters block and entered-rate path (Cr
 - **Bank details:** creator-entered on Payments, read back masked; encrypted at rest; ops see ••••last4; finance reads in full for a payout still to be paid, every view audited without values; a change after a request blocks approval until finance confirms; the creator is emailed a security notice on change; never to brands, audit rows, events, notifications or email.
 - **Payouts on the creator's side:** "Paid by Guapd" on Payments (status, net, TDS, paid, date, reference) and in dashboard earnings at net.
 - **Deferred:** affiliate invoice (4b), RazorpayX.
+
+## Phase 6: brand screens (DRAFT 2026-10-09, awaiting review; nothing built)
+The last build phase: the brand-facing version of everything staff have recorded on the brand's behalf, on `/experiences` (reserved in `lib/experience-staff-auth.ts` for the brand, `verifyBrand`, never the staff gate). Migration 0543, staging only.
+
+**Screens**
+- `/experiences`: the brand's own Experiences, each with a brand-facing stage and the one thing waiting on them ("Review the roster", "3 videos to review", "Invoice due"). A "Request an Experience" button. Nav: "Experiences" in `BrandSidebar` (desktop + mobile lists).
+- `/experiences/new`: the request form (title, creator count, per-creator deliverables, affiliate, brief), the same fields staff record.
+- `/experiences/[id]`: one page that grows with the stage. Price (accept Guapd's quote, or decline with a note); roster review (names, handles, profile links, each creator's planned deliverables; accept / reject); deliverables (shared items: approve / ask for changes with a note); invoices (as today); sign-off; and at Complete, the report.
+
+**Data layer: function-only, own brand only**
+- One gate `_brand_experience_require(p_experience_id)`: caller is a member of the Experience's brand; not the house brand; NULL id, no membership, or no session = refused (`IS NOT TRUE`). Every brand function starts with it.
+- Reads are SECURITY DEFINER functions returning named columns (no `SELECT *`): `brand_experiences()`, `brand_experience(id)`, `brand_experience_roster(id)`, `brand_experience_report(id)`, plus the existing deliverables / invoices / file functions moved onto the same gate.
+- Proposed: REVOKE the brand's direct SELECT on `experiences`, `experience_roster` and `experience_quotes` (today readable through policies 0523/0528), so the functions are the only brand surface and the only thing the tests must cover.
+- Never returned to a brand: creator rates, gross, %, net, payouts, counters, costs, P&L, margin, staff and roster notes, prospects (not on Guapd yet), shoot outcome reasons, the creator brief, bank details, another brand's anything. Creator ids are not returned either; roster rows are referenced by roster id.
+
+**Brand writes, alongside the staff paths (both stay)**
+- Each brand action is its own function writing the SAME columns the staff path writes, with channel `'portal'` and the brand member as the actor:
+  - request → `brand_experience_request` (`request_channel = 'portal'`); staff `experience_console_create` unchanged.
+  - quote → `brand_experience_quote_answer(quote_id, accept|decline, note)`; staff `experience_console_accept` unchanged.
+  - roster → `brand_experience_roster_decide(roster_id, accepted|rejected)`; staff `experience_console_roster_decide` unchanged.
+  - deliverables → `brand_experience_release_decide(release_id, approved|changes_requested, note)`; widens the `edr_decision` CHECK to allow `'portal'`.
+  - sign-off → `brand_experience_signoff(id, note)`; widens `experiences_signoff_shape` to allow `'portal'`.
+- `'portal'` means "the brand did it on Guapd": the brand functions are the only writers of it, and every staff function refuses it (staging has 0 portal rows today, so the tighter CHECK needs no backfill).
+- Whoever acts latest stands, until the point of no return that already exists (lock, approved release, sign-off). Each call carries the state the screen showed; a stale screen is refused. Both paths write the deal / experience timeline, so staff see "Brand rejected Aarav (on Guapd)" next to "Recorded by Guapd (WhatsApp)".
+- Staff keep acting for a brand that isn't self-serving; nothing in the staff console is removed.
+- Notifications: the brand in-app + email when something waits on them (quote ready, roster ready, items shared, invoice issued); staff in-app when the brand acts. WhatsApp stays off.
+
+**The report (Phase 2.5 folded in), at Complete**
+- `brand_experience_report(id)` returns only: title, dates, city; roster names + handle + profile link for creators who were locked on it; delivered items (label, type, brand decision, file/link); the brand's own invoices (number, totals, GST, paid, status). No rate, payout, cost or margin column exists in its return type.
+- Analytics: no source today. Experience content is delivered to the brand, not posted from the creator's account, so the creator's Instagram snapshot doesn't measure it. Proposed: ship the report without analytics.
+
+**Tests (real brand logins, staging)**
+- `scripts/test-experience-brand-portal.ts`: brand A reads and acts on its own; brand B, a creator, anon and the service role get nothing for A's ids on every function; NULL ids refused; the house brand refused; direct table reads refused after the revoke; every response scanned for forbidden keys (rate, gross, net, pct, payout, cost, margin, note, counter, prospect, bank).
+- Coexistence: staff decides then brand changes, brand decides then staff changes; both refused after lock / approval / sign-off; staff can't write `'portal'`; stale screen refused.
+- Regression: the full Experience suite, fee-golden byte-identical, marketplace untouched. Teardown records every id, deletes child-first in `finally`, and asserts zero leftovers.
