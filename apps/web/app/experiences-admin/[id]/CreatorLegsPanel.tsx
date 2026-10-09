@@ -38,6 +38,10 @@ const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
 
 type Row = { type: string; count: string }
 
+/** A Send that cannot go yet: visible, greyed, with the reason beside it. */
+const offBtn = { opacity: 0.4, cursor: 'not-allowed', boxShadow: 'none' } as const
+const hint = { fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' } as const
+
 export default function CreatorLegsPanel({ experienceId, editable, legs, reconcile, brief, affiliateSold, counters = [], canRaise = false }: {
   experienceId: string
   /** Confirmed: legs can be drafted and sent. */
@@ -99,6 +103,14 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
   const ready = legs.filter((l) => !l.leg_deal_id && l.leg_days != null
     && ((l.leg_product_id && l.leg_product_id === l.day_rate_product_id) || (l.leg_entered_rate_paise != null && l.day_rate_product_id == null)))
   const sentCount = legs.filter((l) => l.leg_deal_id).length
+  const unsent = legs.filter((l) => !l.leg_deal_id)
+  // Why an unsent deal cannot go yet; null when it is ready to send.
+  const missing = (l: ConsoleLegRow): string | null => {
+    if (l.leg_deal_id || ready.includes(l)) return null
+    if (l.day_rate_paise == null && l.leg_entered_rate_paise == null) return l.paused_rate_paise != null ? 'Prepare: enter a rate for this deal' : 'Set a day rate, then prepare'
+    if (l.leg_days == null) return 'Prepare: days and what they make'
+    return 'Their rate changed: prepare again'
+  }
   const toPlace = reconcile && reconcile.videos_sold != null && reconcile.videos_placed != null ? reconcile.videos_sold - reconcile.videos_placed : 0
   const affToPlace = reconcile?.affiliate_target != null && reconcile.affiliate_placed != null ? reconcile.affiliate_target - reconcile.affiliate_placed : 0
 
@@ -114,10 +126,16 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
           <h2 className="sect-head">Creator deals <span style={{ color: 'var(--wg-500)', fontWeight: 500, marginLeft: 6 }}>{sentCount} of {legs.length} sent</span></h2>
           <div className="sect-rule" />
         </div>
-        {editable && ready.length > 0 && (
-          <button type="button" className="neonbtn" style={neonBtn} disabled={pending} onClick={() => setConfirm(ready)}>
-            Send all ready ({ready.length})
-          </button>
+        {editable && unsent.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <button type="button" className="neonbtn" style={{ ...neonBtn, ...(ready.length ? null : offBtn) }} disabled={pending || ready.length === 0}
+              onClick={() => setConfirm(ready)}>
+              {ready.length === unsent.length ? `Send all (${ready.length})` : `Send all ready (${ready.length})`}
+            </button>
+            {ready.length < unsent.length && (
+              <span style={hint}>{ready.length} of {unsent.length} ready. Prepare the rest to send them.</span>
+            )}
+          </div>
         )}
       </div>
 
@@ -222,11 +240,11 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                           </button>
                         )}
                         <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => openEditor(l)}>Prepare</button>
-                        {ready.includes(l) && (
-                          <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, padding: '0 14px' }} disabled={pending} onClick={() => setConfirm([l])}>Send</button>
-                        )}
+                        <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, padding: '0 14px', ...(missing(l) ? offBtn : null) }}
+                          disabled={pending || !!missing(l)} title={missing(l) ?? undefined} onClick={() => setConfirm([l])}>Send</button>
                       </div>
                     )}
+                    {editable && missing(l) && <span style={{ ...hint, textAlign: 'right' }}>{missing(l)}</span>}
                   </div>
                 </div>
 

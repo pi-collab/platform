@@ -7153,3 +7153,14 @@ Run (staging, real brand logins; ~200 s after any other suite for the auth rate 
 - [ ] The older suites that read these tables as a brand now assert the refusal and read through the functions (quotes-rls, exp-rls, roster, prospects); `brand_experience_deliverables` carries the 0544 fields (deliverables test).
 
 **Environment:** 0544 is on STAGING only.
+
+## 112. Experiences: Send is always visible; legacy "affiliate on all videos" (migration 0545)
+
+- [ ] Confirmed Experience, a creator with no day rate: their row shows **Send** greyed, with "Set a day rate, then prepare" beside it. Clicking does nothing.
+- [ ] Day rate set, not prepared: Send greyed with "Prepare: days and what they make".
+- [ ] Prepared, then the creator's day rate changes: Send greyed with "Their rate changed: prepare again".
+- [ ] Prepared and ready: Send is live; the confirm dialog opens.
+- [ ] Header: **Send all (N)** when every unsent deal is ready; **Send all ready (n)** plus "n of N ready. Prepare the rest to send them." when some are not; greyed when none are ready; hidden once all are sent.
+- [ ] A brand that bought affiliate links: Prepare shows "Videos with the affiliate link (of N)" on every creator. It is driven by "did the brand buy affiliate", not by whether a count is stored.
+- [ ] 0545: an Experience created before 0538 with affiliate on and no per-creator count now has the count = videos per creator, on the request and on the locked plan. The brand page shows that number (it used to say "all"). A second run of 0545 changes nothing.
+- [ ] Gotcha: deals prepared while the field was hidden were saved with 0 affiliate videos. Re-prepare them before sending.

@@ -149,7 +149,7 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
         <div style={{ marginTop: 20 }}>
           {legs?.ok && legsReconcile?.ok && creatorBrief?.ok
             ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
-                brief={creatorBrief.data} affiliateSold={e.request_affiliate && (e.request_affiliate_per_creator ?? 0) > 0}
+                brief={creatorBrief.data} affiliateSold={e.request_affiliate === true}
                 counters={counters?.ok ? counters.data.counters : []} canRaise={counters?.ok ? counters.data.can_raise : false} />
             : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || (creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the creator deals'} />}
         </div>
