@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandDeliverables, getBrandExperience, getBrandInvoices, getBrandReport, getBrandRoster, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, type BrandInvoice } from '@/lib/experience-brand-server'
+import GuapdChat from './GuapdChat'
+import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import StatusChip from '@/components/StatusChip'
@@ -28,7 +30,7 @@ export const dynamic = 'force-dynamic'
  * member; sign-off: admins). Guapd can still record the same decisions from a
  * WhatsApp or email; the latest stands.
  */
-export default async function BrandExperiencePage({ params }: { params: { id: string } }) {
+export default async function BrandExperiencePage({ params, searchParams }: { params: { id: string }; searchParams?: { chat?: string } }) {
   await verifyBrand()
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
   const exp = await getBrandExperience(params.id)
@@ -37,11 +39,12 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
   const quoteToAnswer = e.quote?.status === 'open' && e.quote.proposed_by === 'guapd'
   const hasRoster = !['requested', 'cancelled'].includes(e.status)
   const hasDeliverables = ['shoot_done', 'delivering', 'complete'].includes(e.status)
-  const [roster, deliverables, invoices, report] = await Promise.all([
+  const [roster, deliverables, invoices, report, guapdThread] = await Promise.all([
     hasRoster ? getBrandRoster(e.id) : Promise.resolve(null),
     hasDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
     getBrandInvoices(e.id),
     e.status === 'complete' ? getBrandReport(e.id) : Promise.resolve(null),
+    getBrandGuapdThread(e.id),
   ])
   const st = brandStage(e.status, quoteToAnswer)
   const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null
@@ -88,7 +91,11 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
             {date || e.shoot_city ? `Shoot${date ? ` on ${date}` : ''}${e.shoot_city ? ` in ${e.shoot_city}` : ''}` : e.requested_at ? `Requested ${fmt(e.requested_at)}${e.request_on_guapd ? '' : ' (recorded by Guapd)'}` : ''}
           </p>
         </div>
-        <div className="bx-hero-aside"><StatusChip label={st.label} tone={st.tone} /></div>
+        <div className="bx-hero-aside" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <StatusChip label={st.label} tone={st.tone} />
+          {/* 0550: the brand ↔ Guapd thread, in the same chat as a deal's. */}
+          <OpenDealChat className="bx-btn">Message Guapd</OpenDealChat>
+        </div>
       </section>
 
       {e.status !== 'cancelled' && (
@@ -145,7 +152,7 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
         <section className="surface bx-card" aria-labelledby="bx-creators">
           <h2 id="bx-creators" className="bx-h2">Creators</h2>
           <p className="bx-note">{roster.data.can_decide
-            ? 'Accept the creators you want for the shoot. You can change your mind until Guapd confirms them.'
+            ? 'Accept, hold or reject each creator Guapd suggests. You can change a hold or an acceptance until Guapd confirms the roster; a rejection is final.'
             : 'The creators for your shoot.'}</p>
           <RosterReview experienceId={e.id} creators={roster.data.creators} canDecide={roster.data.can_decide} />
         </section>
@@ -154,6 +161,8 @@ export default async function BrandExperiencePage({ params }: { params: { id: st
       {!reviewing && reviewBlock}
 
       {invoiceList.length > 0 && <Invoices invoices={invoiceList} fmt={fmt} />}
+
+      {guapdThread.ok && <GuapdChat experienceId={e.id} messages={guapdThread.data} autoOpen={searchParams?.chat === '1'} />}
 
       <section className="surface bx-card" aria-labelledby="bx-req">
         <h2 id="bx-req" className="bx-h2">Your request</h2>

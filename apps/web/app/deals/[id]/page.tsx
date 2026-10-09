@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { zeroFeeNote } from '@/lib/fee-copy'
 import { verifyBrand } from '@/lib/brand-auth'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import DealThread from './DealThread'
 import OpenDealChat from '@/components/OpenDealChat'
@@ -77,6 +78,14 @@ export default async function DealPage({ params, searchParams }: {
   params: { id: string }
   searchParams: { chat?: string }
 }) {
+  /* 0547: experience_payment_sent links to /deals/<deal id>. An Experience
+     creator leg is never a brand deal (its brand is the memberless house brand),
+     so that link goes to the creator's own deal page, which checks ownership.
+     Only leg_role is read; nothing about the deal reaches this response. */
+  if (/^[0-9a-f-]{36}$/i.test(params.id)) {
+    const { data: leg } = await createAdminClient().from('deals').select('leg_role').eq('id', params.id).maybeSingle()
+    if (leg?.leg_role === 'creator_leg') redirect(`/creator/deals/${params.id}`)
+  }
   const brand = await verifyBrand()
 
   const supabase = createClient()

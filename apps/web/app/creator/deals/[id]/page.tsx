@@ -24,6 +24,8 @@ import NegotiationHistory from '@/components/NegotiationHistory'
 import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
 import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
+import BriefBlock from './BriefBlock'
+import { DealHeroCard, DealShellStyles, wrapper, backLinkStyle, metaLabel, sectionHeading, termRow } from './deal-shell'
 import ShippingAddressForm from './ShippingAddressForm'
 import CreatorStepper from './CreatorStepper'
 import CreatorReviewCard from './CreatorReviewCard'
@@ -130,7 +132,23 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
   if ((deal as { leg_role?: string | null }).leg_role === 'creator_leg') {
     const { data: legCtx, error: legErr } = await supabase.rpc('creator_leg_context', { p_deal_id: params.id })
     if (legErr || !legCtx) notFound()
-    return <CreatorLegView dealId={params.id} ctx={legCtx as CreatorLegContext} />
+    const lc = legCtx as CreatorLegContext
+    /* 0546: the brief's attachments are signed here with the service key, but
+       only the paths creator_leg_context just returned for THIS creator's own
+       leg (their own brief, else the shared one), and only inside this
+       Experience's brief folder. One hour, like the campaign brief. */
+    const legAttachmentUrls: Record<string, string> = {}
+    const legAtts = (lc.brief_detail?.attachments ?? []).filter((a) => typeof a.storage_path === 'string' && a.storage_path.startsWith('experience-briefs/'))
+    if (legAtts.length > 0) {
+      const admin = createAdminClient()
+      const signed = await Promise.all(legAtts.map((a) => admin.storage.from('deal-files').createSignedUrl(a.storage_path, 3600)))
+      signed.forEach((r, i) => { if (r.data?.signedUrl) legAttachmentUrls[legAtts[i].storage_path] = r.data.signedUrl })
+    }
+    return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls}
+      messages={(messages ?? []).map((m) => ({ id: m.id as string, deal_id: m.deal_id as string, sender_party: m.sender_party as 'brand' | 'creator', body: m.body as string | null, created_at: m.created_at as string }))}
+      events={(events ?? []) as { id: string; event_type: string; detail: any; created_at: string }[]}
+      unread={await unreadNotificationCount(supabase, profileId)}
+      autoOpenChat={searchParams?.chat === '1'} />
   }
 
   // Fetch creator's own review (if any) — table may not exist yet pre-migration
@@ -407,45 +425,16 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
         whole page again, below the fold. */}
     <main className={showMobileScreen ? 'offer-desktop' : undefined} style={wrapper}>
       <RealtimeDealListener dealId={deal.id} />
-      <style>{`
-        .surface { border-radius: 20px; background: var(--card); box-shadow: 0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04), 0 32px 64px rgba(22,23,15,.05); }
-        .neonbtn { transition: filter .16s ease, transform .12s ease, box-shadow .16s ease; }
-        .neonbtn:hover { filter: brightness(1.02); transform: translateY(-1px); box-shadow: 0 14px 28px -14px rgba(40,45,25,.55), inset 0 1px 0 rgba(255,255,255,.7); }
-        .pill-hover { transition: background .16s ease, box-shadow .16s ease, transform .12s ease; }
-        .pill-hover:hover { background: var(--card); box-shadow: 0 8px 18px -10px rgba(40,45,25,.4); transform: translateY(-1px); }
-        .viewlink { transition: color .14s ease; cursor: pointer; }
-        .viewlink:hover { color: var(--ink) !important; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .reveal { animation: fadeUp .6s cubic-bezier(.22,1,.36,1) backwards; }
-      `}</style>
+      <DealShellStyles />
 
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <div className="frame reveal" style={{ width: '100%', maxWidth: 1200, display: 'flex', flexDirection: 'column', gap: 36 }}>
 
-          {/* ── Editorial hero ── */}
-          <div className="surface" style={{ padding: '28px 30px' }}>
-            <Link href="/creator/deals" style={backLinkStyle}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              Back to deals
-            </Link>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-              {/* The brand's own mark beside their name. The headline named
-                  them and showed nothing of them, while every list this page
-                  is reached from - deals, inbox, payments - already draws one. */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, minWidth: 0 }}>
-                <BrandMark
-                  name={brand}
-                  logoUrl={brandLogo}
-                  style={{
-                    width: 52, height: 52, borderRadius: 15, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
-                    color: 'var(--sec-ink)', background: 'var(--sec-2)',
-                    border: '1px solid var(--frost-edge)',
-                  }}
-                />
-              <div>
-                <div style={metaLabel}>
+          {/* ── Editorial hero (shared with Experience legs: deal-shell.tsx) ── */}
+          <DealHeroCard
+            brand={brand}
+            brandLogo={brandLogo}
+            meta={<>
                   {deal.title || 'Untitled deal'}{deal.deal_ref ? ` \u00B7 ${deal.deal_ref}` : ''}
                   {/* Only once something is posted, since there is nothing to
                       show before that. The creator sees the same numbers the
@@ -459,9 +448,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                       </Link>
                     </>
                   )}
-                </div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
-                  {isNegotiating && hasBrandCounter ? 'Counter received from '
+            </>}
+            headline={isNegotiating && hasBrandCounter ? 'Counter received from '
                     : isNegotiating ? 'Offer received from '
                     : deal.status === 'delivered' ? 'Delivered to '
                     : deal.status === 'revision' ? 'Changes asked by '
@@ -470,28 +458,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                     : invoice && invoice.status === 'issued' ? 'Invoice sent to '
                     : deal.status === 'approved' ? 'Approved by '
                     : 'Deal with '}
-                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
-                </h1>
-              </div>
-              </div>
-              <OpenDealChat className="neonbtn" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 7,
-                height: 42, padding: '0 18px', borderRadius: 11,
-                background: 'var(--neon)', border: 'none',
-                boxShadow: '0 8px 18px -12px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)',
-                textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-              }}>
-                Message brand
-              </OpenDealChat>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border-hairline, #EAEAE3)', flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
-                <span style={{ width: 9, height: 9, borderRadius: '50%', background: (invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'var(--neon)' : invoiceIssuedOrLater ? 'var(--warning)' : sm.dot, boxShadow: `0 0 0 4px ${(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}` }} />
-                {(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'Complete' : invoiceIssuedOrLater ? 'Invoice' : sm.label}
-              </span>
-              <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                {(() => {
+            chatLabel="Message brand"
+            statusDot={(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'var(--neon)' : invoiceIssuedOrLater ? 'var(--warning)' : sm.dot}
+            statusGlow={(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : invoiceIssuedOrLater ? 'rgba(200,154,60,.22)' : sm.glow}
+            statusLabel={(invoice?.status === 'paid' || (!invoice && (deal.status === 'paid' || deal.status === 'complete'))) ? 'Complete' : invoiceIssuedOrLater ? 'Invoice' : sm.label}
+            statusLine={<>{(() => {
                   if (invoiceIssuedOrLater && invoice) {
                     const sentTs = invoice.issued_at ? formatDateWithTime(invoice.issued_at) : ''
                     const receiveAmt = formatRupees(invoice.creator_receives_paise)
@@ -528,10 +499,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                     return <>Approved{ts ? ` ${ts}` : ''} &middot; post inside the live window, then invoice</>
                   }
                   return <>Sent {formatDate(deal.created_at)}{deal.timeline_date && <> &middot; deliver by <b style={{ color: 'var(--ink)' }}>{formatDate(deal.timeline_date + 'T00:00:00')}</b></>}</>
-                })()}
-              </span>
-            </div>
-          </div>
+                })()}</>}
+          />
 
           {/* ── "Ready to decide?" CTA (negotiating only) ── */}
           {isNegotiating && (
@@ -799,148 +768,40 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
               switch (section) {
                 case 'brief': {
                   if (!(pitch || guidelines || avoid || briefAttachments.length > 0)) return null
-                  const guidelinePoints: string[] = guidelines ? guidelines.split('\n').filter(Boolean) : []
-                  const avoidPoints: string[] = avoid ? avoid.split('\n').filter(Boolean) : []
-                  const glParts: string[] = []
-                  if (guidelinePoints.length > 0) glParts.push(`${guidelinePoints.length} guideline${guidelinePoints.length !== 1 ? 's' : ''}`)
-                  if (avoidPoints.length > 0) glParts.push(`${avoidPoints.length} to avoid`)
                   // Brief content (shared between open and collapsed modes)
                   const briefContent = (
-                    <>
-                      {/* The brief */}
-                      {pitch && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
-                          <div style={metaLabel}>The brief</div>
-                          <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--ink-soft)', margin: 0, maxWidth: 620, whiteSpace: 'pre-wrap' }}>{pitch}</p>
-                        </div>
-                      )}
-
-                      {/* Attachments */}
-                      {briefAttachments.length > 0 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
-                          <div style={metaLabel}>What they&apos;ve attached</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-                            {briefAttachments.map((att) => {
-                              const signedUrl = attachmentUrls[att.storage_path]
-                              const ext = att.name.split('.').pop()?.toUpperCase() || 'FILE'
-                              const sizeMB = (att.size_bytes / (1024 * 1024)).toFixed(1)
-                              return (
-                                <a key={att.storage_path} href={signedUrl || '#'} target="_blank" rel="noopener noreferrer" className="att-card" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 13px', borderRadius: 14, background: 'var(--card)', border: '1px solid var(--hairline)', boxShadow: '0 1px 2px rgba(22,23,15,.03)', cursor: 'pointer', textDecoration: 'none' }}>
-                                  <span style={{ width: 32, height: 32, borderRadius: 10, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sec-2)', border: '1px solid var(--sec-mid-2, var(--hairline))', color: 'var(--sec-ink, var(--ink-soft))' }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
-                                  </span>
-                                  <span style={{ flex: 1, minWidth: 0 }}>
-                                    <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name}</span>
-                                    <span style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: 2 }}>{ext} · {sizeMB} MB</span>
-                                  </span>
-                                  {/* Said out loud, the way a deliverable's file
-                                      says it. The whole card was the link, which
-                                      is only discoverable by trying it. */}
-                                  <span style={{ flex: 'none', fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap' }}>View</span>
-                                </a>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Product kit — in brief */}
-                      {deal.requires_shipment && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
-                          <div style={metaLabel}>Product kit</div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', paddingTop: 3 }}>
-                            <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
-                              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', marginTop: 1 }}><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
-                              <div>
-                                <div style={{ fontSize: 13, fontWeight: 700 }}>You will be sent a product kit</div>
-                                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 2 }}>Ships once the deal is agreed</div>
-                              </div>
-                            </div>
-                            {(!deal.shipment_status || deal.shipment_status === 'pending') && (
-                              <a href="#shipment" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--border-hairline)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', cursor: 'pointer' }}>
-                                {(deal as Record<string, unknown>).shipping_address ? 'View address' : 'Add address'}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Full terms — toggle */}
-                      <BriefDetailsToggle label="Full terms" defaultOpen={!deal.agreed_at}>
-                        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column' }}>
-                          {deal.price_paise != null && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your rate</span>
-                              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(deal.price_paise)}</b>
-                            </div>
-                          )}
-                          {fee && fee.fee_paise > 0 && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              {/* Was hardcoded ", paid by the brand" regardless of
-                                  fee_mode. Since 0499 made 'deducted' the rule, that
-                                  told every creator the brand was paying a fee that
-                                  actually comes out of their own side. */}
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee ({fee.fee_percent}%){feeBearerNote(feeMode, 'creator')}</span>
-                              <b style={{ fontSize: 14, fontWeight: 700 }}>{formatINR(fee.fee_paise)}</b>
-                            </div>
-                          )}
-                          {zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator') && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Platform fee</span>
-                              <b style={{ fontSize: 14, fontWeight: 700 }}>{zeroFeeNote(deal.fee_percent, dealFeeBasis, 'creator')}</b>
-                            </div>
-                          )}
-                          {deal.usage_rights && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Usage rights</span>
-                              <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.usage_rights}{deal.usage_rights_end_date && `, ${new Date(deal.usage_rights_end_date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</b>
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                            <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Revisions</span>
-                            <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.revision_limit ?? 0} included{(deal.price_per_extra_revision_paise ?? 0) > 0 ? `, then ${formatINR(deal.price_per_extra_revision_paise)}` : ''}</b>
-                          </div>
-                          {deal.payment_terms && (
-                            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, padding: '13px 0', borderTop: '1px solid var(--border-hairline)' }}>
-                              <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Payment terms</span>
-                              <b style={{ fontSize: 14, fontWeight: 700 }}>{deal.payment_terms}</b>
-                            </div>
-                          )}
-                        </div>
-                      </BriefDetailsToggle>
-
-                      {/* Creative guidelines — toggle */}
-                      {(guidelinePoints.length > 0 || avoidPoints.length > 0) && (
-                        <BriefDetailsToggle label="Creative guidelines" subtitle={glParts.join(' · ')} defaultOpen={!deal.agreed_at}>
-                          {guidelinePoints.length > 0 && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 28 }}>
-                              <div style={metaLabel}>Creative guidelines</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                {guidelinePoints.map((point: string, i: number) => (
-                                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                    <span style={{ width: 22, height: 22, borderRadius: 7, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, background: 'var(--ink)', color: '#FFFFFF' }}>{i + 1}</span>
-                                    <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
+                    <BriefBlock
+                      pitch={pitch}
+                      guidelines={guidelines}
+                      avoid={avoid}
+                      attachments={briefAttachments}
+                      attachmentUrls={attachmentUrls}
+                      defaultOpen={!deal.agreed_at}
+                      middle={
+                        <>
+                          {/* Product kit — in brief */}
+                          {deal.requires_shipment && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 36, paddingTop: 34, borderTop: '1px solid var(--border-hairline)' }}>
+                              <div style={metaLabel}>Product kit</div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', paddingTop: 3 }}>
+                                <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none', marginTop: 1 }}><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                                  <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700 }}>You will be sent a product kit</div>
+                                    <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 2 }}>Ships once the deal is agreed</div>
                                   </div>
-                                ))}
+                                </div>
+                                {(!deal.shipment_status || deal.shipment_status === 'pending') && (
+                                  <a href="#shipment" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 38, padding: '0 16px', borderRadius: 10, background: 'var(--card)', border: '1px solid var(--border-hairline)', fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', cursor: 'pointer' }}>
+                                    {(deal as Record<string, unknown>).shipping_address ? 'View address' : 'Add address'}
+                                  </a>
+                                )}
                               </div>
                             </div>
                           )}
-                          {avoidPoints.length > 0 && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: '0 32px', marginTop: 30, paddingTop: 28, borderTop: guidelinePoints.length > 0 ? '1px solid var(--border-hairline)' : 'none' }}>
-                              <div style={metaLabel}>Please avoid</div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                {avoidPoints.map((point: string, i: number) => (
-                                  <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2.2" strokeLinecap="round" style={{ flex: 'none', marginTop: 4 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
-                                    <span style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--ink-soft)' }}>{point}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </BriefDetailsToggle>
-                      )}
-                    </>
+                        </>
+                      }
+                    />
                   )
 
                   // When negotiating or agreed (pre-submission): open surface
@@ -1359,24 +1220,9 @@ function TermRow({ label, value }: { label: string; value: string }) {
 
 /* ── Style fragments ── */
 
-const wrapper: React.CSSProperties = {
-  flex: 1, minWidth: 0,
-  padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(56px,6vw,96px)',
-}
 
-const backLinkStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  fontSize: 12, fontWeight: 600, color: 'var(--ink-soft)',
-  textDecoration: 'none', whiteSpace: 'nowrap',
-}
 
-const metaLabel: React.CSSProperties = {
-  fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint)',
-}
 
-const sectionHeading: React.CSSProperties = {
-  fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0,
-}
 
 const metaRight: React.CSSProperties = {
   fontSize: 11.5, color: 'var(--ink-soft)',
@@ -1386,10 +1232,6 @@ const dateValue: React.CSSProperties = {
   fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', marginTop: 5,
 }
 
-const termRow: React.CSSProperties = {
-  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14,
-  padding: '13px 0', marginTop: 6, borderTop: '1px solid var(--border-hairline, #EAEAE3)',
-}
 
 const itemIcon: React.CSSProperties = {
   width: 36, height: 36, borderRadius: 11, flexShrink: 0,

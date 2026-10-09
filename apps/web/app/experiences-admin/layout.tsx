@@ -6,7 +6,7 @@ import BrandNav from '@/components/BrandNav'
 export default function GuapdLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <BrandNav />
+      <BrandNav mode="guapd" />
       <main className="brand-main">{children}</main>
     </>
   )

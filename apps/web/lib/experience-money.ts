@@ -123,7 +123,11 @@ export interface MarginInput {
   /** Leg 2: each creator leg the creator ACCEPTED (deal status agreed onward).
    *  Not "locked": since 0534 terms lock at SEND, so an unanswered or declined
    *  leg is locked too and must not be counted (0537). */
-  creatorLegs: Pick<CreatorLegTerms, 'creatorGrossPaise' | 'creatorNetPaise'>[]
+  creatorLegs: (Pick<CreatorLegTerms, 'creatorGrossPaise' | 'creatorNetPaise'> & {
+    /** 0546: travel/other allowance on the leg. Paid to the creator in full, a COST
+     *  to Guapd, never fee-bearing: it is outside gross and net. */
+    allowancePaise?: number
+  })[]
   /** Guapd's own costs (cost lines Guapd bears: travel, makeup, editing, misc…). */
   guapdCostsPaise: number[]
 }
@@ -136,7 +140,10 @@ export interface MarginInput {
  *   − other costs                     (shown even when ₹0)
  *   = sub-total
  *   + platform fee kept               (Σ per leg, each at its own snapshotted %)
- *   = Guapd margin                    = brand revenue − Σ creator NET − costs
+ *   = Guapd margin                    = brand revenue − Σ creator NET − Σ allowances − costs
+ *
+ * 0546: allowances are a cost line of their own (− Σ allowances in BOTH the
+ * sub-total and the margin), so the fee kept (gross − net) never includes them.
  *
  * The fee line is the gross → net reconciliation, not an extra amount: the
  * margin is what Guapd actually keeps (money in − money actually paid out).
@@ -146,11 +153,13 @@ export interface MarginBreakdown {
   creatorGrossTotalPaise: number
   creatorNetTotalPaise: number
   guapdCostsTotalPaise: number
-  /** brand − Σ creator GROSS − costs */
+  /** 0546: Σ creator allowances (fee-exempt, paid in full). */
+  creatorAllowanceTotalPaise: number
+  /** brand − Σ creator GROSS − allowances − costs */
   subtotalPaise: number
   /** Σ (gross − net) per leg: never a blanket % on pooled creator spend */
   platformFeeKeptPaise: number
-  /** THE margin: brand − Σ creator NET − costs  (= subtotal + fee kept) */
+  /** THE margin: brand − Σ creator NET − allowances − costs  (= subtotal + fee kept) */
   guapdMarginPaise: number
 }
 
@@ -163,10 +172,11 @@ export function experienceMargin(m: MarginInput): MarginBreakdown {
   // Per leg, then summed: each leg carries its own track's fee already.
   const platformFeeKeptPaise = m.creatorLegs.reduce((a, l) => a + (l.creatorGrossPaise - l.creatorNetPaise), 0)
   const guapdCostsTotalPaise = sum(m.guapdCostsPaise, 'cost')
-  const subtotalPaise = brandRevenuePaise - creatorGrossTotalPaise - guapdCostsTotalPaise
-  const guapdMarginPaise = brandRevenuePaise - creatorNetTotalPaise - guapdCostsTotalPaise
+  const creatorAllowanceTotalPaise = sum(m.creatorLegs.map(l => l.allowancePaise ?? 0), 'allowance')
+  const subtotalPaise = brandRevenuePaise - creatorGrossTotalPaise - creatorAllowanceTotalPaise - guapdCostsTotalPaise
+  const guapdMarginPaise = brandRevenuePaise - creatorNetTotalPaise - creatorAllowanceTotalPaise - guapdCostsTotalPaise
   if (subtotalPaise + platformFeeKeptPaise !== guapdMarginPaise) throw new Error('P&L does not reconcile')
-  return { brandRevenuePaise, creatorGrossTotalPaise, creatorNetTotalPaise, guapdCostsTotalPaise, subtotalPaise, platformFeeKeptPaise, guapdMarginPaise }
+  return { brandRevenuePaise, creatorGrossTotalPaise, creatorNetTotalPaise, guapdCostsTotalPaise, creatorAllowanceTotalPaise, subtotalPaise, platformFeeKeptPaise, guapdMarginPaise }
 }
 
 /**

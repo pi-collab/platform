@@ -21,6 +21,8 @@ interface Thread {
   senderParty: string
   createdAt: string
   amountPaise: number
+  /** 0546: who the creator is talking to; 'Guapd' on an Experience leg. */
+  counterparty?: 'Brand' | 'Guapd'
 }
 
 interface Message {
@@ -462,7 +464,7 @@ export default function CreatorInboxView({
                                 fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)',
                                 marginTop: 5, textAlign: isCreator ? 'right' : 'left',
                               }}>
-                                {isCreator ? 'You' : 'Brand'} · {new Date(msg.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                {isCreator ? 'You' : selectedThread?.counterparty ?? 'Brand'} · {new Date(msg.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                           </div>
@@ -601,6 +603,7 @@ export default function CreatorInboxView({
 }
 
 function formatTimeAgo(dateStr: string): string {
+  if (!dateStr) return ''
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'now'

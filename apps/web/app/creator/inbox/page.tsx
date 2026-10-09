@@ -33,22 +33,35 @@ export default async function CreatorInboxPage({ searchParams }: {
   const [{ data: messages }, { data: openDeals }] = await Promise.all([
     supabase
       .from('messages')
-      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, brands(name, logo_url))')
+      .select('id, deal_id, sender_party, body, created_at, deals(id, title, status, price_paise, leg_role, experience_brand_name, brands(name, logo_url))')
       .order('created_at', { ascending: false }),
     supabase
       .from('deals')
-      .select('id, title, status, is_posted, price_paise, brands(name, logo_url)')
+      .select('id, title, status, is_posted, price_paise, leg_role, experience_brand_name, brands(name, logo_url)')
       .not('status', 'in', '(cancelled,declined)')
-      // Experience creator legs have no chat in this stage (messages on a leg
-      // are refused by trigger, 0534), so they open no thread here.
-      .is('leg_role', null)
       .order('created_at', { ascending: false }),
   ])
+
+  /* 0546: an Experience creator leg is a thread with GUAPD. It is named
+     Guapd (never the Experience's brand, who is not part of it), its title
+     says whose shoot it is, and its amount is the creator's own: net after the
+     fee plus any allowance, read from their own terms (RLS: own rows only).
+     deals.price_paise is NULL on a leg by design and must never show as ₹0. */
+  const legRows = [...(openDeals ?? []), ...(messages ?? []).map((m) => m.deals as any).filter(Boolean)]
+    .filter((d: any) => d.leg_role === 'creator_leg')
+  const legIds = Array.from(new Set(legRows.map((d: any) => d.id as string)))
+  const legInfo = new Map<string, { brand: string; totalPaise: number }>()
+  if (legIds.length > 0) {
+    const { data: terms } = await supabase.from('experience_creator_terms').select('deal_id, creator_net_paise, allowance_paise').in('deal_id', legIds)
+    const byId = new Map((terms ?? []).map((t: any) => [t.deal_id as string, Number(t.creator_net_paise) + Number(t.allowance_paise ?? 0)]))
+    for (const d of legRows as any[]) legInfo.set(d.id, { brand: d.experience_brand_name ?? 'A brand', totalPaise: byId.get(d.id) ?? 0 })
+  }
+  const legTitle = (id: string, title: string | null) => `${title || 'Shoot'} · ${legInfo.get(id)?.brand ?? 'A brand'} · Managed by Guapd`
 
   const threadMap = new Map<string, {
     dealId: string; dealTitle: string; dealStatus: string; dealStage: string; brandName: string;
     brandInitials: string; brandLogo: string | null; lastMessage: string; senderParty: string; createdAt: string;
-    amountPaise: number;
+    amountPaise: number; counterparty: 'Brand' | 'Guapd';
   }>()
 
   for (const msg of messages ?? []) {
@@ -56,19 +69,21 @@ export default async function CreatorInboxPage({ searchParams }: {
       const deal = msg.deals as any
       const brand = deal?.brands
       const brandObj = Array.isArray(brand) ? brand[0] : brand
-      const brandName = brandObj?.name || 'Unknown brand'
+      const isLeg = deal?.leg_role === 'creator_leg'
+      const brandName = isLeg ? 'Guapd' : brandObj?.name || 'Unknown brand'
       threadMap.set(msg.deal_id, {
         dealId: msg.deal_id,
-        dealTitle: deal?.title || 'Untitled deal',
+        dealTitle: isLeg ? legTitle(msg.deal_id, deal?.title) : deal?.title || 'Untitled deal',
         dealStatus: deal?.status || '',
         dealStage: resolveStatus({ status: deal?.status ?? '', is_posted: deal?.is_posted ?? null }),
         brandName,
         brandInitials: getInitials(brandName),
-        brandLogo: brandObj?.logo_url ?? null,
+        brandLogo: isLeg ? null : brandObj?.logo_url ?? null,
         lastMessage: msg.body || '',
         senderParty: msg.sender_party,
         createdAt: msg.created_at,
-        amountPaise: deal?.price_paise ?? 0,
+        amountPaise: isLeg ? legInfo.get(msg.deal_id)?.totalPaise ?? 0 : deal?.price_paise ?? 0,
+        counterparty: isLeg ? 'Guapd' : 'Brand',
       })
     }
   }
@@ -78,19 +93,21 @@ export default async function CreatorInboxPage({ searchParams }: {
   for (const deal of openDeals ?? []) {
     if (threadMap.has(deal.id)) continue
     const brandObj = Array.isArray(deal.brands) ? deal.brands[0] : (deal.brands as any)
-    const brandName = brandObj?.name || 'Brand'
+    const isLeg = (deal as { leg_role?: string | null }).leg_role === 'creator_leg'
+    const brandName = isLeg ? 'Guapd' : brandObj?.name || 'Brand'
     threadMap.set(deal.id, {
       dealId: deal.id,
-      dealTitle: deal.title || 'Untitled deal',
+      dealTitle: isLeg ? legTitle(deal.id, deal.title) : deal.title || 'Untitled deal',
       dealStatus: deal.status || '',
       dealStage: resolveStatus({ status: deal.status ?? '', is_posted: (deal as { is_posted?: boolean | null }).is_posted ?? null }),
       brandName,
       brandInitials: getInitials(brandName),
-      brandLogo: brandObj?.logo_url ?? null,
+      brandLogo: isLeg ? null : brandObj?.logo_url ?? null,
       lastMessage: '',
       senderParty: '',
       createdAt: '',
-      amountPaise: deal.price_paise ?? 0,
+      amountPaise: isLeg ? legInfo.get(deal.id)?.totalPaise ?? 0 : deal.price_paise ?? 0,
+      counterparty: isLeg ? 'Guapd' : 'Brand',
     })
   }
 

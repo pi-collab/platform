@@ -5,6 +5,8 @@ import { sendDealEmail, isPlausibleEmail } from '@/lib/email'
 import { isSyntheticEmail } from '@/lib/synthetic-email'
 import { renderNoticeEmail } from '@/lib/email-template'
 import { experienceStaffUserIds } from '@/lib/staff-access-server'
+import { emailExperienceStaff } from '@/lib/experience-staff-email'
+import { sendLegWhatsApp, legTotalPaise } from '@/lib/experience-leg-whatsapp'
 
 /**
  * Notifications for counters on a creator leg and for payout-detail changes
@@ -43,6 +45,19 @@ export async function notifyCreatorCounter(dealId: string, kind: 'guapd_counter'
         html, text, dealId, idempotencyKey: `leg-counter-${idKey}-${kind}` })
       if (!r.ok) console.warn(`[experience-counter] email not sent deal=${dealId}`)
     }
+    if (kind === 'guapd_counter') {
+      // What the creator would receive in all on Guapd's counter: its net plus the (unchanged) allowance.
+      const admin = createAdminClient()
+      const [{ data: k }, { data: t }] = await Promise.all([
+        admin.from('experience_leg_counters').select('net_paise').eq('deal_id', dealId).eq('proposed_by', 'guapd').eq('status', 'open').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        admin.from('experience_creator_terms').select('allowance_paise').eq('deal_id', dealId).maybeSingle(),
+      ])
+      // experience_offer_updated: Guapd's counter, at what the creator would receive in all.
+      if (k?.net_paise != null) await sendLegWhatsApp('updated', dealId, Number(k.net_paise) + Number(t?.allowance_paise ?? 0))
+    } else if (kind === 'accepted') {
+      // Their counter accepted: the offer is updated to their terms.
+      await sendLegWhatsApp('updated', dealId, await legTotalPaise(dealId))
+    }
   } catch (err) {
     console.error(`[experience-counter] creator notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }
@@ -55,7 +70,8 @@ export async function notifyStaffCreatorCountered(dealId: string): Promise<void>
     if (!c) return
     const staff = await experienceStaffUserIds(createAdminClient())
     const body = `${c.name ?? 'A creator'} countered their offer for ${c.deal.title ?? 'an Experience'}. It needs an answer.`
-    for (const userId of staff) await createNotification({ userId, dealId: null, type: 'experience_leg_countered', body })
+    for (const userId of staff) await createNotification({ userId, dealId, type: 'experience_leg_countered', body })
+    await emailExperienceStaff(staff, { subject: `${c.name ?? 'A creator'} countered their offer`, heading: 'A creator countered', body, dealId, idKey: `staff-counter-${dealId}-${Date.now().toString().slice(0, -5)}` })
   } catch (err) {
     console.error(`[experience-counter] staff notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }

@@ -5,6 +5,7 @@ import { sendDealEmail, isPlausibleEmail } from '@/lib/email'
 import { isSyntheticEmail } from '@/lib/synthetic-email'
 import { renderNoticeEmail } from '@/lib/email-template'
 import { experienceStaffUserIds } from '@/lib/staff-access-server'
+import { emailExperienceStaff } from '@/lib/experience-staff-email'
 
 /**
  * Notifications for the shoot and deliverables stage of an Experience (0538).
@@ -85,7 +86,9 @@ export async function notifyStaffItemSubmitted(dealId: string, label: string): P
     if (!deal || deal.leg_role !== 'creator_leg') return
     const { data: creator } = await admin.from('creators').select('full_name').eq('id', deal.creator_id).maybeSingle()
     const body = `${creator?.full_name ?? 'A creator'} submitted ${label} for ${deal.title ?? 'an Experience'}. It needs Guapd's review.`
-    for (const userId of staff) await createNotification({ userId, dealId: null, type: 'experience_item_submitted', body })
+    // 0546: the leg's deal id, so the staff bell opens that creator's deal on the console.
+    for (const userId of staff) await createNotification({ userId, dealId, type: 'experience_item_submitted', body })
+    await emailExperienceStaff(staff, { subject: `A deliverable needs Guapd's review`, heading: 'Deliverable submitted', body, dealId, idKey: `staff-item-${dealId}-${label}-${Date.now().toString().slice(0, -5)}` })
   } catch (err) {
     console.error(`[experience-deliverables] staff notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }

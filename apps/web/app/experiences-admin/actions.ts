@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import {
   acceptConsoleQuote, addConsoleQuote, createConsoleExperience,
-  rosterAdd, rosterDecide, rosterLock, rosterNote, rosterPlan, rosterRemove,
+  rosterAdd, rosterDecide, rosterLock, rosterShare, rosterRelease, rosterNote, rosterPlan, rosterRemove,
   listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
+  saveSharedBrief, saveOwnBrief, legRescope, legBroadcast, sendBrandMessageAsGuapd, briefUploadSlot, getConsoleBrief, sendLegMessageAsGuapd, type BriefDoc, type BriefAttachment,
   addConsoleCost, updateConsoleCost, removeConsoleCost, completeConsoleExperience, reopenConsoleExperience,
   scheduleConsoleShoot, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
   itemUploadSlot, attachConsoleItem, reviewConsoleItem, consoleItemFile,
@@ -22,12 +23,12 @@ import {
   type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
-import { notifyCreatorLegOffer } from '@/lib/experience-leg-notify'
+import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
 import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
-import { notifyBrandWaiting } from '@/lib/experience-brand-notify'
+import { notifyBrandWaiting, notifyBrandGuapdMessage } from '@/lib/experience-brand-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
@@ -146,16 +147,43 @@ export async function addToRoster(experienceId: string, creatorIds: string[], ad
   if (!r.ok) return { error: r.error }
   revalidatePath(`${BASE}/${experienceId}`)
   // Guapd's picks wait on the brand's review (0544); at most one nudge an hour.
-  if (addedBy !== 'brand') await notifyBrandWaiting(experienceId, 'roster', creatorIds.length)
+  // 0548: Guapd's picks start as an internal shortlist; the brand is told only
+  // when Guapd shares creators with them (shareRosterWithBrand).
   return { error: null }
 }
 
-export async function recordRosterDecision(experienceId: string, rosterId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Out> {
+export async function recordRosterDecision(experienceId: string, rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold' | 'pending', channel: string | null): Promise<Out> {
   const refused = await gate(); if (refused) return refused
-  if (!['accepted', 'rejected', 'pending'].includes(decision)) return { ok: false, error: 'Unknown decision.' }
+  if (!['accepted', 'rejected', 'on_hold', 'pending'].includes(decision)) return { ok: false, error: 'Unknown decision.' }
   if (decision !== 'pending' && !isChannel(channel)) return { ok: false, error: 'Say how the brand told us.' }
   const r = await rosterDecide(rosterId, decision, decision === 'pending' ? null : channel)
   if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+/** 0549: release a locked creator who backed out. Their open or accepted offer is
+ *  cancelled (with the reason, kept on record) and they are told. They can then
+ *  be removed, or sent a fresh offer if they come back. */
+export async function releaseRosterCreator(experienceId: string, rosterId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId)) return { ok: false, error: 'Unknown creator.' }
+  const why = typeof reason === 'string' ? reason.trim() : ''
+  if (why.length < 3 || why.length > 300) return { ok: false, error: 'Say why they are leaving the roster (3 to 300 characters).' }
+  const r = await rosterRelease(rosterId, why)
+  if (!r.ok) return r
+  if (r.data.deal_cancelled && r.data.deal_id) await notifyCreatorLegWithdrawn(r.data.deal_id)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
+}
+
+/** 0548: share the chosen shortlisted creators with the brand, and tell the brand. */
+export async function shareRosterWithBrand(experienceId: string, rosterIds: string[]): Promise<Out<number>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !Array.isArray(rosterIds) || rosterIds.length === 0 || !rosterIds.every(isUuid)) return { ok: false, error: 'Pick the creators to share.' }
+  const r = await rosterShare(experienceId, rosterIds)
+  if (!r.ok) return r
+  if (r.data > 0) await notifyBrandWaiting(experienceId, 'roster', r.data)
   revalidatePath(`${BASE}/${experienceId}`)
   return r
 }
@@ -222,6 +250,18 @@ export interface LegDraftForm {
   affiliateCount: number | string
   /** 0542: a day rate entered on this deal (rupees) while the creator has no active rate. */
   enteredRate?: number | string | null
+  /** 0546: videos with ad rights / boosted ('' or null = the agreed per-creator default). */
+  adRightsCount?: number | string | null
+  boostCount?: number | string | null
+  /** 0546: travel/other allowance in rupees, fee-exempt ('' or null = none). */
+  allowance?: number | string | null
+}
+
+/** '' / null → null (not set); otherwise a whole number ≥ 0, or undefined when invalid. */
+const optCount = (v: unknown): number | null | undefined => {
+  if (v == null || v === '') return null
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 0 ? n : undefined
 }
 
 export async function draftCreatorLeg(experienceId: string, f: LegDraftForm): Promise<Out<ConsoleLegsReconcile>> {
@@ -235,9 +275,16 @@ export async function draftCreatorLeg(experienceId: string, f: LegDraftForm): Pr
   if (f.days !== null && f.days !== '' && days === null) return { ok: false, error: 'Days must be more than 0, at most 365, with at most two decimals (e.g. 1.5).' }
   const items = deliverables(f.deliverables)
   if (!items || items.length === 0) return { ok: false, error: 'Give this creator at least one deliverable.' }
-  const aff = Number(f.affiliateCount)
-  if (!Number.isInteger(aff) || aff < 0) return { ok: false, error: 'Affiliate is a count of this creator\'s videos (0 for none).' }
-  const r = await legDraft(f.rosterId, enteredPaise != null ? null : f.productId, days, items, aff, enteredPaise)
+  // 0547: a blank count is missing, never 0.
+  const aff = f.affiliateCount === '' || f.affiliateCount == null ? NaN : Number(f.affiliateCount)
+  if (!Number.isInteger(aff) || aff < 0) return { ok: false, error: 'Say how many of this creator\'s videos carry the affiliate link (0 for none).' }
+  const ad = optCount(f.adRightsCount), boost = optCount(f.boostCount)
+  if (ad === undefined) return { ok: false, error: 'Ad rights is a count of this creator\'s videos.' }
+  if (boost === undefined) return { ok: false, error: 'Boost is a count of this creator\'s videos.' }
+  const allowancePaise = f.allowance == null || f.allowance === '' ? null : rupeesToPaise(String(f.allowance))
+  if (f.allowance != null && f.allowance !== '' && (allowancePaise == null || allowancePaise < 0 || allowancePaise % 100 !== 0)) return { ok: false, error: 'Enter the allowance in whole rupees.' }
+  const r = await legDraft(f.rosterId, enteredPaise != null ? null : f.productId, days, items, aff, enteredPaise,
+    { adRightsCount: ad, boostCount: boost, allowancePaise })
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
   return r
@@ -264,13 +311,33 @@ export async function sendCreatorLegs(experienceId: string, rosterIds: string[])
       failed.push({ rosterId: id, error: `${row.full_name}: their day rate changed. Pick it again.` }); continue
     }
     const t = creatorLegTerms({ dayRatePaise: rateP, days: row.leg_days, track: row.track })
-    const r = await legSend(id, { grossPaise: t.creatorGrossPaise, platformPct: t.platformPct, netPaise: t.creatorNetPaise })
+    // The allowance is NOT in these terms: the fee is on day rate × days only.
+    const r = await legSend(id, { grossPaise: t.creatorGrossPaise, platformPct: t.platformPct, netPaise: t.creatorNetPaise, allowancePaise: row.leg_allowance_paise ?? 0 })
     if (!r.ok) { failed.push({ rosterId: id, error: `${row.full_name}: ${r.error}` }); continue }
     sent++
     await notifyCreatorLegOffer(r.data)
   }
   revalidatePath(`${BASE}/${experienceId}`)
   return { ok: true, data: { sent, failed } }
+}
+
+/** 0547: re-split a sent creator's affiliate / ad-rights / boost counts (labels
+ *  only) while the shoot is not yet confirmed. Every count is required; the
+ *  database refuses anything above what the brand bought, a stale screen, and
+ *  any change once the shoot is confirmed. The creator is told. */
+export async function rescopeCreatorLeg(experienceId: string, rosterId: string,
+  counts: { affiliate: number | string; adRights: number | string; boost: number | string },
+  expected: { affiliate: number; ad_rights: number; boost: number }): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId)) return { ok: false, error: 'Unknown creator.' }
+  const n = (v: unknown) => { if (v === '' || v == null) return null; const x = Number(v); return Number.isInteger(x) && x >= 0 ? x : null }
+  const a = n(counts.affiliate), ad = n(counts.adRights), b = n(counts.boost)
+  if (a == null || ad == null || b == null) return { ok: false, error: 'Give every count (0 for none).' }
+  const r = await legRescope(rosterId, { affiliate: a, adRights: ad, boost: b }, expected)
+  if (!r.ok) return r
+  await notifyCreatorScopeChanged(r.data.deal_id)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
 }
 
 export async function setDayRateForCreator(experienceId: string, creatorId: string, rupees: number | string): Promise<Out> {
@@ -290,6 +357,112 @@ export async function saveCreatorBrief(experienceId: string, brief: string): Pro
   const r = await setCreatorBrief(experienceId, typeof brief === 'string' ? brief : '')
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+// ── 0546: the campaign-style brief ─────────────────────────────────────────
+// Shared by default, a creator's own when staff switch them. Editable until
+// the shoot is confirmed (the database refuses after). Every creator who sees
+// the changed brief on a sent deal is told.
+
+function cleanBrief(b: Partial<BriefDoc> | null | undefined): BriefDoc {
+  const str = (v: unknown) => (typeof v === 'string' ? v : null)
+  const atts = Array.isArray(b?.attachments) ? b!.attachments : []
+  return {
+    pitch: str(b?.pitch), guidelines: str(b?.guidelines), avoid: str(b?.avoid),
+    attachments: atts.filter((a) => a && typeof a.storage_path === 'string' && typeof a.name === 'string')
+      .map((a) => ({ name: a.name, storage_path: a.storage_path, size_bytes: typeof a.size_bytes === 'number' ? a.size_bytes : null, content_type: typeof a.content_type === 'string' ? a.content_type : '' })),
+  }
+}
+
+export async function saveExperienceBrief(experienceId: string, brief: Partial<BriefDoc>): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const r = await saveSharedBrief(experienceId, cleanBrief(brief))
+  if (!r.ok) return r
+  await notifyCreatorsBriefChanged(r.data)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
+}
+
+/** own=false puts the creator back on the shared brief. */
+export async function saveCreatorOwnBrief(experienceId: string, rosterId: string, own: boolean, brief: Partial<BriefDoc> | null): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(rosterId) || typeof own !== 'boolean') return { ok: false, error: 'Unknown creator.' }
+  const r = await saveOwnBrief(rosterId, own, own ? cleanBrief(brief) : null)
+  if (!r.ok) return r
+  await notifyCreatorsBriefChanged(r.data)
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
+}
+
+// Server actions take at most 6 MB (next.config), so a larger file would fail
+// with a framework error; refuse it here with a clear one instead.
+const BRIEF_MAX_BYTES = 5 * 1024 * 1024
+
+/** Upload one attachment to the slot the database hands out; the save then
+ *  refuses any path outside this Experience's brief folder. */
+export async function uploadExperienceBriefAttachment(experienceId: string, form: FormData): Promise<Out<BriefAttachment>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const file = form.get('file')
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: 'Pick a file.' }
+  if (file.size > BRIEF_MAX_BYTES) return { ok: false, error: 'Files can be up to 5 MB. For a video, share a link in the brief.' }
+  const slot = await briefUploadSlot(experienceId, file.name)
+  if (!slot.ok) return slot
+  const { error } = await createAdminClient().storage.from('deal-files').upload(slot.data, file, { contentType: file.type || undefined })
+  if (error) return { ok: false, error: 'The upload failed. Try again.' }
+  return { ok: true, data: { name: file.name.slice(0, 200), storage_path: slot.data, size_bytes: file.size, content_type: file.type } }
+}
+
+/** A short-lived link to a brief attachment, for staff. Only paths that are on
+ *  this Experience's brief (shared or a creator's own) are signed. */
+export async function briefAttachmentLink(experienceId: string, path: string): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || typeof path !== 'string') return { ok: false, error: 'Unknown file.' }
+  const b = await getConsoleBrief(experienceId)
+  if (!b.ok) return b
+  const all = [b.data.shared, ...Object.values(b.data.overrides)].flatMap((d) => d?.attachments ?? [])
+  if (!all.some((a) => a.storage_path === path)) return { ok: false, error: 'Unknown file.' }
+  const { data, error } = await createAdminClient().storage.from('deal-files').createSignedUrl(path, 300)
+  return error || !data ? { ok: false, error: 'Could not open the file.' } : { ok: true, data: data.signedUrl }
+}
+
+// ── 0546: Guapd ↔ creator messages ─────────────────────────────────────────
+export async function sendGuapdLegMessage(dealId: string, body: string): Promise<Out<{ id: string; body: string; created_at: string }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(dealId)) return { ok: false, error: 'Unknown deal.' }
+  if (typeof body !== 'string' || !body.trim()) return { ok: false, error: 'Write a message first.' }
+  const r = await sendLegMessageAsGuapd(dealId, body)
+  if (!r.ok) return r
+  await notifyCreatorGuapdMessage(dealId)
+  revalidatePath(`${BASE}/inbox`)
+  return r
+}
+
+// ── 0550: broadcast to creators, and the brand ↔ Guapd thread ──────────────
+/** One message to every creator on the Experience ('all' open offers and deals,
+ *  or 'accepted' only), each in their OWN Guapd thread. The brand never sees it. */
+export async function broadcastToCreators(experienceId: string, body: string, scope: 'all' | 'accepted'): Promise<Out<number>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || (scope !== 'all' && scope !== 'accepted')) return { ok: false, error: 'Unknown Experience.' }
+  if (typeof body !== 'string' || !body.trim()) return { ok: false, error: 'Write a message first.' }
+  const r = await legBroadcast(experienceId, body, scope)
+  if (!r.ok) return r
+  for (const dealId of r.data) await notifyCreatorGuapdMessage(dealId)
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`${BASE}/inbox`)
+  return { ok: true, data: r.data.length }
+}
+
+/** Guapd writes in the brand thread; the brand's members are told. Bind the Experience id. */
+export async function sendGuapdBrandMessage(experienceId: string, body: string): Promise<Out<{ id: string; body: string; created_at: string }>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  if (typeof body !== 'string' || !body.trim()) return { ok: false, error: 'Write a message first.' }
+  const r = await sendBrandMessageAsGuapd(experienceId, body)
+  if (!r.ok) return r
+  await notifyBrandGuapdMessage(experienceId)
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`${BASE}/inbox`)
   return r
 }
 

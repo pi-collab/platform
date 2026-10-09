@@ -60,7 +60,23 @@ export default function CreatorOfferMobile({
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
   stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
+  hideItemPrices = false, totalLabel = 'Deal total', extraTermRows = [], summaryRows = [], stageCopy, messageLabel = 'Message brand',
 }: {
+  /* 6.1 item 9: an Experience creator leg renders THIS screen too, fed only
+     its own leg's figures. These opt-ins exist for it; a marketplace deal
+     passes none of them and renders exactly as before. */
+  /** A leg is paid by the day, not per deliverable: show the items without a price. */
+  hideItemPrices?: boolean
+  /** The label for totalPaise ("Deal total" on a marketplace deal). */
+  totalLabel?: string
+  /** Rows after the platform fee (a leg's fee-exempt allowance). */
+  extraTermRows?: { label: string; value: string }[]
+  /** Rows under the fee on the offer card itself (a leg's no-fee allowance), so the headline adds up without opening the fold. */
+  summaryRows?: { label: string; value: string }[]
+  /** The stage words and progress for a leg (offer → accepted → shoot → paid). */
+  stageCopy?: { line: string; label: string; next: string; lit: number }
+  /** The message button's label ("Message Guapd" on a leg). */
+  messageLabel?: string
   brandName: string
   dealTitle: string
   receivesPaise: number | null
@@ -144,11 +160,11 @@ export default function CreatorOfferMobile({
                   screen uses. Nothing left to weigh up, so nothing opens. */}
               {items.map((it) => (
                 <div className="offer-m__termrow" key={it.id}>
-                  <span>{it.label}</span><span>{inr(it.pricePaise)}</span>
+                  <span>{it.label}</span>{!hideItemPrices && <span>{inr(it.pricePaise)}</span>}
                 </div>
               ))}
               {totalPaise !== null && (
-                <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
+                <div className="offer-m__termrow"><span>{totalLabel}</span><span>{inr(totalPaise)}</span></div>
               )}
               {feePaise !== null && feePaise > 0 && (
                 <div className="offer-m__termrow">
@@ -156,6 +172,7 @@ export default function CreatorOfferMobile({
                   <span>&minus;{inr(feePaise)}</span>
                 </div>
               )}
+              {extraTermRows.map((r) => <div className="offer-m__termrow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
               {usageRights && (
                 <div className="offer-m__termrow"><span>Usage rights</span><span>{usageRights}</span></div>
               )}
@@ -190,7 +207,7 @@ export default function CreatorOfferMobile({
           <div className="offer-m__headactions">
             {/* THIS deal's thread, not the inbox list - and `from=deal` so the
                 thread's back arrow returns here rather than to the list. */}
-            <Link href={messageHref ?? '/creator/inbox'} className="offer-m__icon" aria-label="Message brand">
+            <Link href={messageHref ?? '/creator/inbox'} className="offer-m__icon" aria-label={messageLabel}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </Link>
             <Link href="/creator/notifications?from=deals" className="offer-m__icon" aria-label="Notifications">
@@ -211,7 +228,7 @@ export default function CreatorOfferMobile({
             <span className={`offer-m__dot${stage === 'offer' ? '' : ' offer-m__dot--agreed'}`} aria-hidden="true" />{dealTitle}
           </span>
           <span className="offer-m__waiting">
-            {stage === 'complete'
+            {stageCopy ? stageCopy.line : stage === 'complete'
               ? (paidAt ? `Paid ${paidAt}` : 'Paid')
               : stage === 'invoiced'
               ? 'Invoiced'
@@ -235,7 +252,7 @@ export default function CreatorOfferMobile({
         <div className="offer-m__progresswrap">
           <div className="offer-m__progresshead">
             <span className="offer-m__stage">
-              {stage === 'complete' ? 'Paid'
+              {stageCopy ? stageCopy.label : stage === 'complete' ? 'Paid'
                 : stage === 'invoiced' ? 'Invoiced'
                 : stage === 'approved' ? 'Approved'
                 : stage === 'revision' ? 'Changes requested'
@@ -245,7 +262,7 @@ export default function CreatorOfferMobile({
             </span>
             <span className="offer-m__next">
               {/* No next step: the export puts "Complete" in this slot. */}
-              {stage === 'complete' ? 'Complete'
+              {stageCopy ? stageCopy.next : stage === 'complete' ? 'Complete'
                 : stage === 'invoiced' ? 'Next: paid'
                 : stage === 'approved' ? (allPosted ? 'Next: issue invoice' : 'Next: post content')
                 : stage === 'revision' ? 'Next: resubmit'
@@ -259,7 +276,7 @@ export default function CreatorOfferMobile({
               <span
                 key={i}
                 className={[
-                  i <= (stage === 'complete' ? 5 : stage === 'invoiced' ? 4 : stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
+                  i <= (stageCopy ? stageCopy.lit : stage === 'complete' ? 5 : stage === 'invoiced' ? 4 : stage === 'approved' ? 3 : stage === 'revision' || stage === 'submitted' ? 2 : stage === 'agreed' ? 1 : 0) ? 'is-on' : '',
                   /* The export paints the reached segment amber on revision:
                      progress was made and then handed back. */
                   stage === 'revision' && i === 2 ? 'is-warn' : '',
@@ -551,7 +568,7 @@ export default function CreatorOfferMobile({
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12151C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="12" cy="12" r="3.2" /></svg>
                     </span>
                     <span className="offer-m__delivname">{it.label}</span>
-                    <span className="offer-m__delivprice">{inr(it.pricePaise)}</span>
+                    {!hideItemPrices && <span className="offer-m__delivprice">{inr(it.pricePaise)}</span>}
                     <svg className="offer-m__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#878D99" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                   </summary>
                   {it.detail && <div className="offer-m__delivbody">{it.detail}</div>}
@@ -579,6 +596,7 @@ export default function CreatorOfferMobile({
               <span>&minus;{inr(feePaise)}</span>
             </div>
           ) : null}
+          {summaryRows.map((r) => <div className="offer-m__feerow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
 
           {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
         </section>
@@ -678,7 +696,7 @@ export default function CreatorOfferMobile({
               once usage rights or revision terms wrap. */}
           <div className="offer-m__terms-list">
             {totalPaise !== null && (
-              <div className="offer-m__termrow"><span>Deal total</span><span>{inr(totalPaise)}</span></div>
+              <div className="offer-m__termrow"><span>{totalLabel}</span><span>{inr(totalPaise)}</span></div>
             )}
             {feePaise !== null && feePaise > 0 && (
               <div className="offer-m__termrow">
@@ -686,6 +704,7 @@ export default function CreatorOfferMobile({
                 <span>&minus;{inr(feePaise)}</span>
               </div>
             )}
+            {extraTermRows.map((r) => <div className="offer-m__termrow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
             {receivesPaise !== null && (
               <div className="offer-m__termrow"><span>You receive</span><span>{inr(receivesPaise)}</span></div>
             )}

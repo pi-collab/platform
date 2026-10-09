@@ -26,6 +26,7 @@ export default function DealThread({
   initialMessages,
   autoOpen = false,
   hideLauncher = false,
+  channel,
 }: {
   dealId: string
   dealStatus: string
@@ -40,6 +41,16 @@ export default function DealThread({
   /** Hide the built-in button when the page already has its own Message
    *  control, so a deal does not show two ways into the same panel. */
   hideLauncher?: boolean
+  /** 6.1 item 11: the brand ↔ Guapd thread on an Experience renders THIS chat.
+   *  Its messages live in their own table, so it brings its own send and read
+   *  (server actions, through the brand gate) and is refreshed rather than
+   *  subscribed; the other side is Guapd. A deal passes nothing. */
+  channel?: {
+    send: (body: string) => Promise<{ status: 'success' | 'error'; message?: string; data?: { id: string; body: string; created_at: string } }>
+    markRead: () => Promise<void>
+    otherLabel: string
+    otherPhrase: string
+  }
 }) {
   // Not "is the status terminal". That closed the channel the moment a deal
   // completed, which is exactly when payment and usage-rights questions arrive.
@@ -51,6 +62,21 @@ export default function DealThread({
   })
   const isTerminal = !chatWindow.open
   const [messages, setMessages] = useState<Message[]>(initialMessages)
+  // A channel thread is refreshed, not subscribed: fold in any new messages the server sends down.
+  useEffect(() => {
+    if (!channel) return
+    setMessages((prev) => {
+      const have = new Set(prev.map((m) => m.id))
+      const add = initialMessages.filter((m) => !have.has(m.id))
+      return add.length ? [...prev, ...add].sort((a, b) => a.created_at.localeCompare(b.created_at)) : prev
+    })
+  }, [channel, initialMessages])
+  useEffect(() => {
+    if (!channel) return
+    const t = setInterval(() => router.refresh(), 20000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel])
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,9 +101,9 @@ export default function DealThread({
   // Dedupe: track all known message ids so realtime skips sender's own echo
   const knownIdsRef = useRef(new Set(initialMessages.map((m) => m.id)))
 
-  // Realtime: subscribe to new messages on this deal
+  // Realtime: subscribe to new messages on this deal (a channel thread is refreshed instead)
   useRealtimeMessages(
-    dealId,
+    channel ? null : dealId,
     (msg) => {
       knownIdsRef.current.add(msg.id)
       setMessages((prev) => [...prev, msg as Message])
@@ -136,7 +162,7 @@ export default function DealThread({
     setError(null)
     setSending(true)
 
-    const result = await sendMessage(dealId, trimmed, 'brand')
+    const result = channel ? await channel.send(trimmed) : await sendMessage(dealId, trimmed, 'brand')
 
     setSending(false)
 
@@ -145,7 +171,7 @@ export default function DealThread({
       return
     }
 
-    const msg = { id: result.data!.id, deal_id: dealId, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
+    const msg = { id: result.data!.id, deal_id: dealId, sender_party: channel ? 'brand' : (result.data as unknown as { sender_party: 'brand' | 'creator' }).sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
     knownIdsRef.current.add(msg.id)
     setMessages((prev) => [...prev, msg])
     setBody('')
@@ -187,9 +213,9 @@ export default function DealThread({
     // navigation, which reads as "it didn't work". Only when there WAS
     // something unread, so opening a read thread does not refetch the page.
     if (unread > 0) {
-      void markDealThreadRead(dealId).then(() => router.refresh())
+      void (channel ? channel.markRead() : markDealThreadRead(dealId)).then(() => router.refresh())
     } else {
-      void markDealThreadRead(dealId)
+      void (channel ? channel.markRead() : markDealThreadRead(dealId))
     }
   }, [open, messages, seenKey, dealId, unread, router])
 
@@ -244,7 +270,7 @@ export default function DealThread({
         {/* Panel header */}
         <div style={panelHeader}>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', fontWeight: 700, color: 'var(--color-heading)', margin: 0 }}>
-            Messages
+            {channel ? `Messages with ${channel.otherLabel}` : 'Messages'}
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* Minimise, not close. The conversation stays on screen as a bar. */}
@@ -280,7 +306,7 @@ export default function DealThread({
                   >
                     <div style={isBrand ? bubbleBrand : bubbleCreator}>
                       <p style={bubbleLabel}>
-                        {isBrand ? 'You' : 'Creator'}
+                        {isBrand ? 'You' : channel ? channel.otherLabel : 'Creator'}
                       </p>
                       <p style={bubbleBody}>{msg.body}</p>
                       <p style={bubbleTime}>
@@ -303,7 +329,7 @@ export default function DealThread({
         {/* Compose */}
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>{messagingClosedNotice(chatWindow, 'the creator')}</p>
+            <p style={closedNotice}>{messagingClosedNotice(chatWindow, channel ? channel.otherPhrase : 'the creator')}</p>
           ) : (
             <>
               {emojiOpen && (

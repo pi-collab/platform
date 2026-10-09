@@ -43,7 +43,7 @@ export interface BrandExperience {
 export interface BrandRosterCreator {
   roster_id: string; full_name: string; handle: string | null; profile_url: string | null; photo_url: string | null
   planned_deliverables: { type: string; count: number }[] | null; added_by: 'guapd' | 'brand'
-  decision: 'pending' | 'accepted' | 'rejected'; decided_at: string | null; decided_on_guapd: boolean | null; locked: boolean
+  decision: 'pending' | 'accepted' | 'rejected' | 'on_hold'; decided_at: string | null; decided_on_guapd: boolean | null; locked: boolean
 }
 export interface BrandItem {
   release_id: string; creator_name: string | null; label: string; kind: 'link' | 'file'
@@ -117,7 +117,13 @@ export async function brandAnswerQuote(quoteId: string, accept: boolean, note: s
   const { error } = await createClient().rpc('brand_experience_quote_answer', { p_quote_id: quoteId, p_accept: accept, p_note: note })
   return error ? fail(error) : { ok: true, data: null }
 }
-export async function brandDecideRoster(rosterId: string, decision: 'accepted' | 'rejected', expected: string): Promise<Result<null>> {
+/** 0548: accept several shared creators at once (accept only; all or nothing). */
+export async function brandAcceptRosterMany(experienceId: string, items: { roster_id: string; expected: string }[]): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('brand_experience_roster_accept_many', { p_experience_id: experienceId, p_items: items })
+  return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
+}
+
+export async function brandDecideRoster(rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold', expected: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('brand_experience_roster_decide', { p_roster_id: rosterId, p_decision: decision, p_expected: expected })
   return error ? fail(error) : { ok: true, data: null }
 }
@@ -128,4 +134,20 @@ export async function brandDecideRelease(releaseId: string, decision: 'approved'
 export async function brandSignOff(id: string, note: string | null): Promise<Result<null>> {
   const { error } = await createClient().rpc('brand_experience_signoff', { p_experience_id: id, p_note: note })
   return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0550: the brand ↔ Guapd thread (functions only, through the brand gate) ──
+export interface BrandGuapdMessage { id: string; from: 'brand' | 'guapd'; body: string; created_at: string; sender_name: string | null }
+/** Reading it marks it read for this member. */
+export async function getBrandGuapdThread(id: string): Promise<Result<BrandGuapdMessage[]>> {
+  const { data, error } = await createClient().rpc('brand_experience_messages', { p_experience_id: id })
+  return error ? fail(error) : { ok: true, data: ((data as { messages: BrandGuapdMessage[] }).messages ?? []) }
+}
+export async function brandSendToGuapd(id: string, body: string): Promise<Result<{ id: string; body: string; created_at: string }>> {
+  const { data, error } = await createClient().rpc('brand_experience_message_send', { p_experience_id: id, p_body: body })
+  return error ? fail(error) : { ok: true, data: data as { id: string; body: string; created_at: string } }
+}
+export async function brandGuapdUnread(id: string): Promise<number> {
+  const { data, error } = await createClient().rpc('brand_experience_messages_unread', { p_experience_id: id })
+  return error ? 0 : Number(data ?? 0)
 }

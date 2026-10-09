@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { acceptDeal, declineDeal, counterOffer } from './actions'
+import { acceptGuapdCounter, counterLeg, respondToLeg, withdrawMyCounter } from './leg-actions'
+import type { CreatorLegCounter } from '@/lib/creator-leg-money'
 import { trackEvent } from '@/lib/analytics'
 
 interface ItemForCounter {
@@ -16,14 +18,33 @@ interface ItemForCounter {
    side-by-side row. A variant rather than a CSS override, because the buttons
    carry inline styles and overriding those from a stylesheet means !important
    on every property — which is how a layout stops being editable. */
+/** 6.1 item 9: an Experience creator leg answers through THIS component too
+ *  (same buttons, decline flow, counter modal and confirmations). Only what is
+ *  behind them differs: the leg's own functions, and a counter on day rate and
+ *  days (the leg's terms) instead of per-item prices. Every figure is the leg's
+ *  own (creator_leg_context): never the brand's price. Guapd is the other party. */
+export interface LegAnswer {
+  counters: CreatorLegCounter[]
+  countersLeft: number
+  dayRatePaise: number | null
+  days: number | null
+  platformPct: number | null
+  /** Net after the fee + any allowance, for the Accept button. */
+  totalLabel: string | null
+  /** The fee-exempt allowance (unchanged by a counter), so the counter shows the same total. */
+  allowancePaise?: number
+}
+
 export default function AcceptDecline({
   dealId,
   items,
   stacked = false,
+  leg,
 }: {
   dealId: string
   items?: ItemForCounter[]
   stacked?: boolean
+  leg?: LegAnswer
 }) {
   const [loading, setLoading] = useState(false)
   const [declining, setDeclining] = useState(false)
@@ -33,7 +54,22 @@ export default function AcceptDecline({
   const [done, setDone] = useState<'accepted' | 'declined' | 'countered' | null>(null)
   const [counterPrices, setCounterPrices] = useState<Record<string, string>>({})
   const [counterNote, setCounterNote] = useState('')
+  const [legRate, setLegRate] = useState(leg?.dayRatePaise ? String(leg.dayRatePaise / 100) : '')
+  const [legDays, setLegDays] = useState(leg?.days != null ? String(leg.days) : '1')
   const router = useRouter()
+  const other = leg ? 'Guapd' : 'the brand'
+  const Other = leg ? 'Guapd' : 'The brand'
+  const openGuapd = leg?.counters.find((c) => c.status === 'open' && c.proposed_by === 'guapd') ?? null
+  const openMine = leg?.counters.find((c) => c.status === 'open' && c.proposed_by === 'creator') ?? null
+  const legPreview = (() => {
+    if (!leg) return null
+    const r = Number(legRate), d = Number(legDays), pct = Number(leg.platformPct ?? 0)
+    if (!(r > 0) || !(d > 0)) return null
+    const gross = Math.round(r * 100 * d)
+    const fee = Math.round((gross * pct) / 100)
+    return { gross, fee, net: gross - fee, pct }
+  })()
+  const legResult = (r: { ok: boolean; message?: string }) => (r.ok ? { status: 'success' as const } : { status: 'error' as const, message: r.message ?? 'Something went wrong' })
 
   function formatINR(paise: number): string {
     const rupees = paise / 100
@@ -52,8 +88,10 @@ export default function AcceptDecline({
   async function handleAccept() {
     setError(null)
     setLoading(true)
-    const result = await acceptDeal(dealId)
-    if (result.status === 'success') trackEvent('offer_accepted', { surface: 'app' })
+    const result = leg
+      ? legResult(openGuapd ? await acceptGuapdCounter(dealId, openGuapd.id) : await respondToLeg(dealId, true))
+      : await acceptDeal(dealId)
+    if (result.status === 'success') trackEvent('offer_accepted', { surface: leg ? 'experience' : 'app' })
     setLoading(false)
     if (result.status === 'error') setError(result.message)
     else { setDone('accepted'); router.refresh() }
@@ -62,8 +100,8 @@ export default function AcceptDecline({
   async function handleDecline() {
     setError(null)
     setLoading(true)
-    const result = await declineDeal(dealId, reason)
-    if (result.status === 'success') trackEvent('offer_declined', { surface: 'app' })
+    const result = leg ? legResult(await respondToLeg(dealId, false, reason)) : await declineDeal(dealId, reason)
+    if (result.status === 'success') trackEvent('offer_declined', { surface: leg ? 'experience' : 'app' })
     setLoading(false)
     if (result.status === 'error') setError(result.message)
     else { setDone('declined'); router.refresh() }
@@ -71,6 +109,15 @@ export default function AcceptDecline({
 
   async function handleCounter() {
     setError(null)
+    if (leg) {
+      if (!legPreview) { setError('Give a day rate and the number of days.'); return }
+      setLoading(true)
+      const r = legResult(await counterLeg(dealId, legRate, legDays, counterNote))
+      setLoading(false)
+      if (r.status === 'error') setError(r.message)
+      else { setDone('countered'); setCounterOpen(false); router.refresh() }
+      return
+    }
     if (counterTotal <= 0) {
       setError('Counter total must be greater than zero.')
       return
@@ -96,7 +143,7 @@ export default function AcceptDecline({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
         <div>
           <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: 'var(--ink)' }}>Deal accepted</p>
-          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>You can now start working on the deliverables.</p>
+          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>{leg ? 'Guapd will confirm the shoot details with you.' : 'You can now start working on the deliverables.'}</p>
         </div>
       </div>
     )
@@ -108,7 +155,7 @@ export default function AcceptDecline({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger, #D2545A)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
         <div>
           <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: 'var(--ink)' }}>Deal declined</p>
-          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>The brand has been notified.</p>
+          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>{Other} has been notified.</p>
         </div>
       </div>
     )
@@ -120,7 +167,7 @@ export default function AcceptDecline({
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
         <div>
           <p style={{ fontWeight: 700, fontSize: 14, margin: 0, color: 'var(--ink)' }}>Counter offer sent</p>
-          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>The brand can accept, revise, or decline your counter.</p>
+          <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '2px 0 0' }}>{Other} can accept, revise, or decline your counter.</p>
         </div>
       </div>
     )
@@ -139,7 +186,7 @@ export default function AcceptDecline({
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Let the brand know why..."
+            placeholder={`Let ${other} know why...`}
             disabled={loading}
             style={textareaStyle}
           />
@@ -218,9 +265,21 @@ export default function AcceptDecline({
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-            {loading ? 'Accepting...' : 'Accept offer'}
+            {loading ? 'Accepting...' : leg
+              ? (openGuapd ? `Accept Guapd's offer · ${formatINR(openGuapd.net_paise)}` : leg.totalLabel ? `Accept · ${leg.totalLabel} to you` : 'Accept offer')
+              : 'Accept offer'}
           </button>
-          {items && items.length > 0 && (
+          {leg && openMine && (
+            <button
+              onClick={async () => { setLoading(true); const r = legResult(await withdrawMyCounter(dealId, openMine.id)); setLoading(false); if (r.status === 'error') setError(r.message); else router.refresh() }}
+              disabled={loading}
+              className="pill-hover"
+              style={stacked ? { ...secondaryBtn, width: '100%', height: 50, borderRadius: 14, fontSize: 13.5 } : secondaryBtn}
+            >
+              Withdraw my counter
+            </button>
+          )}
+          {(leg ? !openMine && leg.countersLeft > 0 : items && items.length > 0) && (
             <button
               onClick={() => { setCounterOpen(true); setError(null) }}
               disabled={loading}
@@ -247,7 +306,7 @@ export default function AcceptDecline({
             <div style={{ padding: '22px 24px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Counter this offer</h3>
-                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>Change only what you want to move. Blank fields keep the brand&apos;s terms.</div>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 5 }}>{leg ? `Your day rate and the days. The platform fee and what you make stay the same.${leg.countersLeft ? ` ${leg.countersLeft} counter${leg.countersLeft === 1 ? '' : 's'} left.` : ''}` : <>Change only what you want to move. Blank fields keep the brand&apos;s terms.</>}</div>
               </div>
               <button
                 className="viewlink"
@@ -264,6 +323,20 @@ export default function AcceptDecline({
                 <p style={{ ...errorStyle, margin: 0 }}>{error}</p>
               )}
 
+              {leg ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                  <div>
+                    <div style={metaLabel}>Your day rate (₹)</div>
+                    <input className="dinput" style={{ marginTop: 7 }} type="text" inputMode="numeric" value={legRate}
+                      onChange={(e) => setLegRate(e.target.value.replace(/\D/g, ''))} disabled={loading} />
+                  </div>
+                  <div>
+                    <div style={metaLabel}>Days</div>
+                    <input className="dinput" style={{ marginTop: 7 }} type="text" inputMode="decimal" value={legDays}
+                      onChange={(e) => setLegDays(e.target.value.replace(/[^0-9.]/g, ''))} disabled={loading} />
+                  </div>
+                </div>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
                 {(items ?? []).map((item) => (
                   <div key={item.id}>
@@ -284,10 +357,11 @@ export default function AcceptDecline({
                   </div>
                 ))}
               </div>
+              )}
 
               {/* Note */}
               <div>
-                <div style={metaLabel}>Note to the brand</div>
+                <div style={metaLabel}>Note to {other}</div>
                 <input
                   className="dinput"
                   style={{ marginTop: 7 }}
@@ -307,7 +381,7 @@ export default function AcceptDecline({
               }}>
                 <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>You would receive</span>
                 <b style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>
-                  {counterTotal > 0 ? formatINR(counterTotal) : ', '}
+                  {leg ? (legPreview ? formatINR(legPreview.net + (leg.allowancePaise ?? 0)) : ', ') : counterTotal > 0 ? formatINR(counterTotal) : ', '}
                 </b>
               </div>
             </div>
@@ -315,7 +389,7 @@ export default function AcceptDecline({
             {/* Footer */}
             <div style={{ padding: '18px 24px', borderTop: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 11.5, lineHeight: 1.45, color: 'var(--ink-soft)', maxWidth: 250 }}>
-                The brand can accept, revise, or decline your counter.
+                {leg && legPreview ? `${formatINR(legPreview.gross)} − ${legPreview.pct}% platform fee${leg.allowancePaise ? ` + ${formatINR(leg.allowancePaise)} allowance (no fee)` : ''}. ` : ''}{Other} can accept, revise, or decline your counter.
               </span>
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button
@@ -328,9 +402,9 @@ export default function AcceptDecline({
                 </button>
                 <button
                   onClick={handleCounter}
-                  disabled={loading || counterTotal <= 0}
+                  disabled={loading || (leg ? !legPreview : counterTotal <= 0)}
                   className="neonbtn"
-                  style={{ ...neonBtn, opacity: (loading || counterTotal <= 0) ? 0.6 : 1, cursor: (loading || counterTotal <= 0) ? 'not-allowed' : 'pointer' }}
+                  style={{ ...neonBtn, opacity: (loading || (leg ? !legPreview : counterTotal <= 0)) ? 0.6 : 1, cursor: (loading || (leg ? !legPreview : counterTotal <= 0)) ? 'not-allowed' : 'pointer' }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                   {loading ? 'Sending...' : 'Send counter'}

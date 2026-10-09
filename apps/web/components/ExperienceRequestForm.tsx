@@ -144,9 +144,9 @@ export default function ExperienceRequestForm({ mode, brands = [], submit, doneB
           <Toggle label="Affiliate" hint="The creators also earn on sales" on={affiliate} onChange={setAffiliate}
             per={affPer} onPer={setAffPer} perRequired videosPer={videosPer} />
           <Toggle label="Ad rights" hint={staff ? 'The brand runs the videos as paid ads' : 'You run the videos as paid ads'} on={adRights} onChange={setAdRights}
-            per={adPer} onPer={setAdPer} videosPer={videosPer} months={adMonths} onMonths={setAdMonths} />
+            per={adPer} onPer={setAdPer} perRequired videosPer={videosPer} months={adMonths} onMonths={setAdMonths} />
           <Toggle label="Boost" hint={staff ? "The brand boosts the creators' own posts" : "You boost the creators' own posts"} on={boost} onChange={setBoost}
-            per={boostPer} onPer={setBoostPer} videosPer={videosPer} months={boostMonths} onMonths={setBoostMonths} />
+            per={boostPer} onPer={setBoostPer} perRequired videosPer={videosPer} months={boostMonths} onMonths={setBoostMonths} />
         </div>
       </section>
 

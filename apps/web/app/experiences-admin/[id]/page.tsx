@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getCreatorBrief, getLegsReconcile, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -18,6 +18,10 @@ import DeliverablesPanel from './DeliverablesPanel'
 import InvoicesPanel from './InvoicesPanel'
 import PayoutsPanel from './PayoutsPanel'
 import CompletionPanel from './CompletionPanel'
+import BriefPanel from './BriefPanel'
+import LegThreadList from '../LegThreadList'
+import LegThreadView from '../LegThreadView'
+import { BrandThreadPanel, CreatorBroadcast } from '../DealsExtras'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
 export const dynamic = 'force-dynamic'
@@ -36,7 +40,7 @@ export const dynamic = 'force-dynamic'
 /* The stages shown in the stepper (draft and cancelled are not stages). */
 const STAGES = EXPERIENCE_STATUSES.filter((s) => s !== 'draft' && s !== 'cancelled')
 
-export default async function ExperienceDetailPage({ params }: { params: { id: string } }) {
+export default async function ExperienceDetailPage({ params, searchParams }: { params: { id: string }; searchParams?: { tab?: string; deal?: string } }) {
   const gate = await experienceStaffGate()
   if (!gate.ok) return <NoAccess reason={gate.reason} />
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
@@ -61,9 +65,19 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
     : []
   // Creator deals exist once the roster is locked (Confirmed onward).
   const hasLegs = !['draft', 'requested', 'rostering', 'cancelled'].includes(e.status)
-  const [legs, legsReconcile, creatorBrief, counters] = hasLegs
-    ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getCreatorBrief(e.id), getConsoleCounters(e.id)])
-    : [null, null, null, null]
+  const [legs, legsReconcile, creatorBrief, counters, threads] = hasLegs
+    ? await Promise.all([listConsoleLegs(e.id), getLegsReconcile(e.id), getConsoleBrief(e.id), getConsoleCounters(e.id), listLegThreads(e.id)])
+    : [null, null, null, null, null]
+  // 0546: Overview | Deals. Deals lists every SENT creator deal with its
+  // status, any open counter and the Guapd ↔ creator thread.
+  const threadRows = threads?.ok ? threads.data : []
+  const tab = hasLegs && searchParams?.tab === 'deals' ? 'deals' : 'overview'
+  const openDeal = tab === 'deals' && searchParams?.deal && /^[0-9a-f-]{36}$/i.test(searchParams.deal) && threadRows.some((t) => t.deal_id === searchParams.deal)
+    ? await getLegThread(searchParams.deal) : null
+  const unreadAll = threadRows.reduce((n, t) => n + Number(t.unread ?? 0), 0)
+  // 0550: the brand ↔ Guapd thread (read on the Deals tab only: reading marks it read).
+  const brandThread = tab === 'deals' ? await getBrandThread(e.id) : null
+  const openLegs = threadRows.filter((t) => t.can_message)
   // The shoot (from Confirmed) and deliverables (from Shoot scheduled), 0538. Operational.
   const deliverables = hasLegs ? await getConsoleDeliverables(e.id) : null
   const hasDeliverables = ['shoot_scheduled', 'shoot_done', 'delivering', 'complete'].includes(e.status)
@@ -135,6 +149,51 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
         </div>
       )}
 
+      {/* ══════ TABS (0546) ══════ */}
+      {hasLegs && (
+        <nav className="xp-tabs" aria-label="Experience sections">
+          <Link href={`/experiences-admin/${e.id}`} className={tab === 'overview' ? 'on' : ''} aria-current={tab === 'overview' ? 'page' : undefined}>Overview</Link>
+          <Link href={`/experiences-admin/${e.id}?tab=deals`} className={tab === 'deals' ? 'on' : ''} aria-current={tab === 'deals' ? 'page' : undefined}>
+            Deals <span className="xp-tab-n">{threadRows.length}</span>{unreadAll > 0 && <span className="xp-tab-badge" aria-label={`${unreadAll} unread`}>{unreadAll}</span>}
+          </Link>
+        </nav>
+      )}
+
+      {tab === 'deals' && (
+        <section className="surface" style={{ ...card, marginTop: 16 }} aria-labelledby="xp-deals">
+          <h2 id="xp-deals" className="sect-head">Creator deals sent <span style={{ color: 'var(--wg-500)', fontWeight: 500, marginLeft: 6 }}>{threadRows.length}</span></h2>
+          <div className="sect-rule" />
+          <p className="t-body" style={{ margin: '12px 0 0', fontSize: 13 }}>Every deal sent to a creator on this Experience, and your messages with them. The brand never sees these threads.</p>
+          {openLegs.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <CreatorBroadcast experienceId={e.id} all={openLegs.length} accepted={openLegs.filter((t) => t.status === 'agreed').length} />
+            </div>
+          )}
+          <div className={openDeal?.ok ? 'xp-deals-split' : undefined} style={{ marginTop: 16 }}>
+            <LegThreadList rows={threadRows} hrefFor={`/experiences-admin/${e.id}?tab=deals&deal=`} activeId={openDeal?.ok ? openDeal.data.deal_id : null} showExperience={false} />
+            {openDeal && (openDeal.ok
+              ? <LegThreadView thread={openDeal.data} closeHref={`/experiences-admin/${e.id}?tab=deals`} />
+              : <Failed inline message={openDeal.error} />)}
+          </div>
+        </section>
+      )}
+
+      {tab === 'deals' && brandThread && (
+        <section className="surface" style={{ ...card, marginTop: 16 }} aria-labelledby="xp-brandmsg">
+          <h2 id="xp-brandmsg" className="sect-head">Messages with {e.brand_name}</h2>
+          <div className="sect-rule" />
+          <p className="t-body" style={{ margin: '12px 0 14px', fontSize: 13 }}>Your thread with the brand about this Experience. No creator sees it.</p>
+          {brandThread.ok
+            ? <BrandThreadPanel experienceId={e.id} closeHref={`/experiences-admin/${e.id}`} thread={{
+                deal_id: e.id, deal_ref: null, status: 'open', experience_id: e.id, experience_title: e.title,
+                creator_name: e.brand_name, creator_handle: null, creator_photo: null, can_message: true,
+                messages: brandThread.data.messages.map((m) => ({ id: m.id, from: m.from === 'guapd' ? 'guapd' as const : 'creator' as const, body: m.body, created_at: m.created_at, sender_name: m.sender_name })),
+              }} />
+            : <Failed inline message={brandThread.error} />}
+        </section>
+      )}
+
+      {tab === 'overview' && <>
       {/* ══════ ROSTER: the main action once the price is agreed ══════ */}
       {hasRoster && (
         <div style={{ marginTop: 20 }}>
@@ -147,11 +206,22 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
       {/* ══════ CREATOR DEALS: the main action once the roster is locked ══════ */}
       {hasLegs && (
         <div style={{ marginTop: 20 }}>
-          {legs?.ok && legsReconcile?.ok && creatorBrief?.ok
+          {legs?.ok && legsReconcile?.ok
             ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
-                brief={creatorBrief.data} affiliateSold={e.request_affiliate === true}
+                affiliateSold={e.request_affiliate === true} adRightsSold={e.request_ad_rights === true} boostSold={e.request_boost === true}
+                boughtPer={{ affiliate: e.agreed_plan?.affiliate_per_creator ?? null, adRights: e.agreed_plan?.ad_rights_per_creator ?? null, boost: e.agreed_plan?.boost_per_creator ?? null }}
                 counters={counters?.ok ? counters.data.counters : []} canRaise={counters?.ok ? counters.data.can_raise : false} />
-            : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || (creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the creator deals'} />}
+            : <Failed inline message={(legs && !legs.ok && legs.error) || (legsReconcile && !legsReconcile.ok && legsReconcile.error) || 'Could not load the creator deals'} />}
+        </div>
+      )}
+
+      {/* ══════ THE BRIEF creators get (0546): shared, or a creator's own ══════ */}
+      {hasLegs && (
+        <div style={{ marginTop: 20 }}>
+          {creatorBrief?.ok && legs?.ok
+            ? <BriefPanel experienceId={e.id} brief={creatorBrief.data}
+                creators={legs.data.map((l) => ({ roster_id: l.roster_id, full_name: l.full_name, has_own_brief: !!l.has_own_brief, sent: !!l.leg_deal_id }))} />
+            : <Failed inline message={(creatorBrief && !creatorBrief.ok && creatorBrief.error) || 'Could not load the brief'} />}
         </div>
       )}
 
@@ -265,8 +335,18 @@ export default async function ExperienceDetailPage({ params }: { params: { id: s
           )}
         </section>
       </div>
+      </>}
 
-      <style>{`@media (max-width: 860px) { .xp-cols { grid-template-columns: 1fr !important; } }`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 860px) { .xp-cols { grid-template-columns: 1fr !important; } }
+        .xp-tabs { display: flex; gap: 6px; margin-top: 20px; padding: 4px; border-radius: 14px; background: #F2F2EC; width: fit-content; max-width: 100%; }
+        .xp-tabs a { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px; border-radius: 10px; font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; color: var(--ink-soft); text-decoration: none; }
+        .xp-tabs a.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(22,23,15,.08); }
+        .xp-tab-n { color: var(--ink-faint); font-weight: 500; }
+        .xp-tab-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--neon); color: var(--ink); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+        .xp-deals-split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 16px; align-items: start; }
+        @media (max-width: 860px) { .xp-deals-split { grid-template-columns: 1fr; } .xp-deals-split > :first-child { display: none; } }
+      ` }} />
     </div>
   )
 }

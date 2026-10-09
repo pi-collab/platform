@@ -26,6 +26,7 @@ export default function CreatorThread({
   initialMessages,
   autoOpen = false,
   hideLauncher = false,
+  counterparty = 'Brand',
 }: {
   dealId: string
   dealStatus: string
@@ -37,7 +38,12 @@ export default function CreatorThread({
   initialMessages: Message[]
   autoOpen?: boolean
   hideLauncher?: boolean
+  /** Who the creator is talking to. 'Guapd' on an Experience leg (0546): the
+   *  thread is with Guapd, and the leg's brand is never named as the sender. */
+  counterparty?: 'Brand' | 'Guapd'
 }) {
+  const otherLabel = counterparty
+  const otherPhrase = counterparty === 'Guapd' ? 'Guapd' : 'the brand'
   // Not "is the status terminal". That closed the channel the moment a deal
   // completed, which is exactly when payment and usage-rights questions arrive.
   // See lib/messaging-window.ts for the window and why it ends at all.
@@ -194,7 +200,7 @@ export default function CreatorThread({
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
-        {messages.length > 0 ? `Messages (${messages.length})` : 'Message brand'}
+        {messages.length > 0 ? `Messages (${messages.length})` : `Message ${counterparty === 'Guapd' ? 'Guapd' : 'brand'}`}
       </button>
 
       {/* Minimised bar. Sits where the panel will appear, so expanding does not
@@ -237,7 +243,7 @@ export default function CreatorThread({
 
         <div style={messagesArea}>
           {messages.length === 0 ? (
-            <p style={emptyState}>No messages yet. Send a message to the brand.</p>
+            <p style={emptyState}>No messages yet. Send a message to {otherPhrase}.</p>
           ) : (
             <div style={messageList}>
               {messages.map((msg) => {
@@ -245,7 +251,7 @@ export default function CreatorThread({
                 return (
                   <div key={msg.id} style={{ display: 'flex', justifyContent: isCreator ? 'flex-end' : 'flex-start' }}>
                     <div style={isCreator ? bubbleMine : bubbleTheirs}>
-                      <p style={bubbleLabel}>{isCreator ? 'You' : 'Brand'}</p>
+                      <p style={bubbleLabel}>{isCreator ? 'You' : otherLabel}</p>
                       <p style={bubbleBody}>{msg.body}</p>
                       <p style={bubbleTime}>
                         {new Date(msg.created_at).toLocaleString('en-IN', {
@@ -263,7 +269,7 @@ export default function CreatorThread({
 
         <div style={composeArea}>
           {isTerminal ? (
-            <p style={closedNotice}>{messagingClosedNotice(chatWindow, 'the brand')}</p>
+            <p style={closedNotice}>{messagingClosedNotice(chatWindow, otherPhrase)}</p>
           ) : (
             <>
               {emojiOpen && (

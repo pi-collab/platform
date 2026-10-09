@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { notifyOtherParty } from '@/lib/notifications'
+import { notifyStaffCreatorMessage } from '@/lib/experience-leg-notify'
 
 interface SendResult {
   status: 'success' | 'error'
@@ -31,6 +32,21 @@ export async function sendMessage(
     .select('id')
     .eq('auth_id', user.id)
     .maybeSingle()
+
+  // 0546: an Experience creator leg is a Guapd ↔ creator thread. Direct
+  // inserts on a leg are refused by the database, so the creator writes
+  // through creator_leg_message_send, and Guapd's staff (never the brand) are
+  // told. Brand users are not parties to a leg at all.
+  const { data: leg } = await supabase.from('deals').select('id, leg_role').eq('id', dealId).maybeSingle()
+  if (leg?.leg_role === 'creator_leg') {
+    if (senderParty !== 'creator') return { status: 'error', message: 'Not found.' }
+    const { data: sent, error: legErr } = await supabase.rpc('creator_leg_message_send', { p_deal_id: dealId, p_body: trimmed })
+    if (legErr) return { status: 'error', message: legErr.message }
+    await notifyStaffCreatorMessage(dealId)
+    revalidatePath('/creator/inbox')
+    revalidatePath(`/creator/deals/${dealId}`)
+    return { status: 'success', data: sent as { id: string; body: string; sender_party: string; created_at: string } }
+  }
 
   const { data, error } = await supabase
     .from('messages')

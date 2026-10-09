@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyOfferToken } from '@/lib/offer-token'
 import OfferCard from './OfferCard'
+import { redirect } from 'next/navigation'
 
 /**
  * Public offer page — token-gated, no login required to VIEW.
@@ -12,6 +13,15 @@ import OfferCard from './OfferCard'
 export default async function OfferPage({ params }: { params: { token: string } }) {
   const token = decodeURIComponent(params.token)
   const parsed = verifyOfferToken(token)
+
+  /* 0547: the approved Experience WhatsApp templates (experience_offer_sent /
+     experience_offer_updated) link to /offer/<deal id>, a plain id, not a
+     signed token. A creator's own deal page is the place for it: it requires
+     their login and shows only their own leg. Nothing is read or revealed here
+     (no lookup), so a guessed id learns nothing. */
+  if (!parsed && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
+    redirect(`/creator/deals/${token.toLowerCase()}`)
+  }
 
   if (!parsed) {
     return (

@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandAnswerQuote, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
-import { notifyStaffBrandActed } from '@/lib/experience-brand-notify'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAnswerQuote, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
+import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 
 /**
  * The brand's own Experience actions (0544). Each passes verifyBrand (a
@@ -46,15 +46,27 @@ export async function answerQuote(experienceId: string, quoteId: string, accept:
   return r
 }
 
-export async function decideRosterCreator(experienceId: string, rosterId: string, decision: 'accepted' | 'rejected', expected: string): Promise<Out> {
+export async function decideRosterCreator(experienceId: string, rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold', expected: string): Promise<Out> {
   await verifyBrand()
   if (!isUuid(experienceId) || !isUuid(rosterId)) return { ok: false, error: 'Not found.' }
-  if (decision !== 'accepted' && decision !== 'rejected') return { ok: false, error: 'Accept or reject.' }
-  if (!['pending', 'accepted', 'rejected'].includes(expected)) return { ok: false, error: 'Refresh the page and try again.' }
+  if (!['accepted', 'rejected', 'on_hold'].includes(decision)) return { ok: false, error: 'Accept, reject or put on hold.' }
+  if (!['pending', 'accepted', 'on_hold'].includes(expected)) return { ok: false, error: 'Refresh the page and try again.' }
   const r = await brandDecideRoster(rosterId, decision, expected)
   if (!r.ok) return r
   done(experienceId)
-  await notifyStaffBrandActed(experienceId, decision === 'accepted' ? 'accepted a creator' : 'rejected a creator')
+  await notifyStaffBrandActed(experienceId, decision === 'accepted' ? 'accepted a creator' : decision === 'on_hold' ? 'put a creator on hold' : 'rejected a creator')
+  return r
+}
+
+/** 0548: accept several creators at once. Reject and hold stay one at a time. */
+export async function acceptRosterCreators(experienceId: string, items: { rosterId: string; expected: string }[]): Promise<Out<number>> {
+  await verifyBrand()
+  if (!isUuid(experienceId) || !Array.isArray(items) || items.length === 0 || items.length > 200) return { ok: false, error: 'Pick the creators to accept.' }
+  if (!items.every((i) => isUuid(i.rosterId) && ['pending', 'on_hold'].includes(i.expected))) return { ok: false, error: 'Refresh the page and try again.' }
+  const r = await brandAcceptRosterMany(experienceId, items.map((i) => ({ roster_id: i.rosterId, expected: i.expected })))
+  if (!r.ok) return r
+  done(experienceId)
+  await notifyStaffBrandActed(experienceId, `accepted ${r.data} creator${r.data === 1 ? '' : 's'}`)
   return r
 }
 
@@ -80,4 +92,24 @@ export async function signOffExperience(experienceId: string, why: string): Prom
   done(experienceId)
   await notifyStaffBrandActed(experienceId, 'signed off')
   return r
+}
+
+// ── 0550: the brand ↔ Guapd thread ──
+/** Send to Guapd. Shaped for the shared chat (DealThread's channel). Bind the Experience id. */
+export async function sendMessageToGuapd(experienceId: string, body: string): Promise<{ status: 'success' | 'error'; message?: string; data?: { id: string; body: string; created_at: string } }> {
+  await verifyBrand()
+  if (!isUuid(experienceId)) return { status: 'error', message: 'Not found.' }
+  if (typeof body !== 'string' || !body.trim()) return { status: 'error', message: 'Write a message first.' }
+  const r = await brandSendToGuapd(experienceId, body)
+  if (!r.ok) return { status: 'error', message: r.error }
+  await notifyStaffBrandMessage(experienceId)
+  done(experienceId)
+  return { status: 'success', data: r.data }
+}
+
+/** Opening the thread marks it read (the read is the brand function itself). */
+export async function markGuapdThreadRead(experienceId: string): Promise<void> {
+  await verifyBrand()
+  if (!isUuid(experienceId)) return
+  await getBrandGuapdThread(experienceId)
 }

@@ -7,7 +7,7 @@ import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { CHANNELS, DELIVERABLE_TYPES, channelLabel, countOf } from '@/lib/experience-request'
 import type { ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
-import { lockRoster, recordRosterDecision, removeFromRoster, setRosterNote, setRosterPlan } from '../actions'
+import { lockRoster, recordRosterDecision, releaseRosterCreator, removeFromRoster, setRosterNote, setRosterPlan, shareRosterWithBrand } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 import type { ConsoleProspect } from '@/lib/experience-console-server'
 import ProspectsSection from './ProspectsSection'
@@ -27,6 +27,7 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
   pending:  { label: 'Awaiting brand', tone: 'neutral' },
   accepted: { label: 'Brand accepted', tone: 'lime' },
   rejected: { label: 'Brand rejected', tone: 'red' },
+  on_hold:  { label: 'Brand: on hold', tone: 'amber' },
 }
 const COLS = ROSTER_COLS
 
@@ -45,7 +46,9 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [menu, setMenu] = useState<string | null>(null)
-  const [panel, setPanel] = useState<{ id: string; kind: 'accepted' | 'rejected' | 'plan' | 'note' } | null>(null)
+  const [panel, setPanel] = useState<{ id: string; kind: 'accepted' | 'rejected' | 'on_hold' | 'plan' | 'note' | 'release' } | null>(null)
+  const [releaseWhy, setReleaseWhy] = useState('')
+  const [picked, setPicked] = useState<string[]>([])
   const [channel, setChannel] = useState('')
   const [planRows, setPlanRows] = useState<{ type: string; count: string }[]>([])
   const [note, setNote] = useState('')
@@ -64,14 +67,17 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
     })
   }
 
-  const openPanel = (row: ConsoleRosterRow, kind: 'accepted' | 'rejected' | 'plan' | 'note') => {
+  const openPanel = (row: ConsoleRosterRow, kind: 'accepted' | 'rejected' | 'on_hold' | 'plan' | 'note' | 'release') => {
+    setReleaseWhy('')
     setMenu(null); setError(null); setPanel({ id: row.id, kind })
     setChannel(''); setNote(row.note ?? '')
     setPlanRows((row.planned_deliverables ?? []).map((d) => ({ type: d.type, count: String(d.count) })))
   }
 
   const unlocked = roster.filter((r) => !r.locked)
-  const pendingCount = unlocked.filter((r) => r.brand_decision === 'pending').length
+  // 0548: only creators SHARED with the brand await their answer; the internal shortlist does not block.
+  const pendingCount = unlocked.filter((r) => r.brand_decision === 'pending' && r.shared_with_brand_at).length
+  const internal = roster.filter((r) => !r.shared_with_brand_at && r.brand_decision !== 'rejected')
   const toLock = unlocked.filter((r) => r.brand_decision === 'accepted').length
   const lockBlocked = reconcile?.reason === 'no_agreed_plan' ? 'No agreed plan to lock against.'
     : !reconcile?.ok ? 'The roster does not add up to what the brand bought yet.'
@@ -126,6 +132,25 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
 
       {error && <div role="alert" style={{ ...formError, marginTop: 14 }}>{error}</div>}
 
+      {/* ── 0548: the curation gate. Guapd's picks stay internal until shared. ── */}
+      {editable && internal.length > 0 && (
+        <div className="xp-share-bar" role="region" aria-label="Share creators with the brand">
+          <div>
+            <b>{internal.length} on Guapd&apos;s shortlist</b> · not visible to the brand.
+            <span style={{ color: 'var(--ink-soft)' }}> Tick the ones to send for the brand&apos;s approval.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button type="button" style={{ ...pillBtn, height: 36 }} onClick={() => setPicked(picked.length === internal.length ? [] : internal.map((r) => r.id))}>
+              {picked.length === internal.length ? 'Clear' : 'Select all'}
+            </button>
+            <button type="button" className="neonbtn" style={{ ...neonBtn, height: 36, ...(picked.length ? null : { opacity: 0.45, cursor: 'not-allowed' }) }} disabled={!picked.length || pending}
+              onClick={() => run(() => shareRosterWithBrand(experienceId, picked), () => setPicked([]))}>
+              Share with the brand{picked.length ? ` (${picked.length})` : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {roster.length === 0 ? (
         <p className="t-body" style={{ margin: '18px 0 0' }}>{openProspects ? 'No one on the roster yet.' : 'No creators yet.'} Add creators, or the brand&apos;s suggestions; each one starts from the agreed per-creator plan.</p>
       ) : (
@@ -141,7 +166,13 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                 <div className="xp-rrow" style={{ display: 'grid', gridTemplateColumns: COLS, gap: 16, alignItems: 'center', padding: '16px 4px' }}>
                   <Avatar name={r.full_name} url={r.profile_photo_url} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.full_name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      {editable && !r.shared_with_brand_at && r.brand_decision !== 'rejected' && (
+                        <input type="checkbox" aria-label={`Select ${r.full_name} to share with the brand`} checked={picked.includes(r.id)}
+                          onChange={(e) => setPicked(e.target.checked ? [...picked, r.id] : picked.filter((x) => x !== r.id))} style={{ width: 16, height: 16, flex: 'none' }} />
+                      )}
+                      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.full_name}</div>
+                    </div>
                     <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 2 }}>
                       {r.handle ? `@${r.handle.replace(/^@/, '')} · ` : ''}{r.added_by === 'brand' ? `Brand's pick${r.decision_channel && r.brand_decision === 'pending' ? ` (${channelLabel(r.decision_channel)})` : ''}` : 'Added by Guapd'}
                     </div>
@@ -151,7 +182,9 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                     {(r.planned_deliverables ?? []).length ? r.planned_deliverables.map((x) => countOf(Number(x.count), x.type)).join(' · ') : 'Nothing planned'}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-                    {r.locked ? <StatusChip label="Locked" tone="green" /> : <StatusChip label={d.label} tone={d.tone} />}
+                    {r.locked ? <StatusChip label="Locked" tone="green" />
+                      : !r.shared_with_brand_at ? <StatusChip label="Internal · not shared" tone="neutral" />
+                      : <StatusChip label={d.label} tone={d.tone} />}
                     {r.brand_decision !== 'pending' && r.decision_channel && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)' }}>via {channelLabel(r.decision_channel)}</span>}
                   </div>
                   <div style={{ position: 'relative' }}>
@@ -160,13 +193,16 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                     </button>
                     {menu === r.id && (
                       <div style={menuBox}>
-                        {!r.locked && <MenuItem onClick={() => openPanel(r, 'accepted')}>Brand accepted…</MenuItem>}
-                        {!r.locked && <MenuItem onClick={() => openPanel(r, 'rejected')}>Brand rejected…</MenuItem>}
-                        {!r.locked && r.brand_decision !== 'pending' && <MenuItem onClick={() => run(() => recordRosterDecision(experienceId, r.id, 'pending', null))}>Back to awaiting</MenuItem>}
+                        {/* 0548: a rejected creator is final on this roster; on hold can be decided again. */}
+                        {!r.locked && r.brand_decision !== 'rejected' && <MenuItem onClick={() => openPanel(r, 'accepted')}>Brand accepted…</MenuItem>}
+                        {!r.locked && r.brand_decision !== 'rejected' && r.brand_decision !== 'on_hold' && <MenuItem onClick={() => openPanel(r, 'on_hold')}>Brand put on hold…</MenuItem>}
+                        {!r.locked && r.brand_decision !== 'rejected' && <MenuItem onClick={() => openPanel(r, 'rejected')}>Brand rejected… (final)</MenuItem>}
+                        {!r.locked && r.brand_decision !== 'pending' && r.brand_decision !== 'rejected' && <MenuItem onClick={() => run(() => recordRosterDecision(experienceId, r.id, 'pending', null))}>Back to awaiting</MenuItem>}
                         {!r.locked && <MenuItem onClick={() => openPanel(r, 'plan')}>Adjust plan</MenuItem>}
                         <MenuItem onClick={() => openPanel(r, 'note')}>{r.note ? 'Edit note' : 'Add note'}</MenuItem>
                         {!r.locked && <MenuItem danger onClick={() => { setMenu(null); setRemoving(r) }}>Remove</MenuItem>}
-                        {r.locked && <div style={{ padding: '8px 10px', fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>Locked: only the note can change.</div>}
+                        {/* 0549: a locked creator who backs out can be released (before the shoot is done). */}
+                        {r.locked && <MenuItem danger onClick={() => openPanel(r, 'release')}>Release from roster…</MenuItem>}
                       </div>
                     )}
                   </div>
@@ -175,10 +211,10 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                 {/* ── Inline editor for the chosen action ── */}
                 {isOpen && panel && (
                   <div style={{ margin: '0 4px 16px', padding: 16, borderRadius: 14, background: '#F7F7F4' }}>
-                    {(panel.kind === 'accepted' || panel.kind === 'rejected') && (
+                    {(panel.kind === 'accepted' || panel.kind === 'rejected' || panel.kind === 'on_hold') && (
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                         <div style={{ minWidth: 220 }}>
-                          <label style={fieldLabel} htmlFor={`ch-${r.id}`}>The brand {panel.kind === 'accepted' ? 'accepted' : 'rejected'} {r.full_name.split(' ')[0]} via</label>
+                          <label style={fieldLabel} htmlFor={`ch-${r.id}`}>The brand {panel.kind === 'accepted' ? 'accepted' : panel.kind === 'on_hold' ? 'put on hold' : 'rejected (final)'} {r.full_name.split(' ')[0]} via</label>
                           <select id={`ch-${r.id}`} className="dinput" value={channel} onChange={(e) => setChannel(e.target.value)}>
                             <option value="">Select…</option>
                             {CHANNELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -186,7 +222,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                         </div>
                         <button type="button" style={pillBtn} onClick={() => setPanel(null)}>Cancel</button>
                         <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40 }} disabled={pending}
-                          onClick={() => run(() => recordRosterDecision(experienceId, r.id, panel.kind as 'accepted' | 'rejected', channel || null))}>
+                          onClick={() => run(() => recordRosterDecision(experienceId, r.id, panel.kind as 'accepted' | 'rejected' | 'on_hold', channel || null))}>
                           {pending ? 'Saving…' : 'Record'}
                         </button>
                       </div>
@@ -211,6 +247,20 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                           <button type="button" style={pillBtn} onClick={() => setPanel(null)}>Cancel</button>
                           <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40 }} disabled={pending}
                             onClick={() => run(() => setRosterPlan(experienceId, r.id, planRows))}>{pending ? 'Saving…' : 'Save plan'}</button>
+                        </div>
+                      </div>
+                    )}
+                    {panel.kind === 'release' && (
+                      <div>
+                        <label style={fieldLabel} htmlFor={`rel-${r.id}`}>Why is {r.full_name.split(' ')[0]} leaving the roster?</label>
+                        <input id={`rel-${r.id}`} className="dinput" maxLength={300} value={releaseWhy} onChange={(e) => setReleaseWhy(e.target.value)} placeholder="Backed out the day before: family emergency" />
+                        <p className="t-body" style={{ margin: '8px 0 0', fontSize: 12.5 }}>
+                          They come off the locked roster. An open or accepted offer is cancelled (kept on record) and they are told. Afterwards you can remove them, or send a fresh offer if they come back. Not possible once they have shot, been paid or had work shared with the brand.
+                        </p>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+                          <button type="button" style={pillBtn} onClick={() => setPanel(null)}>Cancel</button>
+                          <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40, background: '#FDECEC', color: '#9C4147', boxShadow: 'none' }} disabled={pending || releaseWhy.trim().length < 3}
+                            onClick={() => run(() => releaseRosterCreator(experienceId, r.id, releaseWhy))}>{pending ? 'Releasing…' : 'Release from roster'}</button>
                         </div>
                       </div>
                     )}
@@ -259,6 +309,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
         onConfirm={() => removing && run(() => removeFromRoster(experienceId, removing.id), () => setRemoving(null))}
         onCancel={() => setRemoving(null)} />
 
+      <style dangerouslySetInnerHTML={{ __html: `.xp-share-bar { margin-top: 18px; padding: 12px 14px; border-radius: 14px; border: 1px dashed #C9CBBE; background: #FBFBF8; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--font-ui); font-size: 13.5px; color: var(--ink); }` }} />
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 720px) {
           .xp-rhead { display: none !important; }

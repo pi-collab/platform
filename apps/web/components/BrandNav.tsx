@@ -3,8 +3,18 @@ import { unreadMessageCount } from '@/lib/unread'
 import BrandSidebar from '@/components/BrandSidebar'
 import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
+import { STAFF_NOTIFICATION_TYPES } from '@/lib/experience-staff-notifications'
+import { consoleUnreadMessages } from '@/lib/experience-console-server'
 
-export default async function BrandNav() {
+/**
+ * mode 'guapd' (0546): rendered by /experiences-admin. The bell shows Guapd
+ * staff alerts only (creator accepted / countered / wrote / submitted, payouts
+ * to approve, the brand acting on Guapd) and the inbox is the Guapd ↔ creator
+ * threads. In the brand portal the bell never shows staff alerts. Each alert
+ * row belongs to one user (RLS), so a brand's alerts never reach staff or the
+ * reverse; the type list only keeps the two bells apart for someone who is both.
+ */
+export default async function BrandNav({ mode = 'brand' }: { mode?: 'brand' | 'guapd' } = {}) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -16,6 +26,11 @@ export default async function BrandNav() {
   let unreadInbox = 0
   let recentNotifications: { id: string; deal_id: string | null; type: string; body: string; read_at: string | null; created_at: string }[] = []
   let notifCreatorMap: Record<string, { name: string; photo: string | null }> = {}
+
+  // Decided first: the console bell is only for staff who pass the gate.
+  const guapdConsole = user ? (await experienceStaffGate()).ok : false
+  const consoleMode = mode === 'guapd' && guapdConsole
+  const staffTypes = `(${STAFF_NOTIFICATION_TYPES.join(',')})`
 
   if (user) {
     const { data: profile } = await supabase
@@ -37,11 +52,12 @@ export default async function BrandNav() {
       brandLogoUrl = (membership as any)?.brands?.logo_url ?? null
 
       // Unread notification count
-      const { count } = await supabase
+      const countQ = supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', profile.id)
         .is('read_at', null)
+      const { count } = consoleMode ? await countQ.in('type', [...STAFF_NOTIFICATION_TYPES]) : await countQ.not('type', 'in', staffTypes)
 
       unreadCount = count ?? 0
 
@@ -51,18 +67,24 @@ export default async function BrandNav() {
       // visits the notifications page — so a brand could read every message in
       // the chat panel and still carry a badge saying they had not. Counted
       // against message_reads now, which the panel updates when it opens.
-      const { data: dealRows } = await supabase.from('deals').select('id')
-      unreadInbox = await unreadMessageCount(
-        profile.id,
-        'brand',
-        (dealRows ?? []).map((d) => d.id as string),
-      )
+      if (consoleMode) {
+        // Creator messages to Guapd on sent deals, unread by this staff user.
+        unreadInbox = await consoleUnreadMessages()
+      } else {
+        const { data: dealRows } = await supabase.from('deals').select('id')
+        unreadInbox = await unreadMessageCount(
+          profile.id,
+          'brand',
+          (dealRows ?? []).map((d) => d.id as string),
+        )
+      }
 
       // Recent notifications for dropdown
-      const { data: recentNotifs } = await supabase
+      const recentQ = supabase
         .from('notifications')
         .select('id, deal_id, type, body, read_at, created_at')
         .eq('user_id', profile.id)
+      const { data: recentNotifs } = await (consoleMode ? recentQ.in('type', [...STAFF_NOTIFICATION_TYPES]) : recentQ.not('type', 'in', staffTypes))
         .order('created_at', { ascending: false })
         .limit(5)
 
@@ -92,7 +114,6 @@ export default async function BrandNav() {
      Experience operational access), not by which brand they belong to. Hiding
      it is a convenience only: /experiences-admin runs the same gate itself and
      reads through a database function that checks access again. */
-  const guapdConsole = user ? (await experienceStaffGate()).ok : false
   // Only staff with no brand lose the brand tabs. Everyone else (brands,
   // signed-out visitors on /pricing, users mid-onboarding) sees exactly what
   // they saw before.
@@ -102,7 +123,7 @@ export default async function BrandNav() {
     <>
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profileId && <AnalyticsIdentify userId={profileId} role="brand" />}
-      <BrandSidebar brandName={brandName} hasBrand={hasBrand} guapdConsole={guapdConsole} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+      <BrandSidebar brandName={brandName} hasBrand={hasBrand} guapdConsole={guapdConsole} consoleMode={consoleMode} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
     </>
   )
 }

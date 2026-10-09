@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import type { BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import { answerQuote, decideDeliverable, decideRosterCreator, signOffExperience } from '../actions'
+import { answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -95,15 +95,35 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
 export function RosterReview({ experienceId, creators, canDecide }: { experienceId: string; creators: BrandRosterCreator[]; canDecide: boolean }) {
   const { pending, error, run } = useRun()
   const [busy, setBusy] = useState<string | null>(null)
+  const [picked, setPicked] = useState<string[]>([])
   if (creators.length === 0) return <p className="bx-note">Guapd is choosing creators for you. You will get an email when they are ready to review.</p>
+  // 0548: several can be accepted at once; reject (final) and hold stay one at a time.
+  const open = creators.filter((c) => canDecide && !c.locked && (c.decision === 'pending' || c.decision === 'on_hold'))
+  const acceptPicked = () => run(() => acceptRosterCreators(experienceId, open.filter((c) => picked.includes(c.roster_id)).map((c) => ({ rosterId: c.roster_id, expected: c.decision }))), () => setPicked([]))
   return (
     <div>
+      {open.length > 1 && (
+        <div className="bx-bulk">
+          <label className="bx-bulk-all">
+            <input type="checkbox" checked={picked.length === open.length} onChange={(e) => setPicked(e.target.checked ? open.map((c) => c.roster_id) : [])} />
+            Select all to review ({open.length})
+          </label>
+          <button type="button" className="neonbtn bx-cta-sm" disabled={pending || picked.length === 0} onClick={acceptPicked}>
+            {pending && !busy ? 'Accepting…' : `Accept selected${picked.length ? ` (${picked.length})` : ''}`}
+          </button>
+        </div>
+      )}
       {creators.map((c) => {
         const initials = c.full_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
         const plan = (c.planned_deliverables ?? []).map((d) => countOf(Number(d.count), d.type)).join(' · ')
-        const act = (d: 'accepted' | 'rejected') => { setBusy(c.roster_id); run(() => decideRosterCreator(experienceId, c.roster_id, d, c.decision), () => setBusy(null)) }
+        const act = (d: 'accepted' | 'rejected' | 'on_hold') => { setBusy(c.roster_id); run(() => decideRosterCreator(experienceId, c.roster_id, d, c.decision), () => setBusy(null)) }
+        const selectable = open.length > 1 && open.some((o) => o.roster_id === c.roster_id)
         return (
-          <div key={c.roster_id} className="bx-roster-row" style={{ opacity: c.decision === 'rejected' ? 0.6 : 1 }}>
+          <div key={c.roster_id} className={`bx-roster-row${open.length > 1 ? ' bx-has-pick' : ''}`} style={{ opacity: c.decision === 'rejected' ? 0.6 : 1 }}>
+            {open.length > 1 && (selectable
+              ? <input type="checkbox" className="bx-pick" aria-label={`Select ${c.full_name}`} checked={picked.includes(c.roster_id)}
+                  onChange={(e) => setPicked(e.target.checked ? [...picked, c.roster_id] : picked.filter((x) => x !== c.roster_id))} />
+              : <span aria-hidden="true" />)}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {c.photo_url ? <img src={c.photo_url} alt="" className="bx-avatar" /> : <span className="bx-avatar">{initials}</span>}
             <div style={{ minWidth: 0 }}>
@@ -118,12 +138,15 @@ export function RosterReview({ experienceId, creators, canDecide }: { experience
               {c.locked ? <span className="bx-chip bx-ok">Confirmed</span>
                 : c.decision === 'accepted' ? <span className="bx-chip bx-ok">Accepted{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
                 : c.decision === 'rejected' ? <span className="bx-chip bx-chg">Rejected{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
+                : c.decision === 'on_hold' ? <span className="bx-chip bx-hold">On hold{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
                 : <span className="bx-chip bx-new">To review</span>}
             </div>
             <div className="bx-roster-actions">
-              {canDecide && !c.locked && (
+              {/* Rejected is final on this roster: no buttons after it. */}
+              {canDecide && !c.locked && c.decision !== 'rejected' && (
                 <>
-                  {c.decision !== 'rejected' && <button type="button" className="bx-btn" disabled={pending} onClick={() => act('rejected')}>{busy === c.roster_id && pending ? '…' : 'Reject'}</button>}
+                  <button type="button" className="bx-btn" disabled={pending} onClick={() => act('rejected')} title="Final for this creator on this Experience">{busy === c.roster_id && pending ? '…' : 'Reject'}</button>
+                  {c.decision !== 'on_hold' && <button type="button" className="bx-btn" disabled={pending} onClick={() => act('on_hold')}>{busy === c.roster_id && pending ? '…' : 'Hold'}</button>}
                   {c.decision !== 'accepted' && <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => act('accepted')}>{busy === c.roster_id && pending ? '…' : 'Accept'}</button>}
                 </>
               )}

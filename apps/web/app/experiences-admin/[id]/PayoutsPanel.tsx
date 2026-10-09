@@ -94,6 +94,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                 </div>
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink)', display: 'grid', gap: 2 }}>
                   <span>Gross {formatRupees(l.gross_paise)} → fee {Number(l.platform_pct)}% {formatRupees(l.platform_fee_paise)} → net <b>{formatRupees(l.net_paise)}</b></span>
+                  {Number(l.allowance_paise ?? 0) > 0 && <span>+ allowance {formatRupees(Number(l.allowance_paise))} (no fee) = due <b>{formatRupees(Number(l.due_paise))}</b></span>}
                   {p && <span>TDS {formatRupees(p.tds_paise)} → paid <b>{formatRupees(p.net_amount_paise)}</b></span>}
                   {p && <span style={{ color: 'var(--ink-faint)' }}>
                     Requested by {p.requested_by_name ?? 'staff'}{p.approved_by_name ? ` · approved by ${p.approved_by_name}` : ''}

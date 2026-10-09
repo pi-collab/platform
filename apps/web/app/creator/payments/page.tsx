@@ -57,7 +57,9 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     supabase.rpc('creator_payout_details'),
     supabase.from('deals').select('id', { count: 'exact', head: true }).eq('leg_role', 'creator_leg'),
   ])
-  const guapdPayouts = ((guapdPayoutsRaw ?? []) as GuapdPayout[]).map((p) => ({ ...p, net_paise: Number(p.net_paise), tds_paise: Number(p.tds_paise), paid_paise: Number(p.paid_paise) }))
+  const guapdPayouts = ((guapdPayoutsRaw ?? []) as GuapdPayout[]).map((p) => ({ ...p, net_paise: Number(p.net_paise), allowance_paise: Number(p.allowance_paise ?? 0), tds_paise: Number(p.tds_paise), paid_paise: Number(p.paid_paise) }))
+  // 0546: what Guapd pays for a shoot = net after the fee + any allowance (no fee on it).
+  const dueOf = (p: { net_paise: number; allowance_paise?: number }) => p.net_paise + (p.allowance_paise ?? 0)
   const payoutDetails = (payoutDetailsRaw ?? { on_file: false }) as PayoutDetailsView
   const showGuapd = (legCount ?? 0) > 0 || guapdPayouts.length > 0 || payoutDetails.on_file
 
@@ -66,7 +68,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   const totalEarnedPaise = all
     .filter((inv) => inv.status === 'paid')
     .reduce((sum, inv) => sum + (inv.creator_receives_paise ?? 0), 0)
-    + guapdPayouts.filter((p) => p.status === 'paid').reduce((sum, p) => sum + p.net_paise, 0)
+    + guapdPayouts.filter((p) => p.status === 'paid').reduce((sum, p) => sum + dueOf(p), 0)
 
   // Pending = issued or accepted (not yet paid)
   const pendingInvoices = all.filter((inv) => inv.status === 'issued' || inv.status === 'accepted')
@@ -75,7 +77,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   const pendingAmountPaise = pendingInvoices.reduce(
     (sum, inv) => sum + (inv.creator_receives_paise ?? 0),
     0
-  ) + guapdPending.reduce((sum, p) => sum + p.net_paise, 0)
+  ) + guapdPending.reduce((sum, p) => sum + dueOf(p), 0)
 
   const pending = pendingInvoices.map((inv) => {
     const deal = inv.deals as any
@@ -109,7 +111,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     brandName: p.brand_label,
     brandInitials: getInitials(p.brand_label),
     brandLogo: null,
-    amountPaise: p.net_paise,
+    amountPaise: dueOf(p),
     status: p.status === 'requested' ? 'Being prepared' : 'On its way',
     meta: 'Paid by Guapd after the shoot',
     dueDateStr: null,

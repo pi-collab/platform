@@ -75,6 +75,10 @@ export interface ConsoleExperience {
     totals: { type: string; per_creator: number; total: number }[]
     plan_videos: number
     videos_sold: number
+    /** Bought per creator (0547: a bought right always has a count). */
+    affiliate_per_creator?: number | null
+    ad_rights_per_creator?: number | null
+    boost_per_creator?: number | null
   } | null
   created_at: string
   updated_at: string
@@ -191,10 +195,13 @@ export interface ConsoleRosterRow {
   handle: string | null
   profile_photo_url: string | null
   added_by: 'guapd' | 'brand'
-  brand_decision: 'pending' | 'accepted' | 'rejected'
+  /** 0548: on_hold is re-decidable; rejected is final on this roster. */
+  brand_decision: 'pending' | 'accepted' | 'rejected' | 'on_hold'
   decision_channel: string | null
   decided_at: string | null
   locked: boolean
+  /** 0548: when Guapd shared this creator with the brand. NULL = internal shortlist, never in a brand read. */
+  shared_with_brand_at: string | null
   locked_at: string | null
   /** This creator's planned deliverables. Starts as the agreed per-creator plan. No money. */
   planned_deliverables: ConsoleDeliverable[]
@@ -233,7 +240,19 @@ export async function rosterAdd(experienceId: string, creatorIds: string[], adde
   return error ? fail(error) : { ok: true, data: data as number }
 }
 
-export async function rosterDecide(rosterId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Result<null>> {
+/** 0549: reverse a lock (a creator backed out). Cancels an open or accepted offer, with the reason. */
+export async function rosterRelease(rosterId: string, reason: string): Promise<Result<{ deal_id: string | null; deal_cancelled: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_release', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as { deal_id: string | null; deal_cancelled: boolean } }
+}
+
+/** 0548: share chosen shortlisted creators with the brand. Returns how many were newly shared. */
+export async function rosterShare(experienceId: string, rosterIds: string[]): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_share', { p_experience_id: experienceId, p_roster_ids: rosterIds })
+  return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
+}
+
+export async function rosterDecide(rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold' | 'pending', channel: string | null): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_roster_decide', { p_roster_id: rosterId, p_decision: decision, p_channel: channel })
   return error ? fail(error) : { ok: true, data: null }
 }
@@ -296,6 +315,15 @@ export interface ConsoleLegRow {
   paused_rate_paise: number | null
   /** 0542: where the sent rate came from. */
   sent_rate_source: 'package' | 'entered' | null
+  /** 0546: per-creator ad rights / boost (null = the agreed per-creator default applies at send). */
+  leg_ad_rights_count: number | null
+  leg_boost_count: number | null
+  /** 0546: the travel/other allowance drafted for this creator (fee-exempt, paid in full). */
+  leg_allowance_paise: number | null
+  /** 0546: frozen at send. */
+  sent_allowance_paise: number | null
+  /** 0546: this creator has their own brief instead of the shared one. */
+  has_own_brief: boolean
 }
 
 export interface ConsoleLegsReconcile {
@@ -307,6 +335,13 @@ export interface ConsoleLegsReconcile {
   videos_placed?: number
   affiliate_target?: number
   affiliate_placed?: number
+  /** 0546: per-creator ad rights and boost against what the brand bought. */
+  ad_rights_target?: number
+  ad_rights_placed?: number
+  ad_rights_months?: number | null
+  boost_target?: number
+  boost_placed?: number
+  boost_months?: number | null
   creators_counted?: number
   lines?: { type: string; target: number; placed: number; is_video: boolean }[]
 }
@@ -321,6 +356,7 @@ export async function listConsoleLegs(experienceId: string): Promise<Result<Cons
     sent_day_rate_paise: num(r.sent_day_rate_paise), sent_days: num(r.sent_days),
     sent_gross_paise: num(r.sent_gross_paise), sent_platform_pct: num(r.sent_platform_pct), sent_net_paise: num(r.sent_net_paise),
     leg_entered_rate_paise: num(r.leg_entered_rate_paise), paused_rate_paise: num(r.paused_rate_paise),
+    leg_allowance_paise: num(r.leg_allowance_paise), sent_allowance_paise: num(r.sent_allowance_paise),
   }))
   return { ok: true, data: rows }
 }
@@ -330,20 +366,31 @@ export async function getLegsReconcile(experienceId: string): Promise<Result<Con
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
 
-export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number, enteredRatePaise: number | null = null): Promise<Result<ConsoleLegsReconcile>> {
+export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number, enteredRatePaise: number | null = null,
+  scope: { adRightsCount: number | null; boostCount: number | null; allowancePaise: number | null } = { adRightsCount: null, boostCount: null, allowancePaise: null }): Promise<Result<ConsoleLegsReconcile>> {
   const { data, error } = await createClient().rpc('experience_console_leg_draft', {
     p_roster_id: rosterId, p_product_id: productId, p_days: days, p_deliverables: deliverables, p_affiliate_count: affiliateCount,
-    p_entered_rate_paise: enteredRatePaise,
+    p_entered_rate_paise: enteredRatePaise, p_ad_rights_count: scope.adRightsCount, p_boost_count: scope.boostCount,
+    p_allowance_paise: scope.allowancePaise,
   })
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
 
-export async function legSend(rosterId: string, expected: { grossPaise: number; platformPct: number; netPaise: number }): Promise<Result<string>> {
+export async function legSend(rosterId: string, expected: { grossPaise: number; platformPct: number; netPaise: number; allowancePaise: number }): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_leg_send', {
     p_roster_id: rosterId, p_expected_gross_paise: expected.grossPaise,
     p_expected_platform_pct: expected.platformPct, p_expected_net_paise: expected.netPaise,
+    p_expected_allowance_paise: expected.allowancePaise,
   })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+
+/** 0547: re-split a SENT leg's labels before the shoot is confirmed (never money). */
+export async function legRescope(rosterId: string, counts: { affiliate: number; adRights: number; boost: number }, expected: { affiliate: number; ad_rights: number; boost: number }): Promise<Result<{ deal_id: string; reconcile: ConsoleLegsReconcile }>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_rescope', {
+    p_roster_id: rosterId, p_affiliate_count: counts.affiliate, p_ad_rights_count: counts.adRights, p_boost_count: counts.boost, p_expected: expected,
+  })
+  return error ? fail(error) : { ok: true, data: data as { deal_id: string; reconcile: ConsoleLegsReconcile } }
 }
 
 export async function setCreatorDayRateAsStaff(creatorId: string, dayRatePaise: number): Promise<Result<string>> {
@@ -359,6 +406,86 @@ export async function getCreatorBrief(experienceId: string): Promise<Result<stri
 export async function setCreatorBrief(experienceId: string, brief: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_set_creator_brief', { p_experience_id: experienceId, p_brief: brief })
   return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0546: the campaign-style brief (shared, or a creator's own) ────────────
+export interface BriefAttachment { name: string; storage_path: string; size_bytes: number | null; content_type: string }
+export interface BriefDoc { pitch: string | null; guidelines: string | null; avoid: string | null; attachments: BriefAttachment[]; updated_at?: string | null }
+export interface ConsoleBrief { shared: BriefDoc; editable: boolean; overrides: Record<string, BriefDoc> }
+
+export async function getConsoleBrief(experienceId: string): Promise<Result<ConsoleBrief>> {
+  const { data, error } = await createClient().rpc('experience_console_brief', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleBrief }
+}
+export async function saveSharedBrief(experienceId: string, b: BriefDoc): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_save', {
+    p_experience_id: experienceId, p_pitch: b.pitch, p_guidelines: b.guidelines, p_avoid: b.avoid, p_attachments: b.attachments,
+  })
+  return error ? fail(error) : { ok: true, data: ((data as { notify_deal_ids: string[] }).notify_deal_ids ?? []) }
+}
+export async function saveOwnBrief(rosterId: string, own: boolean, b: BriefDoc | null): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_override', {
+    p_roster_id: rosterId, p_own: own, p_pitch: b?.pitch ?? null, p_guidelines: b?.guidelines ?? null, p_avoid: b?.avoid ?? null,
+    p_attachments: b?.attachments ?? [],
+  })
+  return error ? fail(error) : { ok: true, data: ((data as { notify_deal_ids: string[] }).notify_deal_ids ?? []) }
+}
+export async function briefUploadSlot(experienceId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_slot', { p_experience_id: experienceId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+// ── 0546: Guapd ↔ creator threads on sent legs (staff side) ─────────────────
+export interface LegThreadRow {
+  deal_id: string; deal_ref: string | null; status: string; experience_id: string; experience_title: string; brand_name: string
+  creator_name: string; creator_handle: string | null; creator_photo: string | null; sent_at: string | null; shoot_outcome: string | null
+  open_counter: { round: number; proposed_by: 'creator' | 'guapd' } | null
+  message_count: number; last_message: { body: string; from: 'creator' | 'guapd'; created_at: string } | null
+  unread: number; can_message: boolean
+}
+export interface LegThreadMessage { id: string; from: 'creator' | 'guapd'; body: string; created_at: string; sender_name: string | null }
+export interface LegThread {
+  deal_id: string; deal_ref: string | null; status: string; experience_id: string; experience_title: string
+  creator_name: string; creator_handle: string | null; creator_photo: string | null; can_message: boolean; messages: LegThreadMessage[]
+}
+
+export async function listLegThreads(experienceId: string | null): Promise<Result<LegThreadRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_threads', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as LegThreadRow[] }
+}
+export async function getLegThread(dealId: string): Promise<Result<LegThread>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_thread', { p_deal_id: dealId })
+  return error ? fail(error) : { ok: true, data: data as LegThread }
+}
+export async function sendLegMessageAsGuapd(dealId: string, body: string): Promise<Result<{ id: string; body: string; created_at: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_message_send', { p_deal_id: dealId, p_body: body })
+  return error ? fail(error) : { ok: true, data: data as { id: string; body: string; created_at: string } }
+}
+/** 0550: one message to every creator on the Experience, each in their own Guapd thread. */
+export async function legBroadcast(experienceId: string, body: string, scope: 'all' | 'accepted'): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_broadcast', { p_experience_id: experienceId, p_body: body, p_scope: scope })
+  return error ? fail(error) : { ok: true, data: ((data as { deal_ids: string[] }).deal_ids ?? []) }
+}
+
+/** 0550: the brand ↔ Guapd thread, staff side (marks it read). */
+export interface BrandThreadMessage { id: string; from: 'brand' | 'guapd'; body: string; created_at: string; sender_name: string | null }
+export async function getBrandThread(experienceId: string): Promise<Result<{ experience_id: string; experience_title: string; brand_name: string; messages: BrandThreadMessage[] }>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_messages', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as { experience_id: string; experience_title: string; brand_name: string; messages: BrandThreadMessage[] } }
+}
+export async function sendBrandMessageAsGuapd(experienceId: string, body: string): Promise<Result<{ id: string; body: string; created_at: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_message_send', { p_experience_id: experienceId, p_body: body })
+  return error ? fail(error) : { ok: true, data: data as { id: string; body: string; created_at: string } }
+}
+export interface BrandThreadRow { experience_id: string; experience_title: string; brand_name: string; last_message: { body: string; from: 'brand' | 'guapd'; created_at: string } | null; message_count: number; unread: number }
+export async function listBrandThreads(): Promise<Result<BrandThreadRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_threads')
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandThreadRow[] }
+}
+
+export async function consoleUnreadMessages(): Promise<number> {
+  const { data, error } = await createClient().rpc('experience_console_unread_messages')
+  return error ? 0 : Number(data ?? 0)
 }
 
 // ── Stage 3c: the cost sheet (operational) and the freeze points ────────────
@@ -692,6 +819,8 @@ export async function consoleFinanceFile(kind: FinanceFileKind, id: string): Pro
 export interface ConsolePayout {
   id: string; status: 'requested' | 'approved' | 'processing' | 'paid' | 'failed'
   amount_paise: number; tds_paise: number; net_amount_paise: number
+  /** 0546: fee-exempt allowance paid with this payout (net_amount = amount + allowance - TDS). */
+  allowance_paise: number
   requested_by_name: string | null; requested_at: string; approved_by_name: string | null; approved_at: string | null
   paid_on: string | null; method: string | null; reference: string | null; has_proof: boolean; i_requested: boolean
   details_changed_after_request: boolean
@@ -699,6 +828,8 @@ export interface ConsolePayout {
 export interface ConsolePayoutLeg {
   deal_id: string; creator_id: string; full_name: string | null; deal_status: string; shoot_outcome: string | null
   work_complete: boolean; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  /** 0546: the allowance, and what is due in all (net + allowance). */
+  allowance_paise: number; due_paise: number
   /** 0542: masked only; full details are finance's (getPayoutAccount). */
   payment_details: { bank_on_file: boolean; account_masked: string | null; upi_on_file: boolean; changed_at: string | null }
   cancelled_before: number; payout: ConsolePayout | null

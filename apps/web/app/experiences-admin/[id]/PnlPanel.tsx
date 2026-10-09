@@ -73,6 +73,7 @@ export default function PnlPanel({ experienceId, status, pnl }: { experienceId: 
         )}
         {pnl.brand_agreed_paise != null && line('Agreed with the brand', formatRupees(n(pnl.brand_agreed_paise)), { sub: 'Context only, not revenue until invoiced', muted: true, indent: true })}
         {line('Creator payouts (gross)', neg(n(pnl.creator_gross_total_paise)), { sub: `${pnl.legs_counted} accepted creator${pnl.legs_counted === 1 ? '' : 's'}` })}
+        {n(pnl.creator_allowance_total_paise ?? 0) > 0 && line('Creator allowances', neg(n(pnl.creator_allowance_total_paise ?? 0)), { sub: 'Travel and other, paid in full to creators; no platform fee on it, so none kept' })}
         {line('Guapd costs', neg(n(pnl.guapd_costs_total_paise)))}
         {(pnl.costs_by_category ?? []).map((c) => line(c.category.replace(/_/g, ' ').replace(/^./, (x) => x.toUpperCase()), neg(n(c.total_paise)), { muted: true, indent: true }))}
         {line('Sub-total', formatRupees(n(pnl.subtotal_paise)), { strong: true })}

@@ -5,6 +5,8 @@ import { sendDealEmail, isPlausibleEmail } from '@/lib/email'
 import { isSyntheticEmail } from '@/lib/synthetic-email'
 import { renderNoticeEmail } from '@/lib/email-template'
 import { experienceStaffUserIds } from '@/lib/staff-access-server'
+import { emailExperienceStaff } from '@/lib/experience-staff-email'
+import { sendLegWhatsApp } from '@/lib/experience-leg-whatsapp'
 import { formatRupees } from '@/lib/experience-request'
 
 /**
@@ -79,6 +81,8 @@ export async function notifyCreatorPaid(dealId: string, paid: { paidPaise: numbe
       const r = await sendDealEmail({ to: [email as string], subject: `Guapd paid you ${formatRupees(paid.paidPaise)} · ref ${paid.reference}`, html, text, dealId, idempotencyKey: `xp-paid-${paid.payoutId}` })
       if (!r.ok) console.warn(`[experience-money] paid email not sent deal=${dealId}`)
     }
+    // experience_payment_sent, on payout release (Guapd recorded it paid, with a reference and proof).
+    await sendLegWhatsApp('payment', dealId, paid.paidPaise)
   } catch (err) {
     console.error(`[experience-money] paid notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }
@@ -96,6 +100,7 @@ export async function notifyStaffPayoutToApprove(experienceId: string, creatorNa
       if (userId === requesterUserId) continue
       await createNotification({ userId, dealId: null, type: 'experience_payout_to_approve', body })
     }
+    await emailExperienceStaff(staff.filter((u) => u !== requesterUserId), { subject: 'A creator payout needs approving', heading: 'Payout to approve', body, dealId: null, idKey: `staff-payout-${experienceId}-${creatorName}-${Date.now().toString().slice(0, -5)}` })
   } catch (err) {
     console.error(`[experience-money] approval notification failed experience=${experienceId}: ${err instanceof Error ? err.message : String(err)}`)
   }

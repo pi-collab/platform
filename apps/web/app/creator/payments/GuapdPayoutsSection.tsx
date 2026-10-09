@@ -14,7 +14,7 @@ import { savePayoutDetails, type PayoutDetailsView } from './payout-details-acti
  */
 export interface GuapdPayout {
   deal_id: string; title: string | null; brand_label: string; status: 'requested' | 'approved' | 'processing' | 'paid'
-  net_paise: number; tds_paise: number; paid_paise: number; paid_on: string | null; reference: string | null
+  net_paise: number; allowance_paise?: number; tds_paise: number; paid_paise: number; paid_on: string | null; reference: string | null
 }
 const STATUS: Record<string, string> = { requested: 'Being prepared', approved: 'Approved · on its way', processing: 'On its way', paid: 'Paid' }
 const fmt = (iso: string | null) => iso ? new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
@@ -55,7 +55,7 @@ export default function GuapdPayoutsSection({ payouts, details }: { payouts: Gua
               </div>
               <div className="gp-money">
                 <div className="gp-amount">{formatPaiseINR(p.paid_paise)}</div>
-                <div className="gp-muted">Net {formatPaiseINR(p.net_paise)}{p.tds_paise ? ` · TDS ${formatPaiseINR(p.tds_paise)}` : ''}</div>
+                <div className="gp-muted">Net {formatPaiseINR(p.net_paise)}{p.allowance_paise ? ` · Allowance ${formatPaiseINR(p.allowance_paise)}` : ''}{p.tds_paise ? ` · TDS ${formatPaiseINR(p.tds_paise)}` : ''}</div>
               </div>
               <div className="gp-status">
                 <span className={`gp-chip ${p.status === 'paid' ? 'gp-ok' : ''}`}>{STATUS[p.status] ?? p.status}</span>

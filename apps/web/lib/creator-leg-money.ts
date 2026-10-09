@@ -51,6 +51,17 @@ export interface CreatorLegContext {
   /** 0542: counters on this offer (both sides), oldest first, and how many the creator has left. */
   counters?: CreatorLegCounter[]
   counters_left?: number
+  /** 0546: this creator's brief (their own, else the shared one), and whether it is locked (shoot confirmed). */
+  brief_detail?: {
+    pitch: string | null; guidelines: string | null; avoid: string | null
+    attachments: { name: string; storage_path: string; size_bytes: number | null; content_type: string }[]
+    updated_at: string | null; locked: boolean
+  }
+  /** 0546: travel/other allowance, paid in full (no platform fee), and net + allowance. */
+  allowance_paise?: number
+  total_to_creator_paise?: number | null
+  /** 0546: the Guapd ↔ creator thread is open. */
+  can_message?: boolean
 }
 
 export interface CreatorLegCounter {
@@ -67,6 +78,8 @@ export interface CreatorLegPayout {
   platform_pct: number
   platform_fee_paise: number
   net_paise: number
+  /** 0546: allowance paid with it, outside the fee. paid = net + allowance - TDS. */
+  allowance_paise?: number
   tds_paise: number
   paid_paise: number
   paid_on: string | null

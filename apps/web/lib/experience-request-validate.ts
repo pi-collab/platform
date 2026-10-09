@@ -86,8 +86,9 @@ export function parseExperienceRequest(f: RequestFormFields): { ok: true; value:
     return { ok: true, n }
   }
   const aff = perCreator(!!f.affiliate, f.affiliatePerCreator, 'carry the affiliate link', true); if (!aff.ok) return aff
-  const ads = perCreator(!!f.adRights, f.adRightsPerCreator, 'the ad rights cover', false); if (!ads.ok) return ads
-  const bst = perCreator(!!f.boost, f.boostPerCreator, 'boost covers', false); if (!bst.ok) return bst
+  // 0547: every bought right names its per-creator count; blank is never "all".
+  const ads = perCreator(!!f.adRights, f.adRightsPerCreator, 'the ad rights cover', true); if (!ads.ok) return ads
+  const bst = perCreator(!!f.boost, f.boostPerCreator, 'boost covers', true); if (!bst.ok) return bst
   const title = cleanText(f.title, 140)
   if (!title) return { ok: false, error: 'Give the Experience a title.' }
   if (f.adRights && months(true, f.adRightsMonths) === null) return { ok: false, error: 'Ad rights need a number of months.' }

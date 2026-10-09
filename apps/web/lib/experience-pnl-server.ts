@@ -39,6 +39,8 @@ export interface ExperiencePnl {
   brand_agreed_paise: number | null
   creator_gross_total_paise: number
   creator_net_total_paise: number
+  /** 0546: travel/other allowances paid to creators: a cost of the shoot, outside the fee. */
+  creator_allowance_total_paise?: number
   guapd_costs_total_paise: number
   costs_by_category: { category: string; total_paise: number }[]
   subtotal_paise: number
