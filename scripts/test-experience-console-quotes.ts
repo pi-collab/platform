@@ -38,7 +38,7 @@ const refused = (r: { error: { message: string } | null }) => !!r.error
 const req = (brandId: string, over: Record<string, unknown> = {}) => ({
   p_brand_id: brandId, p_title: '[console-quotes-test] Kiro day shoot', p_creator_count: 10,
   p_deliverables: [{ type: 'UGC video', count: 2 }, { type: 'Story', count: 1 }],
-  p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: null, p_ad_rights_months: 3,
+  p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: 2, p_ad_rights_months: 3,
   p_boost: false, p_boost_per_creator: null, p_boost_months: null,
   p_location: 'Mumbai', p_date_from: '2026-11-10', p_date_to: '2026-11-12', p_brief: 'Glow serum', p_channel: 'whatsapp', ...over,
 })
@@ -56,6 +56,8 @@ async function run() {
   const C = (crs ?? []).find((c: any) => c.users?.auth_id) as any
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B.user_id, C.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(80)
   const [STAFF, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   const { data: house } = await admin.from('brands').select('id').eq('is_guapd', true).single()
@@ -93,7 +95,9 @@ async function run() {
   const tot = Object.fromEntries((g1.data?.plan_totals ?? []).map((t: any) => [t.type, t.total]))
   ok('totals computed by the database: 20 UGC videos, 10 Stories', tot['UGC video'] === 20 && tot['Story'] === 10, JSON.stringify(g1.data?.plan_totals))
   ok('videos priced per video: 2 each, 20 in total (stories not counted)', g1.data?.plan_videos_per_creator === 2 && g1.data?.plan_videos_total === 20)
-  ok('rights per creator: affiliate on 1, ad rights on all (null) for 3 months', g1.data?.request_affiliate_per_creator === 1 && g1.data?.request_ad_rights_per_creator === null && g1.data?.request_ad_rights_months === 3)
+  ok('rights per creator: affiliate on 1, ad rights on 2 for 3 months', g1.data?.request_affiliate_per_creator === 1 && g1.data?.request_ad_rights_per_creator === 2 && g1.data?.request_ad_rights_months === 3)
+  ok('0547: ad rights with no per-creator count is refused (never "all")', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_ad_rights_per_creator: null }))))
+  ok('0547: boost with no per-creator count is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_boost: true, p_boost_per_creator: null, p_boost_months: 3 }))))
   ok('other request fields stored (Mumbai, WhatsApp)', g1.data?.request_location === 'Mumbai' && g1.data?.request_channel === 'whatsapp')
   const lst = ((await staff.rpc('experience_console_list')).data ?? []).find((r: any) => r.id === E)
   ok('the list shows 20 videos for it', lst?.requested_videos === 20, String(lst?.requested_videos))

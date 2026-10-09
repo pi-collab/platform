@@ -88,6 +88,8 @@ async function run() {
   const { data: house } = await admin.from('brands').select('id').eq('is_guapd', true).limit(1).maybeSingle()
   const { data: cr } = await admin.from('creators').select('id, user_id, full_name, handle, is_bookable, vetting_status, users(auth_id)').eq('is_guapd', false).eq('is_bookable', true).limit(80)
   const pool = (cr ?? []) as any[]
+  // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
+  { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
   const [K1, K2, K3] = pool.filter((c) => c.handle)
   const C = pool.find((c) => c.users?.auth_id && ![K1?.id, K2?.id, K3?.id].includes(c.id)) ?? pool.find((c) => c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
@@ -95,7 +97,9 @@ async function run() {
   const { data: creatorUsers } = await admin.from('creators').select('user_id').not('user_id', 'is', null)
   const busy = new Set([...(access ?? []).map((a) => a.user_id), ...(allMembers ?? []).map((m) => m.user_id), ...(creatorUsers ?? []).map((c) => c.user_id)])
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(300)
-  const [OP, FIN, MEMBER, HOUSE_MEMBER] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
+  const [OP, FIN, MEMBER, SPARE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
+  // 0548: the house brand refuses every member, so this user is only ever refused: any spare login will do.
+  const HOUSE_MEMBER = SPARE ?? OP
   if (!BA || !BB || !house || !K1 || !K2 || !K3 || !C || !OP || !FIN || !MEMBER || !HOUSE_MEMBER) throw new Error('missing test actors')
 
   const { data: had } = await admin.from('creator_products').select('id').in('creator_id', [K1.id, K2.id, K3.id]).eq('pricing_type', 'per_day')
@@ -157,10 +161,13 @@ async function run() {
   ok('an unknown id: the same answer', said(await ba.rpc('brand_experience', { p_experience_id: '00000000-0000-0000-0000-000000000000' }), /Not found/))
   const hx = must(await admin.from('experiences').insert({ brand_id: house!.id, title: `${PREFIX} House`, status: 'requested', request_creator_count: 1, request_deliverables: [{ type: 'UGC video', count: 1 }] }).select('id').single(), 'house exp') as { id: string }
   exps.push(hx.id)
-  const hm = must(await admin.from('brand_members').insert({ brand_id: house!.id, user_id: HOUSE_MEMBER.id, is_admin: true }).select('id').single(), 'house member') as { id: string }
-  tempMembers.push(hm.id); actorAuth.push(HOUSE_MEMBER.auth_id)
-  const houseSession = await sessionFor(HOUSE_MEMBER.auth_id)
-  ok('the Guapd house brand: refused even for its member', said(await houseSession.rpc('brand_experience', { p_experience_id: hx.id }), /Not found/))
+  // 0546: the house brand can no longer gain a member at all (that membership
+  // is what RLS would read to open leg deals), so the gate's own house check is
+  // now backed by a refusal one step earlier.
+  const hm = await admin.from('brand_members').insert({ brand_id: house!.id, user_id: HOUSE_MEMBER.id, is_admin: true }).select('id').single()
+  if (hm.data) { tempMembers.push((hm.data as { id: string }).id); actorAuth.push(HOUSE_MEMBER.auth_id) }
+  ok('the Guapd house brand cannot gain a member (0546)', said(hm, /house brand/))
+  ok('the Guapd house brand\'s Experience: Not found for another brand', said(await ba.rpc('brand_experience', { p_experience_id: hx.id }), /Not found/))
   const list = await ba.rpc('brand_experiences')
   const listed = ((list.data as any)?.experiences ?? []) as any[]
   ok('the list shows their Experiences and no other brand\'s', listed.some((x) => x.id === E) && !listed.some((x) => x.id === hx.id) && listed.every((x) => x.brand_name === BA.brands.name || members.some((m) => m.user_id === BA.user_id && m.brands.name === x.brand_name)))
@@ -202,6 +209,8 @@ async function run() {
   // ════════ Roster ════════
   group('the roster: any member decides until the creator is locked; staff too; last one stands')
   must(await op.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [K1.id, K2.id, K3.id], p_added_by: 'guapd', p_channel: null }), 'roster add')
+  // 0548: Guapd's picks are internal until shared; share them for the brand's review.
+  must(await op.rpc('experience_console_roster_share', { p_experience_id: E, p_roster_ids: ((await op.rpc('experience_console_roster', { p_experience_id: E })).data as any[]).map((r) => r.id) }), 'share')
   ok('staff cannot add brand picks as "portal"', said(await op.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [C.id], p_added_by: 'brand', p_channel: 'portal' }), /On Guapd/))
   const SECRET_NOTE = 'SECRET-ROSTER-NOTE-7731'
   const staffRows = must(await op.rpc('experience_console_roster', { p_experience_id: E }), 'roster') as any[]
@@ -224,11 +233,13 @@ async function run() {
   const { data: k1row } = await admin.from('experience_roster').select('brand_decision, decision_channel').eq('id', bRow(K1).roster_id).single()
   ok('…recorded on Guapd', k1row?.brand_decision === 'accepted' && k1row?.decision_channel === 'portal')
   ok('a stale screen (still showing "pending") is refused', said(await decide(ba, K1, 'rejected', 'pending'), /changed/))
-  ok('staff record a different answer for the brand (rejected, WhatsApp): last one stands', !refused(await op.rpc('experience_console_roster_decide', { p_roster_id: bRow(K1).roster_id, p_decision: 'rejected', p_channel: 'whatsapp' })))
-  ok('the brand changes it back (accepted, showing "rejected")', !refused(await decide(ba, K1, 'accepted', 'rejected')))
+  ok('staff record a different answer for the brand (on hold, WhatsApp): last one stands', !refused(await op.rpc('experience_console_roster_decide', { p_roster_id: bRow(K1).roster_id, p_decision: 'on_hold', p_channel: 'whatsapp' })))
+  ok('0548: on hold is re-decidable: the brand changes it back (accepted, showing "on hold")', !refused(await decide(ba, K1, 'accepted', 'on_hold')))
   ok('staff cannot record a roster decision as "portal"', said(await op.rpc('experience_console_roster_decide', { p_roster_id: bRow(K2).roster_id, p_decision: 'accepted', p_channel: 'portal' }), /On Guapd/))
   ok('a plain member accepts K2', !refused(await decide(member, K2, 'accepted', 'pending')))
   ok('the admin rejects K3', !refused(await decide(ba, K3, 'rejected', 'pending')))
+  ok('0548: a rejection is final: the brand cannot take it back', said(await decide(ba, K3, 'accepted', 'rejected'), /final/))
+  ok('0548: …nor can Guapd record a different answer', said(await op.rpc('experience_console_roster_decide', { p_roster_id: bRow(K3).roster_id, p_decision: 'accepted', p_channel: 'email' }), /final/))
   for (const [n, s] of outsiders) ok(`${n}: cannot decide`, refused(await decide(s as SupabaseClient, K3, 'accepted', 'rejected')))
   must(await op.rpc('experience_console_roster_lock', { p_experience_id: E }), 'lock')
   ok('once locked, the brand cannot change a creator', said(await decide(ba, K1, 'rejected', 'accepted'), /confirmed/))

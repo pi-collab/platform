@@ -64,6 +64,8 @@ async function run() {
   const C = ((cr ?? []) as any[]).find((c) => c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, B2?.user_id, C?.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(200)
   const [OP, FIN, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   if (!B || !B2 || !C || !OP || !FIN || !NONE) throw new Error('missing test actors')

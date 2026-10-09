@@ -7164,3 +7164,119 @@ Run (staging, real brand logins; ~200 s after any other suite for the auth rate 
 - [ ] A brand that bought affiliate links: Prepare shows "Videos with the affiliate link (of N)" on every creator. It is driven by "did the brand buy affiliate", not by whether a count is stored.
 - [ ] 0545: an Experience created before 0538 with affiliate on and no per-creator count now has the count = videos per creator, on the request and on the locked plan. The brand page shows that number (it used to say "all"). A second run of 0545 changes nothing.
 - [ ] Gotcha: deals prepared while the field was hidden were saved with 0 affiliate videos. Re-prepare them before sending.
+
+## 113. Experiences Phase 6.1: campaign brief, per-creator scope, allowance, Guapd ↔ creator messages, Deals tab, staff bell + inbox (migration 0546)
+
+`scripts/test-experience-brief-messages.ts` (110 checks, staging, real sessions) covers the database side; the screens below are checked by hand.
+
+**Brief (A)**
+- [ ] Console → an Experience at Confirmed: "Brief for creators" uses the campaign brief editor (brief, attachments, creative guidelines, what to avoid). The campaign page's brief still works exactly as before (same component, campaign actions).
+- [ ] "Who gets which brief": each locked creator is "Same as everyone" or "Own brief". Switching to Own starts from the shared brief; back to shared asks to confirm.
+- [ ] Creator deal page (a leg): "The brief" renders in the campaign layout (BriefBlock). It is THEIR brief only: their own, else the shared one. Attachments open (signed, one hour). It says "Guapd may update it until the shoot is confirmed", then "Final".
+- [ ] Editing a brief tells only the sent creators who see that brief (in-app + email); a creator on their own brief is not told about a shared change.
+- [ ] From Shoot scheduled on, every brief write is refused (shared, own, upload slot, the old one-box setter) and the editor shows locked.
+- [ ] Attachments: only paths inside `experience-briefs/<experience id>/` are accepted; at most 10; PDF/images/docs/slides/video; up to 5 MB (the server-action body limit is 6 MB).
+- SECURITY: brand, creator, logged-out and service role cannot read or write a brief through the console functions.
+
+**Per-creator scope + allowance (B)**
+- [ ] Prepare shows, when the brand bought them: "With the affiliate link", "With ad rights (N mo)", "Boosted (N mo)" (blank = as agreed), and always "Travel / other allowance (₹, no fee)".
+- [ ] The Creator deals banner adds "x of y with ad rights · x of y boosted". Over what was bought is refused.
+- [ ] Targets never exceed the videos sold. A plan locked before creator counts existed (e.g. "Test brand", per-creator line = the whole order) counts as one creator: "Test brand" reads 0 of 70 with the affiliate link, not 0 of 225.
+- [ ] The allowance is NOT in gross / fee % / net (still day rate × days). The row shows "+ ₹X allowance (no fee)". Send passes the allowance the screen showed; a stale one is refused.
+- [ ] Creator offer: day rate → days → total → fee → take-home, then "Travel and other allowance (no fee) +₹X" and "Total to you". Accept says the total.
+- [ ] Payout: amount = net (fee statement unchanged); allowance on the payout; paid = net + allowance − TDS. Creator statement and payments list show the allowance.
+- [ ] P&L: "Creator allowances" is its own line; fee kept excludes it; margin = revenue − net − allowance − costs. A 'travel' cost line tied to a creator who has an allowance is refused (no double count).
+- [ ] Fee golden baseline byte-identical (no fee code touched).
+- SECURITY: the allowance never appears on any brand screen; locked allowance cannot change (freeze trigger), even with the service key.
+
+**Messages + Deals + staff bell (C, D)**
+- [ ] A sent leg has a thread from the moment it is sent (before accepting). Creator: the deal page's chat bar reads "Message Guapd"; bubbles say "Guapd"; the creator inbox lists it as "Guapd" with "<shoot> · <brand> · Managed by Guapd" and the creator's own total, never ₹0.
+- [ ] Console → Experience → Deals tab: every sent deal (status, open counter, last message, unread). Opening one shows the thread; staff reply as Guapd (staff see which colleague wrote each).
+- [ ] Console header: the bell shows staff alerts only (creator accepted/declined, countered, wrote, submitted; payout to approve; brand acted). Each opens the deal on its Deals tab. The inbox icon opens /experiences-admin/inbox with unread creator messages.
+- [ ] Brand portal bell and /notifications never show staff alerts; the console bell never shows brand alerts (even for a user who is both).
+- SECURITY: RLS lets ONLY the leg's creator read its messages; the brand, another creator, staff-through-RLS and logged-out read nothing; direct inserts on a leg thread are refused. The house brand can never gain a member (trigger, even with the service key). Message events and ops_events record lengths, never text.
+
+**WhatsApp (D)**
+- [ ] Off unless `EXPERIENCE_LEG_WHATSAPP=true`. Reused: `payment_released` (payout paid; follow-on paid when built). New, named by env once approved: `MSG91_TPL_EXPERIENCE_OFFER`, `_COUNTER`, `_AFFILIATE_LINK`, `_MESSAGE`, `_UPDATE`. A new step with no template name is skipped and recorded (`experience.leg_whatsapp_skipped`). Variable order is fixed in `lib/experience-leg-whatsapp.ts`.
+- Gotcha: the leg WhatsApp switch is separate from `MSG91_WHATSAPP_ENABLED`; both must be on.
+
+## 114. Experiences 6.1 follow-up: deny-on-NULL scope, the three-state rule, the three WhatsApp templates, staff email (migration 0547)
+
+`scripts/test-experience-brief-messages.ts` (132 checks) covers the database side.
+
+**Deny-on-NULL scope**
+- [ ] Request form (staff and brand): turning on Ad rights or Boost requires "N of each creator's videos". Blank is refused ("all" is gone); the database refuses it too.
+- [ ] Prepare: the affiliate / ad rights / boost fields start BLANK (placeholder "Required · bought N each") until stated, and a blank is refused. Send stays greyed with "Prepare: state the affiliate, ad-rights and boost counts".
+- [ ] Send refuses a leg whose counts were never stated.
+
+**Three-state scope rule**
+- [ ] Before send: Prepare edits everything.
+- [ ] Sent, shoot not yet confirmed: "Re-split" on the row. Counts can move between plain / affiliate / ad rights / boost or go down; never above what the brand bought per creator (label shows "bought N"), never above the creator's videos, and the Experience total never past what was sold. The creator is told (in-app, email, experience_offer_updated). Day rate, days, gross, fee %, net, allowance, payout and margin do not change (tested byte-for-byte). The deal's items' affiliate labels follow the new count.
+- [ ] From Shoot scheduled on: Re-split is gone and the database refuses it: "Scope is frozen once the shoot is confirmed. More scope is a new brand invoice, and extra creator work a new or topped-up creator deal."
+- [ ] A stale screen and a NULL count are refused.
+
+**Allowance in experienceMargin()**
+- [ ] `experienceMargin()` takes a per-leg allowance: fee kept unchanged; margin = invoiced − Σ net − Σ allowance − costs; sub-total + fee kept = margin (`test-experience-money.ts`). The 6.1 suite checks it equals the database P&L line for line.
+
+**WhatsApp (MSG91, approved)**
+- [ ] Offer sent → `experience_offer_sent` [first name, "<Brand> · Managed by Guapd", total to creator], button /offer/<leg id>.
+- [ ] Guapd counter, Guapd accepting the creator's counter, a brief change, a re-split → `experience_offer_updated` (same variables, the current total).
+- [ ] Payout marked paid → `experience_payment_sent` [first name, amount paid, brand value], button /deals/<leg id>.
+- [ ] /offer/<leg id> and /deals/<leg id> both land on /creator/deals/<leg id> (login, own leg only). /offer/<real token> still opens the marketplace offer. /deals/<marketplace id> still opens the brand deal.
+- [ ] Sent only when `EXPERIENCE_LEG_WHATSAPP=true` (and `MSG91_WHATSAPP_ENABLED=true`). Every attempt is an `experience.leg_whatsapp_*` event. `experience_affiliate_link` is NOT wired (deferred).
+
+**Staff email**
+- [ ] Every staff alert (creator accepted/declined, countered, wrote, submitted; payout to approve; brand acted) also emails each Experiences staff user, linking to the deal on its Deals tab. Messages: at most one email per thread per ~15 minutes, never the message text.
+
+## 115. Experiences roster: ops curation gate, on hold, bulk accept (migration 0548)
+
+`scripts/test-experience-roster-share.ts` (48 checks) covers the database side.
+
+- [ ] Console → roster: creators Guapd adds start **Internal · not shared** with a checkbox; the bar "N on Guapd's shortlist · not visible to the brand" + **Share with the brand (n)**. Sharing tells the brand (in-app + email). Adding no longer notifies the brand.
+- [ ] The brand's own picks (recorded by staff) are shared from the start.
+- [ ] Brand → Experience → Creators: only shared creators appear; per creator: name, handle (Instagram link), photo, what they make, decision. Never a day rate, track, payout or margin. The list's "to review" count counts shared pending/on-hold only.
+- [ ] Brand buttons: **Accept**, **Hold**, **Reject** (final). With 2+ to review: checkboxes + **Accept selected (n)**; reject and hold are one at a time.
+- [ ] On hold can be accepted or rejected later; rejected is final (brand and staff; no "Back to awaiting").
+- [ ] Lock waits for every SHARED creator's answer; the internal shortlist and on-hold creators never block it and never lock. Only accepted creators get a creator deal; Prepare/Send refuse rejected, on-hold and unshared creators.
+- [ ] Nothing reaches a creator (no notification, no deal) before their offer is sent.
+- SECURITY: an unshared creator is "Not found" to the brand's decide and bulk accept; a brand decision on an unshared creator is impossible even with the service key (`er_decided_only_when_shared`). Rows before 0548 were backfilled as shared (they were already visible).
+- Gotcha: a founder can be both a brand member and Guapd staff; tests pick brand actors who are not staff.
+
+## 116. Experiences 6.1 item 9: the creator leg on the normal creator deal page
+
+The leg reuses the creator deal page's own pieces; only the data is the leg's (`creator_leg_context`, own leg only).
+
+| Normal deal page shows | Leg source (creator_leg_context) | Brand price / margin reachable? |
+|---|---|---|
+| Hero: brand mark + name, title · ref, headline, status line (`DealHeroCard`) | `brand_name`, `brand_logo_url`, `title`, `deal_ref`, `status`, `shoot_date/city`, payout `paid_paise/paid_on` | No |
+| Tracker (`CreatorStepper`) | leg stages: Offer received → Accepted → Shoot → (Deliverables) → Paid, from `status`, `shoot_outcome`, `work_complete`, `payout.status` | No |
+| Offer / Agreed terms | `day_rate_paise`, `days`, `gross_paise`, `platform_pct`, `net_paise`, `allowance_paise`, `total_to_creator_paise` (all this leg's terms) | No: no brand-price field exists on the context |
+| Accept / Counter / Decline (`AcceptDecline`, leg mode) | `counters`, `counters_left`; actions `creator_leg_respond/_counter/_counter_accept/_withdraw` | No |
+| What you make / rights | `deliverables`, `videos`, `affiliate_count`, `ad_rights_videos/months`, `boost_videos/months` (this leg's row) | No |
+| The brief (`BriefBlock`) | `brief_detail` (this creator's own brief, else the shared one) | No |
+| Deliverables | `items` (this leg's items; link/file/note only on creator-submit shoots) | No |
+| Payout statement | `payout` (this deal's payout: gross, fee, net, allowance, TDS, paid, reference) | No |
+| Chat (`CreatorThread`, labelled Guapd) | `messages` RLS: this leg's creator only | No |
+| Phone screens (`CreatorOfferMobile`) | the same fields; item prices hidden (a leg pays by the day) | No |
+
+- [ ] Desktop: the leg page has the same hero, tracker, terms surface, brief surface and chat bar as a marketplace deal. Phone: the same offer / agreed / paid screens.
+- [ ] Marketplace creator deal pages look unchanged (hero, styles and tracker are now shared components).
+- [ ] The marketplace fee path (calculateFee / resolveDealFee) is never called on a leg.
+
+## 117. Experiences 6.1 items 10 + 11: broadcast; the brand ↔ Guapd thread (migration 0550)
+
+`scripts/test-experience-broadcast-brand-thread.ts` covers the database side.
+
+- [ ] Console → Experience → Deals: **Message all creators** (Everyone sent an offer / Accepted only). Each creator receives it in their own Guapd thread; closed legs are left out; the brand never sees it.
+- [ ] Campaign → **Message all creators**: one message into each open deal's own thread, as the brand (RLS: only the brand's own open deals).
+- [ ] Brand → Experience: **Message Guapd** opens the same chat as on a deal (DealThread). Guapd's messages read "Guapd".
+- [ ] Console → Experience → Deals: **Messages with <brand>**; console Inbox lists brand threads above creator threads; the console unread badge counts both.
+- [ ] Notifications: brand → staff in-app + email (`experience_brand_message_in`, opens the console inbox); Guapd → brand members in-app + email (link to the Experience). Email throttled per thread; never the message text.
+- SECURITY: `experience_brand_messages` / `_reads`: RLS on, no policy, all grants revoked: functions only. Another brand, a creator, logged-out and the service role are refused by every thread function.
+
+## 118. Experiences 6.1 item 12: ops can release a locked creator (migration 0549)
+
+- [ ] Console → roster → a locked creator → **Release from roster…** with a reason (3–300 characters).
+- [ ] Allowed while Confirmed or Shoot scheduled, with no shoot outcome, no payout and nothing shared with the brand. An open or accepted offer is cancelled (kept on record) and the creator is told. The row unlocks and detaches from the cancelled deal; ops can then remove the creator, or lock and send a fresh offer.
+- [ ] Refused afterwards: once the shoot is done, record "did not shoot".
+- [ ] Linking a not-on-Guapd prospect the brand already decided on marks the creator shared (0548's rule).

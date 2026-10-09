@@ -103,11 +103,15 @@ async function run() {
   const B = members[0]
   const { data: cr } = await admin.from('creators').select('id, user_id, vetting_status, full_name, users(auth_id)').eq('is_guapd', false).eq('is_bookable', true).limit(60)
   const pool = (cr ?? []) as any[]
+  // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
+  { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
   const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
   const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
   const X = pool.find((c) => c.id !== G?.id && c.id !== D?.id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, G?.user_id, D?.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(200)
   const [OP, FIN, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   if (!B || !G || !D || !X || !OP || !FIN || !NONE) throw new Error('missing test actors')
@@ -212,7 +216,8 @@ async function run() {
 
   group("the creator's statement (their own, only)")
   const ctx = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
-  const PK = ['gross_paise', 'net_paise', 'paid_on', 'paid_paise', 'platform_fee_paise', 'platform_pct', 'reference', 'status', 'tds_paise'].join(',')
+  // 0546: the statement carries the fee-exempt allowance too.
+  const PK = ['allowance_paise', 'gross_paise', 'net_paise', 'paid_on', 'paid_paise', 'platform_fee_paise', 'platform_pct', 'reference', 'status', 'tds_paise'].join(',')
   ok('G sees exactly: gross → 30% fee → net → TDS → paid, the date and the reference', ctx.payout && Object.keys(ctx.payout).sort().join(',') === PK
     && ctx.payout.status === 'paid' && Number(ctx.payout.platform_pct) === 30 && Number(ctx.payout.tds_paise) === 100000 && ctx.payout.reference === 'UTR-PAY-G1', JSON.stringify(ctx.payout))
   ok('…never the proof, who requested or approved it, or the vendor', !/proof|approved_by|requested|vendor|payout-proof/.test(JSON.stringify(ctx)))

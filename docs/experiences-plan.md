@@ -562,7 +562,33 @@ The last build phase: the brand-facing version of everything staff have recorded
 - Coexistence: staff decides then brand changes, brand decides then staff changes; both refused after lock / approval / sign-off; staff can't write `'portal'`; stale screen refused.
 - Regression: the full Experience suite, fee-golden byte-identical, marketplace untouched. Teardown records every id, deletes child-first in `finally`, and asserts zero leftovers.
 
-## Phase 6.1: campaign brief, per-creator scope, Guapd ↔ creator messages, Deals tab (PROPOSED 2026-10-09, held for review)
+## Phase 6.1: campaign brief, per-creator scope, Guapd ↔ creator messages, Deals tab (APPROVED + BUILT 2026-10-09, staging only, migration 0546)
+
+Answers (Palak, 2026-10-09): brief editable until the shoot is CONFIRMED, notify on each change, then locked; creators can message from the moment the offer is sent; Deals is a proper TAB (the console nav was touched anyway for the bell + inbox). Additions folded in: B travel/other ALLOWANCE per creator (fee-exempt, paid in full, its own P&L line); C the staff account shell (bell + inbox, reusing the brand portal's nav); D leg WhatsApp templates (reuse where one fits, new where the wording/amount differs), off until approved. Ad rights and boost are settable per creator, like affiliate.
+
+As built:
+- Reused, adapted: the campaign brief editor became `components/BriefEditor.tsx` (campaign page = thin wrapper, unchanged behaviour); the creator's brief display became `BriefBlock` (campaign deal page and leg page share it); `CreatorThread` takes a counterparty label ("Guapd" on a leg); `BrandNav`/`BrandSidebar` take a console mode (staff bell/inbox, staff alert types only). None of these reads money: the brief carries no price; the thread carries messages only; the console lists carry no money field (tested).
+- Leg messages go through functions (creator_leg_message_send / experience_console_leg_message_send); the 0534 direct-write guard stays. RLS on messages: a leg is readable by its creator only (`can_read_deal_messages`); the house brand cannot gain a member (trigger).
+- Not built (no Experience trigger exists yet): "affiliate link shared" and "affiliate follow-on paid" WhatsApp steps are wired in the template map but nothing fires them until those flows exist; there is no creator invoice step on a leg, so no "invoice accepted" message.
+
+0547 follow-up (Palak, 2026-10-09):
+- Deny-on-NULL scope: a bought right carries its per-creator count on the request; every draft and send states each count. Nothing defaults to "all" or to 0.
+- The three-state scope rule: before send, fully editable; sent and shoot not confirmed, a RE-SPLIT only (labels; never above what was bought per creator; money untouched, tested byte-for-byte); from shoot confirmed, refused (new scope = new brand invoice + new or topped-up creator leg).
+- WhatsApp wired to the approved experience_offer_sent / experience_offer_updated / experience_payment_sent. /offer/<leg id> and /deals/<leg id> redirect to the creator's own deal page. Sent only when EXPERIENCE_LEG_WHATSAPP=true.
+- Staff email alongside every staff alert.
+
+0548 (item 8), roster curation gate + brand approval: Guapd shortlists internally and shares chosen creators; the brand accepts / holds / rejects (reject final, hold re-decidable), and can accept several at once; the lock waits only for shared creators; offers only to locked accepted creators. Pricing (day rates, track) stays on the Guapd side throughout; brand approval gates the SEND. Leg drafting (days, scope) still opens at Confirmed, after the lock.
+
+Items 9–12 (added 2026-10-10):
+- 9. The creator leg renders on the normal creator deal page's own components (hero card, tracker, terms surface, AcceptDecline in leg mode, BriefBlock, CreatorThread, CreatorOfferMobile on phones), fed only from creator_leg_context. Field map in docs/test-cases.md §116.
+- 10. Broadcast: Guapd to every creator on an Experience (each in their own Guapd thread), and a brand to every creator on a campaign (each deal's own thread).
+- 11. A brand ↔ Guapd thread per Experience (0550), in the same chat as a deal; staff see it on the Deals tab and in the console inbox.
+- 12. Ops can release a locked creator who backs out (0549), before the shoot is done.
+
+### OPEN (deferred, not built): affiliate posting flow for Experiences
+Intended shape: Guapd creates the reel → shares the finished reel with the creator → the creator posts on their own handle → the creator marks it posted → the affiliate link goes live and `experience_affiliate_link` fires (approved in MSG91, deliberately unwired). Mirrors the normal deal's post-first gate, but Guapd supplies the reel. Before building: decide WHO posts per deliverable (creator handle vs brand / UGC-only).
+
+The proposal as reviewed:
 
 Shipped ahead of it (8c81ae4, 0545): Send always visible with what's missing; affiliate split shown whenever the brand bought affiliate; legacy "all" backfilled.
 

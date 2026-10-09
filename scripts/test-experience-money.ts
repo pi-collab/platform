@@ -128,6 +128,21 @@ group('margin = brand − Σ creator NET − costs; sub-total + fee kept reconci
   eq('no invoices yet → margin 0', experienceMargin({ brandInvoiceSubtotalsPaise: [], creatorLegs: [], guapdCostsPaise: [] }).guapdMarginPaise, 0)
 }
 
+group('0546: an allowance is a cost, paid in full, never fee-bearing')
+{
+  const g = creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' })            // ₹10,000 → 30% → ₹7,000 net
+  const withAllow = experienceMargin({ brandInvoiceSubtotalsPaise: [3_500_000], creatorLegs: [{ ...g, allowancePaise: 200_000 }], guapdCostsPaise: [50_000] })
+  const without = experienceMargin({ brandInvoiceSubtotalsPaise: [3_500_000], creatorLegs: [g], guapdCostsPaise: [50_000] })
+  eq('fee kept is unchanged by the allowance (₹3,000 either way)', [withAllow.platformFeeKeptPaise, without.platformFeeKeptPaise], [300_000, 300_000])
+  eq('allowances line = ₹2,000', withAllow.creatorAllowanceTotalPaise, 200_000)
+  eq('margin = ₹35,000 invoiced − ₹7,000 net − ₹2,000 allowance − ₹500 costs = ₹25,500', withAllow.guapdMarginPaise, 2_550_000)
+  eq('the allowance lowers the margin by exactly itself', without.guapdMarginPaise - withAllow.guapdMarginPaise, 200_000)
+  eq('sub-total + fee kept = margin, with the allowance', withAllow.subtotalPaise + withAllow.platformFeeKeptPaise, withAllow.guapdMarginPaise)
+  eq('cash-in minus cash-out: invoiced − (net + allowance paid to the creator) − costs = margin', 3_500_000 - (g.creatorNetPaise + 200_000) - 50_000, withAllow.guapdMarginPaise)
+  let threw = false; try { experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: [{ ...g, allowancePaise: 100.5 }], guapdCostsPaise: [] }) } catch { threw = true }
+  eq('a fractional-paise allowance is refused', threw, true)
+}
+
 // ── Independence (pure) ─────────────────────────────────────────────────────
 group('two-leg independence (pure functions)')
 {

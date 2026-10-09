@@ -83,7 +83,7 @@ async function create() {
 
   const req = (title: string) => brand.rpc('brand_experience_request', {
     p_title: `${PREFIX} ${title}`, p_creator_count: 2, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 2 }],
-    p_affiliate: false, p_affiliate_per_creator: null, p_ad_rights: true, p_ad_rights_per_creator: null, p_ad_rights_months: 6,
+    p_affiliate: false, p_affiliate_per_creator: null, p_ad_rights: true, p_ad_rights_per_creator: 1, p_ad_rights_months: 6,
     p_boost: false, p_boost_per_creator: null, p_boost_months: null, p_location: 'Mumbai', p_date_from: '2026-11-15', p_date_to: '2026-11-30',
     p_brief: 'Festive skincare routine, warm light, no competitor products in frame.' })
   const quote = (E: string, date: string) => fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 1500000, p_deliverables: [], p_shoot_date: date, p_shoot_city: 'Mumbai', p_message: 'Two creators, one shoot day in Bandra. Stories included in extras.', p_channel: null })
@@ -91,6 +91,8 @@ async function create() {
     const q = must(await quote(E, date), 'quote') as string
     must(await brand.rpc('brand_experience_quote_answer', { p_quote_id: q, p_accept: true, p_note: null }), 'accept')
     must(await op.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [K1.id, K2.id, K3.id], p_added_by: 'guapd', p_channel: null }), 'roster')
+    // 0548: Guapd's picks are internal until shared; share them for the brand's review.
+    must(await op.rpc('experience_console_roster_share', { p_experience_id: E, p_roster_ids: ((await op.rpc('experience_console_roster', { p_experience_id: E })).data as any[]).map((r) => r.id) }), 'share')
   }
 
   const P = must(await req('Diwali skincare UGC'), 'P') as string
@@ -112,7 +114,7 @@ async function create() {
     const legs = (must(await op.rpc('experience_console_legs', { p_experience_id: E }), 'legs') as any[]).filter((l) => [K1.id, K2.id].includes(l.creator_id))
     const deals: string[] = []
     for (const l of legs) {
-      must(await op.rpc('experience_console_leg_draft', { p_roster_id: l.roster_id, p_product_id: l.day_rate_product_id, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 2 }], p_affiliate_count: 0, p_entered_rate_paise: null }), 'draft')
+      must(await op.rpc('experience_console_leg_draft', { p_roster_id: l.roster_id, p_product_id: l.day_rate_product_id, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 2 }], p_affiliate_count: 0, p_ad_rights_count: 1, p_entered_rate_paise: null }), 'draft')
       const t = creatorLegTerms({ dayRatePaise: 1000000, days: 1, track: l.track })
       deals.push(must(await op.rpc('experience_console_leg_send', { p_roster_id: l.roster_id, p_expected_gross_paise: t.creatorGrossPaise, p_expected_platform_pct: t.platformPct, p_expected_net_paise: t.creatorNetPaise }), 'send') as string)
     }

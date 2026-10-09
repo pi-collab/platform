@@ -48,6 +48,8 @@ async function run() {
   const B = ((bm ?? []) as any[]).filter((m) => m.users?.auth_id && !m.brands?.is_guapd)[0]
   const { data: cr } = await admin.from('creators').select('id, user_id, handle, full_name, is_bookable, users(auth_id)').eq('is_guapd', false).limit(80)
   const pool = (cr ?? []) as any[]
+  // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
+  { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
   const C = pool.find((c) => c.users?.auth_id)
   const bookable = pool.filter((c) => c.is_bookable && c.handle)
   const L = bookable.find((c) => c.id !== C?.id)          // the account a prospect "joins" as
@@ -55,6 +57,8 @@ async function run() {
   const notBookable = pool.find((c) => !c.is_bookable)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, C?.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(200)
   const [OP, FIN, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   if (!B || !C || !L || !M || !OP || !FIN || !NONE) throw new Error('missing test actors')

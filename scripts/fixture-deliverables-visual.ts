@@ -70,6 +70,8 @@ async function create() {
   const [C1, C2, C3] = withLogin
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B.user_id, ...(access ?? []).map((a) => a.user_id), ...((cr ?? []) as any[]).map((c) => c.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id, email').not('auth_id', 'is', null).not('email', 'is', null).limit(160)
   const [FIN, OP] = (users ?? []).filter((u: any) => !busy.has(u.id) && !String(u.email).endsWith('auth.guapd.internal')) as any[]
   must(await admin.from('staff_access').insert([{ user_id: FIN.id, experiences_operational: true, experiences_financial: true }, { user_id: OP.id, experiences_operational: true, experiences_financial: false }]), 'grant')

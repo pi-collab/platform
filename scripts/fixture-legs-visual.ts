@@ -65,6 +65,8 @@ async function create() {
   const D = withLogin.find((c) => c.vetting_status !== 'growth')
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([G.user_id, D.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(120)
   const STAFF = (users ?? []).find((u: any) => !busy.has(u.id)) as any
   await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
