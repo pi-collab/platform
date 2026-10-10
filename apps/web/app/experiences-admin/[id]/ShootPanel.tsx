@@ -20,6 +20,7 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
   negotiating: { label: 'Awaiting creator', tone: 'amber' },
   agreed:      { label: 'Accepted', tone: 'lime' },
+  paid:        { label: 'Paid', tone: 'neutral' },
   declined:    { label: 'Declined', tone: 'red' },
   cancelled:   { label: 'Withdrawn', tone: 'neutral' },
 }
@@ -43,7 +44,8 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
   }
 
   const { status, legs } = data
-  const accepted = legs.filter((l) => l.deal_status === 'agreed')
+  // 0551: a paid leg is still an accepted one.
+  const accepted = legs.filter((l) => l.deal_status === 'agreed' || l.deal_status === 'paid')
   const awaiting = legs.filter((l) => l.deal_status === 'negotiating')
   const recorded = accepted.filter((l) => l.shoot_outcome)
   const dateReached = !!data.shoot_date && data.shoot_date <= data.today

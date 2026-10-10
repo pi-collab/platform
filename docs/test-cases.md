@@ -7280,3 +7280,14 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Allowed while Confirmed or Shoot scheduled, with no shoot outcome, no payout and nothing shared with the brand. An open or accepted offer is cancelled (kept on record) and the creator is told. The row unlocks and detaches from the cancelled deal; ops can then remove the creator, or lock and send a fresh offer.
 - [ ] Refused afterwards: once the shoot is done, record "did not shoot".
 - [ ] Linking a not-on-Guapd prospect the brand already decided on marks the creator shared (0548's rule).
+
+## 119. Experiences 6.1 status fix: a paid creator leg reads as paid (migration 0551)
+
+`scripts/test-experience-payouts.ts` (group "0551") covers the database side.
+
+- [ ] Finance marks a creator's **creator fee** payout paid → that creator's deal moves `agreed → paid` in the same transaction (audit log: `deal.status_changed` agreed → paid). Other payout reasons do not move the deal.
+- [ ] Creator inbox (phone + desktop) shows the paid Experience deal as **Paid**, never "In production". The deal page shows Paid / Complete as before.
+- [ ] Nothing that worked on an accepted leg stops once it is paid: deliverables (creator-submits), release to the brand, the shoot rollup, the completion check, the payouts screen, "Accepted only" broadcast, Guapd ↔ creator messages. Console chips read **Paid**.
+- [ ] Phone offer card for an Experience deal: **Payment in** reads "After the shoot" (Guapd delivers) or "After approval" (creator submits), never "—".
+- SECURITY: `guard_creator_leg_no_money` now allows `paid` on a creator leg only from `agreed` and only when a paid `creator_fee` payout exists for it. Any other route, including the service role, is refused. NULL denies.
+- Gotcha: migration 0551 rewrites ten leg functions from their live staging definitions (agreed → agreed or paid) and backfills legs already paid out. Run it on prod before any Experience payout is recorded there.

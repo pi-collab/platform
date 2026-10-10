@@ -32,6 +32,7 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
   negotiating: { label: 'Awaiting creator', tone: 'amber' },
   agreed:      { label: 'Creator accepted', tone: 'lime' },
+  paid:        { label: 'Paid', tone: 'neutral' },
   declined:    { label: 'Creator declined', tone: 'red' },
   cancelled:   { label: 'Cancelled', tone: 'neutral' },
 }

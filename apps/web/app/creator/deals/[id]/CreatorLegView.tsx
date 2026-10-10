@@ -54,12 +54,13 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   const allowance = Number(ctx.allowance_paise ?? 0)
   const total = m ? m.netPaise + allowance : null
   const open = ctx.status === 'negotiating'
-  const accepted = ctx.status === 'agreed'
+  const accepted = ctx.status === 'agreed' || ctx.status === 'paid'
   const declined = ctx.status === 'declined' || ctx.status === 'cancelled'
   const creatorSubmits = ctx.deliverables_owner === 'creator'
   const shot = ctx.shoot_outcome === 'done'
   const noShoot = ctx.shoot_outcome === 'did_not_shoot'
-  const paid = ctx.payout?.status === 'paid'
+  // 0551: Guapd paying the creator fee moves the deal itself to paid.
+  const paid = ctx.status === 'paid' || ctx.payout?.status === 'paid'
   const items = ctx.items ?? []
   const brand = ctx.brand_name ?? 'A brand'
   const managed = `${brand} · Managed by Guapd`
@@ -154,7 +155,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         ]}
         summaryRows={allowance > 0 ? [{ label: 'Allowance (no fee)', value: `+${formatPaiseINR(allowance)}` }] : []}
         paymentTerms={creatorSubmits ? 'Guapd pays you once your deliverables are approved' : 'Guapd pays you after the shoot'}
-        paymentIn={null}
+        paymentIn={creatorSubmits ? 'After approval' : 'After the shoot'}
         deliverBy={short(ctx.shoot_date)}
         waitingLabel={sentAt ? `Received ${short(sentAt)}` : 'Received'}
         items={items.map((i) => ({ id: i.id, label: i.label, pricePaise: 0, detail: i.affiliate_link ? 'Carries the brand’s affiliate link' : null }))}

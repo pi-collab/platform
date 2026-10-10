@@ -264,8 +264,11 @@ async function run() {
 async function cleanup() {
   if (fs.existsSync(STATE)) { const saved = JSON.parse(fs.readFileSync(STATE, 'utf8')); Object.assign(st, saved); staffBefore = saved.staffBefore }
   if (st.files.length) await admin.storage.from('finance-docs').remove(st.files)
+  // Up to three passes: when both Experiences are kept, the first pass can hit one still referenced by the other's rows.
+  for (let pass = 0; pass < 3; pass++) {
   const { data: exps } = await admin.from('experiences').select('id').like('title', `${PREFIX}%`)
-  for (const e of exps ?? []) {
+  if (!exps?.length) break
+  for (const e of exps) {
     const { data: invs } = await admin.from('service_invoices').select('pdf_path').eq('experience_id', e.id)
     const pdfs = (invs ?? []).map((i: any) => i.pdf_path).filter(Boolean)
     if (pdfs.length) await admin.storage.from('finance-docs').remove(pdfs)
@@ -288,6 +291,7 @@ async function cleanup() {
     await admin.from('experience_cost_lines').delete().eq('experience_id', e.id)
     await admin.from('experience_quotes').delete().eq('experience_id', e.id)
     await admin.from('experiences').delete().eq('id', e.id)
+  }
   }
   if (st.newVendorCreators.length) await admin.from('vendors').delete().in('creator_id', st.newVendorCreators)
   if (st.createdRates.length) await admin.from('creator_products').delete().in('id', st.createdRates)

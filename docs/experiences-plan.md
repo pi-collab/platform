@@ -585,6 +585,12 @@ Items 9–12 (added 2026-10-10):
 - 11. A brand ↔ Guapd thread per Experience (0550), in the same chat as a deal; staff see it on the Deals tab and in the console inbox.
 - 12. Ops can release a locked creator who backs out (0549), before the shoot is done.
 
+Status fixes before prod (Palak, 2026-10-10, pulled into 6.1):
+- A Guapd creator-fee payout moves the creator leg agreed → paid, like a normal deal's paid state (0551). Leg gates that meant "accepted" now mean agreed or paid. The 0534 no-paid guard now allows paid only through a paid creator-fee payout.
+- The phone offer card's "Payment in" for a leg reads "After the shoot" / "After approval" instead of "—".
+- Still needs a visual pass before prod (logic covered by the suites): a NORMAL marketplace creator deal page after the shared-header refactor; console roster share bar, release, hold, bulk accept.
+- Playbook Part 13 + Appendix: held until after Palak's own staging pass.
+
 ### OPEN (deferred, not built): affiliate posting flow for Experiences
 Intended shape: Guapd creates the reel → shares the finished reel with the creator → the creator posts on their own handle → the creator marks it posted → the affiliate link goes live and `experience_affiliate_link` fires (approved in MSG91, deliberately unwired). Mirrors the normal deal's post-first gate, but Guapd supplies the reel. Before building: decide WHO posts per deliverable (creator handle vs brand / UGC-only).
 

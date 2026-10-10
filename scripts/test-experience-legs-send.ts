@@ -246,7 +246,7 @@ async function run() {
   ok('cannot submit or change an item', refusedBy(await cg.from('deal_deliverable_items').update({ external_url: 'https://x.y' }).eq('id', anyItem.id), LEG_GUARD))
   ok('cannot upload a deliverable', refusedBy(await cg.from('deliverables').insert({ deal_id: DG, version: 1, external_url: 'https://x.y' }), LEG_GUARD))
   ok('no invoice can be raised on a leg, even by the service role', refusedBy(await admin.from('invoices').insert({ deal_id: DG, status: 'draft' }), /No invoice/))
-  ok('a leg cannot be marked paid, even by the service role', refusedBy(await admin.from('deals').update({ status: 'paid' }).eq('id', DG), /No payment/))
+  ok('a leg cannot be marked paid, even by the service role', refusedBy(await admin.from('deals').update({ status: 'paid' }).eq('id', DG), /marked paid only when Guapd pays/))
   ok("another creator cannot answer this leg", refused(await cd.rpc('creator_leg_respond', { p_deal_id: DG, p_accept: true, p_reason: null })))
   const acc = await cg.rpc('creator_leg_respond', { p_deal_id: DG, p_accept: true, p_reason: null })
   ok('the creator accepts their own leg', !acc.error && acc.data === 'agreed', acc.error?.message ?? '')

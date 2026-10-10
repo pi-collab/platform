@@ -11,6 +11,7 @@ import type { LegThreadRow } from '@/lib/experience-console-server'
 const STATUS: Record<string, { label: string; tone: ChipTone }> = {
   negotiating: { label: 'Awaiting creator', tone: 'amber' },
   agreed: { label: 'Accepted', tone: 'lime' },
+  paid: { label: 'Paid', tone: 'neutral' },
   declined: { label: 'Declined', tone: 'red' },
   cancelled: { label: 'Withdrawn', tone: 'neutral' },
   complete: { label: 'Complete', tone: 'neutral' },

@@ -166,7 +166,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
           <p className="t-body" style={{ margin: '12px 0 0', fontSize: 13 }}>Every deal sent to a creator on this Experience, and your messages with them. The brand never sees these threads.</p>
           {openLegs.length > 0 && (
             <div style={{ marginTop: 14 }}>
-              <CreatorBroadcast experienceId={e.id} all={openLegs.length} accepted={openLegs.filter((t) => t.status === 'agreed').length} />
+              <CreatorBroadcast experienceId={e.id} all={openLegs.length} accepted={openLegs.filter((t) => t.status === 'agreed' || t.status === 'paid').length} />
             </div>
           )}
           <div className={openDeal?.ok ? 'xp-deals-split' : undefined} style={{ marginTop: 16 }}>

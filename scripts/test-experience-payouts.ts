@@ -214,6 +214,15 @@ async function run() {
   const { data: evs } = await admin.from('events').select('event_type, detail').eq('deal_id', legOf(G)).eq('event_type', 'experience.payout_paid')
   ok('it is on G\'s deal timeline (reference, no amounts)', (evs ?? []).length === 1 && !/paise|amount/.test(JSON.stringify(evs![0].detail)))
 
+  group('0551: the paid creator fee marks the creator deal paid')
+  ok("G's deal is now paid (not left at agreed)", (await admin.from('deals').select('status').eq('id', legOf(G)).single()).data?.status === 'paid')
+  ok('the status change is on the audit log', ((await admin.from('events').select('detail').eq('deal_id', legOf(G)).eq('event_type', 'deal.status_changed')).data ?? [])
+    .some((e: any) => e.detail?.from === 'agreed' && e.detail?.to === 'paid'))
+  ok('the creator sees their own deal as paid', ((await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any)?.status === 'paid')
+  ok('still on the payouts screen once paid', ((await payouts()).legs as any[]).some((x) => x.deal_id === legOf(G) && x.payout?.status === 'paid'))
+  ok('an unpaid leg cannot be set paid by anyone, even the service role', refused(await admin.from('deals').update({ status: 'paid' }).eq('id', legOf(D)).select('id'))
+    && (await admin.from('deals').select('status').eq('id', legOf(D)).single()).data?.status === 'agreed')
+
   group("the creator's statement (their own, only)")
   const ctx = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   // 0546: the statement carries the fee-exempt allowance too.
