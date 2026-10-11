@@ -9,6 +9,7 @@ import LegDeliverables from './LegDeliverables'
 import BriefBlock from './BriefBlock'
 import CreatorThread from './CreatorThread'
 import { DealHeroCard, DealShellStyles, wrapper, metaLabel, sectionHeading, termRow } from './deal-shell'
+import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, MoneyCard, CardActions, chipStyle } from './deal-cards'
 import './creator-leg.css'
 
 /**
@@ -96,6 +97,15 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
     : <>Agreed{shootDate ? <> &middot; shoot on <b style={{ color: 'var(--ink)' }}>{shootDate}</b>{ctx.shoot_city ? ` in ${ctx.shoot_city}` : ''}</> : ''}</>
   const dot = paid ? 'var(--neon)' : open ? 'var(--warning)' : declined ? '#C4494F' : '#7E6BC4'
   const glow = paid ? 'color-mix(in oklab, var(--neon) 22%, transparent)' : open ? 'color-mix(in oklab, var(--warning) 22%, transparent)' : declined ? 'rgba(196,73,79,.22)' : 'rgba(126,107,196,.22)'
+
+  const payRule = creatorSubmits ? 'Guapd pays you once your deliverables are approved' : 'Guapd pays you after the shoot'
+  const whatYouMake = (ctx.deliverables ?? []).map((d) => countOf(Number(d.count), d.type)).join(' + ') || 'To be confirmed'
+  const chip = (t: string) => <span key={t} style={chipStyle}>{t}</span>
+  const scopeChips = [
+    ...((ctx.affiliate_count ?? 0) > 0 ? [chip(`Affiliate link on ${ctx.affiliate_count}`)] : []),
+    ...((ctx.ad_rights_videos ?? 0) > 0 ? [chip(`Ad rights \u00B7 ${ctx.ad_rights_videos}${ctx.ad_rights_months != null ? ` for ${ctx.ad_rights_months}mo` : ''}`)] : []),
+    ...((ctx.boost_videos ?? 0) > 0 ? [chip(`Boosting \u00B7 ${ctx.boost_videos}${ctx.boost_months != null ? ` for ${ctx.boost_months}mo` : ''}`)] : []),
+  ]
 
   // ── The shared answer control, in leg mode ──
   const answer = (stacked: boolean) => (
@@ -202,65 +212,87 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
               headline={headline} subline={managed} chatLabel="Message Guapd"
               statusDot={dot} statusGlow={glow} statusLabel={statusLabel} statusLine={statusLine} />
 
+            {open && <ReadyToDecideBar title={(ctx.counters ?? []).some((c) => c.status === 'open' && c.proposed_by === 'guapd') ? 'New counter from Guapd' : 'Ready to decide?'} sub="Scroll down to review terms and respond." />}
+
             {!declined && !noShoot && <CreatorStepper dealStatus={ctx.status} events={[]} track={track} />}
 
-            {/* ── Offer / Agreed terms: the leg's own figures ── */}
-            <div className="surface" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 24 }} id="decision">
-              <div style={{ padding: '26px 28px' }}>
-                <h3 style={sectionHeading}>{open ? 'Offer terms' : 'Agreed terms'}</h3>
-                <div style={{ marginTop: 12 }}>
-                  {m ? (<>
-                    <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Day rate × days</span><b style={{ fontSize: 14 }}>{formatPaiseINR(m.dayRatePaise)}/day × {m.days}</b></div>
-                    <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your rate</span><b style={{ fontSize: 14 }}>{formatPaiseINR(m.grossPaise)}</b></div>
-                    <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Guapd platform fee ({m.platformPct}%, {m.trackName})</span><b style={{ fontSize: 14 }}>−{formatPaiseINR(m.feePaise)}</b></div>
-                    <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>You take home</span><b style={{ fontSize: 14 }}>{formatPaiseINR(m.netPaise)}</b></div>
-                    {allowance > 0 && <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Travel and other allowance (no fee)</span><b style={{ fontSize: 14 }}>+{formatPaiseINR(allowance)}</b></div>}
-                    <div style={termRow}><span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Total to you</span><b style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>{formatPaiseINR(total ?? 0)}</b></div>
-                  </>) : <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your terms are being prepared.</p>}
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>What you make</span><b style={{ fontSize: 14, textAlign: 'right' }}>{(ctx.deliverables ?? []).map((d) => countOf(Number(d.count), d.type)).join(' · ') || '—'}</b></div>
-                  {scopeLines.map((l) => <div key={l} style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{l}</span><span /></div>)}
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Shoot</span><b style={{ fontSize: 14 }}>{shootDate ?? 'To be confirmed'}{ctx.shoot_city ? ` · ${ctx.shoot_city}` : ''}</b></div>
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Payment</span><b style={{ fontSize: 14 }}>{creatorSubmits ? 'Guapd pays you once your deliverables are approved' : 'Guapd pays you after the shoot'}</b></div>
-                  {counterRows.length > 0 && <div style={{ marginTop: 18 }}><div style={metaLabel}>Counters</div>{counterRows}</div>}
-                </div>
-              </div>
-              {open && <div style={{ padding: '20px 28px 26px', borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>{answer(false)}</div>}
-            </div>
+            {/* ── Offer / Agreed terms: the leg's own figures, on the shared terms card ── */}
+            {!declined && !noShoot && (open || (accepted && !shot && !paid)) && (
+              <TermsCard
+                heading={open ? 'Offer terms' : 'Agreed terms'}
+                agreedLabel={agreedAt ? `Agreed ${short(agreedAt)}, ${new Date(agreedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}` : null}
+                title={whatYouMake}
+                sub={`Shoot ${m ? `${m.days} day${m.days === 1 ? '' : 's'}` : 'day'}${ctx.shoot_city ? ` \u00B7 ${ctx.shoot_city}` : ''}`}
+                side={[
+                  { label: 'Shoot', value: short(ctx.shoot_date) ?? 'To be confirmed' },
+                  ...(m ? [{ label: 'Your day rate', value: `${formatPaiseINR(m.dayRatePaise)} \u00D7 ${m.days}` }] : []),
+                ]}
+                receiveLabel={`You receive, ${creatorSubmits ? 'paid once your deliverables are approved' : 'paid after the shoot'}`}
+                receive={total != null ? formatPaiseINR(total) : null}
+              />
+            )}
+
+            {/* ── Deliverables: what you make, then the money and the answer ── */}
+            {!declined && !noShoot && (
+              <DeliverablesCard
+                count={`${(ctx.deliverables ?? []).reduce((n, d) => n + Number(d.count), 0)} item${(ctx.deliverables ?? []).reduce((n, d) => n + Number(d.count), 0) === 1 ? '' : 's'}`}
+                rows={(ctx.deliverables ?? []).map((d, i, all) => (
+                  <DeliverableRow key={`${d.type}-${i}`} last={i === all.length - 1} icon="video"
+                    label={countOf(Number(d.count), d.type)}
+                    chips={i === 0 ? scopeChips : []} />
+                ))}
+              >
+                {open && m && (<>
+                  <MoneyRow label="Day rate × days" value={`${formatPaiseINR(m.dayRatePaise)}/day \u00D7 ${m.days}`} />
+                  <MoneyRow label="Your rate" value={formatPaiseINR(m.grossPaise)} />
+                  <MoneyRow label={`Platform fee (${m.platformPct}%)`} value={`\u2212${formatPaiseINR(m.feePaise)}`} />
+                  {allowance > 0 && <MoneyRow label="Travel and other allowance (no fee)" value={`+${formatPaiseINR(allowance)}`} />}
+                  <MoneyRow label="Total to you" value={formatPaiseINR(total ?? 0)} strong last />
+                </>)}
+                {counterRows.length > 0 && open && <div style={{ marginTop: 18 }}><div style={metaLabel}>Counters</div>{counterRows}</div>}
+                {accepted && (shot || creatorSubmits) && items.length > 0 && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }} id="deliverables">
+                    {creatorSubmits
+                      ? <>{!shot && <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '0 0 10px' }}>You can submit once Guapd marks your shoot done.</p>}<LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /></>
+                      : items.map((it) => <MoneyRow key={it.id} label={it.label} value={<span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-soft)' }}>{it.item_status === 'approved' ? 'Ready' : 'Guapd is preparing it'}</span>} />)}
+                  </div>
+                )}
+                {open && <CardActions>{answer(false)}</CardActions>}
+              </DeliverablesCard>
+            )}
 
             {hasBrief && brief && (
               <div className="surface" style={{ padding: '26px 24px' }}>
-                <div style={metaLabel}>{managed}{brief.locked ? ' · final' : ' · Guapd may update it until the shoot is confirmed'}</div>
+                <div style={metaLabel}>{brand}{sentAt ? ` \u00B7 ${short(sentAt)}` : ''}{brief.locked ? ' \u00B7 final' : ''}</div>
                 <h3 style={{ ...sectionHeading, marginTop: 8 }}>The brief in detail</h3>
                 <BriefBlock pitch={brief.pitch} guidelines={brief.guidelines} avoid={brief.avoid} attachments={brief.attachments ?? []}
                   attachmentUrls={attachmentUrls} defaultOpen={open || accepted} attachedLabel="Attached by Guapd" />
               </div>
             )}
 
-            {accepted && items.length > 0 && (shot || creatorSubmits) && !noShoot && (
-              <div className="surface" style={{ padding: '26px 24px' }} id="deliverables">
-                <h3 style={sectionHeading}>Your deliverables</h3>
-                <div style={{ marginTop: 14 }}>
-                  {creatorSubmits
-                    ? <>{!shot && <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>You can submit once Guapd marks your shoot done.</p>}<LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /></>
-                    : items.map((i) => <div key={i.id} style={termRow}><span style={{ fontSize: 13.5 }}>{i.label}</span><span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>{i.item_status === 'approved' ? 'Ready' : 'Guapd is preparing it'}</span></div>)}
-                </div>
-              </div>
-            )}
-
-            {accepted && shot && ctx.payout && (
-              <div className="surface" style={{ padding: '26px 24px' }}>
-                <h3 style={sectionHeading}>Your payout</h3>
-                <div style={{ marginTop: 10 }}>
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your rate</span><b>{formatPaiseINR(ctx.payout.gross_paise)}</b></div>
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Guapd platform fee ({Number(ctx.payout.platform_pct)}%)</span><b>−{formatPaiseINR(ctx.payout.platform_fee_paise)}</b></div>
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Your net</span><b>{formatPaiseINR(ctx.payout.net_paise)}</b></div>
-                  {Number(ctx.payout.allowance_paise ?? 0) > 0 && <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Allowance (no fee)</span><b>+{formatPaiseINR(Number(ctx.payout.allowance_paise))}</b></div>}
-                  <div style={termRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>TDS withheld</span><b>{ctx.payout.tds_paise ? `−${formatPaiseINR(ctx.payout.tds_paise)}` : formatPaiseINR(0)}</b></div>
-                  <div style={termRow}><span style={{ fontSize: 13, fontWeight: 700 }}>{paid ? 'Paid to you' : 'To be paid to you'}</span><b style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>{formatPaiseINR(ctx.payout.paid_paise)}</b></div>
-                </div>
-                <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 12 }}>{paid ? `Paid${ctx.payout.paid_on ? ` on ${short(ctx.payout.paid_on)}` : ''}. Bank reference: ${ctx.payout.reference}.` : ctx.payout.status === 'requested' ? 'Guapd is preparing your payout.' : 'Approved. Guapd is sending your payout.'}</p>
-              </div>
-            )}
+            {/* ── Payment: the invoice card's layout; Guapd pays, so nothing to raise ── */}
+            {accepted && !noShoot && total != null && (() => {
+              const p = ctx.payout
+              const pill = paid ? 'Paid' : p?.status === 'approved' ? 'On the way' : p ? 'Being prepared' : shot ? 'Next' : 'After the shoot'
+              const dotC = paid ? 'var(--success, #16a34a)' : p ? 'var(--warning)' : 'var(--ink-faint)'
+              const side = p
+                ? [
+                    { label: 'Your rate', value: formatPaiseINR(p.gross_paise) },
+                    { label: `Platform fee (${Number(p.platform_pct)}%)`, value: `\u2212${formatPaiseINR(p.platform_fee_paise)}` },
+                    ...(Number(p.allowance_paise ?? 0) > 0 ? [{ label: 'Allowance (no fee)', value: `+${formatPaiseINR(Number(p.allowance_paise))}` }] : []),
+                    ...(p.tds_paise ? [{ label: 'TDS withheld', value: `\u2212${formatPaiseINR(p.tds_paise)}` }] : []),
+                  ]
+                : m ? [{ label: 'Your rate', value: formatPaiseINR(m.grossPaise) }, { label: `Platform fee (${m.platformPct}%)`, value: `\u2212${formatPaiseINR(m.feePaise)}` }] : []
+              return (
+                <MoneyCard heading="Payment" pill={pill} pillDot={dotC}
+                  helper={paid ? null : p ? (p.status === 'approved' ? 'Approved. Guapd is sending your payout.' : 'Guapd is preparing your payout.') : `${payRule}. You do not raise an invoice; Guapd pays you directly.`}
+                  receiveLabel={paid ? 'You received' : 'You receive'}
+                  receive={formatPaiseINR(p ? p.paid_paise : total)}
+                  receiveSub={paid ? null : payRule}
+                  side={side} paidBar={paid}
+                  footer={paid ? <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Paid{p?.paid_on ? ` on ${short(p.paid_on)}` : ''}{p?.reference ? ` \u00B7 bank reference ${p.reference}` : ''}. This deal is wrapped.</span> : undefined} />
+              )
+            })()}
 
             {(declined || noShoot) && (
               <div className="surface" style={{ padding: '22px 24px' }}>

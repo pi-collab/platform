@@ -25,6 +25,7 @@ import RealtimeDealListener from '@/components/RealtimeDealListener'
 import { getCampaignBriefForCreator } from './actions'
 import BriefDetailsToggle from '@/app/deals/[id]/BriefDetailsToggle'
 import BriefBlock from './BriefBlock'
+import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, CardActions, chipStyle } from './deal-cards'
 import { DealHeroCard, DealShellStyles, wrapper, backLinkStyle, metaLabel, sectionHeading, termRow } from './deal-shell'
 import ShippingAddressForm from './ShippingAddressForm'
 import CreatorStepper from './CreatorStepper'
@@ -504,23 +505,10 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
           {/* ── "Ready to decide?" CTA (negotiating only) ── */}
           {isNegotiating && (
-            <div className="surface" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{hasBrandCounter ? 'New counter from the brand' : 'Ready to decide?'}</div>
-                <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>{hasBrandCounter ? 'Review the updated terms below and respond.' : 'Scroll down to review terms and respond.'}</div>
-              </div>
-              <a href="#decision" className="neonbtn" style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                height: 44, padding: '0 22px', borderRadius: 12,
-                background: 'var(--neon)', border: 'none',
-                fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 13, letterSpacing: '-0.01em', color: 'var(--ink)',
-                boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)',
-                textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0,
-              }}>
-                Ready to decide
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
-              </a>
-            </div>
+            <ReadyToDecideBar
+              title={hasBrandCounter ? 'New counter from the brand' : 'Ready to decide?'}
+              sub={hasBrandCounter ? 'Review the updated terms below and respond.' : 'Scroll down to review terms and respond.'}
+            />
           )}
 
           {/* ── Progress stepper ── */}
@@ -540,110 +528,45 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           )}
 
           {/* ── Offer / Agreed terms (only during negotiating + agreed) ── */}
-          {(isNegotiating || deal.status === 'agreed') && <div className="surface" style={{ padding: 0, overflow: 'hidden', scrollMarginTop: 24 }} id="decision">
-            <div style={{ padding: '26px 28px' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                <h3 style={sectionHeading}>{isNegotiating ? 'Offer terms' : 'Agreed terms'}</h3>
-                {deal.agreed_at && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase' as const, color: 'var(--ink-soft)' }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neon-deep)' }} />
-                    Agreed {new Date(deal.agreed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, {new Date(deal.agreed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}
-                  </span>
-                )}
-              </div>
-
-              {/* Summary hero: deliverables left, dates right */}
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginTop: 22 }}>
-                <div style={{ flex: 1.3, paddingRight: 32 }}>
-                  <div style={metaLabel}>Deliverables</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.15, marginTop: 8 }}>
-                    {hasStructuredItems
-                      ? items.map((i) => i.label).join(' + ')
-                      : deal.deliverables || 'TBD'}
-                  </div>
-                  {items && items.length > 0 && items[0].platform && (
-                    <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 8 }}>
-                      {items[0].platform}{deal.timeline_date ? ` \u00B7 deliver by ${formatDate(deal.timeline_date + 'T00:00:00')}` : ''}
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1, paddingLeft: 32, borderLeft: '1px solid var(--border-hairline, #EAEAE3)', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 18 }}>
-                  {deal.timeline_date && (
-                    <div>
-                      <div style={metaLabel}>Deliver by</div>
-                      <div style={dateValue}>{formatDate(deal.timeline_date + 'T00:00:00')}</div>
-                    </div>
-                  )}
-                  {deal.revision_limit != null && (
-                    <div>
-                      <div style={metaLabel}>Revisions</div>
-                      <div style={dateValue}>{revTerms.unlimited
-                        ? `${deal.revisions_used ?? 0} \u00B7 unlimited`
-                        : `${deal.revisions_used ?? 0} / ${revTerms.limit}`}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Dark "You receive" footer bar */}
-            {creatorReceives != null && (
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
-                padding: '18px 28px',
-                borderRadius: '0 0 20px 20px',
-                background: 'var(--ink)', color: '#FFFFFF',
-              }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700 }}>
-                  You receive{deal.payment_terms ? `, ${deal.payment_terms.toLowerCase()}` : ''}
-                </span>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, fontSize: 34 }}>
-                  {formatINR(creatorReceives)}
-                </span>
-              </div>
-            )}
-          </div>}
+          {(isNegotiating || deal.status === 'agreed') && (
+            <TermsCard
+              heading={isNegotiating ? 'Offer terms' : 'Agreed terms'}
+              agreedLabel={deal.agreed_at ? `Agreed ${new Date(deal.agreed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${new Date(deal.agreed_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}` : null}
+              title={hasStructuredItems ? items.map((i) => i.label).join(' + ') : deal.deliverables || 'TBD'}
+              sub={items && items.length > 0 && items[0].platform ? `${items[0].platform}${deal.timeline_date ? ` \u00B7 deliver by ${formatDate(deal.timeline_date + 'T00:00:00')}` : ''}` : null}
+              side={[
+                ...(deal.timeline_date ? [{ label: 'Deliver by', value: formatDate(deal.timeline_date + 'T00:00:00') }] : []),
+                ...(deal.revision_limit != null ? [{ label: 'Revisions', value: revTerms.unlimited ? `${deal.revisions_used ?? 0} \u00B7 unlimited` : `${deal.revisions_used ?? 0} / ${revTerms.limit}` }] : []),
+              ]}
+              receiveLabel={`You receive${deal.payment_terms ? `, ${deal.payment_terms.toLowerCase()}` : ''}`}
+              receive={creatorReceives != null ? formatINR(creatorReceives) : null}
+            />
+          )}
 
           {/* ── Deliverable items breakdown (during negotiating only) ── */}
           {hasStructuredItems && isNegotiating && (
-            <div className="surface" style={{ padding: '22px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                <h3 style={sectionHeading}>Deliverables</h3>
-                <span style={metaRight}>{items.length} item{items.length !== 1 ? 's' : ''}</span>
-              </div>
-              <div style={{ marginTop: 12 }}>
-                {items.map((item, idx) => (
-                  <div key={item.id} style={{ display: 'flex', gap: 14, padding: '16px 0', borderBottom: idx < items.length - 1 ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}>
-                    <span style={itemIcon}>
+            <DeliverablesCard
+              count={`${items.length} item${items.length !== 1 ? 's' : ''}`}
+              rows={items.map((item, idx) => (
+                <DeliverableRow key={item.id} last={idx === items.length - 1}
+                  icon={item.platform?.toLowerCase().includes('youtube') ? 'youtube' : 'instagram'}
+                  label={item.label}
+                  price={item.price_paise != null && item.price_paise > 0 ? formatINR(item.price_paise) : null}
+                  chips={[
+                    <span key="h" style={chipStyle}>
                       {item.platform?.toLowerCase().includes('youtube') ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
                       ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="12" cy="12" r="4.5" /><circle cx="17.5" cy="6.5" r="1" /></svg>
                       )}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14 }}>
-                        <h4 style={{ fontSize: 14.5, fontWeight: 700, margin: 0 }}>{item.label}</h4>
-                        {item.price_paise != null && item.price_paise > 0 && (
-                          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{formatINR(item.price_paise)}</span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 9 }}>
-                        <span style={chipStyle}>
-                          {item.platform?.toLowerCase().includes('youtube') ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="m10 8 6 4-6 4V8z" /><rect x="2" y="3" width="20" height="18" rx="4" /></svg>
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="12" cy="12" r="4.5" /><circle cx="17.5" cy="6.5" r="1" /></svg>
-                          )}
-                          {item.handle?.startsWith('@') ? item.handle : `@${item.handle}`}
-                        </span>
-                        {item.reel_type && <span style={chipStyle}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>}
-                        {item.boosting_rights && <span style={chipStyle}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '\u221E'}</span>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      {item.handle?.startsWith('@') ? item.handle : `@${item.handle}`}
+                    </span>,
+                    ...(item.reel_type ? [<span key="r" style={chipStyle}>{item.reel_type === 'collab' ? 'Collab' : 'Non-collab'}</span>] : []),
+                    ...(item.boosting_rights ? [<span key="b" style={chipStyle}>Boosting {item.boosting_duration_months ? `${item.boosting_duration_months}mo` : '\u221E'}</span>] : []),
+                  ]}
+                />
+              ))}
+            >
 
               {/* What each deliverable cost, and what was added to it.
                   The SAME component the brand sees — a creator and a brand reading two
@@ -714,11 +637,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
               {/* Accept / Counter / Decline actions */}
               {isNegotiating && (
-                <div style={{ paddingTop: 22, marginTop: 22, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                <CardActions>
                   <AcceptDecline dealId={deal.id} items={items.map((i) => ({ id: i.id, label: i.label, price_paise: i.price_paise ?? 0 }))} />
-                </div>
+                </CardActions>
               )}
-            </div>
+            </DeliverablesCard>
           )}
 
           {/* ── Non-structured terms fallback (negotiating/agreed only) ── */}
@@ -1220,28 +1143,3 @@ function TermRow({ label, value }: { label: string; value: string }) {
 
 /* ── Style fragments ── */
 
-
-
-
-
-const metaRight: React.CSSProperties = {
-  fontSize: 11.5, color: 'var(--ink-soft)',
-}
-
-const dateValue: React.CSSProperties = {
-  fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.025em', marginTop: 5,
-}
-
-
-const itemIcon: React.CSSProperties = {
-  width: 36, height: 36, borderRadius: 11, flexShrink: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
-}
-
-const chipStyle: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  padding: '5px 11px', borderRadius: 999,
-  background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)',
-  fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)',
-}
