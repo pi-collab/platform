@@ -188,13 +188,15 @@ interface Props {
   /** Set when the page is narrowed to one creator, so the chip can say whose
    *  deals these are and offer a way out of it. */
   creatorFilter: { id: string; name: string } | null
+  /** The list's own route (default /deals). The Guapd console lists Experience deals here too. */
+  basePath?: string
 }
 
 // ════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════════════════════════════
 
-export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts, creatorFilter, pageSize }: Props) {
+export default function DealsTable({ deals, currentStatus, currentQuery, currentPage, totalPages, totalCount, tabCounts, creatorFilter, pageSize, basePath = '/deals' }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [searchInput, setSearchInput] = useState(currentQuery)
@@ -244,7 +246,7 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
       }
     }
     if (!('page' in updates)) params.delete('page')
-    router.push(`/deals?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   function handleSearchChange(value: string) {
@@ -456,7 +458,7 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
 
         {/* ── Rows ── */}
         <div>
-          {sorted.map((d) => <DealRow key={d.id} deal={d} />)}
+          {sorted.map((d) => <DealRow key={d.id} deal={d} basePath={basePath} />)}
         </div>
 
         {/* ── Nothing matched ──
@@ -533,7 +535,7 @@ export default function DealsTable({ deals, currentStatus, currentQuery, current
 // DEAL ROW
 // ════════════════════════════════════════════════════════════════
 
-function DealRow({ deal: d }: { deal: Deal }) {
+function DealRow({ deal: d, basePath }: { deal: Deal; basePath: string }) {
   const stage = getStageConfig(d)
   const total = brandTotal(d)
   const creatorName = d.creator?.full_name ?? 'Unknown'
@@ -549,7 +551,7 @@ function DealRow({ deal: d }: { deal: Deal }) {
 
   return (
     <Link
-      href={`/deals/${d.id}`}
+      href={`${basePath}/${d.id}`}
       className="dcard"
       style={{
         display: 'flex', alignItems: 'center', gap: 'clamp(18px, 2.4vw, 30px)',

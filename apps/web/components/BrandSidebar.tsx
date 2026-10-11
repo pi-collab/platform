@@ -18,6 +18,8 @@ const NAV_LINKS = [
 
 /* Staff only: shown when BrandNav's experienceStaffGate passes. Not a brand
    link, so it is never in NAV_LINKS. */
+/* 6.1: inside the console, the deals Guapd sent to creators, on the brand Deals list's design. */
+const GUAPD_CONSOLE_DEALS_LINK = { label: 'Deals', href: '/experiences-admin/deals', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> }
 const GUAPD_CONSOLE_LINK = { label: 'Guapd Experiences', href: '/experiences-admin', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg> }
 
 const ALL_MOBILE_LINKS = [
@@ -83,8 +85,9 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
   /* Guapd staff often belong to no brand. For them the brand tabs, inbox,
      bell and brand menu would only bounce to /ops, so they see the staff
      console alone. A staff member who also belongs to a brand sees both. */
-  const navLinks = [...(hasBrand ? NAV_LINKS : []), ...(guapdConsole ? [GUAPD_CONSOLE_LINK] : [])]
-  const mobileLinks = [...(guapdConsole ? [{ label: GUAPD_CONSOLE_LINK.label, href: GUAPD_CONSOLE_LINK.href }] : []), ...(hasBrand ? ALL_MOBILE_LINKS : [])]
+  const consoleLinks = consoleMode ? [GUAPD_CONSOLE_LINK, GUAPD_CONSOLE_DEALS_LINK] : guapdConsole ? [GUAPD_CONSOLE_LINK] : []
+  const navLinks = [...(hasBrand && !consoleMode ? NAV_LINKS : []), ...consoleLinks]
+  const mobileLinks = [...consoleLinks.map((l) => ({ label: l.label, href: l.href })), ...(hasBrand && !consoleMode ? ALL_MOBILE_LINKS : [])]
   const homeHref = hasBrand ? '/dashboard' : guapdConsole ? GUAPD_CONSOLE_LINK.href : '/dashboard'
   const accountName = brandName || (hasBrand ? 'Brand' : 'Guapd')
   const accountTag = hasBrand ? 'Brand' : 'Guapd team'
@@ -140,7 +143,8 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
 
   useEffect(() => { setDrawerOpen(false); setAvatarOpen(false); setNotifOpen(false) }, [pathname])
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  // The console home must not light up on its own Deals page.
+  const isActive = (href: string) => pathname === href || (pathname.startsWith(href + '/') && !(href === GUAPD_CONSOLE_LINK.href && pathname.startsWith(GUAPD_CONSOLE_DEALS_LINK.href)))
 
   return (
     <>

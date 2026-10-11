@@ -7291,3 +7291,20 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Phone offer card for an Experience deal: **Payment in** reads "After the shoot" (Guapd delivers) or "After approval" (creator submits), never "—".
 - SECURITY: `guard_creator_leg_no_money` now allows `paid` on a creator leg only from `agreed` and only when a paid `creator_fee` payout exists for it. Any other route, including the service role, is refused. NULL denies.
 - Gotcha: migration 0551 rewrites ten leg functions from their live staging definitions (agreed → agreed or paid) and backfills legs already paid out. Run it on prod before any Experience payout is recorded there.
+
+## 120. Experiences 6.1 UI: Experience deals use the normal deal designs
+
+**Creator deal page (`/creator/deals/<leg>`)**
+- [ ] An Experience deal renders the same cards as a normal deal (shared `deal-cards.tsx`): "Ready to decide?" bar while the offer is open, Offer/Agreed terms card with the dark "You receive" bar, Deliverables card (rows, chips for affiliate / ad rights / boosting, money rows and Accept / Counter / Decline only while open), the brief card, and a Payment card in the Invoice card's layout once accepted.
+- [ ] Money appears once per state: offer = terms bar + Deliverables breakdown; agreed = terms bar + Payment card; paid = Payment card with the dark "You received" bar and bank reference.
+- [ ] A normal marketplace deal page renders exactly as before (Offer terms, Deliverables with fee rows, Accept / Counter) — it now uses the same shared cards.
+- [ ] Every figure is the leg's own (creator_leg_context); no brand price or margin.
+
+**Guapd console**
+- [ ] The console nav shows "Guapd Experiences" and "Deals"; Deals is active only on `/experiences-admin/deals…`.
+- [ ] `/experiences-admin/deals` lists every sent creator deal on the brand Deals list design (tabs, search, rows). No amounts on the list.
+- [ ] `/experiences-admin/deals/<id>` shows the creator deal page design (hero, tracker, terms, Deliverables with the creator's pay) and the brand deal page's bottom-right "Messages with <creator>" panel; "Message creator" opens it; sending reaches the creator as Guapd.
+- [ ] `/experiences-admin/inbox` uses the brand inbox design: creator threads and brand threads in one list with filters and search; opening a thread navigates and marks only that thread read; "View deal" goes to the console deal page (or the Experience for a brand thread).
+- [ ] Old links (`/experiences-admin/<exp>?tab=deals&deal=<id>`, `/experiences-admin/leg/<id>`, inbox `?deal=` / `?brand=`) land on the new pages.
+- [ ] The brand's own `/deals` and `/inbox` are unchanged (DealsTable and BrandInboxView take optional console props; defaults are the brand's).
+- [ ] SECURITY: every console page runs experienceStaffGate and reads only through the gated console functions; a non-staff user gets No access. The brand never sees a creator thread; a creator never sees a brand thread.

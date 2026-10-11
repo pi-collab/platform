@@ -6,7 +6,7 @@ import {
   acceptConsoleQuote, addConsoleQuote, createConsoleExperience,
   rosterAdd, rosterDecide, rosterLock, rosterShare, rosterRelease, rosterNote, rosterPlan, rosterRemove,
   listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
-  saveSharedBrief, saveOwnBrief, legRescope, legBroadcast, sendBrandMessageAsGuapd, briefUploadSlot, getConsoleBrief, sendLegMessageAsGuapd, type BriefDoc, type BriefAttachment,
+  saveSharedBrief, saveOwnBrief, legRescope, legBroadcast, sendBrandMessageAsGuapd, briefUploadSlot, getConsoleBrief, sendLegMessageAsGuapd, getLegThread, type BriefDoc, type BriefAttachment,
   addConsoleCost, updateConsoleCost, removeConsoleCost, completeConsoleExperience, reopenConsoleExperience,
   scheduleConsoleShoot, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
   itemUploadSlot, attachConsoleItem, reviewConsoleItem, consoleItemFile,
@@ -438,6 +438,13 @@ export async function sendGuapdLegMessage(dealId: string, body: string): Promise
   await notifyCreatorGuapdMessage(dealId)
   revalidatePath(`${BASE}/inbox`)
   return r
+}
+
+/** Opening a creator thread marks it read for this staff user (the gated read does it). */
+export async function markGuapdLegRead(dealId: string): Promise<void> {
+  if (await gate()) return
+  if (!isUuid(dealId)) return
+  await getLegThread(dealId)
 }
 
 // ── 0550: broadcast to creators, and the brand ↔ Guapd thread ──────────────

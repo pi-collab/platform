@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
@@ -20,7 +20,6 @@ import PayoutsPanel from './PayoutsPanel'
 import CompletionPanel from './CompletionPanel'
 import BriefPanel from './BriefPanel'
 import LegThreadList from '../LegThreadList'
-import LegThreadView from '../LegThreadView'
 import { BrandThreadPanel, CreatorBroadcast } from '../DealsExtras'
 import { card, container, fieldLabel, h1, heroCard, kpiLabel, lede } from '../ui'
 
@@ -72,8 +71,8 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   // status, any open counter and the Guapd ↔ creator thread.
   const threadRows = threads?.ok ? threads.data : []
   const tab = hasLegs && searchParams?.tab === 'deals' ? 'deals' : 'overview'
-  const openDeal = tab === 'deals' && searchParams?.deal && /^[0-9a-f-]{36}$/i.test(searchParams.deal) && threadRows.some((t) => t.deal_id === searchParams.deal)
-    ? await getLegThread(searchParams.deal) : null
+  // Old links to one deal on this tab now open the deal's own page.
+  if (tab === 'deals' && searchParams?.deal && /^[0-9a-f-]{36}$/i.test(searchParams.deal) && threadRows.some((t) => t.deal_id === searchParams.deal)) redirect(`/experiences-admin/deals/${searchParams.deal}`)
   const unreadAll = threadRows.reduce((n, t) => n + Number(t.unread ?? 0), 0)
   // 0550: the brand ↔ Guapd thread (read on the Deals tab only: reading marks it read).
   const brandThread = tab === 'deals' ? await getBrandThread(e.id) : null
@@ -169,11 +168,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
               <CreatorBroadcast experienceId={e.id} all={openLegs.length} accepted={openLegs.filter((t) => t.status === 'agreed' || t.status === 'paid').length} />
             </div>
           )}
-          <div className={openDeal?.ok ? 'xp-deals-split' : undefined} style={{ marginTop: 16 }}>
-            <LegThreadList rows={threadRows} hrefFor={`/experiences-admin/${e.id}?tab=deals&deal=`} activeId={openDeal?.ok ? openDeal.data.deal_id : null} showExperience={false} />
-            {openDeal && (openDeal.ok
-              ? <LegThreadView thread={openDeal.data} closeHref={`/experiences-admin/${e.id}?tab=deals`} />
-              : <Failed inline message={openDeal.error} />)}
+          {/* Each row opens the deal on its own page, with the creator thread in the bottom-right panel. */}
+          <div style={{ marginTop: 16 }}>
+            <LegThreadList rows={threadRows} hrefFor="/experiences-admin/deals/" activeId={null} showExperience={false} />
           </div>
         </section>
       )}
@@ -344,8 +341,6 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
         .xp-tabs a.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(22,23,15,.08); }
         .xp-tab-n { color: var(--ink-faint); font-weight: 500; }
         .xp-tab-badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--neon); color: var(--ink); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
-        .xp-deals-split { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 16px; align-items: start; }
-        @media (max-width: 860px) { .xp-deals-split { grid-template-columns: 1fr; } .xp-deals-split > :first-child { display: none; } }
       ` }} />
     </div>
   )

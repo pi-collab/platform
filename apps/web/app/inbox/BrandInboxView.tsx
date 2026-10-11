@@ -27,6 +27,22 @@ interface Message {
   sender_party: 'brand' | 'creator'
   body: string | null
   created_at: string
+  /** Optional author line under the bubble (the Guapd console names the colleague). */
+  sender_label?: string
+}
+
+/**
+ * The Guapd Experiences console reuses this inbox (6.1): its threads are read
+ * through gated console functions, not RLS, so it supplies its own send, its
+ * own links, and loads one thread at a time (opening a thread navigates, and
+ * the gated read marks it read for that staff user).
+ */
+export interface InboxConsoleMode {
+  send: (threadId: string, body: string) => Promise<{ ok: true; data: { id: string; body: string; created_at: string } } | { ok: false; error: string }>
+  threadHref: (threadId: string) => string
+  dealHref: (threadId: string) => string | null
+  inboxHref: string
+  dealLinkLabel?: string
 }
 
 const TERMINAL_STATUSES = ['complete', 'declined', 'cancelled']
@@ -61,6 +77,7 @@ export default function BrandInboxView({
   allMessages,
   initialDealId = null,
   unreadByDeal = {},
+  console: cm = null,
 }: {
   threads: Thread[]
   allMessages: Message[]
@@ -68,13 +85,14 @@ export default function BrandInboxView({
   initialDealId?: string | null
   /** dealId -> unread count, so a row can say it is waiting. */
   unreadByDeal?: Record<string, number>
+  console?: InboxConsoleMode | null
 }) {
   // Open the thread the URL asked for. Pressing Message on a deal used to land
   // on whichever thread happened to be first, or on an empty state, and left
   // the person to find the conversation they had just come from.
   const [selected, setSelected] = useState<string | null>(
     (initialDealId && threads.some((t) => t.dealId === initialDealId) ? initialDealId : null)
-      ?? threads[0]?.dealId
+      ?? (cm ? null : threads[0]?.dealId)
       ?? null,
   )
   const router = useRouter()
@@ -91,9 +109,17 @@ export default function BrandInboxView({
   )
 
   useEffect(() => {
-    if (!selected || !openedByUser) return
+    if (!selected || !openedByUser || cm) return
     void markDealThreadRead(selected).then(() => router.refresh())
-  }, [selected, openedByUser, router])
+  }, [selected, openedByUser, router, cm])
+
+  // Console: no realtime over RLS for staff, so refresh on a short poll, and
+  // take the server's copy of the open thread whenever it changes.
+  useEffect(() => {
+    if (!cm) return
+    const t = setInterval(() => router.refresh(), 20000)
+    return () => clearInterval(t)
+  }, [cm, router])
 
   const [messagesByDeal, setMessagesByDeal] = useState<Record<string, Message[]>>(() => {
     const map: Record<string, Message[]> = {}
@@ -106,6 +132,13 @@ export default function BrandInboxView({
     }
     return map
   })
+  useEffect(() => {
+    if (!cm) return
+    const map: Record<string, Message[]> = {}
+    for (const msg of allMessages) (map[msg.deal_id] ??= []).push(msg)
+    for (const key of Object.keys(map)) map[key].sort((x, y) => new Date(x.created_at).getTime() - new Date(y.created_at).getTime())
+    setMessagesByDeal(map)
+  }, [cm, allMessages])
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -134,7 +167,7 @@ export default function BrandInboxView({
       }))
       // Watching it arrive is reading it. Marking only on selection meant a
       // message that landed while the thread was open stayed unread.
-      if (msg.sender_party !== 'brand' && msg.deal_id === selected) {
+      if (!cm && msg.sender_party !== 'brand' && msg.deal_id === selected) {
         void markDealThreadRead(msg.deal_id)
       }
       playGuapSound()
@@ -185,6 +218,7 @@ export default function BrandInboxView({
   }, [emojiOpen])
 
   function selectThread(dealId: string) {
+    if (cm) { router.push(cm.threadHref(dealId)); return }
     setSelected(dealId)
     // An explicit choice — this one counts as opened, and so as read.
     setOpenedByUser(true)
@@ -199,13 +233,22 @@ export default function BrandInboxView({
     if (!trimmed || sending || !selected) return
     setError(null)
     setSending(true)
-    const result = await sendMessage(selected, trimmed, 'brand')
-    setSending(false)
-    if (result.status === 'error') {
-      setError(result.message ?? 'Failed to send')
-      return
+    let msg: Message
+    if (cm) {
+      const r = await cm.send(selected, trimmed)
+      setSending(false)
+      if (!r.ok) { setError(r.error); return }
+      msg = { id: r.data.id, deal_id: selected, sender_party: 'brand', body: r.data.body, created_at: r.data.created_at, sender_label: 'You' }
+      router.refresh()
+    } else {
+      const result = await sendMessage(selected, trimmed, 'brand')
+      setSending(false)
+      if (result.status === 'error') {
+        setError(result.message ?? 'Failed to send')
+        return
+      }
+      msg = { id: result.data!.id, deal_id: selected, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
     }
-    const msg = { id: result.data!.id, deal_id: selected, sender_party: result.data!.sender_party, body: result.data!.body, created_at: result.data!.created_at } as Message
     knownIdsRef.current.add(msg.id)
     setMessagesByDeal((prev) => ({
       ...prev,
@@ -382,7 +425,7 @@ export default function BrandInboxView({
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                      <button onClick={() => { setMobileChat(false); router.push('/inbox') }} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
+                      <button onClick={() => { setMobileChat(false); router.push(cm ? cm.inboxHref : '/inbox') }} className="inbox-back-btn" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', padding: 4, display: 'none', alignItems: 'center' }} aria-label="Back">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                       </button>
                       {selectedThread.creatorPhoto ? (
@@ -417,19 +460,19 @@ export default function BrandInboxView({
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  {(!cm || cm.dealHref(selectedThread.dealId)) && <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                     <a
-                      href={`/deals/${selectedThread.dealId}`}
+                      href={cm ? cm.dealHref(selectedThread.dealId)! : `/deals/${selectedThread.dealId}`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600,
                         color: 'var(--ink-soft)', textDecoration: 'none',
                       }}
                     >
-                      View deal
+                      {cm?.dealLinkLabel ?? 'View deal'}
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                     </a>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Messages */}
@@ -466,7 +509,7 @@ export default function BrandInboxView({
                                 fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)',
                                 marginTop: 5, textAlign: isBrand ? 'right' : 'left',
                               }}>
-                                {isBrand ? 'You' : 'Creator'} · {new Date(msg.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                {msg.sender_label ?? (isBrand ? 'You' : 'Creator')} · {new Date(msg.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                               </div>
                             </div>
                           </div>

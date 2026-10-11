@@ -13,5 +13,5 @@ export default async function LegRedirect({ params }: { params: { dealId: string
   if (!/^[0-9a-f-]{36}$/i.test(params.dealId)) notFound()
   const t = await getLegThread(params.dealId)
   if (!t.ok) notFound()
-  redirect(`/experiences-admin/${t.data.experience_id}?tab=deals&deal=${t.data.deal_id}`)
+  redirect(`/experiences-admin/deals/${t.data.deal_id}`)
 }
