@@ -14,7 +14,7 @@ import {
   setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
   draftConsoleInvoice, updateConsoleInvoice, discardConsoleInvoice, issueConsoleInvoice, consoleInvoiceDoc,
   consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
-  getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout,
+  getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
   recordBrandSignoff, clearBrandSignoff,
   addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
   acceptCounter, declineCounter, sendCounter, withdrawGuapdCounter, getPayoutAccount, type PayoutAccount,
@@ -25,7 +25,7 @@ import {
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
-import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove } from '@/lib/experience-money-notify'
+import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove, notifyCreatorInvoiceVoided } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
 import { notifyBrandWaiting, notifyBrandGuapdMessage } from '@/lib/experience-brand-notify'
@@ -898,6 +898,19 @@ export async function reverseInvoicePaymentAction(experienceId: string, paymentI
   if (!w) return { ok: false, error: 'Say why it is being reversed.' }
   const r = await reverseInvoicePayment(paymentId, w)
   if (r.ok) refresh(experienceId)
+  return r
+}
+
+/** 0552: void a creator's invoice so they can raise it again; they are told why. */
+export async function voidCreatorInvoiceAction(experienceId: string, dealId: string, invoiceId: string, number: string, reason: string): Promise<Out<null>> {
+  const g = await experienceStaffGate()
+  if (!g.ok) return { ok: false, error: 'Guapd Experiences is for the Guapd team.' }
+  if (!isUuid(experienceId) || !isUuid(dealId) || !isUuid(invoiceId)) return { ok: false, error: 'Unknown invoice.' }
+  if (typeof reason !== 'string' || reason.trim().length < 3) return { ok: false, error: 'Give a reason (the creator sees it).' }
+  const r = await voidCreatorInvoice(invoiceId, reason.trim().slice(0, 500))
+  if (!r.ok) return r
+  await notifyCreatorInvoiceVoided(dealId, typeof number === 'string' ? number.slice(0, 40) : 'your invoice', reason.trim())
+  refresh(experienceId)
   return r
 }
 

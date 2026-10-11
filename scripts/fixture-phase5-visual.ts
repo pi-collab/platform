@@ -22,6 +22,13 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLI
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
+
+/** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+async function invoiceAs(s: any, deal: string) {
+  const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
+  return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
+}
+
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 const PREFIX = '[visual-5]'
 const STATE = path.join(os.tmpdir(), 'guapd-fixture-phase5-visual.json')
@@ -42,6 +49,7 @@ async function cleanup() {
     const { data: legs } = await admin.from('deals').select('id').eq('experience_id', e.id)
     const ids = (legs ?? []).map((l) => l.id)
     await admin.from('vendor_payouts').delete().eq('experience_id', e.id)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', e.id)
     await admin.from('experience_leg_counters').delete().eq('experience_id', e.id)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', e.id)
     await admin.from('experience_roster').update({ leg_deal_id: null, leg_shoot_outcome: null, leg_shoot_outcome_at: null, leg_shoot_outcome_by: null, leg_shoot_outcome_reason: null }).eq('experience_id', e.id)
@@ -145,6 +153,7 @@ async function create() {
   must(await cG.rpc('creator_set_payout_details', { p_holder: G.full_name ?? 'Test Creator', p_account: '501004433221', p_account_confirm: '501004433221', p_ifsc: 'HDFC0001234', p_pan: 'ABCPK1234Q', p_gst_registered: false }), 'G bank')
   state.detailVendors.push((await admin.from('vendors').select('id').eq('creator_id', G.id).single()).data!.id)
   fs.writeFileSync(STATE, JSON.stringify(state))
+  must(await invoiceAs(cG, deal2[G.id]), 'invoice G'); must(await invoiceAs(cD, deal2[D.id]), 'invoice D')
   must(await op.rpc('experience_console_payout_request', { p_deal_id: deal2[G.id], p_tds_paise: 0 }), 'request G')
   const PD = must(await op.rpc('experience_console_payout_request', { p_deal_id: deal2[D.id], p_tds_paise: 0 }), 'request D') as string
   must(await fin.rpc('experience_console_payout_approve', { p_payout_id: PD }), 'approve D')

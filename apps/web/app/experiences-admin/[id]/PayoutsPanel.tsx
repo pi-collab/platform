@@ -6,7 +6,7 @@ import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatRupees } from '@/lib/experience-request'
 import type { ConsolePayoutLeg, ConsolePayouts, PayoutAccount } from '@/lib/experience-console-server'
-import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, setCreatorPayoutTds, showPayoutAccount } from '../actions'
+import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, setCreatorPayoutTds, showPayoutAccount, voidCreatorInvoiceAction } from '../actions'
 import { openFinanceFileInTab, uploadFinanceFile } from './finance-upload'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
@@ -42,6 +42,8 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
   const [notice, setNotice] = useState<string | null>(null)
   const [tds, setTds] = useState<Record<string, string>>({})
   const [paying, setPaying] = useState<string | null>(null)
+  const [voiding, setVoiding] = useState<string | null>(null)
+  const [voidReason, setVoidReason] = useState('')
   const [cancelling, setCancelling] = useState<ConsolePayoutLeg | null>(null)
   const [reason, setReason] = useState('')
   const [approving, setApproving] = useState<ConsolePayoutLeg | null>(null)
@@ -81,7 +83,9 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
           const st = p ? STATUS[p.status] : null
           const why = l.shoot_outcome === 'did_not_shoot' ? 'Did not shoot: no payout.'
             : l.shoot_outcome !== 'done' ? 'Paid after their shoot is recorded.'
-            : !l.work_complete ? 'Their deliverables need Guapd’s approval first.' : null
+            : !l.work_complete ? 'Their deliverables need Guapd’s approval first.'
+            : !l.creator_invoice ? 'Waiting for the creator to confirm the shoot and raise their invoice.' : null
+          const inv = l.creator_invoice
           return (
             <div key={l.deal_id} style={{ borderTop: '1px solid var(--hairline)', padding: '14px 0' }}>
               <div className="xp-pay-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.6fr) 260px', gap: 14, alignItems: 'start' }}>
@@ -101,6 +105,19 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                     {p.status === 'paid' ? ` · paid ${fmtDate(p.paid_on)} · ref ${p.reference}` : ''}
                   </span>}
                   {!p && why && <span style={{ color: 'var(--ink-soft)' }}>{why}</span>}
+                  {inv && <span>
+                    Creator invoice <a href={`/experiences-admin/creator-invoice/${inv.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>{inv.number}</a>
+                    {' '}· raised {fmtDate(inv.issued_at.slice(0, 10))} · {formatRupees(inv.payable_paise)}{inv.gstin ? ` · GSTIN ${inv.gstin}` : ''}
+                    {!p && open && voiding !== inv.id && <> · <button type="button" onClick={() => { setVoiding(inv.id); setVoidReason('') }} style={{ background: 'none', border: 0, padding: 0, color: '#9C4147', fontWeight: 600, cursor: 'pointer', fontSize: 12.5 }}>Void</button></>}
+                  </span>}
+                  {inv && voiding === inv.id && (
+                    <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input className="dinput" style={{ height: 30, flex: 1, minWidth: 180 }} placeholder="Why (the creator sees this)" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
+                      <button type="button" style={smallBtn} disabled={pending || voidReason.trim().length < 3}
+                        onClick={() => run(() => voidCreatorInvoiceAction(experienceId, l.deal_id, inv.id, inv.number, voidReason), () => { setVoiding(null); setNotice(`Invoice ${inv.number} voided. The creator was asked to raise it again.`) })}>Void invoice</button>
+                      <button type="button" style={smallBtn} onClick={() => setVoiding(null)}>Keep</button>
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                   {st && <StatusChip label={st.label} tone={st.tone} />}

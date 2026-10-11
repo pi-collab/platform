@@ -26,6 +26,13 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 import { fixtureInvoice } from './fixture-invoice'
+
+/** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+async function invoiceAs(s: any, deal: string) {
+  const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
+  return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
+}
+
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 let passed = 0, failed = 0
 const ok = (n: string, c: boolean, d = '') => { c ? passed++ : failed++; console.log(`  ${c ? '✅' : '❌'} ${n}${d ? ' — ' + d : ''}`) }
@@ -100,6 +107,7 @@ const istToday = () => new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().sl
 const ACCT = '501004433221', ACCT2 = '918273645500', PAN = 'ABCPK1234Q'
 const hex = (s: string) => Buffer.from(s, 'utf8').toString('hex')
 const leaks = (x: unknown) => { const j = JSON.stringify(x ?? null); return j.includes(ACCT) || j.includes(ACCT2) || j.includes(PAN) }
+
 
 async function run() {
   startedAt = new Date().toISOString()
@@ -196,6 +204,7 @@ async function run() {
   await op.rpc('experience_console_schedule_shoot', { p_experience_id: E })
   await admin.from('experiences').update({ shoot_date: '2026-10-01' }).eq('id', E)
   await op.rpc('experience_console_leg_shoot_outcome', { p_roster_id: one.roster[G.id], p_outcome: 'done', p_reason: null })
+  await invoiceAs(cG, gLeg)
   const rq = await op.rpc('experience_console_payout_request', { p_deal_id: gLeg, p_tds_paise: 0 })
   ok('operational staff request G\'s payout', !rq.error, rq.error?.message ?? '')
   const P = rq.data as string
@@ -241,6 +250,7 @@ run().catch((e) => { console.error(e); failed++ }).finally(async () => {
   if (uploaded.length) await admin.storage.from('finance-docs').remove(uploaded)
   for (const E of exps) {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', E)
     await admin.from('service_invoices').delete().eq('experience_id', E)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', E)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', E)

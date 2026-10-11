@@ -15,6 +15,11 @@
  * Client-safe: no database access.
  */
 
+export interface CreatorLegInvoice {
+  id: string; number: string; issued_at: string; shoot_confirmed_at: string; billing_name: string; gstin: string | null
+  gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number; allowance_paise: number; payable_paise: number
+}
+
 export interface CreatorLegContext {
   brand_name: string | null
   brand_logo_url: string | null
@@ -48,6 +53,9 @@ export interface CreatorLegContext {
   items?: CreatorLegItem[]
   /** 0540: the live payout to them for this deal, as their statement. Null until Guapd requests it. */
   payout?: CreatorLegPayout | null
+  /** 0552: the creator's issued invoice to Guapd (figures copied from the locked terms), and whether they can raise it now. */
+  invoice?: CreatorLegInvoice | null
+  can_invoice?: boolean
   /** 0542: counters on this offer (both sides), oldest first, and how many the creator has left. */
   counters?: CreatorLegCounter[]
   counters_left?: number

@@ -1561,3 +1561,13 @@ DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
 ALTER TABLE experience_brand_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE experience_brand_message_reads ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_brand_messages, experience_brand_message_reads FROM anon, authenticated;
+
+-- ═════ 0552: the creator invoice to Guapd on an Experience deal ═════
+-- experience_creator_invoices has NO policies and NO grants for users. The
+-- creator raises it through creator_leg_invoice_raise (own deal, after Guapd
+-- marks the shoot done; figures copied from the locked terms by the database)
+-- and reads it through creator_leg_context / creator_leg_invoice_doc; staff read
+-- and void it through experience_console_creator_invoice_doc / _void
+-- (operational). Never deleted; an issued invoice only changes to void.
+ALTER TABLE experience_creator_invoices ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_creator_invoices FROM anon, authenticated;

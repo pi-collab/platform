@@ -105,3 +105,40 @@ export async function notifyStaffPayoutToApprove(experienceId: string, creatorNa
     console.error(`[experience-money] approval notification failed experience=${experienceId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+/**
+ * 0552: a creator confirmed their shoot and raised their invoice to Guapd: tell
+ * the Experiences staff (in-app + email) that the payout can be requested. The
+ * number only; no amounts in the alert.
+ */
+export async function notifyStaffCreatorInvoiced(dealId: string, number: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const [{ data: deal }, staff] = await Promise.all([
+      admin.from('deals').select('title, creator_id, leg_role').eq('id', dealId).maybeSingle(),
+      experienceStaffUserIds(admin),
+    ])
+    if (!deal || deal.leg_role !== 'creator_leg') return
+    const { data: creator } = await admin.from('creators').select('full_name').eq('id', deal.creator_id).maybeSingle()
+    const body = `${creator?.full_name ?? 'A creator'} confirmed the shoot for ${deal.title ?? 'an Experience'} and raised invoice ${number}. Their payout can be requested.`
+    for (const userId of staff) await createNotification({ userId, dealId, type: 'experience_creator_invoiced', body })
+    await emailExperienceStaff(staff, { subject: 'A creator raised their invoice', heading: 'Creator invoice raised', body, dealId, idKey: `staff-invoice-${dealId}-${number}` })
+  } catch (err) {
+    console.error(`[experience-money] creator invoice notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+/** 0552: Guapd voided a creator's invoice: tell them (in-app) to check and raise it again. The reason, no amounts. */
+export async function notifyCreatorInvoiceVoided(dealId: string, number: string, reason: string): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const { data: deal } = await admin.from('deals').select('creator_id, experience_brand_name, leg_role').eq('id', dealId).maybeSingle()
+    if (!deal || deal.leg_role !== 'creator_leg') return
+    const { data: creator } = await admin.from('creators').select('user_id').eq('id', deal.creator_id).maybeSingle()
+    if (!creator?.user_id) return
+    const body = `Guapd voided your invoice ${number} for ${deal.experience_brand_name ?? 'your shoot'}: ${reason.slice(0, 200)}. Please raise it again from your deal page.`
+    await createNotification({ userId: creator.user_id, dealId, type: 'experience_invoice_voided', body })
+  } catch (err) {
+    console.error(`[experience-money] invoice void notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}

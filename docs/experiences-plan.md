@@ -657,3 +657,10 @@ Shipped ahead of it (8c81ae4, 0545): Send always visible with what's missing; af
 1. Brief freeze: live until the shoot is confirmed (proposed) or frozen at send?
 2. Can a creator start a thread before accepting (to ask a question about the offer)? Proposed: yes, as soon as it is sent.
 3. Deals: a separate tab on the console, or a section under Creator deals? Proposed: a section (the console has no tabs today).
+
+
+## Creator confirms the shoot and raises their invoice (Palak, 2026-10-11, migration 0552)
+
+- After Guapd marks the shoot done (creator-submit: and approves every item), the creator ticks "the shoot is done", confirms the name to invoice from (optional GSTIN) and raises their invoice to Guapd from the deal page. Figures are copied from the locked terms by the database: gross (day rate x days), less the platform fee, net, the fee-free allowance, total payable. TDS stays on the payout statement.
+- The payout request needs that invoice. Staff can void a wrong one (reason shown to the creator) while no payout is live; the creator raises it again.
+- Open for the CA before prod: creator-issued invoice vs a statement Guapd issues on the creator's behalf, GST treatment for GST-registered creators, and the TDS section.

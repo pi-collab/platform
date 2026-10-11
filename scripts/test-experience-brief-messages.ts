@@ -32,6 +32,13 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms, experienceMargin } from '../apps/web/lib/experience-money'
+
+/** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+async function invoiceAs(s: any, deal: string) {
+  const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
+  return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
+}
+
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 let passed = 0, failed = 0
 const ok = (n: string, c: boolean, d = '') => { c ? passed++ : failed++; console.log(`  ${c ? '✅' : '❌'} ${n}${d ? ' — ' + d : ''}`) }
@@ -58,6 +65,7 @@ async function sessionFor(authId: string): Promise<SupabaseClient> {
 
 const MARK_SHARED = 'SHARED-BRIEF-7Q', MARK_OWN = 'OWN-BRIEF-G-4K', MARK_MSG = 'hello-from-G-9Z', MARK_GUAPD = 'reply-from-guapd-3M'
 const MONEYISH = /paise|rate|margin|price|net|gross|allowance|fee/i
+
 
 async function run() {
   startedAt = new Date().toISOString()
@@ -254,13 +262,15 @@ async function run() {
   ok('…and it has none', ((await admin.from('brand_members').select('user_id').eq('brand_id', houseId)).data ?? []).length === 0)
 
   group('C. the staff side: thread, list, unread')
-  ok('replying marked the thread read for the staff member who replied', Number((await op.rpc('experience_console_unread_messages')).data) === 0)
+  // This thread's unread for this staff user. The global count also includes any real staging threads.
+  const gUnread = async () => Number(((await op.rpc('experience_console_leg_threads', { p_experience_id: null })).data as any[] ?? []).find((t) => t.deal_id === gLeg)?.unread ?? -1)
+  ok('replying marked the thread read for the staff member who replied', await gUnread() === 0)
   await cG.rpc('creator_leg_message_send', { p_deal_id: gLeg, p_body: 'one more question' })
-  const before = (await op.rpc('experience_console_unread_messages')).data as number
-  ok('a new creator message shows as unread for staff', Number(before) === 1)
+  const globalBefore = Number((await op.rpc('experience_console_unread_messages')).data)
+  ok('a new creator message shows as unread for staff', await gUnread() === 1)
   const th = (await op.rpc('experience_console_leg_thread', { p_deal_id: gLeg })).data as any
   ok('the thread: 3 messages, creator → Guapd → creator', th?.messages?.length === 3 && th.messages[0].from === 'creator' && th.messages[1].from === 'guapd' && th.messages[2].from === 'creator')
-  ok('opening it marks it read for this staff user', Number((await op.rpc('experience_console_unread_messages')).data) === 0)
+  ok('opening it marks it read for this staff user (and the global count drops by one)', await gUnread() === 0 && Number((await op.rpc('experience_console_unread_messages')).data) === globalBefore - 1)
   ok('…but not for another staff user', Number((await fin.rpc('experience_console_unread_messages')).data) >= 1)
   const list = ((await op.rpc('experience_console_leg_threads', { p_experience_id: E })).data ?? []) as any[]
   ok('the Deals list has both sent legs', list.length === 2 && list.some((r) => r.deal_id === gLeg) && list.some((r) => r.deal_id === dLeg))
@@ -339,6 +349,7 @@ async function run() {
   await admin.from('experiences').update({ shoot_date: '2026-10-01' }).eq('id', E)
   const out = await op.rpc('experience_console_leg_shoot_outcome', { p_roster_id: lG.roster_id, p_outcome: 'done', p_reason: null })
   ok('G shot', !out.error, out.error?.message)
+  ok('0552: G confirms the shoot and raises their invoice', !(await invoiceAs(cG, gLeg)).error)
   ok('TDS above net + allowance is refused', said(await op.rpc('experience_console_payout_request', { p_deal_id: gLeg, p_tds_paise: tG.creatorNetPaise + 150001 }), /TDS/))
   const pr = await op.rpc('experience_console_payout_request', { p_deal_id: gLeg, p_tds_paise: 0 })
   ok('payout requested', !pr.error, pr.error?.message)
@@ -357,6 +368,7 @@ async function run() {
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
   for (const E of exps) {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', E)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', E)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', E)
     await admin.from('experience_roster').update({ leg_deal_id: null, leg_shoot_outcome: null, leg_shoot_outcome_at: null, leg_shoot_outcome_by: null, leg_shoot_outcome_reason: null }).eq('experience_id', E)

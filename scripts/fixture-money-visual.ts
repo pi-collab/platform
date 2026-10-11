@@ -26,6 +26,13 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 import { renderInvoicePdf, type InvoiceDoc } from '../apps/web/lib/invoice-pdf'
+
+/** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+async function invoiceAs(s: any, deal: string) {
+  const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
+  return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
+}
+
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 const PREFIX = '[visual-4]'
 const STATE = path.join(os.tmpdir(), 'guapd-fixture-money-visual.json')
@@ -52,6 +59,7 @@ async function cleanup() {
     const { data: legs } = await admin.from('deals').select('id').eq('experience_id', e.id)
     const ids = (legs ?? []).map((l) => l.id)
     await admin.from('vendor_payouts').delete().eq('experience_id', e.id)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', e.id)
     await admin.from('service_invoice_payments').delete().eq('experience_id', e.id)
     await admin.from('service_invoices').delete().eq('experience_id', e.id)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', e.id)
@@ -88,7 +96,7 @@ async function create() {
   // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
   { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
   const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
-  const D = pool.find((c) => c.id !== G?.id)
+  const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
   const X = pool.find((c) => c.id !== G?.id && c.id !== D?.id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, G?.user_id, ...(access ?? []).map((a) => a.user_id)])
@@ -168,6 +176,8 @@ async function create() {
     p_gst_rate_pct: null, p_cgst_paise: null, p_sgst_paise: null, p_igst_paise: null, p_due_date: null }), 'draft 2')
 
   // Payouts: G requested (OP), approved (FIN), paid with proof; D requested by FIN.
+  const cG = await sessionFor(G.users.auth_id), cD = await sessionFor(D.users.auth_id)
+  must(await invoiceAs(cG, deal[G.id]), 'invoice G'); must(await invoiceAs(cD, deal[D.id]), 'invoice D')
   const PG = must(await op.rpc('experience_console_payout_request', { p_deal_id: deal[G.id], p_tds_paise: 70000 }), 'request G') as string
   must(await fin.rpc('experience_console_payout_approve', { p_payout_id: PG }), 'approve G')
   const ps = must(await op.rpc('experience_finance_upload_slot', { p_kind: 'payout-proof', p_target_id: PG, p_file_name: 'upi-receipt.png' }), 'payout slot') as string

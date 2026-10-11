@@ -17,6 +17,7 @@ export const STAFF_NOTIFICATION_TYPES = [
   'experience_leg_message_in',     // a creator wrote to Guapd
   'experience_item_submitted',     // a creator submitted a deliverable
   'experience_payout_to_approve',  // a payout needs a second person
+  'experience_creator_invoiced',   // 0552: a creator confirmed the shoot and raised their invoice
   'experience_brand_message_in',   // 0550: the brand wrote in the brand thread
 ] as const
 

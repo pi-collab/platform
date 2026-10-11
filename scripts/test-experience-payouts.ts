@@ -107,7 +107,7 @@ async function run() {
   { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
   const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
   const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
-  const X = pool.find((c) => c.id !== G?.id && c.id !== D?.id)
+  const X = pool.find((c) => c.id !== G?.id && c.id !== D?.id && c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, G?.user_id, D?.user_id, ...(access ?? []).map((a) => a.user_id)])
   // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
@@ -161,6 +161,45 @@ async function run() {
   await admin.from('deals').update({ settings_snapshot: { ...(dDeal!.settings_snapshot as object), deliverables_owner: 'creator', completion_trigger: 'on_delivery_accepted' } }).eq('id', legOf(D))
   ok("creator-submit, deliverables not yet approved by Guapd: refused", said(await op.rpc('experience_console_payout_request', { p_deal_id: legOf(D), p_tds_paise: 0 }), /not complete/))
   await admin.from('deals').update({ settings_snapshot: dDeal!.settings_snapshot }).eq('id', legOf(D))
+
+  group('0552: the creator confirms the shoot and raises their invoice first')
+  ok('no payout is requested before the creator invoices', said(await op.rpc('experience_console_payout_request', { p_deal_id: legOf(G), p_tds_paise: 0 }), /raised their invoice/))
+  const g0 = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  const gPayable = Number(g0.total_to_creator_paise)
+  ok("G's page offers it (shot, accepted, part complete) and shows no invoice yet", g0.can_invoice === true && g0.invoice === null, JSON.stringify({ c: g0.can_invoice, i: g0.invoice }))
+  const raise = (s: SupabaseClient, deal: string, o: Record<string, unknown> = {}) => s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: '', p_expected_payable_paise: gPayable, ...o })
+  ok('another creator cannot raise it for G', refused(await raise(creatorD, legOf(G))))
+  for (const [n, s] of [['operational staff', op], ['brand', brand], ['anonymous', anon]] as const) ok(`${n} cannot raise a creator invoice`, refused(await raise(s as SupabaseClient, legOf(G))))
+  ok('without confirming the shoot: refused', said(await raise(creator, legOf(G), { p_shoot_confirmed: false }), /Confirm the shoot/))
+  ok('NULL confirmation: refused (deny on NULL)', refused(await raise(creator, legOf(G), { p_shoot_confirmed: null })))
+  ok('a stale total on the screen: refused', said(await raise(creator, legOf(G), { p_expected_payable_paise: gPayable + 1 }), /changed/))
+  ok('NULL total: refused', refused(await raise(creator, legOf(G), { p_expected_payable_paise: null })))
+  ok('an invalid GSTIN: refused', said(await raise(creator, legOf(G), { p_gstin: '27ABC' }), /GSTIN/))
+  ok('no name: refused', refused(await raise(creator, legOf(G), { p_billing_name: ' ' })))
+  ok('a creator who did not shoot cannot invoice', said(await (await sessionFor(X.users.auth_id)).rpc('creator_leg_invoice_raise', { p_deal_id: legOf(X), p_shoot_confirmed: true, p_billing_name: 'X', p_gstin: '', p_expected_payable_paise: 1 }), /marks your shoot done/))
+  const gi1 = await raise(creator, legOf(G), { p_gstin: '27aapfu0939f1zv' })
+  const gRef = (await admin.from('deals').select('deal_ref').eq('id', legOf(G)).single()).data!.deal_ref
+  ok('G confirms and raises it; numbered from the deal reference', !gi1.error && (gi1.data as any)?.number === `CI-${gRef}`, gi1.error?.message ?? JSON.stringify(gi1.data))
+  const giRow = (await admin.from('experience_creator_invoices').select('status, gstin, day_rate_paise, days, gross_paise, platform_pct, platform_fee_paise, net_paise, allowance_paise, payable_paise, shoot_confirmed_at').eq('deal_id', legOf(G)).single()).data as any
+  const gT = (await admin.from('experience_creator_terms').select('day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise, allowance_paise').eq('deal_id', legOf(G)).single()).data as any
+  ok('every figure is copied from the locked terms by the database', giRow.status === 'issued' && Number(giRow.day_rate_paise) === Number(gT.day_rate_paise) && Number(giRow.days) === Number(gT.days)
+    && Number(giRow.gross_paise) === Number(gT.creator_gross_paise) && Number(giRow.platform_pct) === Number(gT.platform_pct) && Number(giRow.net_paise) === Number(gT.creator_net_paise)
+    && Number(giRow.platform_fee_paise) === Number(gT.creator_gross_paise) - Number(gT.creator_net_paise) && Number(giRow.payable_paise) === gPayable && giRow.gstin === '27AAPFU0939F1ZV' && !!giRow.shoot_confirmed_at, JSON.stringify(giRow))
+  ok('raising twice is refused', said(await raise(creator, legOf(G)), /already raised/))
+  const gEv = (await admin.from('events').select('detail').eq('deal_id', legOf(G)).eq('event_type', 'experience.creator_invoice_raised')).data ?? []
+  ok("it is on G's timeline, with no amounts", gEv.length === 1 && !/paise|amount|gross|net/.test(JSON.stringify(gEv[0].detail)))
+  const g1 = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  ok("G's page now shows the invoice and no longer offers it", g1.invoice?.number === `CI-${gRef}` && g1.can_invoice === false)
+  ok('G reads their own invoice document; D cannot', !refused(await creator.rpc('creator_leg_invoice_doc', { p_deal_id: legOf(G) })) && refused(await creatorD.rpc('creator_leg_invoice_doc', { p_deal_id: legOf(G) })))
+  ok('staff read it through the console; the brand cannot', !refused(await op.rpc('experience_console_creator_invoice_doc', { p_invoice_id: (gi1.data as any).id }))
+    && refused(await brand.rpc('experience_console_creator_invoice_doc', { p_invoice_id: (gi1.data as any).id })))
+  ok('the brand never sees the creator invoice table', ((await brand.from('experience_creator_invoices').select('id').limit(1)).data ?? []).length === 0)
+  let direct = true
+  for (const s of [creator, op, fin, brand]) { const q = await s.from('experience_creator_invoices').select('id').limit(1); if (!q.error && (q.data ?? []).length > 0) direct = false }
+  ok('nobody reads the table directly (functions only)', direct)
+  ok('an issued invoice cannot be edited, even by the service role', refused(await admin.from('experience_creator_invoices').update({ payable_paise: 1 }).eq('deal_id', legOf(G)).select('id')))
+  ok('a user cannot delete one', refused(await creator.from('experience_creator_invoices').delete().eq('deal_id', legOf(G)).select('id')) || ((await admin.from('experience_creator_invoices').select('id').eq('deal_id', legOf(G))).data ?? []).length === 1)
+  ok('the console payouts screen shows the creator invoice', (await legRow(G)).creator_invoice?.number === `CI-${gRef}`)
   ok('NULL TDS is refused (0 must be said)', said(await op.rpc('experience_console_payout_request', { p_deal_id: legOf(G), p_tds_paise: null }), /TDS/))
   ok('negative TDS is refused', refused(await op.rpc('experience_console_payout_request', { p_deal_id: legOf(G), p_tds_paise: -1 })))
   const gTerms = (await admin.from('experience_creator_terms').select('creator_gross_paise, platform_pct, creator_net_paise').eq('deal_id', legOf(G)).single()).data as any
@@ -236,6 +275,21 @@ async function run() {
   ok('0542: finance opens it; operational staff cannot (a transfer proof can show bank details)', !refused(await fin.rpc('experience_console_finance_file', { p_kind: 'payout-proof', p_id: PG }))
     && refused(await op.rpc('experience_console_finance_file', { p_kind: 'payout-proof', p_id: PG })))
 
+  group('0552: void a wrong creator invoice; the creator raises it again')
+  const dPayable = Number(((await creatorD.rpc('creator_leg_context', { p_deal_id: legOf(D) })).data as any).total_to_creator_paise)
+  const di1 = await creatorD.rpc('creator_leg_invoice_raise', { p_deal_id: legOf(D), p_shoot_confirmed: true, p_billing_name: 'Test Creator D', p_gstin: null, p_expected_payable_paise: dPayable })
+  ok('D raises their invoice', !di1.error, di1.error?.message ?? '')
+  ok('a void needs a reason', said(await op.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di1.data as any).id, p_reason: '' }), /reason/))
+  ok('the brand and the creator cannot void it', refused(await brand.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di1.data as any).id, p_reason: 'wrong name' }))
+    && refused(await creatorD.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di1.data as any).id, p_reason: 'wrong name' })))
+  ok('operational staff void it with a reason', !refused(await op.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di1.data as any).id, p_reason: 'Wrong billing name' })))
+  ok('a void invoice does not change again', refused(await op.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di1.data as any).id, p_reason: 'again please' })))
+  ok('no payout while D has no issued invoice', said(await op.rpc('experience_console_payout_request', { p_deal_id: legOf(D), p_tds_paise: 0 }), /raised their invoice/))
+  const di2 = await creatorD.rpc('creator_leg_invoice_raise', { p_deal_id: legOf(D), p_shoot_confirmed: true, p_billing_name: 'Test Creator D Studio', p_gstin: null, p_expected_payable_paise: dPayable })
+  const dRef = (await admin.from('deals').select('deal_ref').eq('id', legOf(D)).single()).data!.deal_ref
+  ok('D raises it again, numbered -2; the void one keeps its number', !di2.error && (di2.data as any)?.number === `CI-${dRef}-2`
+    && ((await admin.from('experience_creator_invoices').select('number, status').eq('deal_id', legOf(D))).data ?? []).some((x: any) => x.number === `CI-${dRef}` && x.status === 'void'), di2.error?.message ?? JSON.stringify(di2.data))
+
   group('cancel and request again (a new duplicate key)')
   const rqD = await op.rpc('experience_console_payout_request', { p_deal_id: legOf(D), p_tds_paise: 0 })
   ok('operational staff request D\'s payout', !rqD.error, rqD.error?.message ?? '')
@@ -248,6 +302,7 @@ async function run() {
   await fin.rpc('experience_console_payout_cancel', { p_payout_id: rqD2.data, p_reason: 'Requested by the wrong person' })
   const rqD3 = await op.rpc('experience_console_payout_request', { p_deal_id: legOf(D), p_tds_paise: 0 })
   const PD = rqD3.data as string
+  ok('0552: a creator invoice cannot be voided while its payout is live', said(await op.rpc('experience_console_creator_invoice_void', { p_invoice_id: (di2.data as any).id, p_reason: 'too late now' }), /live payout/))
   ok('the screen shows it: requested by operational staff (so finance may approve), 2 cancelled before', await (async () => { const l = await legRow(D); return l.payout.id === PD && l.payout.i_requested === true && (await fin.rpc('experience_console_payouts', { p_experience_id: E }).then((r) => ((r.data as any).legs as any[]).find((x) => x.deal_id === legOf(D)).payout.i_requested)) === false && l.cancelled_before === 2 })())
 
   group('the P&L: cash out to creators')
@@ -329,6 +384,7 @@ run().catch((e) => { console.error(e); failed++ }).finally(async () => {
   if (uploaded.length) await admin.storage.from('finance-docs').remove(uploaded)
   for (const E of exps) {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', E)
     await admin.from('service_invoices').delete().eq('experience_id', E)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', E)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', E)

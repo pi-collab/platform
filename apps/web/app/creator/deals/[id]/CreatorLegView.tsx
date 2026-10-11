@@ -8,6 +8,7 @@ import CreatorStepper, { type StepperTrack } from './CreatorStepper'
 import LegDeliverables from './LegDeliverables'
 import BriefBlock from './BriefBlock'
 import CreatorThread from './CreatorThread'
+import LegInvoiceForm from './LegInvoiceForm'
 import { DealHeroCard, DealShellStyles, wrapper, metaLabel, sectionHeading, termRow } from './deal-shell'
 import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, MoneyCard, CardActions, chipStyle } from './deal-cards'
 import './creator-leg.css'
@@ -42,7 +43,7 @@ const short = (iso: string | null | undefined) => {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0 }: {
+export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0, creatorName = '' }: {
   dealId: string
   ctx: CreatorLegContext
   attachmentUrls?: Record<string, string>
@@ -50,6 +51,8 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   events?: Ev[]
   autoOpenChat?: boolean
   unread?: number
+  /** Prefills the invoice form (0552). */
+  creatorName?: string
 }) {
   const m = creatorLegMoney(ctx)
   const allowance = Number(ctx.allowance_paise ?? 0)
@@ -75,13 +78,18 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   ].filter(Boolean) as string[]
 
   // ── The leg's own stages, on the same tracker ──
-  const stages = creatorSubmits ? ['Offer received', 'Accepted', 'Shoot', 'Deliverables', 'Paid'] : ['Offer received', 'Accepted', 'Shoot', 'Paid']
-  const idx = open ? 0 : !shot ? 1 : creatorSubmits && !ctx.work_complete ? 3 : stages.length - 1
+  // 0552: the creator confirms the shoot and raises their invoice before Guapd pays.
+  const invoice = ctx.invoice ?? null
+  const stages = creatorSubmits ? ['Offer received', 'Accepted', 'Shoot', 'Deliverables', 'Invoice', 'Paid'] : ['Offer received', 'Accepted', 'Shoot', 'Invoice', 'Paid']
+  const at = (name: string) => stages.indexOf(name)
+  const idx = paid ? stages.length - 1 : open ? 0 : !shot ? 1 : creatorSubmits && !ctx.work_complete ? at('Shoot')
+    : !invoice ? (creatorSubmits ? at('Deliverables') : at('Shoot')) : at('Invoice')
   const statusOf = (to: string) => events.filter((e) => e.event_type === 'deal.status_changed' && (e.detail?.to === to || e.detail?.new_status === to)).pop()?.created_at
   const dates: Record<number, string> = {}
   const sentAt = events.find((e) => e.event_type === 'experience.leg_sent')?.created_at
   if (sentAt) dates[0] = sentAt
   const agreedAt = statusOf('agreed'); if (agreedAt) dates[1] = agreedAt
+  if (invoice) dates[at('Invoice')] = invoice.issued_at
   if (paid && ctx.payout?.paid_on) dates[stages.length - 1] = `${ctx.payout.paid_on}T00:00:00`
   const track: StepperTrack = {
     stages, index: idx, allDone: paid, dates,
@@ -92,7 +100,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   const statusLabel = declined ? (ctx.status === 'cancelled' ? 'Withdrawn' : 'Declined') : paid ? 'Complete' : open ? 'Received' : noShoot ? 'Did not go ahead' : shot ? 'Shot' : 'Agreed'
   const statusLine = paid && ctx.payout ? <>{formatPaiseINR(ctx.payout.paid_paise)} received{ctx.payout.paid_on ? ` ${short(ctx.payout.paid_on)}` : ''} &middot; nothing left to do</>
     : open ? <>Sent{sentAt ? ` ${short(sentAt)}` : ''}{shootDate ? <> &middot; shoot on <b style={{ color: 'var(--ink)' }}>{shootDate}</b></> : ''}</>
-    : shot ? <>{ctx.work_complete ? 'Your part is complete · Guapd pays you next' : 'Shot · Guapd is reviewing your deliverables'}</>
+    : shot ? <>{!ctx.work_complete ? 'Shot · Guapd is reviewing your deliverables' : ctx.invoice ? `Invoice ${ctx.invoice.number} sent · Guapd pays you next` : 'Your part is complete · confirm the shoot and raise your invoice'}</>
     : declined ? <>This offer is closed</>
     : <>Agreed{shootDate ? <> &middot; shoot on <b style={{ color: 'var(--ink)' }}>{shootDate}</b>{ctx.shoot_city ? ` in ${ctx.shoot_city}` : ''}</> : ''}</>
   const dot = paid ? 'var(--neon)' : open ? 'var(--warning)' : declined ? '#C4494F' : '#7E6BC4'
@@ -133,6 +141,22 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   // ── Phone: the same screens as a marketplace deal ──
   const mStage: 'offer' | 'agreed' | 'complete' = open ? 'offer' : paid ? 'complete' : 'agreed'
   const lit = Math.round((paid ? stages.length - 1 : idx) * 5 / (stages.length - 1))
+  const mobileInvoice = ctx.can_invoice && total != null ? (
+    <section className="offer-m__card">
+      <div className="offer-m__label">Raise your invoice</div>
+      <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '6px 0 12px' }}>Guapd marked your shoot done. Confirm it and raise your invoice to get paid.</p>
+      <LegInvoiceForm dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} compact />
+    </section>
+  ) : invoice && !ctx.payout ? (
+    <section className="offer-m__card">
+      <div className="offer-m__label">Invoice sent</div>
+      <div className="offer-m__termrows">
+        <div className="offer-m__termrow"><span>Invoice</span><span><a href={`/creator/deals/${dealId}/invoice`} target="_blank" rel="noopener noreferrer">{invoice.number}</a></span></div>
+        <div className="offer-m__termrow"><span>Sent</span><span>{short(invoice.issued_at)}</span></div>
+        <div className="offer-m__termrow"><span>Total</span><span>{formatPaiseINR(invoice.payable_paise)}</span></div>
+      </div>
+    </section>
+  ) : null
   const statement = ctx.payout ? (
     <section className="offer-m__card">
       <div className="offer-m__label">Your payout</div>
@@ -199,7 +223,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={statement ?? undefined}
+        invoiceNode={statement ?? mobileInvoice ?? undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
@@ -273,8 +297,9 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
             {/* ── Payment: the invoice card's layout; Guapd pays, so nothing to raise ── */}
             {accepted && !noShoot && total != null && (() => {
               const p = ctx.payout
-              const pill = paid ? 'Paid' : p?.status === 'approved' ? 'On the way' : p ? 'Being prepared' : shot ? 'Next' : 'After the shoot'
-              const dotC = paid ? 'var(--success, #16a34a)' : p ? 'var(--warning)' : 'var(--ink-faint)'
+              const pill = paid ? 'Paid' : p?.status === 'approved' ? 'On the way' : p ? 'Being prepared' : invoice ? 'Invoice sent' : ctx.can_invoice ? 'Ready to invoice' : shot ? 'Next' : 'After the shoot'
+              const dotC = paid ? 'var(--success, #16a34a)' : p || invoice ? 'var(--warning)' : ctx.can_invoice ? 'var(--neon-deep)' : 'var(--ink-faint)'
+              const invoiceLink = invoice ? <a href={`/creator/deals/${dealId}/invoice`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>Invoice {invoice.number} (PDF)</a> : null
               const side = p
                 ? [
                     { label: 'Your rate', value: formatPaiseINR(p.gross_paise) },
@@ -282,15 +307,23 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                     ...(Number(p.allowance_paise ?? 0) > 0 ? [{ label: 'Allowance (no fee)', value: `+${formatPaiseINR(Number(p.allowance_paise))}` }] : []),
                     ...(p.tds_paise ? [{ label: 'TDS withheld', value: `\u2212${formatPaiseINR(p.tds_paise)}` }] : []),
                   ]
-                : m ? [{ label: 'Your rate', value: formatPaiseINR(m.grossPaise) }, { label: `Platform fee (${m.platformPct}%)`, value: `\u2212${formatPaiseINR(m.feePaise)}` }] : []
+                : m ? [{ label: 'Your rate', value: formatPaiseINR(m.grossPaise) }, { label: `Platform fee (${m.platformPct}%)`, value: `\u2212${formatPaiseINR(m.feePaise)}` },
+                    ...(allowance > 0 ? [{ label: 'Allowance (no fee)', value: `+${formatPaiseINR(allowance)}` }] : [])] : []
               return (
                 <MoneyCard heading="Payment" pill={pill} pillDot={dotC}
-                  helper={paid ? null : p ? (p.status === 'approved' ? 'Approved. Guapd is sending your payout.' : 'Guapd is preparing your payout.') : `${payRule}. You do not raise an invoice; Guapd pays you directly.`}
+                  helper={paid ? null : p ? (p.status === 'approved' ? 'Approved. Guapd is sending your payout.' : 'Guapd is preparing your payout.')
+                    : invoice ? `You sent invoice ${invoice.number} on ${short(invoice.issued_at)}. Guapd pays you next.`
+                    : ctx.can_invoice ? 'Guapd marked your shoot done. Confirm it and raise your invoice to get paid.'
+                    : shot && creatorSubmits ? 'Once Guapd approves your deliverables, confirm the shoot and raise your invoice here.'
+                    : 'After the shoot, confirm it here and raise your invoice to Guapd.'}
                   receiveLabel={paid ? 'You received' : 'You receive'}
                   receive={formatPaiseINR(p ? p.paid_paise : total)}
                   receiveSub={paid ? null : payRule}
                   side={side} paidBar={paid}
-                  footer={paid ? <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Paid{p?.paid_on ? ` on ${short(p.paid_on)}` : ''}{p?.reference ? ` \u00B7 bank reference ${p.reference}` : ''}. This deal is wrapped.</span> : undefined} />
+                  footer={ctx.can_invoice && total != null
+                    ? <LegInvoiceForm dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} />
+                    : paid ? <><span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Paid{p?.paid_on ? ` on ${short(p.paid_on)}` : ''}{p?.reference ? ` \u00B7 bank reference ${p.reference}` : ''}. This deal is wrapped.</span>{invoiceLink}</>
+                    : invoiceLink ? <><span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Your invoice to Guapd</span>{invoiceLink}</> : undefined} />
               )
             })()}
 

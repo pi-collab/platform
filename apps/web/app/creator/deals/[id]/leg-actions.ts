@@ -7,6 +7,7 @@ import { notifyStaffLegAnswer } from '@/lib/experience-leg-notify'
 import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { notifyStaffCreatorInvoiced } from '@/lib/experience-money-notify'
 
 /**
  * The creator's actions on a Guapd Experience creator leg: accept or
@@ -130,4 +131,36 @@ export async function acceptGuapdCounter(dealId: string, counterId: string): Pro
   await notifyStaffLegAnswer(dealId, true)
   revalidatePath(`/creator/deals/${dealId}`); revalidatePath('/creator/deals'); revalidatePath('/creator/dashboard')
   return { ok: true }
+}
+
+// ── 0552: confirm the shoot and raise the invoice to Guapd ────────────────
+// creator_leg_invoice_raise runs with the creator's own session and checks in
+// Postgres that the deal is theirs, Guapd marked the shoot done, their part is
+// complete and no invoice is issued yet. Every figure is copied from the locked
+// terms by the database; the screen's total is only checked against it.
+export async function raiseLegInvoice(dealId: string, input: { confirmed: boolean; billingName: string; gstin: string; expectedPayablePaise: number }): Promise<LegOut<{ number: string }>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !input || typeof input.confirmed !== 'boolean' || typeof input.billingName !== 'string'
+      || typeof input.gstin !== 'string' || !Number.isSafeInteger(input.expectedPayablePaise)) {
+    return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  }
+  const { data, error } = await createClient().rpc('creator_leg_invoice_raise', {
+    p_deal_id: dealId, p_shoot_confirmed: input.confirmed, p_billing_name: input.billingName.slice(0, 200),
+    p_gstin: input.gstin.slice(0, 20), p_expected_payable_paise: input.expectedPayablePaise,
+  })
+  if (error) {
+    const m = error.message
+    return { ok: false, message: /Confirm the shoot/i.test(m) ? 'Tick the box to confirm the shoot is done.'
+      : /already raised/i.test(m) ? 'You have already raised your invoice for this deal.'
+      : /GSTIN/i.test(m) ? 'That GSTIN is not valid. Check it, or leave it empty.'
+      : /name to invoice/i.test(m) ? 'Enter the name to invoice from.'
+      : /changed/i.test(m) ? 'These figures have changed. Refresh the page and check them again.'
+      : /approval/i.test(m) ? 'Your deliverables need Guapd\u2019s approval before you invoice.'
+      : /marks your shoot done/i.test(m) ? 'You can raise your invoice once Guapd marks your shoot done.'
+      : 'Could not raise your invoice. Please try again.' }
+  }
+  const out = data as { id: string; number: string }
+  await notifyStaffCreatorInvoiced(dealId, out.number)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: { number: out.number } }
 }

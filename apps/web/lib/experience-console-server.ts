@@ -833,8 +833,22 @@ export interface ConsolePayoutLeg {
   /** 0542: masked only; full details are finance's (getPayoutAccount). */
   payment_details: { bank_on_file: boolean; account_masked: string | null; upi_on_file: boolean; changed_at: string | null }
   cancelled_before: number; payout: ConsolePayout | null
+  /** 0552: the creator's issued invoice to Guapd; the payout is requested only once it exists. */
+  creator_invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
 }
 export interface ConsolePayouts { experience_id: string; status: string; legs: ConsolePayoutLeg[]; can_pay: boolean }
+
+/** 0552: a creator invoice document, for staff (operational access, checked in Postgres). */
+export async function getCreatorInvoiceDoc(invoiceId: string): Promise<Result<unknown>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_invoice_doc', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data }
+}
+
+/** 0552: void a wrong creator invoice (reason required; refused while a payout is live). */
+export async function voidCreatorInvoice(invoiceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_creator_invoice_void', { p_invoice_id: invoiceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
 
 export async function getConsolePayouts(experienceId: string): Promise<Result<ConsolePayouts>> {
   const { data, error } = await createClient().rpc('experience_console_payouts', { p_experience_id: experienceId })

@@ -7308,3 +7308,25 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Old links (`/experiences-admin/<exp>?tab=deals&deal=<id>`, `/experiences-admin/leg/<id>`, inbox `?deal=` / `?brand=`) land on the new pages.
 - [ ] The brand's own `/deals` and `/inbox` are unchanged (DealsTable and BrandInboxView take optional console props; defaults are the brand's).
 - [ ] SECURITY: every console page runs experienceStaffGate and reads only through the gated console functions; a non-staff user gets No access. The brand never sees a creator thread; a creator never sees a brand thread.
+
+## 121. Experiences: the creator confirms the shoot and raises their invoice (migration 0552)
+
+**Creator (`/creator/deals/<leg>`, desktop and phone)**
+- [ ] Before the shoot: the Payment card reads "After the shoot, confirm it here and raise your invoice to Guapd." No form.
+- [ ] After Guapd marks the shoot done (and, on creator-submit shoots, approves every deliverable): the Payment card shows **Ready to invoice** with the form: a required "I confirm the shoot on <date> is done" box, "Invoice from" (prefilled with the creator's name), optional GSTIN, and **Confirm and raise invoice**. The phone shows the same form in its own card.
+- [ ] The button stays disabled until the box is ticked and a name is entered. The amount is never typed: it is the agreed take-home plus allowance.
+- [ ] After raising: **Invoice sent** with the number (`CI-<deal ref>`), the date and a PDF link; the tracker's Invoice step is done; Guapd staff get an in-app + email alert.
+- [ ] The PDF: FROM the creator (name, GSTIN if given), BILL TO Guapd (billing settings), day rate x days, less the Guapd platform fee, net, allowance, total payable; the shoot confirmation date; "TDS, if applicable, is deducted by Guapd at payment"; no bank details; no GST computed.
+- [ ] Once paid, the Payment card shows "You received" with the bank reference and still links the invoice.
+
+**Console**
+- [ ] Payouts panel: until the creator invoices, the row reads "Waiting for the creator to confirm the shoot and raise their invoice" and there is no Request payout. After, it shows the invoice number (PDF link), date, total and GSTIN, and Request payout appears.
+- [ ] Void (with a reason the creator sees) is offered only while there is no live payout; the creator is told and raises it again (`CI-<ref>-2`).
+
+**Security / rules (scripts/test-experience-payouts.ts, group 0552)**
+- [ ] `experience_console_payout_request` refuses until an issued creator invoice exists.
+- [ ] `creator_leg_invoice_raise`: own deal only (other creators, staff, brand, anon refused); deal `agreed`, shoot outcome `done`, part complete, Experience in the payout window; confirmation TRUE (FALSE and NULL refused); screen total must equal the database (stale and NULL refused); GSTIN format checked; one issued invoice per deal.
+- [ ] Figures are copied from `experience_creator_terms`; an issued invoice cannot be edited by anyone (service role included); only void, once; delete only by the service role (teardown).
+- [ ] `experience_creator_invoices` has no policies or grants: not readable directly by creators, staff or brands. The brand never sees it. The timeline event carries no amounts.
+- [ ] Void: operational staff only, reason required, refused while a payout is live.
+- Gotcha: 0552 rewrites `experience_console_payout_request`, `creator_leg_context` and `experience_console_payouts` from their live staging definitions (after 0551). Run 0551 then 0552 on prod.

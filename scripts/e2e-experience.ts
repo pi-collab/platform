@@ -61,6 +61,13 @@ function allKeys(v: unknown, out: string[] = []): string[] {
 }
 const BRAND_FORBIDDEN = /rate|gross|net_|_net|pct|payout|cost|margin|fee|allowance|counter|terms|creator_id|deal_id|leg_|brief_for|creator_brief|tds|bank/i
 
+
+/** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+async function invoiceAs(s: any, deal: string) {
+  const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
+  return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
+}
+
 async function run() {
   staffBefore = ((await admin.from('staff_access').select('user_id')).data ?? []).length
   // ── Actors ──
@@ -200,6 +207,7 @@ async function run() {
 
   stage('13. payouts: requested, approved by someone else, paid')
   for (const [d, tds] of [[dG, 0], [dD, 0]] as const) {
+    must(await invoiceAs(d === dG ? cG : cD, d), 'creator invoice')
     const P = must(await op.rpc('experience_console_payout_request', { p_deal_id: d, p_tds_paise: tds }), 'request') as string
     ok('the requester cannot approve their own payout', refused(await op.rpc('experience_console_payout_approve', { p_payout_id: P, p_confirm_details_changed: false })))
     must(await fin.rpc('experience_console_payout_approve', { p_payout_id: P, p_confirm_details_changed: false }), 'approve')
@@ -275,6 +283,7 @@ async function cleanup() {
     const { data: legs } = await admin.from('deals').select('id').eq('experience_id', e.id)
     const ids = Array.from(new Set([...(legs ?? []).map((l) => l.id), ...st.deals]))
     await admin.from('vendor_payouts').delete().eq('experience_id', e.id)
+    await admin.from('experience_creator_invoices').delete().eq('experience_id', e.id)
     await admin.from('service_invoice_payments').delete().eq('experience_id', e.id)
     await admin.from('service_invoices').delete().eq('experience_id', e.id)
     await admin.from('experience_deliverable_releases').delete().eq('experience_id', e.id)

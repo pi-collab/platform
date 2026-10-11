@@ -145,7 +145,9 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
       const signed = await Promise.all(legAtts.map((a) => admin.storage.from('deal-files').createSignedUrl(a.storage_path, 3600)))
       signed.forEach((r, i) => { if (r.data?.signedUrl) legAttachmentUrls[legAtts[i].storage_path] = r.data.signedUrl })
     }
-    return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls}
+    // 0552: prefills the invoice form; the creator can change it.
+    const { data: me } = await supabase.from('creators').select('full_name').eq('user_id', profileId).maybeSingle()
+    return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls} creatorName={(me?.full_name as string | undefined) ?? ''}
       messages={(messages ?? []).map((m) => ({ id: m.id as string, deal_id: m.deal_id as string, sender_party: m.sender_party as 'brand' | 'creator', body: m.body as string | null, created_at: m.created_at as string }))}
       events={(events ?? []) as { id: string; event_type: string; detail: any; created_at: string }[]}
       unread={await unreadNotificationCount(supabase, profileId)}
