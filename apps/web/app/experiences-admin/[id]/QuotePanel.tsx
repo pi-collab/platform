@@ -9,6 +9,7 @@ import { CHANNELS, QUOTE_STATUS, channelLabel, formatRupees, rupeesToPaise } fro
 import type { ConsoleDeliverable, ConsoleQuote } from '@/lib/experience-console-server'
 import { acceptQuote, submitQuote } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
+import ExtrasEditor from '../ExtrasEditor'
 
 /**
  * The negotiation with the brand: Guapd's quotes and the brand's counters, as
@@ -151,19 +152,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
           {/* 0553: extras, each with what it is for. The brand sees these lines. */}
           <div style={{ marginTop: 14 }}>
             <span style={fieldLabel}>Extras (optional)</span>
-            {extras.length === 0 && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--wg-500)', margin: '2px 0 8px' }}>Anything on top of the videos: travel, styling, express edit, location…</div>}
-            <div style={{ display: 'grid', gap: 8 }}>
-              {extras.map((x, i) => (
-                <div key={i} className="xp-extra" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 160px auto', gap: 8, alignItems: 'center' }}>
-                  <input className="dinput" aria-label={`Extra ${i + 1}: what it is for`} placeholder="What it is for, e.g. Travel to Goa" maxLength={120}
-                    value={x.label} onChange={(e) => setExtras(extras.map((y, k) => k === i ? { ...y, label: e.target.value } : y))} />
-                  <input className="dinput" aria-label={`Extra ${i + 1}: amount in rupees`} inputMode="decimal" placeholder="₹ amount"
-                    value={x.amount} onChange={(e) => setExtras(extras.map((y, k) => k === i ? { ...y, amount: e.target.value } : y))} />
-                  <button type="button" style={{ ...pillBtn, height: 36, padding: '0 12px' }} aria-label={`Remove extra ${i + 1}`} onClick={() => setExtras(extras.filter((_, k) => k !== i))}>Remove</button>
-                </div>
-              ))}
-            </div>
-            {extras.length < 20 && <button type="button" style={{ ...pillBtn, height: 34, marginTop: 8 }} onClick={() => setExtras([...extras, { label: '', amount: '' }])}>+ Add an extra</button>}
+            <ExtrasEditor rows={extras} onChange={setExtras} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink)' }}>
@@ -242,7 +231,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
         onCancel={() => setConfirming(false)}
       />
 
-      <style>{`@media (max-width: 720px) { .xp-q { grid-template-columns: 1fr !important; } .xp-extra { grid-template-columns: 1fr 110px !important; } .xp-extra button { grid-column: 1 / -1; justify-self: start; } }`}</style>
+      <style>{`@media (max-width: 720px) { .xp-q { grid-template-columns: 1fr !important; } }`}</style>
     </section>
   )
 }

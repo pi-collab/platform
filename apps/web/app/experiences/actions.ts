@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAnswerQuote, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 
 /**
@@ -43,6 +43,19 @@ export async function answerQuote(experienceId: string, quoteId: string, accept:
   if (!r.ok) return r
   done(experienceId)
   await notifyStaffBrandActed(experienceId, accept ? 'accepted the price' : 'declined the price, with a note')
+  return r
+}
+
+/** 0554: the brand accepts or declines an add-on to its agreed price. */
+export async function answerAddon(experienceId: string, addonId: string, accept: boolean, why: string, expectedTotalPaise: number): Promise<Out> {
+  await verifyBrand()
+  if (!isUuid(experienceId) || !isUuid(addonId) || typeof accept !== 'boolean' || !Number.isSafeInteger(expectedTotalPaise)) return { ok: false, error: 'Not found.' }
+  const text = note(why, 1000)
+  if (!accept && (!text || text.length < 3)) return { ok: false, error: 'Tell Guapd what would work.' }
+  const r = await brandAnswerAddon(addonId, accept, accept ? null : text, expectedTotalPaise)
+  if (!r.ok) return r
+  done(experienceId)
+  await notifyStaffBrandActed(experienceId, accept ? 'accepted an add-on to the price' : 'declined an add-on, with a note')
   return r
 }
 

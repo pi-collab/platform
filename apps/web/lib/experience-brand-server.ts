@@ -153,3 +153,19 @@ export async function brandGuapdUnread(id: string): Promise<number> {
   const { data, error } = await createClient().rpc('brand_experience_messages_unread', { p_experience_id: id })
   return error ? 0 : Number(data ?? 0)
 }
+
+// ── 0554: add-ons to the agreed price ──────────────────────────────────────
+export interface BrandAddon {
+  id: string; number: number; status: 'open' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: { type: string; count: number }[]; videos: number; per_video_paise: number
+  extras: { label: string; amount_paise: number }[]; total_paise: number; message: string | null
+  brand_note: string | null; decided_at: string | null; on_guapd: boolean; created_at: string
+}
+export async function getBrandAddons(experienceId: string): Promise<Result<{ addons: BrandAddon[]; agreed_total_paise: number | null }>> {
+  const { data, error } = await createClient().rpc('brand_experience_addons', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as { addons: BrandAddon[]; agreed_total_paise: number | null } }
+}
+export async function brandAnswerAddon(addonId: string, accept: boolean, note: string | null, expectedTotalPaise: number): Promise<Result<null>> {
+  const { error } = await createClient().rpc('brand_experience_addon_answer', { p_addon_id: addonId, p_accept: accept, p_note: note, p_expected_total_paise: expectedTotalPaise })
+  return error ? fail(error) : { ok: true, data: null }
+}

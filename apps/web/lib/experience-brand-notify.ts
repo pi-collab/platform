@@ -44,7 +44,7 @@ export async function notifyStaffBrandActed(experienceId: string, what: string):
 }
 
 /** Something waits on the brand: tell the brand's members (in-app + email). */
-export async function notifyBrandWaiting(experienceId: string, kind: 'quote' | 'roster', count = 0): Promise<void> {
+export async function notifyBrandWaiting(experienceId: string, kind: 'quote' | 'roster' | 'addon', count = 0): Promise<void> {
   try {
     const e = await experienceTitle(experienceId)
     if (!e) return
@@ -59,21 +59,23 @@ export async function notifyBrandWaiting(experienceId: string, kind: 'quote' | '
     }
     const body = kind === 'quote'
       ? `Guapd's price for ${e.title} is ready. Accept it, or tell Guapd what would work.`
+      : kind === 'addon'
+      ? `Guapd sent an add-on to your agreed price for ${e.title}. Review it and accept, or tell Guapd what would work.`
       : `Creators for ${e.title} are ready for your review.`
     const emails: string[] = []
     for (const m of (members ?? []) as unknown as { user_id: string; users: { email: string | null } | { email: string | null }[] | null }[]) {
-      await createNotification({ userId: m.user_id, dealId: null, type: kind === 'quote' ? 'experience_quote_ready' : 'experience_roster_ready', body })
+      await createNotification({ userId: m.user_id, dealId: null, type: kind === 'quote' ? 'experience_quote_ready' : kind === 'addon' ? 'experience_addon_ready' : 'experience_roster_ready', body })
       const u = Array.isArray(m.users) ? m.users[0] : m.users
       if (isPlausibleEmail(u?.email) && !isSyntheticEmail(u?.email)) emails.push(u!.email as string)
     }
     if (emails.length) {
       const { html, text } = renderNoticeEmail({
-        heading: kind === 'quote' ? 'Your Experience price is ready' : 'Creators to review',
+        heading: kind === 'quote' ? 'Your Experience price is ready' : kind === 'addon' ? 'An add-on to your agreed price' : 'Creators to review',
         body: [body],
         ctaUrl: `${siteBase()}/experiences/${e.id}`,
-        ctaLabel: kind === 'quote' ? 'See the price' : 'Review creators',
+        ctaLabel: kind === 'quote' ? 'See the price' : kind === 'addon' ? 'Review the add-on' : 'Review creators',
       })
-      const r = await sendDealEmail({ to: emails, subject: `${e.title}: ${kind === 'quote' ? 'price ready' : 'creators to review'}`, html, text,
+      const r = await sendDealEmail({ to: emails, subject: `${e.title}: ${kind === 'quote' ? 'price ready' : kind === 'addon' ? 'add-on to review' : 'creators to review'}`, html, text,
         idempotencyKey: `xp-${kind}-${e.id}-${Date.now().toString().slice(0, -5)}` })
       if (!r.ok) console.warn(`[experience-brand] brand email not sent experience=${e.id}`)
     }

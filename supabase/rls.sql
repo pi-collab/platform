@@ -1571,3 +1571,12 @@ REVOKE ALL ON experience_brand_messages, experience_brand_message_reads FROM ano
 -- (operational). Never deleted; an issued invoice only changes to void.
 ALTER TABLE experience_creator_invoices ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_creator_invoices FROM anon, authenticated;
+
+-- ═════ 0554: add-ons to the agreed brand price ═════
+-- experience_addons has NO policies and NO grants for users. Finance sends,
+-- withdraws and records answers through experience_console_addon_* ; the brand
+-- (an admin on its account) answers through brand_experience_addon_answer and
+-- reads its own through brand_experience_addons; operational staff read what an
+-- add-on adds and its status (no amounts) through experience_console_addons.
+ALTER TABLE experience_addons ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_addons FROM anon, authenticated;

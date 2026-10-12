@@ -664,3 +664,11 @@ Shipped ahead of it (8c81ae4, 0545): Send always visible with what's missing; af
 - After Guapd marks the shoot done (creator-submit: and approves every item), the creator ticks "the shoot is done", confirms the name to invoice from (optional GSTIN) and raises their invoice to Guapd from the deal page. Figures are copied from the locked terms by the database: gross (day rate x days), less the platform fee, net, the fee-free allowance, total payable. TDS stays on the payout statement.
 - The payout request needs that invoice. Staff can void a wrong one (reason shown to the creator) while no payout is live; the creator raises it again.
 - Open for the CA before prod: creator-issued invoice vs a statement Guapd issues on the creator's behalf, GST treatment for GST-registered creators, and the TDS section.
+
+
+## Extra deliverables after the shoot (Palak, 2026-10-12)
+
+Decisions: (1) creator extra priced at a rate per video x count, with a flat-total option; (2) the Guapd platform fee applies at the % locked on the original creator deal; (3) the brand is billed first: an add-on to the agreed price; (4) the creator accepts or declines (no counter); Guapd can revise an unanswered request (it replaces the old one) or withdraw it.
+
+- **Phase A, built (0554):** add-ons to the agreed brand price. Finance sends (deliverables + per-video price + extras lines + message), revises by sending again, withdraws, or records the brand's answer; the brand accepts or declines on Guapd. Accept raises the agreed total (brand_addons_paise) and the agreed plan (videos sold, plan videos, per-type totals). Rights (affiliate, ad rights, boost) are not changed by an add-on.
+- **Phase B, next:** the extra request to a creator: linked offer on the creator deal page and inbox, count x rate (or flat), fee at the locked %, capped by what the brand bought; accept grows that creator's deliverables; its own creator invoice and payout; P&L and completion include it.

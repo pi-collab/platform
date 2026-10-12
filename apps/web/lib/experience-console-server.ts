@@ -1040,3 +1040,32 @@ export async function getPayoutAccount(payoutId: string): Promise<Result<PayoutA
   const { data, error } = await createClient().rpc('experience_console_payout_account', { p_payout_id: payoutId })
   return error ? fail(error) : { ok: true, data: data as PayoutAccount }
 }
+
+// ── 0554: add-ons to the agreed brand price ─────────────────────────────────
+export interface ConsoleAddon {
+  id: string; number: number; status: 'open' | 'superseded' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: ConsoleDeliverable[]; videos: number
+  /** Prices, lines, message and brand note: financial only (0537). */
+  per_video_paise: number | null; extras: QuoteExtra[] | null; extras_count: number; misc_paise: number | null; total_paise: number | null
+  message: string | null; brand_note: string | null
+  recorded_channel: string | null; created_at: string; decided_at: string | null; created_by_name: string | null
+}
+export async function getConsoleAddons(experienceId: string): Promise<Result<{ addons: ConsoleAddon[]; can_send: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_addons', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as { addons: ConsoleAddon[]; can_send: boolean } }
+}
+export async function sendAddon(p: { experienceId: string; deliverables: ConsoleDeliverable[]; perVideoPaise: number; extras: QuoteExtra[]; message: string | null; expectedTotalPaise: number }): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_addon_send', {
+    p_experience_id: p.experienceId, p_deliverables: p.deliverables, p_per_video_paise: p.perVideoPaise,
+    p_extras: p.extras, p_message: p.message, p_expected_total_paise: p.expectedTotalPaise,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function recordAddonAnswer(addonId: string, accept: boolean, channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_addon_answer', { p_addon_id: addonId, p_accept: accept, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function withdrawAddon(addonId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_addon_withdraw', { p_addon_id: addonId })
+  return error ? fail(error) : { ok: true, data: null }
+}

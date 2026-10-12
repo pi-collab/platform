@@ -298,6 +298,7 @@ async function cleanup() {
     }
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', e.id)
     await admin.from('experience_cost_lines').delete().eq('experience_id', e.id)
+    await admin.from('experience_addons').delete().eq('experience_id', e.id)
     await admin.from('experience_quotes').delete().eq('experience_id', e.id)
     await admin.from('experiences').delete().eq('id', e.id)
   }

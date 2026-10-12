@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, type BrandInvoice } from '@/lib/experience-brand-server'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -10,7 +10,7 @@ import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import ViewFile from './ViewFile'
-import { DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
+import { AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
 
 export const dynamic = 'force-dynamic'
@@ -39,6 +39,10 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   const quoteToAnswer = e.quote?.status === 'open' && e.quote.proposed_by === 'guapd'
   const hasRoster = !['requested', 'cancelled'].includes(e.status)
   const hasDeliverables = ['shoot_done', 'delivering', 'complete'].includes(e.status)
+  // 0554: add-ons to the agreed price.
+  const addonsRes = hasRoster ? await getBrandAddons(e.id) : null
+  const addons = addonsRes?.ok ? addonsRes.data.addons : []
+  const openAddon = addons.find((a) => a.status === 'open') ?? null
   const [roster, deliverables, invoices, report, guapdThread] = await Promise.all([
     hasRoster ? getBrandRoster(e.id) : Promise.resolve(null),
     hasDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
@@ -141,10 +145,23 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
       {/* While deliverables are with the brand, they (and the sign-off) come first. */}
       {reviewing && reviewBlock}
 
+      {/* 0554: an add-on waiting for an answer comes before the price it adds to. */}
+      {openAddon && (
+        <section className="surface bx-card" aria-labelledby="bx-addon">
+          <h2 id="bx-addon" className="bx-h2">Add-on to your agreed price</h2>
+          <div style={{ marginTop: 12 }}>
+            <AddonCard experienceId={e.id} addon={openAddon} agreedTotal={e.agreed_total_paise} isAdmin={e.is_admin} />
+          </div>
+        </section>
+      )}
+
       <section className="surface bx-card" aria-labelledby="bx-price">
         <h2 id="bx-price" className="bx-h2">Price</h2>
         <div style={{ marginTop: 12 }}>
-          <QuoteCard experienceId={e.id} quote={e.quote} isAdmin={e.is_admin} agreedTotal={e.agreed_total_paise} />
+          <AgreedTotal quoteTotal={e.quote?.status === 'accepted' ? e.quote.total_paise : null} agreedTotal={e.agreed_total_paise} addons={addons} />
+          {addons.some((a) => a.status === 'accepted') && <div className="bx-flabel" style={{ marginBottom: 6 }}>Original price</div>}
+          <QuoteCard experienceId={e.id} quote={e.quote} isAdmin={e.is_admin} agreedTotal={addons.some((a) => a.status === 'accepted') ? null : e.agreed_total_paise} />
+          <AddonHistory addons={addons} />
         </div>
       </section>
 

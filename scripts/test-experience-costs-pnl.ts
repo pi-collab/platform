@@ -218,7 +218,11 @@ async function run() {
   const ctx = await creator.rpc('creator_leg_context', { p_deal_id: dealOf[G.id] })
   const keys = Object.keys((ctx.data ?? {}) as object)
   const vals = JSON.stringify(Object.values((ctx.data ?? {}) as object))
-  const badKey = keys.find((k) => /brand_.*paise|margin|cost|invoice|agreed|revenue/.test(k))
+  // 0552: the creator's OWN invoice to Guapd ('invoice', 'can_invoice') is theirs to see; any other invoice key is a leak.
+  const badKey = keys.find((k) => /brand_.*paise|margin|cost|invoice|agreed|revenue/.test(k) && k !== 'invoice' && k !== 'can_invoice')
+  const ownInvoiceKeys = ['allowance_paise', 'billing_name', 'gross_paise', 'gstin', 'id', 'issued_at', 'net_paise', 'number', 'payable_paise', 'platform_fee_paise', 'platform_pct', 'shoot_confirmed_at']
+  const inv = (ctx.data as any)?.invoice
+  ok("…and the creator's own invoice, if any, carries only their own figures", inv == null || Object.keys(inv).every((k) => ownInvoiceKeys.includes(k)), inv ? Object.keys(inv).join(',') : '')
   ok("the creator's own leg context carries no brand price, cost or margin", !ctx.error && !badKey && !/\b14000000\b|\b10000000\b/.test(vals), ctx.error?.message ?? badKey ?? '')
 }
 

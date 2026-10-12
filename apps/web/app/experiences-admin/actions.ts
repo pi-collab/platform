@@ -14,7 +14,7 @@ import {
   setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
   draftConsoleInvoice, updateConsoleInvoice, discardConsoleInvoice, issueConsoleInvoice, consoleInvoiceDoc,
   consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
-  getConsolePayouts, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
+  getConsolePayouts, sendAddon, recordAddonAnswer, withdrawAddon, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
   recordBrandSignoff, clearBrandSignoff,
   addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
   acceptCounter, declineCounter, sendCounter, withdrawGuapdCounter, getPayoutAccount, type PayoutAccount,
@@ -71,6 +71,22 @@ function deliverables(raw: unknown): ConsoleDeliverable[] | null {
   return out
 }
 
+/** 0553: named extras from a form (empty rows ignored). */
+function parseExtras(raw: unknown): Out<{ label: string; amount_paise: number }[]> {
+  const lines: { label: string; amount_paise: number }[] = []
+  for (const x of Array.isArray(raw) ? raw.slice(0, 21) : []) {
+    const label = typeof x?.label === 'string' ? x.label.trim() : ''
+    const hasAmt = typeof x?.amount === 'string' && x.amount.trim() !== ''
+    if (!label && !hasAmt) continue // an empty row
+    const amt = hasAmt ? rupeesToPaise(x.amount) : null
+    if (label.length < 2 || label.length > 120) return { ok: false, error: 'Describe each extra (2 to 120 characters).' }
+    if (!amt || amt <= 0) return { ok: false, error: `Enter an amount in rupees for "${label}".` }
+    lines.push({ label, amount_paise: amt })
+  }
+  if (lines.length > 20) return { ok: false, error: 'At most 20 extras.' }
+  return { ok: true, data: lines }
+}
+
 /** The request form's fields plus, for staff, the brand and how it arrived. */
 export interface NewRequestForm extends RequestFormFields { brandId?: string; channel?: string }
 
@@ -108,16 +124,9 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
   if (!perVideo || perVideo <= 0) return { ok: false, error: 'Enter a price per video, in rupees.' }
   const count = Number(f.count)
   if (!Number.isInteger(count) || count <= 0) return { ok: false, error: 'Enter how many videos.' }
-  const lines: { label: string; amount_paise: number }[] = []
-  for (const x of Array.isArray(f.extras) ? f.extras.slice(0, 21) : []) {
-    const label = typeof x?.label === 'string' ? x.label.trim() : ''
-    const amt = typeof x?.amount === 'string' && x.amount.trim() ? rupeesToPaise(x.amount) : null
-    if (!label && !(typeof x?.amount === 'string' && x.amount.trim())) continue // an empty row
-    if (label.length < 2 || label.length > 120) return { ok: false, error: 'Describe each extra (2 to 120 characters).' }
-    if (!amt || amt <= 0) return { ok: false, error: `Enter an amount in rupees for "${label}".` }
-    lines.push({ label, amount_paise: amt })
-  }
-  if (lines.length > 20) return { ok: false, error: 'At most 20 extras.' }
+  const parsedExtras = parseExtras(f.extras)
+  if (!parsedExtras.ok) return parsedExtras
+  const lines = parsedExtras.data
   const misc = lines.length ? lines.reduce((n, l) => n + l.amount_paise, 0) : f.misc?.trim() ? rupeesToPaise(f.misc) : 0
   if (misc === null) return { ok: false, error: 'Extras must be an amount in rupees.' }
   const channel = isChannel(f.channel) ? f.channel : null
@@ -1149,4 +1158,52 @@ export async function showPayoutAccount(payoutId: string): Promise<Out<PayoutAcc
   const refused = await gate(); if (refused) return refused
   if (!isUuid(payoutId)) return { ok: false, error: 'Unknown payout.' }
   return getPayoutAccount(payoutId)
+}
+
+// ── 0554: add-ons to the agreed brand price (finance) ──────────────────────
+export interface AddonForm {
+  experienceId: string
+  deliverables: { type: string; count: number | string }[]
+  perVideo: string
+  extras: { label: string; amount: string }[]
+  message: string
+  expectedTotalPaise: number
+}
+export async function sendAddonAction(f: AddonForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(f.experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const rows = (Array.isArray(f.deliverables) ? f.deliverables : []).filter((d) => String(d?.count ?? '').trim() !== '' && Number(d?.count) !== 0)
+  const dl = deliverables(rows)
+  if (!dl) return { ok: false, error: 'Each added deliverable needs a type and a whole count.' }
+  if (new Set(dl.map((d) => d.type)).size !== dl.length) return { ok: false, error: 'List each type once.' }
+  const videos = dl.filter((d) => isVideoType(d.type)).reduce((n, d) => n + d.count, 0)
+  const pv = videos > 0 ? rupeesToPaise(f.perVideo) : 0
+  if (videos > 0 && (!pv || pv <= 0)) return { ok: false, error: 'Enter the price per video, in rupees.' }
+  const ex = parseExtras(f.extras)
+  if (!ex.ok) return ex
+  if (dl.length === 0 && ex.data.length === 0) return { ok: false, error: 'Add deliverables or an extra.' }
+  if (!Number.isSafeInteger(f.expectedTotalPaise)) return { ok: false, error: 'Something went wrong. Reload and try again.' }
+  const r = await sendAddon({ experienceId: f.experienceId, deliverables: dl, perVideoPaise: pv ?? 0, extras: ex.data,
+    message: cleanText(f.message, 2000), expectedTotalPaise: f.expectedTotalPaise })
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${f.experienceId}`)
+  await notifyBrandWaiting(f.experienceId, 'addon')
+  return r
+}
+export async function recordAddonAnswerAction(experienceId: string, addonId: string, accept: boolean, channel: string, note: string): Promise<Out<null>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(addonId) || typeof accept !== 'boolean') return { ok: false, error: 'Unknown add-on.' }
+  if (!isChannel(channel)) return { ok: false, error: 'Say how the brand answered.' }
+  const r = await recordAddonAnswer(addonId, accept, channel, cleanText(note, 1000))
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+export async function withdrawAddonAction(experienceId: string, addonId: string): Promise<Out<null>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(addonId)) return { ok: false, error: 'Unknown add-on.' }
+  const r = await withdrawAddon(addonId)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return r
 }

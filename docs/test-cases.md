@@ -7339,3 +7339,23 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Brand (`/experiences/<id>`): the quote shows each extra ("+ Travel to Goa ₹15,000") under the total.
 - [ ] Rules (scripts/test-experience-console-quotes.ts, group 0553): the extras amount is the sum of the lines (a mismatched amount is refused, also by a table CHECK the service role cannot get round); each line needs a 2 to 120 character description and a whole-paise amount above zero, no other fields, numbers not text; at most 20; operational staff see no amounts or lines (financial only, 0537); accept copies the lines to `experiences.brand_extras`. Quote total, agreed price, invoices and the P&L are unchanged (the sum is misc_paise as before).
 - Gotcha: `experience_quote_accept_apply` reads the quote positionally into its row type; a new column on `experience_quotes` must be added at the END of that select list.
+
+## 123. Experiences: add-ons to the agreed brand price (migration 0554, Phase A of extra deliverables)
+
+**Console (`/experiences-admin/<id>`, from Building roster to Delivering)**
+- [ ] "Add-ons to the agreed price" panel under Quotes. Finance sees "Send an add-on": what it adds (type + count rows, each type once), price per video (shown when videos are added), extras lines (same editor as quotes), message, and a live "Add-on ₹X · New agreed total ₹Y if accepted".
+- [ ] With an add-on open the button reads "Revise the add-on" (prefilled); sending replaces the open one (shown as replaced; the brand no longer sees it).
+- [ ] Open add-ons: "Record brand's answer" (Accepted / Declined + how it came + optional note) and "Withdraw". Operational staff see what each add-on adds and its status, never amounts, lines, message or note.
+- [ ] After an accept, the "Agreed with the brand" card reads "Quote: …" then "+ Add-on #n: ₹X" and the service price includes them; "Plan locked" shows the larger totals.
+
+**Brand (`/experiences/<id>`)**
+- [ ] An open add-on shows first as its own card, "Add-on to your agreed price": "Nothing changes unless you accept", each line (+10 UGC videos × ₹3,500 … + Express edit ₹5,000), "Add-on total", and "Your agreed total goes from ₹A to ₹B if you accept". Admins: "Accept add-on (₹X)" / Decline (note required). Non-admins are told an admin answers.
+- [ ] Answered add-ons list under Price with Accepted (on Guapd / recorded by Guapd) or Declined and the note.
+- [ ] Brand gets an in-app alert + email "add-on to review"; staff get "accepted an add-on" / "declined an add-on".
+
+**Rules (scripts/test-experience-addons.ts)**
+- [ ] Only once the price is agreed and before Complete; finance only to send, record or withdraw; the brand admin answers its own.
+- [ ] Known types, counts 1..1000, each type once, no extra fields; videos need a price; extras lines valid; something must be added; stale totals (console and brand screen) refused; one open add-on.
+- [ ] Accept: agreed total += add-on total (kept as `experiences.brand_addons_paise`, and the agreed-total CHECK now includes it); agreed plan videos sold, plan videos and per-type totals grow by what was added (Stories etc. grow their type, not the video count); the plan records the add-on; the creator-deal reconcile then expects the new count. Declined / withdrawn change nothing.
+- [ ] `experience_addons` has no policies or grants: functions only; sums held by CHECKs the service role cannot get round.
+- Gotcha: after an accepted add-on, the creator deals are short of the videos sold until Phase B (extra requests to creators) places them; the reconcile and the completion check say so.

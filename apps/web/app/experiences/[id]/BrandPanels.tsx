@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
-import type { BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import { answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
+import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
+import { answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -97,6 +97,111 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
         </div>
       )}
       {error && <p className="bx-err" role="alert">{error}</p>}
+    </div>
+  )
+}
+
+// ── 0554: an add-on to the agreed price ──
+// One clear card, separate from the original price: what it adds, its own
+// total, and what the agreed total becomes if accepted.
+function addonLines(a: BrandAddon) {
+  return (
+    <ul className="bx-addon-lines" style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 6 }}>
+      {a.deliverables.map((d) => (
+        <li key={d.type} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 13.5 }}>
+          <span>+ {countOf(Number(d.count), d.type)}{['UGC video', 'Reel'].includes(d.type) && a.per_video_paise ? ` × ${formatRupees(Number(a.per_video_paise))}` : ''}</span>
+          <span style={{ fontWeight: 600 }}>{['UGC video', 'Reel'].includes(d.type) && a.per_video_paise ? formatRupees(Number(d.count) * Number(a.per_video_paise)) : ''}</span>
+        </li>
+      ))}
+      {a.extras.map((x, i) => (
+        <li key={`x${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 13.5 }}>
+          <span>+ {x.label}</span><span style={{ fontWeight: 600 }}>{formatRupees(Number(x.amount_paise))}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function AddonCard({ experienceId, addon, agreedTotal, isAdmin }: { experienceId: string; addon: BrandAddon; agreedTotal: number | null; isAdmin: boolean }) {
+  const { pending, error, run } = useRun()
+  const [declining, setDeclining] = useState(false)
+  const [why, setWhy] = useState('')
+  const total = Number(addon.total_paise)
+  return (
+    <div>
+      <p className="bx-note" style={{ marginTop: 0 }}>Guapd is offering more on top of the price you agreed. Nothing changes unless you accept.</p>
+      {addonLines(addon)}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--hairline)', fontFamily: 'var(--font-ui)' }}>
+        <span style={{ fontWeight: 700 }}>Add-on total</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22 }}>{formatRupees(total)}</span>
+      </div>
+      {agreedTotal != null && (
+        <p className="bx-note">Your agreed total goes from {formatRupees(agreedTotal)} to <b>{formatRupees(agreedTotal + total)}</b> if you accept.</p>
+      )}
+      {addon.message && <p className="bx-msg">“{addon.message}”</p>}
+      {!isAdmin && <p className="bx-note">An admin on your brand account accepts or declines it.</p>}
+      {isAdmin && !declining && (
+        <div className="bx-actions">
+          <button type="button" className="bx-btn" disabled={pending} onClick={() => setDeclining(true)}>Decline</button>
+          <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => run(() => answerAddon(experienceId, addon.id, true, '', total))}>
+            {pending ? 'Saving…' : `Accept add-on (${formatRupees(total)})`}
+          </button>
+        </div>
+      )}
+      {isAdmin && declining && (
+        <div className="bx-box">
+          <label className="bx-flabel" htmlFor="bx-addon-why">What would work for you?</label>
+          <textarea id="bx-addon-why" className="dinput bx-textarea" rows={3} maxLength={1000} value={why} onChange={(e) => setWhy(e.target.value)} placeholder="We only need 5 more videos" />
+          <div className="bx-actions">
+            <button type="button" className="bx-btn" disabled={pending} onClick={() => setDeclining(false)}>Back</button>
+            <button type="button" className="bx-btn bx-btn-danger" disabled={pending} onClick={() => run(() => answerAddon(experienceId, addon.id, false, why, total), () => setDeclining(false))}>
+              {pending ? 'Sending…' : 'Decline and send note'}
+            </button>
+          </div>
+        </div>
+      )}
+      {error && <p className="bx-err" role="alert">{error}</p>}
+    </div>
+  )
+}
+
+/** 0554: with accepted add-ons, the agreed total leads and shows what makes it up. */
+export function AgreedTotal({ quoteTotal, agreedTotal, addons }: { quoteTotal: number | null; agreedTotal: number | null; addons: BrandAddon[] }) {
+  const accepted = addons.filter((a) => a.status === 'accepted').sort((x, y) => x.number - y.number)
+  if (accepted.length === 0 || agreedTotal == null || quoteTotal == null) return null
+  return (
+    <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--hairline)' }}>
+      <div className="bx-flabel" style={{ marginBottom: 4 }}>Agreed total</div>
+      <div className="bx-quote-total">{formatRupees(agreedTotal)}</div>
+      <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: 4, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
+        <li style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>Original price</span><span>{formatRupees(quoteTotal)}</span></li>
+        {accepted.map((a) => (
+          <li key={a.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><span>+ Add-on #{a.number}</span><span>{formatRupees(Number(a.total_paise))}</span></li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** Answered add-ons, under the price. */
+export function AddonHistory({ addons }: { addons: BrandAddon[] }) {
+  const done = addons.filter((a) => a.status === 'accepted' || a.status === 'declined')
+  if (done.length === 0) return null
+  return (
+    <div style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+      {done.map((a) => (
+        <div key={a.id} style={{ borderTop: '1px solid var(--hairline)', paddingTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>
+            <span>Add-on #{a.number}</span><span>{formatRupees(Number(a.total_paise))}</span>
+          </div>
+          {addonLines(a)}
+          <p className="bx-note">
+            {a.status === 'accepted'
+              ? <><span className="bx-chip bx-ok">Accepted</span> {a.on_guapd ? 'You accepted this' : 'Accepted (recorded by Guapd)'}{a.decided_at ? ` on ${fmt(a.decided_at)}` : ''}.</>
+              : <><span className="bx-chip bx-chg">Declined</span> {a.brand_note ? `You told Guapd: “${a.brand_note}”.` : 'Declined.'}</>}
+          </p>
+        </div>
+      ))}
     </div>
   )
 }

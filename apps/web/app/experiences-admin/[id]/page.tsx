@@ -3,12 +3,13 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
 import NoAccess from '../NoAccess'
 import QuotePanel from './QuotePanel'
+import AddonPanel from './AddonPanel'
 import RosterPanel from './RosterPanel'
 import CreatorLegsPanel from './CreatorLegsPanel'
 import CostSheetPanel from './CostSheetPanel'
@@ -84,6 +85,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
   const pnl = hasRoster && financial ? await getExperiencePnl(e.id) : null
   // 0540: invoices (financial only), creator payouts (after the shoot), completion (Delivering onward).
+  // 0554: add-ons to the agreed price, once it is agreed (amounts financial only, decided in Postgres).
+  const addons = hasRoster ? await getConsoleAddons(e.id) : null
+  const acceptedAddons = addons?.ok ? addons.data.addons.filter((a) => a.status === 'accepted') : []
   const [invoices, payouts, completion] = await Promise.all([
     hasRoster && financial ? getConsoleInvoices(e.id) : Promise.resolve(null),
     hasDeliverables ? getConsolePayouts(e.id) : Promise.resolve(null),
@@ -264,6 +268,17 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
         ) : <Failed message={quotes.error} inline />}
       </div>
 
+      {/* ══════ ADD-ONS: more after the price is agreed (0554) ══════ */}
+      {addons && (
+        <div style={{ marginTop: 20 }}>
+          {addons.ok
+            ? <AddonPanel experienceId={e.id} addons={addons.data.addons} canSend={addons.data.can_send}
+                windowOpen={['rostering', 'confirmed', 'shoot_scheduled', 'shoot_done', 'delivering'].includes(e.status)}
+                agreedTotalPaise={e.can_see_brand_price ? e.brand_service_total_paise : null} />
+            : <Failed message={addons.error} inline />}
+        </div>
+      )}
+
 
       <div className="xp-cols" style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 20, marginTop: 20, alignItems: 'start' }}>
         {/* ══════ THE REQUEST ══════ */}
@@ -306,8 +321,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
                     {formatRupees(e.brand_service_total_paise)}
                   </div>
                   <p className="t-body" style={{ margin: '6px 0 0' }}>
-                    {e.brand_deliverable_count} × {formatRupees(e.brand_per_video_paise)}{e.brand_misc_paise ? ` + ${formatRupees(e.brand_misc_paise)} extras` : ''}
+                    {acceptedAddons.length > 0 ? 'Quote: ' : ''}{e.brand_deliverable_count} × {formatRupees(e.brand_per_video_paise)}{e.brand_misc_paise ? ` + ${formatRupees(e.brand_misc_paise)} extras` : ''}
                     {(e.brand_extras ?? []).length > 0 ? ` (${(e.brand_extras ?? []).map((x) => `${x.label} ${formatRupees(Number(x.amount_paise))}`).join(', ')})` : ''}
+                    {acceptedAddons.map((a) => <span key={a.id} style={{ display: 'block' }}>+ Add-on #{a.number}: {a.total_paise != null ? formatRupees(a.total_paise) : ''}</span>)}
                   </p>
                 </>
               ) : (
