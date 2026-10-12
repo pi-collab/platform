@@ -33,6 +33,7 @@ async function sessionFor(authId: string): Promise<SupabaseClient> {
   return createClient(URL, ANON, { global: { headers: { Authorization: `Bearer ${s.access_token}` } }, auth: { persistSession: false } })
 }
 const refused = (r: { error: { message: string } | null }) => !!r.error
+const said = (r: { error: { message: string } | null }, re: RegExp) => !!r.error && re.test(r.error.message)
 // The plan: 10 creators, each making 2 UGC videos + 1 Story; affiliate on 1 of
 // each creator's 2 videos; ad rights on all of them for 3 months.
 const req = (brandId: string, over: Record<string, unknown> = {}) => ({
@@ -160,6 +161,31 @@ async function run() {
   const g3 = (await staff.rpc('experience_console_get', { p_experience_id: c2.data })).data
   ok('with it: accepted, 18 × ₹3,500 = ₹63,000 locked, rostering', !ok2.error && g3.brand_service_total_paise === 6300000 && g3.status === 'rostering')
   ok('a negotiated count is the contract: sold 18 against a plan of 20, both recorded', g3.agreed_plan?.videos_sold === 18 && g3.agreed_plan?.plan_videos === 20)
+
+  group('0553: extras as named lines')
+  const c3 = await staff.rpc('experience_console_create', req(B.brand_id)); made.push(c3.data as string)
+  const X3 = c3.data as string
+  const lines = [{ label: 'Travel to Goa', amount_paise: 1500000 }, { label: 'Hair and makeup', amount_paise: 800000 }]
+  ok('a mismatched extras total is refused', said(await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: 100, p_extras: lines })), /does not match/))
+  for (const [n, bad] of [
+    ['an extra with no description', [{ label: ' ', amount_paise: 1000 }]],
+    ['an extra of zero', [{ label: 'Travel', amount_paise: 0 }]],
+    ['an extra in fractions of a paisa', [{ label: 'Travel', amount_paise: 10.5 }]],
+    ['an extra with an unknown field', [{ label: 'Travel', amount_paise: 1000, note: 'x' }]],
+    ['an amount sent as text', [{ label: 'Travel', amount_paise: '1000' }]],
+    ['more than 20 extras', Array.from({ length: 21 }, (_, i) => ({ label: `Extra ${i}`, amount_paise: 100 }))],
+  ] as const) ok(`${n}: refused`, said(await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: null, p_extras: bad })), /description|20/))
+  const q3 = await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: null, p_extras: lines }))
+  ok('Guapd quotes with two named extras', !q3.error, q3.error?.message ?? '')
+  const row3 = ((await staff.rpc('experience_console_quotes', { p_experience_id: X3 })).data as any[])[0]
+  ok('the extras amount is their sum and the total includes it: 20 × ₹3,500 + ₹23,000 = ₹93,000', Number(row3.misc_paise) === 2300000 && Number(row3.total_paise) === 9300000, JSON.stringify({ m: row3.misc_paise, t: row3.total_paise }))
+  ok('finance sees the lines', JSON.stringify(row3.extras) === JSON.stringify(lines), JSON.stringify(row3.extras))
+  const bq = ((await brand.rpc('brand_experience', { p_experience_id: X3 })).data as any)?.quote
+  ok('the brand sees what each extra is for', JSON.stringify(bq?.extras) === JSON.stringify(lines) && Number(bq?.misc_paise) === 2300000, JSON.stringify(bq?.extras))
+  ok('the database refuses lines that do not add up, even from the service role', refused(await admin.from('experience_quotes').update({ misc_paise: 1 }).eq('id', row3.id).select('id')))
+  ok('accept copies the lines onto the Experience', !refused(await staff.rpc('experience_console_accept', { p_quote_id: row3.id, p_channel: 'email' }))
+    && JSON.stringify(((await staff.rpc('experience_console_get', { p_experience_id: X3 })).data as any)?.brand_extras) === JSON.stringify(lines))
+  ok('an older-style quote (one amount, no lines) still works', (await staff.rpc('experience_console_quotes', { p_experience_id: c2.data })).data?.[0]?.extras?.length === 0)
 
   group('revoking')
   await admin.from('staff_access').update({ experiences_operational: false, experiences_financial: false }).eq('user_id', STAFF.id)  // financial includes operational, so revoke both

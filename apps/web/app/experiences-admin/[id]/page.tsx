@@ -307,6 +307,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
                   </div>
                   <p className="t-body" style={{ margin: '6px 0 0' }}>
                     {e.brand_deliverable_count} × {formatRupees(e.brand_per_video_paise)}{e.brand_misc_paise ? ` + ${formatRupees(e.brand_misc_paise)} extras` : ''}
+                    {(e.brand_extras ?? []).length > 0 ? ` (${(e.brand_extras ?? []).map((x) => `${x.label} ${formatRupees(Number(x.amount_paise))}`).join(', ')})` : ''}
                   </p>
                 </>
               ) : (

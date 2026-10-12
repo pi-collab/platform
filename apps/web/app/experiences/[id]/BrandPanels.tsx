@@ -48,6 +48,16 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
         {quote.deliverable_count} video{quote.deliverable_count === 1 ? '' : 's'} × {formatRupees(quote.per_video_paise)}{quote.misc_paise ? ` + ${formatRupees(quote.misc_paise)} extras` : ''}
         {(quote.shoot_city || quote.shoot_date) ? ` · shoot ${[quote.shoot_city, fmt(quote.shoot_date)].filter(Boolean).join(', ')}` : ''}
       </div>
+      {/* 0553: what each extra is for. */}
+      {(quote.extras ?? []).length > 0 && (
+        <ul className="bx-extras" style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 4 }}>
+          {(quote.extras ?? []).map((x, i) => (
+            <li key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
+              <span>+ {x.label}</span><span style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatRupees(Number(x.amount_paise))}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {quote.message && <p className="bx-msg">“{quote.message}”</p>}
     </div>
   )

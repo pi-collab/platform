@@ -21,6 +21,8 @@ export interface BrandExperienceRow {
 export interface BrandQuote {
   quote_id: string; version: number; proposed_by: 'guapd' | 'brand'
   per_video_paise: number; deliverable_count: number; misc_paise: number; total_paise: number
+  /** 0553: the extras as named lines (their sum is misc_paise); [] on older quotes. */
+  extras?: { label: string; amount_paise: number }[]
   deliverables: { type: string; count: number }[]; shoot_date: string | null; shoot_city: string | null
   message: string | null; status: 'open' | 'accepted' | 'rejected' | 'withdrawn'; brand_note: string | null
   decided_at: string | null; on_guapd: boolean

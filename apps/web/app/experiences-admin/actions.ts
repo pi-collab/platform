@@ -92,6 +92,8 @@ export interface QuoteForm {
   perVideo: string
   count: number | string
   misc: string
+  /** 0553: named extras; when given, the extras amount is their sum. */
+  extras?: { label: string; amount: string }[]
   shootDate: string
   shootCity: string
   message: string
@@ -106,14 +108,24 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
   if (!perVideo || perVideo <= 0) return { ok: false, error: 'Enter a price per video, in rupees.' }
   const count = Number(f.count)
   if (!Number.isInteger(count) || count <= 0) return { ok: false, error: 'Enter how many videos.' }
-  const misc = f.misc?.trim() ? rupeesToPaise(f.misc) : 0
+  const lines: { label: string; amount_paise: number }[] = []
+  for (const x of Array.isArray(f.extras) ? f.extras.slice(0, 21) : []) {
+    const label = typeof x?.label === 'string' ? x.label.trim() : ''
+    const amt = typeof x?.amount === 'string' && x.amount.trim() ? rupeesToPaise(x.amount) : null
+    if (!label && !(typeof x?.amount === 'string' && x.amount.trim())) continue // an empty row
+    if (label.length < 2 || label.length > 120) return { ok: false, error: 'Describe each extra (2 to 120 characters).' }
+    if (!amt || amt <= 0) return { ok: false, error: `Enter an amount in rupees for "${label}".` }
+    lines.push({ label, amount_paise: amt })
+  }
+  if (lines.length > 20) return { ok: false, error: 'At most 20 extras.' }
+  const misc = lines.length ? lines.reduce((n, l) => n + l.amount_paise, 0) : f.misc?.trim() ? rupeesToPaise(f.misc) : 0
   if (misc === null) return { ok: false, error: 'Extras must be an amount in rupees.' }
   const channel = isChannel(f.channel) ? f.channel : null
   if (f.proposedBy === 'brand' && !channel) return { ok: false, error: 'Say how the brand sent its counter.' }
 
   const r = await addConsoleQuote({
     experienceId: f.experienceId, proposedBy: f.proposedBy, perVideoPaise: perVideo, deliverableCount: count,
-    miscPaise: misc, deliverables: deliverables(f.deliverables) ?? [], shootDate: isoDate(f.shootDate),
+    miscPaise: misc, extras: lines, deliverables: deliverables(f.deliverables) ?? [], shootDate: isoDate(f.shootDate),
     shootCity: cleanText(f.shootCity, 120), message: cleanText(f.message, 2000), channel,
   })
   if (!r.ok) return r

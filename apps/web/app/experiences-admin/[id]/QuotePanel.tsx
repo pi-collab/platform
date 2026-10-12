@@ -39,7 +39,8 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
   // composer
   const [perVideo, setPerVideo] = useState('')
   const [count, setCount] = useState(String(defaults.count || ''))
-  const [misc, setMisc] = useState('')
+  // 0553: extras as named lines; the extras amount is their sum.
+  const [extras, setExtras] = useState<{ label: string; amount: string }[]>([])
   const [date, setDate] = useState(defaults.date)
   const [city, setCity] = useState(defaults.city)
   const [message, setMessage] = useState('')
@@ -51,7 +52,9 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
     if (latest) {
       setPerVideo(latest.per_video_paise != null ? String(latest.per_video_paise / 100) : '')
       setCount(String(latest.deliverable_count))
-      setMisc(latest.misc_paise ? String(latest.misc_paise / 100) : '')
+      setExtras((latest.extras ?? []).length > 0
+        ? (latest.extras ?? []).map((x) => ({ label: x.label, amount: String(x.amount_paise / 100) }))
+        : latest.misc_paise ? [{ label: 'Extras', amount: String(latest.misc_paise / 100) }] : [])
       setDate(latest.shoot_date ?? defaults.date)
       setCity(latest.shoot_city ?? defaults.city)
     }
@@ -59,14 +62,17 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
     setChannel('')
   }
 
-  const pv = rupeesToPaise(perVideo), ms = misc.trim() ? rupeesToPaise(misc) : 0, n = Number(count)
+  const filled = extras.filter((x) => x.label.trim() || x.amount.trim())
+  const extraPaise = filled.map((x) => rupeesToPaise(x.amount))
+  const ms = extraPaise.some((v) => v === null) ? null : extraPaise.reduce<number>((a, v) => a + (v ?? 0), 0)
+  const pv = rupeesToPaise(perVideo), n = Number(count)
   const preview = pv && ms !== null && Number.isInteger(n) && n > 0 ? pv * n + ms : null
 
   const send = () => {
     if (!mode) return
     setError(null)
     start(async () => {
-      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc, shootDate: date, shootCity: city, message, channel, deliverables: requested })
+      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc: '', extras: filled, shootDate: date, shootCity: city, message, channel, deliverables: requested })
       if (r.ok) { setMode(null); router.refresh() } else setError(r.error)
     })
   }
@@ -129,8 +135,6 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
               <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, marginTop: 6, color: Number(count) && Number(count) !== planVideos ? '#8C6417' : 'var(--wg-500)' }}>
                 {Number(count) && Number(count) !== planVideos ? `Plan is ${planVideos} (${planLabel}). Accepting this locks ${count}.` : `From the plan: ${planLabel}`}
               </div></div>
-            <div><label style={fieldLabel} htmlFor="q-misc">Extras (₹, optional)</label>
-              <input id="q-misc" className="dinput" inputMode="decimal" placeholder="0" value={misc} onChange={(e) => setMisc(e.target.value)} /></div>
             <div><span style={fieldLabel}>Shoot date</span><DatePill value={date} onChange={setDate} id="q-date" /></div>
             <div><label style={fieldLabel} htmlFor="q-city">City</label>
               <input id="q-city" className="dinput" value={city} maxLength={120} onChange={(e) => setCity(e.target.value)} /></div>
@@ -143,6 +147,23 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
             )}
             <div style={{ gridColumn: '1 / -1' }}><label style={fieldLabel} htmlFor="q-msg">{mode === 'guapd' ? 'Message to the brand (optional)' : 'What they said (optional)'}</label>
               <textarea id="q-msg" className="dinput" rows={3} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} style={{ height: 'auto', padding: '12px 14px', lineHeight: 1.5 }} /></div>
+          </div>
+          {/* 0553: extras, each with what it is for. The brand sees these lines. */}
+          <div style={{ marginTop: 14 }}>
+            <span style={fieldLabel}>Extras (optional)</span>
+            {extras.length === 0 && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--wg-500)', margin: '2px 0 8px' }}>Anything on top of the videos: travel, styling, express edit, location…</div>}
+            <div style={{ display: 'grid', gap: 8 }}>
+              {extras.map((x, i) => (
+                <div key={i} className="xp-extra" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 160px auto', gap: 8, alignItems: 'center' }}>
+                  <input className="dinput" aria-label={`Extra ${i + 1}: what it is for`} placeholder="What it is for, e.g. Travel to Goa" maxLength={120}
+                    value={x.label} onChange={(e) => setExtras(extras.map((y, k) => k === i ? { ...y, label: e.target.value } : y))} />
+                  <input className="dinput" aria-label={`Extra ${i + 1}: amount in rupees`} inputMode="decimal" placeholder="₹ amount"
+                    value={x.amount} onChange={(e) => setExtras(extras.map((y, k) => k === i ? { ...y, amount: e.target.value } : y))} />
+                  <button type="button" style={{ ...pillBtn, height: 36, padding: '0 12px' }} aria-label={`Remove extra ${i + 1}`} onClick={() => setExtras(extras.filter((_, k) => k !== i))}>Remove</button>
+                </div>
+              ))}
+            </div>
+            {extras.length < 20 && <button type="button" style={{ ...pillBtn, height: 34, marginTop: 8 }} onClick={() => setExtras([...extras, { label: '', amount: '' }])}>+ Add an extra</button>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink)' }}>
@@ -177,7 +198,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
                   <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{q.total_paise != null ? formatRupees(q.total_paise) : <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--wg-500)' }}>Finance only</span>}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 6 }}>
-                  {q.per_video_paise != null ? <>{q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}</> : <>{q.deliverable_count} video{q.deliverable_count === 1 ? '' : 's'}</>}
+                  {q.per_video_paise != null ? <>{q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}{(q.extras ?? []).length > 0 ? ` (${(q.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(', ')})` : ''}</> : <>{q.deliverable_count} video{q.deliverable_count === 1 ? '' : 's'}</>}
                   {(q.shoot_date || q.shoot_city) && <> · {[q.shoot_city, q.shoot_date ? fmt(q.shoot_date) : null].filter(Boolean).join(', ')}</>}
                 </div>
                 {q.message && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>“{q.message}”</p>}
@@ -204,7 +225,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
       <ConfirmDialog
         open={confirming && !!current}
         title={brandAccepts ? 'Record that the brand accepted' : "Accept the brand's counter"}
-        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
+        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${(current.extras ?? []).length > 0 ? (current.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(' + ') : formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
         detail={brandAccepts ? (
           <div style={{ marginTop: 12 }}>
             <label style={fieldLabel} htmlFor="acc-ch">They accepted via</label>
@@ -221,7 +242,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
         onCancel={() => setConfirming(false)}
       />
 
-      <style>{`@media (max-width: 720px) { .xp-q { grid-template-columns: 1fr !important; } }`}</style>
+      <style>{`@media (max-width: 720px) { .xp-q { grid-template-columns: 1fr !important; } .xp-extra { grid-template-columns: 1fr 110px !important; } .xp-extra button { grid-column: 1 / -1; justify-self: start; } }`}</style>
     </section>
   )
 }

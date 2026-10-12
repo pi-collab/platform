@@ -65,6 +65,8 @@ export interface ConsoleExperience {
   brand_per_video_paise: number | null
   brand_deliverable_count: number | null
   brand_misc_paise: number | null
+  /** 0553: the agreed extras as named lines (financial only). */
+  brand_extras?: QuoteExtra[] | null
   brand_service_total_paise: number | null
   shoot_date: string | null
   shoot_city: string | null
@@ -92,6 +94,8 @@ export interface ConsoleQuote {
   per_video_paise: number | null
   deliverable_count: number
   misc_paise: number | null
+  /** 0553: the extras as named lines (their sum is misc_paise); null without financial access, [] on older quotes. */
+  extras?: QuoteExtra[] | null
   total_paise: number | null
   /** The brand's note when they declined on Guapd (0544); financial only, like the message. */
   brand_note?: string | null
@@ -157,12 +161,16 @@ export async function createConsoleExperience(p: CreateRequestInput): Promise<Re
   return error ? fail(error) : { ok: true, data: data as string }
 }
 
+/** 0553: one named extra on a quote. */
+export interface QuoteExtra { label: string; amount_paise: number }
+
 export interface QuoteInput {
   experienceId: string
   proposedBy: 'guapd' | 'brand'
   perVideoPaise: number
   deliverableCount: number
   miscPaise: number
+  extras: QuoteExtra[]
   deliverables: ConsoleDeliverable[]
   shootDate: string | null
   shootCity: string | null
@@ -174,7 +182,7 @@ export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_quote', {
     p_experience_id: p.experienceId, p_proposed_by: p.proposedBy, p_per_video_paise: p.perVideoPaise,
     p_deliverable_count: p.deliverableCount, p_misc_paise: p.miscPaise, p_deliverables: p.deliverables,
-    p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel,
+    p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel, p_extras: p.extras,
   })
   return error ? fail(error) : { ok: true, data: data as string }
 }

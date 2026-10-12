@@ -7330,3 +7330,12 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] `experience_creator_invoices` has no policies or grants: not readable directly by creators, staff or brands. The brand never sees it. The timeline event carries no amounts.
 - [ ] Void: operational staff only, reason required, refused while a payout is live.
 - Gotcha: 0552 rewrites `experience_console_payout_request`, `creator_leg_context` and `experience_console_payouts` from their live staging definitions (after 0551). Run 0551 then 0552 on prod.
+
+## 122. Experiences: quote extras as named lines (migration 0553)
+
+- [ ] Console quote form (finance): "Extras (optional)" is a list. "+ Add an extra" adds a row (what it is for, ₹ amount, Remove); up to 20. Empty rows are ignored. The Total reads `videos × price + extras sum`.
+- [ ] "Send a new quote" / "Record brand's counter" prefill the last quote's lines; an older quote with one bare amount prefills one line "Extras".
+- [ ] Quote history and the accept confirmation list each extra with its amount; the agreed price on the console lists them after accept.
+- [ ] Brand (`/experiences/<id>`): the quote shows each extra ("+ Travel to Goa ₹15,000") under the total.
+- [ ] Rules (scripts/test-experience-console-quotes.ts, group 0553): the extras amount is the sum of the lines (a mismatched amount is refused, also by a table CHECK the service role cannot get round); each line needs a 2 to 120 character description and a whole-paise amount above zero, no other fields, numbers not text; at most 20; operational staff see no amounts or lines (financial only, 0537); accept copies the lines to `experiences.brand_extras`. Quote total, agreed price, invoices and the P&L are unchanged (the sum is misc_paise as before).
+- Gotcha: `experience_quote_accept_apply` reads the quote positionally into its row type; a new column on `experience_quotes` must be added at the END of that select list.
