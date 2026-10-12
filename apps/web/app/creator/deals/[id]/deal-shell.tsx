@@ -77,26 +77,28 @@ export function DealHeroCard({ brand, brandLogo, meta, headline, subline, chatLa
               {backLabel}
             </Link>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, minWidth: 0 }}>
-                <BrandMark
-                  name={brand}
-                  logoUrl={brandLogo}
-                  style={{
-                    width: 52, height: 52, borderRadius: 15, flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
-                    color: 'var(--sec-ink)', background: 'var(--sec-2)',
-                    border: '1px solid var(--frost-edge)',
-                  }}
-                />
-              <div>
-                <div style={metaLabel}>{meta}</div>
-                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: '8px 0 0' }}>
-                  {headline}
-                  <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
-                </h1>
-                {subline && <div style={{ marginTop: 6, fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>{subline}</div>}
-              </div>
+              {/* The mark sits level with the headline; the label above and the
+                  subline below line up with the text, not with the mark. */}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ ...metaLabel, paddingLeft: 68 }}>{meta}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8, minWidth: 0 }}>
+                  <BrandMark
+                    name={brand}
+                    logoUrl={brandLogo}
+                    style={{
+                      width: 52, height: 52, borderRadius: 15, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
+                      color: 'var(--sec-ink)', background: 'var(--sec-2)',
+                      border: '1px solid var(--frost-edge)',
+                    }}
+                  />
+                  <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(26px,3.4vw,34px)', fontWeight: 700, letterSpacing: '-0.025em', margin: 0, minWidth: 0 }}>
+                    {headline}
+                    <span style={{ fontFamily: 'var(--font-serif, Georgia, serif)', fontStyle: 'italic', fontWeight: 400 }}>{brand}</span>
+                  </h1>
+                </div>
+                {subline && <div style={{ marginTop: 6, paddingLeft: 68, fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>{subline}</div>}
               </div>
               <OpenDealChat className="neonbtn" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
