@@ -20,6 +20,16 @@ export interface CreatorLegInvoice {
   gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number; allowance_paise: number; payable_paise: number
 }
 
+export interface CreatorLegExtra {
+  id: string; number: number; status: 'open' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: { type: string; count: number }[]; items: number; videos: number
+  pricing: 'per_item' | 'flat'; unit_paise: number | null; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  message: string | null; decline_reason: string | null; created_at: string; decided_at: string | null
+  invoice: { id: string; number: string; issued_at: string; payable_paise: number } | null
+  can_invoice: boolean
+  payout: { status: string; net_paise: number; tds_paise: number; paid_paise: number; paid_on: string | null; reference: string | null } | null
+}
+
 export interface CreatorLegContext {
   brand_name: string | null
   brand_logo_url: string | null
@@ -56,6 +66,8 @@ export interface CreatorLegContext {
   /** 0552: the creator's issued invoice to Guapd (figures copied from the locked terms), and whether they can raise it now. */
   invoice?: CreatorLegInvoice | null
   can_invoice?: boolean
+  /** 0555: extra deliverables offered on this deal (not replaced ones), each with its own invoice and payout. */
+  extras?: CreatorLegExtra[]
   /** 0542: counters on this offer (both sides), oldest first, and how many the creator has left. */
   counters?: CreatorLegCounter[]
   counters_left?: number

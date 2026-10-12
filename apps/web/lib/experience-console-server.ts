@@ -841,6 +841,9 @@ export interface ConsolePayoutLeg {
   /** 0542: masked only; full details are finance's (getPayoutAccount). */
   payment_details: { bank_on_file: boolean; account_masked: string | null; upi_on_file: boolean; changed_at: string | null }
   cancelled_before: number; payout: ConsolePayout | null
+  /** 0555: accepted extras on this creator deal, each with its own invoice and payout. */
+  extras?: { id: string; number: number; deliverables: ConsoleDeliverable[]; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number; work_complete: boolean
+    invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null; payout: ConsolePayout | null }[]
   /** 0552: the creator's issued invoice to Guapd; the payout is requested only once it exists. */
   creator_invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
 }
@@ -1068,4 +1071,32 @@ export async function recordAddonAnswer(addonId: string, accept: boolean, channe
 export async function withdrawAddon(addonId: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_addon_withdraw', { p_addon_id: addonId })
   return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0555: extra deliverables for a creator ─────────────────────────────────
+export interface ConsoleExtra {
+  id: string; deal_id: string; creator_id: string; full_name: string; number: number
+  status: 'open' | 'superseded' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: ConsoleDeliverable[]; items: number; videos: number; pricing: 'per_item' | 'flat'; unit_paise: number | null
+  gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  message: string | null; decline_reason: string | null; created_at: string; decided_at: string | null; created_by_name: string | null
+}
+export async function getConsoleExtras(experienceId: string): Promise<Result<ConsoleExtra[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_extras', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleExtra[] }
+}
+export async function sendExtra(p: { dealId: string; deliverables: ConsoleDeliverable[]; pricing: 'per_item' | 'flat'; unitPaise: number | null; flatPaise: number | null; message: string | null; expectedGrossPaise: number; expectedNetPaise: number }): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_extra_send', {
+    p_deal_id: p.dealId, p_deliverables: p.deliverables, p_pricing: p.pricing, p_unit_paise: p.unitPaise, p_flat_paise: p.flatPaise,
+    p_message: p.message, p_expected_gross_paise: p.expectedGrossPaise, p_expected_net_paise: p.expectedNetPaise,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function withdrawExtra(extraId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_extra_withdraw', { p_extra_id: extraId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function requestExtraPayout(extraId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_extra_payout_request', { p_extra_id: extraId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
 }

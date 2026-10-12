@@ -2,20 +2,22 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { raiseLegInvoice } from './leg-actions'
+import { raiseExtraInvoice, raiseLegInvoice } from './leg-actions'
 
 /**
  * 0552: after Guapd marks the shoot done, the creator confirms it and raises
  * their invoice to Guapd. Nothing here sets an amount: the database copies the
  * locked figures; the total shown is only checked against them on submit.
  */
-export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, shootLabel, defaultName, compact = false }: {
+export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, shootLabel, defaultName, compact = false, extraId = null }: {
   dealId: string
   payablePaise: number
   payableLabel: string
   shootLabel: string
   defaultName: string
   compact?: boolean
+  /** 0555: the invoice for an extra on this deal. */
+  extraId?: string | null
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -27,7 +29,8 @@ export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, sho
   const submit = () => {
     setError(null)
     start(async () => {
-      const r = await raiseLegInvoice(dealId, { confirmed, billingName: name, gstin, expectedPayablePaise: payablePaise })
+      const input = { confirmed, billingName: name, gstin, expectedPayablePaise: payablePaise }
+      const r = extraId ? await raiseExtraInvoice(dealId, extraId, input) : await raiseLegInvoice(dealId, input)
       if (!r.ok) { setError(r.message); return }
       router.refresh()
     })
@@ -44,7 +47,7 @@ export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, sho
     <div style={{ width: '100%', display: 'grid', gap: 14 }}>
       <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 13, lineHeight: 1.45, color: 'var(--ink)' }}>
         <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ marginTop: 3, width: 16, height: 16, accentColor: 'var(--ink)' }} />
-        <span>I confirm the shoot {shootLabel} is done and my part is complete.</span>
+        <span>{extraId ? 'I confirm this extra work is agreed and my part is complete.' : <>I confirm the shoot {shootLabel} is done and my part is complete.</>}</span>
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: 12 }}>
         <div>

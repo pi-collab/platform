@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getLegThread, listConsoleLegs } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleExtras, getLegThread, listConsoleLegs } from '@/lib/experience-console-server'
 import { countOf } from '@/lib/experience-request'
 import { formatPaiseINR } from '@/lib/money'
 import CreatorStepper from '@/app/creator/deals/[id]/CreatorStepper'
@@ -9,6 +9,7 @@ import { DealHeroCard, DealShellStyles, wrapper } from '@/app/creator/deals/[id]
 import { TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, chipStyle } from '@/app/creator/deals/[id]/deal-cards'
 import NoAccess from '../../NoAccess'
 import ConsoleDealThread from '../../ConsoleDealThread'
+import ConsoleExtras from '../../ConsoleExtras'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,7 +36,8 @@ export default async function ConsoleDealPage({ params, searchParams }: { params
   const t = await getLegThread(params.dealId)
   if (!t.ok) notFound()
   const th = t.data
-  const [exp, legs] = await Promise.all([getConsoleExperience(th.experience_id), listConsoleLegs(th.experience_id)])
+  const [exp, legs, extrasRes] = await Promise.all([getConsoleExperience(th.experience_id), listConsoleLegs(th.experience_id), getConsoleExtras(th.experience_id)])
+  const extras = extrasRes.ok ? extrasRes.data.filter((x) => x.deal_id === th.deal_id) : []
   const e = exp.ok ? exp.data : null
   const leg = legs.ok ? legs.data.find((l) => l.leg_deal_id === th.deal_id) ?? null : null
 
@@ -94,6 +96,12 @@ export default async function ConsoleDealPage({ params, searchParams }: { params
                 <MoneyRow label="Total to the creator" value={formatPaiseINR(total ?? 0)} strong last />
               </>)}
             </DeliverablesCard>
+
+            {/* 0555: extra deliverables for this creator. */}
+            {leg && (th.status === 'agreed' || th.status === 'paid' || extras.length > 0) && (
+              <ConsoleExtras experienceId={th.experience_id} dealId={th.deal_id} creatorName={th.creator_name} track={leg.track} extras={extras}
+                canSend={(th.status === 'agreed' || th.status === 'paid') && !!e && ['confirmed', 'shoot_scheduled', 'shoot_done', 'delivering'].includes(e.status)} />
+            )}
 
             <div className="surface" style={{ padding: '22px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Counters, brief, shoot outcome, deliverables and payout are managed on the Experience.</span>

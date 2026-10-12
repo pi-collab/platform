@@ -18,6 +18,7 @@ export const STAFF_NOTIFICATION_TYPES = [
   'experience_item_submitted',     // a creator submitted a deliverable
   'experience_payout_to_approve',  // a payout needs a second person
   'experience_creator_invoiced',   // 0552: a creator confirmed the shoot and raised their invoice
+  'experience_extra_answer',       // 0555: a creator answered an extra deliverables offer
   'experience_brand_message_in',   // 0550: the brand wrote in the brand thread
 ] as const
 

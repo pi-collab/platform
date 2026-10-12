@@ -30,14 +30,14 @@ const statusPill: React.CSSProperties = {
 }
 
 /** "Ready to decide?" — the bar above the tracker while an offer is open. */
-export function ReadyToDecideBar({ title, sub }: { title: string; sub: string }) {
+export function ReadyToDecideBar({ title, sub, href = '#decision' }: { title: string; sub: string; href?: string }) {
   return (
     <div className="surface" style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
       <div>
         <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{title}</div>
         <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>{sub}</div>
       </div>
-      <a href="#decision" className="neonbtn" style={{
+      <a href={href} className="neonbtn" style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         height: 44, padding: '0 22px', borderRadius: 12,
         background: 'var(--neon)', border: 'none',

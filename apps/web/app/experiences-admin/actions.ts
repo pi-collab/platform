@@ -14,7 +14,7 @@ import {
   setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
   draftConsoleInvoice, updateConsoleInvoice, discardConsoleInvoice, issueConsoleInvoice, consoleInvoiceDoc,
   consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
-  getConsolePayouts, sendAddon, recordAddonAnswer, withdrawAddon, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
+  getConsolePayouts, sendExtra, withdrawExtra, requestExtraPayout, sendAddon, recordAddonAnswer, withdrawAddon, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
   recordBrandSignoff, clearBrandSignoff,
   addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
   acceptCounter, declineCounter, sendCounter, withdrawGuapdCounter, getPayoutAccount, type PayoutAccount,
@@ -23,7 +23,7 @@ import {
   type ConsoleDeliverable, type ConsoleLegsReconcile,
 } from '@/lib/experience-console-server'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
-import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged } from '@/lib/experience-leg-notify'
+import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
 import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove, notifyCreatorInvoiceVoided } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
@@ -1205,5 +1205,60 @@ export async function withdrawAddonAction(experienceId: string, addonId: string)
   const r = await withdrawAddon(addonId)
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
+  return r
+}
+
+// ── 0555: extra deliverables for a creator (operational) ─────────────────────
+export interface ExtraForm {
+  experienceId: string
+  dealId: string
+  deliverables: { type: string; count: number | string }[]
+  pricing: 'per_item' | 'flat'
+  unit: string
+  flat: string
+  message: string
+  expectedGrossPaise: number
+  expectedNetPaise: number
+  /** An open extra is being replaced. */
+  revising: boolean
+}
+export async function sendExtraAction(f: ExtraForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(f.experienceId) || !isUuid(f.dealId)) return { ok: false, error: 'Unknown creator deal.' }
+  const dl = deliverables((Array.isArray(f.deliverables) ? f.deliverables : []).filter((d) => String(d?.count ?? '').trim() !== ''))
+  if (!dl || dl.length === 0) return { ok: false, error: 'Add what the extra is: a type and a count.' }
+  if (new Set(dl.map((d) => d.type)).size !== dl.length) return { ok: false, error: 'List each type once.' }
+  if (f.pricing !== 'per_item' && f.pricing !== 'flat') return { ok: false, error: 'Price it per item or as a flat amount.' }
+  const unit = f.pricing === 'per_item' ? rupeesToPaise(f.unit) : null
+  const flat = f.pricing === 'flat' ? rupeesToPaise(f.flat) : null
+  if (f.pricing === 'per_item' && (!unit || unit <= 0)) return { ok: false, error: 'Enter the rate per item, in rupees.' }
+  if (f.pricing === 'flat' && (!flat || flat <= 0)) return { ok: false, error: 'Enter the flat amount, in rupees.' }
+  if (!Number.isSafeInteger(f.expectedGrossPaise) || !Number.isSafeInteger(f.expectedNetPaise)) return { ok: false, error: 'Something went wrong. Reload and try again.' }
+  const r = await sendExtra({ dealId: f.dealId, deliverables: dl, pricing: f.pricing, unitPaise: unit, flatPaise: flat,
+    message: cleanText(f.message, 2000), expectedGrossPaise: f.expectedGrossPaise, expectedNetPaise: f.expectedNetPaise })
+  if (!r.ok) return r
+  await notifyCreatorExtraOffer(f.dealId, !!f.revising)
+  refresh(f.experienceId); revalidatePath(`${BASE}/deals/${f.dealId}`)
+  return r
+}
+export async function withdrawExtraAction(experienceId: string, dealId: string, extraId: string): Promise<Out<null>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(dealId) || !isUuid(extraId)) return { ok: false, error: 'Unknown extra.' }
+  const r = await withdrawExtra(extraId)
+  if (!r.ok) return r
+  refresh(experienceId); revalidatePath(`${BASE}/deals/${dealId}`)
+  return r
+}
+export async function requestExtraPayoutAction(experienceId: string, extraId: string, tds: string, creatorName: string): Promise<Out<string>> {
+  const g = await experienceStaffGate()
+  if (!g.ok) return { ok: false, error: 'Guapd Experiences is for the Guapd team.' }
+  if (!isUuid(experienceId) || !isUuid(extraId)) return { ok: false, error: 'Unknown extra.' }
+  const tdsPaise = money(tds || '0', true)
+  if (tdsPaise == null) return { ok: false, error: 'Enter the TDS to withhold (0 if none).' }
+  const r = await requestExtraPayout(extraId, tdsPaise)
+  if (!r.ok) return r
+  const { data: me } = await createAdminClient().from('users').select('id').eq('auth_id', g.user.id).maybeSingle()
+  await notifyStaffPayoutToApprove(experienceId, typeof creatorName === 'string' ? creatorName.slice(0, 120) : 'a creator', me?.id ?? null)
+  refresh(experienceId)
   return r
 }

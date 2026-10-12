@@ -1580,3 +1580,13 @@ REVOKE ALL ON experience_creator_invoices FROM anon, authenticated;
 -- add-on adds and its status (no amounts) through experience_console_addons.
 ALTER TABLE experience_addons ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_addons FROM anon, authenticated;
+
+-- ═════ 0555: extra deliverables for a creator ═════
+-- experience_leg_extras has NO policies and NO grants for users. Operational
+-- staff send, revise and withdraw through experience_console_extra_* and read
+-- through experience_console_leg_extras; the creator answers their own through
+-- creator_leg_extra_respond, reads them through creator_leg_context, and
+-- invoices an accepted one through creator_leg_extra_invoice_raise / _doc.
+-- The brand never sees an extra (only what is shared with it as a deliverable).
+ALTER TABLE experience_leg_extras ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_leg_extras FROM anon, authenticated;

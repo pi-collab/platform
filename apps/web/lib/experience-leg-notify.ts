@@ -187,3 +187,34 @@ export async function notifyCreatorScopeChanged(dealId: string): Promise<void> {
     console.error(`[experience-leg] scope notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+/** 0555: Guapd offered the creator extra deliverables on their deal. In-app + email (no amounts in the email subject). */
+export async function notifyCreatorExtraOffer(dealId: string, revised: boolean): Promise<void> {
+  try {
+    const c = await legCreator(dealId)
+    if (!c?.userId) return
+    const body = revised
+      ? `Guapd revised the extra deliverables offer for your ${c.brand} shoot. Review it and accept or decline.`
+      : `Guapd offered you extra deliverables for your ${c.brand} shoot. Review it and accept or decline.`
+    await createNotification({ userId: c.userId, dealId, type: 'experience_extra_offer', body })
+    await emailCreator(c, `${c.brand} · Managed by Guapd: ${revised ? 'a revised' : 'an'} extra offer`, revised ? 'A revised extra offer' : 'An extra offer from Guapd',
+      [`Hi ${c.first}, ${body.charAt(0).toLowerCase()}${body.slice(1)}`, 'Open your deal to see what it adds and what you receive.'],
+      'See the offer', `leg-extra-${dealId}-${Date.now().toString().slice(0, -5)}`)
+  } catch (err) {
+    console.error(`[experience-leg] extra offer notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+/** 0555: the creator answered an extra offer: tell the Experiences staff (in-app + email). */
+export async function notifyStaffExtraAnswer(dealId: string, accepted: boolean): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    const [c, staff] = await Promise.all([legCreator(dealId), experienceStaffUserIds(admin)])
+    if (!c) return
+    const body = `${c.name ?? 'A creator'} ${accepted ? 'accepted' : 'declined'} the extra deliverables for ${c.deal.title ?? 'an Experience'}.`
+    for (const userId of staff) await createNotification({ userId, dealId, type: 'experience_extra_answer', body })
+    await emailExperienceStaff(staff, { subject: `${c.name ?? 'A creator'} ${accepted ? 'accepted' : 'declined'} an extra`, heading: accepted ? 'Extra accepted' : 'Extra declined', body, dealId, idKey: `staff-extra-${dealId}-${Date.now().toString().slice(0, -5)}` })
+  } catch (err) {
+    console.error(`[experience-leg] staff extra notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}

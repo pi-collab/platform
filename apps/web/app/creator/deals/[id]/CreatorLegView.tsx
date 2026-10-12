@@ -9,6 +9,7 @@ import LegDeliverables from './LegDeliverables'
 import BriefBlock from './BriefBlock'
 import CreatorThread from './CreatorThread'
 import LegInvoiceForm from './LegInvoiceForm'
+import ExtraOffers from './ExtraOffers'
 import { DealHeroCard, DealShellStyles, wrapper, metaLabel, sectionHeading, termRow } from './deal-shell'
 import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, MoneyCard, CardActions, chipStyle } from './deal-cards'
 import './creator-leg.css'
@@ -223,7 +224,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={statement ?? mobileInvoice ?? undefined}
+        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0) ? <>{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
@@ -236,6 +237,10 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
               headline={headline} subline={managed} chatLabel="Message Guapd"
               statusDot={dot} statusGlow={glow} statusLabel={statusLabel} statusLine={statusLine} />
 
+            {/* 0555: an extra offer waiting for an answer is flagged at the top. */}
+            {!open && (ctx.extras ?? []).some((x) => x.status === 'open') && (
+              <ReadyToDecideBar title="New extra offer from Guapd" sub="The brand wants more from your shoot. Review it and answer." href={`#extra-${(ctx.extras ?? []).find((x) => x.status === 'open')?.number}`} />
+            )}
             {open && <ReadyToDecideBar title={(ctx.counters ?? []).some((c) => c.status === 'open' && c.proposed_by === 'guapd') ? 'New counter from Guapd' : 'Ready to decide?'} sub="Scroll down to review terms and respond." />}
 
             {!declined && !noShoot && <CreatorStepper dealStatus={ctx.status} events={[]} track={track} />}
@@ -284,6 +289,9 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                 {open && <CardActions>{answer(false)}</CardActions>}
               </DeliverablesCard>
             )}
+
+            {/* 0555: extra deliverables on this deal, each with its own invoice and payment. */}
+            <ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} />
 
             {hasBrief && brief && (
               <div className="surface" style={{ padding: '26px 24px' }}>

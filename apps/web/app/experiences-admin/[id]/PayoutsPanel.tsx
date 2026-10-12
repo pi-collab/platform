@@ -6,7 +6,7 @@ import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatRupees } from '@/lib/experience-request'
 import type { ConsolePayoutLeg, ConsolePayouts, PayoutAccount } from '@/lib/experience-console-server'
-import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, setCreatorPayoutTds, showPayoutAccount, voidCreatorInvoiceAction } from '../actions'
+import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, requestExtraPayoutAction, setCreatorPayoutTds, showPayoutAccount, voidCreatorInvoiceAction } from '../actions'
 import { openFinanceFileInTab, uploadFinanceFile } from './finance-upload'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
@@ -78,13 +78,18 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
 
       <div style={{ marginTop: 14 }}>
         {data.legs.length === 0 && <p className="t-body" style={{ margin: 0, color: 'var(--ink-soft)' }}>No accepted creators yet.</p>}
-        {data.legs.map((l) => {
+        {/* 0555: each accepted extra is its own row under the creator, with its own invoice and payout. */}
+        {data.legs.flatMap((leg) => [{ ...leg, extraId: null as string | null }, ...(leg.extras ?? []).map((x) => ({
+          ...leg, deal_id: `${leg.deal_id}:x${x.number}`, extraId: x.id as string | null, full_name: `${leg.full_name ?? 'Creator'} · Extra #${x.number}`,
+          gross_paise: x.gross_paise, platform_pct: x.platform_pct, platform_fee_paise: x.platform_fee_paise, net_paise: x.net_paise,
+          allowance_paise: 0, due_paise: x.net_paise, work_complete: x.work_complete, creator_invoice: x.invoice, payout: x.payout, cancelled_before: 0,
+        }))]).map((l) => {
           const p = l.payout
           const st = p ? STATUS[p.status] : null
           const why = l.shoot_outcome === 'did_not_shoot' ? 'Did not shoot: no payout.'
             : l.shoot_outcome !== 'done' ? 'Paid after their shoot is recorded.'
             : !l.work_complete ? 'Their deliverables need Guapd’s approval first.'
-            : !l.creator_invoice ? 'Waiting for the creator to confirm the shoot and raise their invoice.' : null
+            : !l.creator_invoice ? (l.extraId ? 'Waiting for the creator to raise the invoice for this extra.' : 'Waiting for the creator to confirm the shoot and raise their invoice.') : null
           const inv = l.creator_invoice
           return (
             <div key={l.deal_id} style={{ borderTop: '1px solid var(--hairline)', padding: '14px 0' }}>
@@ -114,7 +119,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                       <input className="dinput" style={{ height: 30, flex: 1, minWidth: 180 }} placeholder="Why (the creator sees this)" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
                       <button type="button" style={smallBtn} disabled={pending || voidReason.trim().length < 3}
-                        onClick={() => run(() => voidCreatorInvoiceAction(experienceId, l.deal_id, inv.id, inv.number, voidReason), () => { setVoiding(null); setNotice(`Invoice ${inv.number} voided. The creator was asked to raise it again.`) })}>Void invoice</button>
+                        onClick={() => run(() => voidCreatorInvoiceAction(experienceId, l.deal_id.split(':')[0], inv.id, inv.number, voidReason), () => { setVoiding(null); setNotice(`Invoice ${inv.number} voided. The creator was asked to raise it again.`) })}>Void invoice</button>
                       <button type="button" style={smallBtn} onClick={() => setVoiding(null)}>Keep</button>
                     </span>
                   )}
@@ -127,7 +132,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                         <input className="dinput" style={{ width: 90, height: 30 }} inputMode="decimal" value={tds[l.deal_id] ?? '0'} onChange={(e) => setTds({ ...tds, [l.deal_id]: e.target.value })} />
                       </label>
                       <button type="button" style={{ ...smallBtn, background: 'var(--lime-400)', borderColor: 'var(--lime-400)' }} disabled={pending}
-                        onClick={() => run(() => requestCreatorPayout(experienceId, l.deal_id, tds[l.deal_id] ?? '0'), () => setNotice(`Payout to ${l.full_name ?? 'the creator'} requested. Someone else on the team approves it.`))}>Request payout</button>
+                        onClick={() => run(() => l.extraId ? requestExtraPayoutAction(experienceId, l.extraId, tds[l.deal_id] ?? '0', l.full_name ?? 'a creator') : requestCreatorPayout(experienceId, l.deal_id, tds[l.deal_id] ?? '0'), () => setNotice(`Payout to ${l.full_name ?? 'the creator'} requested. Someone else on the team approves it.`))}>Request payout</button>
                     </>}
                     {p?.status === 'requested' && open && <>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 12 }}>TDS ₹

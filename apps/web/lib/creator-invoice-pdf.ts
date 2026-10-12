@@ -16,6 +16,8 @@ export interface CreatorInvoiceDoc {
   platform_fee_paise: number; net_paise: number; allowance_paise: number; payable_paise: number
   deal_ref: string | null; experience_title: string; brand_name: string | null; shoot_date: string | null; shoot_city: string | null
   bill_to: { legal_name: string; address: string | null; state: string | null; gstin: string | null; pan: string | null } | null
+  /** 0555: set when this invoice is for an extra on the deal. */
+  extra?: { number: number; deliverables: { type: string; count: number }[]; pricing: 'per_item' | 'flat'; unit_paise: number | null; items: number } | null
 }
 
 const date = (iso: string | null) => iso
@@ -67,7 +69,9 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
     y += 4
   }
   const days = Number(d.days)
-  line(`Shoot day rate, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${inr(d.day_rate_paise)} x ${days} day${days === 1 ? '' : 's'}`, inr(d.gross_paise))
+  const what = (d.extra?.deliverables ?? []).map((x) => `${x.count} ${x.type}${x.count === 1 ? '' : 's'}`).join(', ')
+  if (d.extra) line(`Extra deliverables #${d.extra.number}, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${what}${d.extra.pricing === 'per_item' && d.extra.unit_paise ? ` at ${inr(Number(d.extra.unit_paise))} each` : ''}`, inr(d.gross_paise))
+  else line(`Shoot day rate, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${inr(d.day_rate_paise)} x ${days} day${days === 1 ? '' : 's'}`, inr(d.gross_paise))
   line(`Less Guapd platform fee (${Number(d.platform_pct)}%)`, `-${inr(d.platform_fee_paise)}`)
   line('Net fee', inr(d.net_paise))
   if (d.allowance_paise > 0) line('Travel and other allowance (no platform fee)', inr(d.allowance_paise))
@@ -79,7 +83,7 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
   y += 26
 
   for (const t of [
-    `The creator confirmed on ${date(d.shoot_confirmed_at)} that the shoot is done.`,
+    d.extra ? `The creator confirmed on ${date(d.shoot_confirmed_at)} that the extra work is agreed and their part is complete.` : `The creator confirmed on ${date(d.shoot_confirmed_at)} that the shoot is done.`,
     'TDS, if applicable, is deducted by Guapd at payment and shown on the payout statement.',
     ...(d.gstin ? [] : ['GST is not charged on this invoice.']),
   ]) { for (const l of wrap(t, 9, W)) { pdf.text(L, y, l, 9, 'regular', 0.35); y += 12 } }

@@ -7359,3 +7359,27 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Accept: agreed total += add-on total (kept as `experiences.brand_addons_paise`, and the agreed-total CHECK now includes it); agreed plan videos sold, plan videos and per-type totals grow by what was added (Stories etc. grow their type, not the video count); the plan records the add-on; the creator-deal reconcile then expects the new count. Declined / withdrawn change nothing.
 - [ ] `experience_addons` has no policies or grants: functions only; sums held by CHECKs the service role cannot get round.
 - Gotcha: after an accepted add-on, the creator deals are short of the videos sold until Phase B (extra requests to creators) places them; the reconcile and the completion check say so.
+
+## 124. Experiences: extra deliverables for a creator (migration 0555, Phase B)
+
+**Console deal page (`/experiences-admin/deals/<id>`)**
+- [ ] "Extra deliverables" section on an accepted creator deal (Confirmed to Delivering): "Request extra deliverables" opens what it adds (type + count rows), price for the creator ("Rate per item" or "Flat amount"), message, and a live line "N × ₹rate = ₹gross · fee x% −₹fee · creator receives ₹net" (the fee at the % locked on this creator's deal).
+- [ ] Sending more than the brand bought is refused: "… Send the brand an add-on first" (videos, and each other type).
+- [ ] With an extra open: "Revise the extra" (prefilled; replaces it) and "Withdraw". The list shows each extra, its price, status, who sent it and the creator's decline reason.
+- [ ] Payouts panel: each accepted extra is its own row ("<creator> · Extra #n") with its invoice (PDF, total), "Waiting for the creator to raise the invoice for this extra" until then, then Request payout → finance Approve → Record paid, as for the main fee. Voiding an extra invoice is refused while its payout is live.
+
+**Creator (`/creator/deals/<leg>`, desktop and phone)**
+- [ ] An open extra shows a "New extra offer from Guapd" bar at the top and a highlighted "Extra offer from Guapd" card: what it adds (+2 UGC videos, ₹2,500 each), "N × ₹rate", "Platform fee (x%)", "You receive", the message, "Your deal does not change unless you accept"; Accept extra (₹net) / Decline (optional reason).
+- [ ] Accepted: the items join the deal (numbered on: UGC video 2, 3 …) and go through review and sharing as usual; the card then offers "Confirm and raise invoice" for the extra (its own number, `CI-<ref>-X<n>`, PDF says "Extra deliverables #n"), then shows the payout status and reference. The main fee's invoice and payout are separate.
+- [ ] Declined / withdrawn extras stay listed with their status.
+- [ ] Creator and staff are notified: offer (and revised offer) to the creator; the answer and the extra invoice to staff.
+
+**Rules (scripts/test-experience-extras.ts)**
+- [ ] Operational staff send; brand, creator, anon, no-access refused. Accepted creator deal only, Confirmed to Delivering.
+- [ ] Known types, counts 1..1000, each type once; per item needs a rate, flat needs an amount; stale or NULL expected gross/net refused; fee = round(gross × locked %).
+- [ ] Open and accepted extras count as placed in the creator-deal reconcile; never past videos sold or any type's total.
+- [ ] Only the creator answers their own; stale net refused; NULL refused; answer once. Accept adds items with `extra_id`. Timeline events carry no amounts.
+- [ ] Extra invoice: own deal, accepted, part complete (creator-submit: its items approved), confirmation TRUE, stale total refused, one issued per extra; the main invoice is unaffected (`extra_id IS NULL` everywhere the main invoice is looked up).
+- [ ] Extra payout: needs its invoice; one live per extra; exactly the extra (DB guard, also against the service role); finance approves (maker-checker) and pays; paying an extra never moves the deal status.
+- [ ] P&L creator cost includes accepted extras (`creator_extras_gross_paise` / `_net_paise`); cash out includes extra payouts; completion needs accepted extras paid and no open extra request.
+- [ ] `experience_leg_extras` has no policies or grants; the brand never reads extras, extra invoices or their documents.

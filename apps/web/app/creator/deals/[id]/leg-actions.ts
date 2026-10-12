@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createClient } from '@/lib/supabase/server'
-import { notifyStaffLegAnswer } from '@/lib/experience-leg-notify'
+import { notifyStaffLegAnswer, notifyStaffExtraAnswer } from '@/lib/experience-leg-notify'
 import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -157,6 +157,45 @@ export async function raiseLegInvoice(dealId: string, input: { confirmed: boolea
       : /changed/i.test(m) ? 'These figures have changed. Refresh the page and check them again.'
       : /approval/i.test(m) ? 'Your deliverables need Guapd\u2019s approval before you invoice.'
       : /marks your shoot done/i.test(m) ? 'You can raise your invoice once Guapd marks your shoot done.'
+      : 'Could not raise your invoice. Please try again.' }
+  }
+  const out = data as { id: string; number: string }
+  await notifyStaffCreatorInvoiced(dealId, out.number)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: { number: out.number } }
+}
+
+// ── 0555: extra deliverables offered on this deal ─────────────────────────
+export async function respondToExtra(dealId: string, extraId: string, accept: boolean, reason: string, expectedNetPaise: number): Promise<LegOut<null>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(extraId) || typeof accept !== 'boolean' || !Number.isSafeInteger(expectedNetPaise)) return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  const { error } = await createClient().rpc('creator_leg_extra_respond', {
+    p_extra_id: extraId, p_accept: accept, p_reason: typeof reason === 'string' ? reason.slice(0, 500) : null, p_expected_net_paise: expectedNetPaise,
+  })
+  if (error) return { ok: false, message: /changed/i.test(error.message) ? 'Guapd changed this offer. Refresh to see the latest.' : /closed/i.test(error.message) ? 'This deal is closed.' : 'Could not save your answer. Please try again.' }
+  await notifyStaffExtraAnswer(dealId, accept)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: null }
+}
+
+export async function raiseExtraInvoice(dealId: string, extraId: string, input: { confirmed: boolean; billingName: string; gstin: string; expectedPayablePaise: number }): Promise<LegOut<{ number: string }>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(extraId) || !input || typeof input.confirmed !== 'boolean' || typeof input.billingName !== 'string'
+      || typeof input.gstin !== 'string' || !Number.isSafeInteger(input.expectedPayablePaise)) {
+    return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  }
+  const { data, error } = await createClient().rpc('creator_leg_extra_invoice_raise', {
+    p_extra_id: extraId, p_confirmed: input.confirmed, p_billing_name: input.billingName.slice(0, 200),
+    p_gstin: input.gstin.slice(0, 20), p_expected_payable_paise: input.expectedPayablePaise,
+  })
+  if (error) {
+    const m = error.message
+    return { ok: false, message: /Confirm/i.test(m) ? 'Tick the box to confirm first.'
+      : /already raised/i.test(m) ? 'You have already raised the invoice for this extra.'
+      : /GSTIN/i.test(m) ? 'That GSTIN is not valid. Check it, or leave it empty.'
+      : /name to invoice/i.test(m) ? 'Enter the name to invoice from.'
+      : /changed/i.test(m) ? 'These figures have changed. Refresh the page and check them again.'
+      : /complete|shoot is done/i.test(m) ? 'You can invoice this once your part is complete.'
       : 'Could not raise your invoice. Please try again.' }
   }
   const out = data as { id: string; number: string }

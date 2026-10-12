@@ -283,6 +283,7 @@ async function cleanup() {
     const { data: legs } = await admin.from('deals').select('id').eq('experience_id', e.id)
     const ids = Array.from(new Set([...(legs ?? []).map((l) => l.id), ...st.deals]))
     await admin.from('vendor_payouts').delete().eq('experience_id', e.id)
+    await admin.from('experience_creator_invoices').delete().not('extra_id', 'is', null).eq('experience_id', e.id)
     await admin.from('experience_creator_invoices').delete().eq('experience_id', e.id)
     await admin.from('service_invoice_payments').delete().eq('experience_id', e.id)
     await admin.from('service_invoices').delete().eq('experience_id', e.id)
@@ -294,6 +295,8 @@ async function cleanup() {
       await admin.from('messages').delete().in('deal_id', ids)
       await admin.from('notifications').delete().in('deal_id', ids)
       await admin.from('events').delete().in('deal_id', ids)
+      await admin.from('deal_deliverable_items').delete().not('extra_id', 'is', null).in('deal_id', ids)
+      await admin.from('experience_leg_extras').delete().in('deal_id', ids)
       await admin.from('deals').delete().in('id', ids)
     }
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', e.id)
