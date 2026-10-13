@@ -7533,3 +7533,36 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Finance only: operational staff, the brand, creators and anonymous cannot record it; audited `experience.affiliate_pct_recorded` (with how many deals were already sent without it)
 - [ ] Tests: `scripts/test-experience-console-quotes.ts` (0562 checks)
 
+---
+
+## 132. Collab C3: the affiliate commission (migration 0563)
+
+### Creator deal page (desktop and phone; shot, accepted, an affiliate % on the deal)
+- [ ] "Affiliate commission" card: "N% of sales through your affiliate link"; before the ads finish: "Once <brand> marks your collab ads complete…"
+- [ ] When every collab ad is complete: sales (₹) input with a live preview "N% of ₹S = ₹G · Platform fee (Y%) −₹F · You receive ₹N" (half up, whole paise; the database computes the same and refuses a mismatch)
+- [ ] Confirm checkbox + Invoice from + GSTIN (optional) → **Confirm and raise invoice**: numbered CI-<ref>-AFF (then -AFF-2 after a turned-down claim); PDF "Affiliate commission … N% of ₹S sales through the affiliate link"
+- [ ] After claiming: "Guapd is reviewing" → "Approved" → "Being paid" → "Paid" with the bank reference; turned down shows Guapd's reason and the form again; closed shows "No commission is due: <reason>"
+- [ ] The commission invoice never replaces or blocks the main invoice (separate lookups everywhere)
+
+### Console, Affiliate commission (operational; Shoot done / Delivering)
+- [ ] One row per creator deal with an affiliate %: collab ads complete N of M, the claim figures, the creator invoice link, status
+- [ ] **Approve** / **Turn down** (reason 3–300, the creator sees it and may claim again; their invoice is voided) for a claim to review
+- [ ] **No commission due** (reason) when there is no claim or after a turned-down one: final for that deal
+- [ ] Finance: tick approved, unbilled commissions → **Bill the brand** → the invoice editor (type "Affiliate commission", the amount fixed to the ticked commissions, GST entered) → a follow-on draft with one line per creator; it appears under Invoices labelled "Affiliate commission", with no Edit (discard and bill again)
+- [ ] The generic invoice form cannot make a follow-on invoice; issuing one checks it still equals its approved claims
+
+### Console, Creator payouts
+- [ ] An approved commission is its own row "<creator> · Affiliate commission": TDS → Request payout → finance Approve (not the requester) → Record paid with proof, as for the main fee; its invoice cannot be voided here
+- [ ] Paying it marks the claim Paid; it never moves the creator deal's status
+
+### P&L and completion
+- [ ] P&L: approved commissions are inside creator gross/net ("incl. affiliate commission ₹X (billed to the brand)"); the follow-on invoice is revenue; commission payouts count as paid out
+- [ ] Completion is blocked by: collab ads not complete; commissions not paid or closed; paid/approved commissions not on an issued invoice to the brand
+
+### SECURITY
+- [ ] A creator claims and reads only their own deal's commission; the brand and other creators cannot read the commission invoice
+- [ ] Review / close / payout request: operational staff; billing: finance; approve and pay: finance, maker-checker
+- [ ] The database refuses a follow_on payout that is not exactly the approved claim, a second live payout per claim, a second live claim per deal, and figures that do not match sales × % (half up) and the deal's fee %
+- [ ] Audited: affiliate_claimed_by_creator, affiliate_approved, affiliate_turned_down, affiliate_closed, payout_requested (follow_on), invoice_drafted (follow_on)
+- [ ] Tests: `scripts/test-experience-collab.ts` (89 checks, commission included)
+

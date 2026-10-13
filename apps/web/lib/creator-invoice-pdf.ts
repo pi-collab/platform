@@ -18,6 +18,8 @@ export interface CreatorInvoiceDoc {
   bill_to: { legal_name: string; address: string | null; state: string | null; gstin: string | null; pan: string | null } | null
   /** 0555: set when this invoice is for an extra on the deal. */
   extra?: { number: number; deliverables: { type: string; count: number }[]; pricing: 'per_item' | 'flat'; unit_paise: number | null; items: number } | null
+  /** 0563: set when this invoice is for the affiliate commission on the deal. */
+  commission?: { sales_paise: number; affiliate_pct: number } | null
 }
 
 const date = (iso: string | null) => iso
@@ -70,7 +72,8 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
   }
   const days = Number(d.days)
   const what = (d.extra?.deliverables ?? []).map((x) => `${x.count} ${x.type}${x.count === 1 ? '' : 's'}`).join(', ')
-  if (d.extra) line(`Extra deliverables #${d.extra.number}, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${what}${d.extra.pricing === 'per_item' && d.extra.unit_paise ? ` at ${inr(Number(d.extra.unit_paise))} each` : ''}`, inr(d.gross_paise))
+  if (d.commission) line(`Affiliate commission, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${Number(d.commission.affiliate_pct)}% of ${inr(Number(d.commission.sales_paise))} sales through the affiliate link`, inr(d.gross_paise))
+  else if (d.extra) line(`Extra deliverables #${d.extra.number}, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${what}${d.extra.pricing === 'per_item' && d.extra.unit_paise ? ` at ${inr(Number(d.extra.unit_paise))} each` : ''}`, inr(d.gross_paise))
   else line(`Shoot day rate, ${d.experience_title}${d.brand_name ? ` (${d.brand_name}, managed by Guapd)` : ''}: ${inr(d.day_rate_paise)} x ${days} day${days === 1 ? '' : 's'}`, inr(d.gross_paise))
   line(`Less Guapd platform fee (${Number(d.platform_pct)}%)`, `-${inr(d.platform_fee_paise)}`)
   line('Net fee', inr(d.net_paise))
@@ -83,7 +86,8 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
   y += 26
 
   for (const t of [
-    d.extra ? `The creator confirmed on ${date(d.shoot_confirmed_at)} that the extra work is agreed and their part is complete.` : `The creator confirmed on ${date(d.shoot_confirmed_at)} that the shoot is done.`,
+    d.commission ? `The creator confirmed on ${date(d.shoot_confirmed_at)} that the sales figure is what the brand's affiliate link recorded.`
+    : d.extra ? `The creator confirmed on ${date(d.shoot_confirmed_at)} that the extra work is agreed and their part is complete.` : `The creator confirmed on ${date(d.shoot_confirmed_at)} that the shoot is done.`,
     'TDS, if applicable, is deducted by Guapd at payment and shown on the payout statement.',
     ...(d.gstin ? [] : ['GST is not charged on this invoice.']),
   ]) { for (const l of wrap(t, 9, W)) { pdf.text(L, y, l, 9, 'regular', 0.35); y += 12 } }

@@ -11,6 +11,7 @@ import CreatorThread from './CreatorThread'
 import LegInvoiceForm from './LegInvoiceForm'
 import ExtraOffers from './ExtraOffers'
 import CollabPosts from './CollabPosts'
+import AffiliateCommission from './AffiliateCommission'
 import { DealHeroCard, DealShellStyles, wrapper, metaLabel, sectionHeading, termRow } from './deal-shell'
 import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, MoneyCard, CardActions, chipStyle } from './deal-cards'
 import './creator-leg.css'
@@ -227,7 +228,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0))) ? <>{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
+        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0)) || (accepted && shot && !!ctx.commission)) ? <>{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{accepted && shot && ctx.commission && <div style={{ marginBottom: 12 }}><AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} /></div>}{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
@@ -295,6 +296,8 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
 
             {/* 0561: the videos to post as collabs (the invoice waits for them) or shared to post. */}
             {accepted && <CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} />}
+            {/* 0563: the affiliate commission, once the collab ads have run. */}
+            {accepted && shot && ctx.commission && <AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} />}
 
             {/* 0555: extra deliverables on this deal, each with its own invoice and payment. */}
             <ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} />

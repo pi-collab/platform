@@ -112,7 +112,7 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
               <div className="xp-inv-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr) 260px', gap: 14, alignItems: 'start' }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>
-                    {inv.number ?? 'Draft'} <span style={{ fontWeight: 500, color: 'var(--ink-soft)', fontSize: 12.5 }}>· {inv.kind === 'initial' ? 'Service invoice' : `Additional (${inv.source === 'new_shoot' ? 'new shoot' : 'existing footage'})`}</span>
+                    {inv.number ?? 'Draft'} <span style={{ fontWeight: 500, color: 'var(--ink-soft)', fontSize: 12.5 }}>· {inv.kind === 'initial' ? 'Service invoice' : inv.kind === 'follow_on' ? 'Affiliate commission' : `Additional (${inv.source === 'new_shoot' ? 'new shoot' : 'existing footage'})`}</span>
                   </div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)', marginTop: 4 }}>{inv.description}</div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)', marginTop: 4 }}>
@@ -133,7 +133,8 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                   <StatusChip label={st.label} tone={st.tone} />
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {inv.status === 'draft' && open && <>
-                      <button type="button" style={smallBtn} onClick={() => { setError(null); setEditing(inv.id) }}>Edit</button>
+                      {/* 0563: a commission invoice is its claims: discard and bill again rather than edit. */}
+                      {inv.kind !== 'follow_on' && <button type="button" style={smallBtn} onClick={() => { setError(null); setEditing(inv.id) }}>Edit</button>}
                       <button type="button" style={{ ...smallBtn, background: 'var(--lime-400)', borderColor: 'var(--lime-400)' }} onClick={() => setAsk({ kind: 'issue', inv })}>Issue</button>
                       <button type="button" style={{ ...smallBtn, color: '#9C4147' }} onClick={() => setAsk({ kind: 'discard', inv })}>Discard</button>
                     </>}
@@ -293,9 +294,11 @@ function BrandBillingForm({ brandId, initial, busy, onSave, onError }: { brandId
   )
 }
 
-function InvoiceEditor({ initial, defaults, registered, busy, onSave, onCancel }: {
+export function InvoiceEditor({ initial, defaults, registered, busy, onSave, onCancel, fixedAmountLabel }: {
   initial?: ConsoleInvoice; defaults?: { description: string; amount: string }; registered: boolean; busy: boolean
   onSave: (f: InvoiceForm) => void; onCancel: () => void
+  /** 0563: a commission invoice: no type to pick, the amount is the claims' sum (shown, not edited). */
+  fixedAmountLabel?: string
 }) {
   const [f, setF] = useState<InvoiceForm>({
     kind: initial?.kind === 'additional' ? 'additional' : 'initial', source: initial?.source ?? null,
@@ -308,19 +311,21 @@ function InvoiceEditor({ initial, defaults, registered, busy, onSave, onCancel }
   return (
     <div style={{ marginTop: 14, padding: 14, borderRadius: 14, background: '#F7F7F3', display: 'grid', gap: 10 }}>
       <div className="xp-inv-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Field label="Type">
+        {fixedAmountLabel ? <Field label="Type"><input className="dinput" value="Affiliate commission" disabled /></Field> : <Field label="Type">
           <select className="dinput" value={f.kind} onChange={set('kind')}>
             <option value="initial">Service invoice</option>
             <option value="additional">Additional (more videos later)</option>
           </select>
-        </Field>
+        </Field>}
         {f.kind === 'additional'
           ? <Field label="Additional for"><select className="dinput" value={f.source ?? ''} onChange={(e) => setF({ ...f, source: e.target.value || null })}>
               <option value="">Pick one</option><option value="existing_footage">Existing footage</option><option value="new_shoot">A new shoot</option></select></Field>
           : <Field label="Due date (optional)"><input className="dinput" type="date" min={today()} value={f.dueDate} onChange={set('dueDate')} /></Field>}
       </div>
       <Field label="Description (one line, the brand sees it)"><input className="dinput" maxLength={300} value={f.description} onChange={set('description')} /></Field>
-      <Field label="Amount before GST (₹)"><input className="dinput" inputMode="decimal" value={f.amount} onChange={set('amount')} /></Field>
+      {fixedAmountLabel
+        ? <Field label="Amount before GST (the approved commissions)"><input className="dinput" value={fixedAmountLabel} disabled /></Field>
+        : <Field label="Amount before GST (₹)"><input className="dinput" inputMode="decimal" value={f.amount} onChange={set('amount')} /></Field>}
       {registered ? (
         <div className="xp-inv-form" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="GST">

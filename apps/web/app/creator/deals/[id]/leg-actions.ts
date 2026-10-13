@@ -8,7 +8,7 @@ import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyStaffCreatorInvoiced } from '@/lib/experience-money-notify'
-import { notifyCollabPosted } from '@/lib/experience-collab-notify'
+import { notifyCollabPosted, notifyStaffCommissionClaimed } from '@/lib/experience-collab-notify'
 
 /**
  * The creator's actions on a Guapd Experience creator leg: accept or
@@ -233,5 +233,30 @@ export async function submitCollabPostLink(dealId: string, postId: string, url: 
   if (first) await notifyCollabPosted(postId, 'creator')
   revalidatePath(`/creator/deals/${dealId}`)
   return { ok: true, data: null }
+}
+
+// ── 0563: the affiliate commission ─────────────────────────────────────────
+// creator_affiliate_claim runs with the creator's own session: their own deal,
+// every collab ad complete, figures computed in Postgres (the screen's total is
+// checked against them).
+export async function claimAffiliateCommission(dealId: string, input: { salesRupees: string; confirmed: boolean; billingName: string; gstin: string; expectedPayablePaise: number }): Promise<LegOut<{ number: string }>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !input || typeof input.salesRupees !== 'string' || !Number.isSafeInteger(input.expectedPayablePaise)) return { ok: false, message: 'Something went wrong. Reload and try again.' }
+  const m = input.salesRupees.replace(/[,\s₹]/g, '').match(/^(\d{1,10})(?:\.(\d{1,2}))?$/)
+  if (!m) return { ok: false, message: 'Enter the sales amount in rupees, e.g. 125000 or 125000.50' }
+  const salesPaise = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'))
+  const { data, error } = await createClient().rpc('creator_affiliate_claim', {
+    p_deal_id: dealId, p_sales_paise: salesPaise, p_confirmed: input.confirmed === true,
+    p_billing_name: typeof input.billingName === 'string' ? input.billingName.slice(0, 200) : '', p_gstin: typeof input.gstin === 'string' ? input.gstin.slice(0, 15) : null,
+    p_expected_payable_paise: input.expectedPayablePaise,
+  })
+  if (error) return { ok: false, message: /Confirm/i.test(error.message) ? 'Confirm the sales figure first.' : /changed/i.test(error.message) ? 'These figures have changed. Refresh the page and check them again.'
+    : /GSTIN/i.test(error.message) ? 'That GSTIN is not valid.' : /name to invoice/i.test(error.message) ? 'Enter the name to invoice from.'
+    : /already claimed/i.test(error.message) ? 'You have already claimed this commission.' : /ads complete/i.test(error.message) ? 'You can claim once the brand marks your collab ads complete.'
+    : /no commission|more than zero/i.test(error.message) ? 'Enter a sales amount that earns a commission.' : 'Could not raise your invoice. Please try again.' }
+  const out = data as { id: string; number: string }
+  await notifyStaffCommissionClaimed(out.id)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: { number: out.number } }
 }
 

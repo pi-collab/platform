@@ -21,6 +21,7 @@ if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging')
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
+import { percentOfPaise } from '../apps/web/lib/money-round'
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 let passed = 0, failed = 0
 const ok = (n: string, c: boolean, d = '') => { c ? passed++ : failed++; console.log(`  ${c ? '✅' : '❌'} ${n}${d ? ' — ' + d : ''}`) }
@@ -89,6 +90,8 @@ async function buildExperience(op: SupabaseClient, fin: SupabaseClient, brandId:
 
 
 
+const istToday = () => new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10)
+
 async function run() {
   startedAt = new Date().toISOString()
   const { data: bm } = await admin.from('brand_members').select('brand_id, user_id, users(auth_id), brands(is_guapd)').limit(60)
@@ -98,7 +101,8 @@ async function run() {
   const { data: cr } = await admin.from('creators').select('id, user_id, vetting_status, full_name, users(auth_id)').eq('is_guapd', false).eq('is_bookable', true).limit(60)
   const pool = (cr ?? []) as any[]
   { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
-  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
+  // Either track works here (the fee % is read from the deal): a Growth creator when one is free.
+  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id) ?? pool.find((c) => c.users?.auth_id)
   const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, B2?.user_id, G?.user_id, D?.user_id, ...(access ?? []).map((a) => a.user_id)])
@@ -185,6 +189,7 @@ async function run() {
   ok('a shared video takes no link', said(await cG.rpc('creator_collab_post_link', { p_post_id: P2, p_url: IG }), /No link is needed/))
   ok('the brand cannot add the affiliate link before the post', said(await brand.rpc('brand_experience_collab_act', { p_post_id: P1, p_action: 'affiliate', p_url: 'https://shop.example.com/r/abc' }), /not posted/))
   ok('G posts it', !refused(await cG.rpc('creator_collab_post_link', { p_post_id: P1, p_url: IG })))
+  ok('0563 no commission claim before the brand marks the ad complete', said(await cG.rpc('creator_affiliate_claim', { p_deal_id: legOf(G), p_sales_paise: 1000000, p_confirmed: true, p_billing_name: 'G', p_gstin: null, p_expected_payable_paise: 1 }), /ads complete/))
   ctx = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   ok('G can now raise their invoice', ctx.can_invoice === true && ctx.collab_waiting === 0, JSON.stringify({ i: ctx.can_invoice, w: ctx.collab_waiting }))
   ok('G can correct the link before the ad completes', !refused(await cG.rpc('creator_collab_post_link', { p_post_id: P1, p_url: IG + '?igsh=x1' })))
@@ -220,6 +225,93 @@ async function run() {
   ok('…and G no longer sees it or its file', !((await cG.rpc('creator_collab_posts', { p_deal_id: legOf(G) })).data as any[]).some((p) => p.id === P2) && refused(await cG.rpc('creator_collab_file', { p_post_id: P2 })))
   ok('…so it can be sent again', !refused(await op.rpc('experience_console_collab_send', { p_release_id: g2, p_kind: 'share' })))
   ok('nobody reads the table directly', ((await cG.from('experience_collab_posts').select('id')).data ?? []).length === 0 && ((await brand.from('experience_collab_posts').select('id')).data ?? []).length === 0)
+
+  group('0563 the affiliate commission: the creator claims')
+  const tG = (await admin.from('experience_creator_terms').select('affiliate_pct, platform_pct, creator_net_paise, allowance_paise').eq('deal_id', legOf(G)).single()).data as any
+  ok('the 10% from the quote is locked on G\'s deal', Number(tG.affiliate_pct) === 10)
+  const SALES = 12_345_789
+  const gross = percentOfPaise(SALES, Number(tG.affiliate_pct)), fee = percentOfPaise(gross, Number(tG.platform_pct)), net = gross - fee
+  const claim = (s: SupabaseClient, o: Record<string, unknown> = {}) => s.rpc('creator_affiliate_claim', { p_deal_id: legOf(G), p_sales_paise: SALES, p_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: net, ...o })
+  let ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  ok('G can claim: every collab ad is complete', ctx3.commission?.can_claim === true && Number(ctx3.commission?.affiliate_pct) === 10)
+  ok('D, the brand, staff cannot claim for G', refused(await claim(cD)) && refused(await claim(brand)) && refused(await claim(op)))
+  ok('without the confirmation, zero sales, a stale total: refused', said(await claim(cG, { p_confirmed: false }), /Confirm/) && said(await claim(cG, { p_sales_paise: 0 }), /more than zero/)
+    && said(await claim(cG, { p_expected_payable_paise: net + 1 }), /changed/) && refused(await claim(cG, { p_sales_paise: null })))
+  const c1 = await claim(cG)
+  ok('G claims: sales × 10% half up, less their fee %', !c1.error, c1.error?.message ?? '')
+  const F1 = (c1.data as any)?.id as string
+  const f1 = (await admin.from('deal_follow_ons').select('status, sales_figure_paise, creator_gross_paise, platform_fee_paise, creator_net_paise').eq('id', F1).single()).data as any
+  ok(`…₹${SALES / 100} sales → ₹${gross / 100} commission, ₹${net / 100} to G (TS and the database agree)`, f1.status === 'sales_entered' && Number(f1.creator_gross_paise) === gross && Number(f1.platform_fee_paise) === fee && Number(f1.creator_net_paise) === net)
+  const gRef = (await admin.from('deals').select('deal_ref').eq('id', legOf(G)).single()).data!.deal_ref
+  ok('its invoice is numbered CI-<ref>-AFF for the net', (c1.data as any)?.number === `CI-${gRef}-AFF`
+    && Number(((await cG.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })).data as any)?.commission?.sales_paise) === SALES)
+  ok('claiming twice is refused', said(await claim(cG), /already claimed/))
+  ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  ok("the commission invoice is not G's main invoice", ctx3.invoice === null && ctx3.commission?.claim?.status === 'sales_entered')
+  const mainInv = await cG.rpc('creator_leg_invoice_raise', { p_deal_id: legOf(G), p_shoot_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: Number(tG.creator_net_paise) + Number(tG.allowance_paise) })
+  ok('…the main invoice is still raised on its own', !mainInv.error, mainInv.error?.message ?? '')
+  ok('nobody else reads the commission invoice', refused(await cD.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })) && refused(await brand.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })))
+
+  group('0563 Guapd reviews the claim')
+  const review = (s: SupabaseClient, id: string, ok_: boolean | null, note: string | null) => s.rpc('experience_console_affiliate_review', { p_follow_on_id: id, p_approve: ok_, p_note: note })
+  ok('no payout before it is approved', said(await op.rpc('experience_console_affiliate_payout_request', { p_follow_on_id: F1, p_tds_paise: 0 }), /Approve the claim/))
+  ok('the brand, a creator, no access: cannot review', refused(await review(brand, F1, true, null)) && refused(await review(cG, F1, true, null)) && refused(await review(none, F1, true, null)))
+  ok('turning it down needs a reason; NULL decision refused', said(await review(op, F1, false, 'no'), /why/) && refused(await review(op, F1, null, null)))
+  ok('staff turn it down: the sales do not match the brand report', !refused(await review(op, F1, false, 'The brand report shows lower sales')))
+  ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  ok('G sees why and can claim again; the invoice is void', ctx3.commission?.claim?.status === 'cancelled' && ctx3.commission?.claim?.review_note === 'The brand report shows lower sales' && ctx3.commission?.can_claim === true
+    && (await admin.from('experience_creator_invoices').select('status').eq('follow_on_id', F1).single()).data?.status === 'void')
+  const SALES2 = 10_000_000, gross2 = percentOfPaise(SALES2, 10), fee2 = percentOfPaise(gross2, Number(tG.platform_pct)), net2 = gross2 - fee2
+  const c2 = await claim(cG, { p_sales_paise: SALES2, p_expected_payable_paise: net2 })
+  ok('G claims again (₹1,00,000 sales): CI-<ref>-AFF-2', !c2.error && (c2.data as any)?.number === `CI-${gRef}-AFF-2`, c2.error?.message ?? JSON.stringify(c2.data))
+  const F2 = (c2.data as any).id as string
+  ok('staff approve it', !refused(await review(op, F2, true, null)))
+  ok('…an approved claim is not reviewed again', said(await review(op, F2, false, 'changed my mind'), /waiting for review/))
+  ok('a commission invoice is not voided on its own', said(await op.rpc('experience_console_creator_invoice_void', { p_invoice_id: (await admin.from('experience_creator_invoices').select('id').eq('follow_on_id', F2).single()).data!.id, p_reason: 'wrong' }), /turning the claim down/))
+
+  group('0563 D: no commission due (closed)')
+  ok('closing needs a reason', said(await op.rpc('experience_console_affiliate_close', { p_deal_id: legOf(D), p_reason: '' }), /Say why/))
+  const cl = await op.rpc('experience_console_affiliate_close', { p_deal_id: legOf(D), p_reason: 'No sales through the link' })
+  ok("staff close D's commission", !cl.error, cl.error?.message ?? '')
+  ok('…so D cannot claim, and it cannot be closed twice', said(await cD.rpc('creator_affiliate_claim', { p_deal_id: legOf(D), p_sales_paise: 100000, p_confirmed: true, p_billing_name: 'D', p_gstin: null, p_expected_payable_paise: 1 }), /already claimed/)
+    && said(await op.rpc('experience_console_affiliate_close', { p_deal_id: legOf(D), p_reason: 'again' }), /already has/))
+
+  group('0563 the commission payout, maker-checker')
+  ok('TDS above the amount is refused', said(await op.rpc('experience_console_affiliate_payout_request', { p_follow_on_id: F2, p_tds_paise: net2 + 1 }), /TDS/))
+  const pp = await op.rpc('experience_console_affiliate_payout_request', { p_follow_on_id: F2, p_tds_paise: 0 })
+  ok('operational staff request it', !pp.error, pp.error?.message ?? '')
+  const pr = (await admin.from('vendor_payouts').select('reason, follow_on_id, gross_paise, amount_paise, allowance_paise').eq('id', pp.data as string).single()).data as any
+  ok('a follow_on payout of exactly the approved claim', pr.reason === 'follow_on' && pr.follow_on_id === F2 && Number(pr.gross_paise) === gross2 && Number(pr.amount_paise) === net2 && Number(pr.allowance_paise) === 0)
+  ok('one live payout per claim', said(await op.rpc('experience_console_affiliate_payout_request', { p_follow_on_id: F2, p_tds_paise: 0 }), /already has a payout/))
+  ok('the database refuses a commission payout that is not the claim', refused(await admin.from('vendor_payouts').insert({ experience_id: E, deal_id: legOf(G), follow_on_id: F2, vendor_id: (await admin.from('vendors').select('id').eq('creator_id', G.id).single()).data!.id,
+    reason: 'follow_on', gross_paise: 999999, platform_pct: 30, platform_fee_paise: 299999, amount_paise: 700000, net_amount_paise: 700000, idempotency_key: `bad-f-${E}` })))
+  ok('operational staff cannot approve; finance does', said(await op.rpc('experience_console_payout_approve', { p_payout_id: pp.data }), /Financial access/) && !refused(await fin.rpc('experience_console_payout_approve', { p_payout_id: pp.data })))
+  const sl = await fin.rpc('experience_finance_upload_slot', { p_kind: 'payout-proof', p_target_id: pp.data, p_file_name: 'c.png' })
+  await admin.storage.from('finance-docs').upload(sl.data as string, Buffer.from('png'), { contentType: 'image/png' }); uploaded.push(sl.data as string)
+  ok('finance records it paid', !refused(await fin.rpc('experience_console_payout_paid', { p_payout_id: pp.data, p_paid_on: istToday(), p_method: 'upi', p_reference: 'UPI-C-1', p_proof_path: sl.data })))
+  ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
+  ok('the claim is paid; G sees it with the reference; G\'s deal is not moved by it', ctx3.commission?.claim?.status === 'paid' && ctx3.commission?.claim?.payout?.reference === 'UPI-C-1'
+    && (await admin.from('deals').select('status').eq('id', legOf(G)).single()).data?.status === 'agreed')
+
+  group('0563 billing the brand; P&L; completion')
+  const pnl = (await fin.rpc('experience_pnl', { p_experience_id: E })).data as any
+  ok('P&L: the approved commission is creator cost (gross and net)', Number(pnl?.creator_commission_gross_paise) === gross2 && Number(pnl?.creator_commission_net_paise) === net2, JSON.stringify({ g: pnl?.creator_commission_gross_paise, n: pnl?.creator_commission_net_paise }))
+  const bill = (s: SupabaseClient, ids: (string | null)[]) => s.rpc('experience_console_affiliate_bill', { p_experience_id: E, p_follow_on_ids: ids, p_description: 'Affiliate commission on collab sales', p_gst_rate_pct: null, p_cgst_paise: null, p_sgst_paise: null, p_igst_paise: null, p_due_date: null })
+  ok('operational staff cannot bill', refused(await bill(op, [F2])))
+  ok("a closed or turned-down claim cannot be billed", refused(await bill(fin, [(await admin.from('deal_follow_ons').select('id').eq('deal_id', legOf(D)).single()).data!.id])) && refused(await bill(fin, [F1])))
+  ok('the generic invoice form cannot make a commission invoice', said(await fin.rpc('experience_console_invoice_draft', { p_experience_id: E, p_kind: 'follow_on', p_source: null, p_description: 'x commission', p_subtotal_paise: 100, p_gst_rate_pct: null, p_cgst_paise: null, p_sgst_paise: null, p_igst_paise: null, p_due_date: null }), /commission claims/))
+  const b1 = await bill(fin, [F2])
+  ok('finance bills the commission: a follow-on draft for exactly the commission', !b1.error, b1.error?.message ?? '')
+  const si = (await admin.from('service_invoices').select('kind, subtotal_paise, lines, status').eq('id', b1.data as string).single()).data as any
+  ok('…one line per creator', si.kind === 'follow_on' && si.status === 'draft' && Number(si.subtotal_paise) === gross2 && (si.lines as any[]).length === 1 && String((si.lines as any[])[0].description).includes('10% of sales'), JSON.stringify(si.lines))
+  ok('a billed claim cannot be billed again', refused(await bill(fin, [F2])))
+  ok('a commission draft is not edited', said(await fin.rpc('experience_console_invoice_update', { p_invoice_id: b1.data, p_kind: 'follow_on', p_source: null, p_description: 'changed text', p_subtotal_paise: 1, p_gst_rate_pct: null, p_cgst_paise: null, p_sgst_paise: null, p_igst_paise: null, p_due_date: null }), /not edited/))
+  const comp = (await op.rpc('experience_console_completion', { p_experience_id: E })).data as any
+  ok('completion: ads complete, D closed, G paid, but G\'s commission is not on an issued invoice yet', comp.collab_ads_open === 0 && comp.commissions_open === 0 && comp.commissions_unbilled === 1
+    && (comp.blockers as string[]).some((b) => /not billed/.test(b)), JSON.stringify({ a: comp.collab_ads_open, o: comp.commissions_open, u: comp.commissions_unbilled }))
+  ok('discarding the draft frees the claim to bill again', !refused(await fin.rpc('experience_console_invoice_discard', { p_invoice_id: b1.data })) && !refused(await bill(fin, [F2])))
+  const acts3 = new Set(((await admin.from('ops_events').select('action').in('target_id', [F1, F2])).data ?? []).map((a: any) => a.action))
+  ok('audited: claimed, turned down, approved', ['experience.affiliate_claimed_by_creator', 'experience.affiliate_turned_down', 'experience.affiliate_approved'].every((a) => acts3.has(a)), Array.from(acts3).join(','))
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
@@ -229,6 +321,7 @@ run().catch((e) => { console.error(e); failed++ }).finally(async () => {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)
     await admin.from('deal_deliverable_items').delete().not('extra_id', 'is', null).in('deal_id', legDeals.length ? legDeals : ['00000000-0000-0000-0000-000000000000'])
     await admin.from('experience_creator_invoices').delete().eq('experience_id', E)
+    await admin.from('deal_follow_ons').delete().eq('experience_id', E)
     await admin.from('service_invoices').delete().eq('experience_id', E)
     await admin.from('experience_leg_extras').delete().eq('experience_id', E)
     await admin.from('experience_addons').delete().eq('experience_id', E)

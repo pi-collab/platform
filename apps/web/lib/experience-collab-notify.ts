@@ -109,3 +109,54 @@ export async function notifyCollabPosted(postId: string, by: 'creator' | 'guapd'
     console.error(`[experience-collab] posted notification failed post=${postId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
+
+// ── 0563: the affiliate commission ─────────────────────────────────────────
+async function claimContext(followOnId: string) {
+  const admin = createAdminClient()
+  const { data: f } = await admin.from('deal_follow_ons').select('id, deal_id, experience_id, creator_id').eq('id', followOnId).maybeSingle()
+  if (!f) return null
+  const [{ data: c }, { data: d }] = await Promise.all([
+    admin.from('creators').select('user_id, full_name').eq('id', f.creator_id).maybeSingle(),
+    admin.from('deals').select('title, experience_brand_name').eq('id', f.deal_id).maybeSingle(),
+  ])
+  const { data: u } = c?.user_id ? await admin.from('users').select('email').eq('id', c.user_id).maybeSingle() : { data: null }
+  return { dealId: f.deal_id as string, userId: (c?.user_id ?? null) as string | null, name: (c?.full_name ?? null) as string | null,
+    email: (u?.email ?? null) as string | null, title: (d?.title ?? 'an Experience') as string, brand: (d?.experience_brand_name ?? 'the brand') as string }
+}
+
+/** The creator claimed their commission: the staff review it (in-app + email). */
+export async function notifyStaffCommissionClaimed(followOnId: string): Promise<void> {
+  try {
+    const c = await claimContext(followOnId)
+    if (!c) return
+    const admin = createAdminClient()
+    const staff = await experienceStaffUserIds(admin)
+    const body = `${c.name ?? 'A creator'} claimed their affiliate commission for ${c.title}. Check the sales and approve it.`
+    for (const userId of staff) await createNotification({ userId, dealId: c.dealId, type: 'experience_commission_claimed', body })
+    await emailExperienceStaff(staff, { subject: `${c.name ?? 'A creator'} claimed a commission`, heading: 'Commission to review', body, dealId: c.dealId, idKey: `staff-commission-${followOnId}` })
+  } catch (err) {
+    console.error(`[experience-collab] staff commission notification failed claim=${followOnId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+/** Guapd approved or turned down the creator's claim (the reason is on their deal, not in the message). */
+export async function notifyCreatorCommissionReviewed(followOnId: string, approved: boolean): Promise<void> {
+  try {
+    const c = await claimContext(followOnId)
+    if (!c?.userId) return
+    const body = approved
+      ? `Guapd approved your affiliate commission for ${c.brand}. Your payment is being prepared.`
+      : `Guapd could not approve your affiliate commission claim for ${c.brand}. Open your deal to see why and claim again.`
+    await createNotification({ userId: c.userId, dealId: c.dealId, type: approved ? 'experience_commission_approved' : 'experience_commission_turned_down', body })
+    if (isPlausibleEmail(c.email) && !isSyntheticEmail(c.email)) {
+      const first = (c.name ?? '').split(' ')[0] || 'there'
+      const heading = approved ? 'Your commission is approved' : 'About your commission claim'
+      const { html, text } = renderNoticeEmail({ heading, body: [`Hi ${first}, ${body}`], ctaUrl: `${siteBase()}/creator/deals/${c.dealId}`, ctaLabel: 'Open your deal' })
+      const r = await sendDealEmail({ to: [c.email as string], subject: `${c.brand} · Managed by Guapd: ${heading.toLowerCase()}`, html, text, dealId: c.dealId, idempotencyKey: `commission-review-${followOnId}-${approved ? 'ok' : 'no'}` })
+      if (!r.ok) console.warn(`[experience-collab] creator email not sent claim=${followOnId}`)
+    }
+  } catch (err) {
+    console.error(`[experience-collab] creator commission notification failed claim=${followOnId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+

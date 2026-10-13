@@ -851,6 +851,9 @@ export interface ConsolePayoutLeg {
   /** 0555: accepted extras on this creator deal, each with its own invoice and payout. */
   extras?: { id: string; number: number; deliverables: ConsoleDeliverable[]; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number; work_complete: boolean
     invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null; payout: ConsolePayout | null }[]
+  /** 0563: the approved affiliate commission on this deal (verified or paid), paid on its own. */
+  commission?: { id: string; status: 'verified' | 'paid'; affiliate_pct: number; sales_paise: number; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+    invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null; payout: ConsolePayout | null } | null
   /** 0552: the creator's issued invoice to Guapd; the payout is requested only once it exists. */
   creator_invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
 }
@@ -1157,5 +1160,44 @@ export async function consoleCollabAct(postId: string, action: 'affiliate' | 'ad
 export async function setAgreedAffiliatePct(experienceId: string, pct: number, channel: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_affiliate_pct_set', { p_experience_id: experienceId, p_pct: pct, p_channel: channel })
   return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0563: affiliate commissions (claims reviewed by operational staff; billed by finance) ──
+export interface ConsoleAffiliateClaim {
+  id: string; status: 'sales_entered' | 'verified' | 'paid' | 'cancelled' | 'closed'
+  sales_paise: number | null; gross_paise: number | null; platform_fee_paise: number | null; net_paise: number | null
+  claimed_at: string | null; reviewed_at: string | null; review_note: string | null
+  billed_on: { id: string; number: string | null; status: string } | null
+  invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
+  payout: ConsolePayout | null
+}
+export interface ConsoleAffiliate {
+  deal_id: string; creator_name: string; affiliate_pct: number; platform_pct: number
+  claimable: boolean; collabs: number; collabs_complete: number
+  claim: ConsoleAffiliateClaim | null
+}
+export async function listConsoleAffiliates(experienceId: string): Promise<Result<ConsoleAffiliate[]>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliates', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleAffiliate[] }
+}
+export async function consoleAffiliateReview(followOnId: string, approve: boolean, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_affiliate_review', { p_follow_on_id: followOnId, p_approve: approve, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleAffiliateClose(dealId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_close', { p_deal_id: dealId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleAffiliatePayoutRequest(followOnId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_payout_request', { p_follow_on_id: followOnId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleAffiliateBill(experienceId: string, followOnIds: string[], description: string,
+  gst: { ratePct: number | null; cgstPaise: number | null; sgstPaise: number | null; igstPaise: number | null }, dueDate: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_bill', {
+    p_experience_id: experienceId, p_follow_on_ids: followOnIds, p_description: description,
+    p_gst_rate_pct: gst.ratePct, p_cgst_paise: gst.cgstPaise, p_sgst_paise: gst.sgstPaise, p_igst_paise: gst.igstPaise, p_due_date: dueDate,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
 }
 

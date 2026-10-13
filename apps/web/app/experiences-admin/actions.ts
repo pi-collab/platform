@@ -22,8 +22,9 @@ import {
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
   consoleCollabSend, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
+  consoleAffiliateReview, consoleAffiliateClose, consoleAffiliatePayoutRequest, consoleAffiliateBill,
 } from '@/lib/experience-console-server'
-import { notifyCreatorVideoSent, notifyCreatorAffiliateAdded, notifyCollabPosted } from '@/lib/experience-collab-notify'
+import { notifyCreatorVideoSent, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
@@ -1357,5 +1358,61 @@ export async function recordAgreedAffiliatePct(experienceId: string, pct: string
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`)
   return { ok: true, data: null }
+}
+
+
+// ── 0563: affiliate commissions ───────────────────────────────────────────
+// Operational staff review a claim or close a deal with no commission; the
+// payout is requested here and approved / paid by finance as for any payout.
+// Finance bills approved commissions to the brand on a follow-on invoice.
+export async function reviewAffiliateClaim(experienceId: string, followOnId: string, approve: boolean, note: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(followOnId) || typeof approve !== 'boolean') return { ok: false, error: 'Unknown claim.' }
+  const n = cleanText(note, 300)
+  if (!approve && (!n || n.length < 3)) return { ok: false, error: 'Tell the creator why (3 to 300 characters).' }
+  const r = await consoleAffiliateReview(followOnId, approve, n)
+  if (!r.ok) return r
+  await notifyCreatorCommissionReviewed(followOnId, approve)
+  refresh(experienceId)
+  return r
+}
+
+export async function closeAffiliate(experienceId: string, dealId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(dealId)) return { ok: false, error: 'Unknown creator deal.' }
+  const why_ = cleanText(reason, 300)
+  if (!why_ || why_.length < 3) return { ok: false, error: 'Say why no commission is due (3 to 300 characters).' }
+  const r = await consoleAffiliateClose(dealId, why_)
+  if (!r.ok) return r
+  refresh(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function requestAffiliatePayoutAction(experienceId: string, followOnId: string, tds: string, creatorName: string): Promise<Out<string>> {
+  const g = await experienceStaffGate()
+  if (!g.ok) return { ok: false, error: 'Guapd Experiences is for the Guapd team.' }
+  if (!isUuid(experienceId) || !isUuid(followOnId)) return { ok: false, error: 'Unknown commission.' }
+  const tdsPaise = money(tds || '0', true)
+  if (tdsPaise == null) return { ok: false, error: 'Enter the TDS to withhold (0 if none).' }
+  const r = await consoleAffiliatePayoutRequest(followOnId, tdsPaise)
+  if (!r.ok) return r
+  const { data: me } = await createAdminClient().from('users').select('id').eq('auth_id', g.user.id).maybeSingle()
+  await notifyStaffPayoutToApprove(experienceId, typeof creatorName === 'string' ? `${creatorName.slice(0, 120)} (commission)` : 'a creator (commission)', me?.id ?? null)
+  refresh(experienceId)
+  return r
+}
+
+export async function billAffiliates(experienceId: string, followOnIds: string[], f: InvoiceForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !Array.isArray(followOnIds) || followOnIds.length === 0 || followOnIds.length > 100 || !followOnIds.every(isUuid)) {
+    return { ok: false, error: 'Pick the commissions to bill.' }
+  }
+  // The amount is the claims' sum (set in Postgres); the form supplies the description, GST and due date.
+  const input = invoiceInput({ ...f, kind: 'initial', source: null, amount: f.amount || '1' })
+  if (typeof input === 'string') return { ok: false, error: input }
+  const r = await consoleAffiliateBill(experienceId, Array.from(new Set(followOnIds)), input.description,
+    { ratePct: input.gstRatePct, cgstPaise: input.cgstPaise, sgstPaise: input.sgstPaise, igstPaise: input.igstPaise }, input.dueDate)
+  if (r.ok) refresh(experienceId)
+  return r
 }
 

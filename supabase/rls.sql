@@ -1618,3 +1618,9 @@ ALTER TABLE experience_collab_posts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_collab_posts FROM PUBLIC, anon, authenticated;
 
 -- 0562: experience_console_affiliate_pct_set(uuid, numeric, text): finance only (checked inside), authenticated only, revoked from PUBLIC/anon.
+
+-- 0563: deal_follow_ons keeps its 0524 policy (dfo_read_own_creator: a creator reads their own rows); all writes go through
+-- SECURITY DEFINER functions: creator_affiliate_claim / creator_affiliate_invoice_doc (own deal), experience_console_affiliate_review /
+-- _close / _payout_request / experience_console_affiliates (operational), experience_console_affiliate_bill (finance). All authenticated only,
+-- revoked from PUBLIC/anon. experience_creator_invoices.follow_on_id and vendor_payouts reason 'follow_on' ride the existing table RLS.
+

@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, listConsoleCollabPosts } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, listConsoleCollabPosts, listConsoleAffiliates } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -16,6 +16,7 @@ import CostSheetPanel from './CostSheetPanel'
 import PnlPanel from './PnlPanel'
 import ShootPanel from './ShootPanel'
 import CollabPanel from './CollabPanel'
+import CommissionPanel from './CommissionPanel'
 import DeliverablesPanel from './DeliverablesPanel'
 import InvoicesPanel from './InvoicesPanel'
 import PayoutsPanel from './PayoutsPanel'
@@ -86,6 +87,8 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   const hasDeliverables = ['shoot_scheduled', 'shoot_done', 'delivering', 'complete'].includes(e.status)
   // 0561: approved videos to their creator (collab / share).
   const collabPosts = hasDeliverables ? await listConsoleCollabPosts(e.id) : null
+  // 0563: affiliate commission claims (deals with an affiliate % locked on them).
+  const affiliates = hasDeliverables ? await listConsoleAffiliates(e.id) : null
   const adRights = Object.fromEntries((legs?.ok ? legs.data : []).filter((l) => l.leg_deal_id).map((l) => [l.leg_deal_id as string, Number(l.leg_ad_rights_count ?? 0)]))
   // Cost sheet (operational) and P&L (financial only, decided in Postgres) once the price is agreed.
   const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
@@ -246,6 +249,10 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
         : <div style={{ marginTop: 20 }}><Failed inline message={deliverables.error} /></div>)}
 
       {/* ══════ MONEY + COMPLETION (0540) ══════ */}
+      {affiliates && (affiliates.ok
+        ? <CommissionPanel experienceId={e.id} rows={affiliates.data} canBill={financial} open={['shoot_done', 'delivering'].includes(e.status)}
+            registered={invoices?.ok ? invoices.data.settings?.gst_registered === true : false} />
+        : <div style={{ marginTop: 20 }}><Failed inline message={affiliates.error} /></div>)}
       {payouts && <div style={{ marginTop: 20 }}>{payouts.ok ? <PayoutsPanel experienceId={e.id} data={payouts.data} /> : <Failed inline message={payouts.error} />}</div>}
       {invoices && <div style={{ marginTop: 20 }}>{invoices.ok ? <InvoicesPanel data={invoices.data} /> : <Failed inline message={invoices.error} />}</div>}
       {completion && <div style={{ marginTop: 20 }}>{completion.ok ? <CompletionPanel experienceId={e.id} data={completion.data} /> : <Failed inline message={completion.error} />}</div>}

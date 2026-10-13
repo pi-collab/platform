@@ -46,6 +46,8 @@ export interface CreatorLegContext {
   affiliate_pct?: number | null
   /** 0561: ad-rights videos still to post as collabs; the main invoice waits for them. */
   collab_waiting?: number
+  /** 0563: the affiliate commission on this deal (null when none was agreed). */
+  commission?: CreatorCommission | null
   ad_rights_months: number | null
   ad_rights_videos: number | null
   boost_months: number | null
@@ -160,5 +162,17 @@ export interface CreatorCollabPost {
   sent_at: string; file_name: string | null; has_link: boolean
   post_url: string | null; posted_at: string | null; affiliate_url: string | null; ad_complete_at: string | null
   can_post: boolean
+}
+
+/** 0563: the creator's affiliate commission (experience_affiliate_for_creator, their own deal only). */
+export interface CreatorCommission {
+  affiliate_pct: number; platform_pct: number; claimable: boolean; can_claim: boolean
+  claim: {
+    id: string; status: 'sales_entered' | 'verified' | 'paid' | 'cancelled' | 'closed'
+    sales_paise: number | null; gross_paise: number | null; platform_fee_paise: number | null; net_paise: number | null
+    claimed_at: string | null; reviewed_at: string | null; review_note: string | null
+    invoice: { number: string; issued_at: string; payable_paise: number } | null
+    payout: { status: string; net_paise: number; tds_paise: number; paid_paise: number; paid_on: string | null; reference: string | null } | null
+  } | null
 }
 

@@ -6,7 +6,7 @@ import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { formatRupees } from '@/lib/experience-request'
 import type { ConsolePayoutLeg, ConsolePayouts, PayoutAccount } from '@/lib/experience-console-server'
-import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestCreatorPayout, requestExtraPayoutAction, setCreatorPayoutTds, showPayoutAccount, voidCreatorInvoiceAction } from '../actions'
+import { approveCreatorPayout, cancelCreatorPayout, recordCreatorPayoutPaid, requestAffiliatePayoutAction, requestCreatorPayout, requestExtraPayoutAction, setCreatorPayoutTds, showPayoutAccount, voidCreatorInvoiceAction } from '../actions'
 import { openFinanceFileInTab, uploadFinanceFile } from './finance-upload'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
@@ -79,17 +79,23 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
       <div style={{ marginTop: 14 }}>
         {data.legs.length === 0 && <p className="t-body" style={{ margin: 0, color: 'var(--ink-soft)' }}>No accepted creators yet.</p>}
         {/* 0555: each accepted extra is its own row under the creator, with its own invoice and payout. */}
-        {data.legs.flatMap((leg) => [{ ...leg, extraId: null as string | null }, ...(leg.extras ?? []).map((x) => ({
-          ...leg, deal_id: `${leg.deal_id}:x${x.number}`, extraId: x.id as string | null, full_name: `${leg.full_name ?? 'Creator'} · Extra #${x.number}`,
+        {data.legs.flatMap((leg) => [{ ...leg, extraId: null as string | null, commissionId: null as string | null }, ...(leg.extras ?? []).map((x) => ({
+          ...leg, deal_id: `${leg.deal_id}:x${x.number}`, extraId: x.id as string | null, commissionId: null as string | null, full_name: `${leg.full_name ?? 'Creator'} · Extra #${x.number}`,
           gross_paise: x.gross_paise, platform_pct: x.platform_pct, platform_fee_paise: x.platform_fee_paise, net_paise: x.net_paise,
           allowance_paise: 0, due_paise: x.net_paise, work_complete: x.work_complete, creator_invoice: x.invoice, payout: x.payout, cancelled_before: 0,
-        }))]).map((l) => {
+        })),
+        // 0563: an approved affiliate commission is its own row, paid on its own (reason follow_on).
+        ...(leg.commission ? [{
+          ...leg, deal_id: `${leg.deal_id}:aff`, extraId: null as string | null, commissionId: leg.commission.id as string | null, full_name: `${leg.full_name ?? 'Creator'} · Affiliate commission`,
+          gross_paise: leg.commission.gross_paise, platform_pct: leg.commission.platform_pct, platform_fee_paise: leg.commission.platform_fee_paise, net_paise: leg.commission.net_paise,
+          allowance_paise: 0, due_paise: leg.commission.net_paise, work_complete: true, creator_invoice: leg.commission.invoice, payout: leg.commission.payout, cancelled_before: 0,
+        }] : [])]).map((l) => {
           const p = l.payout
           const st = p ? STATUS[p.status] : null
           const why = l.shoot_outcome === 'did_not_shoot' ? 'Did not shoot: no payout.'
             : l.shoot_outcome !== 'done' ? 'Paid after their shoot is recorded.'
             : !l.work_complete ? 'Their deliverables need Guapd’s approval first.'
-            : !l.creator_invoice ? (l.extraId ? 'Waiting for the creator to raise the invoice for this extra.' : 'Waiting for the creator to confirm the shoot and raise their invoice.') : null
+            : !l.creator_invoice ? (l.commissionId ? 'The commission invoice is missing.' : l.extraId ? 'Waiting for the creator to raise the invoice for this extra.' : 'Waiting for the creator to confirm the shoot and raise their invoice.') : null
           const inv = l.creator_invoice
           return (
             <div key={l.deal_id} style={{ borderTop: '1px solid var(--hairline)', padding: '14px 0' }}>
@@ -113,7 +119,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                   {inv && <span>
                     Creator invoice <a href={`/experiences-admin/creator-invoice/${inv.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>{inv.number}</a>
                     {' '}· raised {fmtDate(inv.issued_at.slice(0, 10))} · {formatRupees(inv.payable_paise)}{inv.gstin ? ` · GSTIN ${inv.gstin}` : ''}
-                    {!p && open && voiding !== inv.id && <> · <button type="button" onClick={() => { setVoiding(inv.id); setVoidReason('') }} style={{ background: 'none', border: 0, padding: 0, color: '#9C4147', fontWeight: 600, cursor: 'pointer', fontSize: 12.5 }}>Void</button></>}
+                    {!p && open && !l.commissionId && voiding !== inv.id && <> · <button type="button" onClick={() => { setVoiding(inv.id); setVoidReason('') }} style={{ background: 'none', border: 0, padding: 0, color: '#9C4147', fontWeight: 600, cursor: 'pointer', fontSize: 12.5 }}>Void</button></>}
                   </span>}
                   {inv && voiding === inv.id && (
                     <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -132,7 +138,8 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                         <input className="dinput" style={{ width: 90, height: 30 }} inputMode="decimal" value={tds[l.deal_id] ?? '0'} onChange={(e) => setTds({ ...tds, [l.deal_id]: e.target.value })} />
                       </label>
                       <button type="button" style={{ ...smallBtn, background: 'var(--lime-400)', borderColor: 'var(--lime-400)' }} disabled={pending}
-                        onClick={() => run(() => l.extraId ? requestExtraPayoutAction(experienceId, l.extraId, tds[l.deal_id] ?? '0', l.full_name ?? 'a creator') : requestCreatorPayout(experienceId, l.deal_id, tds[l.deal_id] ?? '0'), () => setNotice(`Payout to ${l.full_name ?? 'the creator'} requested. Someone else on the team approves it.`))}>Request payout</button>
+                        onClick={() => run(() => l.commissionId ? requestAffiliatePayoutAction(experienceId, l.commissionId, tds[l.deal_id] ?? '0', (l.full_name ?? 'a creator').replace(' · Affiliate commission', ''))
+                          : l.extraId ? requestExtraPayoutAction(experienceId, l.extraId, tds[l.deal_id] ?? '0', l.full_name ?? 'a creator') : requestCreatorPayout(experienceId, l.deal_id, tds[l.deal_id] ?? '0'), () => setNotice(`Payout to ${l.full_name ?? 'the creator'} requested. Someone else on the team approves it.`))}>Request payout</button>
                     </>}
                     {p?.status === 'requested' && open && <>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 12 }}>TDS ₹
