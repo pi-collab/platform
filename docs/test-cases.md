@@ -7436,7 +7436,7 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] "Have creators in mind?" shows two buttons: **Suggest someone not on Guapd** (pill) and **Add from Guapd** (neon)
 - [ ] Add from Guapd opens `/experiences/[id]/pool`: the Growth campaign pool's layout (hero with "N of M on the roster", filters for niche, followers, location, platform; creator cards with photo, handle, followers, niches, avg reach, engagement, interactions)
 - [ ] **No price anywhere on the pool** (no day rate, no package price, no ₹): the shoot day rate never reaches a brand
-- [ ] "Add to my roster" puts the creator on the roster as Accepted (0557); the card turns to "On your roster"; a creator Guapd confirmed reads "Confirmed on your roster", one the brand rejected "You rejected them"; Guapd's private shortlist is never marked
+- [ ] "Add to my roster" adds the creator as the brand's pick, **not accepted** (0559); the card turns to "Added · to review"; one the brand accepted reads "Accepted", on hold "On hold", Guapd confirmed "Confirmed on your roster", rejected "You rejected them"; Guapd's private shortlist is never marked
 - [ ] "Suggest them to Guapd" in the pool's hero goes back to the Creators card
 - [ ] Suggest opens a form: name, Instagram handle (@, a full instagram.com link or plain all work), optional note; "Send to Guapd"
 - [ ] A handle that is already a listed Guapd creator is refused: "@x is already on Guapd: add them from Guapd instead"
@@ -7450,3 +7450,16 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] **Not possible** asks for a one-line reason the brand sees; "Tell the brand"
 - [ ] When the prospect is later linked to their Guapd account, the brand's suggestion reads "Joined Guapd: on your roster"
 - [ ] Tests: `scripts/test-experience-brand-portal.ts` 184 green; P&L isolation and package gating checks pass
+
+---
+
+## 128. A creator the brand adds is a pick to review, not an acceptance (migration 0559)
+
+- [ ] Brand pool: "Add to my roster" on several creators; each card reads "Added · to review"; the note says "added and shared with Guapd. Add more, then accept the ones you want"
+- [ ] Pool hero progress counts only accepted and confirmed creators: "N of M accepted · K to review"; the bottom button reads "Review on your roster" once anything is added
+- [ ] Experience page, Creators: each added creator shows "Added by you · to review" with Reject / Hold / Accept; "Select all to review" + "Accept selected" accept several at once
+- [ ] Console roster: the brand's picks show at once as shared, added by the brand, awaiting the brand's answer; Guapd gets "added N creators to review on the roster"
+- [ ] A creator on Guapd's private shortlist that the brand adds becomes shared, still to review; an accepted, on hold, rejected or confirmed creator is unchanged
+- [ ] Lock still waits for the brand's answer on every shared creator, so unanswered picks block it as before
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` green
+

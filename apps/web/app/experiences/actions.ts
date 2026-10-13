@@ -97,7 +97,7 @@ export async function addRosterCreators(experienceId: string, creatorIds: string
   const r = await brandAddRosterCreators(experienceId, Array.from(new Set(creatorIds)))
   if (!r.ok) return r
   done(experienceId)
-  if (r.data > 0) await notifyStaffBrandActed(experienceId, r.data === 1 ? 'added a creator to the roster' : `added ${r.data} creators to the roster`)
+  if (r.data > 0) await notifyStaffBrandActed(experienceId, r.data === 1 ? 'added a creator to review on the roster' : `added ${r.data} creators to review on the roster`)
   return r
 }
 

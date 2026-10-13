@@ -315,7 +315,7 @@ export function RosterReview({ experienceId, creators, canDecide }: { experience
                 : c.decision === 'accepted' ? <span className="bx-chip bx-ok">Accepted{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
                 : c.decision === 'rejected' ? <span className="bx-chip bx-chg">Rejected{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
                 : c.decision === 'on_hold' ? <span className="bx-chip bx-hold">On hold{c.decided_on_guapd === false ? ' · via Guapd' : ''}</span>
-                : <span className="bx-chip bx-new">To review</span>}
+                : <span className="bx-chip bx-new">{c.added_by === 'brand' ? 'Added by you · to review' : 'To review'}</span>}
             </div>
             <div className="bx-roster-actions">
               {/* Rejected is final on this roster: no buttons after it. */}
@@ -445,7 +445,7 @@ export function RosterAdd({ experienceId, suggestions, canAdd }: {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>Have creators in mind?</div>
             <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 3, maxWidth: 520 }}>
-              {notice ?? 'Pick creators on Guapd, or suggest someone who isn’t on Guapd yet. Guapd checks they are free on your shoot date and confirms them.'}
+              {notice ?? 'Add creators from Guapd (Guapd sees them straight away), then accept the ones you want below. Or suggest someone who isn’t on Guapd yet.'}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

@@ -260,9 +260,13 @@ async function run() {
     const a1 = await add(member, [X.id])
     ok('0557 a plain member adds a listed creator', !a1.error && Number(a1.data) === 1, a1.error?.message ?? String(a1.data))
     const { data: xr } = await admin.from('experience_roster').select('id, added_by, brand_decision, decision_channel, shared_with_brand_at, locked').eq('experience_id', E).eq('creator_id', X.id).single()
-    ok('…joins the roster added by the brand, accepted on Guapd, shared, not locked',
-      xr?.added_by === 'brand' && xr?.brand_decision === 'accepted' && xr?.decision_channel === 'portal' && !!xr?.shared_with_brand_at && xr?.locked === false)
-    ok('…and the brand sees them', (((await ba.rpc('brand_experience_roster', { p_experience_id: E })).data as any)?.creators ?? []).some((c: any) => c.full_name === X.full_name && c.decision === 'accepted'))
+    ok('0559 …joins the roster added by the brand, PENDING (a pick, not an acceptance), shared with Guapd, not locked',
+      xr?.added_by === 'brand' && xr?.brand_decision === 'pending' && xr?.decision_channel === null && !!xr?.shared_with_brand_at && xr?.locked === false)
+    ok('…and the brand sees them to review', (((await ba.rpc('brand_experience_roster', { p_experience_id: E })).data as any)?.creators ?? []).some((c: any) => c.full_name === X.full_name && c.decision === 'pending' && c.added_by === 'brand'))
+    ok('0559 the brand then accepts its own pick', !refused(await ba.rpc('brand_experience_roster_decide', { p_roster_id: xr!.id, p_decision: 'accepted', p_expected: 'pending' }))
+      && (await admin.from('experience_roster').select('brand_decision').eq('id', xr!.id).single()).data?.brand_decision === 'accepted')
+    ok('0559 adding an accepted creator again leaves them accepted', Number((await add(ba, [X.id])).data) === 0
+      && (await admin.from('experience_roster').select('brand_decision').eq('id', xr!.id).single()).data?.brand_decision === 'accepted')
     ok('adding the same creator again changes nothing', Number((await add(ba, [X.id])).data) === 0)
     ok('a rejected creator stays rejected (rejection is final)', Number((await add(ba, [K3.id])).data) === 0
       && (await admin.from('experience_roster').select('brand_decision').eq('id', bRow(K3).roster_id).single()).data?.brand_decision === 'rejected')

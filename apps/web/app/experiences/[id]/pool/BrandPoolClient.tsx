@@ -16,9 +16,9 @@ const FOLLOWER_BANDS = [
 
 /**
  * The brand's creator pool for its Experience (0557): the Growth pool's layout
- * and card with NO price on it. Adding puts the creator on the roster as the
- * brand's accepted pick; Guapd checks they are free, confirms them and sends
- * the offer. Changing a pick (hold or reject) happens on the roster itself.
+ * and card with NO price on it. Adding shares the creator with Guapd as the
+ * brand's pick, still to review (0559); the brand accepts, holds or rejects it
+ * on the roster itself. Guapd checks they are free, confirms and sends the offer.
  */
 export default function BrandPoolClient({ experienceId, title, editable, creatorsPlanned, creators }: {
   experienceId: string
@@ -52,10 +52,12 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
     return true
   }), [creators, niche, band, location, platform])
 
-  const counted = creators.filter((c) => c.rosterState === 'on' || c.rosterState === 'locked')
+  // 0559: an added creator is a pick to review, not an acceptance; only accepted (and confirmed) ones fill the plan.
+  const counted = creators.filter((c) => c.rosterState === 'accepted' || c.rosterState === 'locked')
+  const toReview = creators.filter((c) => c.rosterState === 'added' || c.rosterState === 'on_hold').length
   const need = creatorsPlanned ?? 0
   const pct = need > 0 ? Math.min(100, Math.round((counted.length / need) * 100)) : 0
-  const progressLabel = need ? `${counted.length} of ${need} on the roster` : `${counted.length} on the roster`
+  const progressLabel = (need ? `${counted.length} of ${need} accepted` : `${counted.length} accepted`) + (toReview ? ` · ${toReview} to review` : '')
   const floatHint = !need ? 'No plan to count against'
     : counted.length >= need ? (counted.length > need ? `${counted.length - need} over plan` : 'Plan filled')
     : `${need - counted.length} more to go`
@@ -68,7 +70,7 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
       const r = await addRosterCreators(experienceId, [c.id])
       setBusyId(null)
       if (!r.ok) { setError(r.error); return }
-      setJustAdded(`${c.name} is on your roster. Guapd will check they are free on your shoot date and confirm them.`)
+      setJustAdded(`${c.name} added and shared with Guapd. Add more, then accept the ones you want on your roster.`)
       router.refresh()
     })
   }
@@ -89,7 +91,7 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
               Add creators
             </h1>
             <p style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-soft)', margin: '9px 0 0', maxWidth: 520, lineHeight: 1.55 }}>
-              Pick the creators you want for this shoot. Each one you add goes on your roster; Guapd checks they are free on your shoot date and confirms them.
+              Add the creators you like; Guapd sees them straight away. Then accept the ones you want on your Experience page. Guapd checks they are free on your shoot date and confirms them.
               Someone you want isn&rsquo;t here? <Link href={`/experiences/${experienceId}#bx-creators`} style={{ color: 'var(--ink)', fontWeight: 700 }}>Suggest them to Guapd</Link>.
             </p>
 
@@ -138,8 +140,9 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
                 meta={c.location}
                 button={{
                   add: 'Add to my roster',
-                  added: 'On your roster',
-                  disabled: c.rosterState === 'locked' ? 'Confirmed on your roster' : c.rosterState === 'rejected' ? 'You rejected them' : c.rosterState ? 'On your roster' : 'Roster closed',
+                  added: c.rosterState === 'accepted' ? 'Accepted' : c.rosterState === 'on_hold' ? 'On hold' : 'Added · to review',
+                  disabled: c.rosterState === 'locked' ? 'Confirmed on your roster' : c.rosterState === 'rejected' ? 'You rejected them'
+                    : c.rosterState === 'accepted' ? 'Accepted' : c.rosterState === 'on_hold' ? 'On hold' : c.rosterState ? 'Added · to review' : 'Roster closed',
                 }}
                 onToggle={() => add(c)}
               />
@@ -172,7 +175,7 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
           </div>
           <Link href={`/experiences/${experienceId}`} className="inkbtn"
                 style={{ flexShrink: 0, height: 42, padding: '0 20px', borderRadius: 999, background: 'var(--ink)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            {counted.length > 0 ? 'Done' : 'Back to the Experience'}
+            {counted.length + toReview > 0 ? 'Review on your roster' : 'Back to the Experience'}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </Link>
         </div>

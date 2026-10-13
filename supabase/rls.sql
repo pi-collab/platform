@@ -1605,3 +1605,5 @@ REVOKE ALL ON experience_leg_extras FROM anon, authenticated;
 -- experience_console_suggestion_resolve.
 ALTER TABLE experience_brand_suggestions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_brand_suggestions FROM anon, authenticated;
+
+-- 0559: brand_experience_roster_add replaced (a brand add is shared and PENDING, no decision); grants unchanged: authenticated only, revoked from PUBLIC/anon.

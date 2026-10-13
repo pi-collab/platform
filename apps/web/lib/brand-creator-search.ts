@@ -18,7 +18,7 @@ export interface BrandPoolCreator {
   platforms: string[]; followers: number | null; followersLabel: string | null; verified: boolean
   avgReachLabel: string | null; engagementLabel: string | null; interactionsLabel: string | null
   /** On this roster (shared with the brand): accepted / pending / on hold / rejected / locked; null = not on it. */
-  rosterState: 'on' | 'locked' | 'rejected' | null
+  rosterState: 'added' | 'accepted' | 'on_hold' | 'locked' | 'rejected' | null
 }
 
 export async function listBrandPoolCreators(experienceId: string): Promise<BrandPoolCreator[]> {
@@ -67,7 +67,7 @@ export async function listBrandPoolCreators(experienceId: string): Promise<Brand
       avgReachLabel: snap?.reachLast30 != null ? compactNumber(snap.reachLast30) : null,
       engagementLabel: engagement != null ? `${engagement}%` : null,
       interactionsLabel: snap?.interactionsLast30 != null ? compactNumber(snap.interactionsLast30) : null,
-      rosterState: !r ? null : r.locked ? 'locked' : r.brand_decision === 'rejected' ? 'rejected' : 'on',
+      rosterState: !r ? null : r.locked ? 'locked' : r.brand_decision === 'rejected' ? 'rejected' : r.brand_decision === 'accepted' ? 'accepted' : r.brand_decision === 'on_hold' ? 'on_hold' : 'added',
     }
   })
 }
