@@ -34,6 +34,20 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms, experienceMargin } from '../apps/web/lib/experience-money'
 
 /** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
+/** 0561 fixture: n of the deal's videos released, brand-approved and posted as collabs (rows written directly; the flow is tested in test-experience-collab.ts). */
+async function postCollabsFixture(exp: string, deal: string, n: number) {
+  const { data: its } = await admin.from('deal_deliverable_items').select('id, label').eq('deal_id', deal).is('extra_id', null).order('label').limit(n)
+  const { data: d } = await admin.from('deals').select('creator_id').eq('id', deal).single()
+  for (const [k, it] of ((its ?? []) as any[]).entries()) {
+    const r = await admin.from('experience_deliverable_releases').insert({ experience_id: exp, deal_id: deal, item_id: it.id, item_version: 1, label: it.label,
+      external_url: `https://drive.example.com/${it.id}`, brand_decision: 'approved', brand_decision_channel: 'email', brand_decided_at: new Date().toISOString() }).select('id').single()
+    if (r.error) throw new Error('fixture release: ' + r.error.message)
+    const p = await admin.from('experience_collab_posts').insert({ experience_id: exp, deal_id: deal, creator_id: d!.creator_id, release_id: r.data.id, item_id: it.id, label: it.label,
+      kind: 'collab', status: 'posted', post_url: `https://www.instagram.com/p/Fx${k}`, posted_at: new Date().toISOString(), post_channel: 'email' })
+    if (p.error) throw new Error('fixture post: ' + p.error.message)
+  }
+}
+
 async function invoiceAs(s: any, deal: string) {
   const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
   return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
@@ -108,7 +122,7 @@ async function run() {
   if (c.error) throw new Error('create: ' + c.error.message)
   const E = c.data as string
   exps.push(E)
-  const q = await fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3000000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null })
+  const q = await fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3000000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 })
   if (q.error) throw new Error('quote: ' + q.error.message)
   const a = await fin.rpc('experience_console_accept', { p_quote_id: q.data, p_channel: 'email' })
   if (a.error) throw new Error('accept: ' + a.error.message)
@@ -349,6 +363,9 @@ async function run() {
   await admin.from('experiences').update({ shoot_date: '2026-10-01' }).eq('id', E)
   const out = await op.rpc('experience_console_leg_shoot_outcome', { p_roster_id: lG.roster_id, p_outcome: 'done', p_reason: null })
   ok('G shot', !out.error, out.error?.message)
+  // 0561: G's 2 ad-rights videos must be posted as collabs before the invoice.
+  ok('0561: G cannot invoice before posting their 2 collab videos', said(await invoiceAs(cG, gLeg), /./) && ((await cG.rpc('creator_leg_context', { p_deal_id: gLeg })).data as any)?.collab_waiting === 2)
+  await postCollabsFixture(E, gLeg, 2)
   ok('0552: G confirms the shoot and raises their invoice', !(await invoiceAs(cG, gLeg)).error)
   ok('TDS above net + allowance is refused', said(await op.rpc('experience_console_payout_request', { p_deal_id: gLeg, p_tds_paise: tG.creatorNetPaise + 150001 }), /TDS/))
   const pr = await op.rpc('experience_console_payout_request', { p_deal_id: gLeg, p_tds_paise: 0 })
@@ -367,6 +384,7 @@ async function run() {
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
   for (const E of exps) {
+    await admin.from('experience_collab_posts').delete().eq('experience_id', E)
     await admin.from('vendor_payouts').delete().eq('experience_id', E)
     await admin.from('experience_creator_invoices').delete().eq('experience_id', E)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', E)

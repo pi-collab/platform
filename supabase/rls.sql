@@ -1607,3 +1607,14 @@ ALTER TABLE experience_brand_suggestions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_brand_suggestions FROM anon, authenticated;
 
 -- 0559: brand_experience_roster_add replaced (a brand add is shared and PENDING, no decision); grants unchanged: authenticated only, revoked from PUBLIC/anon.
+
+-- 0560: experience_console_quote gains p_affiliate_pct (old 11-arg signature dropped); experience_console_quotes returns affiliate_pct (dropped and recreated). Both: authenticated only, revoked from PUBLIC/anon. New columns experience_quotes.affiliate_pct and experience_creator_terms.affiliate_pct ride the existing table RLS (no new grants).
+
+-- 0561: experience_collab_posts. RLS on, NO policies, no grants: read and written only by
+-- SECURITY DEFINER functions (creator_collab_posts / creator_collab_file / creator_collab_post_link
+-- for the creator's own deal; brand_experience_collab_posts / brand_experience_collab_act for the
+-- brand's own Experience; experience_console_collab_* for operational staff).
+ALTER TABLE experience_collab_posts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_collab_posts FROM PUBLIC, anon, authenticated;
+
+-- 0562: experience_console_affiliate_pct_set(uuid, numeric, text): finance only (checked inside), authenticated only, revoked from PUBLIC/anon.

@@ -26,6 +26,8 @@ export interface BrandQuote {
   deliverables: { type: string; count: number }[]; shoot_date: string | null; shoot_city: string | null
   message: string | null; status: 'open' | 'accepted' | 'rejected' | 'withdrawn'; brand_note: string | null
   decided_at: string | null; on_guapd: boolean
+  /** 0560: affiliate commission, % of sales through each creator's link; null when no affiliate links. */
+  affiliate_pct?: number | null
 }
 export interface BrandExperience {
   id: string; title: string; brand_name: string; status: string; requested_at: string | null; request_on_guapd: boolean
@@ -188,3 +190,20 @@ export async function brandAnswerAddon(addonId: string, accept: boolean, note: s
   const { error } = await createClient().rpc('brand_experience_addon_answer', { p_addon_id: addonId, p_accept: accept, p_note: note, p_expected_total_paise: expectedTotalPaise })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+/** 0561: the brand's collab posts (no creator or deal ids; shared videos and taken-back ones are not shown). */
+export interface BrandCollabPost {
+  id: string; creator_name: string; handle: string | null; label: string; status: 'sent' | 'posted' | 'ad_complete'
+  sent_at: string; post_url: string | null; posted_at: string | null
+  affiliate_url: string | null; affiliate_at: string | null; affiliate_on_guapd: boolean | null
+  ad_complete_at: string | null; ad_complete_on_guapd: boolean | null; can_act: boolean
+}
+export async function getBrandCollabPosts(experienceId: string): Promise<Result<BrandCollabPost[]>> {
+  const { data, error } = await createClient().rpc('brand_experience_collab_posts', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandCollabPost[] }
+}
+export async function brandCollabAct(postId: string, action: 'affiliate' | 'ad_complete', url: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('brand_experience_collab_act', { p_post_id: postId, p_action: action, p_url: url })
+  return error ? fail(error) : { ok: true, data: null }
+}
+

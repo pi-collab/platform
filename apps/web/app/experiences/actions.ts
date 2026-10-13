@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff, brandCollabAct } from '@/lib/experience-brand-server'
+import { notifyCreatorAffiliateAdded } from '@/lib/experience-collab-notify'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 import { registerExperienceRequestReview } from '@/lib/send-gate'
 
@@ -156,3 +157,18 @@ export async function markGuapdThreadRead(experienceId: string): Promise<void> {
   if (!isUuid(experienceId)) return
   await getBrandGuapdThread(experienceId)
 }
+
+/** 0561: the brand adds its affiliate link to a live collab, or marks the ad complete. */
+export async function actOnCollab(experienceId: string, postId: string, action: 'affiliate' | 'ad_complete', url: string | null): Promise<Out<null>> {
+  await verifyBrand()
+  if (!isUuid(experienceId) || !isUuid(postId) || (action !== 'affiliate' && action !== 'ad_complete')) return { ok: false, error: 'Not found.' }
+  const link = action === 'affiliate' ? (typeof url === 'string' ? url.trim().slice(0, 500) : '') : null
+  if (action === 'affiliate' && !/^https:\/\//i.test(link ?? '')) return { ok: false, error: 'Paste the full affiliate link, starting with https://' }
+  const r = await brandCollabAct(postId, action, link)
+  if (!r.ok) return r
+  done(experienceId)
+  if (action === 'affiliate') await notifyCreatorAffiliateAdded(postId)
+  await notifyStaffBrandActed(experienceId, action === 'affiliate' ? 'added its affiliate link to a collab' : 'marked a collab ad complete')
+  return r
+}
+

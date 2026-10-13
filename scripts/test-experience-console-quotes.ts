@@ -45,7 +45,7 @@ const req = (brandId: string, over: Record<string, unknown> = {}) => ({
 })
 const quote = (expId: string, over: Record<string, unknown> = {}) => ({
   p_experience_id: expId, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 20, p_misc_paise: 500000,
-  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, ...over,
+  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, p_affiliate_pct: 10, ...over,
 })
 const audit = async (targetId: string, action: string) =>
   (await admin.from('ops_events').select('action, actor_email, detail').eq('target_id', targetId).eq('action', action)).data ?? []
@@ -148,6 +148,19 @@ async function run() {
   ok('locked plan records videos sold (20) against the plan (20)', ap?.videos_sold === 20 && ap?.plan_videos === 20)
   ok('status moved exactly one step: requested → rostering', g2.status === 'rostering', g2.status)
   ok('quotes are closed once agreed', refused(await staff.rpc('experience_console_quote', quote(E))))
+  // 0560 / 0562: the % the brand agreed sits on the plan; an older agreement (no key) can have it recorded once.
+  ok('0560 the agreed plan holds the 10% from the quote', Number(ap?.affiliate_pct) === 10)
+  const pctSet = (s: SupabaseClient, pct: number | null, ch: string | null) => s.rpc('experience_console_affiliate_pct_set', { p_experience_id: E, p_pct: pct, p_channel: ch })
+  ok('0562 an agreed % cannot be recorded again', said(await pctSet(staff, 12, 'email'), /already agreed/))
+  const { data: plan0 } = await admin.from('experiences').select('agreed_plan').eq('id', E).single()
+  const legacyPlan = { ...(plan0!.agreed_plan as Record<string, unknown>) }; delete legacyPlan.affiliate_pct
+  await admin.from('experiences').update({ agreed_plan: legacyPlan }).eq('id', E)
+  ok('0562 an older agreement: the brand, a creator, no access, anonymous cannot record it',
+    refused(await pctSet(brand, 12, 'email')) && refused(await pctSet(creator, 12, 'email')) && refused(await pctSet(none, 12, 'email')) && refused(await pctSet(createClient(URL, ANON), 12, 'email')))
+  ok('0562 a channel is required; 0 / over 100 / NULL refused', said(await pctSet(staff, 12, null), /Say how/) && said(await pctSet(staff, 0, 'email'), /above 0/) && said(await pctSet(staff, 101, 'email'), /above 0/) && refused(await pctSet(staff, null, 'email')))
+  ok('0562 finance records the 12% the brand agreed', !refused(await pctSet(staff, 12, 'email')))
+  ok('…on the plan, with its channel', Number(((await admin.from('experiences').select('agreed_plan').eq('id', E).single()).data?.agreed_plan as any)?.affiliate_pct) === 12)
+  ok('0562 audited', (await audit(E, 'experience.affiliate_pct_recorded')).length === 1)
   ok('a second accept is refused', refused(await staff.rpc('experience_console_accept', { p_quote_id: open[0].id, p_channel: null })))
   const a3 = await audit(E, 'experience.quote_accepted')
   ok('audit: accept with before/after status and the total', a3.length === 1 && (a3[0].detail as any).status_before === 'requested' && (a3[0].detail as any).status_after === 'rostering' && (a3[0].detail as any).total_paise === 6000000)

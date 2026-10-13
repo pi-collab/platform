@@ -189,6 +189,7 @@ async function run() {
 
   // ════════ Price ════════
   group('the price: a brand ADMIN accepts, or declines with a note')
+  ok('0560 no affiliate commission on an Experience without affiliate links', said(await fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 }), /did not ask for affiliate/))
   const q1 = must(await fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: 'Two creators, one day', p_channel: null }), 'quote 1') as string
   const bq = ((await ba.rpc('brand_experience', { p_experience_id: E })).data as any).quote
   ok('the brand sees Guapd\'s open quote: its own price, no Guapd author', bq?.quote_id === q1 && bq?.status === 'open' && Number(bq?.total_paise) === 7000000 && !('created_by' in bq))
@@ -421,7 +422,7 @@ async function run() {
     ['brand_experience_report', R],
   ]
   for (const [n, d] of reads) {
-    const ks = allKeys(d).filter((k) => FORBIDDEN_KEY.test(k))
+    const ks = allKeys(d).filter((k) => FORBIDDEN_KEY.test(k) && k !== 'affiliate_pct') // 0560: the commission % the brand agreed is the brand's own term
     const s = JSON.stringify(d)
     ok(`${n}: clean`, !!d && ks.length === 0 && !/SECRET-|secretprospect/.test(s) && ![K1.id, K2.id, K3.id, ...legDeals].some((x) => s.includes(x)) && !netOf.some((x) => s.includes(x)), ks.join(','))
   }

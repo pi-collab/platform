@@ -86,7 +86,7 @@ async function run() {
   })
   if (c.error) throw new Error('create: ' + c.error.message)
   E = c.data as string
-  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: null, p_channel: null })
+  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 })
   await staff.rpc('experience_console_accept', { p_quote_id: q.data, p_channel: 'email' })
   await staff.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [G.id, D.id], p_added_by: 'guapd', p_channel: null })
   let roster = ((await staff.rpc('experience_console_roster', { p_experience_id: E })).data ?? []) as any[]

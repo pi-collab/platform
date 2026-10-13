@@ -21,7 +21,9 @@ import {
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
+  consoleCollabSend, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
 } from '@/lib/experience-console-server'
+import { notifyCreatorVideoSent, notifyCreatorAffiliateAdded, notifyCollabPosted } from '@/lib/experience-collab-notify'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
@@ -115,6 +117,8 @@ export interface QuoteForm {
   message: string
   channel: string
   deliverables: { type: string; count: number | string }[]
+  /** 0560: affiliate commission %, when the brand asked for affiliate links. */
+  affiliatePct?: string
 }
 
 export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
@@ -131,11 +135,15 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
   if (misc === null) return { ok: false, error: 'Extras must be an amount in rupees.' }
   const channel = isChannel(f.channel) ? f.channel : null
   if (f.proposedBy === 'brand' && !channel) return { ok: false, error: 'Say how the brand sent its counter.' }
+  const affRaw = (f.affiliatePct ?? '').replace('%', '').trim()
+  const affiliatePct = affRaw ? Number(affRaw) : null
+  if (affiliatePct !== null && (!Number.isFinite(affiliatePct) || affiliatePct <= 0 || affiliatePct > 100)) return { ok: false, error: 'Affiliate commission: a % above 0 and at most 100.' }
 
   const r = await addConsoleQuote({
     experienceId: f.experienceId, proposedBy: f.proposedBy, perVideoPaise: perVideo, deliverableCount: count,
     miscPaise: misc, extras: lines, deliverables: deliverables(f.deliverables) ?? [], shootDate: isoDate(f.shootDate),
     shootCity: cleanText(f.shootCity, 120), message: cleanText(f.message, 2000), channel,
+    affiliatePct,
   })
   if (!r.ok) return r
   revalidatePath(`${BASE}/${f.experienceId}`)
@@ -1287,3 +1295,67 @@ export async function requestExtraPayoutAction(experienceId: string, extraId: st
   refresh(experienceId)
   return r
 }
+
+
+// ── 0561: approved videos to their creator (collab / share) ──────────────
+// Staff record the creator's post link or the brand's affiliate link / ad
+// complete only when it reached Guapd another way, with the channel.
+const collabPaths = (experienceId: string) => { revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`) }
+
+export async function sendVideoToCreator(experienceId: string, releaseId: string, kind: 'collab' | 'share'): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(releaseId)) return { ok: false, error: 'Unknown video.' }
+  if (kind !== 'collab' && kind !== 'share') return { ok: false, error: 'Post as a collab, or share.' }
+  const r = await consoleCollabSend(releaseId, kind)
+  if (!r.ok) return r
+  await notifyCreatorVideoSent(r.data)
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function takeVideoBack(experienceId: string, postId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(postId)) return { ok: false, error: 'Unknown video.' }
+  const reasonText = why(reason); if (!reasonText) return { ok: false, error: 'Say why (3 to 300 characters).' }
+  const r = await consoleCollabCancel(postId, reasonText)
+  if (!r.ok) return r
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function recordCollabPost(experienceId: string, postId: string, url: string, channel: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(postId)) return { ok: false, error: 'Unknown video.' }
+  if (!isChannel(channel)) return { ok: false, error: 'Say how the creator sent the link.' }
+  const r = await consoleCollabPostLink(postId, String(url ?? '').trim(), channel)
+  if (!r.ok) return r
+  await notifyCollabPosted(postId, 'guapd')
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function recordCollabForBrand(experienceId: string, postId: string, action: 'affiliate' | 'ad_complete', url: string | null, channel: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(postId)) return { ok: false, error: 'Unknown video.' }
+  if (action !== 'affiliate' && action !== 'ad_complete') return { ok: false, error: 'Unknown action.' }
+  if (!isChannel(channel)) return { ok: false, error: 'Say how the brand told us.' }
+  const r = await consoleCollabAct(postId, action, action === 'affiliate' ? String(url ?? '').trim() : null, channel)
+  if (!r.ok) return r
+  if (action === 'affiliate') await notifyCreatorAffiliateAdded(postId)
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+/** 0562: the affiliate % on a price agreed before 0560; deals sent after it lock it. */
+export async function recordAgreedAffiliatePct(experienceId: string, pct: string, channel: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  const n = Number(String(pct ?? '').replace('%', '').trim())
+  if (!Number.isFinite(n) || n <= 0 || n > 100) return { ok: false, error: 'Affiliate commission: a % above 0 and at most 100.' }
+  if (!isChannel(channel)) return { ok: false, error: 'Say how the brand agreed it.' }
+  const r = await setAgreedAffiliatePct(experienceId, n, channel)
+  if (!r.ok) return r
+  revalidatePath(`${BASE}/${experienceId}`)
+  return { ok: true, data: null }
+}
+

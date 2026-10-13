@@ -79,6 +79,8 @@ export interface ConsoleExperience {
     videos_sold: number
     /** Bought per creator (0547: a bought right always has a count). */
     affiliate_per_creator?: number | null
+    /** 0560: the affiliate commission % the brand agreed (absent on prices agreed before 0560). */
+    affiliate_pct?: number | null
     ad_rights_per_creator?: number | null
     boost_per_creator?: number | null
   } | null
@@ -99,6 +101,8 @@ export interface ConsoleQuote {
   total_paise: number | null
   /** The brand's note when they declined on Guapd (0544); financial only, like the message. */
   brand_note?: string | null
+  /** 0560: affiliate commission % of sales (not money; everyone in the console sees it). */
+  affiliate_pct?: number | null
   deliverables: ConsoleDeliverable[]
   shoot_date: string | null
   shoot_city: string | null
@@ -176,6 +180,8 @@ export interface QuoteInput {
   shootCity: string | null
   message: string | null
   channel: string | null
+  /** 0560: affiliate commission, % of sales; required when the brand asked for affiliate links, else null. */
+  affiliatePct: number | null
 }
 
 export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
@@ -183,6 +189,7 @@ export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
     p_experience_id: p.experienceId, p_proposed_by: p.proposedBy, p_per_video_paise: p.perVideoPaise,
     p_deliverable_count: p.deliverableCount, p_misc_paise: p.miscPaise, p_deliverables: p.deliverables,
     p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel, p_extras: p.extras,
+    p_affiliate_pct: p.affiliatePct,
   })
   return error ? fail(error) : { ok: true, data: data as string }
 }
@@ -1113,3 +1120,42 @@ export async function requestExtraPayout(extraId: string, tdsPaise: number): Pro
   const { data, error } = await createClient().rpc('experience_console_extra_payout_request', { p_extra_id: extraId, p_tds_paise: tdsPaise })
   return error ? fail(error) : { ok: true, data: data as string }
 }
+
+
+// ── 0561: approved videos go to their creator (collab / share) ────────────
+// Operational access, checked again in Postgres. No money.
+export interface ConsoleCollabPost {
+  id: string; deal_id: string; release_id: string; creator_name: string; label: string
+  kind: 'collab' | 'share'; status: 'sent' | 'posted' | 'ad_complete' | 'cancelled'
+  sent_at: string; post_url: string | null; posted_at: string | null; post_channel: string | null
+  affiliate_url: string | null; affiliate_at: string | null; affiliate_channel: string | null
+  ad_complete_at: string | null; ad_complete_channel: string | null
+  cancelled_at: string | null; cancel_reason: string | null
+}
+export async function listConsoleCollabPosts(experienceId: string): Promise<Result<ConsoleCollabPost[]>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_posts', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleCollabPost[] }
+}
+export async function consoleCollabSend(releaseId: string, kind: 'collab' | 'share'): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_send', { p_release_id: releaseId, p_kind: kind })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleCollabCancel(postId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_cancel', { p_post_id: postId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleCollabPostLink(postId: string, url: string, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_post_link', { p_post_id: postId, p_url: url, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleCollabAct(postId: string, action: 'affiliate' | 'ad_complete', url: string | null, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_act', { p_post_id: postId, p_action: action, p_url: url, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+/** 0562: record the affiliate % the brand agreed on a price agreed before 0560 (finance). */
+export async function setAgreedAffiliatePct(experienceId: string, pct: number, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_affiliate_pct_set', { p_experience_id: experienceId, p_pct: pct, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+

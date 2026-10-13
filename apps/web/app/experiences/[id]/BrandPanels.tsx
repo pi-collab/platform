@@ -4,9 +4,9 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import type { BrandSuggestion } from '@/lib/experience-brand-server'
+import type { BrandCollabPost, BrandSuggestion } from '@/lib/experience-brand-server'
 import Link from 'next/link'
-import { suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
+import { actOnCollab, suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -82,6 +82,7 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
         <div style={{ flex: '1 1 200px', paddingLeft: 20, borderLeft: '1px solid var(--border-hairline, #EAEAE3)', display: 'grid', gap: 14, alignContent: 'center' }}>
           <div><div style={metaLabel}>Videos</div><div style={sideValue}>{quote.deliverable_count} × {formatRupees(quote.per_video_paise)}</div></div>
           {shoot && <div><div style={metaLabel}>Shoot</div><div style={sideValue}>{shoot}</div></div>}
+          {quote.affiliate_pct != null && <div><div style={metaLabel}>Affiliate commission</div><div style={sideValue}>{Number(quote.affiliate_pct)}% of sales</div></div>}
         </div>
       </div>
 
@@ -96,6 +97,11 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
         <div style={{ ...lineRow, borderBottom: 'none' }}><span style={{ fontSize: 13, fontWeight: 600 }}>Total</span><b style={{ fontSize: 16 }}>{formatRupees(quote.total_paise)}</b></div>
       </div>
 
+      {quote.affiliate_pct != null && (
+        <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '10px 0 0', lineHeight: 1.5 }}>
+          Plus {Number(quote.affiliate_pct)}% of the sales through each creator&rsquo;s affiliate link, billed by Guapd after the ad runs. Not part of the total above.
+        </p>
+      )}
       {quote.message && <p className="bx-msg" style={{ marginTop: 6 }}>“{quote.message}”</p>}
     </>
   )
@@ -392,6 +398,74 @@ export function DeliverableReview({ experienceId, items }: { experienceId: strin
         </div>
       ))}
       <p className="bx-note">Approving is final for that deliverable.</p>
+      {error && <p className="bx-err" role="alert">{error}</p>}
+    </div>
+  )
+}
+
+// ── 0561: collab posts: the affiliate link and ad complete ──
+export function CollabReview({ experienceId, posts }: { experienceId: string; posts: BrandCollabPost[] }) {
+  const { pending, error, run } = useRun()
+  const [linking, setLinking] = useState<string | null>(null)
+  const [url, setUrl] = useState('')
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const groups = new Map<string, BrandCollabPost[]>()
+  for (const p of posts) groups.set(p.creator_name, [...(groups.get(p.creator_name) ?? []), p])
+  return (
+    <div>
+      {Array.from(groups.entries()).map(([creator, list]) => (
+        <div key={creator} className="bx-group">
+          <div className="bx-creator">{creator}{list[0].handle ? <span className="bx-when"> · @{list[0].handle.replace(/^@/, '')}</span> : null}</div>
+          {list.map((p) => (
+            <div key={p.id} className="bx-item">
+              <div className="bx-row">
+                <div>
+                  <div className="bx-label">{p.label}</div>
+                  <div className="bx-when">{p.posted_at ? `Posted ${fmt(p.posted_at)}` : `With the creator since ${fmt(p.sent_at)}`}</div>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  {p.post_url ? <a className="bx-link" href={p.post_url} target="_blank" rel="noreferrer noopener">{p.post_url}</a> : <span className="bx-when">The creator posts it as a collab with you</span>}
+                </div>
+                <div className="bx-item-state">
+                  {p.status === 'ad_complete' ? <span className="bx-chip bx-ok">Ad complete</span>
+                    : p.status === 'posted' ? <span className="bx-chip bx-new">Live</span>
+                    : <span className="bx-chip bx-hold">Not posted yet</span>}
+                </div>
+              </div>
+              {p.affiliate_url && (
+                <p className="bx-when bx-item-note">Your affiliate link{p.affiliate_on_guapd === false ? ' (added via Guapd)' : ''}: <a className="bx-link" href={p.affiliate_url} target="_blank" rel="noreferrer noopener">{p.affiliate_url}</a></p>
+              )}
+              {p.ad_complete_at && <p className="bx-when bx-item-note">{p.ad_complete_on_guapd ? 'You marked the ad complete' : 'Marked complete (via Guapd)'} on {fmt(p.ad_complete_at)}.</p>}
+              {p.can_act && linking !== p.id && confirming !== p.id && (
+                <div className="bx-actions bx-item-actions">
+                  <button type="button" className="bx-btn" disabled={pending} onClick={() => { setUrl(p.affiliate_url ?? ''); setLinking(p.id) }}>{p.affiliate_url ? 'Change affiliate link' : 'Add affiliate link'}</button>
+                  <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => setConfirming(p.id)}>Ad complete</button>
+                </div>
+              )}
+              {linking === p.id && (
+                <div className="bx-box">
+                  <label className="bx-flabel" htmlFor={`bx-aff-${p.id}`}>Your affiliate link for this post</label>
+                  <input id={`bx-aff-${p.id}`} className="dinput" maxLength={500} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourstore.com/?ref=…" />
+                  <p className="bx-when" style={{ marginTop: 6 }}>Guapd and the creator see it. Sales through it earn the creator the agreed affiliate commission.</p>
+                  <div className="bx-actions">
+                    <button type="button" className="bx-btn" disabled={pending} onClick={() => setLinking(null)}>Back</button>
+                    <button type="button" className="neonbtn bx-cta-sm" disabled={pending || !url.trim()} onClick={() => run(() => actOnCollab(experienceId, p.id, 'affiliate', url), () => setLinking(null))}>{pending ? 'Saving…' : 'Save link'}</button>
+                  </div>
+                </div>
+              )}
+              {confirming === p.id && (
+                <div className="bx-box">
+                  <p className="bx-note" style={{ margin: 0 }}>Mark the ad on this post as complete? Do this once it has run on the agreed terms. It cannot be undone.</p>
+                  <div className="bx-actions">
+                    <button type="button" className="bx-btn" disabled={pending} onClick={() => setConfirming(null)}>Back</button>
+                    <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => run(() => actOnCollab(experienceId, p.id, 'ad_complete', null), () => setConfirming(null))}>{pending ? 'Saving…' : 'Mark complete'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
       {error && <p className="bx-err" role="alert">{error}</p>}
     </div>
   )

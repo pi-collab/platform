@@ -7463,3 +7463,73 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Lock still waits for the brand's answer on every shared creator, so unanswered picks block it as before
 - [ ] Tests: `scripts/test-experience-brand-portal.ts` green
 
+---
+
+## 129. Collab C1: the affiliate commission % (migration 0560)
+
+### Console, Quotes (finance)
+- [ ] On an Experience where the brand asked for affiliate links, the quote composer shows **Affiliate commission (% of sales)**; "Send quote" / "Record counter" without it is refused ("Set the affiliate commission")
+- [ ] 0%, over 100% or three decimals are refused; on an Experience without affiliate links the field is hidden and any % is refused
+- [ ] A new quote starts from the latest quote's %; the history shows "· N% affiliate commission"; the accept dialog says "… with N% affiliate commission as the agreed price"
+- [ ] An open quote from before 0560 (no %) cannot be accepted on an affiliate Experience: "send a new quote with it"
+
+### Brand
+- [ ] Guapd's price card shows **Affiliate commission N% of sales** in the side column and "Plus N% of the sales through each creator's affiliate link, billed by Guapd after the ad runs. Not part of the total above."
+- [ ] The total is unchanged by the %
+
+### Creator offer
+- [ ] Every creator deal sent on an affiliate Experience locks the agreed % (`experience_creator_terms.affiliate_pct`), like the fee %
+- [ ] The offer's scope line reads "N of your videos carry the brand's affiliate link: you earn X% of the sales through it, less your Y% Guapd fee"
+- [ ] Sending refuses when the agreed price has no % on an affiliate Experience
+
+- [ ] Tests: `scripts/e2e-experience.ts` (0560 checks), `scripts/test-experience-brand-portal.ts` (no % without affiliate links)
+
+---
+
+## 130. Collab C2: approved videos go to their creator; collab posts, affiliate link, ad complete (migration 0561)
+
+### Console, Posting (operational; Shoot scheduled to Delivering)
+- [ ] "Posting" lists, per creator who shot, every video the BRAND approved. Each has **Send to post as a collab** and **Share with the creator**
+- [ ] A collab is one of the creator's ad-rights videos: the header reads "Collabs: N of M posted"; once M are sent, "Send to post as a collab" is disabled (the database refuses past the count)
+- [ ] A video not yet approved by the brand cannot be sent; the same video cannot be sent twice (a taken-back one can)
+- [ ] Sent: "With the creator"; **Record the post link** (channel required, never "On Guapd") and **Take back** (reason 3 to 300 characters, only before it is posted)
+- [ ] Posted: **Record affiliate link** / **Record ad complete** for the brand, with the channel
+- [ ] Each row shows the post link, the affiliate link and ad complete, and who recorded each ("by the creator", "by the brand", or "recorded (WhatsApp)")
+
+### Creator deal page (desktop and phone)
+- [ ] "Your videos" card once the deal is accepted: each video with **Download video** / **Open video** (10-minute link to their own file only)
+- [ ] Collab: "Post it on Instagram as a collab with <brand> … paste the post link here. Your invoice waits for it."; **Save post link** accepts only https Instagram post/reel links; "Change" until the brand marks the ad complete
+- [ ] The brand's affiliate link shows once added
+- [ ] Shared: "Post it on your own account if you like; nothing more is needed." No link field
+- [ ] With ad-rights videos still to post: "N collab videos still to post…" and the Payment card says to post them first; the invoice form appears only once all are posted
+
+### Brand Experience page
+- [ ] "Collab posts" section (Shoot done onward) lists only collab posts (never shared videos or taken-back ones), by creator: label, post link, Live / Not posted yet / Ad complete
+- [ ] Live: **Add affiliate link** (https only; Guapd and the creator see it) and **Ad complete** (confirm step; final)
+- [ ] No creator id, deal id, rate or fee in what the brand reads
+
+### Notifications (in-app + email; WhatsApp stays off)
+- [ ] Creator: "Your video is ready to post" (collab) / "Your video from the shoot" (share); "The brand added its affiliate link"
+- [ ] Brand members: "<creator> posted their collab … Add your affiliate link" (first post only, not on a link correction)
+- [ ] Staff: the creator posted; the brand added an affiliate link / marked an ad complete
+
+### Gate
+- [ ] `experience_leg_work_complete` is false until every ad-rights video on the deal is posted (status posted or ad complete), so the creator's main invoice and payout wait. Deals with 0 ad-rights videos are unchanged
+
+### SECURITY
+- [ ] `experience_collab_posts`: RLS on, no grants; creators and brands read it only through `creator_collab_posts` / `brand_experience_collab_posts` (own deal / own brand); direct selects return nothing
+- [ ] Another creator cannot read, open or post on someone else's video; another brand cannot read or act; anonymous cannot call anything
+- [ ] Every action is audited in ops_events (collab_sent, collab_cancelled, collab_posted_by_creator, collab_post_recorded, collab_affiliate_by_brand / _recorded, collab_ad_complete_by_brand / _recorded) and on the deal timeline (events)
+- [ ] Tests: `scripts/test-experience-collab.ts` (46 checks); `scripts/test-experience-brief-messages.ts` covers the invoice waiting on 2 collab posts
+
+---
+
+## 131. Affiliate % on Experiences agreed before 0560 (migration 0562)
+
+- [ ] An Experience with affiliate links whose price was agreed before 0560 (agreed plan has no affiliate_pct) still sends creator deals: they go out with no commission, as before
+- [ ] Console, Quotes (finance), Choosing creators / Confirmed: an amber box "The agreed price has no affiliate commission" with % of sales + "The brand agreed via" + **Record it**
+- [ ] Recording sets the % on the agreed plan once (a second time: "already agreed"); deals sent afterwards lock it and show it on the creator's offer; deals already sent stay without one
+- [ ] Refused: 0, over 100, three decimals, no channel, any status other than Choosing creators / Confirmed, an Experience without affiliate links, a price agreed from 0560 on (it always has its %)
+- [ ] Finance only: operational staff, the brand, creators and anonymous cannot record it; audited `experience.affiliate_pct_recorded` (with how many deals were already sent without it)
+- [ ] Tests: `scripts/test-experience-console-quotes.ts` (0562 checks)
+

@@ -1,6 +1,6 @@
 import { formatPaiseINR } from '@/lib/money'
 import { countOf } from '@/lib/experience-request'
-import type { CreatorLegContext } from '@/lib/creator-leg-money'
+import type { CreatorCollabPost, CreatorLegContext } from '@/lib/creator-leg-money'
 import { creatorLegMoney } from '@/lib/creator-leg-money'
 import CreatorOfferMobile from '@/components/CreatorOfferMobile'
 import AcceptDecline from './AcceptDecline'
@@ -10,6 +10,7 @@ import BriefBlock from './BriefBlock'
 import CreatorThread from './CreatorThread'
 import LegInvoiceForm from './LegInvoiceForm'
 import ExtraOffers from './ExtraOffers'
+import CollabPosts from './CollabPosts'
 import { DealHeroCard, DealShellStyles, wrapper, metaLabel, sectionHeading, termRow } from './deal-shell'
 import { ReadyToDecideBar, TermsCard, DeliverablesCard, DeliverableRow, MoneyRow, MoneyCard, CardActions, chipStyle } from './deal-cards'
 import './creator-leg.css'
@@ -44,9 +45,11 @@ const short = (iso: string | null | undefined) => {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0, creatorName = '' }: {
+export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0, creatorName = '', collabPosts = [] }: {
   dealId: string
   ctx: CreatorLegContext
+  /** 0561: the videos Guapd sent to post as collabs or to share. */
+  collabPosts?: CreatorCollabPost[]
   attachmentUrls?: Record<string, string>
   messages?: Msg[]
   events?: Ev[]
@@ -73,7 +76,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   const hasBrief = !!brief && !!(brief.pitch || brief.guidelines || brief.avoid || (brief.attachments ?? []).length > 0)
   const shootDate = ctx.shoot_date ? new Date(`${ctx.shoot_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : null
   const scopeLines = [
-    (ctx.affiliate_count ?? 0) > 0 ? `${ctx.affiliate_count} of your ${ctx.videos} video${ctx.videos === 1 ? '' : 's'} carr${ctx.affiliate_count === 1 ? 'ies' : 'y'} the brand's affiliate link` : null,
+    (ctx.affiliate_count ?? 0) > 0 ? `${ctx.affiliate_count} of your ${ctx.videos} video${ctx.videos === 1 ? '' : 's'} carr${ctx.affiliate_count === 1 ? 'ies' : 'y'} the brand's affiliate link${ctx.affiliate_pct != null ? `: you earn ${Number(ctx.affiliate_pct)}% of the sales through it, less your ${ctx.platform_pct != null ? `${Number(ctx.platform_pct)}% ` : ''}Guapd fee` : ''}` : null,
     (ctx.ad_rights_videos ?? 0) > 0 ? `The brand may run ${ctx.ad_rights_videos} as ads${ctx.ad_rights_months != null ? ` for ${ctx.ad_rights_months} month${ctx.ad_rights_months === 1 ? '' : 's'}` : ''}` : null,
     (ctx.boost_videos ?? 0) > 0 ? `The brand may boost ${ctx.boost_videos}${ctx.boost_months != null ? ` for ${ctx.boost_months} month${ctx.boost_months === 1 ? '' : 's'}` : ''}` : null,
   ].filter(Boolean) as string[]
@@ -224,7 +227,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0) ? <>{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
+        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0))) ? <>{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
@@ -290,6 +293,9 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
               </DeliverablesCard>
             )}
 
+            {/* 0561: the videos to post as collabs (the invoice waits for them) or shared to post. */}
+            {accepted && <CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} />}
+
             {/* 0555: extra deliverables on this deal, each with its own invoice and payment. */}
             <ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} />
 
@@ -322,6 +328,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                   helper={paid ? null : p ? (p.status === 'approved' ? 'Approved. Guapd is sending your payout.' : 'Guapd is preparing your payout.')
                     : invoice ? `You sent invoice ${invoice.number} on ${short(invoice.issued_at)}. Guapd pays you next.`
                     : ctx.can_invoice ? 'Guapd marked your shoot done. Confirm it and raise your invoice to get paid.'
+                    : shot && Number(ctx.collab_waiting ?? 0) > 0 ? 'Post your collab videos and add their links above, then raise your invoice here.'
                     : shot && creatorSubmits ? 'Once Guapd approves your deliverables, confirm the shoot and raise your invoice here.'
                     : 'After the shoot, confirm it here and raise your invoice to Guapd.'}
                   receiveLabel={paid ? 'You received' : 'You receive'}

@@ -44,7 +44,7 @@ const req = (brandId: string, over: Record<string, unknown> = {}) => ({
 })
 const quote = (expId: string, over: Record<string, unknown> = {}) => ({
   p_experience_id: expId, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 20, p_misc_paise: 500000,
-  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, ...over,
+  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, p_affiliate_pct: 10, ...over,
 })
 const audit = async (targetId: string, action: string) =>
   (await admin.from('ops_events').select('action, actor_email, detail').eq('target_id', targetId).eq('action', action)).data ?? []

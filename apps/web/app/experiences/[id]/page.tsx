@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, getBrandSuggestions, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, getBrandSuggestions, getBrandCollabPosts, type BrandInvoice } from '@/lib/experience-brand-server'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -10,7 +10,7 @@ import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import ViewFile from './ViewFile'
-import { RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
+import { CollabReview, RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
 
 export const dynamic = 'force-dynamic'
@@ -53,6 +53,9 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   // 0558: the brand's suggestions of creators not on Guapd yet.
   const sugRes = hasRoster ? await getBrandSuggestions(e.id) : null
   const suggestions = sugRes?.ok ? sugRes.data : []
+  // 0561: collab posts (once Guapd sends approved videos to their creators).
+  const collabRes = hasDeliverables ? await getBrandCollabPosts(e.id) : null
+  const collabs = collabRes?.ok ? collabRes.data : []
   const st = brandStage(e.status, quoteToAnswer)
   const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null
   const date = fmt(e.shoot_date)
@@ -72,6 +75,14 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
           <h2 id="bx-deliv" className="bx-h2">Deliverables</h2>
           <p className="bx-note">What Guapd has shared with you. Approve each one, or tell Guapd what to change.</p>
           <DeliverableReview experienceId={e.id} items={deliverables.data.items} />
+        </section>
+      )}
+
+      {collabs.length > 0 && (
+        <section className="surface bx-card" aria-labelledby="bx-collabs">
+          <h2 id="bx-collabs" className="bx-h2">Collab posts</h2>
+          <p className="bx-note">Videos your creators post as a collab with you. Add your affiliate link once a post is live, run the ad on the agreed terms, then mark it complete.</p>
+          <CollabReview experienceId={e.id} posts={collabs} />
         </section>
       )}
 

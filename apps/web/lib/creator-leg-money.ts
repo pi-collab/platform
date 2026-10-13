@@ -42,6 +42,10 @@ export interface CreatorLegContext {
   deliverables: { type: string; count: number }[]
   videos: number
   affiliate_count: number
+  /** 0560: commission on sales through this creator's affiliate link, locked at send; null when none. */
+  affiliate_pct?: number | null
+  /** 0561: ad-rights videos still to post as collabs; the main invoice waits for them. */
+  collab_waiting?: number
   ad_rights_months: number | null
   ad_rights_videos: number | null
   boost_months: number | null
@@ -149,3 +153,12 @@ export function creatorLegMoney(t: Pick<CreatorLegContext, 'day_rate_paise' | 'd
 export function creatorLegBrandLabel(experienceBrandName: string | null | undefined): string {
   return `${experienceBrandName?.trim() || 'A brand'} · Managed by Guapd`
 }
+
+/** 0561: a video Guapd sent this creator (creator_collab_posts, their own deal only). */
+export interface CreatorCollabPost {
+  id: string; label: string; kind: 'collab' | 'share'; status: 'sent' | 'posted' | 'ad_complete'
+  sent_at: string; file_name: string | null; has_link: boolean
+  post_url: string | null; posted_at: string | null; affiliate_url: string | null; ad_complete_at: string | null
+  can_post: boolean
+}
+

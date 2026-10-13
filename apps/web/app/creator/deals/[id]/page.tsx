@@ -31,7 +31,7 @@ import ShippingAddressForm from './ShippingAddressForm'
 import CreatorStepper from './CreatorStepper'
 import CreatorReviewCard from './CreatorReviewCard'
 import CreatorLegView from './CreatorLegView'
-import type { CreatorLegContext } from '@/lib/creator-leg-money'
+import type { CreatorLegContext, CreatorCollabPost } from '@/lib/creator-leg-money'
 
 // ── Stage definitions (mirrors the deals list) ──
 const STATUS_META: Record<string, { label: string; dot: string; glow: string }> = {
@@ -134,6 +134,8 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     const { data: legCtx, error: legErr } = await supabase.rpc('creator_leg_context', { p_deal_id: params.id })
     if (legErr || !legCtx) notFound()
     const lc = legCtx as CreatorLegContext
+    // 0561: the videos Guapd sent this creator (their own deal only).
+    const { data: collabRows } = await supabase.rpc('creator_collab_posts', { p_deal_id: params.id })
     /* 0546: the brief's attachments are signed here with the service key, but
        only the paths creator_leg_context just returned for THIS creator's own
        leg (their own brief, else the shared one), and only inside this
@@ -147,7 +149,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     }
     // 0552: prefills the invoice form; the creator can change it.
     const { data: me } = await supabase.from('creators').select('full_name').eq('user_id', profileId).maybeSingle()
-    return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls} creatorName={(me?.full_name as string | undefined) ?? ''}
+    return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls} collabPosts={(collabRows ?? []) as CreatorCollabPost[]} creatorName={(me?.full_name as string | undefined) ?? ''}
       messages={(messages ?? []).map((m) => ({ id: m.id as string, deal_id: m.deal_id as string, sender_party: m.sender_party as 'brand' | 'creator', body: m.body as string | null, created_at: m.created_at as string }))}
       events={(events ?? []) as { id: string; event_type: string; detail: any; created_at: string }[]}
       unread={await unreadNotificationCount(supabase, profileId)}

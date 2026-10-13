@@ -8,6 +8,7 @@ import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyStaffCreatorInvoiced } from '@/lib/experience-money-notify'
+import { notifyCollabPosted } from '@/lib/experience-collab-notify'
 
 /**
  * The creator's actions on a Guapd Experience creator leg: accept or
@@ -203,3 +204,34 @@ export async function raiseExtraInvoice(dealId: string, extraId: string, input: 
   revalidatePath(`/creator/deals/${dealId}`)
   return { ok: true, data: { number: out.number } }
 }
+
+// ── 0561: the videos Guapd sent this creator (collab / share) ─────────────
+// creator_collab_file and creator_collab_post_link run with the creator's own
+// session: their own deal's live posts only. The service role signs a
+// 10-minute link for exactly the path the database just returned.
+export async function openCollabVideo(dealId: string, postId: string): Promise<LegOut<string>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(postId)) return { ok: false, message: 'Something went wrong.' }
+  const { data, error } = await createClient().rpc('creator_collab_file', { p_post_id: postId })
+  if (error || !data) return { ok: false, message: 'This video is no longer shared with you.' }
+  const f = data as { storage_path: string | null; external_url: string | null }
+  if (f.external_url) return { ok: true, data: f.external_url }
+  const signed = await createAdminClient().storage.from('deliverables').createSignedUrl(f.storage_path as string, 600, { download: true })
+  if (signed.error || !signed.data) return { ok: false, message: 'Could not open the video. Try again.' }
+  return { ok: true, data: signed.data.signedUrl }
+}
+
+export async function submitCollabPostLink(dealId: string, postId: string, url: string): Promise<LegOut<null>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(postId) || typeof url !== 'string') return { ok: false, message: 'Something went wrong.' }
+  // The brand and staff hear about the first post only, not each correction.
+  const { data: before } = await createClient().rpc('creator_collab_posts', { p_deal_id: dealId })
+  const first = !((before ?? []) as { id: string; post_url: string | null }[]).some((p) => p.id === postId && p.post_url)
+  const { error } = await createClient().rpc('creator_collab_post_link', { p_post_id: postId, p_url: url.trim().slice(0, 500) })
+  if (error) return { ok: false, message: /Instagram post link/i.test(error.message) ? 'Paste the link to your Instagram post or reel (https://www.instagram.com/…).'
+    : /final/i.test(error.message) ? 'The brand marked the ad complete; the link is final.' : /closed/i.test(error.message) ? 'This Experience is closed.' : 'Could not save the link. Please try again.' }
+  if (first) await notifyCollabPosted(postId, 'creator')
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: null }
+}
+

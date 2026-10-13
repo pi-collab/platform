@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, listConsoleCollabPosts } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -15,6 +15,7 @@ import CreatorLegsPanel from './CreatorLegsPanel'
 import CostSheetPanel from './CostSheetPanel'
 import PnlPanel from './PnlPanel'
 import ShootPanel from './ShootPanel'
+import CollabPanel from './CollabPanel'
 import DeliverablesPanel from './DeliverablesPanel'
 import InvoicesPanel from './InvoicesPanel'
 import PayoutsPanel from './PayoutsPanel'
@@ -83,6 +84,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   // The shoot (from Confirmed) and deliverables (from Shoot scheduled), 0538. Operational.
   const deliverables = hasLegs ? await getConsoleDeliverables(e.id) : null
   const hasDeliverables = ['shoot_scheduled', 'shoot_done', 'delivering', 'complete'].includes(e.status)
+  // 0561: approved videos to their creator (collab / share).
+  const collabPosts = hasDeliverables ? await listConsoleCollabPosts(e.id) : null
+  const adRights = Object.fromEntries((legs?.ok ? legs.data : []).filter((l) => l.leg_deal_id).map((l) => [l.leg_deal_id as string, Number(l.leg_ad_rights_count ?? 0)]))
   // Cost sheet (operational) and P&L (financial only, decided in Postgres) once the price is agreed.
   const [costs, financial] = hasRoster ? await Promise.all([listConsoleCosts(e.id), canSeePnl()]) : [null, false]
   const pnl = hasRoster && financial ? await getExperiencePnl(e.id) : null
@@ -234,6 +238,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
             <>
               <div style={{ marginTop: 20 }}><ShootPanel experienceId={e.id} data={deliverables.data} shootCity={e.shoot_city} /></div>
               {hasDeliverables && <div style={{ marginTop: 20 }}><DeliverablesPanel experienceId={e.id} data={deliverables.data} /></div>}
+              {hasDeliverables && collabPosts && (collabPosts.ok
+                ? <CollabPanel experienceId={e.id} data={deliverables.data} posts={collabPosts.data} adRights={adRights} />
+                : <div style={{ marginTop: 20 }}><Failed inline message={collabPosts.error} /></div>)}
             </>
           ))
         : <div style={{ marginTop: 20 }}><Failed inline message={deliverables.error} /></div>)}
@@ -263,6 +270,8 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
             canSeePrice={e.can_see_brand_price}
             quotes={quotes.data}
             requested={e.request_deliverables ?? []}
+            affiliate={e.request_affiliate === true}
+            needsAgreedPct={e.request_affiliate === true && !!e.agreed_plan && e.agreed_plan.affiliate_pct == null && ['rostering', 'confirmed'].includes(e.status)}
             defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
             planVideos={e.plan_videos_total}
             planLabel={`${creators} creator${creators === 1 ? '' : 's'} × ${e.plan_videos_per_creator} video${e.plan_videos_per_creator === 1 ? '' : 's'}`}

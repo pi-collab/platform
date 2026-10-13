@@ -37,6 +37,7 @@ let passed = 0, failed = 0
 const ok = (n: string, c: boolean, d = '') => { c ? passed++ : failed++; console.log(`  ${c ? '✅' : '❌'} ${n}${d ? ' — ' + d : ''}`) }
 const stage = (g: string) => console.log(`\n▸ ${g}`)
 const refused = (r: { error: { message: string } | null }) => !!r.error
+const said = (r: { error: { message: string } | null }, re: RegExp) => !!r.error && re.test(r.error.message)
 const must = <T,>(r: { data: T; error: { message: string } | null }, what: string): T => { if (r.error) throw new Error(`${what}: ${r.error.message}`); return r.data }
 
 const st: { E?: string; deals: string[]; files: string[]; createdRates: string[]; priorRates: any[]; newVendorCreators: string[]; grants: { id: string; auth: string }[]; brandId?: string; priorSettings?: any; priorBilling?: any; startedAt: string } =
@@ -115,11 +116,22 @@ async function run() {
   ok('another brand cannot see it', refused(await other.rpc('brand_experience', { p_experience_id: E })))
 
   stage('2. Guapd quotes; 3. the brand accepts the price')
-  const q = must(await fin.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-10-01', p_shoot_city: 'Mumbai', p_message: 'Two creators, one video each', p_channel: null }), 'quote') as string
+  const q0 = { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-10-01', p_shoot_city: 'Mumbai', p_message: 'Two creators, one video each', p_channel: null }
+  // 0560: an affiliate Experience is quoted with its commission %.
+  ok('0560 a quote without the affiliate commission is refused', said(await fin.rpc('experience_console_quote', q0), /affiliate commission/))
+  ok('0560 0% / over 100% / three decimals refused', said(await fin.rpc('experience_console_quote', { ...q0, p_affiliate_pct: 0 }), /above 0/)
+    && said(await fin.rpc('experience_console_quote', { ...q0, p_affiliate_pct: 101 }), /at most 100/) && said(await fin.rpc('experience_console_quote', { ...q0, p_affiliate_pct: 10.125 }), /two decimals/))
+  const q = must(await fin.rpc('experience_console_quote', { ...q0, p_affiliate_pct: 12.5 }), 'quote') as string
+  ok('0560 the quote carries 12.5%', Number((await admin.from('experience_quotes').select('affiliate_pct').eq('id', q).single()).data?.affiliate_pct) === 12.5)
+  must(await admin.from('experience_quotes').update({ affiliate_pct: null }).eq('id', q), 'strip pct')
+  ok('0560 a quote with no % (from before 0560) cannot be accepted on an affiliate Experience', said(await brand.rpc('brand_experience_quote_answer', { p_quote_id: q, p_accept: true, p_note: null }), /no affiliate commission/))
+  must(await admin.from('experience_quotes').update({ affiliate_pct: 12.5 }).eq('id', q), 'restore pct')
   const bx = (await brand.rpc('brand_experience', { p_experience_id: E })).data as any
   ok('the brand sees the price to answer', bx?.quote?.status === 'open' && Number(bx?.quote?.total_paise) === 7000000)
+  ok('0560 …with the 12.5% affiliate commission', Number(bx?.quote?.affiliate_pct) === 12.5)
   must(await brand.rpc('brand_experience_quote_answer', { p_quote_id: q, p_accept: true, p_note: null }), 'brand accepts')
   ok('price accepted → Building roster', (await status()) === 'rostering')
+  ok('0560 the agreed plan holds the 12.5%', Number(((await admin.from('experiences').select('agreed_plan').eq('id', E).single()).data as any)?.agreed_plan?.affiliate_pct) === 12.5)
 
   stage('4. roster: staff add, the brand accepts on Guapd, staff lock')
   must(await op.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [G.id, D.id], p_added_by: 'guapd', p_channel: null }), 'roster add')
@@ -148,6 +160,8 @@ async function run() {
   const dD = must(await op.rpc('experience_console_leg_send', { p_roster_id: lD.roster_id, p_expected_gross_paise: tD.creatorGrossPaise, p_expected_platform_pct: tD.platformPct, p_expected_net_paise: tD.creatorNetPaise, p_expected_allowance_paise: 0 }), 'send D') as string
   st.deals.push(dG, dD)
   const ctxG = (await cG.rpc('creator_leg_context', { p_deal_id: dG })).data as any
+  ok('0560 the 12.5% is locked on both creator deals and shown on the offer', Number(ctxG?.affiliate_pct) === 12.5
+    && ((await admin.from('experience_creator_terms').select('affiliate_pct').in('deal_id', [dG, dD])).data ?? []).every((t: any) => Number(t.affiliate_pct) === 12.5))
   ok('G\'s offer: Managed by Guapd, rate → fee → net, + ₹2,000 allowance, own scope', ctxG?.status === 'negotiating' && Number(ctxG.net_paise) === tG0.creatorNetPaise && Number(ctxG.allowance_paise) === 200000 && ctxG.affiliate_count === 1 && ctxG.ad_rights_videos === 1)
   ok('G reads the shared brief; D reads their own', String(ctxG?.brief_detail?.pitch).startsWith('Diwali glow') && String(((await cD.rpc('creator_leg_context', { p_deal_id: dD })).data as any)?.brief_detail?.pitch).startsWith('D: the evening'))
   ok('the brand cannot see either leg', ((await brand.from('deals').select('id').in('id', [dG, dD])).data ?? []).length === 0 && refused(await brand.rpc('creator_leg_context', { p_deal_id: dG })))
@@ -248,7 +262,7 @@ async function run() {
       p_title: `${PREFIX} Kiro Beauty · Wedding season`, p_creator_count: 1, p_deliverables: [{ type: 'UGC video', count: 2 }, { type: 'Story', count: 1 }],
       p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: 1, p_ad_rights_months: 6,
       p_boost: false, p_boost_per_creator: null, p_boost_months: null, p_location: 'Mumbai', p_date_from: null, p_date_to: null, p_brief: 'Bridal glam, two looks' }), 'request 2') as string
-    const q2 = must(await fin.rpc('experience_console_quote', { p_experience_id: E2, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 500000, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null }), 'quote 2') as string
+    const q2 = must(await fin.rpc('experience_console_quote', { p_experience_id: E2, p_proposed_by: 'guapd', p_per_video_paise: 3500000, p_deliverable_count: 2, p_misc_paise: 500000, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 }), 'quote 2') as string
     must(await brand.rpc('brand_experience_quote_answer', { p_quote_id: q2, p_accept: true, p_note: null }), 'accept 2')
     must(await op.rpc('experience_console_roster_add', { p_experience_id: E2, p_creator_ids: [G.id], p_added_by: 'guapd', p_channel: null }), 'roster 2')
     // 0548: Guapd's picks are internal until shared; share them for the brand's review.
