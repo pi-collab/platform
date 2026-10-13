@@ -95,7 +95,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
             {date || e.shoot_city ? `Shoot${date ? ` on ${date}` : ''}${e.shoot_city ? ` in ${e.shoot_city}` : ''}` : e.requested_at ? `Requested ${fmt(e.requested_at)}${e.request_on_guapd ? '' : ' (recorded by Guapd)'}` : ''}
           </p>
         </div>
-        <div className="bx-hero-aside" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="bx-hero-aside" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', maxWidth: 'none' }}>
           <StatusChip label={st.label} tone={st.tone} />
           {/* 0550: the brand ↔ Guapd thread, in the same chat as a deal's. */}
           <OpenDealChat className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, height: 42, padding: '0 18px', borderRadius: 11, background: 'var(--card)', border: '1px solid var(--hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12.5, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
