@@ -31,7 +31,7 @@ export const dynamic = 'force-dynamic'
  * WhatsApp or email; the latest stands.
  */
 export default async function BrandExperiencePage({ params, searchParams }: { params: { id: string }; searchParams?: { chat?: string } }) {
-  await verifyBrand()
+  const brand = await verifyBrand()
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
   const exp = await getBrandExperience(params.id)
   if (!exp.ok) notFound()
@@ -107,6 +107,13 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
           <StepperTimeline steps={BRAND_STEPS} currentStepIndex={e.status === 'requested' && e.quote?.status === 'accepted' ? 1 : brandStepIndex(e.status)}
             nextLabel={brandNext(e.status, quoteToAnswer)} dates={{}} />
         </div>
+      )}
+
+      {/* 0556: a brand not yet approved can request; Guapd quotes once it is approved. */}
+      {e.status === 'requested' && !e.quote && brand.brandStatus !== 'approved' && (
+        <section className="surface bx-card">
+          <p className="bx-note" style={{ margin: 0 }}>Guapd is taking a quick look at your brand account, as it does before anyone’s first booking. Your price follows as soon as that’s done, usually within a day.</p>
+        </section>
       )}
 
       {report?.ok && (

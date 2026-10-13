@@ -12,7 +12,8 @@ export const metadata = { title: 'Experiences · Guapd' }
  * The brand's Experiences (0544): every one on their own brand, from
  * brand_experiences (the brand's own session; membership checked in the
  * database), with the one thing waiting on them. "Request an Experience" for
- * a member of an approved brand.
+ * a member of any brand that isn't rejected (0556): approval comes with the
+ * first request, before Guapd quotes.
  */
 export default async function BrandExperiencesPage() {
   await verifyBrand()
@@ -31,7 +32,7 @@ export default async function BrandExperiencesPage() {
         </div>
         {canRequest
           ? <Link href="/experiences/new" className="neonbtn bx-cta">Request an Experience</Link>
-          : <p className="bx-note bx-hero-aside">Requests open once Guapd has approved your brand account.</p>}
+          : <p className="bx-note bx-hero-aside">Requests aren’t open for your brand account. Message Guapd if you think this is a mistake.</p>}
       </section>
 
       {!r.ok && <p className="bx-err" role="alert">Could not load your Experiences. Refresh to try again.</p>}

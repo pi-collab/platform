@@ -133,13 +133,22 @@ async function run() {
   const r2 = await member.rpc('brand_experience_request', request({ p_title: `${PREFIX} Second` }))
   ok('a plain member can request too', !r2.error, r2.error?.message ?? '')
   const E2 = r2.data as string; if (E2) exps.push(E2)
-  if (BB.brands.brand_status === 'approved') {
-    brandStatusRestore.push({ id: BB.brand_id, status: 'approved' })
-    must(await admin.from('brands').update({ brand_status: 'unreviewed' }).eq('id', BB.brand_id), 'unreview brand B')
-  }
+  // 0556: a brand not yet approved CAN request; the first request opens the review, and Guapd quotes only once it is approved.
+  brandStatusRestore.push({ id: BB.brand_id, status: BB.brands.brand_status })
+  must(await admin.from('brands').update({ brand_status: 'unreviewed' }).eq('id', BB.brand_id), 'unreview brand B')
+  ok('a brand not yet approved sees it can request (0556)', ((await bb.rpc('brand_experiences')).data as any)?.can_request === true)
   const pend = await bb.rpc('brand_experience_request', request({ p_title: `${PREFIX} Pending` }))
   if (pend.data) exps.push(pend.data as string)
-  ok('a brand not yet approved cannot request', said(pend, /approved/), pend.error?.message ?? `created (brand status was ${BB.brands.brand_status})`)
+  ok('a brand not yet approved can request (0556)', !pend.error && !!pend.data, pend.error?.message ?? '')
+  const { data: bbRow } = await admin.from('brands').select('brand_status').eq('id', BB.brand_id).single()
+  ok('…and its first request opens the review (unreviewed → pending_review)', bbRow?.brand_status === 'pending_review', bbRow?.brand_status ?? '')
+  if (pend.data) {
+    const qp = await fin.rpc('experience_console_quote', { p_experience_id: pend.data, p_proposed_by: 'guapd', p_per_video_paise: 100000, p_deliverable_count: 1, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-20', p_shoot_city: 'Mumbai', p_message: null, p_channel: null })
+    ok('…Guapd cannot quote it until the brand is approved', said(qp, /Approve this brand/), qp.error?.message ?? 'QUOTED')
+  }
+  must(await admin.from('brands').update({ brand_status: 'rejected' }).eq('id', BB.brand_id), 'reject brand B')
+  ok('a rejected brand cannot request', said(await bb.rpc('brand_experience_request', request({ p_title: `${PREFIX} Rejected` })), /cannot request/))
+  ok('…and is told it cannot', ((await bb.rpc('brand_experiences')).data as any)?.can_request === false)
   for (const r of brandStatusRestore.splice(0)) await admin.from('brands').update({ brand_status: r.status }).eq('id', r.id)
   ok('staff cannot record a request as "portal"', said(await op.rpc('experience_console_create', { ...request({ p_title: `${PREFIX} x` }), p_brand_id: BA.brand_id, p_channel: 'portal' }), /On Guapd/))
   const sr = await op.rpc('experience_console_create', { ...request({ p_title: `${PREFIX} By staff` }), p_brand_id: BA.brand_id, p_channel: 'whatsapp' })

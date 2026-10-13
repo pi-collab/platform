@@ -114,13 +114,26 @@ export async function registerHeldSend(brandId: string, dealId: string): Promise
     // The email is guarded independently of the status transition: if the
     // transition succeeded but the email failed, a later send retries the email
     // without re-transitioning.
-    await notifyOpsOnce(brandId)
+    await notifyOpsOnce(brandId, 'deal')
   } catch (err) {
     console.error(
       `[send-gate] registerHeldSend failed brand=${brandId} deal=${dealId}: ${
         err instanceof Error ? err.message : String(err)
       }`,
     )
+  }
+}
+
+/**
+ * An unapproved brand's first Experience request (0556): the database has
+ * already moved it to pending_review; this emails ops, once per brand ever
+ * (the same guard as a held deal). Never throws, like registerHeldSend.
+ */
+export async function registerExperienceRequestReview(brandId: string): Promise<void> {
+  try {
+    await notifyOpsOnce(brandId, 'experience')
+  } catch (err) {
+    console.error(`[send-gate] registerExperienceRequestReview failed brand=${brandId}: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 
@@ -135,7 +148,7 @@ export async function registerHeldSend(brandId: string, dealId: string): Promise
  * The email is a nudge only. It carries no approve/reject actions; /ops remains
  * the source of truth.
  */
-async function notifyOpsOnce(brandId: string): Promise<void> {
+async function notifyOpsOnce(brandId: string, first: 'deal' | 'experience'): Promise<void> {
   const admin = createAdminClient()
 
   const { data: alreadySent } = await admin
@@ -169,7 +182,9 @@ async function notifyOpsOnce(brandId: string): Promise<void> {
 
   const { html, text } = renderDealEmail({
     heading: `${brandName} is awaiting approval`,
-    body: `${brandName} tried to send their first deal. It’s being held until you approve the account. Review them in the ops queue. Approving releases every held deal automatically.`,
+    body: first === 'deal'
+      ? `${brandName} tried to send their first deal. It’s being held until you approve the account. Review them in the ops queue. Approving releases every held deal automatically.`
+      : `${brandName} requested their first Experience. Guapd can quote it once you approve the account. Review them in the ops queue.`,
     dealLabel: brandName,
     dealUrl: `${base}/ops/brands`,
     ctaLabel: 'Open brand review queue',

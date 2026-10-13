@@ -7383,3 +7383,23 @@ The leg reuses the creator deal page's own pieces; only the data is the leg's (`
 - [ ] Extra payout: needs its invoice; one live per extra; exactly the extra (DB guard, also against the service role); finance approves (maker-checker) and pays; paying an extra never moves the deal status.
 - [ ] P&L creator cost includes accepted extras (`creator_extras_gross_paise` / `_net_paise`); cash out includes extra payouts; completion needs accepted extras paid and no open extra request.
 - [ ] `experience_leg_extras` has no policies or grants; the brand never reads extras, extra invoices or their documents.
+
+---
+
+## 125. Brands see the platform from signup; approval comes with the first deal (migration 0556)
+
+Palak, 2026-10-13: a new genuine brand waiting for approval before it can see anything may never come back. Show the value at signup; reject bad or false brands afterwards.
+
+### Browse (reverses §79's roster hold)
+- [ ] A new brand (unreviewed, email domain unlike its website) opens `/browse` and sees every bookable creator, and opens any `/browse/[id]`
+- [ ] A rejected brand is still sent to `/brand/rejected` (verifyBrand), unchanged
+- [ ] `/ops/brands` still shows "⚠ email domain does not match website" on a brand awaiting review, as a reviewer's signal only
+- [ ] Sending a first deal as an unapproved brand is still HELD (lib/send-gate.ts, unchanged): the creator sees nothing until ops approves
+
+### Experiences
+- [ ] An unreviewed or pending brand sees "Request an Experience" on `/experiences` and can submit `/experiences/new`
+- [ ] The first request moves an unreviewed brand to `pending_review`, and ops is emailed once ("requested their first Experience"), never again for that brand (shared guard with a held deal)
+- [ ] The brand's Experience page, while requested with no quote and the brand not approved, says Guapd is taking a quick look at the account and the price follows
+- [ ] Guapd sending a quote to a brand that is not approved is refused: "Approve this brand in Ops, Brands before sending it a quote". Approve the brand, then the quote sends
+- [ ] A rejected brand cannot request ("Requests aren't open for your brand account…") and `can_request` is false
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` (143), console-quotes (75), addons (52) green

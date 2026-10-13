@@ -245,8 +245,8 @@ const tdStyle: React.CSSProperties = {
 /**
  * "Email domain does not match the website" — shown on a brand waiting review.
  *
- * This is the signal lib/brand-review-gate.ts uses to withhold the creator
- * roster, so a reviewer should be able to see it without opening anything.
+ * A reviewer's signal only: it no longer withholds anything (every brand that
+ * isn't rejected sees the roster), so it shows here, without opening anything.
  * Silent when the domains agree: a flag on every row is not a flag.
  */
 function DomainFlag({ website, email }: { website: string | null; email: string | null }) {

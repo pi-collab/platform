@@ -5,6 +5,7 @@ import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
 import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
+import { registerExperienceRequestReview } from '@/lib/send-gate'
 
 /**
  * The brand's own Experience actions (0544). Each passes verifyBrand (a
@@ -24,13 +25,15 @@ const note = (v: unknown, max: number) => {
 const done = (id: string) => { revalidatePath(BASE); revalidatePath(`${BASE}/${id}`) }
 
 export async function requestExperience(f: RequestFormFields): Promise<Out<string>> {
-  await verifyBrand()
+  const brand = await verifyBrand()
   const parsed = parseExperienceRequest(f)
   if (!parsed.ok) return parsed
   const r = await brandRequestExperience(parsed.value)
   if (!r.ok) return r
   done(r.data)
   await notifyStaffBrandActed(r.data, 'requested a new Experience')
+  // 0556: a brand not yet approved may request; its first request opens the review.
+  if (brand.brandStatus !== 'approved') await registerExperienceRequestReview(brand.brandId)
   return r
 }
 

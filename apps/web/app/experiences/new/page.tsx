@@ -23,7 +23,7 @@ export default async function NewBrandExperiencePage() {
       </section>
       {canRequest
         ? <ExperienceRequestForm mode="brand" submit={requestExperience} doneBase="/experiences" cancelHref="/experiences" />
-        : <section className="surface bx-card"><p className="bx-empty" style={{ marginTop: 0 }}>Requests open once Guapd has approved your brand account.</p></section>}
+        : <section className="surface bx-card"><p className="bx-empty" style={{ marginTop: 0 }}>Requests aren’t open for your brand account. Message Guapd if you think this is a mistake.</p></section>}
     </div>
   )
 }
