@@ -4,10 +4,9 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import type { BrandPickerCreator } from '@/lib/brand-creator-search'
 import type { BrandSuggestion } from '@/lib/experience-brand-server'
-import AddCreatorsModal from '@/components/AddCreatorsModal'
-import { addRosterCreators, suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
+import Link from 'next/link'
+import { suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -419,8 +418,8 @@ export function SignOffCard({ experienceId, isAdmin, signedAt, signedOnGuapd, op
 }
 
 // ── 0557 / 0558: the brand adds creators while the roster is open ──
-// "Add from Guapd" is the same picker a campaign uses (components/AddCreatorsModal):
-// each pick joins the roster accepted. "Suggest someone not on Guapd" sends Guapd a
+// "Add from Guapd" opens the brand's creator pool (/experiences/[id]/pool), the
+// Growth campaign pool's cards without a price: each pick joins the roster accepted. "Suggest someone not on Guapd" sends Guapd a
 // name and handle; Guapd reaches out, and the list below says where each stands.
 const SUGGESTION_STATE: Record<BrandSuggestion['status'], { label: string; cls: string }> = {
   open: { label: 'Sent to Guapd', cls: 'bx-new' },
@@ -429,8 +428,8 @@ const SUGGESTION_STATE: Record<BrandSuggestion['status'], { label: string; cls: 
   not_possible: { label: 'Not possible', cls: 'bx-chg' },
 }
 
-export function RosterAdd({ experienceId, creators, suggestions, canAdd }: {
-  experienceId: string; creators: BrandPickerCreator[]; suggestions: BrandSuggestion[]; canAdd: boolean
+export function RosterAdd({ experienceId, suggestions, canAdd }: {
+  experienceId: string; suggestions: BrandSuggestion[]; canAdd: boolean
 }) {
   const { pending, error, run } = useRun()
   const [suggesting, setSuggesting] = useState(false)
@@ -451,13 +450,10 @@ export function RosterAdd({ experienceId, creators, suggestions, canAdd }: {
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="button" className="pill" style={{ ...pillBtn, height: 44, fontSize: 12.5 }} onClick={() => { setSuggesting(true); setNotice(null) }}>Suggest someone not on Guapd</button>
-            <AddCreatorsModal creators={creators} existingCreatorIds={[]} title="Add creators from Guapd" buttonLabel="Add from Guapd"
-              onAdd={async (ids) => {
-                const r = await addRosterCreators(experienceId, ids)
-                if (!r.ok) return { error: r.error }
-                setNotice(r.data === 0 ? 'Those creators were already on your roster.' : `Added ${r.data} creator${r.data === 1 ? '' : 's'}. Guapd will check they are free and confirm them.`)
-                return { error: null }
-              }} />
+            <Link href={`/experiences/${experienceId}/pool`} className="neonbtn" style={{ ...neonBtn, height: 44, fontSize: 12.5, textDecoration: 'none' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              Add from Guapd
+            </Link>
           </div>
         </div>
       )}

@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
 import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, getBrandSuggestions, type BrandInvoice } from '@/lib/experience-brand-server'
-import { listBookableCreators } from '@/lib/brand-creator-search'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -187,7 +186,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
             : 'The creators for your shoot.'}</p>
           {/* 0557: the brand can name creators itself while the roster is open. */}
           {(roster.data.can_decide || suggestions.length > 0) && (
-            <RosterAdd experienceId={e.id} creators={roster.data.can_decide ? await listBookableCreators() : []} suggestions={suggestions} canAdd={roster.data.can_decide} />
+            <RosterAdd experienceId={e.id} suggestions={suggestions} canAdd={roster.data.can_decide} />
           )}
           <RosterReview experienceId={e.id} creators={roster.data.creators} canDecide={roster.data.can_decide} />
         </section>

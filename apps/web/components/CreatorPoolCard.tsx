@@ -28,8 +28,8 @@ export default function CreatorPoolCard({
   busy: boolean
   /** Cannot be toggled (e.g. doesn't sell the campaign's deliverable, or is locked). */
   disabled?: boolean
-  /** The figure the card leads with, and what it is FOR. */
-  rate: { paise: number | null; label: string }
+  /** The figure the card leads with, and what it is FOR. Omitted where no price may show (a brand's Experience pool). */
+  rate?: { paise: number | null; label: string }
   /** Sits at the end of the rate row (e.g. "View more"). */
   rateAction?: React.ReactNode
   /** Under the header (e.g. the full package list). */
@@ -78,14 +78,16 @@ export default function CreatorPoolCard({
             {c.niches.join(' · ') || '—'}
           </div>
           {meta && <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 3, lineHeight: 1.4 }}>{meta}</div>}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 'auto', paddingTop: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
-              {rate.paise != null ? inr(rate.paise) : '—'}
-            </span>
-            {/* Named, never a bare number. */}
-            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{rate.label}</span>
-            {rateAction}
-          </div>
+          {rate && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 'auto', paddingTop: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>
+                {rate.paise != null ? inr(rate.paise) : '—'}
+              </span>
+              {/* Named, never a bare number. */}
+              <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{rate.label}</span>
+              {rateAction}
+            </div>
+          )}
         </div>
       </div>
 

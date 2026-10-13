@@ -7434,7 +7434,10 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 ### Brand, Creators card (Choosing creators / Confirmed)
 - [ ] "Have creators in mind?" shows two buttons: **Suggest someone not on Guapd** (pill) and **Add from Guapd** (neon)
-- [ ] Add from Guapd opens the same picker a campaign uses (search, multi-select, photo, handle, niches); adding puts each on the roster as Accepted (0557); the card says how many were added
+- [ ] Add from Guapd opens `/experiences/[id]/pool`: the Growth campaign pool's layout (hero with "N of M on the roster", filters for niche, followers, location, platform; creator cards with photo, handle, followers, niches, avg reach, engagement, interactions)
+- [ ] **No price anywhere on the pool** (no day rate, no package price, no ₹): the shoot day rate never reaches a brand
+- [ ] "Add to my roster" puts the creator on the roster as Accepted (0557); the card turns to "On your roster"; a creator Guapd confirmed reads "Confirmed on your roster", one the brand rejected "You rejected them"; Guapd's private shortlist is never marked
+- [ ] "Suggest them to Guapd" in the pool's hero goes back to the Creators card
 - [ ] Suggest opens a form: name, Instagram handle (@, a full instagram.com link or plain all work), optional note; "Send to Guapd"
 - [ ] A handle that is already a listed Guapd creator is refused: "@x is already on Guapd: add them from Guapd instead"
 - [ ] The same handle twice is refused; after Guapd says not possible it can be suggested again
