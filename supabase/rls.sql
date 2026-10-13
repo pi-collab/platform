@@ -1590,3 +1590,8 @@ REVOKE ALL ON experience_addons FROM anon, authenticated;
 -- The brand never sees an extra (only what is shared with it as a deliverable).
 ALTER TABLE experience_leg_extras ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_leg_extras FROM anon, authenticated;
+
+-- ═════ 0557: the brand adds creators to its own roster ═════
+-- No table change: experience_roster stays function-access only. A brand member
+-- writes through brand_experience_roster_add (SECURITY DEFINER, brand gate,
+-- roster open, bookable creators only), granted to authenticated, not anon.

@@ -125,6 +125,11 @@ export async function brandAcceptRosterMany(experienceId: string, items: { roste
   return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
 }
 
+/** 0557: the brand names creators for its own roster (shared and accepted). */
+export async function brandAddRosterCreators(experienceId: string, creatorIds: string[]): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('brand_experience_roster_add', { p_experience_id: experienceId, p_creator_ids: creatorIds })
+  return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
+}
 export async function brandDecideRoster(rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold', expected: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('brand_experience_roster_decide', { p_roster_id: rosterId, p_decision: decision, p_expected: expected })
   return error ? fail(error) : { ok: true, data: null }

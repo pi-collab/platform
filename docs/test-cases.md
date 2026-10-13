@@ -7403,3 +7403,27 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Guapd sending a quote to a brand that is not approved is refused: "Approve this brand in Ops, Brands before sending it a quote". Approve the brand, then the quote sends
 - [ ] A rejected brand cannot request ("Requests aren't open for your brand account…") and `can_request` is false
 - [ ] Tests: `scripts/test-experience-brand-portal.ts` (143), console-quotes (75), addons (52) green
+
+---
+
+## 126. Brand quote card in the deal design; Message Guapd button; the brand adds creators (migration 0557)
+
+### Price card (`/experiences/[id]`, BrandPanels QuoteCard)
+- [ ] Open Guapd quote: label "Guapd's price", the total large; beside it Videos (25 × ₹4,000) and Shoot (city, date); below, lines "25 videos × ₹4,000 = ₹1,00,000", each extra by name with its amount, and Total
+- [ ] Footer: helper text on the left; **Decline** as a white pill and **Accept ₹…** in neon with a tick, the same buttons as a deal's Negotiation card
+- [ ] Decline opens an overlay ("Decline the price") with the note box, Back and "Decline and send note"; a note under 3 characters is refused
+- [ ] Accepted: "Agreed price", the same lines, the footer says Agreed and when; a plain member sees "An admin on your brand account accepts or declines the price"
+- [ ] The add-on card uses the same Decline / Accept buttons
+- [ ] Phone width: the side column wraps under the price, buttons wrap, no sideways scroll
+
+### Message Guapd
+- [ ] The hero shows a bordered pill button with a chat icon, "Message Guapd", next to the status chip; it opens the thread panel
+
+### The brand adds creators (0557)
+- [ ] While creators are being chosen (Choosing creators or Confirmed), the Creators card shows "Have creators in mind?" with **Add creators**
+- [ ] Search by name or @handle (2+ characters) lists only listed (bookable) creators, never the Guapd house account; each links to their `/browse` profile
+- [ ] Select up to 20, "Add N creators": each joins the roster as Accepted, added by the brand, shown to the brand; Guapd gets the in-app note "added N creators to the roster"
+- [ ] A creator already on Guapd's private shortlist becomes shared and accepted; one pending or on hold becomes accepted; a rejected one stays rejected; locked ones are untouched
+- [ ] Guapd still checks availability, confirms (locks) and sends the offer; nothing reaches the creator from the brand's add
+- [ ] Another brand, a creator, staff who are not members, anonymous and the service role cannot call it
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` 157 green

@@ -250,6 +250,28 @@ async function run() {
   ok('0548: a rejection is final: the brand cannot take it back', said(await decide(ba, K3, 'accepted', 'rejected'), /final/))
   ok('0548: …nor can Guapd record a different answer', said(await op.rpc('experience_console_roster_decide', { p_roster_id: bRow(K3).roster_id, p_decision: 'accepted', p_channel: 'email' }), /final/))
   for (const [n, s] of outsiders) ok(`${n}: cannot decide`, refused(await decide(s as SupabaseClient, K3, 'accepted', 'rejected')))
+  // 0557: the brand names creators itself while the roster is open.
+  const { data: spareCreators } = await admin.from('creators').select('id, full_name').eq('is_bookable', true).eq('is_guapd', false)
+    .not('id', 'in', `(${[K1.id, K2.id, K3.id, C.id].join(',')})`).limit(1)
+  const X = (spareCreators ?? [])[0] as { id: string; full_name: string } | undefined
+  if (X) {
+    const add = (sess: SupabaseClient, ids: (string | null)[]) => sess.rpc('brand_experience_roster_add', { p_experience_id: E, p_creator_ids: ids })
+    for (const [n, sx] of outsiders) ok(`0557 ${n}: cannot add creators`, refused(await add(sx as SupabaseClient, [X.id])))
+    const a1 = await add(member, [X.id])
+    ok('0557 a plain member adds a listed creator', !a1.error && Number(a1.data) === 1, a1.error?.message ?? String(a1.data))
+    const { data: xr } = await admin.from('experience_roster').select('id, added_by, brand_decision, decision_channel, shared_with_brand_at, locked').eq('experience_id', E).eq('creator_id', X.id).single()
+    ok('…joins the roster added by the brand, accepted on Guapd, shared, not locked',
+      xr?.added_by === 'brand' && xr?.brand_decision === 'accepted' && xr?.decision_channel === 'portal' && !!xr?.shared_with_brand_at && xr?.locked === false)
+    ok('…and the brand sees them', (((await ba.rpc('brand_experience_roster', { p_experience_id: E })).data as any)?.creators ?? []).some((c: any) => c.full_name === X.full_name && c.decision === 'accepted'))
+    ok('adding the same creator again changes nothing', Number((await add(ba, [X.id])).data) === 0)
+    ok('a rejected creator stays rejected (rejection is final)', Number((await add(ba, [K3.id])).data) === 0
+      && (await admin.from('experience_roster').select('brand_decision').eq('id', bRow(K3).roster_id).single()).data?.brand_decision === 'rejected')
+    ok('the house creator or an unknown id is refused', said(await add(ba, ['00000000-0000-0000-0000-000000000000']), /listed on Guapd/))
+    ok('NULL in the list is refused', said(await add(ba, [null]), /listed on Guapd/))
+    ok('an empty list is refused', said(await add(ba, []), /at least one/))
+    ok('0557 audited', ((await admin.from('ops_events').select('id').eq('action', 'experience.roster_added_by_brand').eq('target_id', xr!.id)).data ?? []).length === 1)
+    must(await op.rpc('experience_console_roster_remove', { p_roster_id: xr!.id }), 'remove brand pick before lock')
+  } else ok('0557 needs a spare bookable creator on staging', false)
   must(await op.rpc('experience_console_roster_lock', { p_experience_id: E }), 'lock')
   ok('once locked, the brand cannot change a creator', said(await decide(ba, K1, 'rejected', 'accepted'), /confirmed/))
 

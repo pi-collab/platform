@@ -3,9 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 import { registerExperienceRequestReview } from '@/lib/send-gate'
+import { searchBookableCreators, type BrandCreatorHit } from '@/lib/brand-creator-search'
 
 /**
  * The brand's own Experience actions (0544). Each passes verifyBrand (a
@@ -71,6 +72,26 @@ export async function decideRosterCreator(experienceId: string, rosterId: string
   if (!r.ok) return r
   done(experienceId)
   await notifyStaffBrandActed(experienceId, decision === 'accepted' ? 'accepted a creator' : decision === 'on_hold' ? 'put a creator on hold' : 'rejected a creator')
+  return r
+}
+
+/** 0557: search Guapd's listed creators to add to the roster. */
+export async function searchRosterCreators(query: string): Promise<Out<BrandCreatorHit[]>> {
+  await verifyBrand()
+  if (typeof query !== 'string') return { ok: true, data: [] }
+  return { ok: true, data: await searchBookableCreators(query) }
+}
+
+/** 0557: the brand adds creators it wants; each joins the roster accepted. */
+export async function addRosterCreators(experienceId: string, creatorIds: string[]): Promise<Out<number>> {
+  await verifyBrand()
+  if (!isUuid(experienceId) || !Array.isArray(creatorIds) || creatorIds.length === 0 || creatorIds.length > 20 || !creatorIds.every(isUuid)) {
+    return { ok: false, error: 'Pick up to 20 creators.' }
+  }
+  const r = await brandAddRosterCreators(experienceId, Array.from(new Set(creatorIds)))
+  if (!r.ok) return r
+  done(experienceId)
+  if (r.data > 0) await notifyStaffBrandActed(experienceId, r.data === 1 ? 'added a creator to the roster' : `added ${r.data} creators to the roster`)
   return r
 }
 

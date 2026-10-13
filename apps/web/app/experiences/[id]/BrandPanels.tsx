@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import { answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
+import type { BrandCreatorHit } from '@/lib/brand-creator-search'
+import { addRosterCreators, searchRosterCreators, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -35,68 +36,127 @@ function useRun() {
 const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
 // ── The price ──
+// The deal page's look (NegotiationCard / the money card): the big price with
+// its make-up beside it, the lines, then a footer with Decline as a pill and
+// Accept in neon. Decline opens the same overlay a deal's Counter does.
+const metaLabel: React.CSSProperties = { fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint)' }
+const sideValue: React.CSSProperties = { fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.025em', marginTop: 5 }
+const lineRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, padding: '11px 0', borderBottom: '1px solid var(--border-hairline, #EAEAE3)', fontFamily: 'var(--font-ui)' }
+export const neonBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 9, height: 48, padding: '0 26px', borderRadius: 12,
+  background: 'var(--neon)', border: 'none', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 14, letterSpacing: '-0.01em', color: 'var(--ink)',
+  boxShadow: '0 10px 24px -14px rgba(40,45,25,.5), inset 0 1px 0 rgba(255,255,255,.7)', cursor: 'pointer', whiteSpace: 'nowrap',
+}
+export const pillBtn: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12,
+  background: 'var(--card)', border: '1px solid var(--hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)',
+  fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', whiteSpace: 'nowrap',
+}
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(22,23,15,.45)', backdropFilter: 'blur(4px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+}
+const Tick = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
+
 export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { experienceId: string; quote: BrandQuote | null; isAdmin: boolean; agreedTotal: number | null }) {
   const { pending, error, run } = useRun()
   const [declining, setDeclining] = useState(false)
   const [why, setWhy] = useState('')
 
   if (!quote) return <p className="bx-note">Guapd is preparing your price. You will get an email when it is ready.</p>
-  const lines = (
-    <div className="bx-quote">
-      <div className="bx-quote-total">{formatRupees(quote.total_paise)}</div>
-      <div className="bx-when">
-        {quote.deliverable_count} video{quote.deliverable_count === 1 ? '' : 's'} × {formatRupees(quote.per_video_paise)}{quote.misc_paise ? ` + ${formatRupees(quote.misc_paise)} extras` : ''}
-        {(quote.shoot_city || quote.shoot_date) ? ` · shoot ${[quote.shoot_city, fmt(quote.shoot_date)].filter(Boolean).join(', ')}` : ''}
+  const extras = quote.extras ?? []
+  const videos = `${quote.deliverable_count} video${quote.deliverable_count === 1 ? '' : 's'}`
+  const shoot = [quote.shoot_city, fmt(quote.shoot_date)].filter(Boolean).join(', ')
+  const open = quote.status === 'open' && quote.proposed_by === 'guapd'
+  const heading = quote.status === 'accepted' ? 'Agreed price' : quote.proposed_by === 'brand' ? 'Your counter' : 'Guapd’s price'
+
+  const body = (
+    <>
+      <div style={{ display: 'flex', alignItems: 'stretch', flexWrap: 'wrap', gap: 20 }}>
+        <div style={{ flex: '1.3 1 220px' }}>
+          <div style={metaLabel}>{heading}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, marginTop: 8 }}>{formatRupees(quote.total_paise)}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 8 }}>For the whole Experience. Guapd pays the creators and runs the shoot.</div>
+        </div>
+        <div style={{ flex: '1 1 200px', paddingLeft: 20, borderLeft: '1px solid var(--border-hairline, #EAEAE3)', display: 'grid', gap: 14, alignContent: 'center' }}>
+          <div><div style={metaLabel}>Videos</div><div style={sideValue}>{quote.deliverable_count} × {formatRupees(quote.per_video_paise)}</div></div>
+          {shoot && <div><div style={metaLabel}>Shoot</div><div style={sideValue}>{shoot}</div></div>}
+        </div>
       </div>
-      {/* 0553: what each extra is for. */}
-      {(quote.extras ?? []).length > 0 && (
-        <ul className="bx-extras" style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 4 }}>
-          {(quote.extras ?? []).map((x, i) => (
-            <li key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)' }}>
-              <span>+ {x.label}</span><span style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatRupees(Number(x.amount_paise))}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {quote.message && <p className="bx-msg">“{quote.message}”</p>}
-    </div>
+
+      <div style={{ marginTop: 20 }}>
+        <div style={lineRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{videos} × {formatRupees(quote.per_video_paise)}</span><b style={{ fontSize: 14 }}>{formatRupees(quote.per_video_paise * quote.deliverable_count)}</b></div>
+        {/* 0553: what each extra is for. */}
+        {extras.length > 0
+          ? extras.map((x, i) => (
+              <div key={i} style={lineRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{x.label}</span><b style={{ fontSize: 14 }}>{formatRupees(Number(x.amount_paise))}</b></div>
+            ))
+          : quote.misc_paise > 0 && <div style={lineRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Extras</span><b style={{ fontSize: 14 }}>{formatRupees(quote.misc_paise)}</b></div>}
+        <div style={{ ...lineRow, borderBottom: 'none' }}><span style={{ fontSize: 13, fontWeight: 600 }}>Total</span><b style={{ fontSize: 16 }}>{formatRupees(quote.total_paise)}</b></div>
+      </div>
+
+      {quote.message && <p className="bx-msg" style={{ marginTop: 6 }}>“{quote.message}”</p>}
+    </>
   )
 
-  if (quote.status === 'accepted') return (
-    <div>{lines}<p className="bx-note"><span className="bx-chip bx-ok">Agreed</span> {quote.on_guapd ? 'You accepted this' : 'Accepted (recorded by Guapd)'}{quote.decided_at ? ` on ${fmt(quote.decided_at)}` : ''}.{agreedTotal != null && agreedTotal !== quote.total_paise ? ` Agreed total ${formatRupees(agreedTotal)}.` : ''}</p></div>
+  const footer = (children: React.ReactNode) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }}>{children}</div>
   )
-  if (quote.status === 'rejected') return (
-    <div>{lines}<p className="bx-note"><span className="bx-chip bx-chg">Declined</span> You told Guapd: “{quote.brand_note}”. Guapd will send a new price.</p></div>
-  )
-  if (quote.proposed_by === 'brand') return (
-    <div>{lines}<p className="bx-note">Your counter, recorded by Guapd. Waiting for Guapd&rsquo;s answer.</p></div>
+  const helper = (t: React.ReactNode) => <div style={{ fontSize: 12, color: 'var(--ink-soft)', maxWidth: 420, lineHeight: 1.5 }}>{t}</div>
+
+  if (!open) return (
+    <div>
+      {body}
+      {footer(helper(
+        quote.status === 'accepted'
+          ? <><span className="bx-chip bx-ok">Agreed</span> {quote.on_guapd ? 'You accepted this' : 'Accepted (recorded by Guapd)'}{quote.decided_at ? ` on ${fmt(quote.decided_at)}` : ''}.{agreedTotal != null && agreedTotal !== quote.total_paise ? ` Agreed total ${formatRupees(agreedTotal)}.` : ''}</>
+          : quote.status === 'rejected'
+            ? <><span className="bx-chip bx-chg">Declined</span> You told Guapd: “{quote.brand_note}”. Guapd will send a new price.</>
+            : 'Your counter, recorded by Guapd. Waiting for Guapd’s answer.'))}
+    </div>
   )
 
   return (
     <div>
-      {lines}
-      {!isAdmin && <p className="bx-note">An admin on your brand account accepts or declines the price.</p>}
-      {isAdmin && !declining && (
-        <div className="bx-actions">
-          <button type="button" className="bx-btn" disabled={pending} onClick={() => setDeclining(true)}>Decline</button>
-          <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => run(() => answerQuote(experienceId, quote.quote_id, true, ''))}>
-            {pending ? 'Saving…' : `Accept ${formatRupees(quote.total_paise)}`}
-          </button>
-        </div>
-      )}
-      {isAdmin && declining && (
-        <div className="bx-box">
-          <label className="bx-flabel" htmlFor="bx-why">What would work for you?</label>
-          <textarea id="bx-why" className="dinput bx-textarea" rows={3} maxLength={1000} value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Our budget is closer to ₹2.5L; could we do 60 videos?" />
-          <div className="bx-actions">
-            <button type="button" className="bx-btn" disabled={pending} onClick={() => setDeclining(false)}>Back</button>
-            <button type="button" className="bx-btn bx-btn-danger" disabled={pending} onClick={() => run(() => answerQuote(experienceId, quote.quote_id, false, why), () => setDeclining(false))}>
-              {pending ? 'Sending…' : 'Decline and send note'}
+      {body}
+      {error && !declining && <p className="bx-err" role="alert">{error}</p>}
+      {footer(<>
+        {helper(isAdmin
+          ? 'Accepting agrees this price and Guapd starts choosing your creators. Declining sends Guapd a note so it can send a new price.'
+          : 'An admin on your brand account accepts or declines the price.')}
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="pill-hover" style={pillBtn} disabled={pending} onClick={() => setDeclining(true)}>Decline</button>
+            <button type="button" className="neonbtn" style={{ ...neonBtn, opacity: pending ? 0.6 : 1 }} disabled={pending}
+              onClick={() => run(() => answerQuote(experienceId, quote.quote_id, true, ''))}>
+              <Tick />{pending ? 'Accepting…' : `Accept ${formatRupees(quote.total_paise)}`}
             </button>
+          </div>
+        )}
+      </>)}
+
+      {isAdmin && declining && (
+        <div style={overlayStyle} onClick={(ev) => { if (ev.target === ev.currentTarget && !pending) setDeclining(false) }}>
+          <div className="surface" role="dialog" aria-modal="true" aria-labelledby="bx-decline-h" style={{ width: '100%', maxWidth: 520, padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '20px 22px', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
+              <h3 id="bx-decline-h" style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>Decline the price</h3>
+              <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 5 }}>Tell Guapd what would work; it sends a new price.</div>
+            </div>
+            <div style={{ padding: '18px 22px', display: 'grid', gap: 10 }}>
+              <label style={metaLabel} htmlFor="bx-why">What would work for you?</label>
+              <textarea id="bx-why" className="dinput bx-textarea" rows={4} maxLength={1000} value={why} onChange={(ev) => setWhy(ev.target.value)} placeholder="Our budget is closer to ₹2.5L; could we do 60 videos?" />
+              {error && <p className="bx-err" role="alert">{error}</p>}
+            </div>
+            <div style={{ padding: '14px 22px 20px', display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="pill-hover" style={pillBtn} disabled={pending} onClick={() => setDeclining(false)}>Back</button>
+              <button type="button" className="neonbtn" style={{ ...neonBtn, opacity: pending ? 0.6 : 1 }} disabled={pending}
+                onClick={() => run(() => answerQuote(experienceId, quote.quote_id, false, why), () => setDeclining(false))}>
+                {pending ? 'Sending…' : 'Decline and send note'}
+              </button>
+            </div>
           </div>
         </div>
       )}
-      {error && <p className="bx-err" role="alert">{error}</p>}
     </div>
   )
 }
@@ -142,9 +202,9 @@ export function AddonCard({ experienceId, addon, agreedTotal, isAdmin }: { exper
       {!isAdmin && <p className="bx-note">An admin on your brand account accepts or declines it.</p>}
       {isAdmin && !declining && (
         <div className="bx-actions">
-          <button type="button" className="bx-btn" disabled={pending} onClick={() => setDeclining(true)}>Decline</button>
-          <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => run(() => answerAddon(experienceId, addon.id, true, '', total))}>
-            {pending ? 'Saving…' : `Accept add-on (${formatRupees(total)})`}
+          <button type="button" className="pill-hover" style={pillBtn} disabled={pending} onClick={() => setDeclining(true)}>Decline</button>
+          <button type="button" className="neonbtn" style={{ ...neonBtn, opacity: pending ? 0.6 : 1 }} disabled={pending} onClick={() => run(() => answerAddon(experienceId, addon.id, true, '', total))}>
+            <Tick />{pending ? 'Accepting…' : `Accept add-on (${formatRupees(total)})`}
           </button>
         </div>
       )}
@@ -352,6 +412,101 @@ export function SignOffCard({ experienceId, isAdmin, signedAt, signedOnGuapd, op
         <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => run(() => signOffExperience(experienceId, why))}>{pending ? 'Saving…' : 'Sign off'}</button>
       </div>
       {error && <p className="bx-err" role="alert">{error}</p>}
+    </div>
+  )
+}
+
+// ── 0557: the brand adds creators it wants to its own roster ──
+// Search Guapd's listed creators (the ones /browse shows), pick, add. Each joins
+// the roster accepted; Guapd checks availability, confirms and sends the offer.
+export function AddCreators({ experienceId }: { experienceId: string }) {
+  const { pending, error, run } = useRun()
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState<BrandCreatorHit[]>([])
+  const [picked, setPicked] = useState<BrandCreatorHit[]>([])
+  const [searching, setSearching] = useState(false)
+  const [added, setAdded] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || q.trim().length < 2) { setHits([]); return }
+    let live = true
+    setSearching(true)
+    const t = setTimeout(async () => {
+      const r = await searchRosterCreators(q)
+      if (live) { setHits(r.ok ? r.data : []); setSearching(false) }
+    }, 250)
+    return () => { live = false; clearTimeout(t) }
+  }, [q, open])
+
+  const toggle = (c: BrandCreatorHit) => setPicked((p) => p.some((x) => x.id === c.id) ? p.filter((x) => x.id !== c.id) : p.length >= 20 ? p : [...p, c])
+  const avatar = (c: BrandCreatorHit) => c.photo_url
+    // eslint-disable-next-line @next/next/no-img-element
+    ? <img src={c.photo_url} alt="" width={36} height={36} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    : <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-2, #F1F1EC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{c.full_name.slice(0, 1)}</span>
+
+  if (!open) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '16px 18px', margin: '14px 0 4px', borderRadius: 14, border: '1px dashed var(--hairline, #DADAD2)' }}>
+      <div>
+        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>Have creators in mind?</div>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 3 }}>{added ?? 'Add creators from Guapd yourself. Guapd checks they are free on your shoot date and confirms them.'}</div>
+      </div>
+      <button type="button" className="pill-hover" style={{ ...pillBtn, height: 42 }} onClick={() => { setOpen(true); setAdded(null) }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        Add creators
+      </button>
+    </div>
+  )
+
+  return (
+    <div className="surface" style={{ padding: 18, margin: '14px 0 4px', boxShadow: 'none', border: '1px solid var(--hairline, #EAEAE3)' }}>
+      <label htmlFor="bx-add-q" style={metaLabel}>Add creators from Guapd</label>
+      <input id="bx-add-q" className="dinput" style={{ marginTop: 8 }} autoFocus type="search" placeholder="Search by name or @handle" value={q} onChange={(ev) => setQ(ev.target.value)} />
+
+      {picked.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          {picked.map((c) => (
+            <button key={c.id} type="button" onClick={() => toggle(c)} aria-label={`Remove ${c.full_name}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 12px', borderRadius: 999, border: '1px solid var(--neon-deep, #C9E04A)', background: 'color-mix(in oklab, var(--neon) 18%, var(--card))', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              {c.full_name}<span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>×</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 10 }}>
+        {q.trim().length >= 2 && !searching && hits.length === 0 && <p className="bx-note" style={{ margin: '8px 0 0' }}>No listed creator matches “{q.trim()}”.</p>}
+        {hits.map((c) => {
+          const on = picked.some((x) => x.id === c.id)
+          return (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
+              {avatar(c)}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <a href={`/browse/${c.id}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)', textDecoration: 'none' }}>{c.full_name}</a>
+                {c.handle && <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>@{c.handle}</div>}
+              </div>
+              <button type="button" className={on ? 'neonbtn' : 'pill-hover'} onClick={() => toggle(c)} aria-pressed={on}
+                style={on ? { ...neonBtn, height: 34, padding: '0 14px', fontSize: 12.5 } : { ...pillBtn, height: 34, padding: '0 14px', fontSize: 12.5 }}>
+                {on ? 'Selected' : 'Select'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      {error && <p className="bx-err" role="alert">{error}</p>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+        <button type="button" className="pill-hover" style={{ ...pillBtn, height: 42 }} disabled={pending} onClick={() => { setOpen(false); setQ(''); setPicked([]) }}>Cancel</button>
+        <button type="button" className="neonbtn" style={{ ...neonBtn, height: 42, opacity: pending || picked.length === 0 ? 0.55 : 1 }} disabled={pending || picked.length === 0}
+          onClick={() => run(async () => {
+            const r = await addRosterCreators(experienceId, picked.map((c) => c.id))
+            if (r.ok) setAdded(r.data === 0 ? 'Those creators were already on your roster.' : `Added ${r.data} creator${r.data === 1 ? '' : 's'}. Guapd will check they are free and confirm them.`)
+            return r
+          }, () => { setOpen(false); setQ(''); setPicked([]) })}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          {pending ? 'Adding…' : picked.length ? `Add ${picked.length} creator${picked.length === 1 ? '' : 's'}` : 'Add creators'}
+        </button>
+      </div>
     </div>
   )
 }
