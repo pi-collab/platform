@@ -16,7 +16,7 @@ import {
   consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
   getConsolePayouts, sendExtra, withdrawExtra, requestExtraPayout, sendAddon, recordAddonAnswer, withdrawAddon, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
   recordBrandSignoff, clearBrandSignoff,
-  addProspect, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
+  addProspect, resolveSuggestion, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
   acceptCounter, declineCounter, sendCounter, withdrawGuapdCounter, getPayoutAccount, type PayoutAccount,
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
@@ -1053,6 +1053,31 @@ export async function addProspectAction(experienceId: string, f: ProspectForm): 
   if (typeof input === 'string') return { ok: false, error: input }
   if (!isProspectStatus(f.status)) return { ok: false, error: 'Pick where things stand.' }
   const r = await addProspect(experienceId, input, f.status)
+  if (r.ok) poolPath(experienceId)
+  return r
+}
+
+/** 0558: a brand suggestion becomes a prospect (staff add the expected cost), atomically answered. */
+export async function addProspectFromSuggestionAction(experienceId: string, suggestionId: string, f: ProspectForm): Promise<Out<string>> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(suggestionId)) return { ok: false, error: 'Unknown suggestion.' }
+  const input = prospectInput(f)
+  if (typeof input === 'string') return { ok: false, error: input }
+  if (!isProspectStatus(f.status)) return { ok: false, error: 'Pick where things stand.' }
+  const r = await addProspect(experienceId, input, f.status)
+  if (!r.ok) return r
+  const s = await resolveSuggestion(suggestionId, 'prospect', r.data, null)
+  poolPath(experienceId)
+  return s.ok ? r : { ok: false, error: `Added as a prospect, but the suggestion was not marked: ${s.error}` }
+}
+
+/** 0558: a brand suggestion that cannot happen, with the reason the brand sees. */
+export async function suggestionNotPossibleAction(experienceId: string, suggestionId: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(suggestionId)) return { ok: false, error: 'Unknown suggestion.' }
+  const why = typeof reason === 'string' ? reason.trim().slice(0, 300) : ''
+  if (why.length < 3) return { ok: false, error: 'Say why; the brand sees it.' }
+  const r = await resolveSuggestion(suggestionId, 'not_possible', null, why)
   if (r.ok) poolPath(experienceId)
   return r
 }

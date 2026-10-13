@@ -9,7 +9,7 @@ import { CHANNELS, DELIVERABLE_TYPES, channelLabel, countOf } from '@/lib/experi
 import type { ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
 import { lockRoster, recordRosterDecision, releaseRosterCreator, removeFromRoster, setRosterNote, setRosterPlan, shareRosterWithBrand } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
-import type { ConsoleProspect } from '@/lib/experience-console-server'
+import type { ConsoleProspect, ConsoleSuggestion } from '@/lib/experience-console-server'
 import ProspectsSection from './ProspectsSection'
 import { Avatar, MenuItem, kebab, menuBox, ROSTER_COLS } from './roster-bits'
 
@@ -31,7 +31,7 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
 }
 const COLS = ROSTER_COLS
 
-export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects, linkable }: {
+export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects, linkable, suggestions }: {
   experienceId: string
   /** Building roster or Confirmed: creators can still be added (add-after-lock). */
   editable: boolean
@@ -39,6 +39,8 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   reconcile: ConsoleReconcile | null
   /** 0541: creators not on Guapd yet, listed under the roster (not on it until linked). */
   prospects: ConsoleProspect[]
+  /** 0558: the brand's suggestions of creators not on Guapd yet. */
+  suggestions: ConsoleSuggestion[]
   /** Vetted creators not on this roster, to link a not-on-Guapd entry to. */
   linkable: { id: string; name: string; handle: string }[]
 }) {
@@ -284,7 +286,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
         </div>
       )}
 
-      <ProspectsSection experienceId={experienceId} editable={editable} prospects={prospects} linkable={linkable}
+      <ProspectsSection experienceId={experienceId} editable={editable} prospects={prospects} linkable={linkable} suggestions={suggestions}
         adding={addingProspect} onAddingChange={setAddingProspect} />
 
       {editable && roster.length > 0 && (

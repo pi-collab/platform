@@ -3,10 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff } from '@/lib/experience-brand-server'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 import { registerExperienceRequestReview } from '@/lib/send-gate'
-import { searchBookableCreators, type BrandCreatorHit } from '@/lib/brand-creator-search'
 
 /**
  * The brand's own Experience actions (0544). Each passes verifyBrand (a
@@ -75,11 +74,18 @@ export async function decideRosterCreator(experienceId: string, rosterId: string
   return r
 }
 
-/** 0557: search Guapd's listed creators to add to the roster. */
-export async function searchRosterCreators(query: string): Promise<Out<BrandCreatorHit[]>> {
+/** 0558: the brand suggests a creator who is not on Guapd yet. */
+export async function suggestCreator(experienceId: string, fullName: string, handle: string, why: string): Promise<Out<string>> {
   await verifyBrand()
-  if (typeof query !== 'string') return { ok: true, data: [] }
-  return { ok: true, data: await searchBookableCreators(query) }
+  if (!isUuid(experienceId) || typeof fullName !== 'string' || typeof handle !== 'string') return { ok: false, error: 'Not found.' }
+  const name = fullName.trim()
+  if (name.length < 2) return { ok: false, error: 'Enter their name.' }
+  if (!handle.trim()) return { ok: false, error: 'Enter their Instagram handle.' }
+  const r = await brandSuggestCreator(experienceId, name.slice(0, 120), handle.trim().slice(0, 200), note(why, 500))
+  if (!r.ok) return r
+  done(experienceId)
+  await notifyStaffBrandActed(experienceId, 'suggested a creator who is not on Guapd yet')
+  return r
 }
 
 /** 0557: the brand adds creators it wants; each joins the roster accepted. */

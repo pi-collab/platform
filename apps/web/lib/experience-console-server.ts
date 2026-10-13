@@ -976,6 +976,19 @@ export async function addProspect(experienceId: string, p: ProspectInput, status
   const { data, error } = await createClient().rpc('experience_console_prospect_add', { p_experience_id: experienceId, ...prospectArgs(p), p_status: status })
   return error ? fail(error) : { ok: true, data: data as string }
 }
+/** 0558: creators the brand suggested that are not on Guapd yet. */
+export interface ConsoleSuggestion {
+  id: string; full_name: string; handle: string; note: string | null
+  status: 'open' | 'prospect' | 'not_possible'; prospect_id: string | null; reason: string | null; created_at: string
+}
+export async function listConsoleSuggestions(experienceId: string): Promise<Result<ConsoleSuggestion[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_suggestions', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleSuggestion[] }
+}
+export async function resolveSuggestion(suggestionId: string, outcome: 'prospect' | 'not_possible', prospectId: string | null, reason: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_suggestion_resolve', { p_suggestion_id: suggestionId, p_outcome: outcome, p_prospect_id: prospectId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
 export async function updateProspect(prospectId: string, p: ProspectInput): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_prospect_update', { p_prospect_id: prospectId, ...prospectArgs(p) })
   return error ? fail(error) : { ok: true, data: null }

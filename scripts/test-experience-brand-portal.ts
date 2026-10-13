@@ -272,6 +272,45 @@ async function run() {
     ok('0557 audited', ((await admin.from('ops_events').select('id').eq('action', 'experience.roster_added_by_brand').eq('target_id', xr!.id)).data ?? []).length === 1)
     must(await op.rpc('experience_console_roster_remove', { p_roster_id: xr!.id }), 'remove brand pick before lock')
   } else ok('0557 needs a spare bookable creator on staging', false)
+  // 0558: the brand suggests creators who are not on Guapd yet.
+  {
+    const H = `notonguapd${Date.now() % 100000}`
+    const sug = (sx: SupabaseClient, name: string | null, handle: string | null, note: string | null = null) =>
+      sx.rpc('brand_experience_suggest_creator', { p_experience_id: E, p_full_name: name, p_handle: handle, p_note: note })
+    for (const [n, sx] of outsiders) ok(`0558 ${n}: cannot suggest`, refused(await sug(sx as SupabaseClient, 'Test Person', H)))
+    const s1 = await sug(member, 'Ananya Test', `@${H}`, 'Loved her reels')
+    ok('0558 a plain member suggests someone not on Guapd (handle cleaned)', !s1.error && !!s1.data, s1.error?.message ?? '')
+    ok('…the same handle twice is refused', said(await sug(ba, 'Ananya Test', `https://instagram.com/${H}`), /already suggested/))
+    ok('…a NULL name or handle is refused', said(await sug(ba, null, 'abc.def'), /name/) && said(await sug(ba, 'Some One', null), /handle/))
+    const listedHandle = ((await admin.from('creators').select('handle').eq('is_bookable', true).eq('is_guapd', false).not('handle', 'is', null).limit(1)).data ?? [])[0]?.handle as string | undefined
+    if (listedHandle) ok('…a handle already on Guapd points to Add from Guapd', said(await sug(ba, 'On Guapd', listedHandle), /already on Guapd/))
+    const bl = await ba.rpc('brand_experience_suggestions', { p_experience_id: E })
+    const mine = ((bl.data ?? []) as any[]).find((x) => x.id === s1.data)
+    ok('…the brand sees it, "open", with only name, handle, note, status', mine?.status === 'open' && mine?.handle === H
+      && Object.keys(mine).sort().join(',') === 'created_at,full_name,handle,id,note,reason,status')
+    for (const [n, sx] of outsiders) ok(`0558 ${n}: cannot read the suggestions`, refused(await (sx as SupabaseClient).rpc('brand_experience_suggestions', { p_experience_id: E })))
+    const cl = await op.rpc('experience_console_brand_suggestions', { p_experience_id: E })
+    ok('0558 staff see it in the console', ((cl.data ?? []) as any[]).some((x) => x.id === s1.data && x.status === 'open'))
+    ok('…the brand cannot read the console list', refused(await ba.rpc('experience_console_brand_suggestions', { p_experience_id: E })))
+    const resolve = (id: unknown, outcome: string | null, pid: string | null, reason: string | null) =>
+      op.rpc('experience_console_suggestion_resolve', { p_suggestion_id: id, p_outcome: outcome, p_prospect_id: pid, p_reason: reason })
+    ok('…a NULL outcome is refused', said(await resolve(s1.data, null, null, null), /prospect, or say/))
+    ok('…"prospect" without the matching prospect is refused', said(await resolve(s1.data, 'prospect', null, null), /not this creator/))
+    const pid = must(await op.rpc('experience_console_prospect_add', { p_experience_id: E, p_full_name: 'Ananya Test', p_handle: H, p_phone: null, p_cost_basis: 'flat', p_day_rate_paise: null, p_days: null, p_flat_paise: 1500000, p_note: null, p_status: 'not_contacted' }), 'prospect from suggestion') as string
+    ok('…staff add them as a prospect and answer the suggestion', !refused(await resolve(s1.data, 'prospect', pid, null)))
+    const after = (((await ba.rpc('brand_experience_suggestions', { p_experience_id: E })).data ?? []) as any[]).find((x) => x.id === s1.data)
+    ok('…the brand sees "prospect" and never the cost', after?.status === 'prospect' && !JSON.stringify(after).includes('1500000'))
+    ok('…answered twice is refused', said(await resolve(s1.data, 'not_possible', null, 'Busy that week'), /already answered/))
+    const s2 = await sug(ba, 'Busy Person', `${H}x`)
+    ok('…"not possible" needs a reason', said(await resolve(s2.data, 'not_possible', null, ''), /Say why/))
+    ok('…"not possible" with a reason', !refused(await resolve(s2.data, 'not_possible', null, 'Not free on the shoot date')))
+    const nb = (((await ba.rpc('brand_experience_suggestions', { p_experience_id: E })).data ?? []) as any[]).find((x) => x.id === s2.data)
+    ok('…the brand sees "not possible" with the reason', nb?.status === 'not_possible' && nb?.reason === 'Not free on the shoot date')
+    ok('…and can suggest that handle again', !refused(await sug(ba, 'Busy Person', `${H}x`)))
+    ok('0558 audited', ((await admin.from('ops_events').select('id').eq('action', 'experience.creator_suggested_by_brand').eq('target_id', s1.data as string)).data ?? []).length === 1)
+    must(await admin.from('experience_brand_suggestions').delete().eq('experience_id', E), 'clean suggestions')
+    must(await admin.from('experience_roster_prospects').delete().eq('id', pid), 'clean prospect')
+  }
   must(await op.rpc('experience_console_roster_lock', { p_experience_id: E }), 'lock')
   ok('once locked, the brand cannot change a creator', said(await decide(ba, K1, 'rejected', 'accepted'), /confirmed/))
 
@@ -400,6 +439,7 @@ run().catch((e) => { console.error(e); failed++ }).finally(async () => {
   }
   if (legDeals.length) { await admin.from('notifications').delete().in('deal_id', legDeals); await admin.from('events').delete().in('deal_id', legDeals); await admin.from('deals').delete().in('id', legDeals) }
   for (const E of exps) {
+    await admin.from('experience_brand_suggestions').delete().eq('experience_id', E)
     await admin.from('experience_roster_prospects').delete().eq('experience_id', E)
     await admin.from('experience_cost_lines').delete().eq('experience_id', E)
     await admin.from('experience_pnl_snapshots').delete().eq('experience_id', E)

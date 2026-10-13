@@ -1595,3 +1595,13 @@ REVOKE ALL ON experience_leg_extras FROM anon, authenticated;
 -- No table change: experience_roster stays function-access only. A brand member
 -- writes through brand_experience_roster_add (SECURITY DEFINER, brand gate,
 -- roster open, bookable creators only), granted to authenticated, not anon.
+
+-- ═════ 0558: the brand suggests creators not on Guapd yet ═════
+-- experience_brand_suggestions has NO policies and NO grants for users. A brand
+-- member suggests through brand_experience_suggest_creator and reads its own
+-- through brand_experience_suggestions (name, handle, note, status, reason:
+-- never the prospect's cost). Operational staff read through
+-- experience_console_brand_suggestions and answer through
+-- experience_console_suggestion_resolve.
+ALTER TABLE experience_brand_suggestions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_brand_suggestions FROM anon, authenticated;

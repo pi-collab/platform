@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { countOf, formatRupees } from '@/lib/experience-request'
 import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
-import type { BrandCreatorHit } from '@/lib/brand-creator-search'
-import { addRosterCreators, searchRosterCreators, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
+import type { BrandPickerCreator } from '@/lib/brand-creator-search'
+import type { BrandSuggestion } from '@/lib/experience-brand-server'
+import AddCreatorsModal from '@/components/AddCreatorsModal'
+import { addRosterCreators, suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
 
 /**
@@ -416,97 +418,93 @@ export function SignOffCard({ experienceId, isAdmin, signedAt, signedOnGuapd, op
   )
 }
 
-// ── 0557: the brand adds creators it wants to its own roster ──
-// Search Guapd's listed creators (the ones /browse shows), pick, add. Each joins
-// the roster accepted; Guapd checks availability, confirms and sends the offer.
-export function AddCreators({ experienceId }: { experienceId: string }) {
+// ── 0557 / 0558: the brand adds creators while the roster is open ──
+// "Add from Guapd" is the same picker a campaign uses (components/AddCreatorsModal):
+// each pick joins the roster accepted. "Suggest someone not on Guapd" sends Guapd a
+// name and handle; Guapd reaches out, and the list below says where each stands.
+const SUGGESTION_STATE: Record<BrandSuggestion['status'], { label: string; cls: string }> = {
+  open: { label: 'Sent to Guapd', cls: 'bx-new' },
+  prospect: { label: 'Guapd is reaching out', cls: 'bx-new' },
+  on_roster: { label: 'Joined Guapd: on your roster', cls: 'bx-ok' },
+  not_possible: { label: 'Not possible', cls: 'bx-chg' },
+}
+
+export function RosterAdd({ experienceId, creators, suggestions, canAdd }: {
+  experienceId: string; creators: BrandPickerCreator[]; suggestions: BrandSuggestion[]; canAdd: boolean
+}) {
   const { pending, error, run } = useRun()
-  const [open, setOpen] = useState(false)
-  const [q, setQ] = useState('')
-  const [hits, setHits] = useState<BrandCreatorHit[]>([])
-  const [picked, setPicked] = useState<BrandCreatorHit[]>([])
-  const [searching, setSearching] = useState(false)
-  const [added, setAdded] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open || q.trim().length < 2) { setHits([]); return }
-    let live = true
-    setSearching(true)
-    const t = setTimeout(async () => {
-      const r = await searchRosterCreators(q)
-      if (live) { setHits(r.ok ? r.data : []); setSearching(false) }
-    }, 250)
-    return () => { live = false; clearTimeout(t) }
-  }, [q, open])
-
-  const toggle = (c: BrandCreatorHit) => setPicked((p) => p.some((x) => x.id === c.id) ? p.filter((x) => x.id !== c.id) : p.length >= 20 ? p : [...p, c])
-  const avatar = (c: BrandCreatorHit) => c.photo_url
-    // eslint-disable-next-line @next/next/no-img-element
-    ? <img src={c.photo_url} alt="" width={36} height={36} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-    : <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface-2, #F1F1EC)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{c.full_name.slice(0, 1)}</span>
-
-  if (!open) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '16px 18px', margin: '14px 0 4px', borderRadius: 14, border: '1px dashed var(--hairline, #DADAD2)' }}>
-      <div>
-        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>Have creators in mind?</div>
-        <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 3 }}>{added ?? 'Add creators from Guapd yourself. Guapd checks they are free on your shoot date and confirms them.'}</div>
-      </div>
-      <button type="button" className="pill-hover" style={{ ...pillBtn, height: 42 }} onClick={() => { setOpen(true); setAdded(null) }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-        Add creators
-      </button>
-    </div>
-  )
+  const [suggesting, setSuggesting] = useState(false)
+  const [name, setName] = useState('')
+  const [handle, setHandle] = useState('')
+  const [why, setWhy] = useState('')
+  const [notice, setNotice] = useState<string | null>(null)
 
   return (
-    <div className="surface" style={{ padding: 18, margin: '14px 0 4px', boxShadow: 'none', border: '1px solid var(--hairline, #EAEAE3)' }}>
-      <label htmlFor="bx-add-q" style={metaLabel}>Add creators from Guapd</label>
-      <input id="bx-add-q" className="dinput" style={{ marginTop: 8 }} autoFocus type="search" placeholder="Search by name or @handle" value={q} onChange={(ev) => setQ(ev.target.value)} />
-
-      {picked.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-          {picked.map((c) => (
-            <button key={c.id} type="button" onClick={() => toggle(c)} aria-label={`Remove ${c.full_name}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px 6px 12px', borderRadius: 999, border: '1px solid var(--neon-deep, #C9E04A)', background: 'color-mix(in oklab, var(--neon) 18%, var(--card))', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-              {c.full_name}<span aria-hidden="true" style={{ fontSize: 14, lineHeight: 1 }}>×</span>
-            </button>
-          ))}
+    <div style={{ margin: '14px 0 4px' }}>
+      {canAdd && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', padding: '16px 18px', borderRadius: 14, border: '1px dashed var(--hairline, #DADAD2)' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>Have creators in mind?</div>
+            <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 3, maxWidth: 520 }}>
+              {notice ?? 'Pick creators on Guapd, or suggest someone who isn’t on Guapd yet. Guapd checks they are free on your shoot date and confirms them.'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="pill" style={{ ...pillBtn, height: 44, fontSize: 12.5 }} onClick={() => { setSuggesting(true); setNotice(null) }}>Suggest someone not on Guapd</button>
+            <AddCreatorsModal creators={creators} existingCreatorIds={[]} title="Add creators from Guapd" buttonLabel="Add from Guapd"
+              onAdd={async (ids) => {
+                const r = await addRosterCreators(experienceId, ids)
+                if (!r.ok) return { error: r.error }
+                setNotice(r.data === 0 ? 'Those creators were already on your roster.' : `Added ${r.data} creator${r.data === 1 ? '' : 's'}. Guapd will check they are free and confirm them.`)
+                return { error: null }
+              }} />
+          </div>
         </div>
       )}
 
-      <div style={{ marginTop: 10 }}>
-        {q.trim().length >= 2 && !searching && hits.length === 0 && <p className="bx-note" style={{ margin: '8px 0 0' }}>No listed creator matches “{q.trim()}”.</p>}
-        {hits.map((c) => {
-          const on = picked.some((x) => x.id === c.id)
-          return (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
-              {avatar(c)}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <a href={`/browse/${c.id}`} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)', textDecoration: 'none' }}>{c.full_name}</a>
-                {c.handle && <div style={{ fontSize: 12, color: 'var(--ink-soft)' }}>@{c.handle}</div>}
-              </div>
-              <button type="button" className={on ? 'neonbtn' : 'pill-hover'} onClick={() => toggle(c)} aria-pressed={on}
-                style={on ? { ...neonBtn, height: 34, padding: '0 14px', fontSize: 12.5 } : { ...pillBtn, height: 34, padding: '0 14px', fontSize: 12.5 }}>
-                {on ? 'Selected' : 'Select'}
-              </button>
-            </div>
-          )
-        })}
-      </div>
+      {canAdd && suggesting && (
+        <div className="surface" style={{ padding: 18, marginTop: 12, boxShadow: 'none', border: '1px solid var(--hairline, #EAEAE3)' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em' }}>Suggest a creator who isn’t on Guapd</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>Guapd reaches out to them and gets them onto Guapd; you’ll see them here and then on your roster.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginTop: 14 }}>
+            <div><label style={metaLabel} htmlFor="bx-sg-name">Their name</label>
+              <input id="bx-sg-name" className="dinput" style={{ marginTop: 7 }} maxLength={120} value={name} onChange={(ev) => setName(ev.target.value)} placeholder="Ananya Rao" /></div>
+            <div><label style={metaLabel} htmlFor="bx-sg-handle">Instagram handle</label>
+              <input id="bx-sg-handle" className="dinput" style={{ marginTop: 7 }} maxLength={200} value={handle} onChange={(ev) => setHandle(ev.target.value)} placeholder="@ananya.makes" /></div>
+          </div>
+          <div style={{ marginTop: 12 }}><label style={metaLabel} htmlFor="bx-sg-why">Note for Guapd (optional)</label>
+            <input id="bx-sg-why" className="dinput" style={{ marginTop: 7 }} maxLength={500} value={why} onChange={(ev) => setWhy(ev.target.value)} placeholder="We loved her skincare reels" /></div>
+          {error && <p className="bx-err" role="alert">{error}</p>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <button type="button" className="pill-hover" style={{ ...pillBtn, height: 42 }} disabled={pending} onClick={() => setSuggesting(false)}>Cancel</button>
+            <button type="button" className="neonbtn" style={{ ...neonBtn, height: 42, opacity: pending ? 0.6 : 1 }} disabled={pending}
+              onClick={() => run(() => suggestCreator(experienceId, name, handle, why), () => {
+                setSuggesting(false); setNotice(`Sent ${name.trim()} to Guapd. Guapd will reach out to them.`); setName(''); setHandle(''); setWhy('')
+              })}>
+              {pending ? 'Sending…' : 'Send to Guapd'}
+            </button>
+          </div>
+        </div>
+      )}
 
-      {error && <p className="bx-err" role="alert">{error}</p>}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-        <button type="button" className="pill-hover" style={{ ...pillBtn, height: 42 }} disabled={pending} onClick={() => { setOpen(false); setQ(''); setPicked([]) }}>Cancel</button>
-        <button type="button" className="neonbtn" style={{ ...neonBtn, height: 42, opacity: pending || picked.length === 0 ? 0.55 : 1 }} disabled={pending || picked.length === 0}
-          onClick={() => run(async () => {
-            const r = await addRosterCreators(experienceId, picked.map((c) => c.id))
-            if (r.ok) setAdded(r.data === 0 ? 'Those creators were already on your roster.' : `Added ${r.data} creator${r.data === 1 ? '' : 's'}. Guapd will check they are free and confirm them.`)
-            return r
-          }, () => { setOpen(false); setQ(''); setPicked([]) })}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          {pending ? 'Adding…' : picked.length ? `Add ${picked.length} creator${picked.length === 1 ? '' : 's'}` : 'Add creators'}
-        </button>
-      </div>
+      {suggestions.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div style={metaLabel}>Your suggestions, not on Guapd yet</div>
+          {suggestions.map((g) => {
+            const st = SUGGESTION_STATE[g.status] ?? SUGGESTION_STATE.open
+            return (
+              <div key={g.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 0', borderBottom: '1px solid var(--border-hairline, #EAEAE3)' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{g.full_name}</div>
+                  <a href={`https://instagram.com/${g.handle}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>@{g.handle}</a>
+                  {g.status === 'not_possible' && g.reason && <div className="bx-when" style={{ marginTop: 3 }}>Guapd: “{g.reason}”</div>}
+                </div>
+                <span className={`bx-chip ${st.cls}`}>{st.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

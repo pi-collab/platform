@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { CHANNELS, formatRupees } from '@/lib/experience-request'
-import type { ConsoleProspect } from '@/lib/experience-console-server'
+import type { ConsoleProspect, ConsoleSuggestion } from '@/lib/experience-console-server'
 import {
-  addProspectAction, decideProspectAction, dropProspectAction, editProspectAction, linkProspectAction, setProspectStatusAction,
+  addProspectAction, addProspectFromSuggestionAction, suggestionNotPossibleAction, decideProspectAction, dropProspectAction, editProspectAction, linkProspectAction, setProspectStatusAction,
   type ProspectForm,
 } from '../actions'
 import { fieldLabel, neonBtn, pillBtn } from '../ui'
@@ -40,7 +40,7 @@ const SIGNUP = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://guapd.com').repl
 const OPEN = ['not_contacted', 'contacted', 'agreed', 'onboarding'] as const
 const empty: ProspectForm = { fullName: '', handle: '', phone: '', costBasis: 'per_day', dayRate: '', days: '1', flat: '', note: '', status: 'not_contacted' }
 
-export default function ProspectsSection({ experienceId, editable, prospects, linkable, adding, onAddingChange }: {
+export default function ProspectsSection({ experienceId, editable, prospects, linkable, adding, onAddingChange, suggestions = [] }: {
   experienceId: string
   editable: boolean
   prospects: ConsoleProspect[]
@@ -49,6 +49,8 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
   /** The add form is open (the button is in the roster header). */
   adding: boolean
   onAddingChange: (open: boolean) => void
+  /** 0558: creators the brand suggested; open ones wait for an answer here. */
+  suggestions?: ConsoleSuggestion[]
 }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -63,6 +65,9 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
   const [reason, setReason] = useState('')
   const [linking, setLinking] = useState<ConsoleProspect | null>(null)
   const [linkTo, setLinkTo] = useState('')
+  const [fromSuggestion, setFromSuggestion] = useState<ConsoleSuggestion | null>(null)
+  const [notPossible, setNotPossible] = useState<ConsoleSuggestion | null>(null)
+  const openSuggestions = suggestions.filter((g) => g.status === 'open')
   const top = useRef<HTMLDivElement>(null)
   // The add button is up in the roster header; bring the form into view.
   useEffect(() => { if (adding) top.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [adding])
@@ -82,7 +87,7 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
   }
   const copySignup = async () => { try { await navigator.clipboard.writeText(SIGNUP); setNotice('Sign-up link copied. Send it to them yourself.') } catch { setNotice(SIGNUP) } }
 
-  if (open.length === 0 && dropped.length === 0 && !adding && !notice) return null
+  if (open.length === 0 && dropped.length === 0 && openSuggestions.length === 0 && !adding && !notice) return null
 
   return (
     <div id="not-on-guapd" ref={top} style={{ marginTop: 26 }}>
@@ -97,6 +102,45 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
         </div>
         <button type="button" style={{ ...pillBtn, height: 34, fontSize: 12.5 }} onClick={copySignup}>Copy sign-up link</button>
       </div>
+
+      {/* 0558: the brand's own suggestions: add one as a prospect (with the cost) or say it is not possible. */}
+      {openSuggestions.length > 0 && (
+        <div style={{ margin: '14px 0 6px', padding: 14, borderRadius: 14, border: '1px solid var(--neon-deep, #C9E04A)', background: 'color-mix(in oklab, var(--neon) 10%, var(--card))' }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>Suggested by the brand <span style={{ color: 'var(--wg-500)', fontWeight: 500 }}>{openSuggestions.length}</span></div>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 2 }}>Not on Guapd yet. Add them as a prospect with the expected cost, or tell the brand it is not possible.</div>
+          {openSuggestions.map((g) => (
+            <div key={g.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 0 0', marginTop: 12, borderTop: '1px solid var(--hairline)' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14 }}>{g.full_name}</div>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-faint)' }}>
+                  <a href={`https://instagram.com/${g.handle}`} target="_blank" rel="noreferrer noopener" style={{ color: 'inherit' }}>@{g.handle}</a>
+                  {g.note ? ` · “${g.note}”` : ''}
+                </div>
+              </div>
+              {editable && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" style={{ ...pillBtn, height: 34, fontSize: 12.5 }} disabled={pending} onClick={() => { setNotPossible(g); setReason(''); setFromSuggestion(null) }}>Not possible</button>
+                  <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, fontSize: 12.5 }} disabled={pending} onClick={() => { setFromSuggestion(g); setNotPossible(null); onAddingChange(false) }}>Add as prospect</button>
+                </div>
+              )}
+              {notPossible?.id === g.id && (
+                <div style={{ flexBasis: '100%', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input className="dinput" style={{ flex: '1 1 260px' }} value={reason} onChange={(ev) => setReason(ev.target.value)} maxLength={300} placeholder="Why, in a line the brand sees (e.g. not available on the shoot date)" />
+                  <button type="button" style={{ ...pillBtn, height: 34, fontSize: 12.5 }} disabled={pending} onClick={() => setNotPossible(null)}>Cancel</button>
+                  <button type="button" style={{ ...neonBtn, height: 34, fontSize: 12.5 }} disabled={pending}
+                    onClick={() => run(() => suggestionNotPossibleAction(experienceId, g.id, reason), () => setNotPossible(null), `Told the brand ${g.full_name} is not possible.`)}>Tell the brand</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {fromSuggestion && (
+        <Editor key={fromSuggestion.id} busy={pending} prefill={{ fullName: fromSuggestion.full_name, handle: fromSuggestion.handle, note: fromSuggestion.note ?? '' }}
+          onCancel={() => setFromSuggestion(null)}
+          onSave={(f) => run(() => addProspectFromSuggestionAction(experienceId, fromSuggestion.id, f), () => setFromSuggestion(null), `${f.fullName} added as a prospect. The brand sees Guapd is reaching out.`)} />
+      )}
 
       {adding && (
         <Editor busy={pending} onCancel={() => onAddingChange(false)}
@@ -205,17 +249,17 @@ export default function ProspectsSection({ experienceId, editable, prospects, li
   )
 }
 
-function Editor({ initial, busy, onSave, onCancel }: { initial?: ConsoleProspect; busy: boolean; onSave: (f: ProspectForm) => void; onCancel: () => void }) {
+function Editor({ initial, prefill, busy, onSave, onCancel }: { initial?: ConsoleProspect; prefill?: Partial<ProspectForm>; busy: boolean; onSave: (f: ProspectForm) => void; onCancel: () => void }) {
   const [f, setF] = useState<ProspectForm>(initial ? {
     fullName: initial.full_name, handle: initial.instagram_handle, phone: initial.phone ?? '', costBasis: initial.cost_basis,
     dayRate: initial.expected_day_rate_paise != null ? String(initial.expected_day_rate_paise / 100) : '', days: initial.expected_days != null ? String(initial.expected_days) : '1',
     flat: initial.cost_basis === 'flat' ? String(initial.expected_total_paise / 100) : '', note: initial.note ?? '',
-  } : empty)
+  } : { ...empty, ...prefill })
   const set = (k: keyof ProspectForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value })
   const field = (text: string, el: React.ReactNode) => <label style={{ minWidth: 0 }}><span style={fieldLabel}>{text}</span>{el}</label>
   return (
     <div style={{ margin: '14px 0 16px', padding: 16, borderRadius: 14, background: '#F7F7F4', display: 'grid', gap: 12 }}>
-      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{initial ? `Edit ${initial.full_name}` : 'Add someone not on Guapd'}</div>
+      <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{initial ? `Edit ${initial.full_name}` : prefill ? `Add ${prefill.fullName ?? 'them'} as a prospect (suggested by the brand)` : 'Add someone not on Guapd'}</div>
       {/* Two rows of three, always: who they are, then what they cost. */}
       <div className="xp-prospect-form" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
         {field('Name', <input className="dinput" value={f.fullName} onChange={set('fullName')} maxLength={120} />)}

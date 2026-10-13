@@ -7427,3 +7427,23 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Guapd still checks availability, confirms (locks) and sends the offer; nothing reaches the creator from the brand's add
 - [ ] Another brand, a creator, staff who are not members, anonymous and the service role cannot call it
 - [ ] Tests: `scripts/test-experience-brand-portal.ts` 157 green
+
+---
+
+## 127. The brand adds creators from Guapd (campaign picker) or suggests someone not on Guapd (migration 0558)
+
+### Brand, Creators card (Choosing creators / Confirmed)
+- [ ] "Have creators in mind?" shows two buttons: **Suggest someone not on Guapd** (pill) and **Add from Guapd** (neon)
+- [ ] Add from Guapd opens the same picker a campaign uses (search, multi-select, photo, handle, niches); adding puts each on the roster as Accepted (0557); the card says how many were added
+- [ ] Suggest opens a form: name, Instagram handle (@, a full instagram.com link or plain all work), optional note; "Send to Guapd"
+- [ ] A handle that is already a listed Guapd creator is refused: "@x is already on Guapd: add them from Guapd instead"
+- [ ] The same handle twice is refused; after Guapd says not possible it can be suggested again
+- [ ] "Your suggestions, not on Guapd yet" lists each with a status: Sent to Guapd → Guapd is reaching out → Joined Guapd: on your roster, or Not possible with Guapd's reason
+- [ ] The brand never sees the prospect's expected cost, phone or staff note
+
+### Console, Roster → Not on Guapd yet
+- [ ] "Suggested by the brand N" box lists open suggestions with name, @handle (Instagram link) and the brand's note; Guapd gets the in-app note "suggested a creator who is not on Guapd yet"
+- [ ] **Add as prospect** opens the prospect form pre-filled (name, handle, note); staff add the expected cost and status; saving adds the prospect and answers the suggestion (brand sees "Guapd is reaching out")
+- [ ] **Not possible** asks for a one-line reason the brand sees; "Tell the brand"
+- [ ] When the prospect is later linked to their Guapd account, the brand's suggestion reads "Joined Guapd: on your roster"
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` 184 green; P&L isolation and package gating checks pass

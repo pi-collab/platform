@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, getBrandSuggestions, type BrandInvoice } from '@/lib/experience-brand-server'
+import { listBookableCreators } from '@/lib/brand-creator-search'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -10,7 +11,7 @@ import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import ViewFile from './ViewFile'
-import { AddCreators, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
+import { RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
 
 export const dynamic = 'force-dynamic'
@@ -50,6 +51,9 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
     e.status === 'complete' ? getBrandReport(e.id) : Promise.resolve(null),
     getBrandGuapdThread(e.id),
   ])
+  // 0558: the brand's suggestions of creators not on Guapd yet.
+  const sugRes = hasRoster ? await getBrandSuggestions(e.id) : null
+  const suggestions = sugRes?.ok ? sugRes.data : []
   const st = brandStage(e.status, quoteToAnswer)
   const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null
   const date = fmt(e.shoot_date)
@@ -182,7 +186,9 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
             ? 'Accept, hold or reject each creator Guapd suggests. You can change a hold or an acceptance until Guapd confirms the roster; a rejection is final.'
             : 'The creators for your shoot.'}</p>
           {/* 0557: the brand can name creators itself while the roster is open. */}
-          {roster.data.can_decide && <AddCreators experienceId={e.id} />}
+          {(roster.data.can_decide || suggestions.length > 0) && (
+            <RosterAdd experienceId={e.id} creators={roster.data.can_decide ? await listBookableCreators() : []} suggestions={suggestions} canAdd={roster.data.can_decide} />
+          )}
           <RosterReview experienceId={e.id} creators={roster.data.creators} canDecide={roster.data.can_decide} />
         </section>
       )}

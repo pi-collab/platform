@@ -125,6 +125,20 @@ export async function brandAcceptRosterMany(experienceId: string, items: { roste
   return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
 }
 
+/** 0558: a creator the brand suggested who is not on Guapd yet, and where it stands. */
+export interface BrandSuggestion {
+  id: string; full_name: string; handle: string; note: string | null; created_at: string
+  status: 'open' | 'prospect' | 'on_roster' | 'not_possible'; reason: string | null
+}
+export async function getBrandSuggestions(experienceId: string): Promise<Result<BrandSuggestion[]>> {
+  const { data, error } = await createClient().rpc('brand_experience_suggestions', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandSuggestion[] }
+}
+export async function brandSuggestCreator(experienceId: string, fullName: string, handle: string, note: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('brand_experience_suggest_creator', { p_experience_id: experienceId, p_full_name: fullName, p_handle: handle, p_note: note })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
 /** 0557: the brand names creators for its own roster (shared and accepted). */
 export async function brandAddRosterCreators(experienceId: string, creatorIds: string[]): Promise<Result<number>> {
   const { data, error } = await createClient().rpc('brand_experience_roster_add', { p_experience_id: experienceId, p_creator_ids: creatorIds })
