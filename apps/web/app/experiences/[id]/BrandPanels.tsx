@@ -439,7 +439,7 @@ export function CollabReview({ experienceId, posts }: { experienceId: string; po
               )}
               {p.ad_complete_at && <p className="bx-when bx-item-note">{p.ad_complete_on_guapd ? 'You marked the ad complete' : 'Marked complete (via Guapd)'} on {fmt(p.ad_complete_at)}.</p>}
               {p.can_act && linking !== p.id && confirming !== p.id && (
-                <div className="bx-actions bx-item-actions">
+                <div className="bx-actions bx-item-actions" style={{ marginTop: 14 }}>
                   <button type="button" className="bx-btn" disabled={pending} onClick={() => { setUrl(p.affiliate_url ?? ''); setLinking(p.id) }}>{p.affiliate_url ? 'Change affiliate link' : 'Add affiliate link'}</button>
                   <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => setConfirming(p.id)}>Ad complete</button>
                 </div>
