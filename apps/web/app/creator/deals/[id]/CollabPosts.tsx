@@ -10,7 +10,7 @@ import LinkTile, { LinkTiles, tileBtn } from '@/components/LinkTile'
 /**
  * 0561: the videos Guapd sent this creator, on the deal page's card design.
  * Collab: post it on Instagram as a collab with the brand, then paste the post
- * link (their invoice waits for it); the brand's affiliate link shows here once
+ * link (0566: their invoice no longer waits for it); the brand's affiliate link shows here once
  * added. Shared: theirs to post if they like, nothing asked.
  */
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
@@ -52,7 +52,7 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
         {p.kind === 'share'
           ? `Guapd shared this on ${fmt(p.sent_at)}. Post it on your own account if you like; nothing more is needed.`
           : p.status === 'sent'
-          ? `Post it on Instagram as a collab with ${brand} (invite them as a collaborator), then paste the post link here. Your invoice waits for it.`
+          ? `Post it on Instagram as a collab with ${brand} (invite them as a collaborator), then paste the post link here.`
           : p.status === 'posted'
           ? `Posted ${fmt(p.posted_at)}. ${brand} runs it as an ad on the agreed terms and marks it complete.`
           : `${brand} marked the ad complete on ${fmt(p.ad_complete_at)}.`}
@@ -87,7 +87,7 @@ export default function CollabPosts({ dealId, posts, brand, waiting }: { dealId:
       <h3 style={{ ...sectionHeading, marginTop: 6 }}>Your videos</h3>
       {waiting > 0 && (
         <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '8px 0 0', lineHeight: 1.5 }}>
-          {waiting} collab video{waiting === 1 ? '' : 's'} still to post. You can raise your invoice once {waiting === 1 ? 'it is' : 'they are'} posted and linked here.
+          {waiting} collab video{waiting === 1 ? '' : 's'} still to post with {brand}. Paste each post link here once it is up.
           {posts.length === 0 ? ' Guapd sends them once the brand approves the edits.' : ''}
         </p>
       )}

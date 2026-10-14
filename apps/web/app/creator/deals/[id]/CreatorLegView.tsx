@@ -296,7 +296,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
               </DeliverablesCard>
             )}
 
-            {/* 0561: the videos to post as collabs (the invoice waits for them) or shared to post. */}
+            {/* 0561: the videos to post as collabs or shared to post (0566: the invoice does not wait for them). */}
             {accepted && <CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} />}
             {/* 0563: the affiliate commission, once the collab ads have run. */}
             {accepted && shot && ctx.commission && <AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} />}
@@ -333,7 +333,6 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                   helper={paid ? null : p ? (p.status === 'approved' ? 'Approved. Guapd is sending your payout.' : 'Guapd is preparing your payout.')
                     : invoice ? `You sent invoice ${invoice.number} on ${short(invoice.issued_at)}. Guapd pays you next.`
                     : ctx.can_invoice ? 'Guapd marked your shoot done. Confirm it and raise your invoice to get paid.'
-                    : shot && Number(ctx.collab_waiting ?? 0) > 0 ? 'Post your collab videos and add their links above, then raise your invoice here.'
                     : shot && creatorSubmits ? 'Once Guapd approves your deliverables, confirm the shoot and raise your invoice here.'
                     : 'After the shoot, confirm it here and raise your invoice to Guapd.'}
                   receiveLabel={paid ? 'You received' : 'You receive'}

@@ -44,7 +44,7 @@ export interface CreatorLegContext {
   affiliate_count: number
   /** 0560: commission on sales through this creator's affiliate link, locked at send; null when none. */
   affiliate_pct?: number | null
-  /** 0561: ad-rights videos still to post as collabs; the main invoice waits for them. */
+  /** 0561: ad-rights videos still to post as collabs (0566: the main invoice no longer waits for them). */
   collab_waiting?: number
   /** 0563: the affiliate commission on this deal (null when none was agreed). */
   commission?: CreatorCommission | null
