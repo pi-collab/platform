@@ -451,9 +451,17 @@ export async function briefUploadSlot(experienceId: string, fileName: string): P
 }
 
 // ── 0546: Guapd ↔ creator threads on sent legs (staff side) ─────────────────
+export type LegStage =
+  | { key: 'offer' | 'creator_countered' | 'declined' | 'cancelled' | 'did_not_shoot' | 'invoice_due' | 'to_pay' | 'paid' }
+  | { key: 'shoot_ahead' | 'record_shoot'; shoot_date: string | null }
+  | { key: 'videos'; approved: number; total: number }
+  | { key: 'posting'; waiting: number }
+  | { key: 'payout'; payout_status: string }
 export interface LegThreadRow {
   deal_id: string; deal_ref: string | null; status: string; experience_id: string; experience_title: string; brand_name: string
   creator_name: string; creator_handle: string | null; creator_photo: string | null; sent_at: string | null; shoot_outcome: string | null
+  /** 0565: where the deal really is (deals.status stays 'agreed' until paid). */
+  stage: LegStage | null
   open_counter: { round: number; proposed_by: 'creator' | 'guapd' } | null
   message_count: number; last_message: { body: string; from: 'creator' | 'guapd'; created_at: string } | null
   unread: number; can_message: boolean

@@ -7601,8 +7601,29 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 ---
 
-## 136. Creator deal, Your videos: the links have room (0561 UI)
+## 136. Collab links have room: creator, brand and console (0561 UI, shared components/LinkTile)
 
 - [ ] Each posted collab shows its links as tiles: "Your post" and "<Brand>'s affiliate link", side by side on desktop, stacked on mobile
 - [ ] Each tile shows the link without https:// (cut short with … if long; the full link on hover), plus **Open** (new tab) and **Copy** ("Copied" for a moment)
 - [ ] "Your post" has **Change** while the post can still be edited; it opens the link field and hides the tile until saved
+- [ ] Brand, Experience page, Collab posts: each video shows its title, Posted date and Live / Ad complete chip on one line, then "<Creator>'s post" and "Your affiliate link" tiles (Open, Copy; "Added via Guapd" when Guapd recorded it); Add / Change affiliate link and Ad complete stay below
+- [ ] Console, Posting: under each sent video, "Post" (date, by the creator or recorded via a channel) and "Brand's affiliate link" (added by the brand or recorded) tiles with Open and Copy; the action buttons stay on the video's line
+
+---
+
+## 137. Deliverable lists: number order and a compact console row
+
+- [ ] Console Deliverables, the brand's Deliverables and the creator's deal list videos in number order: UGC video 1, 2, … 9, 10 (never 1, 10, 2)
+- [ ] Console Deliverables: each video is one line: name (· vN), a small status chip, the brand's chip once shared, and a quiet "· Affiliate link" tag for videos that carry it; the file / link and its notes in the middle; the actions on the right
+- [ ] An empty video Guapd prepares shows only "Waiting for content" and **Attach** (no "Nothing attached yet."); one the creator submits still says "The creator has not submitted yet."
+- [ ] Mobile (≤720px): the file and actions wrap under the name
+
+---
+
+## 138. Console Experience deals list shows where each deal really is (migration 0565)
+
+- [ ] /experiences-admin/deals: the pill follows the deal, not deals.status (which stays "agreed" until paid): Offer with creator → Creator countered → Shoot <date> → Record the shoot → Videos x of y approved → N collab posts to come / Posting → Waiting for invoice → Invoice in · to pay → Payout to approve / Payout on its way → Paid (and Did not shoot, Declined, Cancelled)
+- [ ] It updates on refresh as the Experience moves (shot recorded, a video approved, a collab posted, the invoice raised, the payout requested, approved, paid)
+- [ ] "Needs you" counts Guapd's moves: a creator counter, a shoot to record, an invoice to pay, a payout to approve; "Posted · paid" holds the paid ones
+- [ ] Extras and affiliate commissions do not change the stage (only the main payout does)
+- [ ] SECURITY: experience_leg_stage is not callable by anon or authenticated (revoked); only the gated list function (operational staff) returns it; no money in it

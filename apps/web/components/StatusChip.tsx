@@ -30,13 +30,14 @@ function mixWithWhite(hex: string, tintPct: number): string {
   return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`
 }
 
-export default function StatusChip({ label, tone, width }: { label: string; tone: ChipTone; width?: number }) {
+/** `compact`: a smaller pill for dense lists (several chips beside a title). */
+export default function StatusChip({ label, tone, width, compact }: { label: string; tone: ChipTone; width?: number; compact?: boolean }) {
   const t = TONES[tone]
   return (
     <span style={{
       flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-      width, padding: '6px 10px', borderRadius: 999,
-      fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 600, letterSpacing: '.01em',
+      width, padding: compact ? '3px 8px' : '6px 10px', borderRadius: 999,
+      fontFamily: 'var(--font-ui)', fontSize: compact ? 11 : 11.5, fontWeight: 600, letterSpacing: '.01em',
       whiteSpace: 'nowrap',
       background: mixWithWhite(t.bg, 45),
       border: `1px solid ${t.dot}30`,

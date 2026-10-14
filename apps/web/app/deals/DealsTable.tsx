@@ -27,6 +27,8 @@ interface Deal {
   creator: { id: string; full_name: string; profile_photo_url: string | null } | null
   invoiceStatus: string | null
   invoiceDueDate: string | null
+  /** A caller-derived stage that replaces the status pill (the console's Experience deals: 0565). */
+  stage?: StageConfig | null
 }
 
 // ── Helpers ──
@@ -44,7 +46,7 @@ function brandTotal(d: Deal): number | null {
 // colour and a tint; the pill is built from both — mixWithWhite lightens the
 // tint to 45% against white and the dot colour at 30% alpha draws the border,
 // so one pair of values defines the whole chip.
-interface StageConfig {
+export interface StageConfig {
   label: string
   /** Dot colour; also the source of the pill's border. */
   dot: string
@@ -71,6 +73,7 @@ function mixWithWhite(hex: string, tintPct: number): string {
 const INVOICE_TONE = { dot: '#C89A3C', bg: '#FCF6E4' }
 
 function getStageConfig(deal: Deal): StageConfig {
+  if (deal.stage) return deal.stage
   const derived = deriveDisplayStatus(deal.status, deal.invoiceStatus, deal.invoiceDueDate)
 
   if (derived.label === 'invoice to accept' || derived.label === 'payment due' || derived.label === 'overdue') {

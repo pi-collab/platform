@@ -8,6 +8,7 @@ import type { BrandCollabPost, BrandSuggestion } from '@/lib/experience-brand-se
 import Link from 'next/link'
 import { actOnCollab, suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
+import LinkTile, { LinkTiles } from '@/components/LinkTile'
 
 /**
  * The brand's own decisions on an Experience (0544). Each button calls a
@@ -348,7 +349,8 @@ export function DeliverableReview({ experienceId, items }: { experienceId: strin
   const [why, setWhy] = useState('')
   if (items.length === 0) return <p className="bx-empty">Nothing shared yet. Guapd will email you when the first deliverables are ready.</p>
   const groups = new Map<string, BrandItem[]>()
-  for (const i of items) groups.set(i.creator_name ?? 'Creator', [...(groups.get(i.creator_name ?? 'Creator') ?? []), i])
+  // Number order within a creator (video 2 before video 10), not text order.
+  for (const i of [...items].sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))) groups.set(i.creator_name ?? 'Creator', [...(groups.get(i.creator_name ?? 'Creator') ?? []), i])
   return (
     <div>
       {Array.from(groups.entries()).map(([creator, list]) => (
@@ -418,13 +420,10 @@ export function CollabReview({ experienceId, posts }: { experienceId: string; po
           <div className="bx-creator">{creator}{list[0].handle ? <span className="bx-when"> · @{list[0].handle.replace(/^@/, '')}</span> : null}</div>
           {list.map((p) => (
             <div key={p.id} className="bx-item">
-              <div className="bx-row">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 0 0' }}>
                 <div>
                   <div className="bx-label">{p.label}</div>
-                  <div className="bx-when">{p.posted_at ? `Posted ${fmt(p.posted_at)}` : `With the creator since ${fmt(p.sent_at)}`}</div>
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  {p.post_url ? <a className="bx-link" href={p.post_url} target="_blank" rel="noreferrer noopener">{p.post_url}</a> : <span className="bx-when">The creator posts it as a collab with you</span>}
+                  <div className="bx-when">{p.posted_at ? `Posted ${fmt(p.posted_at)}` : `With the creator since ${fmt(p.sent_at)}. They post it as a collab with you.`}</div>
                 </div>
                 <div className="bx-item-state">
                   {p.status === 'ad_complete' ? <span className="bx-chip bx-ok">Ad complete</span>
@@ -432,12 +431,15 @@ export function CollabReview({ experienceId, posts }: { experienceId: string; po
                     : <span className="bx-chip bx-hold">Not posted yet</span>}
                 </div>
               </div>
-              {p.affiliate_url && (
-                <p className="bx-when bx-item-note">Your affiliate link{p.affiliate_on_guapd === false ? ' (added via Guapd)' : ''}: <a className="bx-link" href={p.affiliate_url} target="_blank" rel="noreferrer noopener">{p.affiliate_url}</a></p>
+              {(p.post_url || p.affiliate_url) && (
+                <LinkTiles>
+                  {p.post_url && <LinkTile label={`${creator}\u2019s post`} url={p.post_url} />}
+                  {p.affiliate_url && <LinkTile label="Your affiliate link" url={p.affiliate_url} meta={p.affiliate_on_guapd === false ? 'Added via Guapd' : undefined} />}
+                </LinkTiles>
               )}
               {p.ad_complete_at && <p className="bx-when bx-item-note">{p.ad_complete_on_guapd ? 'You marked the ad complete' : 'Marked complete (via Guapd)'} on {fmt(p.ad_complete_at)}.</p>}
               {p.can_act && linking !== p.id && confirming !== p.id && (
-                <div className="bx-actions bx-item-actions">
+                <div className="bx-actions bx-item-actions" style={{ marginTop: 14 }}>
                   <button type="button" className="bx-btn" disabled={pending} onClick={() => { setUrl(p.affiliate_url ?? ''); setLinking(p.id) }}>{p.affiliate_url ? 'Change affiliate link' : 'Add affiliate link'}</button>
                   <button type="button" className="neonbtn bx-cta-sm" disabled={pending} onClick={() => setConfirming(p.id)}>Ad complete</button>
                 </div>

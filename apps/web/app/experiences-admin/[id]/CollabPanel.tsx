@@ -7,6 +7,7 @@ import { CHANNELS, channelLabel } from '@/lib/experience-request'
 import type { ConsoleCollabPost, ConsoleDeliverables } from '@/lib/experience-console-server'
 import { recordCollabForBrand, recordCollabPost, sendVideoToCreator, takeVideoBack } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
+import LinkTile, { LinkTiles } from '@/components/LinkTile'
 
 /**
  * Posting (0561, operational). Once the brand approves a video Guapd shared,
@@ -118,10 +119,16 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                   {p && (
                     <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6, display: 'grid', gap: 3 }}>
                       <span>Sent {fmt(p.sent_at)}{p.kind === 'share' ? ' · no link needed' : ''}</span>
-                      {p.post_url && <span>Post: <a href={p.post_url} target="_blank" rel="noreferrer noopener">{p.post_url}</a> · {fmt(p.posted_at)}{p.post_channel && p.post_channel !== 'portal' ? ` · recorded (${channelLabel(p.post_channel)})` : ' · by the creator'}</span>}
-                      {p.affiliate_url && <span>Affiliate link: <a href={p.affiliate_url} target="_blank" rel="noreferrer noopener">{p.affiliate_url}</a>{p.affiliate_channel && p.affiliate_channel !== 'portal' ? ` · recorded (${channelLabel(p.affiliate_channel)})` : ' · by the brand'}</span>}
                       {p.ad_complete_at && <span>Ad complete {fmt(p.ad_complete_at)}{p.ad_complete_channel && p.ad_complete_channel !== 'portal' ? ` · recorded (${channelLabel(p.ad_complete_channel)})` : ' · by the brand'}</span>}
                     </div>
+                  )}
+                  {p && (p.post_url || p.affiliate_url) && (
+                    <LinkTiles>
+                      {p.post_url && <LinkTile label="Post" url={p.post_url}
+                        meta={`${fmt(p.posted_at)}${p.post_channel && p.post_channel !== 'portal' ? ` · recorded (${channelLabel(p.post_channel)})` : ' · by the creator'}`} />}
+                      {p.affiliate_url && <LinkTile label="Brand’s affiliate link" url={p.affiliate_url}
+                        meta={p.affiliate_channel && p.affiliate_channel !== 'portal' ? `Recorded (${channelLabel(p.affiliate_channel)})` : 'Added by the brand'} />}
+                    </LinkTiles>
                   )}
                   {ask && p && ask.post.id === p.id && (
                     <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: '#F7F7F4', display: 'grid', gap: 10 }}>
