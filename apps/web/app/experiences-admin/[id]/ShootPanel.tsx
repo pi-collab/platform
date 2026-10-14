@@ -116,10 +116,11 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
                 )}
                 {(l.deal_status === 'agreed' || l.deal_status === 'paid') && !l.shoot_outcome && outcomesOpen && (
                   <>
-                    <button type="button" style={{ ...pillBtn, height: 34 }} disabled={pending || !dateReached}
-                      onClick={() => { setReason(''); setError(null); setAsk({ kind: 'no_shoot', leg: l }) }}>Did not shoot</button>
-                    <button type="button" className="neonbtn" style={{ ...neonBtn, height: 34, padding: '0 14px' }} disabled={pending || !dateReached}
-                      onClick={() => run(() => setShootOutcome(experienceId, l.roster_id, 'done', null))}>Shot</button>
+                    {/* Both outlined: a filled button here read as an outcome already chosen. */}
+                    <button type="button" style={{ ...pillBtn, height: 34, opacity: dateReached ? 1 : 0.45 }} disabled={pending || !dateReached}
+                      aria-label={`${l.full_name} shot`} onClick={() => run(() => setShootOutcome(experienceId, l.roster_id, 'done', null))}>Yes, shot</button>
+                    <button type="button" style={{ ...pillBtn, height: 34, opacity: dateReached ? 1 : 0.45 }} disabled={pending || !dateReached}
+                      aria-label={`${l.full_name} did not shoot`} onClick={() => { setReason(''); setError(null); setAsk({ kind: 'no_shoot', leg: l }) }}>No, didn&rsquo;t shoot</button>
                   </>
                 )}
                 {l.shoot_outcome && undoOpen && (
