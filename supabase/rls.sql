@@ -1631,3 +1631,6 @@ REVOKE ALL ON experience_collab_posts FROM PUBLIC, anon, authenticated;
 -- operational staff, checked inside), authenticated only, revoked from PUBLIC/anon.
 ALTER TABLE experience_shoot_date_changes ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
+
+-- 0565: experience_leg_stage(uuid): internal, REVOKED from PUBLIC/anon/authenticated; read only through
+-- experience_console_leg_threads (operational staff, checked inside), whose grants are unchanged.

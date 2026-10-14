@@ -7617,3 +7617,13 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Console Deliverables: each video is one line: name (· vN), a small status chip, the brand's chip once shared, and a quiet "· Affiliate link" tag for videos that carry it; the file / link and its notes in the middle; the actions on the right
 - [ ] An empty video Guapd prepares shows only "Waiting for content" and **Attach** (no "Nothing attached yet."); one the creator submits still says "The creator has not submitted yet."
 - [ ] Mobile (≤720px): the file and actions wrap under the name
+
+---
+
+## 138. Console Experience deals list shows where each deal really is (migration 0565)
+
+- [ ] /experiences-admin/deals: the pill follows the deal, not deals.status (which stays "agreed" until paid): Offer with creator → Creator countered → Shoot <date> → Record the shoot → Videos x of y approved → N collab posts to come / Posting → Waiting for invoice → Invoice in · to pay → Payout to approve / Payout on its way → Paid (and Did not shoot, Declined, Cancelled)
+- [ ] It updates on refresh as the Experience moves (shot recorded, a video approved, a collab posted, the invoice raised, the payout requested, approved, paid)
+- [ ] "Needs you" counts Guapd's moves: a creator counter, a shoot to record, an invoice to pay, a payout to approve; "Posted · paid" holds the paid ones
+- [ ] Extras and affiliate commissions do not change the stage (only the main payout does)
+- [ ] SECURITY: experience_leg_stage is not callable by anon or authenticated (revoked); only the gated list function (operational staff) returns it; no money in it
