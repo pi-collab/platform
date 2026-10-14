@@ -7601,8 +7601,10 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 ---
 
-## 136. Creator deal, Your videos: the links have room (0561 UI)
+## 136. Collab links have room: creator, brand and console (0561 UI, shared components/LinkTile)
 
 - [ ] Each posted collab shows its links as tiles: "Your post" and "<Brand>'s affiliate link", side by side on desktop, stacked on mobile
 - [ ] Each tile shows the link without https:// (cut short with … if long; the full link on hover), plus **Open** (new tab) and **Copy** ("Copied" for a moment)
 - [ ] "Your post" has **Change** while the post can still be edited; it opens the link field and hides the tile until saved
+- [ ] Brand, Experience page, Collab posts: each video shows its title, Posted date and Live / Ad complete chip on one line, then "<Creator>'s post" and "Your affiliate link" tiles (Open, Copy; "Added via Guapd" when Guapd recorded it); Add / Change affiliate link and Ad complete stay below
+- [ ] Console, Posting: under each sent video, "Post" (date, by the creator or recorded via a channel) and "Brand's affiliate link" (added by the brand or recorded) tiles with Open and Copy; the action buttons stay on the video's line

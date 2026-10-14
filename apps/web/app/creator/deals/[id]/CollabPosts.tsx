@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { CreatorCollabPost } from '@/lib/creator-leg-money'
 import { openCollabVideo, submitCollabPostLink } from './leg-actions'
 import { metaLabel, sectionHeading } from './deal-shell'
+import LinkTile, { LinkTiles, tileBtn } from '@/components/LinkTile'
 
 /**
  * 0561: the videos Guapd sent this creator, on the deal page's card design.
@@ -13,36 +14,6 @@ import { metaLabel, sectionHeading } from './deal-shell'
  * added. Shared: theirs to post if they like, nothing asked.
  */
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
-const bare = (u: string) => u.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '')
-
-const tileBtn: React.CSSProperties = {
-  height: 30, padding: '0 12px', borderRadius: 999, border: '1px solid var(--border-hairline, #EAEAE3)', background: '#fff',
-  fontSize: 12, fontWeight: 700, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center',
-}
-
-/** One link with room of its own: what it is, the link itself, and Open / Copy (and Change for the creator's post). */
-function LinkTile({ label, url, hint, onChange }: { label: string; url: string; hint?: string; onChange?: () => void }) {
-  const [copied, setCopied] = useState(false)
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard blocked: the link is still selectable */ }
-  }
-  return (
-    <div style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--sec-2, #F7F7F4)', border: '1px solid var(--border-hairline, #EAEAE3)', minWidth: 0 }}>
-      <div style={{ ...metaLabel, fontSize: 10 }}>{label}</div>
-      <a href={url} target="_blank" rel="noreferrer noopener" title={url}
-        style={{ display: 'block', marginTop: 6, fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {bare(url)}
-      </a>
-      {hint && <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.45 }}>{hint}</div>}
-      <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-        <a href={url} target="_blank" rel="noreferrer noopener" style={tileBtn}>Open &#8599;</a>
-        <button type="button" onClick={copy} style={tileBtn} aria-label={`Copy ${label.toLowerCase()}`}>{copied ? 'Copied' : 'Copy'}</button>
-        {onChange && <button type="button" onClick={onChange} style={tileBtn}>Change</button>}
-      </div>
-    </div>
-  )
-}
-
 function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabPost; brand: string; last: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
@@ -87,10 +58,11 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
           : `${brand} marked the ad complete on ${fmt(p.ad_complete_at)}.`}
       </p>
       {((p.post_url && !editing) || p.affiliate_url) && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 12 }}>
-          {p.post_url && !editing && <LinkTile label="Your post" url={p.post_url} onChange={p.can_post ? () => setEditing(true) : undefined} />}
+        <LinkTiles>
+          {p.post_url && !editing && <LinkTile label="Your post" url={p.post_url}
+            actions={p.can_post ? <button type="button" onClick={() => setEditing(true)} style={tileBtn}>Change</button> : undefined} />}
           {p.affiliate_url && <LinkTile label={`${brand}\u2019s affiliate link`} url={p.affiliate_url} hint="Use it wherever you share this post (caption, bio, stories)." />}
-        </div>
+        </LinkTiles>
       )}
       {editing && p.can_post && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
