@@ -7590,3 +7590,10 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Each change adds a row to experience_shoot_date_changes (from, to, reason, who) and an audit `experience.shoot_date_changed` (before, after, reason length, creators told)
 - [ ] Operational staff only: finance-only staff, brands, creators and anonymous cannot call experience_console_shoot_date_set
 - [ ] SECURITY: experience_shoot_date_changes has RLS on and no grants (no direct read or write for anon or authenticated)
+
+---
+
+## 135. Typing in a confirm dialog keeps focus (shared ConfirmDialog)
+
+- [ ] Console dialogs with a field (Change date "Why", Did not shoot, Undo, Withdraw offer, payouts, invoices, deliverables, completion, costs, P&L, prospects): type a full sentence without the cursor jumping to the action button
+- [ ] On open, focus lands in the first field when the dialog has one, else on the action button; Escape still cancels
