@@ -7598,3 +7598,11 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 - [ ] Console dialogs with a field (Change date "Why", Did not shoot, Undo, Withdraw offer, payouts, invoices, deliverables, completion, costs, P&L, prospects): type a full sentence without the cursor jumping to the action button
 - [ ] On open, focus lands in the first field when the dialog has one, else on the action button; Escape still cancels
+
+---
+
+## 136. Creator deal, Your videos: the links have room (0561 UI)
+
+- [ ] Each posted collab shows its links as tiles: "Your post" and "<Brand>'s affiliate link", side by side on desktop, stacked on mobile
+- [ ] Each tile shows the link without https:// (cut short with … if long; the full link on hover), plus **Open** (new tab) and **Copy** ("Copied" for a moment)
+- [ ] "Your post" has **Change** while the post can still be edited; it opens the link field and hides the tile until saved
