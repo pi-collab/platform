@@ -40,8 +40,14 @@ export interface LegState {
   deliveryAccepted: boolean
 }
 
-/** Has the creator done everything their leg asks of them? */
+/**
+ * Has the creator done everything their leg asks of them? (Payment
+ * eligibility.) Mirrors experience_leg_work_complete (0538): when the creator
+ * provides the deliverables, Guapd must also have accepted them, whatever the
+ * trigger says.
+ */
 export function isCreatorWorkComplete(s: Flow, leg: LegState): boolean {
+  if (creatorUploadsDeliverables(s) && !leg.deliveryAccepted) return false
   switch (creatorWorkEndsAt(s)) {
     case 'shoot_done': return leg.shootDone
     case 'content_posted': return leg.isPosted

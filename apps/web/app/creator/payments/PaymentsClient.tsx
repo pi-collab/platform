@@ -18,6 +18,8 @@ interface PendingPayment {
   amountPaise: number
   status: string
   meta: string
+  /** A Guapd payout (Guapd pays after the shoot): no invoice, nothing to remind. */
+  byGuapd?: boolean
 }
 
 interface HistoryPayment {
@@ -211,7 +213,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
-                        {reminded ? (
+                        {p.byGuapd ? null : reminded ? (
                           <span style={{
                             display: 'inline-flex', alignItems: 'center', gap: 7,
                             padding: '10px 16px', borderRadius: 'var(--radius-pill, 999px)',

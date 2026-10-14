@@ -4,6 +4,7 @@ import NotificationFeed from '@/components/NotificationFeed'
 import NotificationsMobile from '@/components/NotificationsMobile'
 import { pendingForBrand } from '@/lib/notification-priority'
 import type { Metadata } from 'next'
+import { STAFF_NOTIFICATION_TYPES } from '@/lib/experience-staff-notifications'
 
 export const metadata: Metadata = { title: 'Notifications · Guapd' }
 
@@ -14,6 +15,8 @@ export default async function BrandNotificationsPage() {
   const { data: notifications } = await supabase
     .from('notifications')
     .select('id, deal_id, type, body, read_at, created_at')
+    // 0546: Guapd staff alerts live in the console's own bell, never here.
+    .not('type', 'in', `(${STAFF_NOTIFICATION_TYPES.join(',')})`)
     .order('created_at', { ascending: false })
     .limit(100)
 

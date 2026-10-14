@@ -47,22 +47,28 @@ async function run() {
   const B = (bm ?? []).find((m: any) => m.users?.auth_id && !m.brands?.is_guapd) as any
   const { data: logged } = await admin.from('creators').select('id, user_id, vetting_status, users(auth_id)')
     .eq('is_guapd', false).eq('is_bookable', true).not('user_id', 'is', null).limit(40)
-  const withLogin = (logged ?? []).filter((c: any) => c.users?.auth_id) as any[]
+  // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
+  const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day')
+  const hasRate = new Set((rated ?? []).map((x: any) => x.creator_id))
+  const withLogin = (logged ?? []).filter((c: any) => c.users?.auth_id && !hasRate.has(c.id)) as any[]
   const G = withLogin.find((c) => c.vetting_status === 'growth')      // Growth: 30%
   const D = withLogin.find((c) => c.vetting_status !== 'growth')      // Deals: 15%
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, G?.user_id, D?.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(120)
   const [STAFF, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   if (!B || !G || !D || !STAFF || !NONE) throw new Error('missing test actors (need a brand, a Growth and a Deals creator with logins)')
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id)
   const cg = await sessionFor(G.users.auth_id), cd = await sessionFor(D.users.auth_id)
   const anon = createClient(URL, ANON)
   const houseBrand = (await admin.from('brands').select('id').eq('is_guapd', true).single()).data!.id
+  const houseCreator = (await admin.from('creators').select('id').eq('is_guapd', true).single()).data?.id
 
   // Remember any day rate these creators already had, to restore it after.
   const { data: had } = await admin.from('creator_products').select('id, price_paise, is_active').in('creator_id', [G.id, D.id]).eq('pricing_type', 'per_day')
@@ -74,13 +80,13 @@ async function run() {
   const c = await staff.rpc('experience_console_create', {
     p_brand_id: B.brand_id, p_title: '[legs-test] Kiro shoot', p_creator_count: 2,
     p_deliverables: [{ type: 'UGC video', count: 2 }, { type: 'Story', count: 1 }],
-    p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: null, p_ad_rights_months: 3,
+    p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: 2, p_ad_rights_months: 3,
     p_boost: false, p_boost_per_creator: null, p_boost_months: null, p_location: 'Mumbai', p_date_from: null, p_date_to: null,
     p_brief: 'BRAND-INTERNAL: we pay 3,500 a video', p_channel: 'email',
   })
   if (c.error) throw new Error('create: ' + c.error.message)
   E = c.data as string
-  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: null, p_channel: null })
+  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 4, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 })
   await staff.rpc('experience_console_accept', { p_quote_id: q.data, p_channel: 'email' })
   await staff.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [G.id, D.id], p_added_by: 'guapd', p_channel: null })
   let roster = ((await staff.rpc('experience_console_roster', { p_experience_id: E })).data ?? []) as any[]
@@ -88,7 +94,7 @@ async function run() {
   const RG = rid(G.id), RD = rid(D.id)
 
   group('before the roster is locked')
-  ok('a leg cannot be drafted while the roster is still being built', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: null, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 2 }], p_affiliate_count: 0 })))
+  ok('a leg cannot be drafted while the roster is still being built', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: null, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 2 }], p_ad_rights_count: 2, p_affiliate_count: 0 })))
   for (const r of [RG, RD]) await staff.rpc('experience_console_roster_decide', { p_roster_id: r, p_decision: 'accepted', p_channel: 'email' })
   const lk = await staff.rpc('experience_console_roster_lock', { p_experience_id: E })
   ok('roster locks; Experience is Confirmed', !lk.error, lk.error?.message ?? '')
@@ -99,11 +105,12 @@ async function run() {
     const all = [
       await cl.rpc('experience_console_legs', { p_experience_id: E }),
       await cl.rpc('experience_console_legs_reconcile', { p_experience_id: E }),
-      await cl.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: null, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }], p_affiliate_count: 0 }),
+      await cl.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: null, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }], p_ad_rights_count: 1, p_affiliate_count: 0 }),
       await cl.rpc('experience_console_leg_send', { p_roster_id: RG, p_expected_gross_paise: 1, p_expected_platform_pct: 30, p_expected_net_paise: 1 }),
       await cl.rpc('experience_console_set_day_rate', { p_creator_id: G.id, p_day_rate_paise: 1000000 }),
       await cl.rpc('experience_console_set_creator_brief', { p_experience_id: E, p_brief: 'x' }),
       await cl.rpc('experience_console_creator_brief', { p_experience_id: E }),
+      await cl.rpc('experience_console_creator_pool'),
     ]
     ok(`${n}: every leg read and write refused`, all.every(refused))
   }
@@ -134,28 +141,31 @@ async function run() {
   legs = ((await staff.rpc('experience_console_legs', { p_experience_id: E })).data ?? []) as any[]
   const PG = leg(RG).day_rate_product_id, PD = leg(RD).day_rate_product_id
   ok('the console sees each creator\'s active day rate', Number(leg(RG).day_rate_paise) === 1000000 && Number(leg(RD).day_rate_paise) === 800000)
+  const pool = ((await staff.rpc('experience_console_creator_pool')).data ?? []) as any[]
+  ok('the creator pool (0536) shows staff each creator\'s day rate and track', Number(pool.find((p) => p.id === G.id)?.day_rate_paise) === 1000000 && pool.find((p) => p.id === D.id)?.track === 'deals')
+  ok('the creator pool never lists the house creator', !pool.some((p) => p.id === (houseCreator ?? '')))
 
   group('reconcile on adjust: the total can never go past what was sold')
-  const over = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })
+  const over = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })
   ok('Growth creator up to 3 videos while the other still has 2 (5 of 4): refused', refused(over), over.error?.message ?? '')
   legs = ((await staff.rpc('experience_console_legs', { p_experience_id: E })).data ?? []) as any[]
   ok('…and nothing was saved', leg(RG).leg_deliverables === null)
-  const down = await staff.rpc('experience_console_leg_draft', { p_roster_id: RD, p_product_id: PD, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })
+  const down = await staff.rpc('experience_console_leg_draft', { p_roster_id: RD, p_product_id: PD, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 1 }], p_ad_rights_count: 1, p_affiliate_count: 1 })
   ok('lowering the Deals creator to 1 video first is allowed (3 of 4, under)', !down.error && (down.data as any).over === false && (down.data as any).ok === false && (down.data as any).videos_placed === 3, down.error?.message ?? JSON.stringify(down.data))
-  const up = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })
+  const up = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })
   ok('then raising the Growth creator to 3 fits: 4 of 4, uneven creators, ok', !up.error && (up.data as any).ok === true, up.error?.message ?? JSON.stringify(up.data))
-  ok('a Story over its own total (3 of 2) is refused per type', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RD, p_product_id: PD, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 2 }], p_affiliate_count: 1 })))
+  ok('a Story over its own total (3 of 2) is refused per type', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RD, p_product_id: PD, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }, { type: 'Story', count: 2 }], p_ad_rights_count: 1, p_affiliate_count: 1 })))
 
   group('affiliate is a flag on videos, never a deliverable of its own')
-  ok('more affiliate videos than the leg\'s videos (4 of 3) is refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 4 })))
-  ok('affiliate past the agreed total (2 + 1 = 3 of 2) is refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 2 })))
-  ok('"Affiliate" is not a deliverable type', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Affiliate', count: 1 }], p_affiliate_count: 1 })))
+  ok('more affiliate videos than the leg\'s videos (4 of 3) is refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 4 })))
+  ok('affiliate past the agreed total (2 + 1 = 3 of 2) is refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 2 })))
+  ok('"Affiliate" is not a deliverable type', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 2, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Affiliate', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })))
 
   group('days drive money only; they never scale deliverables')
-  const d3 = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 3, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })
+  const d3 = await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 3, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })
   ok('3 days instead of 2: still 4 of 4 videos placed', !d3.error && (d3.data as any).videos_placed === 4 && (d3.data as any).ok === true)
-  ok('days with three decimals are refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 1.555, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })))
-  ok("another creator's day rate cannot be used", refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PD, p_days: 3, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_affiliate_count: 1 })))
+  ok('days with three decimals are refused', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 1.555, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })))
+  ok("another creator's day rate cannot be used", refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PD, p_days: 3, p_deliverables: [{ type: 'UGC video', count: 3 }, { type: 'Story', count: 1 }], p_ad_rights_count: 3, p_affiliate_count: 1 })))
 
   group('send: the money module, re-derived in the database, frozen')
   const tg = creatorLegTerms({ dayRatePaise: 1000000, days: 3, track: 'growth' })
@@ -185,7 +195,7 @@ async function run() {
   ok('a locked term cannot be changed, even by the service role', refused(await admin.from('experience_creator_terms').update({ creator_net_paise: 2500000 }).eq('deal_id', DG)))
   ok('a per_day term whose gross is not day rate × days is refused (ect_gross_formula)', refused(await admin.from('experience_creator_terms').insert({
     deal_id: DD, experience_id: E, creator_id: D.id, day_rate_paise: 800000, days: 1, creator_gross_paise: 900000, platform_pct: 15, creator_net_paise: 765000, product_id: PD, pricing_type: 'per_day' })))
-  ok('a sent leg cannot be re-drafted', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }], p_affiliate_count: 0 })))
+  ok('a sent leg cannot be re-drafted', refused(await staff.rpc('experience_console_leg_draft', { p_roster_id: RG, p_product_id: PG, p_days: 1, p_deliverables: [{ type: 'UGC video', count: 1 }], p_ad_rights_count: 1, p_affiliate_count: 0 })))
   ok('…or sent twice', refused(await staff.rpc('experience_console_leg_send', { p_roster_id: RG, p_expected_gross_paise: tg.creatorGrossPaise, p_expected_platform_pct: 30, p_expected_net_paise: tg.creatorNetPaise })))
   await staff.rpc('experience_console_set_day_rate', { p_creator_id: G.id, p_day_rate_paise: 1500000 })
   const t2 = (await admin.from('experience_creator_terms').select('day_rate_paise').eq('deal_id', DG).single()).data
@@ -236,7 +246,7 @@ async function run() {
   ok('cannot submit or change an item', refusedBy(await cg.from('deal_deliverable_items').update({ external_url: 'https://x.y' }).eq('id', anyItem.id), LEG_GUARD))
   ok('cannot upload a deliverable', refusedBy(await cg.from('deliverables').insert({ deal_id: DG, version: 1, external_url: 'https://x.y' }), LEG_GUARD))
   ok('no invoice can be raised on a leg, even by the service role', refusedBy(await admin.from('invoices').insert({ deal_id: DG, status: 'draft' }), /No invoice/))
-  ok('a leg cannot be marked paid, even by the service role', refusedBy(await admin.from('deals').update({ status: 'paid' }).eq('id', DG), /No payment/))
+  ok('a leg cannot be marked paid, even by the service role', refusedBy(await admin.from('deals').update({ status: 'paid' }).eq('id', DG), /marked paid only when Guapd pays/))
   ok("another creator cannot answer this leg", refused(await cd.rpc('creator_leg_respond', { p_deal_id: DG, p_accept: true, p_reason: null })))
   const acc = await cg.rpc('creator_leg_respond', { p_deal_id: DG, p_accept: true, p_reason: null })
   ok('the creator accepts their own leg', !acc.error && acc.data === 'agreed', acc.error?.message ?? '')

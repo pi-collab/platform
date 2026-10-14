@@ -365,9 +365,12 @@ CREATE TRIGGER t_deals_00_guard
 DROP POLICY IF EXISTS messages_read   ON messages;
 DROP POLICY IF EXISTS messages_insert ON messages;
 
+-- 0546: an Experience creator leg's thread is readable under RLS by its own
+-- creator ONLY (staff read through experience_console_leg_thread; the real
+-- brand is never a party to a leg). Marketplace deals: either party, as before.
 CREATE POLICY messages_read
   ON messages FOR SELECT
-  USING (can_access_deal(deal_id));
+  USING (can_read_deal_messages(deal_id));
 
 CREATE POLICY messages_insert
   ON messages FOR INSERT
@@ -1146,13 +1149,11 @@ REVOKE ALL ON deal_templates, experiences, experience_finance, experience_creato
               creator_private, service_invoices, vendor_payouts, deal_follow_ons
   FROM anon, authenticated;
 
-GRANT SELECT (id, brand_id, title, status, brand_service_total_paise, shoot_date, shoot_city, created_at, updated_at)
-  ON experiences TO authenticated;
+-- experiences: NO user grant since 0544 (brands read through brand_experience*).
 GRANT SELECT (deal_id, experience_id, creator_id, day_rate_paise, days, creator_gross_paise, platform_pct, creator_net_paise,
               platform_track, locked_at, created_at, updated_at)
   ON experience_creator_terms TO authenticated;
-GRANT SELECT (id, experience_id, creator_id, added_by, brand_decision, locked, decided_at, created_at, updated_at)
-  ON experience_roster TO authenticated;
+-- experience_roster: NO user grant since 0544 (brands read through brand_experience_roster).
 GRANT SELECT (id, experience_id, brand_id, kind, number, status, issue_date, due_date, lines, subtotal_paise,
               gst_rate_pct, cgst_paise, sgst_paise, igst_paise, tds_paise, total_paise,
               supplier_gstin, supplier_gstin_provisional, supplier_arn,
@@ -1166,25 +1167,18 @@ GRANT SELECT (id, experience_id, deal_id, creator_id, type, trigger, basis, invo
               sales_figure_paise, sales_verified_at, creator_gross_paise, platform_pct, creator_net_paise, status, created_at, updated_at)
   ON deal_follow_ons TO authenticated;
 
+-- Removed in 0544: brands read only through the brand_experience* functions.
 DROP POLICY IF EXISTS experiences_read_brand ON experiences;
-CREATE POLICY experiences_read_brand ON experiences FOR SELECT
-  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
 
 DROP POLICY IF EXISTS ect_read_own_creator ON experience_creator_terms;
 CREATE POLICY ect_read_own_creator ON experience_creator_terms FOR SELECT
   USING (creator_id = my_creator_id() AND creator_id IS DISTINCT FROM guapd_creator_id());
 
+-- Removed in 0544: brands read only through brand_experience_roster.
 DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
-CREATE POLICY roster_read_brand ON experience_roster FOR SELECT
-  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_id AND e.brand_id = my_brand_id()));
 
-DROP POLICY IF EXISTS si_read_brand ON service_invoices;
-CREATE POLICY si_read_brand ON service_invoices FOR SELECT
-  USING (brand_id = my_brand_id() AND brand_id IS DISTINCT FROM guapd_brand_id());
-
-DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
-CREATE POLICY vp_read_own_creator ON vendor_payouts FOR SELECT
-  USING (is_my_vendor(vendor_id));
+-- si_read_brand (service_invoices) and vp_read_own_creator (vendor_payouts)
+-- were removed in 0540: see "Experience money loop (0540)" below.
 
 DROP POLICY IF EXISTS dfo_read_own_creator ON deal_follow_ons;
 CREATE POLICY dfo_read_own_creator ON deal_follow_ons FOR SELECT
@@ -1211,58 +1205,91 @@ SET search_path = public AS $$
   ), false)
 $$;
 
+-- 0537: accepted legs only, revenue = invoiced, reconciliation enforced.
+-- 0538: a creator recorded as not shooting is not counted.
 CREATE OR REPLACE FUNCTION compute_experience_pnl(p_experience_id uuid)
-RETURNS jsonb LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public AS $$
-  WITH inv AS (
-    SELECT coalesce(sum(subtotal_paise) FILTER (WHERE status IN ('issued', 'paid')), 0) AS billed,
-           coalesce(sum(subtotal_paise) FILTER (WHERE status = 'paid'), 0) AS received
-    FROM service_invoices WHERE experience_id = p_experience_id
-  ), legs AS (
-    SELECT coalesce(sum(creator_gross_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS gross,
-           coalesce(sum(creator_net_paise) FILTER (WHERE locked_at IS NOT NULL), 0) AS net,
-           count(*) FILTER (WHERE locked_at IS NULL) AS pending,
-           coalesce(jsonb_agg(jsonb_build_object(
-             'deal_id', deal_id, 'creator_id', creator_id, 'platform_track', platform_track,
-             'platform_pct', platform_pct, 'creator_gross_paise', creator_gross_paise,
-             'platform_fee_paise', creator_gross_paise - creator_net_paise, 'creator_net_paise', creator_net_paise
-           ) ORDER BY created_at) FILTER (WHERE locked_at IS NOT NULL), '[]'::jsonb) AS per_leg
-    FROM experience_creator_terms WHERE experience_id = p_experience_id
-  ), costs AS (
-    SELECT coalesce(sum(total_paise), 0) AS total
-    FROM experience_cost_lines WHERE experience_id = p_experience_id AND provided_by = 'guapd'
-  )
-  SELECT jsonb_build_object(
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_billed bigint; v_received bigint; v_invoices int; v_agreed bigint;
+  v_gross bigint; v_net bigint; v_per_leg jsonb;
+  v_awaiting int; v_awaiting_net bigint; v_declined int; v_no_shoot int;
+  v_costs bigint; v_by_cat jsonb;
+  v_subtotal bigint; v_fee_kept bigint; v_margin bigint;
+BEGIN
+  SELECT coalesce(sum(si.subtotal_paise) FILTER (WHERE si.status IN ('issued', 'paid')), 0)::bigint,
+         coalesce(sum(si.subtotal_paise) FILTER (WHERE si.status = 'paid'), 0)::bigint,
+         count(*) FILTER (WHERE si.status IN ('issued', 'paid'))::int
+    INTO v_billed, v_received, v_invoices
+    FROM service_invoices si WHERE si.experience_id = p_experience_id;
+  SELECT e.brand_service_total_paise INTO v_agreed FROM experiences e WHERE e.id = p_experience_id;
+
+  -- Accepted legs only (agreed onward), minus any creator recorded as not shooting.
+  SELECT coalesce(sum(t.creator_gross_paise), 0)::bigint, coalesce(sum(t.creator_net_paise), 0)::bigint,
+         coalesce(jsonb_agg(jsonb_build_object(
+           'deal_id', t.deal_id, 'creator_id', t.creator_id, 'full_name', c.full_name, 'deal_status', d.status::text,
+           'platform_track', t.platform_track, 'platform_pct', t.platform_pct,
+           'day_rate_paise', t.day_rate_paise, 'days', t.days,
+           'creator_gross_paise', t.creator_gross_paise, 'platform_fee_paise', t.creator_gross_paise - t.creator_net_paise,
+           'creator_net_paise', t.creator_net_paise) ORDER BY t.created_at), '[]'::jsonb)
+    INTO v_gross, v_net, v_per_leg
+    FROM experience_creator_terms t
+    JOIN deals d ON d.id = t.deal_id
+    JOIN creators c ON c.id = t.creator_id
+    WHERE t.experience_id = p_experience_id AND t.locked_at IS NOT NULL
+      AND d.status IN ('agreed', 'delivered', 'revision', 'approved', 'paid', 'complete')
+      AND NOT EXISTS (SELECT 1 FROM experience_roster r WHERE r.leg_deal_id = t.deal_id AND r.leg_shoot_outcome = 'did_not_shoot');
+
+  SELECT count(*) FILTER (WHERE d.status = 'negotiating')::int,
+         coalesce(sum(t.creator_net_paise) FILTER (WHERE d.status = 'negotiating'), 0)::bigint,
+         count(*) FILTER (WHERE d.status IN ('declined', 'cancelled'))::int,
+         count(*) FILTER (WHERE r.leg_shoot_outcome = 'did_not_shoot')::int
+    INTO v_awaiting, v_awaiting_net, v_declined, v_no_shoot
+    FROM experience_creator_terms t JOIN deals d ON d.id = t.deal_id
+    LEFT JOIN experience_roster r ON r.leg_deal_id = t.deal_id
+    WHERE t.experience_id = p_experience_id;
+
+  v_costs := experience_cost_total(p_experience_id);
+  SELECT coalesce(jsonb_agg(jsonb_build_object('category', x.category, 'total_paise', x.total) ORDER BY x.category), '[]'::jsonb)
+    INTO v_by_cat
+    FROM (SELECT cl.category, sum(cl.total_paise)::bigint AS total FROM experience_cost_lines cl
+          WHERE cl.experience_id = p_experience_id AND cl.provided_by = 'guapd' AND cl.removed_at IS NULL
+          GROUP BY cl.category) x;
+
+  v_subtotal := v_billed - v_gross - v_costs;
+  v_fee_kept := v_gross - v_net;
+  v_margin := v_billed - v_net - v_costs;
+  IF v_subtotal + v_fee_kept IS DISTINCT FROM v_margin THEN
+    RAISE EXCEPTION 'P&L does not reconcile: sub-total % + fee kept % <> margin %', v_subtotal, v_fee_kept, v_margin;
+  END IF;
+
+  RETURN jsonb_build_object(
     'experience_id', p_experience_id,
-    'brand_revenue_paise', inv.billed,
-    'brand_received_paise', inv.received,
-    'creator_gross_total_paise', legs.gross,
-    'creator_net_total_paise', legs.net,
-    'guapd_costs_total_paise', costs.total,
-    'subtotal_paise', inv.billed - legs.gross - costs.total,
-    'platform_fee_kept_paise', legs.gross - legs.net,
-    'guapd_margin_paise', inv.billed - legs.net - costs.total,
-    'legs_pending', legs.pending,
-    'per_leg', legs.per_leg
-  )
-  FROM inv, legs, costs
+    'brand_revenue_paise', v_billed, 'revenue_basis', 'invoiced', 'revenue_pending_invoice', v_invoices = 0,
+    'invoices_counted', v_invoices, 'brand_received_paise', v_received, 'brand_agreed_paise', v_agreed,
+    'creator_gross_total_paise', v_gross, 'creator_net_total_paise', v_net,
+    'guapd_costs_total_paise', v_costs, 'costs_by_category', v_by_cat,
+    'subtotal_paise', v_subtotal, 'platform_fee_kept_paise', v_fee_kept, 'guapd_margin_paise', v_margin,
+    'legs_counted', jsonb_array_length(v_per_leg), 'legs_awaiting', v_awaiting, 'awaiting_net_paise', v_awaiting_net,
+    'legs_declined', v_declined, 'legs_pending', v_awaiting, 'legs_did_not_shoot', v_no_shoot,
+    'per_leg', v_per_leg);
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION experience_pnl(p_experience_id uuid)
-RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public AS $$
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  snap_pnl jsonb;
-  snap_at  timestamptz;
+  v_pnl jsonb; v_at timestamptz; v_final boolean; v_stored bigint;
 BEGIN
-  IF NOT has_experience_access('financial') THEN
+  IF has_experience_access('financial') IS NOT TRUE THEN
     RAISE EXCEPTION 'Financial access required' USING ERRCODE = '42501';
   END IF;
-  SELECT pnl, captured_at INTO snap_pnl, snap_at FROM experience_pnl_snapshots WHERE experience_id = p_experience_id;
-  IF snap_pnl IS NOT NULL THEN
-    RETURN snap_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', snap_at);
+  SELECT s.pnl, s.captured_at, s.is_final, s.guapd_margin_paise INTO v_pnl, v_at, v_final, v_stored
+    FROM experience_pnl_snapshots s WHERE s.experience_id = p_experience_id;
+  IF v_final THEN
+    RETURN v_pnl || jsonb_build_object('source', 'snapshot', 'captured_at', v_at);
   END IF;
-  RETURN compute_experience_pnl(p_experience_id) || jsonb_build_object('source', 'live');
+  RETURN compute_experience_pnl(p_experience_id)
+         || jsonb_build_object('source', 'live', 'stored_at', v_at, 'stored_margin_paise', v_stored);
 END;
 $$;
 
@@ -1272,7 +1299,7 @@ RETURNS TABLE (id uuid, vendor_name text, deal_id uuid, reason text, amount_pais
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public AS $$
 BEGIN
-  IF NOT has_experience_access('operational') THEN
+  IF has_experience_access('operational') IS NOT TRUE THEN
     RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
   END IF;
   RETURN QUERY
@@ -1303,18 +1330,10 @@ CREATE POLICY deal_brand_notes_read_brand ON deal_brand_notes FOR SELECT TO auth
   USING (EXISTS (SELECT 1 FROM deals d WHERE d.id = deal_brand_notes.deal_id AND d.brand_id = my_brand_id()));
 
 -- ── 0528: Experience request columns, quote history ─────────────────────────
-GRANT SELECT (request_deliverables, request_affiliate, request_ad_rights, request_ad_rights_months,
-              request_boost, request_boost_months, request_location, request_date_from, request_date_to,
-              request_brief, request_channel, requested_at)
-  ON experiences TO authenticated;
+-- The request columns and quotes: NO user grant since 0544; the brand reads
+-- its request and Guapd's price through brand_experience().
 REVOKE ALL ON experience_quotes FROM anon, authenticated;
-GRANT SELECT (id, experience_id, version, proposed_by, per_video_paise, deliverable_count, misc_paise,
-              total_paise, deliverables, shoot_date, shoot_city, message, status, created_at, decided_at)
-  ON experience_quotes TO authenticated;
 DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
-CREATE POLICY experience_quotes_read_brand ON experience_quotes FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM experiences e WHERE e.id = experience_quotes.experience_id
-                 AND e.brand_id = my_brand_id() AND e.brand_id IS DISTINCT FROM guapd_brand_id()));
 
 -- ── 0529: Guapd Experiences staff console list ──────────────────────────────
 CREATE OR REPLACE FUNCTION experience_console_list()
@@ -1324,7 +1343,7 @@ RETURNS TABLE (id uuid, title text, status text, brand_name text, shoot_date dat
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public AS $$
 BEGIN
-  IF NOT has_experience_access('operational') THEN
+  IF has_experience_access('operational') IS NOT TRUE THEN
     RAISE EXCEPTION 'Operational access required' USING ERRCODE = '42501';
   END IF;
   RETURN QUERY
@@ -1360,9 +1379,7 @@ GRANT  EXECUTE ON FUNCTION experience_console_quote(uuid, text, bigint, int, big
 GRANT  EXECUTE ON FUNCTION experience_console_accept(uuid, text)                   TO authenticated;
 
 -- ── 0531: the per-creator request plan ──────────────────────────────────────
-GRANT SELECT (request_creator_count, request_affiliate_per_creator, request_ad_rights_per_creator,
-              request_boost_per_creator, agreed_plan)
-  ON experiences TO authenticated;
+-- (The plan columns' user grant was removed in 0544: read through brand_experience().)
 REVOKE EXECUTE ON FUNCTION experience_plan_count(jsonb, boolean) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_plan_totals(jsonb, int) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION experience_console_create(uuid, text, int, jsonb, boolean, int, boolean, int, int, boolean, int, int, text, date, date, text, text) FROM PUBLIC, anon;
@@ -1411,4 +1428,199 @@ REVOKE ALL ON package_pricing_types FROM anon, authenticated;
 -- uploads, messages) are refused by trigger, invoices on a creator leg are
 -- refused for every role, and a creator leg cannot be marked paid
 -- (guard_creator_leg_*). See supabase/migrations/0534_experience_creator_legs.sql.
+
+
+-- ── Experience cost sheet + P&L (0537) ─────────────────────────────────
+-- experience_cost_lines and experience_pnl_snapshots have NO policies by design:
+-- REVOKEd from anon/authenticated, reached only through staff-gated definer
+-- functions (experience_console_costs / _cost_add / _cost_update / _cost_remove
+-- for operational staff; experience_pnl for financial staff). The stored margin
+-- refreshes by trigger while an Experience is open and freezes at Complete;
+-- reopening is financial-only and audited. The brand price is masked from
+-- operational staff in experience_console_get / experience_console_quotes, and
+-- quoting requires financial access. See supabase/migrations/0537_experience_costs_pnl.sql.
+
+
+-- ── Experience shoot + deliverables (0538) ──────────────────────────────
+-- experience_deliverable_releases (what Guapd has given the brand, versioned)
+-- and experience_item_staff_notes (Guapd's notes on its own content) have NO
+-- policies by design: REVOKEd from anon/authenticated. Staff reach them
+-- through experience_console_* functions (operational); the brand ONLY
+-- through brand_experience_deliverables / brand_experience_release_file,
+-- which check brand membership in Postgres and return live releases with the
+-- creator's name only. A creator reads their own leg's items through the
+-- existing deal_deliverable_items_read policy and creator_leg_context; their
+-- writes go through creator_leg_item_submit (creator-submit legs only), as the
+-- 0534 trigger still refuses direct session writes to a creator leg. The new
+-- experience_roster shoot-outcome columns are outside the 0523 brand column
+-- grant. See supabase/migrations/0538_experience_deliverables.sql.
+ALTER TABLE experience_deliverable_releases ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_deliverable_releases FROM anon, authenticated;
+ALTER TABLE experience_item_staff_notes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_item_staff_notes FROM anon, authenticated;
+
+
+-- ── NULL means no (0539) ────────────────────────────────────────────────
+-- Every Experience gate and transition check refuses on an UNKNOWN: gates read
+-- `has_experience_access(..) IS NOT TRUE`, guards use IS DISTINCT FROM and
+-- `x IS NULL OR x NOT IN (..)`, reconcile/readiness treat a missing number as
+-- "not ok". Creators can no longer upload straight into the deliverables
+-- bucket under an Experience leg (only through the service-role upload slot):
+DROP POLICY IF EXISTS storage_deliverables_insert ON storage.objects;
+CREATE POLICY storage_deliverables_insert
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'deliverables'
+    AND EXISTS (
+      SELECT 1 FROM deals
+      WHERE deals.id = (string_to_array(name, '/'))[1]::uuid
+        AND deals.creator_id = my_creator_id()
+        AND deals.leg_role IS NULL
+    )
+  );
+-- See supabase/migrations/0539_experience_null_means_no.sql.
+
+
+-- ── Experience money loop (0540) ────────────────────────────────────────
+-- service_invoices, service_invoice_payments, service_invoice_counters,
+-- vendor_payouts, vendors, vendor_payout_details, brand_billing_profiles and
+-- guapd_billing_settings have NO policies and NO grants for users: REVOKEd
+-- from anon/authenticated. The 0524 brand read of service_invoices
+-- (si_read_brand + column grants) and the creator read of vendor_payouts
+-- (vp_read_own_creator + column grants) were DROPPED. Staff reach invoices,
+-- payments and billing details only through experience_console_invoice* /
+-- _finance_settings / _brand_billing (FINANCIAL access), payouts through
+-- experience_console_payout* (OPERATIONAL, maker-checker in Postgres). The
+-- brand reads its ISSUED and PAID invoices through brand_experience_invoices /
+-- brand_experience_invoice_file (membership checked); the creator reads their
+-- own payout statement through creator_leg_context. The finance-docs bucket is
+-- private with no user policies (service-role signed links only, after a
+-- database function authorises the path). See
+-- supabase/migrations/0540_experience_invoices_payouts.sql.
+DROP POLICY IF EXISTS si_read_brand ON service_invoices;
+DROP POLICY IF EXISTS vp_read_own_creator ON vendor_payouts;
+REVOKE ALL ON service_invoices FROM anon, authenticated;
+REVOKE ALL ON vendor_payouts FROM anon, authenticated;
+ALTER TABLE service_invoice_payments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON service_invoice_payments FROM anon, authenticated;
+ALTER TABLE service_invoice_counters ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON service_invoice_counters FROM anon, authenticated;
+ALTER TABLE brand_billing_profiles ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_billing_profiles FROM anon, authenticated;
+ALTER TABLE guapd_billing_settings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON guapd_billing_settings FROM anon, authenticated;
+
+
+-- ── Creators not on Guapd yet (0541) ────────────────────────────────────
+-- experience_roster_prospects has NO policies and NO grants for users: staff
+-- reach it only through experience_console_prospect* (operational). The brand
+-- never sees it (only the roster, once someone is linked to their account).
+-- See supabase/migrations/0541_experience_roster_prospects.sql.
+ALTER TABLE experience_roster_prospects ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_roster_prospects FROM anon, authenticated;
+
+-- ═════ 0542: counters on a creator leg + creator bank details ═════
+-- experience_leg_counters has NO policies and NO grants for users. The creator
+-- reads their own leg's counters through creator_leg_context and acts through
+-- creator_leg_counter* (own leg only); staff through experience_console_counter*
+-- (operational; a counter that RAISES the cost needs financial access). A
+-- counter is never deleted (trigger), and a decided one never changes.
+ALTER TABLE experience_leg_counters ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_leg_counters FROM anon, authenticated;
+-- vendor_payout_details (above) now holds the account number and PAN only
+-- ENCRYPTED with the Vault key 'guapd_payout_details_key' (the plaintext
+-- columns are held empty by CHECK vpd_no_plaintext). The creator writes and
+-- reads their own MASKED through creator_set_payout_details /
+-- creator_payout_details; operational staff see ••••last4 only; FINANCE reads
+-- in full through experience_console_payout_account (audited, no values).
+-- vendor_payout_detail_changes records which FIELD NAMES changed, never values.
+ALTER TABLE vendor_payout_detail_changes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON vendor_payout_detail_changes FROM anon, authenticated;
+
+-- ═════ 0544: the brand's own Experience screens (Phase 6) ═════
+-- Brands read Experiences ONLY through SECURITY DEFINER functions, each behind
+-- brand_experience_require (a member of THIS Experience's brand; never the
+-- house brand; NULL / no session / not a member = "Not found"; admin-only for
+-- the price and sign-off): brand_experiences, brand_experience,
+-- brand_experience_roster, brand_experience_deliverables (+ _release_file),
+-- brand_experience_invoices (+ _invoice_file), brand_experience_report.
+-- Brand writes: brand_experience_request / _quote_answer / _roster_decide /
+-- _release_decide / _signoff, each writing channel 'portal' (staff functions
+-- refuse 'portal'). No direct user grant or policy on these three tables:
+REVOKE ALL ON experiences, experience_roster, experience_quotes FROM anon, authenticated;
+DROP POLICY IF EXISTS experiences_read_brand ON experiences;
+DROP POLICY IF EXISTS roster_read_brand ON experience_roster;
+DROP POLICY IF EXISTS experience_quotes_read_brand ON experience_quotes;
+
+
+-- ═══ 0550: the brand <-> Guapd thread on an Experience ═══
+-- Functions only (brand_experience_messages / _message_send through the brand
+-- gate; experience_console_brand_* through the staff gate). RLS on with NO
+-- policy, and every grant revoked, so no session reads or writes directly.
+ALTER TABLE experience_brand_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience_brand_message_reads ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_brand_messages, experience_brand_message_reads FROM anon, authenticated;
+
+-- ═════ 0552: the creator invoice to Guapd on an Experience deal ═════
+-- experience_creator_invoices has NO policies and NO grants for users. The
+-- creator raises it through creator_leg_invoice_raise (own deal, after Guapd
+-- marks the shoot done; figures copied from the locked terms by the database)
+-- and reads it through creator_leg_context / creator_leg_invoice_doc; staff read
+-- and void it through experience_console_creator_invoice_doc / _void
+-- (operational). Never deleted; an issued invoice only changes to void.
+ALTER TABLE experience_creator_invoices ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_creator_invoices FROM anon, authenticated;
+
+-- ═════ 0554: add-ons to the agreed brand price ═════
+-- experience_addons has NO policies and NO grants for users. Finance sends,
+-- withdraws and records answers through experience_console_addon_* ; the brand
+-- (an admin on its account) answers through brand_experience_addon_answer and
+-- reads its own through brand_experience_addons; operational staff read what an
+-- add-on adds and its status (no amounts) through experience_console_addons.
+ALTER TABLE experience_addons ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_addons FROM anon, authenticated;
+
+-- ═════ 0555: extra deliverables for a creator ═════
+-- experience_leg_extras has NO policies and NO grants for users. Operational
+-- staff send, revise and withdraw through experience_console_extra_* and read
+-- through experience_console_leg_extras; the creator answers their own through
+-- creator_leg_extra_respond, reads them through creator_leg_context, and
+-- invoices an accepted one through creator_leg_extra_invoice_raise / _doc.
+-- The brand never sees an extra (only what is shared with it as a deliverable).
+ALTER TABLE experience_leg_extras ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_leg_extras FROM anon, authenticated;
+
+-- ═════ 0557: the brand adds creators to its own roster ═════
+-- No table change: experience_roster stays function-access only. A brand member
+-- writes through brand_experience_roster_add (SECURITY DEFINER, brand gate,
+-- roster open, bookable creators only), granted to authenticated, not anon.
+
+-- ═════ 0558: the brand suggests creators not on Guapd yet ═════
+-- experience_brand_suggestions has NO policies and NO grants for users. A brand
+-- member suggests through brand_experience_suggest_creator and reads its own
+-- through brand_experience_suggestions (name, handle, note, status, reason:
+-- never the prospect's cost). Operational staff read through
+-- experience_console_brand_suggestions and answer through
+-- experience_console_suggestion_resolve.
+ALTER TABLE experience_brand_suggestions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_brand_suggestions FROM anon, authenticated;
+
+-- 0559: brand_experience_roster_add replaced (a brand add is shared and PENDING, no decision); grants unchanged: authenticated only, revoked from PUBLIC/anon.
+
+-- 0560: experience_console_quote gains p_affiliate_pct (old 11-arg signature dropped); experience_console_quotes returns affiliate_pct (dropped and recreated). Both: authenticated only, revoked from PUBLIC/anon. New columns experience_quotes.affiliate_pct and experience_creator_terms.affiliate_pct ride the existing table RLS (no new grants).
+
+-- 0561: experience_collab_posts. RLS on, NO policies, no grants: read and written only by
+-- SECURITY DEFINER functions (creator_collab_posts / creator_collab_file / creator_collab_post_link
+-- for the creator's own deal; brand_experience_collab_posts / brand_experience_collab_act for the
+-- brand's own Experience; experience_console_collab_* for operational staff).
+ALTER TABLE experience_collab_posts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_collab_posts FROM PUBLIC, anon, authenticated;
+
+-- 0562: experience_console_affiliate_pct_set(uuid, numeric, text): finance only (checked inside), authenticated only, revoked from PUBLIC/anon.
+
+-- 0563: deal_follow_ons keeps its 0524 policy (dfo_read_own_creator: a creator reads their own rows); all writes go through
+-- SECURITY DEFINER functions: creator_affiliate_claim / creator_affiliate_invoice_doc (own deal), experience_console_affiliate_review /
+-- _close / _payout_request / experience_console_affiliates (operational), experience_console_affiliate_bill (finance). All authenticated only,
+-- revoked from PUBLIC/anon. experience_creator_invoices.follow_on_id and vendor_payouts reason 'follow_on' ride the existing table RLS.
 

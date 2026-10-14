@@ -65,9 +65,11 @@ async function create() {
   const D = withLogin.find((c) => c.vetting_status !== 'growth')
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([G.user_id, D.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(120)
   const STAFF = (users ?? []).find((u: any) => !busy.has(u.id)) as any
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   const staff = await sessionFor(STAFF.auth_id)
 
   const { data: had } = await admin.from('creator_products').select('id, price_paise, is_active').in('creator_id', [G.id, D.id]).eq('pricing_type', 'per_day')
@@ -85,7 +87,7 @@ async function create() {
   })
   if (c.error) throw new Error(c.error.message)
   const E = c.data as string
-  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 10, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-14', p_shoot_city: 'Mumbai', p_message: null, p_channel: null })
+  const q = await staff.rpc('experience_console_quote', { p_experience_id: E, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 10, p_misc_paise: 0, p_deliverables: [], p_shoot_date: '2026-11-14', p_shoot_city: 'Mumbai', p_message: null, p_channel: null, p_affiliate_pct: 10 })
   await staff.rpc('experience_console_accept', { p_quote_id: q.data, p_channel: 'email' })
   await staff.rpc('experience_console_roster_add', { p_experience_id: E, p_creator_ids: [G.id, D.id], p_added_by: 'guapd', p_channel: null })
   const roster = ((await staff.rpc('experience_console_roster', { p_experience_id: E })).data ?? []) as any[]

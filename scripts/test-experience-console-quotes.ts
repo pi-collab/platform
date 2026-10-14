@@ -33,18 +33,19 @@ async function sessionFor(authId: string): Promise<SupabaseClient> {
   return createClient(URL, ANON, { global: { headers: { Authorization: `Bearer ${s.access_token}` } }, auth: { persistSession: false } })
 }
 const refused = (r: { error: { message: string } | null }) => !!r.error
+const said = (r: { error: { message: string } | null }, re: RegExp) => !!r.error && re.test(r.error.message)
 // The plan: 10 creators, each making 2 UGC videos + 1 Story; affiliate on 1 of
 // each creator's 2 videos; ad rights on all of them for 3 months.
 const req = (brandId: string, over: Record<string, unknown> = {}) => ({
   p_brand_id: brandId, p_title: '[console-quotes-test] Kiro day shoot', p_creator_count: 10,
   p_deliverables: [{ type: 'UGC video', count: 2 }, { type: 'Story', count: 1 }],
-  p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: null, p_ad_rights_months: 3,
+  p_affiliate: true, p_affiliate_per_creator: 1, p_ad_rights: true, p_ad_rights_per_creator: 2, p_ad_rights_months: 3,
   p_boost: false, p_boost_per_creator: null, p_boost_months: null,
   p_location: 'Mumbai', p_date_from: '2026-11-10', p_date_to: '2026-11-12', p_brief: 'Glow serum', p_channel: 'whatsapp', ...over,
 })
 const quote = (expId: string, over: Record<string, unknown> = {}) => ({
   p_experience_id: expId, p_proposed_by: 'guapd', p_per_video_paise: 350000, p_deliverable_count: 20, p_misc_paise: 500000,
-  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, ...over,
+  p_deliverables: [{ type: 'UGC video', count: 20 }], p_shoot_date: '2026-11-11', p_shoot_city: 'Mumbai', p_message: 'Our quote', p_channel: null, p_affiliate_pct: 10, ...over,
 })
 const audit = async (targetId: string, action: string) =>
   (await admin.from('ops_events').select('action, actor_email, detail').eq('target_id', targetId).eq('action', action)).data ?? []
@@ -56,12 +57,14 @@ async function run() {
   const C = (crs ?? []).find((c: any) => c.users?.auth_id) as any
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B.user_id, C.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(80)
   const [STAFF, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   const { data: house } = await admin.from('brands').select('id').eq('is_guapd', true).single()
   if (!B || !C || !STAFF || !NONE || !house) throw new Error('missing test actors')
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id), creator = await sessionFor(C.users.auth_id)
@@ -93,7 +96,9 @@ async function run() {
   const tot = Object.fromEntries((g1.data?.plan_totals ?? []).map((t: any) => [t.type, t.total]))
   ok('totals computed by the database: 20 UGC videos, 10 Stories', tot['UGC video'] === 20 && tot['Story'] === 10, JSON.stringify(g1.data?.plan_totals))
   ok('videos priced per video: 2 each, 20 in total (stories not counted)', g1.data?.plan_videos_per_creator === 2 && g1.data?.plan_videos_total === 20)
-  ok('rights per creator: affiliate on 1, ad rights on all (null) for 3 months', g1.data?.request_affiliate_per_creator === 1 && g1.data?.request_ad_rights_per_creator === null && g1.data?.request_ad_rights_months === 3)
+  ok('rights per creator: affiliate on 1, ad rights on 2 for 3 months', g1.data?.request_affiliate_per_creator === 1 && g1.data?.request_ad_rights_per_creator === 2 && g1.data?.request_ad_rights_months === 3)
+  ok('0547: ad rights with no per-creator count is refused (never "all")', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_ad_rights_per_creator: null }))))
+  ok('0547: boost with no per-creator count is refused', refused(await staff.rpc('experience_console_create', req(B.brand_id, { p_boost: true, p_boost_per_creator: null, p_boost_months: 3 }))))
   ok('other request fields stored (Mumbai, WhatsApp)', g1.data?.request_location === 'Mumbai' && g1.data?.request_channel === 'whatsapp')
   const lst = ((await staff.rpc('experience_console_list')).data ?? []).find((r: any) => r.id === E)
   ok('the list shows 20 videos for it', lst?.requested_videos === 20, String(lst?.requested_videos))
@@ -143,6 +148,19 @@ async function run() {
   ok('locked plan records videos sold (20) against the plan (20)', ap?.videos_sold === 20 && ap?.plan_videos === 20)
   ok('status moved exactly one step: requested → rostering', g2.status === 'rostering', g2.status)
   ok('quotes are closed once agreed', refused(await staff.rpc('experience_console_quote', quote(E))))
+  // 0560 / 0562: the % the brand agreed sits on the plan; an older agreement (no key) can have it recorded once.
+  ok('0560 the agreed plan holds the 10% from the quote', Number(ap?.affiliate_pct) === 10)
+  const pctSet = (s: SupabaseClient, pct: number | null, ch: string | null) => s.rpc('experience_console_affiliate_pct_set', { p_experience_id: E, p_pct: pct, p_channel: ch })
+  ok('0562 an agreed % cannot be recorded again', said(await pctSet(staff, 12, 'email'), /already agreed/))
+  const { data: plan0 } = await admin.from('experiences').select('agreed_plan').eq('id', E).single()
+  const legacyPlan = { ...(plan0!.agreed_plan as Record<string, unknown>) }; delete legacyPlan.affiliate_pct
+  await admin.from('experiences').update({ agreed_plan: legacyPlan }).eq('id', E)
+  ok('0562 an older agreement: the brand, a creator, no access, anonymous cannot record it',
+    refused(await pctSet(brand, 12, 'email')) && refused(await pctSet(creator, 12, 'email')) && refused(await pctSet(none, 12, 'email')) && refused(await pctSet(createClient(URL, ANON), 12, 'email')))
+  ok('0562 a channel is required; 0 / over 100 / NULL refused', said(await pctSet(staff, 12, null), /Say how/) && said(await pctSet(staff, 0, 'email'), /above 0/) && said(await pctSet(staff, 101, 'email'), /above 0/) && refused(await pctSet(staff, null, 'email')))
+  ok('0562 finance records the 12% the brand agreed', !refused(await pctSet(staff, 12, 'email')))
+  ok('…on the plan, with its channel', Number(((await admin.from('experiences').select('agreed_plan').eq('id', E).single()).data?.agreed_plan as any)?.affiliate_pct) === 12)
+  ok('0562 audited', (await audit(E, 'experience.affiliate_pct_recorded')).length === 1)
   ok('a second accept is refused', refused(await staff.rpc('experience_console_accept', { p_quote_id: open[0].id, p_channel: null })))
   const a3 = await audit(E, 'experience.quote_accepted')
   ok('audit: accept with before/after status and the total', a3.length === 1 && (a3[0].detail as any).status_before === 'requested' && (a3[0].detail as any).status_after === 'rostering' && (a3[0].detail as any).total_paise === 6000000)
@@ -157,8 +175,33 @@ async function run() {
   ok('with it: accepted, 18 × ₹3,500 = ₹63,000 locked, rostering', !ok2.error && g3.brand_service_total_paise === 6300000 && g3.status === 'rostering')
   ok('a negotiated count is the contract: sold 18 against a plan of 20, both recorded', g3.agreed_plan?.videos_sold === 18 && g3.agreed_plan?.plan_videos === 20)
 
+  group('0553: extras as named lines')
+  const c3 = await staff.rpc('experience_console_create', req(B.brand_id)); made.push(c3.data as string)
+  const X3 = c3.data as string
+  const lines = [{ label: 'Travel to Goa', amount_paise: 1500000 }, { label: 'Hair and makeup', amount_paise: 800000 }]
+  ok('a mismatched extras total is refused', said(await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: 100, p_extras: lines })), /does not match/))
+  for (const [n, bad] of [
+    ['an extra with no description', [{ label: ' ', amount_paise: 1000 }]],
+    ['an extra of zero', [{ label: 'Travel', amount_paise: 0 }]],
+    ['an extra in fractions of a paisa', [{ label: 'Travel', amount_paise: 10.5 }]],
+    ['an extra with an unknown field', [{ label: 'Travel', amount_paise: 1000, note: 'x' }]],
+    ['an amount sent as text', [{ label: 'Travel', amount_paise: '1000' }]],
+    ['more than 20 extras', Array.from({ length: 21 }, (_, i) => ({ label: `Extra ${i}`, amount_paise: 100 }))],
+  ] as const) ok(`${n}: refused`, said(await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: null, p_extras: bad })), /description|20/))
+  const q3 = await staff.rpc('experience_console_quote', quote(X3, { p_misc_paise: null, p_extras: lines }))
+  ok('Guapd quotes with two named extras', !q3.error, q3.error?.message ?? '')
+  const row3 = ((await staff.rpc('experience_console_quotes', { p_experience_id: X3 })).data as any[])[0]
+  ok('the extras amount is their sum and the total includes it: 20 × ₹3,500 + ₹23,000 = ₹93,000', Number(row3.misc_paise) === 2300000 && Number(row3.total_paise) === 9300000, JSON.stringify({ m: row3.misc_paise, t: row3.total_paise }))
+  ok('finance sees the lines', JSON.stringify(row3.extras) === JSON.stringify(lines), JSON.stringify(row3.extras))
+  const bq = ((await brand.rpc('brand_experience', { p_experience_id: X3 })).data as any)?.quote
+  ok('the brand sees what each extra is for', JSON.stringify(bq?.extras) === JSON.stringify(lines) && Number(bq?.misc_paise) === 2300000, JSON.stringify(bq?.extras))
+  ok('the database refuses lines that do not add up, even from the service role', refused(await admin.from('experience_quotes').update({ misc_paise: 1 }).eq('id', row3.id).select('id')))
+  ok('accept copies the lines onto the Experience', !refused(await staff.rpc('experience_console_accept', { p_quote_id: row3.id, p_channel: 'email' }))
+    && JSON.stringify(((await staff.rpc('experience_console_get', { p_experience_id: X3 })).data as any)?.brand_extras) === JSON.stringify(lines))
+  ok('an older-style quote (one amount, no lines) still works', (await staff.rpc('experience_console_quotes', { p_experience_id: c2.data })).data?.[0]?.extras?.length === 0)
+
   group('revoking')
-  await admin.from('staff_access').update({ experiences_operational: false }).eq('user_id', STAFF.id)
+  await admin.from('staff_access').update({ experiences_operational: false, experiences_financial: false }).eq('user_id', STAFF.id)  // financial includes operational, so revoke both
   ok('operational off → every console function refused at once', refused(await staff.rpc('experience_console_get', { p_experience_id: E })) && refused(await staff.rpc('experience_console_create', req(B.brand_id))))
 }
 

@@ -9,7 +9,7 @@ interface Event {
   created_at: string
 }
 
-const STAGES = ['Offer received', 'Negotiating', 'Agreed', 'Submitted', 'Revision', 'Approved', 'Invoice', 'Paid'] as const
+const DEAL_STAGES = ['Offer received', 'Negotiating', 'Agreed', 'Submitted', 'Revision', 'Approved', 'Invoice', 'Paid'] as const
 
 const STATUS_TO_STAGE: Record<string, number> = {
   negotiating: 1, agreed: 2, delivered: 3, revision: 4, approved: 5, paid: 6, complete: 7, declined: -1, cancelled: -1,
@@ -49,16 +49,30 @@ function formatStepDate(iso: string): string {
   return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function CreatorStepper({ dealStatus, events, invoiceStatus }: { dealStatus: string; events: Event[]; invoiceStatus?: string | null }) {
+/** 6.1 item 9: an Experience creator leg passes its OWN stages (its offer, the
+ *  shoot, its payout), so the same tracker shows on a leg. Marketplace deals
+ *  pass nothing and get the deal stages above, exactly as before. */
+export interface StepperTrack {
+  stages: string[]
+  /** The current stage (0-based). */
+  index: number
+  allDone: boolean
+  dates?: Record<number, string>
+  footer: string
+}
+
+export default function CreatorStepper({ dealStatus, events, invoiceStatus, track }: { dealStatus: string; events: Event[]; invoiceStatus?: string | null; track?: StepperTrack }) {
   let stageIndex = STATUS_TO_STAGE[dealStatus] ?? 0
   // When invoice is issued/accepted, advance stepper to Invoice stage
   if (invoiceStatus === 'issued' || invoiceStatus === 'accepted') stageIndex = 6
   if (invoiceStatus === 'paid' || dealStatus === 'paid') stageIndex = 7
-  const allDone = dealStatus === 'complete' || dealStatus === 'paid' || invoiceStatus === 'paid'
-  const stepDates = deriveStepDates(events)
+  let allDone = dealStatus === 'complete' || dealStatus === 'paid' || invoiceStatus === 'paid'
+  let stepDates = deriveStepDates(events)
+  const STAGES: readonly string[] = track ? track.stages : DEAL_STAGES
+  if (track) { stageIndex = track.index; allDone = track.allDone; stepDates = track.dates ?? {} }
   const [hoveredStep, setHoveredStep] = useState<number | null>(null)
 
-  const footerLabel = dealStatus === 'revision'
+  const footerLabel = track ? track.footer : dealStatus === 'revision'
     ? 'Revision requested'
     : allDone
       ? 'Deal complete'

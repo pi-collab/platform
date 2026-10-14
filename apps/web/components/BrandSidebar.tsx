@@ -5,22 +5,28 @@ import { usePathname } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeNotifications } from '@/lib/realtime/useRealtimeNotifications'
+import { isStaffNotification, staffNotificationHref } from '@/lib/experience-staff-notifications'
 import ContactLink from '@/components/ContactLink'
 
 const NAV_LINKS = [
   { label: 'Dashboard', href: '/dashboard', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg> },
   { label: 'Deals', href: '/deals', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> },
   { label: 'Campaigns', href: '/campaigns', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 11 18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg> },
+  // Guapd Experiences, the brand's own (0544). Not the staff console below.
+  { label: 'Experiences', href: '/experiences', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z" /><rect width="14" height="12" x="2" y="6" rx="2" /></svg> },
 ]
 
 /* Staff only: shown when BrandNav's experienceStaffGate passes. Not a brand
    link, so it is never in NAV_LINKS. */
+/* 6.1: inside the console, the deals Guapd sent to creators, on the brand Deals list's design. */
+const GUAPD_CONSOLE_DEALS_LINK = { label: 'Deals', href: '/experiences-admin/deals', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg> }
 const GUAPD_CONSOLE_LINK = { label: 'Guapd Experiences', href: '/experiences-admin', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg> }
 
 const ALL_MOBILE_LINKS = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Deals', href: '/deals' },
   { label: 'Campaigns', href: '/campaigns' },
+  { label: 'Experiences', href: '/experiences' },
   { label: 'Browse Creators', href: '/browse' },
   { label: 'Inbox', href: '/inbox' },
   { label: 'Notifications', href: '/notifications' },
@@ -75,12 +81,13 @@ interface NotifCreatorMap {
   [dealId: string]: { name: string; photo: string | null }
 }
 
-export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole = false, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; hasBrand?: boolean; guapdConsole?: boolean; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole = false, consoleMode = false, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; hasBrand?: boolean; guapdConsole?: boolean; /** 0546: on /experiences-admin: the bell and inbox are Guapd staff's, not the brand's. */ consoleMode?: boolean; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
   /* Guapd staff often belong to no brand. For them the brand tabs, inbox,
      bell and brand menu would only bounce to /ops, so they see the staff
      console alone. A staff member who also belongs to a brand sees both. */
-  const navLinks = [...(hasBrand ? NAV_LINKS : []), ...(guapdConsole ? [GUAPD_CONSOLE_LINK] : [])]
-  const mobileLinks = [...(guapdConsole ? [{ label: GUAPD_CONSOLE_LINK.label, href: GUAPD_CONSOLE_LINK.href }] : []), ...(hasBrand ? ALL_MOBILE_LINKS : [])]
+  const consoleLinks = consoleMode ? [GUAPD_CONSOLE_LINK, GUAPD_CONSOLE_DEALS_LINK] : guapdConsole ? [GUAPD_CONSOLE_LINK] : []
+  const navLinks = [...(hasBrand && !consoleMode ? NAV_LINKS : []), ...consoleLinks]
+  const mobileLinks = [...consoleLinks.map((l) => ({ label: l.label, href: l.href })), ...(hasBrand && !consoleMode ? ALL_MOBILE_LINKS : [])]
   const homeHref = hasBrand ? '/dashboard' : guapdConsole ? GUAPD_CONSOLE_LINK.href : '/dashboard'
   const accountName = brandName || (hasBrand ? 'Brand' : 'Guapd')
   const accountTag = hasBrand ? 'Brand' : 'Guapd team'
@@ -90,7 +97,12 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
   const [notifOpen, setNotifOpen] = useState(false)
   const avatarRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
-  const unreadCount = useRealtimeNotifications(initialUnread)
+  const unreadCount = useRealtimeNotifications(initialUnread, consoleMode ? isStaffNotification : (t) => !isStaffNotification(t))
+  // The bell and inbox: the brand's in the brand portal, Guapd staff's on the console.
+  const showBell = consoleMode || hasBrand
+  const inboxHref = consoleMode ? '/experiences-admin/inbox' : '/inbox'
+  const notificationsHref = consoleMode ? '/experiences-admin/notifications' : '/notifications'
+  const notifHref = (dealId: string | null, type?: string) => consoleMode ? staffNotificationHref(dealId, type) : dealId ? `/deals/${dealId}` : '/notifications'
 
   const initials = brandName ? brandName.slice(0, 2).toUpperCase() : hasBrand ? 'BR' : 'GU'
 
@@ -131,7 +143,8 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
 
   useEffect(() => { setDrawerOpen(false); setAvatarOpen(false); setNotifOpen(false) }, [pathname])
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
+  // The console home must not light up on its own Deals page.
+  const isActive = (href: string) => pathname === href || (pathname.startsWith(href + '/') && !(href === GUAPD_CONSOLE_LINK.href && pathname.startsWith(GUAPD_CONSOLE_DEALS_LINK.href)))
 
   return (
     <>
@@ -185,8 +198,8 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
 
           {/* Right: inbox + bell + avatar */}
           <div style={rightGroup}>
-            {hasBrand && <>{/* Inbox / Messages */}
-            <Link href="/inbox" style={iconBtnStyle} title="Inbox">
+            {showBell && <>{/* Inbox / Messages */}
+            <Link href={inboxHref} style={iconBtnStyle} title={consoleMode ? 'Creator messages' : 'Inbox'}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
               {unreadInbox > 0 && <span style={neonBadge}>{unreadInbox > 99 ? '99+' : unreadInbox}</span>}
             </Link>
@@ -222,7 +235,7 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
                         const avatarName = creatorInfo?.name || 'Guapd'
                         const initials = getInitials(avatarName)
                         const grad = NOTIF_GRADS[nameToGradIndex(avatarName)]
-                        const href = n.deal_id ? `/deals/${n.deal_id}` : '/notifications'
+                        const href = notifHref(n.deal_id, n.type)
                         return (
                           <Link
                             key={n.id}
@@ -280,7 +293,7 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
 
                   {/* Footer */}
                   <Link
-                    href="/notifications"
+                    href={notificationsHref}
                     onClick={() => setNotifOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -404,7 +417,7 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
           <span style={hamLine} /><span style={{ ...hamLine, marginTop: 4 }} /><span style={{ ...hamLine, marginTop: 4 }} />
         </button>
         <Link href={homeHref} style={{ ...logoText, fontSize: 16, textDecoration: 'none' }}>guapd</Link>
-        {hasBrand ? <Link href="/notifications" style={{ position: 'relative', padding: 4, color: '#1a1b16' }}>
+        {showBell ? <Link href={notificationsHref} style={{ position: 'relative', padding: 4, color: '#1a1b16' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
           {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
         </Link> : <span style={{ width: 28 }} />}

@@ -13,15 +13,17 @@ export const DELIVERABLE_TYPES = ['UGC video', 'Reel', 'Story', 'Static post', '
 export const VIDEO_TYPES: readonly string[] = ['UGC video', 'Reel']
 export const isVideoType = (t: string) => VIDEO_TYPES.includes(t)
 
+/** How a brand told STAFF something, recorded on the brand's behalf. 'portal'
+    is not here: it means the brand did it themselves on Guapd (0544), and only
+    the brand's own functions write it; every staff function refuses it. */
 export const CHANNELS = [
   ['whatsapp', 'WhatsApp'],
   ['email', 'Email'],
   ['call', 'Call'],
   ['in_person', 'In person'],
-  ['portal', 'Guapd portal'],
 ] as const
 export type Channel = (typeof CHANNELS)[number][0]
-export const channelLabel = (c: string | null) => CHANNELS.find(([k]) => k === c)?.[1] ?? c ?? ''
+export const channelLabel = (c: string | null) => c === 'portal' ? 'Guapd, by the brand' : CHANNELS.find(([k]) => k === c)?.[1] ?? c ?? ''
 export const isChannel = (c: unknown): c is Channel => CHANNELS.some(([k]) => k === c)
 
 /** "3,500" or "3500.50" rupees → whole paise, in integers (no float maths). Null if not a valid amount. */

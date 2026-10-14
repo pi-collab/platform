@@ -128,6 +128,21 @@ group('margin = brand − Σ creator NET − costs; sub-total + fee kept reconci
   eq('no invoices yet → margin 0', experienceMargin({ brandInvoiceSubtotalsPaise: [], creatorLegs: [], guapdCostsPaise: [] }).guapdMarginPaise, 0)
 }
 
+group('0546: an allowance is a cost, paid in full, never fee-bearing')
+{
+  const g = creatorLegTerms({ grossPaise: 1_000_000, track: 'growth' })            // ₹10,000 → 30% → ₹7,000 net
+  const withAllow = experienceMargin({ brandInvoiceSubtotalsPaise: [3_500_000], creatorLegs: [{ ...g, allowancePaise: 200_000 }], guapdCostsPaise: [50_000] })
+  const without = experienceMargin({ brandInvoiceSubtotalsPaise: [3_500_000], creatorLegs: [g], guapdCostsPaise: [50_000] })
+  eq('fee kept is unchanged by the allowance (₹3,000 either way)', [withAllow.platformFeeKeptPaise, without.platformFeeKeptPaise], [300_000, 300_000])
+  eq('allowances line = ₹2,000', withAllow.creatorAllowanceTotalPaise, 200_000)
+  eq('margin = ₹35,000 invoiced − ₹7,000 net − ₹2,000 allowance − ₹500 costs = ₹25,500', withAllow.guapdMarginPaise, 2_550_000)
+  eq('the allowance lowers the margin by exactly itself', without.guapdMarginPaise - withAllow.guapdMarginPaise, 200_000)
+  eq('sub-total + fee kept = margin, with the allowance', withAllow.subtotalPaise + withAllow.platformFeeKeptPaise, withAllow.guapdMarginPaise)
+  eq('cash-in minus cash-out: invoiced − (net + allowance paid to the creator) − costs = margin', 3_500_000 - (g.creatorNetPaise + 200_000) - 50_000, withAllow.guapdMarginPaise)
+  let threw = false; try { experienceMargin({ brandInvoiceSubtotalsPaise: [0], creatorLegs: [{ ...g, allowancePaise: 100.5 }], guapdCostsPaise: [] }) } catch { threw = true }
+  eq('a fractional-paise allowance is refused', threw, true)
+}
+
 // ── Independence (pure) ─────────────────────────────────────────────────────
 group('two-leg independence (pure functions)')
 {
@@ -190,6 +205,10 @@ reject('missing payment_flow', { ...kiro, payment_flow: undefined })
   eq('schema-valid but unexposed value refused when exposedOnly', r.ok, false)
   eq('…and accepted without exposedOnly (schema stays flexible)', validateDealSettings({ ...kiro, completion_trigger: 'on_content_posted' }).ok, true)
 }
+group('settings validator: who provides the deliverables decides when the creator is done (0538)')
+eq('a creator-submit Experience template (creator + on_delivery_accepted) is valid and offered', validateDealSettings({ ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_delivery_accepted' }, { exposedOnly: true }).ok, true)
+reject('creator submits but is "done" at shoot done (would be payable before Guapd approves)', { ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_shoot_done' })
+reject('creator submits but is "done" when posted', { ...kiro, deliverables_owner: 'creator', completion_trigger: 'on_content_posted' })
 throws('resolveDealSettings throws on an invalid template', () => resolveDealSettings({ id: 't', version: 1, settings: { ...kiro, payment_flow: 'route_split' } }))
 
 // ── Deal flow ───────────────────────────────────────────────────────────────
@@ -199,6 +218,9 @@ eq('Kiro: creator does not upload', creatorUploadsDeliverables(kiroFlow), false)
 eq('Kiro: creator work complete once the shoot is done', isCreatorWorkComplete(kiroFlow, { shootDone: true, isPosted: false, deliveryAccepted: false }), true)
 eq('Kiro: not complete before the shoot', isCreatorWorkComplete(kiroFlow, { shootDone: false, isPosted: true, deliveryAccepted: true }), false)
 eq('Kiro steps: no deliver/review step', creatorSteps(kiroFlow), ['offer', 'agreed', 'shoot_scheduled', 'shoot_done', 'paid'])
+eq('creator-submit: shot but not approved is NOT complete', isCreatorWorkComplete({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: false }), false)
+eq('creator-submit: complete once Guapd approved', isCreatorWorkComplete({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: true }), true)
+eq('creator uploads, whatever the trigger: approval still required', isCreatorWorkComplete({ completion_trigger: 'on_shoot_done', deliverables_owner: 'creator' }, { shootDone: true, isPosted: false, deliveryAccepted: false }), false)
 eq('creator-owned, on_delivery_accepted: uploads + review', creatorSteps({ completion_trigger: 'on_delivery_accepted', deliverables_owner: 'creator' }), ['offer', 'agreed', 'deliver', 'review', 'paid'])
 
 console.log(failed ? `\n${failed} FAILED, ${passed} passed` : `\nALL ${passed} PASSED`)

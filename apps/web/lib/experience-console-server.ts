@@ -58,12 +58,16 @@ export interface ConsoleExperience {
   request_brief: string | null
   request_channel: string | null
   requested_at: string | null
-  /** The agreed brand price, set when a quote is accepted. Brand-side money,
-      never a creator rate, cost or margin. */
+  /** The agreed brand price, set when a quote is accepted. FINANCIAL ACCESS
+      ONLY (0537): null for operational staff, so they cannot derive margin.
+      can_see_brand_price says which. */
+  can_see_brand_price: boolean
   brand_per_video_paise: number | null
   brand_deliverable_count: number | null
   brand_misc_paise: number | null
-  brand_service_total_paise: number
+  /** 0553: the agreed extras as named lines (financial only). */
+  brand_extras?: QuoteExtra[] | null
+  brand_service_total_paise: number | null
   shoot_date: string | null
   shoot_city: string | null
   /** Locked on accept: the plan, its totals and the videos actually sold. The contract Stage 3 reconciles to. */
@@ -73,6 +77,12 @@ export interface ConsoleExperience {
     totals: { type: string; per_creator: number; total: number }[]
     plan_videos: number
     videos_sold: number
+    /** Bought per creator (0547: a bought right always has a count). */
+    affiliate_per_creator?: number | null
+    /** 0560: the affiliate commission % the brand agreed (absent on prices agreed before 0560). */
+    affiliate_pct?: number | null
+    ad_rights_per_creator?: number | null
+    boost_per_creator?: number | null
   } | null
   created_at: string
   updated_at: string
@@ -82,10 +92,17 @@ export interface ConsoleQuote {
   id: string
   version: number
   proposed_by: 'guapd' | 'brand'
-  per_video_paise: number
+  /** Amounts and message are null without financial access (0537). */
+  per_video_paise: number | null
   deliverable_count: number
-  misc_paise: number
-  total_paise: number
+  misc_paise: number | null
+  /** 0553: the extras as named lines (their sum is misc_paise); null without financial access, [] on older quotes. */
+  extras?: QuoteExtra[] | null
+  total_paise: number | null
+  /** The brand's note when they declined on Guapd (0544); financial only, like the message. */
+  brand_note?: string | null
+  /** 0560: affiliate commission % of sales (not money; everyone in the console sees it). */
+  affiliate_pct?: number | null
   deliverables: ConsoleDeliverable[]
   shoot_date: string | null
   shoot_city: string | null
@@ -148,24 +165,31 @@ export async function createConsoleExperience(p: CreateRequestInput): Promise<Re
   return error ? fail(error) : { ok: true, data: data as string }
 }
 
+/** 0553: one named extra on a quote. */
+export interface QuoteExtra { label: string; amount_paise: number }
+
 export interface QuoteInput {
   experienceId: string
   proposedBy: 'guapd' | 'brand'
   perVideoPaise: number
   deliverableCount: number
   miscPaise: number
+  extras: QuoteExtra[]
   deliverables: ConsoleDeliverable[]
   shootDate: string | null
   shootCity: string | null
   message: string | null
   channel: string | null
+  /** 0560: affiliate commission, % of sales; required when the brand asked for affiliate links, else null. */
+  affiliatePct: number | null
 }
 
 export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_quote', {
     p_experience_id: p.experienceId, p_proposed_by: p.proposedBy, p_per_video_paise: p.perVideoPaise,
     p_deliverable_count: p.deliverableCount, p_misc_paise: p.miscPaise, p_deliverables: p.deliverables,
-    p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel,
+    p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel, p_extras: p.extras,
+    p_affiliate_pct: p.affiliatePct,
   })
   return error ? fail(error) : { ok: true, data: data as string }
 }
@@ -186,10 +210,13 @@ export interface ConsoleRosterRow {
   handle: string | null
   profile_photo_url: string | null
   added_by: 'guapd' | 'brand'
-  brand_decision: 'pending' | 'accepted' | 'rejected'
+  /** 0548: on_hold is re-decidable; rejected is final on this roster. */
+  brand_decision: 'pending' | 'accepted' | 'rejected' | 'on_hold'
   decision_channel: string | null
   decided_at: string | null
   locked: boolean
+  /** 0548: when Guapd shared this creator with the brand. NULL = internal shortlist, never in a brand read. */
+  shared_with_brand_at: string | null
   locked_at: string | null
   /** This creator's planned deliverables. Starts as the agreed per-creator plan. No money. */
   planned_deliverables: ConsoleDeliverable[]
@@ -228,7 +255,19 @@ export async function rosterAdd(experienceId: string, creatorIds: string[], adde
   return error ? fail(error) : { ok: true, data: data as number }
 }
 
-export async function rosterDecide(rosterId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Result<null>> {
+/** 0549: reverse a lock (a creator backed out). Cancels an open or accepted offer, with the reason. */
+export async function rosterRelease(rosterId: string, reason: string): Promise<Result<{ deal_id: string | null; deal_cancelled: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_release', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as { deal_id: string | null; deal_cancelled: boolean } }
+}
+
+/** 0548: share chosen shortlisted creators with the brand. Returns how many were newly shared. */
+export async function rosterShare(experienceId: string, rosterIds: string[]): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_roster_share', { p_experience_id: experienceId, p_roster_ids: rosterIds })
+  return error ? fail(error) : { ok: true, data: Number(data ?? 0) }
+}
+
+export async function rosterDecide(rosterId: string, decision: 'accepted' | 'rejected' | 'on_hold' | 'pending', channel: string | null): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_roster_decide', { p_roster_id: rosterId, p_decision: decision, p_channel: channel })
   return error ? fail(error) : { ok: true, data: null }
 }
@@ -285,6 +324,21 @@ export interface ConsoleLegRow {
   sent_gross_paise: number | null
   sent_platform_pct: number | null
   sent_net_paise: number | null
+  /** 0542: a rate entered on this deal while the creator has no active rate (paused or never set). */
+  leg_entered_rate_paise: number | null
+  /** 0542: the creator's paused package rate, when they have no active one. */
+  paused_rate_paise: number | null
+  /** 0542: where the sent rate came from. */
+  sent_rate_source: 'package' | 'entered' | null
+  /** 0546: per-creator ad rights / boost (null = the agreed per-creator default applies at send). */
+  leg_ad_rights_count: number | null
+  leg_boost_count: number | null
+  /** 0546: the travel/other allowance drafted for this creator (fee-exempt, paid in full). */
+  leg_allowance_paise: number | null
+  /** 0546: frozen at send. */
+  sent_allowance_paise: number | null
+  /** 0546: this creator has their own brief instead of the shared one. */
+  has_own_brief: boolean
 }
 
 export interface ConsoleLegsReconcile {
@@ -296,6 +350,13 @@ export interface ConsoleLegsReconcile {
   videos_placed?: number
   affiliate_target?: number
   affiliate_placed?: number
+  /** 0546: per-creator ad rights and boost against what the brand bought. */
+  ad_rights_target?: number
+  ad_rights_placed?: number
+  ad_rights_months?: number | null
+  boost_target?: number
+  boost_placed?: number
+  boost_months?: number | null
   creators_counted?: number
   lines?: { type: string; target: number; placed: number; is_video: boolean }[]
 }
@@ -309,6 +370,8 @@ export async function listConsoleLegs(experienceId: string): Promise<Result<Cons
     leg_days: num(r.leg_days), day_rate_paise: num(r.day_rate_paise),
     sent_day_rate_paise: num(r.sent_day_rate_paise), sent_days: num(r.sent_days),
     sent_gross_paise: num(r.sent_gross_paise), sent_platform_pct: num(r.sent_platform_pct), sent_net_paise: num(r.sent_net_paise),
+    leg_entered_rate_paise: num(r.leg_entered_rate_paise), paused_rate_paise: num(r.paused_rate_paise),
+    leg_allowance_paise: num(r.leg_allowance_paise), sent_allowance_paise: num(r.sent_allowance_paise),
   }))
   return { ok: true, data: rows }
 }
@@ -318,19 +381,31 @@ export async function getLegsReconcile(experienceId: string): Promise<Result<Con
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
 
-export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number): Promise<Result<ConsoleLegsReconcile>> {
+export async function legDraft(rosterId: string, productId: string | null, days: number | null, deliverables: ConsoleDeliverable[], affiliateCount: number, enteredRatePaise: number | null = null,
+  scope: { adRightsCount: number | null; boostCount: number | null; allowancePaise: number | null } = { adRightsCount: null, boostCount: null, allowancePaise: null }): Promise<Result<ConsoleLegsReconcile>> {
   const { data, error } = await createClient().rpc('experience_console_leg_draft', {
     p_roster_id: rosterId, p_product_id: productId, p_days: days, p_deliverables: deliverables, p_affiliate_count: affiliateCount,
+    p_entered_rate_paise: enteredRatePaise, p_ad_rights_count: scope.adRightsCount, p_boost_count: scope.boostCount,
+    p_allowance_paise: scope.allowancePaise,
   })
   return error ? fail(error) : { ok: true, data: data as ConsoleLegsReconcile }
 }
 
-export async function legSend(rosterId: string, expected: { grossPaise: number; platformPct: number; netPaise: number }): Promise<Result<string>> {
+export async function legSend(rosterId: string, expected: { grossPaise: number; platformPct: number; netPaise: number; allowancePaise: number }): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_leg_send', {
     p_roster_id: rosterId, p_expected_gross_paise: expected.grossPaise,
     p_expected_platform_pct: expected.platformPct, p_expected_net_paise: expected.netPaise,
+    p_expected_allowance_paise: expected.allowancePaise,
   })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+
+/** 0547: re-split a SENT leg's labels before the shoot is confirmed (never money). */
+export async function legRescope(rosterId: string, counts: { affiliate: number; adRights: number; boost: number }, expected: { affiliate: number; ad_rights: number; boost: number }): Promise<Result<{ deal_id: string; reconcile: ConsoleLegsReconcile }>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_rescope', {
+    p_roster_id: rosterId, p_affiliate_count: counts.affiliate, p_ad_rights_count: counts.adRights, p_boost_count: counts.boost, p_expected: expected,
+  })
+  return error ? fail(error) : { ok: true, data: data as { deal_id: string; reconcile: ConsoleLegsReconcile } }
 }
 
 export async function setCreatorDayRateAsStaff(creatorId: string, dayRatePaise: number): Promise<Result<string>> {
@@ -347,3 +422,782 @@ export async function setCreatorBrief(experienceId: string, brief: string): Prom
   const { error } = await createClient().rpc('experience_console_set_creator_brief', { p_experience_id: experienceId, p_brief: brief })
   return error ? fail(error) : { ok: true, data: null }
 }
+
+// ── 0546: the campaign-style brief (shared, or a creator's own) ────────────
+export interface BriefAttachment { name: string; storage_path: string; size_bytes: number | null; content_type: string }
+export interface BriefDoc { pitch: string | null; guidelines: string | null; avoid: string | null; attachments: BriefAttachment[]; updated_at?: string | null }
+export interface ConsoleBrief { shared: BriefDoc; editable: boolean; overrides: Record<string, BriefDoc> }
+
+export async function getConsoleBrief(experienceId: string): Promise<Result<ConsoleBrief>> {
+  const { data, error } = await createClient().rpc('experience_console_brief', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleBrief }
+}
+export async function saveSharedBrief(experienceId: string, b: BriefDoc): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_save', {
+    p_experience_id: experienceId, p_pitch: b.pitch, p_guidelines: b.guidelines, p_avoid: b.avoid, p_attachments: b.attachments,
+  })
+  return error ? fail(error) : { ok: true, data: ((data as { notify_deal_ids: string[] }).notify_deal_ids ?? []) }
+}
+export async function saveOwnBrief(rosterId: string, own: boolean, b: BriefDoc | null): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_override', {
+    p_roster_id: rosterId, p_own: own, p_pitch: b?.pitch ?? null, p_guidelines: b?.guidelines ?? null, p_avoid: b?.avoid ?? null,
+    p_attachments: b?.attachments ?? [],
+  })
+  return error ? fail(error) : { ok: true, data: ((data as { notify_deal_ids: string[] }).notify_deal_ids ?? []) }
+}
+export async function briefUploadSlot(experienceId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_brief_slot', { p_experience_id: experienceId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+// ── 0546: Guapd ↔ creator threads on sent legs (staff side) ─────────────────
+export interface LegThreadRow {
+  deal_id: string; deal_ref: string | null; status: string; experience_id: string; experience_title: string; brand_name: string
+  creator_name: string; creator_handle: string | null; creator_photo: string | null; sent_at: string | null; shoot_outcome: string | null
+  open_counter: { round: number; proposed_by: 'creator' | 'guapd' } | null
+  message_count: number; last_message: { body: string; from: 'creator' | 'guapd'; created_at: string } | null
+  unread: number; can_message: boolean
+}
+export interface LegThreadMessage { id: string; from: 'creator' | 'guapd'; body: string; created_at: string; sender_name: string | null }
+export interface LegThread {
+  deal_id: string; deal_ref: string | null; status: string; experience_id: string; experience_title: string
+  creator_name: string; creator_handle: string | null; creator_photo: string | null; can_message: boolean; messages: LegThreadMessage[]
+}
+
+export async function listLegThreads(experienceId: string | null): Promise<Result<LegThreadRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_threads', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as LegThreadRow[] }
+}
+export async function getLegThread(dealId: string): Promise<Result<LegThread>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_thread', { p_deal_id: dealId })
+  return error ? fail(error) : { ok: true, data: data as LegThread }
+}
+export async function sendLegMessageAsGuapd(dealId: string, body: string): Promise<Result<{ id: string; body: string; created_at: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_message_send', { p_deal_id: dealId, p_body: body })
+  return error ? fail(error) : { ok: true, data: data as { id: string; body: string; created_at: string } }
+}
+/** 0550: one message to every creator on the Experience, each in their own Guapd thread. */
+export async function legBroadcast(experienceId: string, body: string, scope: 'all' | 'accepted'): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_broadcast', { p_experience_id: experienceId, p_body: body, p_scope: scope })
+  return error ? fail(error) : { ok: true, data: ((data as { deal_ids: string[] }).deal_ids ?? []) }
+}
+
+/** 0550: the brand ↔ Guapd thread, staff side (marks it read). */
+export interface BrandThreadMessage { id: string; from: 'brand' | 'guapd'; body: string; created_at: string; sender_name: string | null }
+export async function getBrandThread(experienceId: string): Promise<Result<{ experience_id: string; experience_title: string; brand_name: string; messages: BrandThreadMessage[] }>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_messages', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as { experience_id: string; experience_title: string; brand_name: string; messages: BrandThreadMessage[] } }
+}
+export async function sendBrandMessageAsGuapd(experienceId: string, body: string): Promise<Result<{ id: string; body: string; created_at: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_message_send', { p_experience_id: experienceId, p_body: body })
+  return error ? fail(error) : { ok: true, data: data as { id: string; body: string; created_at: string } }
+}
+export interface BrandThreadRow { experience_id: string; experience_title: string; brand_name: string; last_message: { body: string; from: 'brand' | 'guapd'; created_at: string } | null; message_count: number; unread: number }
+export async function listBrandThreads(): Promise<Result<BrandThreadRow[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_threads')
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandThreadRow[] }
+}
+
+export async function consoleUnreadMessages(): Promise<number> {
+  const { data, error } = await createClient().rpc('experience_console_unread_messages')
+  return error ? 0 : Number(data ?? 0)
+}
+
+// ── Stage 3c: the cost sheet (operational) and the freeze points ────────────
+// Costs are what Guapd spends running the shoot. Creator pay is never a cost
+// line (it lives on the creator legs). Soft-deleted with a reason. The P&L
+// itself is NOT here: it is financial-only, read via lib/experience-pnl-server.ts.
+
+export interface ConsoleCostLine {
+  id: string
+  label: string
+  category: string
+  basis: 'per_unit' | 'flat_total'
+  quantity: number | null
+  unit_rate_paise: number | null
+  total_paise: number
+  provided_by: 'guapd' | 'brand' | 'creator'
+  creator_leg_deal_id: string | null
+  creator_name: string | null
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsoleCosts {
+  status: string
+  categories: string[]
+  lines: ConsoleCostLine[]
+  /** Σ of Guapd-provided, not-removed lines: the figure the P&L subtracts. */
+  guapd_total_paise: number
+}
+
+export interface CostInput {
+  label: string
+  category: string
+  basis: 'per_unit' | 'flat_total'
+  quantity: number | null
+  unitRatePaise: number | null
+  totalPaise: number
+  providedBy: 'guapd' | 'brand' | 'creator'
+  creatorLegDealId: string | null
+  note: string | null
+}
+
+export async function listConsoleCosts(experienceId: string): Promise<Result<ConsoleCosts>> {
+  const { data, error } = await createClient().rpc('experience_console_costs', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const c = data as ConsoleCosts
+  return { ok: true, data: { ...c, guapd_total_paise: Number(c.guapd_total_paise),
+    lines: (c.lines ?? []).map((l) => ({ ...l, total_paise: Number(l.total_paise), quantity: l.quantity == null ? null : Number(l.quantity), unit_rate_paise: l.unit_rate_paise == null ? null : Number(l.unit_rate_paise) })) } }
+}
+
+const costArgs = (c: CostInput) => ({
+  p_label: c.label, p_category: c.category, p_basis: c.basis, p_quantity: c.quantity, p_unit_rate_paise: c.unitRatePaise,
+  p_total_paise: c.totalPaise, p_provided_by: c.providedBy, p_creator_leg_deal_id: c.creatorLegDealId, p_note: c.note,
+})
+
+export async function addConsoleCost(experienceId: string, c: CostInput): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_cost_add', { p_experience_id: experienceId, ...costArgs(c) })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function updateConsoleCost(costId: string, c: CostInput, expectedUpdatedAt: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_cost_update', { p_cost_id: costId, ...costArgs(c), p_expected_updated_at: expectedUpdatedAt })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function removeConsoleCost(costId: string, reason: string, expectedUpdatedAt: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_cost_remove', { p_cost_id: costId, p_reason: reason, p_expected_updated_at: expectedUpdatedAt })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function completeConsoleExperience(experienceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_complete', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function reopenConsoleExperience(experienceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_reopen', { p_experience_id: experienceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+
+// ── 0538: the shoot, deliverables, and releasing them to the brand ─────────
+// Operational access, checked again in Postgres. Nothing here carries a price,
+// rate, net or margin. Who provides the deliverables (Guapd attaches, or the
+// creator submits) comes from the Experience's snapshotted template settings.
+
+export interface ConsoleRelease {
+  id: string
+  item_version: number
+  released_at: string
+  brand_decision: 'approved' | 'changes_requested' | null
+  brand_decision_channel: string | null
+  brand_decided_at: string | null
+  brand_decision_note: string | null
+}
+
+export interface ConsoleItem {
+  id: string
+  label: string
+  type: string | null
+  affiliate_link: boolean
+  visible_to_creator: boolean
+  item_status: 'pending' | 'submitted' | 'revision' | 'approved'
+  version: number
+  external_url: string | null
+  file_name: string | null
+  has_file: boolean
+  submitted_at: string | null
+  submitted_via: 'creator' | 'guapd' | null
+  approved_at: string | null
+  /** Guapd's note: to the creator (creator-submit) or staff-only (Guapd provides). */
+  note: string | null
+  /** The live release to the brand, if any. */
+  release: ConsoleRelease | null
+  /** Withdrawn or superseded releases of this item. */
+  releases_before: number
+}
+
+export interface ConsoleShootLeg {
+  roster_id: string
+  deal_id: string
+  creator_id: string
+  full_name: string
+  handle: string | null
+  deal_status: string
+  owner: 'guapd' | 'creator'
+  shoot_outcome: 'done' | 'did_not_shoot' | null
+  shoot_outcome_at: string | null
+  shoot_outcome_reason: string | null
+  /** The creator's part is done: payment eligibility (paid in Phase 4). */
+  work_complete: boolean
+  items: ConsoleItem[]
+}
+
+export interface DeliverablesProgress {
+  ready: boolean
+  over_shared: boolean
+  per_type?: boolean
+  videos_sold?: number
+  videos_shared?: number
+  videos_approved?: number
+  awaiting_brand?: number
+  reason?: string
+  lines: { type: string; sold: number; shared: number; approved: number; is_video: boolean }[]
+  gaps: { type: string; sold: number; approved: number }[]
+}
+
+export interface ConsoleDeliverables {
+  status: string
+  shoot_date: string | null
+  today: string
+  owner: 'guapd' | 'creator'
+  completion_trigger: string
+  legs: ConsoleShootLeg[]
+  progress: DeliverablesProgress
+}
+
+export async function getConsoleDeliverables(experienceId: string): Promise<Result<ConsoleDeliverables>> {
+  const { data, error } = await createClient().rpc('experience_console_deliverables', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleDeliverables }
+}
+
+export async function scheduleConsoleShoot(experienceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_schedule_shoot', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function recordShootOutcome(rosterId: string, outcome: 'done' | 'did_not_shoot', reason: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_shoot_outcome', { p_roster_id: rosterId, p_outcome: outcome, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function undoShootOutcome(rosterId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_shoot_undo', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function withdrawConsoleLeg(rosterId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_withdraw', { p_roster_id: rosterId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function itemUploadSlot(itemId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_item_upload_slot', { p_item_id: itemId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export async function attachConsoleItem(itemId: string, c: { url: string | null; storagePath: string | null; fileName: string | null }): Promise<Result<number>> {
+  const { data, error } = await createClient().rpc('experience_console_item_attach', { p_item_id: itemId, p_url: c.url, p_storage_path: c.storagePath, p_file_name: c.fileName })
+  return error ? fail(error) : { ok: true, data: Number(data) }
+}
+
+export async function reviewConsoleItem(itemId: string, decision: 'approve' | 'revision', note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_item_review', { p_item_id: itemId, p_decision: decision, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function consoleItemFile(itemId: string): Promise<Result<{ storage_path: string; file_name: string }>> {
+  const { data, error } = await createClient().rpc('experience_console_item_file', { p_item_id: itemId })
+  return error ? fail(error) : { ok: true, data: data as { storage_path: string; file_name: string } }
+}
+
+export async function releaseConsoleItems(experienceId: string, itemIds: string[]): Promise<Result<{ released: number; progress: DeliverablesProgress }>> {
+  const { data, error } = await createClient().rpc('experience_console_release', { p_experience_id: experienceId, p_item_ids: itemIds })
+  return error ? fail(error) : { ok: true, data: data as { released: number; progress: DeliverablesProgress } }
+}
+
+export async function withdrawConsoleRelease(releaseId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_release_withdraw', { p_release_id: releaseId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function decideConsoleRelease(releaseId: string, decision: 'approved' | 'changes_requested', channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_release_decide', { p_release_id: releaseId, p_decision: decision, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+
+// ── 0540: invoices (FINANCIAL), payouts (operational), completion ──────────
+// Every call runs with the signed-in user's session; the database checks
+// financial access for invoices, payments and billing details, operational
+// access for payouts and completion. The service role is used by the actions
+// only to sign storage links and upload slots for paths these functions return.
+
+export interface FinanceSettings {
+  legal_name: string; address: string; state: string; gstin: string | null; gst_registered: boolean
+  pan: string | null; payment_instructions: string | null; updated_at: string
+}
+export interface BrandBilling {
+  brand_id: string; legal_name: string; address: string; state: string; gstin: string | null; pan: string | null
+  has_certificate: boolean; updated_at: string
+}
+export interface InvoicePayment {
+  id: string; amount_paise: number; tds_paise: number; received_on: string; method: string; reference: string
+  recorded_at: string; recorded_by_name: string | null; reversed_at: string | null; reversed_reason: string | null
+}
+export interface ConsoleInvoice {
+  id: string; kind: 'initial' | 'additional' | 'follow_on'; source: string | null; number: string | null
+  status: 'draft' | 'issued' | 'paid' | 'void'; description: string
+  subtotal_paise: number; gst_rate_pct: number | null; cgst_paise: number | null; sgst_paise: number | null; igst_paise: number | null
+  total_paise: number; gst_registered: boolean | null; issue_date: string | null; due_date: string | null; issued_at: string | null
+  has_pdf: boolean; void_reason: string | null; voided_at: string | null; paid_paise: number; outstanding_paise: number
+  updated_at: string; payments: InvoicePayment[]
+}
+export interface ConsoleInvoices {
+  experience_id: string; status: string; title: string; brand_id: string; brand_name: string; agreed_paise: number | null
+  settings: FinanceSettings | null; billing: BrandBilling | null; invoices: ConsoleInvoice[]
+}
+export interface InvoiceDraftInput {
+  kind: 'initial' | 'additional'; source: 'existing_footage' | 'new_shoot' | null; description: string
+  subtotalPaise: number; gstRatePct: number | null; cgstPaise: number | null; sgstPaise: number | null; igstPaise: number | null
+  dueDate: string | null
+}
+
+export async function getConsoleInvoices(experienceId: string): Promise<Result<ConsoleInvoices>> {
+  const { data, error } = await createClient().rpc('experience_console_invoices', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleInvoices }
+}
+export async function setFinanceSettings(s: { legalName: string; address: string; state: string; gstin: string | null; gstRegistered: boolean; pan: string | null; paymentInstructions: string | null }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_set_finance_settings', {
+    p_legal_name: s.legalName, p_address: s.address, p_state: s.state, p_gstin: s.gstin, p_gst_registered: s.gstRegistered,
+    p_pan: s.pan, p_payment_instructions: s.paymentInstructions,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function setBrandBilling(brandId: string, b: { legalName: string; address: string; state: string; gstin: string | null; pan: string | null; certificatePath: string | null }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_set_brand_billing', {
+    p_brand_id: brandId, p_legal_name: b.legalName, p_address: b.address, p_state: b.state, p_gstin: b.gstin, p_pan: b.pan, p_certificate_path: b.certificatePath,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+const draftArgs = (d: InvoiceDraftInput) => ({
+  p_kind: d.kind, p_source: d.source, p_description: d.description, p_subtotal_paise: d.subtotalPaise,
+  p_gst_rate_pct: d.gstRatePct, p_cgst_paise: d.cgstPaise, p_sgst_paise: d.sgstPaise, p_igst_paise: d.igstPaise, p_due_date: d.dueDate,
+})
+export async function draftConsoleInvoice(experienceId: string, d: InvoiceDraftInput): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_draft', { p_experience_id: experienceId, ...draftArgs(d) })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function updateConsoleInvoice(invoiceId: string, d: InvoiceDraftInput): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_update', { p_invoice_id: invoiceId, ...draftArgs(d) })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function discardConsoleInvoice(invoiceId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_discard', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function issueConsoleInvoice(invoiceId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_issue', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleInvoiceDoc(invoiceId: string): Promise<Result<Record<string, unknown>>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_doc', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as Record<string, unknown> }
+}
+export async function consoleInvoicePdfPath(invoiceId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_pdf_path', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function setConsoleInvoicePdf(invoiceId: string, path: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_set_pdf', { p_invoice_id: invoiceId, p_path: path })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function voidConsoleInvoice(invoiceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_void', { p_invoice_id: invoiceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function addInvoicePayment(invoiceId: string, p: { amountPaise: number; tdsPaise: number; receivedOn: string; method: string; reference: string; proofPath: string }): Promise<Result<{ payment_id: string; settled: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_invoice_payment_add', {
+    p_invoice_id: invoiceId, p_amount_paise: p.amountPaise, p_tds_paise: p.tdsPaise, p_received_on: p.receivedOn,
+    p_method: p.method, p_reference: p.reference, p_proof_path: p.proofPath,
+  })
+  return error ? fail(error) : { ok: true, data: data as { payment_id: string; settled: boolean } }
+}
+export async function reverseInvoicePayment(paymentId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_invoice_payment_reverse', { p_payment_id: paymentId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export type FinanceUploadKind = 'invoice-payment' | 'brand-certificate' | 'payout-proof'
+export type FinanceFileKind = 'invoice-pdf' | 'invoice-payment' | 'brand-certificate' | 'payout-proof'
+export async function financeUploadSlot(kind: FinanceUploadKind, targetId: string, fileName: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_finance_upload_slot', { p_kind: kind, p_target_id: targetId, p_file_name: fileName })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleFinanceFile(kind: FinanceFileKind, id: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_finance_file', { p_kind: kind, p_id: id })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+export interface ConsolePayout {
+  id: string; status: 'requested' | 'approved' | 'processing' | 'paid' | 'failed'
+  amount_paise: number; tds_paise: number; net_amount_paise: number
+  /** 0546: fee-exempt allowance paid with this payout (net_amount = amount + allowance - TDS). */
+  allowance_paise: number
+  requested_by_name: string | null; requested_at: string; approved_by_name: string | null; approved_at: string | null
+  paid_on: string | null; method: string | null; reference: string | null; has_proof: boolean; i_requested: boolean
+  details_changed_after_request: boolean
+}
+export interface ConsolePayoutLeg {
+  deal_id: string; creator_id: string; full_name: string | null; deal_status: string; shoot_outcome: string | null
+  work_complete: boolean; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  /** 0546: the allowance, and what is due in all (net + allowance). */
+  allowance_paise: number; due_paise: number
+  /** 0542: masked only; full details are finance's (getPayoutAccount). */
+  payment_details: { bank_on_file: boolean; account_masked: string | null; upi_on_file: boolean; changed_at: string | null }
+  cancelled_before: number; payout: ConsolePayout | null
+  /** 0555: accepted extras on this creator deal, each with its own invoice and payout. */
+  extras?: { id: string; number: number; deliverables: ConsoleDeliverable[]; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number; work_complete: boolean
+    invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null; payout: ConsolePayout | null }[]
+  /** 0563: the approved affiliate commission on this deal (verified or paid), paid on its own. */
+  commission?: { id: string; status: 'verified' | 'paid'; affiliate_pct: number; sales_paise: number; gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+    invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null; payout: ConsolePayout | null } | null
+  /** 0552: the creator's issued invoice to Guapd; the payout is requested only once it exists. */
+  creator_invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
+}
+export interface ConsolePayouts { experience_id: string; status: string; legs: ConsolePayoutLeg[]; can_pay: boolean }
+
+/** 0552: a creator invoice document, for staff (operational access, checked in Postgres). */
+export async function getCreatorInvoiceDoc(invoiceId: string): Promise<Result<unknown>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_invoice_doc', { p_invoice_id: invoiceId })
+  return error ? fail(error) : { ok: true, data }
+}
+
+/** 0552: void a wrong creator invoice (reason required; refused while a payout is live). */
+export async function voidCreatorInvoice(invoiceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_creator_invoice_void', { p_invoice_id: invoiceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export async function getConsolePayouts(experienceId: string): Promise<Result<ConsolePayouts>> {
+  const { data, error } = await createClient().rpc('experience_console_payouts', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsolePayouts }
+}
+export async function requestPayout(dealId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_payout_request', { p_deal_id: dealId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function setPayoutTds(payoutId: string, tdsPaise: number): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_set_tds', { p_payout_id: payoutId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function approvePayout(payoutId: string, confirmDetailsChanged = false): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_approve', { p_payout_id: payoutId, p_confirm_details_changed: confirmDetailsChanged })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function markPayoutPaid(payoutId: string, p: { paidOn: string; method: string; reference: string; proofPath: string }): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_paid', {
+    p_payout_id: payoutId, p_paid_on: p.paidOn, p_method: p.method, p_reference: p.reference, p_proof_path: p.proofPath,
+  })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function cancelPayout(payoutId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payout_cancel', { p_payout_id: payoutId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export interface ConsoleCompletion {
+  status: string; deliverables_ok: boolean; invoices_ok: boolean; payouts_ok: boolean; brand_signed_off: boolean
+  invoices_live: number; invoices_unpaid: number; invoices_draft: number; creators_to_pay: number; creators_paid: number
+  can_complete: boolean; blockers: string[]
+  brand_signoff_at: string | null; brand_signoff_channel: string | null; brand_signoff_note: string | null; brand_signoff_by_name: string | null
+  guapd_signoff_at: string | null; guapd_signoff_by_name: string | null
+}
+export async function getConsoleCompletion(experienceId: string): Promise<Result<ConsoleCompletion>> {
+  const { data, error } = await createClient().rpc('experience_console_completion', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleCompletion }
+}
+export async function recordBrandSignoff(experienceId: string, channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_brand_signoff', { p_experience_id: experienceId, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function clearBrandSignoff(experienceId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_brand_signoff_clear', { p_experience_id: experienceId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── Creator pool (0536): the roster's "Add creators" page ──────────────────
+// Includes each creator's SHOOT DAY RATE, which is staff-only (never shown to
+// brands), so it is read only through this staff-gated function.
+
+export interface ConsolePoolCreator {
+  id: string
+  full_name: string
+  handle: string | null
+  profile_photo_url: string | null
+  niches: string[] | null
+  city: string | null
+  state: string | null
+  location: string | null
+  social_accounts: unknown
+  track: 'growth' | 'deals'
+  day_rate_product_id: string | null
+  day_rate_paise: number | null
+  ig_connected: boolean | null
+  ig_followers: number | null
+  ig_reach_30: number | null
+  ig_interactions_30: number | null
+}
+
+export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreator[]>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_pool')
+  if (error) return fail(error)
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+    ...(r as unknown as ConsolePoolCreator),
+    day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
+  })) }
+}
+
+// ── 0541: creators not on Guapd yet, on the roster's "Add creators" page ───
+// Staff only (operational). Not on the roster until linked to their account.
+
+export interface ConsoleProspect {
+  id: string; full_name: string; instagram_handle: string; phone: string | null
+  cost_basis: 'per_day' | 'flat'; expected_day_rate_paise: number | null; expected_days: number | null; expected_total_paise: number
+  status: 'not_contacted' | 'contacted' | 'agreed' | 'onboarding' | 'linked' | 'dropped'
+  brand_decision: 'pending' | 'accepted' | 'rejected'; decision_channel: string | null; note: string | null
+  linked_creator_id: string | null; linked_creator_name: string | null; linked_at: string | null; dropped_reason: string | null
+  created_at: string; updated_at: string
+  match: { creator_id: string; full_name: string; bookable: boolean; on_roster: boolean } | null
+}
+export interface ProspectInput {
+  fullName: string; handle: string; phone: string | null; costBasis: 'per_day' | 'flat'
+  dayRatePaise: number | null; days: number | null; flatPaise: number | null; note: string | null
+}
+const prospectArgs = (p: ProspectInput) => ({
+  p_full_name: p.fullName, p_handle: p.handle, p_phone: p.phone, p_cost_basis: p.costBasis,
+  p_day_rate_paise: p.dayRatePaise, p_days: p.days, p_flat_paise: p.flatPaise, p_note: p.note,
+})
+
+export async function listConsoleProspects(experienceId: string): Promise<Result<ConsoleProspect[]>> {
+  const { data, error } = await createClient().rpc('experience_console_prospects', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: (((data as { prospects: Record<string, unknown>[] }).prospects) ?? []).map((r) => ({
+    ...(r as unknown as ConsoleProspect),
+    expected_day_rate_paise: n(r.expected_day_rate_paise), expected_days: n(r.expected_days), expected_total_paise: Number(r.expected_total_paise),
+  })) }
+}
+export type ProspectStatus = 'not_contacted' | 'contacted' | 'agreed' | 'onboarding'
+export async function addProspect(experienceId: string, p: ProspectInput, status: ProspectStatus): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_prospect_add', { p_experience_id: experienceId, ...prospectArgs(p), p_status: status })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+/** 0558: creators the brand suggested that are not on Guapd yet. */
+export interface ConsoleSuggestion {
+  id: string; full_name: string; handle: string; note: string | null
+  status: 'open' | 'prospect' | 'not_possible'; prospect_id: string | null; reason: string | null; created_at: string
+}
+export async function listConsoleSuggestions(experienceId: string): Promise<Result<ConsoleSuggestion[]>> {
+  const { data, error } = await createClient().rpc('experience_console_brand_suggestions', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleSuggestion[] }
+}
+export async function resolveSuggestion(suggestionId: string, outcome: 'prospect' | 'not_possible', prospectId: string | null, reason: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_suggestion_resolve', { p_suggestion_id: suggestionId, p_outcome: outcome, p_prospect_id: prospectId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function updateProspect(prospectId: string, p: ProspectInput): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_update', { p_prospect_id: prospectId, ...prospectArgs(p) })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function setProspectStatus(prospectId: string, status: ProspectStatus): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_status', { p_prospect_id: prospectId, p_status: status })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function decideProspect(prospectId: string, decision: 'accepted' | 'rejected' | 'pending', channel: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_decide', { p_prospect_id: prospectId, p_decision: decision, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function dropProspect(prospectId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_prospect_drop', { p_prospect_id: prospectId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function linkProspect(prospectId: string, creatorId: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_prospect_link', { p_prospect_id: prospectId, p_creator_id: creatorId })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+
+// ── 0542: counters on a creator leg; finance-only bank details ─────────────
+
+export interface ConsoleCounter {
+  id: string; deal_id: string; round: number; proposed_by: 'creator' | 'guapd'
+  day_rate_paise: number; days: number; gross_paise: number; platform_pct: number; net_paise: number
+  note: string | null; status: 'open' | 'accepted' | 'declined' | 'withdrawn' | 'superseded'
+  created_at: string; decided_at: string | null; decision_note: string | null
+  /** Against the deal's current terms: a raise needs financial access to accept or send. */
+  direction: 'raises' | 'lowers' | 'holds'
+}
+export async function getConsoleCounters(experienceId: string): Promise<Result<{ counters: ConsoleCounter[]; can_raise: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_counters', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const d = data as { counters: Record<string, unknown>[]; can_raise: boolean }
+  return { ok: true, data: { can_raise: d.can_raise, counters: (d.counters ?? []).map((c) => ({
+    ...(c as unknown as ConsoleCounter), day_rate_paise: Number(c.day_rate_paise), days: Number(c.days), gross_paise: Number(c.gross_paise),
+    platform_pct: Number(c.platform_pct), net_paise: Number(c.net_paise),
+  })) } }
+}
+export async function acceptCounter(counterId: string, expectedGrossPaise: number): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_accept', { p_counter_id: counterId, p_expected_gross_paise: expectedGrossPaise })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function declineCounter(counterId: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_decline', { p_counter_id: counterId, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function sendCounter(dealId: string, dayRatePaise: number, days: number, note: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_counter_send', { p_deal_id: dealId, p_day_rate_paise: dayRatePaise, p_days: days, p_note: note })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function withdrawGuapdCounter(counterId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_counter_withdraw', { p_counter_id: counterId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+export interface PayoutAccount {
+  account_holder_name: string | null; account_number: string | null; ifsc: string | null; pan: string | null
+  gst_registered: boolean | null; changed_at: string | null; changed_after_request: boolean; upi_id: string | null
+}
+/** FINANCE only, for paying one payout; every call is audited (no values). */
+export async function getPayoutAccount(payoutId: string): Promise<Result<PayoutAccount>> {
+  const { data, error } = await createClient().rpc('experience_console_payout_account', { p_payout_id: payoutId })
+  return error ? fail(error) : { ok: true, data: data as PayoutAccount }
+}
+
+// ── 0554: add-ons to the agreed brand price ─────────────────────────────────
+export interface ConsoleAddon {
+  id: string; number: number; status: 'open' | 'superseded' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: ConsoleDeliverable[]; videos: number
+  /** Prices, lines, message and brand note: financial only (0537). */
+  per_video_paise: number | null; extras: QuoteExtra[] | null; extras_count: number; misc_paise: number | null; total_paise: number | null
+  message: string | null; brand_note: string | null
+  recorded_channel: string | null; created_at: string; decided_at: string | null; created_by_name: string | null
+}
+export async function getConsoleAddons(experienceId: string): Promise<Result<{ addons: ConsoleAddon[]; can_send: boolean }>> {
+  const { data, error } = await createClient().rpc('experience_console_addons', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as { addons: ConsoleAddon[]; can_send: boolean } }
+}
+export async function sendAddon(p: { experienceId: string; deliverables: ConsoleDeliverable[]; perVideoPaise: number; extras: QuoteExtra[]; message: string | null; expectedTotalPaise: number }): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_addon_send', {
+    p_experience_id: p.experienceId, p_deliverables: p.deliverables, p_per_video_paise: p.perVideoPaise,
+    p_extras: p.extras, p_message: p.message, p_expected_total_paise: p.expectedTotalPaise,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function recordAddonAnswer(addonId: string, accept: boolean, channel: string, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_addon_answer', { p_addon_id: addonId, p_accept: accept, p_channel: channel, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function withdrawAddon(addonId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_addon_withdraw', { p_addon_id: addonId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0555: extra deliverables for a creator ─────────────────────────────────
+export interface ConsoleExtra {
+  id: string; deal_id: string; creator_id: string; full_name: string; number: number
+  status: 'open' | 'superseded' | 'accepted' | 'declined' | 'withdrawn'
+  deliverables: ConsoleDeliverable[]; items: number; videos: number; pricing: 'per_item' | 'flat'; unit_paise: number | null
+  gross_paise: number; platform_pct: number; platform_fee_paise: number; net_paise: number
+  message: string | null; decline_reason: string | null; created_at: string; decided_at: string | null; created_by_name: string | null
+}
+export async function getConsoleExtras(experienceId: string): Promise<Result<ConsoleExtra[]>> {
+  const { data, error } = await createClient().rpc('experience_console_leg_extras', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleExtra[] }
+}
+export async function sendExtra(p: { dealId: string; deliverables: ConsoleDeliverable[]; pricing: 'per_item' | 'flat'; unitPaise: number | null; flatPaise: number | null; message: string | null; expectedGrossPaise: number; expectedNetPaise: number }): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_extra_send', {
+    p_deal_id: p.dealId, p_deliverables: p.deliverables, p_pricing: p.pricing, p_unit_paise: p.unitPaise, p_flat_paise: p.flatPaise,
+    p_message: p.message, p_expected_gross_paise: p.expectedGrossPaise, p_expected_net_paise: p.expectedNetPaise,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function withdrawExtra(extraId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_extra_withdraw', { p_extra_id: extraId })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function requestExtraPayout(extraId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_extra_payout_request', { p_extra_id: extraId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+
+
+// ── 0561: approved videos go to their creator (collab / share) ────────────
+// Operational access, checked again in Postgres. No money.
+export interface ConsoleCollabPost {
+  id: string; deal_id: string; release_id: string; creator_name: string; label: string
+  kind: 'collab' | 'share'; status: 'sent' | 'posted' | 'ad_complete' | 'cancelled'
+  sent_at: string; post_url: string | null; posted_at: string | null; post_channel: string | null
+  affiliate_url: string | null; affiliate_at: string | null; affiliate_channel: string | null
+  ad_complete_at: string | null; ad_complete_channel: string | null
+  cancelled_at: string | null; cancel_reason: string | null
+}
+export async function listConsoleCollabPosts(experienceId: string): Promise<Result<ConsoleCollabPost[]>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_posts', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleCollabPost[] }
+}
+export async function consoleCollabSend(releaseId: string, kind: 'collab' | 'share'): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_send', { p_release_id: releaseId, p_kind: kind })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleCollabCancel(postId: string, reason: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_cancel', { p_post_id: postId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleCollabPostLink(postId: string, url: string, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_post_link', { p_post_id: postId, p_url: url, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleCollabAct(postId: string, action: 'affiliate' | 'ad_complete', url: string | null, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_collab_act', { p_post_id: postId, p_action: action, p_url: url, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+/** 0562: record the affiliate % the brand agreed on a price agreed before 0560 (finance). */
+export async function setAgreedAffiliatePct(experienceId: string, pct: number, channel: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_affiliate_pct_set', { p_experience_id: experienceId, p_pct: pct, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: null }
+}
+
+// ── 0563: affiliate commissions (claims reviewed by operational staff; billed by finance) ──
+export interface ConsoleAffiliateClaim {
+  id: string; status: 'sales_entered' | 'verified' | 'paid' | 'cancelled' | 'closed'
+  sales_paise: number | null; gross_paise: number | null; platform_fee_paise: number | null; net_paise: number | null
+  claimed_at: string | null; reviewed_at: string | null; review_note: string | null
+  billed_on: { id: string; number: string | null; status: string } | null
+  invoice: { id: string; number: string; issued_at: string; payable_paise: number; gstin: string | null } | null
+  payout: ConsolePayout | null
+}
+export interface ConsoleAffiliate {
+  deal_id: string; creator_name: string; affiliate_pct: number; platform_pct: number
+  claimable: boolean; collabs: number; collabs_complete: number
+  claim: ConsoleAffiliateClaim | null
+}
+export async function listConsoleAffiliates(experienceId: string): Promise<Result<ConsoleAffiliate[]>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliates', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleAffiliate[] }
+}
+export async function consoleAffiliateReview(followOnId: string, approve: boolean, note: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_affiliate_review', { p_follow_on_id: followOnId, p_approve: approve, p_note: note })
+  return error ? fail(error) : { ok: true, data: null }
+}
+export async function consoleAffiliateClose(dealId: string, reason: string): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_close', { p_deal_id: dealId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleAffiliatePayoutRequest(followOnId: string, tdsPaise: number): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_payout_request', { p_follow_on_id: followOnId, p_tds_paise: tdsPaise })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+export async function consoleAffiliateBill(experienceId: string, followOnIds: string[], description: string,
+  gst: { ratePct: number | null; cgstPaise: number | null; sgstPaise: number | null; igstPaise: number | null }, dueDate: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_affiliate_bill', {
+    p_experience_id: experienceId, p_follow_on_ids: followOnIds, p_description: description,
+    p_gst_rate_pct: gst.ratePct, p_cgst_paise: gst.cgstPaise, p_sgst_paise: gst.sgstPaise, p_igst_paise: gst.igstPaise, p_due_date: dueDate,
+  })
+  return error ? fail(error) : { ok: true, data: data as string }
+}
+

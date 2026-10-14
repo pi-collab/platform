@@ -56,6 +56,8 @@ const FILTERS: [FilterKey, string][] = [
  * forms. A bare time on a three-week-old message reads as "just now".
  */
 function stamp(iso: string): string {
+  // A live deal with nothing said yet has no timestamp: show none, not "Invalid Date".
+  if (!iso) return ''
   const d = new Date(iso)
   const now = new Date()
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -39,6 +39,8 @@ export interface PendingRow {
   status: string
   dueDateStr: string | null
   isOverdue: boolean
+  /** A Guapd payout: no invoice, nothing to remind. */
+  byGuapd?: boolean
 }
 
 export interface ReadyRow {
@@ -227,14 +229,14 @@ export default function CreatorPaymentsMobile({
               {p.dueDateStr && <> &middot; {p.isOverdue ? 'was due' : 'expected'} {p.dueDateStr}</>}
             </div>
             <div className="cpay-m__pending-actions">
-              <button
+              {!p.byGuapd && <button
                 type="button"
                 onClick={() => remind(p.id)}
                 disabled={busy === p.id || reminded[p.id]}
                 className="cpay-m__btn-dark"
               >
                 {reminded[p.id] ? 'Reminder sent' : busy === p.id ? 'Sending…' : 'Send reminder'}
-              </button>
+              </button>}
               <Link href={`/creator/deals/${p.dealId}`} className="cpay-m__btn-soft">View deal</Link>
             </div>
             {remindError[p.id] && (

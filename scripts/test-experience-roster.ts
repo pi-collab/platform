@@ -42,6 +42,8 @@ async function run() {
   const C = (crs ?? []).find((c: any) => c.users?.auth_id) as any
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B.user_id, C.user_id, ...(access ?? []).map((a) => a.user_id)])
+  // Test staff actors are never creators: a creator login can save its own bank details, list its own deals, etc.
+  { const { data: cu } = await admin.from('creators').select('user_id').not('user_id', 'is', null); for (const x of cu ?? []) busy.add((x as any).user_id) } // staff actors are never creators
   const { data: users } = await admin.from('users').select('id, auth_id').not('auth_id', 'is', null).limit(80)
   const [STAFF, NONE] = (users ?? []).filter((u: any) => !busy.has(u.id)) as any[]
   const { data: bookable } = await admin.from('creators').select('id').eq('is_bookable', true).eq('is_guapd', false).limit(4)
@@ -50,7 +52,7 @@ async function run() {
   if (!B || !C || !STAFF || !NONE || (bookable ?? []).length < 4 || !house) throw new Error('missing test actors (need 4 bookable creators)')
   const [K1, K2, K3, K4] = bookable!.map((b) => b.id)
 
-  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true })
+  await admin.from('staff_access').insert({ user_id: STAFF.id, experiences_operational: true, experiences_financial: true })  // quoting is the brand price: finance only (0537)
   staffUserId = STAFF.id
   const staff = await sessionFor(STAFF.auth_id), none = await sessionFor(NONE.auth_id)
   const brand = await sessionFor(B.users.auth_id), creator = await sessionFor(C.users.auth_id)
@@ -105,6 +107,10 @@ async function run() {
 
   group('the contract check: combined total against what was sold')
   let rec = (await staff.rpc('experience_console_reconcile', { p_experience_id: E })).data as any
+  // 0548: Guapd's picks are an internal shortlist until shared; the brand's own pick is shared from the start.
+  ok('0548: only the shared creator counts until Guapd shares (2 of 4 videos)', rec.videos_planned === 2, JSON.stringify({ p: rec.videos_planned }))
+  ok('0548: Guapd shares its picks with the brand', (await staff.rpc('experience_console_roster_share', { p_experience_id: E, p_roster_ids: [row(K1).id, row(K2).id] })).data === 2)
+  rec = (await staff.rpc('experience_console_reconcile', { p_experience_id: E })).data as any
   ok('3 creators × 2 = 6 videos against 4 sold: flagged', rec.ok === false && rec.videos_planned === 6 && rec.videos_sold === 4)
   ok('lock refused while any creator awaits the brand', refused(await staff.rpc('experience_console_roster_lock', { p_experience_id: E })))
   ok('a decision needs the channel', refused(await staff.rpc('experience_console_roster_decide', { p_roster_id: row(K1).id, p_decision: 'accepted', p_channel: null })))
@@ -134,10 +140,11 @@ async function run() {
   ok('the brand cannot read the notes table', refused(bn), bn.error?.message ?? `${bn.data?.length} rows`)
   ok('the creator cannot read the notes table', refused(cn), cn.error?.message ?? `${cn.data?.length} rows`)
   ok('the brand cannot write a note', refused(await brand.from('experience_roster_notes').insert({ roster_id: row(K1).id, note: 'x' })))
-  const br = await brand.from('experience_roster').select('id, brand_decision').eq('experience_id', E)
-  ok('the brand still reads its own roster basics (for its future view)', !br.error && (br.data ?? []).length === 3, br.error?.message ?? '')
-  const bp = await brand.from('experience_roster').select('id, decision_channel').eq('experience_id', E)
-  ok('…but not the columns added here (channel, planned deliverables)', refused(bp) && refused(await brand.from('experience_roster').select('planned_deliverables').eq('experience_id', E)))
+  // 0544: the brand reads its roster through brand_experience_roster only.
+  const br = await brand.rpc('brand_experience_roster', { p_experience_id: E })
+  ok('the brand reads its own roster (names, plan, decision) through brand_experience_roster', !br.error && ((br.data as any)?.creators ?? []).length === 3, br.error?.message ?? '')
+  ok('…and nothing from the table directly (0544)', refused(await brand.from('experience_roster').select('id').eq('experience_id', E)) && refused(await brand.from('experience_roster').select('planned_deliverables').eq('experience_id', E)))
+  ok('…with no note, channel, creator id or leg column in it', !/note|creator_id|leg_|channel/.test(JSON.stringify(Object.keys(((br.data as any)?.creators ?? [])[0] ?? {}))))
   const cr = await creator.from('experience_roster').select('id').eq('experience_id', E)
   ok('the creator reads no roster at all', !!cr.error || (cr.data ?? []).length === 0)
   const nAudit = (await admin.from('ops_events').select('detail').eq('target_id', row(K1).id).eq('action', 'experience.roster_note_set')).data ?? []
@@ -159,7 +166,10 @@ async function run() {
   roster = ((await staff.rpc('experience_console_roster', { p_experience_id: E })).data ?? []) as any[]
   touched.push(row(K4).id)
   rec = (await staff.rpc('experience_console_reconcile', { p_experience_id: E })).data as any
-  ok('the extra creator is flagged against the sold total (6 against 4)', rec.ok === false && rec.videos_planned === 6)
+  ok('0548: an internal addition after the lock does not count yet (4 against 4)', rec.videos_planned === 4)
+  await staff.rpc('experience_console_roster_share', { p_experience_id: E, p_roster_ids: [row(K4).id] })
+  rec = (await staff.rpc('experience_console_reconcile', { p_experience_id: E })).data as any
+  ok('the extra creator is flagged against the sold total once shared (6 against 4)', rec.ok === false && rec.videos_planned === 6)
   ok('the status stays confirmed (adding never moves it back)', (await staff.rpc('experience_console_get', { p_experience_id: E })).data.status === 'confirmed')
   ok('the locked set is untouched', row(K1).locked && row(K2).locked)
   ok('an unlocked addition can still be removed', !refused(await staff.rpc('experience_console_roster_remove', { p_roster_id: row(K4).id })))
@@ -171,7 +181,7 @@ async function run() {
   }
 
   group('revoking')
-  await admin.from('staff_access').update({ experiences_operational: false }).eq('user_id', STAFF.id)
+  await admin.from('staff_access').update({ experiences_operational: false, experiences_financial: false }).eq('user_id', STAFF.id)  // financial includes operational, so revoke both
   ok('operational off → roster refused at once', refused(await staff.rpc('experience_console_roster', { p_experience_id: E })))
 }
 

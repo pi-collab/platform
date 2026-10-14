@@ -10,6 +10,7 @@ import CampaignRoster from './CampaignRoster'
 import GrowthRoster, { type GrowthDraft } from './GrowthRoster'
 import { GROWTH_FEE_PERCENT } from '@/lib/deal-fee'
 import CampaignBrief from './CampaignBrief'
+import CampaignBroadcast from './CampaignBroadcast'
 import type { DraftPlacement } from './draft-actions'
 
 function formatINR(paise: number): string {
@@ -419,6 +420,11 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             />
             )}
           </div>
+          {/* 6.1 item 10: one message to every creator with an open deal. */}
+          {(() => {
+            const openDeals = (deals ?? []).filter((d) => !['complete', 'declined', 'cancelled'].includes(d.status as string)).length
+            return openDeals > 0 ? <div style={{ marginBottom: 16 }}><CampaignBroadcast campaignId={campaign.id} open={openDeals} /></div> : null
+          })()}
           {isGrowth ? (
             /* A Growth campaign is not a negotiation, so it does not get the
                placement editor. One package per creator at the creator's own

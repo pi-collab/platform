@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
  * RLS scopes the subscription: only rows where user_id = my_user_id()
  * are delivered — no cross-user leakage.
  */
-export function useRealtimeNotifications(initialCount: number): number {
+export function useRealtimeNotifications(initialCount: number, accept?: (type: string) => boolean): number {
   const [count, setCount] = useState(initialCount)
 
   // Sync with server-rendered count on navigation
@@ -28,7 +28,10 @@ export function useRealtimeNotifications(initialCount: number): number {
           schema: 'public',
           table: 'notifications',
         },
-        () => {
+        (payload: { new?: { type?: string } }) => {
+          // 0546: the console bell counts staff alerts only, the brand bell
+          // never counts them (lib/experience-staff-notifications).
+          if (accept && !accept(String(payload.new?.type ?? ''))) return
           setCount((prev) => prev + 1)
         },
       )

@@ -7,8 +7,9 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { DatePill } from '@/components/DealOptionPills'
 import { CHANNELS, QUOTE_STATUS, channelLabel, formatRupees, rupeesToPaise } from '@/lib/experience-request'
 import type { ConsoleDeliverable, ConsoleQuote } from '@/lib/experience-console-server'
-import { acceptQuote, submitQuote } from '../actions'
+import { acceptQuote, recordAgreedAffiliatePct, submitQuote } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
+import ExtrasEditor from '../ExtrasEditor'
 
 /**
  * The negotiation with the brand: Guapd's quotes and the brand's counters, as
@@ -17,9 +18,15 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * through. The database enforces the rules (one open quote, totals, quotes
  * closed once one is accepted); this component only collects input.
  */
-export default function QuotePanel({ experienceId, open: quotesOpen, quotes, requested, defaults, planVideos, planLabel }: {
+export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice, quotes, requested, defaults, planVideos, planLabel, affiliate, needsAgreedPct = false }: {
   experienceId: string
+  /** 0560: the brand asked for affiliate links, so every quote states the commission %. */
+  affiliate: boolean
+  /** 0562: the price was agreed before 0560 with no %: finance can record what the brand agreed (rostering / confirmed). */
+  needsAgreedPct?: boolean
   open: boolean
+  /** The brand price is financial-only (0537). Without it: no amounts, no messages, no quoting. */
+  canSeePrice: boolean
   quotes: ConsoleQuote[]
   requested: ConsoleDeliverable[]
   defaults: { count: number; city: string; date: string }
@@ -37,34 +44,44 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
   // composer
   const [perVideo, setPerVideo] = useState('')
   const [count, setCount] = useState(String(defaults.count || ''))
-  const [misc, setMisc] = useState('')
+  // 0553: extras as named lines; the extras amount is their sum.
+  const [extras, setExtras] = useState<{ label: string; amount: string }[]>([])
   const [date, setDate] = useState(defaults.date)
   const [city, setCity] = useState(defaults.city)
   const [message, setMessage] = useState('')
   const [channel, setChannel] = useState('')
+  const [affPct, setAffPct] = useState('')
+  const [agreedPct, setAgreedPct] = useState('')
+  const [agreedCh, setAgreedCh] = useState('')
 
   const openComposer = (m: 'guapd' | 'brand') => {
     setError(null)
     setMode(m)
     if (latest) {
-      setPerVideo(String(latest.per_video_paise / 100))
+      setPerVideo(latest.per_video_paise != null ? String(latest.per_video_paise / 100) : '')
       setCount(String(latest.deliverable_count))
-      setMisc(latest.misc_paise ? String(latest.misc_paise / 100) : '')
+      setExtras((latest.extras ?? []).length > 0
+        ? (latest.extras ?? []).map((x) => ({ label: x.label, amount: String(x.amount_paise / 100) }))
+        : latest.misc_paise ? [{ label: 'Extras', amount: String(latest.misc_paise / 100) }] : [])
       setDate(latest.shoot_date ?? defaults.date)
       setCity(latest.shoot_city ?? defaults.city)
+      setAffPct(latest.affiliate_pct != null ? String(latest.affiliate_pct) : '')
     }
     setMessage('')
     setChannel('')
   }
 
-  const pv = rupeesToPaise(perVideo), ms = misc.trim() ? rupeesToPaise(misc) : 0, n = Number(count)
+  const filled = extras.filter((x) => x.label.trim() || x.amount.trim())
+  const extraPaise = filled.map((x) => rupeesToPaise(x.amount))
+  const ms = extraPaise.some((v) => v === null) ? null : extraPaise.reduce<number>((a, v) => a + (v ?? 0), 0)
+  const pv = rupeesToPaise(perVideo), n = Number(count)
   const preview = pv && ms !== null && Number.isInteger(n) && n > 0 ? pv * n + ms : null
 
   const send = () => {
     if (!mode) return
     setError(null)
     start(async () => {
-      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc, shootDate: date, shootCity: city, message, channel, deliverables: requested })
+      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc: '', extras: filled, shootDate: date, shootCity: city, message, channel, deliverables: requested, affiliatePct: affiliate ? affPct : '' })
       if (r.ok) { setMode(null); router.refresh() } else setError(r.error)
     })
   }
@@ -92,7 +109,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
           <h2 className="sect-head">Quotes</h2>
           <div className="sect-rule" />
         </div>
-        {quotesOpen && !mode && (
+        {quotesOpen && canSeePrice && !mode && (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="button" style={pillBtn} onClick={() => openComposer('brand')} disabled={!current}
               title={current ? '' : 'The brand counters a quote, so send one first'}>
@@ -106,6 +123,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
       </div>
 
       {!quotesOpen && <p className="t-body" style={{ margin: '14px 0 0' }}>The price is agreed, so quotes are closed.</p>}
+      {!canSeePrice && (
+        <p className="t-body" style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--ink-soft)' }}>
+          The brand&apos;s price and the quotes are visible to finance only. You can see each quote&apos;s status, videos, date and city.
+        </p>
+      )}
 
       {/* ── Composer ── */}
       {mode && (
@@ -122,11 +144,14 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
               <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, marginTop: 6, color: Number(count) && Number(count) !== planVideos ? '#8C6417' : 'var(--wg-500)' }}>
                 {Number(count) && Number(count) !== planVideos ? `Plan is ${planVideos} (${planLabel}). Accepting this locks ${count}.` : `From the plan: ${planLabel}`}
               </div></div>
-            <div><label style={fieldLabel} htmlFor="q-misc">Extras (₹, optional)</label>
-              <input id="q-misc" className="dinput" inputMode="decimal" placeholder="0" value={misc} onChange={(e) => setMisc(e.target.value)} /></div>
             <div><span style={fieldLabel}>Shoot date</span><DatePill value={date} onChange={setDate} id="q-date" /></div>
             <div><label style={fieldLabel} htmlFor="q-city">City</label>
               <input id="q-city" className="dinput" value={city} maxLength={120} onChange={(e) => setCity(e.target.value)} /></div>
+            {affiliate && (
+              <div><label style={fieldLabel} htmlFor="q-aff">Affiliate commission (% of sales)</label>
+                <input id="q-aff" className="dinput" inputMode="decimal" placeholder="10" value={affPct} onChange={(e) => setAffPct(e.target.value.replace(/[^\d.]/g, ''))} />
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, marginTop: 6, color: 'var(--wg-500)' }}>The brand pays this on sales through each creator&apos;s link; the creator gets it less their fee.</div></div>
+            )}
             {mode === 'brand' && (
               <div><label style={fieldLabel} htmlFor="q-ch">Sent via</label>
                 <select id="q-ch" className="dinput" value={channel} onChange={(e) => setChannel(e.target.value)}>
@@ -136,6 +161,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
             )}
             <div style={{ gridColumn: '1 / -1' }}><label style={fieldLabel} htmlFor="q-msg">{mode === 'guapd' ? 'Message to the brand (optional)' : 'What they said (optional)'}</label>
               <textarea id="q-msg" className="dinput" rows={3} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} style={{ height: 'auto', padding: '12px 14px', lineHeight: 1.5 }} /></div>
+          </div>
+          {/* 0553: extras, each with what it is for. The brand sees these lines. */}
+          <div style={{ marginTop: 14 }}>
+            <span style={fieldLabel}>Extras (optional)</span>
+            <ExtrasEditor rows={extras} onChange={setExtras} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink)' }}>
@@ -148,6 +178,27 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
                 {pending ? 'Saving…' : mode === 'guapd' ? 'Send quote' : 'Record counter'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 0562: a price agreed before 0560 has no affiliate %: record what the brand agreed. Deals sent from now lock it. */}
+      {needsAgreedPct && canSeePrice && (
+        <div style={{ marginTop: 18, padding: 16, borderRadius: 14, background: '#FCF6E4', border: '1px solid #C89A3C40' }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>The agreed price has no affiliate commission</div>
+          <p className="t-body" style={{ margin: '4px 0 12px', fontSize: 12.5 }}>It was agreed before commissions were recorded. Record the % the brand agreed: creator deals sent from now carry it. Deals already sent stay without one.</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div><label style={fieldLabel} htmlFor="q-agreed-pct">% of sales</label>
+              <input id="q-agreed-pct" className="dinput" inputMode="decimal" placeholder="10" value={agreedPct} onChange={(e) => setAgreedPct(e.target.value.replace(/[^\d.]/g, ''))} style={{ width: 120 }} /></div>
+            <div><label style={fieldLabel} htmlFor="q-agreed-ch">The brand agreed via</label>
+              <select id="q-agreed-ch" className="dinput" value={agreedCh} onChange={(e) => setAgreedCh(e.target.value)}>
+                <option value="">Select…</option>
+                {CHANNELS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              </select></div>
+            <button type="button" className="neonbtn" style={{ ...neonBtn, height: 40 }} disabled={pending}
+              onClick={() => { setError(null); start(async () => { const r = await recordAgreedAffiliatePct(experienceId, agreedPct, agreedCh); if (r.ok) router.refresh(); else setError(r.error) }) }}>
+              {pending ? 'Saving…' : 'Record it'}
+            </button>
           </div>
         </div>
       )}
@@ -167,19 +218,22 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <span style={kpiLabel}>v{q.version} · {q.proposed_by === 'guapd' ? 'Guapd quote' : 'Brand counter'}</span>
                   <StatusChip label={st.label} tone={st.tone} />
-                  <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{formatRupees(q.total_paise)}</span>
+                  <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 20, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{q.total_paise != null ? formatRupees(q.total_paise) : <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--wg-500)' }}>Finance only</span>}</span>
                 </div>
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 6 }}>
-                  {q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}
+                  {q.per_video_paise != null ? <>{q.deliverable_count} × {formatRupees(q.per_video_paise)}{q.misc_paise ? ` + ${formatRupees(q.misc_paise)} extras` : ''}{(q.extras ?? []).length > 0 ? ` (${(q.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(', ')})` : ''}</> : <>{q.deliverable_count} video{q.deliverable_count === 1 ? '' : 's'}</>}
                   {(q.shoot_date || q.shoot_city) && <> · {[q.shoot_city, q.shoot_date ? fmt(q.shoot_date) : null].filter(Boolean).join(', ')}</>}
+                  {q.affiliate_pct != null && <> · {Number(q.affiliate_pct)}% affiliate commission</>}
                 </div>
                 {q.message && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>“{q.message}”</p>}
+                {q.brand_note && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', color: '#8C6417' }}>The brand: “{q.brand_note}”</p>}
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--wg-500)', marginTop: 8 }}>
                   {q.proposed_by === 'brand' ? `Recorded by ${q.created_by_name ?? 'Guapd'}${q.recorded_channel ? `, received via ${channelLabel(q.recorded_channel)}` : ''}` : `Sent by ${q.created_by_name ?? 'Guapd'}`}
                   {' · '}{new Date(q.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
+                  {q.status === 'rejected' && q.decided_at && <> · declined {new Date(q.decided_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{q.recorded_channel === 'portal' ? ' by the brand on Guapd' : ''}</>}
                   {q.status === 'accepted' && q.decided_at && <> · accepted {new Date(q.decided_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{q.proposed_by === 'guapd' && q.recorded_channel ? ` via ${channelLabel(q.recorded_channel)}` : ''}</>}
                 </div>
-                {isOpen && quotesOpen && !mode && (
+                {isOpen && quotesOpen && canSeePrice && !mode && (
                   <div style={{ marginTop: 12 }}>
                     <button type="button" style={pillBtn} onClick={() => { setAcceptChannel(''); setAcceptErr(null); setConfirming(true) }}>
                       {q.proposed_by === 'guapd' ? 'Brand accepted this' : 'Accept their counter'}
@@ -195,7 +249,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, quotes, req
       <ConfirmDialog
         open={confirming && !!current}
         title={brandAccepts ? 'Record that the brand accepted' : "Accept the brand's counter"}
-        body={current ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
+        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${(current.extras ?? []).length > 0 ? (current.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(' + ') : formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} ${current.affiliate_pct != null ? ` with ${Number(current.affiliate_pct)}% affiliate commission` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
         detail={brandAccepts ? (
           <div style={{ marginTop: 12 }}>
             <label style={fieldLabel} htmlFor="acc-ch">They accepted via</label>

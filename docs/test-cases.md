@@ -6888,3 +6888,681 @@ Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/we
 - [ ] Decline frees that creator's videos in the reconciliation.
 
 **Environment note:** 0533–0535 are applied on staging (ledger 0533/0534/0535), NOT on production. Run them on prod at release, in order, after confirming `supabase/.temp/linked-project.json`.
+
+## 104. Experiences stage 3c: cost sheet + margin / P&L; brand price finance-only (migration 0537, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-costs-pnl.ts` (58 checks). Regressions: fee golden byte-identical, walk-deal-guard 45/45, legs-send, roster, console-quotes, console-access, quotes-rls, experience-rls, legs-db, pnl-access, house-hidden, pnl-isolation, package-gating.
+
+**Brand price is finance only (decision c, SECURITY)**
+- [ ] Operational-only staff: `experience_console_get` returns `can_see_brand_price: false` and NULL brand money fields; `experience_console_quotes` returns NULL amounts and NULL message (people type prices into it); creating or accepting a quote is refused ("Financial access required").
+- [ ] Financial staff see and send quotes and see the agreed price.
+- [ ] Console: "Agreed with the brand" shows "The price is visible to finance only" for operational staff; the quote history shows "Finance only" instead of amounts and offers no quote or accept buttons.
+- [ ] With the brand price hidden, operational staff (creator nets + costs) cannot work out the margin.
+
+**Margin (financial only)**
+- [ ] margin = brand INVOICED (issued + paid service invoices; drafts and voids never) − Σ creator NET of ACCEPTED legs − Σ Guapd costs; sub-total + platform fee kept = margin (the database refuses a P&L that does not reconcile).
+- [ ] No issued invoice: revenue ₹0, "Revenue pending invoice"; the agreed price shows only as a context line, never as revenue.
+- [ ] Unanswered (negotiating) and declined legs are NOT counted; they appear as footnotes ("N awaiting… not counted", "N declined").
+- [ ] Platform fee kept is summed per creator at each creator's own snapshotted %.
+- [ ] The stored margin (`experience_pnl_snapshots.guapd_margin_paise`, generated from the jsonb) equals the live figure after every cost add/edit/remove, leg send, accept, decline and invoice change while open.
+
+**Cost sheet (operational)**
+- [ ] Add (flat or quantity × rate), edit, remove with a reason; removed lines stay on record and drop out of totals; a stale edit is refused.
+- [ ] Per-unit totals are computed by the database (half up); a different total from the screen is refused.
+- [ ] Categories per_video / day_rate / retainer are refused (creator pay lives on the legs).
+- [ ] Brand- or creator-provided items are noted at their value but are not Guapd costs.
+- [ ] Linking a cost to a creator only accepts this Experience's creator legs.
+- [ ] Phase 4 columns (billable to brand, vendor, invoice) cannot be set, even by the service role (`ecl_not_billed_yet`).
+- [ ] Every write writes one `ops_events` row with before/after money fields.
+
+**Complete and reopen (decision d)**
+- [ ] "Mark Complete" (from Delivering, operational) freezes the P&L (`is_final`); costs on a Complete Experience are refused; later input changes do not move the frozen margin.
+- [ ] Reopen is financial only, needs a reason, is audited (reason recorded, no margin figure in the audit row), moves to Delivering and recomputes; a late cost can then be added; completing again re-freezes.
+
+**Gating**
+- [ ] Brand, creator, outreach/no-access, anonymous and the service role are refused every cost function and `experience_pnl`; no session can read `experience_cost_lines` or `experience_pnl_snapshots` directly.
+- [ ] A creator's leg context carries no brand price, cost or margin.
+
+**Environment:** 0537 is on STAGING only (applied from a scratch folder because staging's DB also holds the held 0536). Not on production.
+
+## 105. Experiences: the shoot, deliverables, and the brand seeing only what Guapd releases (migration 0538, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-deliverables.ts` (127 checks; runs two Experiences: the approved Guapd-provides template, and a creator-submit one). Validator and deal-flow cases are in `scripts/test-experience-money.ts`. Regressions: fee golden byte-identical, walk-deal-guard 45/45, and every Experience suite from §98–§104.
+
+**The shoot (operational)**
+- [ ] "Confirm the shoot" (Confirmed → Shoot scheduled) needs every locked creator's deal sent, no roster creator still undecided or unlocked, and at least one creator accepted; unanswered offers are allowed. No creators can be added afterwards.
+- [ ] A shoot outcome (Shot / Did not shoot) is recorded only for an accepted creator, only while Shoot scheduled, and only from the shoot date (India time); "Did not shoot" needs a reason; recording twice is refused.
+- [ ] The Experience moves to Shoot done BY ITSELF once every accepted creator has an outcome, no offer is unanswered, and at least one creator shot.
+- [ ] Withdraw an unanswered offer (reason required; the deal becomes cancelled; the creator is told in-app + email); an accepted offer cannot be withdrawn.
+- [ ] Undo an outcome (reason required) until anything from that creator has been shared with the brand; from Shoot done it goes back to Shoot scheduled.
+- [ ] "Did not shoot" takes the creator out of the counted P&L creators (footnote "accepted but did not shoot. Not counted."), and the stored margin refreshes.
+
+**Who provides the deliverables (the template decides)**
+- [ ] Kiro / the approved template (`deliverables_owner: guapd`, `on_shoot_done`): staff attach a link or a file per item; the creator cannot submit and their deal page shows status only (no link, file or note); their part is done at shoot done.
+- [ ] Creator-submit template (`deliverables_owner: creator`, `on_delivery_accepted`): the creator submits a link or file on their own deal page once their shoot is marked done; staff cannot attach for them; Guapd's "ask for changes" note shows to the creator; a resubmission after changes is a new version; their part is done only when Guapd has approved every item.
+- [ ] The validator refuses an Experience template where the creator submits but is "done" at anything other than `on_delivery_accepted`.
+- [ ] Files: the database names the path (`{deal}/{item}/v{version}/{name}`, allowed types only); the file must be in the private bucket before it attaches; a different path is refused. Every file opens through a 10-minute signed link.
+- [ ] Guapd-provides: Guapd's notes on its own content are staff-only (`experience_item_staff_notes`), never on the creator-readable item.
+
+**Releasing to the brand (versioned)**
+- [ ] Only Guapd-approved items from creators who shot can be shared, and only once the Experience is Shoot done or Delivering. The first share moves it to Delivering.
+- [ ] Staff pick which items to share (e.g. 4 of N); the panel shows "Shared X · sold Y videos" and a warning (not a block) when more is shared than sold.
+- [ ] A release snapshots the version: after a new version is attached, the brand still sees the old one until Guapd shares the new one, which supersedes it (kept on record).
+- [ ] Withdraw a release with a reason until the brand approves it; the brand stops seeing it.
+- [ ] Staff record the brand's answer with the channel (WhatsApp / email / call / in person, never "portal"; self-service is Phase 6); "changes requested" needs what they asked. Approval is final: no withdraw, no re-decide, no new version, no outcome undo for that creator.
+
+**The brand page `/experiences/[id]` (SECURITY)**
+- [ ] A member of the Experience's brand sees ONLY live releases: creator name, label, link or "View file", shared date, decision. Never unreleased items, other versions, who submitted, Guapd's or the brand's notes, handles, storage paths, deal/item/creator ids, or any money.
+- [ ] Another brand, the creator, staff who are not brand members, anonymous and the service role are refused (`brand_experience_deliverables`, `brand_experience_release_file`).
+- [ ] No session can read `experience_deliverable_releases` or `experience_item_staff_notes` directly.
+- [ ] The brand's team is told in-app + by email when items are shared (count only). No WhatsApp.
+
+**Readiness (sets up two-party completion)**
+- [ ] `ready` is true only when brand-approved releases cover everything sold (per type, and videos against videos sold); the console lists the gaps.
+- [ ] Since 0540 Complete IS gated on readiness (and invoices paid, creators paid, both sign-offs: §108); a Complete Experience refuses every deliverable change.
+
+**Audit**
+- [ ] Every staff action writes `ops_events` (shoot_scheduled, leg_shoot_outcome, leg_shoot_outcome_undone, leg_withdrawn, shoot_done, deliverable_attached, deliverable_reviewed, deliverable_released, delivering, deliverable_withdrawn, brand_deliverable_decision_recorded); none carries a price, rate, net or margin; notes are recorded by length. Creator submissions go to the deal's `events` (creators may have no email).
+
+**Also in 0538:** the seven 3a functions (create + six roster actions) rewritten without `SELECT *`; no function in `public` uses `SELECT *` (checked on staging).
+
+**Environment:** 0538 is on STAGING only (applied from the scratch folder; `creator_leg_context` and `experience_console_leg_shoot_outcome` re-applied by hand after two NULL fixes, the file matches). Not on production.
+
+## 106. Experiences: NULL means no, and the creator boundary (migration 0539, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-creator-boundary.ts` (63 checks, staging, real sessions; cleans up after itself).
+
+**NULL means no (every Experience gate and transition)**
+- [ ] Access gates read `has_experience_access(..) IS NOT TRUE`; no function in `public` still has `IF NOT has_experience_access`.
+- [ ] Guards use `IS DISTINCT FROM` / `x IS NULL OR x NOT IN (..)`: a NULL decision, outcome, "added by", "proposed by", "provided by" or cost category is refused on its own.
+- [ ] A deliverable with no type is refused (planning and sending).
+- [ ] An agreed plan missing "videos sold" never reconciles as ok: the roster cannot be locked and no leg can be drafted or sent past it; readiness is "not ready".
+- [ ] Payment eligibility (`experience_leg_work_complete`) is false unless every visible item is positively `approved` (creator-submit) or the trigger is exactly `on_shoot_done`.
+- [ ] Flags block unless FALSE (`locked`, `is_guapd`); the item gate refuses an unknown actor and treats an unknown visibility as hidden.
+
+**The creator boundary (SECURITY)**
+- [ ] A creator reads deliverable items on their OWN leg only, visible ones only, through every query shape: unfiltered, by id, by deal id, OR across legs, embedded through `deals`, by filtering on another creator's link text, or on `visible_to_creator=false`.
+- [ ] Own items carry no Guapd staff note (Guapd-provides: notes live in `experience_item_staff_notes`); the creator CAN read the link Guapd attached to their own item (accepted).
+- [ ] No direct write: own item, another creator's item, a hidden item, a new item on either leg, a release row.
+- [ ] Refused or empty: staff notes, releases (the brand's note), roster notes, quotes, cost lines, P&L snapshots, roster, experiences, another creator's terms, `ops_events`, another deal's events; own-deal events carry no notes.
+- [ ] Functions: another leg's context, upload slot and submit say "Not found"; brand view and brand file, every console reader, the P&L, readiness, the item-file path and the internal gate/put helpers are refused.
+- [ ] Files: another creator's file cannot be downloaded, signed or listed; no direct upload into another creator's folder, NOR into their own leg folder (0539); a Guapd-minted upload slot still works from the creator's session.
+
+## 107. Experiences Phase 4: brand invoices, paid offline (migration 0540, run by hand)
+
+Run: `NODE_OPTIONS=--conditions=react-server NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-invoices.ts` (112 checks, staging, real sessions; restores Guapd's billing settings and the test brand's billing profile).
+
+**Access (SECURITY)**
+- [ ] Invoices, payments, Guapd's billing settings and brand billing profiles are FINANCIAL only (an invoice is the brand price). Operational-only staff, no-access staff, brands, creators, anonymous and the service role are refused by every `experience_console_invoice*` / `_finance_settings` / `_brand_billing` function.
+- [ ] No user can read `service_invoices`, `service_invoice_payments`, `service_invoice_counters`, `brand_billing_profiles` or `guapd_billing_settings` directly (the 0524 brand read of invoices and its column grants are gone).
+- [ ] App code never touches these tables (`scripts/check-pnl-isolation.ts`).
+
+**Billing details**
+- [ ] Guapd's details (legal name, address, state, GSTIN, GST-registered yes/no, PAN, how to pay) are set by finance; a NULL "GST-registered" is refused; registered needs a GSTIN.
+- [ ] The brand's details (legal name, address, state, optional GSTIN / PAN / GST certificate) are set by finance; never bank details. A certificate path that was not uploaded is refused.
+
+**Drafts → Issued (numbered, frozen, PDF)**
+- [ ] Invoices exist once the price is agreed and before Complete. One clean service price per invoice (one line: description + amount); no platform fee, creator rate or per-video breakdown.
+- [ ] GST is entered, never computed. Not registered → no GST is allowed and the PDF says "GST not charged" with the provisional GSTIN. Registered → IGST, or CGST + SGST, never both.
+- [ ] Validation refuses: NULL kind, NULL or zero amount, a short description, an additional invoice without its source, a past due date.
+- [ ] A draft has no number, can be edited or discarded (deleted).
+- [ ] Issue needs Guapd's and the brand's billing details; snapshots both onto the invoice; numbers it `GPD/<FY>/<0001>` from a per-financial-year counter in the same transaction. A failed issue and a discarded draft use no number (no gaps).
+- [ ] A draft made under one GST registration cannot be issued after it changes.
+- [ ] Issued: no edit, no discard, not even the service role can change its amount (freeze trigger).
+- [ ] The PDF is rendered once from the frozen invoice (no dependency: `lib/simple-pdf.ts`), stored at a path the database names in the private `finance-docs` bucket, and recorded once; it cannot be swapped.
+- [ ] Issuing tells the brand's team in-app + by email (number, title, total, due date).
+
+**The brand's view (SECURITY)**
+- [ ] `/experiences/[id]` lists the brand's ISSUED and PAID invoices only: number, dates, description, amount, GST, total, Due / Part paid / Paid, and the PDF. Never drafts, voids, reasons, references, GSTINs, creators, payouts, costs or margin.
+- [ ] Another brand, the creator, staff who are not members, anonymous and the service role are refused.
+
+**Payments (paid offline)**
+- [ ] Recorded by finance with amount, TDS the brand withheld (0 must be entered), date (not future), method, reference and a proof file uploaded to the invoice's own unguessable path. Each NULL is refused; another invoice's proof is refused; more than is due is refused; the same reference twice on one invoice is refused.
+- [ ] Several payments until the total is met; then the invoice is Paid. A reversal (with a reason) puts it back to due; a reversed payment is final.
+
+**Void**
+- [ ] Only an issued, unpaid invoice with no live payment; a reason is required; the number is kept and never reused; void is final; the brand stops seeing it.
+
+**P&L flip**
+- [ ] Before an invoice is issued: revenue ₹0 "pending invoice". Issued and paid invoices count as revenue BEFORE GST; GST is shown as a liability, never revenue; drafts and voids count for nothing.
+- [ ] Cash: received, TDS withheld, outstanding; invoiced vs agreed is flagged.
+
+**Audit**
+- [ ] Every finance action writes `ops_events` (settings, brand billing, drafted, edited, discarded, issued, PDF stored, payment recorded, payment reversed, voided); none carries an amount.
+
+## 108. Experiences Phase 4: creator payouts and the completion gate (migration 0540, run by hand)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-payouts.ts` (86 checks, staging, real sessions).
+
+**Payouts (operational, manual)**
+- [ ] Only operational staff reach payouts; no-access staff, brands, creators, anonymous and the service role are refused. No user reads `vendor_payouts`, `vendors` or `vendor_payout_details` directly (the 0524 creator read is gone).
+- [ ] Eligible only when the creator accepted, SHOT, and their part is complete (Guapd provides: shoot done; creator submits: every item approved by Guapd). Did not shoot → never paid.
+- [ ] The amount is the creator's LOCKED net; the database refuses any payout that is not exactly their locked terms. TDS is a field (NULL refused, 0 by default in the screen, not above the net), editable only while requested.
+- [ ] One live payout per creator deal (a unique index); a cancelled one (with a reason) allows a new request whose duplicate key names attempt 2.
+- [ ] Maker-checker: the requester cannot approve; the database refuses it even from the service role.
+- [ ] (0542) Operational staff REQUEST; only FINANCE approves, records paid, attaches or opens the proof, and cancels an approved payout. Finance cannot approve a payout they requested themselves.
+- [ ] Paid (finance) needs an approval, a date (not future), a method (bank transfer / UPI / other), a reference and a proof file uploaded to the payout's own path. Paid and cancelled are final. A paid payout is on the creator's deal timeline (reference, no amount).
+- [ ] The creator is told in-app + by email when it is recorded paid ("Guapd paid you ₹X · ref …").
+- [ ] The other staff are told in-app that a payout needs approving (never the requester).
+
+**The creator's statement (SECURITY)**
+- [ ] On their own deal page: gross → Guapd platform fee (their %) → net → TDS → paid, the date and the bank reference. Never the proof file, who requested or approved it, or vendor details. Another creator's deal stays "Not found".
+
+**Completion gate**
+- [ ] Complete only from Delivering, and only when: the brand has approved what was sold, at least one invoice is issued and every one is paid with no draft left, every creator who shot is paid, and the brand's sign-off is recorded (staff, with the channel; NULL or "portal" refused; cleared only with a reason). Completing is Guapd's sign-off (who and when are recorded).
+- [ ] The refusal lists what is missing. Brands, creators and no-access staff can neither sign off nor complete.
+- [ ] Complete freezes the P&L. Reopen is finance-only, needs a reason and clears BOTH sign-offs, so completing again needs the brand's sign-off again.
+
+**P&L**
+- [ ] Paid out to creators, TDS withheld from them, paid count and still-to-pay count are shown beside the margin; operational staff still cannot read the P&L.
+
+**Audit**
+- [ ] Every payout and sign-off action writes `ops_events` (requested, TDS set, approved, paid, cancelled, brand sign-off recorded / cleared, completed, reopened); none carries an amount.
+
+**Environment:** 0540 is on STAGING only (`experience_completion_check` re-applied by hand after a `text[] || 'literal'` fix, and the invoices / payouts / completion readers after a name-or-email fallback; the file matches). The `finance-docs` bucket is private with no user policies. Not on production.
+
+## 109. Experiences roster: the creator pool + creators not on Guapd yet (migrations 0536, 0541)
+
+Run: `NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-prospects.ts` (58 checks, staging, real sessions). The pool (0536) is covered by `test-experience-legs-send.ts`.
+
+**The pool ("Add creators", 0536)**
+- [ ] "Add creators" and "Add brand's picks" open the creator pool (Growth pool layout): every bookable creator with their figures and SHOOT DAY RATE; adding puts them on the roster (Guapd's pick, or the brand's with the channel). Staff only; the day rate never reaches a brand.
+- [ ] The brand's Growth campaign pool still works with the shared card and shows its per-deliverable prices, never a day rate.
+
+**Creators not on Guapd yet (0541, SECURITY + functional)**
+- [ ] Operational staff only: no-access staff, brands, creators, anonymous and the service role are refused; no user reads `experience_roster_prospects` directly; the brand sees only the roster, never this list.
+- [ ] Added from the Experience page: "Add someone not on Guapd" sits in the roster header beside "Add creators" and opens the form under the roster (two rows of three fields, Cancel/Add right-aligned). Name, Instagram handle (stored clean: no @, lower case, URL accepted), optional phone, expected cost (day rate × days, or flat) and a note. NULL basis, missing days, zero fee, bad handle, bad phone are refused. A handle already bookable on Guapd is refused ("add them from the pool"); a live duplicate is refused.
+- [ ] Status not contacted yet → contacted → agreed → onboarding (0543). The add form says where things stand (default "Not contacted yet"; NULL refused, never defaulted; "linked"/"dropped" refused as a start). Each row's status is a dropdown in the Status column; "linked" cannot be set by hand. The brand's answer needs the channel ("portal" refused).
+- [ ] They are not on the roster (cannot be locked or sent a deal); the P&L shows them as "not on Guapd yet (about ₹X expected)", never in the margin.
+- [ ] When their handle is on Guapd now, the list says so. "Link to their account" (vetted, bookable only) puts them on the roster carrying the brand's answer and channel, planned from the agreed per-creator plan; a linked entry no longer changes; a creator already on the roster cannot be linked again.
+- [ ] Drop needs a reason and is final; the handle can be added again after a drop. Nothing changes once the shoot is scheduled.
+- [ ] They list INSIDE the roster panel, under the roster rows, in the same columns (avatar, name + handle + "Not on Guapd", expected cost, status + the brand's answer, a ⋯ menu: link, brand's answer, mark status, edit, drop). Not counted in the roster number. Linked ones leave this list (they are on the roster above); dropped ones show as one line. The creator pool page no longer carries this section.
+- [ ] Phone width: each row stacks like a roster row (status and menu under the name); no sideways scroll from these rows.
+- [ ] Every action writes `ops_events` with no amount and no phone number. Nothing messages anyone; "Copy sign-up link" is for staff to send themselves.
+
+**Environment:** 0536 + 0541 + 0543 are on STAGING only.
+
+## 110. Experiences Phase 5: counters on a creator leg, the paused day rate, bank details, payouts on the creator's side (migration 0542)
+
+Run (staging, real sessions, ~200 s apart for the auth rate limit):
+`NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-counters.ts` and `scripts/test-experience-bank-details.ts`; `test-experience-payouts.ts` covers finance-only paying.
+
+**Counters (SECURITY + functional)**
+- [ ] Only the leg's own creator counters; another creator, the brand, staff, anonymous and the service role are refused. No user reads `experience_leg_counters` directly; the creator sees their leg's counters on the deal page only.
+- [ ] A counter is a day rate (whole rupees) and/or days with an optional note; NULLs, part-rupees and "the current offer" are refused. One open counter at a time per side; 3 counters each way (a withdrawn one counts); the full history stays.
+- [ ] A counter changes the PROPOSED gross only. The fee % snapshotted at send, the track, the package, the rate source, the lock time, the deliverable items, the roster scope and `experience_legs_reconcile` are identical before and after a counter and after it is accepted.
+- [ ] Direction: a counter that RAISES the cost needs financial access to accept or send (operational staff are refused in the database, and the button is disabled with the reason); lowering or holding is operational. A stale screen (expected gross changed) is refused.
+- [ ] Guapd's counter supersedes the creator's open one (and vice versa). While Guapd's counter is open the creator cannot accept the original offer; they accept Guapd's, counter or decline. Accepting or declining closes the creator's own open counter.
+- [ ] On accept the leg is agreed and FROZEN: no counter from either side, no direct terms write (even the service role), no re-price. The fee % never changes even while open, and open terms change only through the counter path.
+- [ ] Withdrawing the offer closes an open counter. The creator is told in-app + by email when Guapd counters, accepts or declines; staff in-app when the creator counters.
+- [ ] Every counter action is audited (`experience.leg_counter_*`) and on the deal timeline, with no amounts.
+
+**Paused day rate**
+- [ ] Staff "Set day rate" is refused while the creator's rate is paused, and no second active rate ever exists. The console shows the paused rate and offers "enter a rate on the deal"; a package AND an entered rate is refused, and an entered rate is refused while the creator has an active one.
+- [ ] A leg sent on an entered rate records `rate_source = 'entered'` with no package.
+
+**Bank details (SECURITY)**
+- [ ] Only a creator saves or reads payout details, their own; staff, brands, anonymous and the service role are refused. Validation: holder name, 9–18 digit account entered twice, IFSC shape, optional PAN shape, GST-registered yes/no (NULL refused); refused attempts store nothing.
+- [ ] Account number and PAN are encrypted with the Vault key; the stored bytes do not contain them; the plaintext columns stay empty and the database refuses them; only the last 4 are kept in the clear.
+- [ ] The creator reads back masked (••••1234, PAN ••••••234Q); another creator never sees them. No user reads `vendor_payout_details` or `vendor_payout_detail_changes` directly.
+- [ ] Operational staff see "bank on file ••••1234" only, on requested AND approved payouts; finance's payouts screen is masked too. Only finance opens the full details ("Bank details"), for a requested or approved payout; ops, the creator, the brand, anonymous and the service role are refused; each view is audited (`finance.payout_details_viewed`) with no values.
+- [ ] A change after the payout was requested is flagged on the payout and blocks approval until finance confirms the new details; finance then reads the new number. The creator gets a security notice (in-app + email, never the details) when saved details change.
+- [ ] The change log holds field names only. No account number, PAN or bank field reaches `ops_events`, deal events or notifications.
+
+**The creator's side**
+- [ ] Payments shows "Guapd-managed shoots": each payout's status, net, TDS, paid amount, date and reference (paid only), their own only; and the bank-details card (masked, Add / Change).
+- [ ] Paid and pending Guapd payouts count in dashboard earnings at their NET (paid → paid, otherwise expected).
+- [ ] On Payments, an unpaid Guapd payout counts in Pending (amount and a row, desktop and mobile) with "View deal" and NO "Send reminder" (there is no invoice); paid ones count in Total earned. A creator with only Guapd payouts does not get the empty state.
+
+**Environment:** 0542 is on STAGING only; the Vault secret `guapd_payout_details_key` must exist on any project it is applied to (the migration creates it if missing; production needs its own, never copied). pgcrypto lives in the `extensions` schema. Test rows in `experience_leg_counters` are removed by the service role before their deal (a cascade runs as the owner and is refused by design).
+
+## 111. Experiences Phase 6: the brand's own screens on /experiences (migration 0544)
+
+Run (staging, real brand logins; ~200 s after any other suite for the auth rate limit):
+`NODE_PATH=apps/web/node_modules ./node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json scripts/test-experience-brand-portal.ts`
+
+**The gate (SECURITY)**
+- [ ] One gate, `brand_experience_require`: a member of THIS Experience's brand. Another brand, a creator, staff who are not members, the service role and NULL / unknown ids all get the same "Not found" (anonymous cannot call it at all). The Guapd house brand is refused even for its own member.
+- [ ] Admin-only: answering the price and signing off. A plain member reads everything and decides creators and deliverables.
+- [ ] Brands have NO direct read on `experiences`, `experience_roster` or `experience_quotes` (no grant, no policy); creators and anonymous neither. Every brand read is a `brand_experience*` function returning named fields.
+- [ ] Every brand read (list, Experience, roster, deliverables, invoices, report) is scanned at every depth: no rate, gross, net, %, payout, cost, margin, fee, note, counter, prospect, bank, phone, email, creator id, deal id or leg field; no planted roster note, cost line, creator brief or prospect; no creator money value.
+- [ ] No brand function selects `*`; every per-Experience brand function calls the gate.
+
+**The report (Phase 2.5, folded in)**
+- [ ] Only at Complete (refused before, saying why). Exactly: title, brand, requested / shoot / completed dates, city; creators = the LOCKED roster who shot (name, Instagram handle, profile link; never the rejected or "did not shoot"); items = shared deliverables (label, kind, link or file name, shared at, the brand's decision); the brand's own issued and paid invoices.
+- [ ] Its source joins no money table (deals, creator terms, finance, cost lines, payouts, counters, P&L, day rates) and reads no money column. Creator names come through `experience_roster` → `creators` (name, handle).
+- [ ] No analytics section (Experience content is Guapd-produced, not posted from the creator's account; there is no honest metric).
+
+**Brand actions, alongside staff (functional)**
+- [ ] Request (`/experiences/new`): any member of an APPROVED brand; same fields and checks as the staff form (NULL title / count / no deliverables refused); recorded as channel "portal", by them. A pending brand is refused with a clear message. Staff still record requests for a brand (WhatsApp, email, call, in person) and can never choose "portal".
+- [ ] Price: a brand admin accepts Guapd's open quote (→ Building roster at that price, "portal"), or declines with a note (3 to 1,000 characters; NULL accept refused). Finance sees the brand's note on the console (operational staff do not: financial, like the message). A declined or replaced quote cannot be accepted (stale). A brand counter recorded by staff is Guapd's to answer, not the brand's. No counter-price on Guapd.
+- [ ] Creators: names, handles, Instagram links, photo, each creator's planned deliverables, decision. Any member accepts or rejects until the creator is locked; each call carries the decision the screen showed (stale refused). Staff can record a different answer (with the channel) and the brand can change it back: the latest stands; both are in the history. Locked = no change.
+- [ ] Deliverables: any member approves or asks for changes (with a note) on shared items; stale screens refused; approval is final (staff or brand). The brand sees who decided ("you" or "via Guapd") and its OWN words back when it asked on Guapd; a note staff recorded for the brand is never shown to the brand (0538 rule: "changes asked" only).
+- [ ] Sign-off: a brand admin, while Delivering; twice refused; staff can still clear it with a reason, and the brand signs off again.
+- [ ] Every brand action writes an `ops_events` row (`experience.*_by_brand`); staff are told in-app. The brand is told in-app + by email when Guapd's price is ready and when Guapd adds creators (at most one creator nudge an hour).
+
+**Screens**
+- [ ] Brand nav has "Experiences" (desktop and mobile); it is active on `/experiences/*` and not on the staff console.
+- [ ] `/experiences`: own Experiences with the brand-facing stage and "Waiting on you"; "Request an Experience" only for an approved brand.
+- [ ] `/experiences/[id]`: stepper (Requested → Price agreed → Creators → Shoot → Deliverables → Complete), Price, Creators, Deliverables, Sign-off, Invoices, Your request; "Your report" at Complete.
+- [ ] Phone width (390px): no sideways scroll on the list, the request form or the Experience page; buttons full width.
+- [ ] The shared stepper wraps its labels on phones instead of widening the page (staff Experience page, brand Experience page AND the brand deal page).
+
+**Regression to watch**
+- [ ] Removing the brand's direct reads breaks no existing brand screen (dashboard, deals, deal page, campaigns, browse, inbox): none of them reads these three tables.
+- [ ] The older suites that read these tables as a brand now assert the refusal and read through the functions (quotes-rls, exp-rls, roster, prospects); `brand_experience_deliverables` carries the 0544 fields (deliverables test).
+
+**Environment:** 0544 is on STAGING only.
+
+## 112. Experiences: Send is always visible; legacy "affiliate on all videos" (migration 0545)
+
+- [ ] Confirmed Experience, a creator with no day rate: their row shows **Send** greyed, with "Set a day rate, then prepare" beside it. Clicking does nothing.
+- [ ] Day rate set, not prepared: Send greyed with "Prepare: days and what they make".
+- [ ] Prepared, then the creator's day rate changes: Send greyed with "Their rate changed: prepare again".
+- [ ] Prepared and ready: Send is live; the confirm dialog opens.
+- [ ] Header: **Send all (N)** when every unsent deal is ready; **Send all ready (n)** plus "n of N ready. Prepare the rest to send them." when some are not; greyed when none are ready; hidden once all are sent.
+- [ ] A brand that bought affiliate links: Prepare shows "Videos with the affiliate link (of N)" on every creator. It is driven by "did the brand buy affiliate", not by whether a count is stored.
+- [ ] 0545: an Experience created before 0538 with affiliate on and no per-creator count now has the count = videos per creator, on the request and on the locked plan. The brand page shows that number (it used to say "all"). A second run of 0545 changes nothing.
+- [ ] Gotcha: deals prepared while the field was hidden were saved with 0 affiliate videos. Re-prepare them before sending.
+
+## 113. Experiences Phase 6.1: campaign brief, per-creator scope, allowance, Guapd ↔ creator messages, Deals tab, staff bell + inbox (migration 0546)
+
+`scripts/test-experience-brief-messages.ts` (110 checks, staging, real sessions) covers the database side; the screens below are checked by hand.
+
+**Brief (A)**
+- [ ] Console → an Experience at Confirmed: "Brief for creators" uses the campaign brief editor (brief, attachments, creative guidelines, what to avoid). The campaign page's brief still works exactly as before (same component, campaign actions).
+- [ ] "Who gets which brief": each locked creator is "Same as everyone" or "Own brief". Switching to Own starts from the shared brief; back to shared asks to confirm.
+- [ ] Creator deal page (a leg): "The brief" renders in the campaign layout (BriefBlock). It is THEIR brief only: their own, else the shared one. Attachments open (signed, one hour). It says "Guapd may update it until the shoot is confirmed", then "Final".
+- [ ] Editing a brief tells only the sent creators who see that brief (in-app + email); a creator on their own brief is not told about a shared change.
+- [ ] From Shoot scheduled on, every brief write is refused (shared, own, upload slot, the old one-box setter) and the editor shows locked.
+- [ ] Attachments: only paths inside `experience-briefs/<experience id>/` are accepted; at most 10; PDF/images/docs/slides/video; up to 5 MB (the server-action body limit is 6 MB).
+- SECURITY: brand, creator, logged-out and service role cannot read or write a brief through the console functions.
+
+**Per-creator scope + allowance (B)**
+- [ ] Prepare shows, when the brand bought them: "With the affiliate link", "With ad rights (N mo)", "Boosted (N mo)" (blank = as agreed), and always "Travel / other allowance (₹, no fee)".
+- [ ] The Creator deals banner adds "x of y with ad rights · x of y boosted". Over what was bought is refused.
+- [ ] Targets never exceed the videos sold. A plan locked before creator counts existed (e.g. "Test brand", per-creator line = the whole order) counts as one creator: "Test brand" reads 0 of 70 with the affiliate link, not 0 of 225.
+- [ ] The allowance is NOT in gross / fee % / net (still day rate × days). The row shows "+ ₹X allowance (no fee)". Send passes the allowance the screen showed; a stale one is refused.
+- [ ] Creator offer: day rate → days → total → fee → take-home, then "Travel and other allowance (no fee) +₹X" and "Total to you". Accept says the total.
+- [ ] Payout: amount = net (fee statement unchanged); allowance on the payout; paid = net + allowance − TDS. Creator statement and payments list show the allowance.
+- [ ] P&L: "Creator allowances" is its own line; fee kept excludes it; margin = revenue − net − allowance − costs. A 'travel' cost line tied to a creator who has an allowance is refused (no double count).
+- [ ] Fee golden baseline byte-identical (no fee code touched).
+- SECURITY: the allowance never appears on any brand screen; locked allowance cannot change (freeze trigger), even with the service key.
+
+**Messages + Deals + staff bell (C, D)**
+- [ ] A sent leg has a thread from the moment it is sent (before accepting). Creator: the deal page's chat bar reads "Message Guapd"; bubbles say "Guapd"; the creator inbox lists it as "Guapd" with "<shoot> · <brand> · Managed by Guapd" and the creator's own total, never ₹0.
+- [ ] Console → Experience → Deals tab: every sent deal (status, open counter, last message, unread). Opening one shows the thread; staff reply as Guapd (staff see which colleague wrote each).
+- [ ] Console header: the bell shows staff alerts only (creator accepted/declined, countered, wrote, submitted; payout to approve; brand acted). Each opens the deal on its Deals tab. The inbox icon opens /experiences-admin/inbox with unread creator messages.
+- [ ] Brand portal bell and /notifications never show staff alerts; the console bell never shows brand alerts (even for a user who is both).
+- SECURITY: RLS lets ONLY the leg's creator read its messages; the brand, another creator, staff-through-RLS and logged-out read nothing; direct inserts on a leg thread are refused. The house brand can never gain a member (trigger, even with the service key). Message events and ops_events record lengths, never text.
+
+**WhatsApp (D)**
+- [ ] Off unless `EXPERIENCE_LEG_WHATSAPP=true`. Reused: `payment_released` (payout paid; follow-on paid when built). New, named by env once approved: `MSG91_TPL_EXPERIENCE_OFFER`, `_COUNTER`, `_AFFILIATE_LINK`, `_MESSAGE`, `_UPDATE`. A new step with no template name is skipped and recorded (`experience.leg_whatsapp_skipped`). Variable order is fixed in `lib/experience-leg-whatsapp.ts`.
+- Gotcha: the leg WhatsApp switch is separate from `MSG91_WHATSAPP_ENABLED`; both must be on.
+
+## 114. Experiences 6.1 follow-up: deny-on-NULL scope, the three-state rule, the three WhatsApp templates, staff email (migration 0547)
+
+`scripts/test-experience-brief-messages.ts` (132 checks) covers the database side.
+
+**Deny-on-NULL scope**
+- [ ] Request form (staff and brand): turning on Ad rights or Boost requires "N of each creator's videos". Blank is refused ("all" is gone); the database refuses it too.
+- [ ] Prepare: the affiliate / ad rights / boost fields start BLANK (placeholder "Required · bought N each") until stated, and a blank is refused. Send stays greyed with "Prepare: state the affiliate, ad-rights and boost counts".
+- [ ] Send refuses a leg whose counts were never stated.
+
+**Three-state scope rule**
+- [ ] Before send: Prepare edits everything.
+- [ ] Sent, shoot not yet confirmed: "Re-split" on the row. Counts can move between plain / affiliate / ad rights / boost or go down; never above what the brand bought per creator (label shows "bought N"), never above the creator's videos, and the Experience total never past what was sold. The creator is told (in-app, email, experience_offer_updated). Day rate, days, gross, fee %, net, allowance, payout and margin do not change (tested byte-for-byte). The deal's items' affiliate labels follow the new count.
+- [ ] From Shoot scheduled on: Re-split is gone and the database refuses it: "Scope is frozen once the shoot is confirmed. More scope is a new brand invoice, and extra creator work a new or topped-up creator deal."
+- [ ] A stale screen and a NULL count are refused.
+
+**Allowance in experienceMargin()**
+- [ ] `experienceMargin()` takes a per-leg allowance: fee kept unchanged; margin = invoiced − Σ net − Σ allowance − costs; sub-total + fee kept = margin (`test-experience-money.ts`). The 6.1 suite checks it equals the database P&L line for line.
+
+**WhatsApp (MSG91, approved)**
+- [ ] Offer sent → `experience_offer_sent` [first name, "<Brand> · Managed by Guapd", total to creator], button /offer/<leg id>.
+- [ ] Guapd counter, Guapd accepting the creator's counter, a brief change, a re-split → `experience_offer_updated` (same variables, the current total).
+- [ ] Payout marked paid → `experience_payment_sent` [first name, amount paid, brand value], button /deals/<leg id>.
+- [ ] /offer/<leg id> and /deals/<leg id> both land on /creator/deals/<leg id> (login, own leg only). /offer/<real token> still opens the marketplace offer. /deals/<marketplace id> still opens the brand deal.
+- [ ] Sent only when `EXPERIENCE_LEG_WHATSAPP=true` (and `MSG91_WHATSAPP_ENABLED=true`). Every attempt is an `experience.leg_whatsapp_*` event. `experience_affiliate_link` is NOT wired (deferred).
+
+**Staff email**
+- [ ] Every staff alert (creator accepted/declined, countered, wrote, submitted; payout to approve; brand acted) also emails each Experiences staff user, linking to the deal on its Deals tab. Messages: at most one email per thread per ~15 minutes, never the message text.
+
+## 115. Experiences roster: ops curation gate, on hold, bulk accept (migration 0548)
+
+`scripts/test-experience-roster-share.ts` (48 checks) covers the database side.
+
+- [ ] Console → roster: creators Guapd adds start **Internal · not shared** with a checkbox; the bar "N on Guapd's shortlist · not visible to the brand" + **Share with the brand (n)**. Sharing tells the brand (in-app + email). Adding no longer notifies the brand.
+- [ ] The brand's own picks (recorded by staff) are shared from the start.
+- [ ] Brand → Experience → Creators: only shared creators appear; per creator: name, handle (Instagram link), photo, what they make, decision. Never a day rate, track, payout or margin. The list's "to review" count counts shared pending/on-hold only.
+- [ ] Brand buttons: **Accept**, **Hold**, **Reject** (final). With 2+ to review: checkboxes + **Accept selected (n)**; reject and hold are one at a time.
+- [ ] On hold can be accepted or rejected later; rejected is final (brand and staff; no "Back to awaiting").
+- [ ] Lock waits for every SHARED creator's answer; the internal shortlist and on-hold creators never block it and never lock. Only accepted creators get a creator deal; Prepare/Send refuse rejected, on-hold and unshared creators.
+- [ ] Nothing reaches a creator (no notification, no deal) before their offer is sent.
+- SECURITY: an unshared creator is "Not found" to the brand's decide and bulk accept; a brand decision on an unshared creator is impossible even with the service key (`er_decided_only_when_shared`). Rows before 0548 were backfilled as shared (they were already visible).
+- Gotcha: a founder can be both a brand member and Guapd staff; tests pick brand actors who are not staff.
+
+## 116. Experiences 6.1 item 9: the creator leg on the normal creator deal page
+
+The leg reuses the creator deal page's own pieces; only the data is the leg's (`creator_leg_context`, own leg only).
+
+| Normal deal page shows | Leg source (creator_leg_context) | Brand price / margin reachable? |
+|---|---|---|
+| Hero: brand mark + name, title · ref, headline, status line (`DealHeroCard`) | `brand_name`, `brand_logo_url`, `title`, `deal_ref`, `status`, `shoot_date/city`, payout `paid_paise/paid_on` | No |
+| Tracker (`CreatorStepper`) | leg stages: Offer received → Accepted → Shoot → (Deliverables) → Paid, from `status`, `shoot_outcome`, `work_complete`, `payout.status` | No |
+| Offer / Agreed terms | `day_rate_paise`, `days`, `gross_paise`, `platform_pct`, `net_paise`, `allowance_paise`, `total_to_creator_paise` (all this leg's terms) | No: no brand-price field exists on the context |
+| Accept / Counter / Decline (`AcceptDecline`, leg mode) | `counters`, `counters_left`; actions `creator_leg_respond/_counter/_counter_accept/_withdraw` | No |
+| What you make / rights | `deliverables`, `videos`, `affiliate_count`, `ad_rights_videos/months`, `boost_videos/months` (this leg's row) | No |
+| The brief (`BriefBlock`) | `brief_detail` (this creator's own brief, else the shared one) | No |
+| Deliverables | `items` (this leg's items; link/file/note only on creator-submit shoots) | No |
+| Payout statement | `payout` (this deal's payout: gross, fee, net, allowance, TDS, paid, reference) | No |
+| Chat (`CreatorThread`, labelled Guapd) | `messages` RLS: this leg's creator only | No |
+| Phone screens (`CreatorOfferMobile`) | the same fields; item prices hidden (a leg pays by the day) | No |
+
+- [ ] Desktop: the leg page has the same hero, tracker, terms surface, brief surface and chat bar as a marketplace deal. Phone: the same offer / agreed / paid screens.
+- [ ] Marketplace creator deal pages look unchanged (hero, styles and tracker are now shared components).
+- [ ] The marketplace fee path (calculateFee / resolveDealFee) is never called on a leg.
+
+## 117. Experiences 6.1 items 10 + 11: broadcast; the brand ↔ Guapd thread (migration 0550)
+
+`scripts/test-experience-broadcast-brand-thread.ts` covers the database side.
+
+- [ ] Console → Experience → Deals: **Message all creators** (Everyone sent an offer / Accepted only). Each creator receives it in their own Guapd thread; closed legs are left out; the brand never sees it.
+- [ ] Campaign → **Message all creators**: one message into each open deal's own thread, as the brand (RLS: only the brand's own open deals).
+- [ ] Brand → Experience: **Message Guapd** opens the same chat as on a deal (DealThread). Guapd's messages read "Guapd".
+- [ ] Console → Experience → Deals: **Messages with <brand>**; console Inbox lists brand threads above creator threads; the console unread badge counts both.
+- [ ] Notifications: brand → staff in-app + email (`experience_brand_message_in`, opens the console inbox); Guapd → brand members in-app + email (link to the Experience). Email throttled per thread; never the message text.
+- SECURITY: `experience_brand_messages` / `_reads`: RLS on, no policy, all grants revoked: functions only. Another brand, a creator, logged-out and the service role are refused by every thread function.
+
+## 118. Experiences 6.1 item 12: ops can release a locked creator (migration 0549)
+
+- [ ] Console → roster → a locked creator → **Release from roster…** with a reason (3–300 characters).
+- [ ] Allowed while Confirmed or Shoot scheduled, with no shoot outcome, no payout and nothing shared with the brand. An open or accepted offer is cancelled (kept on record) and the creator is told. The row unlocks and detaches from the cancelled deal; ops can then remove the creator, or lock and send a fresh offer.
+- [ ] Refused afterwards: once the shoot is done, record "did not shoot".
+- [ ] Linking a not-on-Guapd prospect the brand already decided on marks the creator shared (0548's rule).
+
+## 119. Experiences 6.1 status fix: a paid creator leg reads as paid (migration 0551)
+
+`scripts/test-experience-payouts.ts` (group "0551") covers the database side.
+
+- [ ] Finance marks a creator's **creator fee** payout paid → that creator's deal moves `agreed → paid` in the same transaction (audit log: `deal.status_changed` agreed → paid). Other payout reasons do not move the deal.
+- [ ] Creator inbox (phone + desktop) shows the paid Experience deal as **Paid**, never "In production". The deal page shows Paid / Complete as before.
+- [ ] Nothing that worked on an accepted leg stops once it is paid: deliverables (creator-submits), release to the brand, the shoot rollup, the completion check, the payouts screen, "Accepted only" broadcast, Guapd ↔ creator messages. Console chips read **Paid**.
+- [ ] Phone offer card for an Experience deal: **Payment in** reads "After the shoot" (Guapd delivers) or "After approval" (creator submits), never "—".
+- SECURITY: `guard_creator_leg_no_money` now allows `paid` on a creator leg only from `agreed` and only when a paid `creator_fee` payout exists for it. Any other route, including the service role, is refused. NULL denies.
+- Gotcha: migration 0551 rewrites ten leg functions from their live staging definitions (agreed → agreed or paid) and backfills legs already paid out. Run it on prod before any Experience payout is recorded there.
+
+## 120. Experiences 6.1 UI: Experience deals use the normal deal designs
+
+**Creator deal page (`/creator/deals/<leg>`)**
+- [ ] An Experience deal renders the same cards as a normal deal (shared `deal-cards.tsx`): "Ready to decide?" bar while the offer is open, Offer/Agreed terms card with the dark "You receive" bar, Deliverables card (rows, chips for affiliate / ad rights / boosting, money rows and Accept / Counter / Decline only while open), the brief card, and a Payment card in the Invoice card's layout once accepted.
+- [ ] Money appears once per state: offer = terms bar + Deliverables breakdown; agreed = terms bar + Payment card; paid = Payment card with the dark "You received" bar and bank reference.
+- [ ] A normal marketplace deal page renders exactly as before (Offer terms, Deliverables with fee rows, Accept / Counter) — it now uses the same shared cards.
+- [ ] Every figure is the leg's own (creator_leg_context); no brand price or margin.
+
+**Guapd console**
+- [ ] The console nav shows "Guapd Experiences" and "Deals"; Deals is active only on `/experiences-admin/deals…`.
+- [ ] `/experiences-admin/deals` lists every sent creator deal on the brand Deals list design (tabs, search, rows). No amounts on the list.
+- [ ] `/experiences-admin/deals/<id>` shows the creator deal page design (hero, tracker, terms, Deliverables with the creator's pay) and the brand deal page's bottom-right "Messages with <creator>" panel; "Message creator" opens it; sending reaches the creator as Guapd.
+- [ ] `/experiences-admin/inbox` uses the brand inbox design: creator threads and brand threads in one list with filters and search; opening a thread navigates and marks only that thread read; "View deal" goes to the console deal page (or the Experience for a brand thread).
+- [ ] Old links (`/experiences-admin/<exp>?tab=deals&deal=<id>`, `/experiences-admin/leg/<id>`, inbox `?deal=` / `?brand=`) land on the new pages.
+- [ ] The brand's own `/deals` and `/inbox` are unchanged (DealsTable and BrandInboxView take optional console props; defaults are the brand's).
+- [ ] SECURITY: every console page runs experienceStaffGate and reads only through the gated console functions; a non-staff user gets No access. The brand never sees a creator thread; a creator never sees a brand thread.
+
+## 121. Experiences: the creator confirms the shoot and raises their invoice (migration 0552)
+
+**Creator (`/creator/deals/<leg>`, desktop and phone)**
+- [ ] Before the shoot: the Payment card reads "After the shoot, confirm it here and raise your invoice to Guapd." No form.
+- [ ] After Guapd marks the shoot done (and, on creator-submit shoots, approves every deliverable): the Payment card shows **Ready to invoice** with the form: a required "I confirm the shoot on <date> is done" box, "Invoice from" (prefilled with the creator's name), optional GSTIN, and **Confirm and raise invoice**. The phone shows the same form in its own card.
+- [ ] The button stays disabled until the box is ticked and a name is entered. The amount is never typed: it is the agreed take-home plus allowance.
+- [ ] After raising: **Invoice sent** with the number (`CI-<deal ref>`), the date and a PDF link; the tracker's Invoice step is done; Guapd staff get an in-app + email alert.
+- [ ] The PDF: FROM the creator (name, GSTIN if given), BILL TO Guapd (billing settings), day rate x days, less the Guapd platform fee, net, allowance, total payable; the shoot confirmation date; "TDS, if applicable, is deducted by Guapd at payment"; no bank details; no GST computed.
+- [ ] Once paid, the Payment card shows "You received" with the bank reference and still links the invoice.
+
+**Console**
+- [ ] Payouts panel: until the creator invoices, the row reads "Waiting for the creator to confirm the shoot and raise their invoice" and there is no Request payout. After, it shows the invoice number (PDF link), date, total and GSTIN, and Request payout appears.
+- [ ] Void (with a reason the creator sees) is offered only while there is no live payout; the creator is told and raises it again (`CI-<ref>-2`).
+
+**Security / rules (scripts/test-experience-payouts.ts, group 0552)**
+- [ ] `experience_console_payout_request` refuses until an issued creator invoice exists.
+- [ ] `creator_leg_invoice_raise`: own deal only (other creators, staff, brand, anon refused); deal `agreed`, shoot outcome `done`, part complete, Experience in the payout window; confirmation TRUE (FALSE and NULL refused); screen total must equal the database (stale and NULL refused); GSTIN format checked; one issued invoice per deal.
+- [ ] Figures are copied from `experience_creator_terms`; an issued invoice cannot be edited by anyone (service role included); only void, once; delete only by the service role (teardown).
+- [ ] `experience_creator_invoices` has no policies or grants: not readable directly by creators, staff or brands. The brand never sees it. The timeline event carries no amounts.
+- [ ] Void: operational staff only, reason required, refused while a payout is live.
+- Gotcha: 0552 rewrites `experience_console_payout_request`, `creator_leg_context` and `experience_console_payouts` from their live staging definitions (after 0551). Run 0551 then 0552 on prod.
+
+## 122. Experiences: quote extras as named lines (migration 0553)
+
+- [ ] Console quote form (finance): "Extras (optional)" is a list. "+ Add an extra" adds a row (what it is for, ₹ amount, Remove); up to 20. Empty rows are ignored. The Total reads `videos × price + extras sum`.
+- [ ] "Send a new quote" / "Record brand's counter" prefill the last quote's lines; an older quote with one bare amount prefills one line "Extras".
+- [ ] Quote history and the accept confirmation list each extra with its amount; the agreed price on the console lists them after accept.
+- [ ] Brand (`/experiences/<id>`): the quote shows each extra ("+ Travel to Goa ₹15,000") under the total.
+- [ ] Rules (scripts/test-experience-console-quotes.ts, group 0553): the extras amount is the sum of the lines (a mismatched amount is refused, also by a table CHECK the service role cannot get round); each line needs a 2 to 120 character description and a whole-paise amount above zero, no other fields, numbers not text; at most 20; operational staff see no amounts or lines (financial only, 0537); accept copies the lines to `experiences.brand_extras`. Quote total, agreed price, invoices and the P&L are unchanged (the sum is misc_paise as before).
+- Gotcha: `experience_quote_accept_apply` reads the quote positionally into its row type; a new column on `experience_quotes` must be added at the END of that select list.
+
+## 123. Experiences: add-ons to the agreed brand price (migration 0554, Phase A of extra deliverables)
+
+**Console (`/experiences-admin/<id>`, from Building roster to Delivering)**
+- [ ] "Add-ons to the agreed price" panel under Quotes. Finance sees "Send an add-on": what it adds (type + count rows, each type once), price per video (shown when videos are added), extras lines (same editor as quotes), message, and a live "Add-on ₹X · New agreed total ₹Y if accepted".
+- [ ] With an add-on open the button reads "Revise the add-on" (prefilled); sending replaces the open one (shown as replaced; the brand no longer sees it).
+- [ ] Open add-ons: "Record brand's answer" (Accepted / Declined + how it came + optional note) and "Withdraw". Operational staff see what each add-on adds and its status, never amounts, lines, message or note.
+- [ ] After an accept, the "Agreed with the brand" card reads "Quote: …" then "+ Add-on #n: ₹X" and the service price includes them; "Plan locked" shows the larger totals.
+
+**Brand (`/experiences/<id>`)**
+- [ ] An open add-on shows first as its own card, "Add-on to your agreed price": "Nothing changes unless you accept", each line (+10 UGC videos × ₹3,500 … + Express edit ₹5,000), "Add-on total", and "Your agreed total goes from ₹A to ₹B if you accept". Admins: "Accept add-on (₹X)" / Decline (note required). Non-admins are told an admin answers.
+- [ ] Answered add-ons list under Price with Accepted (on Guapd / recorded by Guapd) or Declined and the note.
+- [ ] Brand gets an in-app alert + email "add-on to review"; staff get "accepted an add-on" / "declined an add-on".
+
+**Rules (scripts/test-experience-addons.ts)**
+- [ ] Only once the price is agreed and before Complete; finance only to send, record or withdraw; the brand admin answers its own.
+- [ ] Known types, counts 1..1000, each type once, no extra fields; videos need a price; extras lines valid; something must be added; stale totals (console and brand screen) refused; one open add-on.
+- [ ] Accept: agreed total += add-on total (kept as `experiences.brand_addons_paise`, and the agreed-total CHECK now includes it); agreed plan videos sold, plan videos and per-type totals grow by what was added (Stories etc. grow their type, not the video count); the plan records the add-on; the creator-deal reconcile then expects the new count. Declined / withdrawn change nothing.
+- [ ] `experience_addons` has no policies or grants: functions only; sums held by CHECKs the service role cannot get round.
+- Gotcha: after an accepted add-on, the creator deals are short of the videos sold until Phase B (extra requests to creators) places them; the reconcile and the completion check say so.
+
+## 124. Experiences: extra deliverables for a creator (migration 0555, Phase B)
+
+**Console deal page (`/experiences-admin/deals/<id>`)**
+- [ ] "Extra deliverables" section on an accepted creator deal (Confirmed to Delivering): "Request extra deliverables" opens what it adds (type + count rows), price for the creator ("Rate per item" or "Flat amount"), message, and a live line "N × ₹rate = ₹gross · fee x% −₹fee · creator receives ₹net" (the fee at the % locked on this creator's deal).
+- [ ] Sending more than the brand bought is refused: "… Send the brand an add-on first" (videos, and each other type).
+- [ ] With an extra open: "Revise the extra" (prefilled; replaces it) and "Withdraw". The list shows each extra, its price, status, who sent it and the creator's decline reason.
+- [ ] Payouts panel: each accepted extra is its own row ("<creator> · Extra #n") with its invoice (PDF, total), "Waiting for the creator to raise the invoice for this extra" until then, then Request payout → finance Approve → Record paid, as for the main fee. Voiding an extra invoice is refused while its payout is live.
+
+**Creator (`/creator/deals/<leg>`, desktop and phone)**
+- [ ] An open extra shows a "New extra offer from Guapd" bar at the top and a highlighted "Extra offer from Guapd" card: what it adds (+2 UGC videos, ₹2,500 each), "N × ₹rate", "Platform fee (x%)", "You receive", the message, "Your deal does not change unless you accept"; Accept extra (₹net) / Decline (optional reason).
+- [ ] Accepted: the items join the deal (numbered on: UGC video 2, 3 …) and go through review and sharing as usual; the card then offers "Confirm and raise invoice" for the extra (its own number, `CI-<ref>-X<n>`, PDF says "Extra deliverables #n"), then shows the payout status and reference. The main fee's invoice and payout are separate.
+- [ ] Declined / withdrawn extras stay listed with their status.
+- [ ] Creator and staff are notified: offer (and revised offer) to the creator; the answer and the extra invoice to staff.
+
+**Rules (scripts/test-experience-extras.ts)**
+- [ ] Operational staff send; brand, creator, anon, no-access refused. Accepted creator deal only, Confirmed to Delivering.
+- [ ] Known types, counts 1..1000, each type once; per item needs a rate, flat needs an amount; stale or NULL expected gross/net refused; fee = round(gross × locked %).
+- [ ] Open and accepted extras count as placed in the creator-deal reconcile; never past videos sold or any type's total.
+- [ ] Only the creator answers their own; stale net refused; NULL refused; answer once. Accept adds items with `extra_id`. Timeline events carry no amounts.
+- [ ] Extra invoice: own deal, accepted, part complete (creator-submit: its items approved), confirmation TRUE, stale total refused, one issued per extra; the main invoice is unaffected (`extra_id IS NULL` everywhere the main invoice is looked up).
+- [ ] Extra payout: needs its invoice; one live per extra; exactly the extra (DB guard, also against the service role); finance approves (maker-checker) and pays; paying an extra never moves the deal status.
+- [ ] P&L creator cost includes accepted extras (`creator_extras_gross_paise` / `_net_paise`); cash out includes extra payouts; completion needs accepted extras paid and no open extra request.
+- [ ] `experience_leg_extras` has no policies or grants; the brand never reads extras, extra invoices or their documents.
+
+---
+
+## 125. Brands see the platform from signup; approval comes with the first deal (migration 0556)
+
+Palak, 2026-10-13: a new genuine brand waiting for approval before it can see anything may never come back. Show the value at signup; reject bad or false brands afterwards.
+
+### Browse (reverses §79's roster hold)
+- [ ] A new brand (unreviewed, email domain unlike its website) opens `/browse` and sees every bookable creator, and opens any `/browse/[id]`
+- [ ] A rejected brand is still sent to `/brand/rejected` (verifyBrand), unchanged
+- [ ] `/ops/brands` still shows "⚠ email domain does not match website" on a brand awaiting review, as a reviewer's signal only
+- [ ] Sending a first deal as an unapproved brand is still HELD (lib/send-gate.ts, unchanged): the creator sees nothing until ops approves
+
+### Experiences
+- [ ] An unreviewed or pending brand sees "Request an Experience" on `/experiences` and can submit `/experiences/new`
+- [ ] The first request moves an unreviewed brand to `pending_review`, and ops is emailed once ("requested their first Experience"), never again for that brand (shared guard with a held deal)
+- [ ] The brand's Experience page, while requested with no quote and the brand not approved, says Guapd is taking a quick look at the account and the price follows
+- [ ] Guapd sending a quote to a brand that is not approved is refused: "Approve this brand in Ops, Brands before sending it a quote". Approve the brand, then the quote sends
+- [ ] A rejected brand cannot request ("Requests aren't open for your brand account…") and `can_request` is false
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` (143), console-quotes (75), addons (52) green
+
+---
+
+## 126. Brand quote card in the deal design; Message Guapd button; the brand adds creators (migration 0557)
+
+### Price card (`/experiences/[id]`, BrandPanels QuoteCard)
+- [ ] Open Guapd quote: label "Guapd's price", the total large; beside it Videos (25 × ₹4,000) and Shoot (city, date); below, lines "25 videos × ₹4,000 = ₹1,00,000", each extra by name with its amount, and Total
+- [ ] Footer: helper text on the left; **Decline** as a white pill and **Accept ₹…** in neon with a tick, the same buttons as a deal's Negotiation card
+- [ ] Decline opens an overlay ("Decline the price") with the note box, Back and "Decline and send note"; a note under 3 characters is refused
+- [ ] Accepted: "Agreed price", the same lines, the footer says Agreed and when; a plain member sees "An admin on your brand account accepts or declines the price"
+- [ ] The add-on card uses the same Decline / Accept buttons
+- [ ] Phone width: the side column wraps under the price, buttons wrap, no sideways scroll
+
+### Message Guapd
+- [ ] The hero shows a bordered pill button with a chat icon, "Message Guapd", next to the status chip; it opens the thread panel
+
+### The brand adds creators (0557)
+- [ ] While creators are being chosen (Choosing creators or Confirmed), the Creators card shows "Have creators in mind?" with **Add creators**
+- [ ] Search by name or @handle (2+ characters) lists only listed (bookable) creators, never the Guapd house account; each links to their `/browse` profile
+- [ ] Select up to 20, "Add N creators": each joins the roster as Accepted, added by the brand, shown to the brand; Guapd gets the in-app note "added N creators to the roster"
+- [ ] A creator already on Guapd's private shortlist becomes shared and accepted; one pending or on hold becomes accepted; a rejected one stays rejected; locked ones are untouched
+- [ ] Guapd still checks availability, confirms (locks) and sends the offer; nothing reaches the creator from the brand's add
+- [ ] Another brand, a creator, staff who are not members, anonymous and the service role cannot call it
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` 157 green
+
+---
+
+## 127. The brand adds creators from Guapd (campaign picker) or suggests someone not on Guapd (migration 0558)
+
+### Brand, Creators card (Choosing creators / Confirmed)
+- [ ] "Have creators in mind?" shows two buttons: **Suggest someone not on Guapd** (pill) and **Add from Guapd** (neon)
+- [ ] Add from Guapd opens `/experiences/[id]/pool`: the Growth campaign pool's layout (hero with "N of M on the roster", filters for niche, followers, location, platform; creator cards with photo, handle, followers, niches, avg reach, engagement, interactions)
+- [ ] **No price anywhere on the pool** (no day rate, no package price, no ₹): the shoot day rate never reaches a brand
+- [ ] "Add to my roster" adds the creator as the brand's pick, **not accepted** (0559); the card turns to "Added · to review"; one the brand accepted reads "Accepted", on hold "On hold", Guapd confirmed "Confirmed on your roster", rejected "You rejected them"; Guapd's private shortlist is never marked
+- [ ] "Suggest them to Guapd" in the pool's hero goes back to the Creators card
+- [ ] Suggest opens a form: name, Instagram handle (@, a full instagram.com link or plain all work), optional note; "Send to Guapd"
+- [ ] A handle that is already a listed Guapd creator is refused: "@x is already on Guapd: add them from Guapd instead"
+- [ ] The same handle twice is refused; after Guapd says not possible it can be suggested again
+- [ ] "Your suggestions, not on Guapd yet" lists each with a status: Sent to Guapd → Guapd is reaching out → Joined Guapd: on your roster, or Not possible with Guapd's reason
+- [ ] The brand never sees the prospect's expected cost, phone or staff note
+
+### Console, Roster → Not on Guapd yet
+- [ ] "Suggested by the brand N" box lists open suggestions with name, @handle (Instagram link) and the brand's note; Guapd gets the in-app note "suggested a creator who is not on Guapd yet"
+- [ ] **Add as prospect** opens the prospect form pre-filled (name, handle, note); staff add the expected cost and status; saving adds the prospect and answers the suggestion (brand sees "Guapd is reaching out")
+- [ ] **Not possible** asks for a one-line reason the brand sees; "Tell the brand"
+- [ ] When the prospect is later linked to their Guapd account, the brand's suggestion reads "Joined Guapd: on your roster"
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` 184 green; P&L isolation and package gating checks pass
+
+---
+
+## 128. A creator the brand adds is a pick to review, not an acceptance (migration 0559)
+
+- [ ] Brand pool: "Add to my roster" on several creators; each card reads "Added · to review"; the note says "added and shared with Guapd. Add more, then accept the ones you want"
+- [ ] Pool hero progress counts only accepted and confirmed creators: "N of M accepted · K to review"; the bottom button reads "Review on your roster" once anything is added
+- [ ] Experience page, Creators: each added creator shows "Added by you · to review" with Reject / Hold / Accept; "Select all to review" + "Accept selected" accept several at once
+- [ ] Console roster: the brand's picks show at once as shared, added by the brand, awaiting the brand's answer; Guapd gets "added N creators to review on the roster"
+- [ ] A creator on Guapd's private shortlist that the brand adds becomes shared, still to review; an accepted, on hold, rejected or confirmed creator is unchanged
+- [ ] Lock still waits for the brand's answer on every shared creator, so unanswered picks block it as before
+- [ ] Tests: `scripts/test-experience-brand-portal.ts` green
+
+---
+
+## 129. Collab C1: the affiliate commission % (migration 0560)
+
+### Console, Quotes (finance)
+- [ ] On an Experience where the brand asked for affiliate links, the quote composer shows **Affiliate commission (% of sales)**; "Send quote" / "Record counter" without it is refused ("Set the affiliate commission")
+- [ ] 0%, over 100% or three decimals are refused; on an Experience without affiliate links the field is hidden and any % is refused
+- [ ] A new quote starts from the latest quote's %; the history shows "· N% affiliate commission"; the accept dialog says "… with N% affiliate commission as the agreed price"
+- [ ] An open quote from before 0560 (no %) cannot be accepted on an affiliate Experience: "send a new quote with it"
+
+### Brand
+- [ ] Guapd's price card shows **Affiliate commission N% of sales** in the side column and "Plus N% of the sales through each creator's affiliate link, billed by Guapd after the ad runs. Not part of the total above."
+- [ ] The total is unchanged by the %
+
+### Creator offer
+- [ ] Every creator deal sent on an affiliate Experience locks the agreed % (`experience_creator_terms.affiliate_pct`), like the fee %
+- [ ] The offer's scope line reads "N of your videos carry the brand's affiliate link: you earn X% of the sales through it, less your Y% Guapd fee"
+- [ ] Sending refuses when the agreed price has no % on an affiliate Experience
+
+- [ ] Tests: `scripts/e2e-experience.ts` (0560 checks), `scripts/test-experience-brand-portal.ts` (no % without affiliate links)
+
+---
+
+## 130. Collab C2: approved videos go to their creator; collab posts, affiliate link, ad complete (migration 0561)
+
+### Console, Posting (operational; Shoot scheduled to Delivering)
+- [ ] "Posting" lists, per creator who shot, every video the BRAND approved. Each has **Send to post as a collab** and **Share with the creator**
+- [ ] A collab is one of the creator's ad-rights videos: the header reads "Collabs: N of M posted"; once M are sent, "Send to post as a collab" is disabled (the database refuses past the count)
+- [ ] A video not yet approved by the brand cannot be sent; the same video cannot be sent twice (a taken-back one can)
+- [ ] Sent: "With the creator"; **Record the post link** (channel required, never "On Guapd") and **Take back** (reason 3 to 300 characters, only before it is posted)
+- [ ] Posted: **Record affiliate link** / **Record ad complete** for the brand, with the channel
+- [ ] Each row shows the post link, the affiliate link and ad complete, and who recorded each ("by the creator", "by the brand", or "recorded (WhatsApp)")
+
+### Creator deal page (desktop and phone)
+- [ ] "Your videos" card once the deal is accepted: each video with **Download video** / **Open video** (10-minute link to their own file only)
+- [ ] Collab: "Post it on Instagram as a collab with <brand> … paste the post link here. Your invoice waits for it."; **Save post link** accepts only https Instagram post/reel links; "Change" until the brand marks the ad complete
+- [ ] The brand's affiliate link shows once added
+- [ ] Shared: "Post it on your own account if you like; nothing more is needed." No link field
+- [ ] With ad-rights videos still to post: "N collab videos still to post…" and the Payment card says to post them first; the invoice form appears only once all are posted
+
+### Brand Experience page
+- [ ] "Collab posts" section (Shoot done onward) lists only collab posts (never shared videos or taken-back ones), by creator: label, post link, Live / Not posted yet / Ad complete
+- [ ] Live: **Add affiliate link** (https only; Guapd and the creator see it) and **Ad complete** (confirm step; final)
+- [ ] No creator id, deal id, rate or fee in what the brand reads
+
+### Notifications (in-app + email; WhatsApp stays off)
+- [ ] Creator: "Your video is ready to post" (collab) / "Your video from the shoot" (share); "The brand added its affiliate link"
+- [ ] Brand members: "<creator> posted their collab … Add your affiliate link" (first post only, not on a link correction)
+- [ ] Staff: the creator posted; the brand added an affiliate link / marked an ad complete
+
+### Gate
+- [ ] `experience_leg_work_complete` is false until every ad-rights video on the deal is posted (status posted or ad complete), so the creator's main invoice and payout wait. Deals with 0 ad-rights videos are unchanged
+
+### SECURITY
+- [ ] `experience_collab_posts`: RLS on, no grants; creators and brands read it only through `creator_collab_posts` / `brand_experience_collab_posts` (own deal / own brand); direct selects return nothing
+- [ ] Another creator cannot read, open or post on someone else's video; another brand cannot read or act; anonymous cannot call anything
+- [ ] Every action is audited in ops_events (collab_sent, collab_cancelled, collab_posted_by_creator, collab_post_recorded, collab_affiliate_by_brand / _recorded, collab_ad_complete_by_brand / _recorded) and on the deal timeline (events)
+- [ ] Tests: `scripts/test-experience-collab.ts` (46 checks); `scripts/test-experience-brief-messages.ts` covers the invoice waiting on 2 collab posts
+
+---
+
+## 131. Affiliate % on Experiences agreed before 0560 (migration 0562)
+
+- [ ] An Experience with affiliate links whose price was agreed before 0560 (agreed plan has no affiliate_pct) still sends creator deals: they go out with no commission, as before
+- [ ] Console, Quotes (finance), Choosing creators / Confirmed: an amber box "The agreed price has no affiliate commission" with % of sales + "The brand agreed via" + **Record it**
+- [ ] Recording sets the % on the agreed plan once (a second time: "already agreed"); deals sent afterwards lock it and show it on the creator's offer; deals already sent stay without one
+- [ ] Refused: 0, over 100, three decimals, no channel, any status other than Choosing creators / Confirmed, an Experience without affiliate links, a price agreed from 0560 on (it always has its %)
+- [ ] Finance only: operational staff, the brand, creators and anonymous cannot record it; audited `experience.affiliate_pct_recorded` (with how many deals were already sent without it)
+- [ ] Tests: `scripts/test-experience-console-quotes.ts` (0562 checks)
+
+---
+
+## 132. Collab C3: the affiliate commission (migration 0563)
+
+### Creator deal page (desktop and phone; shot, accepted, an affiliate % on the deal)
+- [ ] "Affiliate commission" card: "N% of sales through your affiliate link"; before the ads finish: "Once <brand> marks your collab ads complete…"
+- [ ] When every collab ad is complete: sales (₹) input with a live preview "N% of ₹S = ₹G · Platform fee (Y%) −₹F · You receive ₹N" (half up, whole paise; the database computes the same and refuses a mismatch)
+- [ ] Confirm checkbox + Invoice from + GSTIN (optional) → **Confirm and raise invoice**: numbered CI-<ref>-AFF (then -AFF-2 after a turned-down claim); PDF "Affiliate commission … N% of ₹S sales through the affiliate link"
+- [ ] After claiming: "Guapd is reviewing" → "Approved" → "Being paid" → "Paid" with the bank reference; turned down shows Guapd's reason and the form again; closed shows "No commission is due: <reason>"
+- [ ] The commission invoice never replaces or blocks the main invoice (separate lookups everywhere)
+
+### Console, Affiliate commission (operational; Shoot done / Delivering)
+- [ ] One row per creator deal with an affiliate %: collab ads complete N of M, the claim figures, the creator invoice link, status
+- [ ] **Approve** / **Turn down** (reason 3–300, the creator sees it and may claim again; their invoice is voided) for a claim to review
+- [ ] **No commission due** (reason) when there is no claim or after a turned-down one: final for that deal
+- [ ] Finance: tick approved, unbilled commissions → **Bill the brand** → the invoice editor (type "Affiliate commission", the amount fixed to the ticked commissions, GST entered) → a follow-on draft with one line per creator; it appears under Invoices labelled "Affiliate commission", with no Edit (discard and bill again)
+- [ ] The generic invoice form cannot make a follow-on invoice; issuing one checks it still equals its approved claims
+
+### Console, Creator payouts
+- [ ] An approved commission is its own row "<creator> · Affiliate commission": TDS → Request payout → finance Approve (not the requester) → Record paid with proof, as for the main fee; its invoice cannot be voided here
+- [ ] Paying it marks the claim Paid; it never moves the creator deal's status
+
+### P&L and completion
+- [ ] P&L: approved commissions are inside creator gross/net ("incl. affiliate commission ₹X (billed to the brand)"); the follow-on invoice is revenue; commission payouts count as paid out
+- [ ] Completion is blocked by: collab ads not complete; commissions not paid or closed; paid/approved commissions not on an issued invoice to the brand
+
+### SECURITY
+- [ ] A creator claims and reads only their own deal's commission; the brand and other creators cannot read the commission invoice
+- [ ] Review / close / payout request: operational staff; billing: finance; approve and pay: finance, maker-checker
+- [ ] The database refuses a follow_on payout that is not exactly the approved claim, a second live payout per claim, a second live claim per deal, and figures that do not match sales × % (half up) and the deal's fee %
+- [ ] Audited: affiliate_claimed_by_creator, affiliate_approved, affiliate_turned_down, affiliate_closed, payout_requested (follow_on), invoice_drafted (follow_on)
+- [ ] Tests: `scripts/test-experience-collab.ts` (89 checks, commission included)
+
