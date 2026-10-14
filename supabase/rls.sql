@@ -1634,3 +1634,5 @@ REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
 
 -- 0565: experience_leg_stage(uuid): internal, REVOKED from PUBLIC/anon/authenticated; read only through
 -- experience_console_leg_threads (operational staff, checked inside), whose grants are unchanged.
+-- 0566: experience_leg_work_complete(uuid) recreated without the collab-post wait; still internal,
+-- REVOKED from PUBLIC/anon/authenticated. No new table, no policy change.

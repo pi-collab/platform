@@ -16,7 +16,7 @@ import LinkTile, { LinkTiles } from '@/components/LinkTile'
  * SHARE (post it on their own account if they like; nothing asked). The brand
  * adds its affiliate link and marks the ad complete on Guapd; staff record
  * either for someone only when it reached Guapd another way.
- * The creator's main invoice waits until all their ad-rights videos are posted.
+ * 0566: the creator's main invoice no longer waits for these; it opens once their shoot is done.
  */
 const STATE: Record<ConsoleCollabPost['status'], { label: string; tone: ChipTone }> = {
   sent:        { label: 'With the creator', tone: 'amber' },
@@ -66,7 +66,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
       <h2 className="sect-head">Posting</h2>
       <div className="sect-rule" />
       <p className="t-body" style={{ margin: '10px 0 0', fontSize: 13 }}>
-        Send each brand-approved video to the creator who shot it. Their ad-rights videos go as collabs: they post with the brand and give the link, and their invoice waits for it.
+        Send each brand-approved video to the creator who shot it. Their ad-rights videos go as collabs: they post with the brand and give the link (their invoice does not wait for it).
         Any other video can be shared for them to post on their own account. The brand adds its affiliate link and marks the ad complete on Guapd.
       </p>
       {error && !ask && <div role="alert" style={{ ...formError, marginTop: 12 }}>{error}</div>}

@@ -7498,7 +7498,7 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 ### Creator deal page (desktop and phone)
 - [ ] "Your videos" card once the deal is accepted: each video with **Download video** / **Open video** (10-minute link to their own file only)
-- [ ] Collab: "Post it on Instagram as a collab with <brand> … paste the post link here. Your invoice waits for it."; **Save post link** accepts only https Instagram post/reel links; "Change" until the brand marks the ad complete
+- [ ] Collab: "Post it on Instagram as a collab with <brand> … paste the post link here." (0566: no longer says the invoice waits); **Save post link** accepts only https Instagram post/reel links; "Change" until the brand marks the ad complete
 - [ ] The brand's affiliate link shows once added
 - [ ] Shared: "Post it on your own account if you like; nothing more is needed." No link field
 - [ ] With ad-rights videos still to post: "N collab videos still to post…" and the Payment card says to post them first; the invoice form appears only once all are posted
@@ -7514,7 +7514,7 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Staff: the creator posted; the brand added an affiliate link / marked an ad complete
 
 ### Gate
-- [ ] `experience_leg_work_complete` is false until every ad-rights video on the deal is posted (status posted or ad complete), so the creator's main invoice and payout wait. Deals with 0 ad-rights videos are unchanged
+- [ ] ~~`experience_leg_work_complete` is false until every ad-rights video is posted~~ (superseded by 0566, §139: the main invoice no longer waits for collab posts)
 
 ### SECURITY
 - [ ] `experience_collab_posts`: RLS on, no grants; creators and brands read it only through `creator_collab_posts` / `brand_experience_collab_posts` (own deal / own brand); direct selects return nothing
@@ -7622,8 +7622,18 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 
 ## 138. Console Experience deals list shows where each deal really is (migration 0565)
 
-- [ ] /experiences-admin/deals: the pill follows the deal, not deals.status (which stays "agreed" until paid): Offer with creator → Creator countered → Shoot <date> → Record the shoot → Videos x of y approved → N collab posts to come / Posting → Waiting for invoice → Invoice in · to pay → Payout to approve / Payout on its way → Paid (and Did not shoot, Declined, Cancelled)
+- [ ] /experiences-admin/deals: the pill follows the deal, not deals.status (which stays "agreed" until paid): Offer with creator → Creator countered → Shoot <date> → Record the shoot → Videos x of y approved → (Posting: since 0566 only a creator-made leg still waiting on approvals reaches it) → Waiting for invoice → Invoice in · to pay → Payout to approve / Payout on its way → Paid (and Did not shoot, Declined, Cancelled)
 - [ ] It updates on refresh as the Experience moves (shot recorded, a video approved, a collab posted, the invoice raised, the payout requested, approved, paid)
 - [ ] "Needs you" counts Guapd's moves: a creator counter, a shoot to record, an invoice to pay, a payout to approve; "Posted · paid" holds the paid ones
 - [ ] Extras and affiliate commissions do not change the stage (only the main payout does)
 - [ ] SECURITY: experience_leg_stage is not callable by anon or authenticated (revoked); only the gated list function (operational staff) returns it; no money in it
+
+## 139. A creator invoices once the shoot is done, not once collab videos are posted (migration 0566)
+
+- [ ] Guapd-shot leg with ad-rights videos, shoot recorded "Yes, shot", nothing posted: the creator's deal page shows "Guapd marked your shoot done. Confirm it and raise your invoice to get paid." and the invoice can be raised
+- [ ] Guapd can then request, approve and pay that creator's payout straight away; the console deals list reads "Waiting for invoice" → "Invoice in · to pay"
+- [ ] The collab posts are unchanged: still sent, still "With the creator" until posted; the creator still sees "N collab videos still to post with <brand>. Paste each post link here once it is up." (no mention of the invoice)
+- [ ] Unchanged: no invoice before the shoot is recorded done, none for "Did not shoot"; a creator who makes their own videos (or an on_delivery_accepted leg) still needs every visible video approved first
+- [ ] The affiliate commission is still claimed later, once the brand marks the collab ads complete (0563), on its own invoice
+- [ ] Staging check: the three Holiday shoot legs (ad rights 1, 2, 6; posts waiting 1, 2, 5) went from work complete false to true when 0566 was applied
+- [ ] SECURITY: experience_leg_work_complete stays REVOKED from PUBLIC/anon/authenticated
