@@ -284,7 +284,8 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                 </>)}
                 {counterRows.length > 0 && open && <div style={{ marginTop: 18 }}><div style={metaLabel}>Counters</div>{counterRows}</div>}
                 {accepted && (shot || creatorSubmits) && items.length > 0 && (
-                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-hairline, #EAEAE3)' }} id="deliverables">
+                  // The read-only rows (MoneyRow) draw their own top line; a second one here doubled it.
+                  <div style={creatorSubmits ? { marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-hairline, #EAEAE3)' } : { marginTop: 8 }} id="deliverables">
                     {creatorSubmits
                       ? <>{!shot && <p style={{ fontSize: 12.5, color: 'var(--ink-soft)', margin: '0 0 10px' }}>You can submit once Guapd marks your shoot done.</p>}<LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /></>
                       : items.map((it) => <MoneyRow key={it.id} label={it.label} value={<span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-soft)' }}>{it.item_status === 'approved' ? 'Ready' : 'Guapd is preparing it'}</span>} />)}
