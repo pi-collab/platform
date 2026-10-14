@@ -84,6 +84,30 @@ export async function notifyBrandWaiting(experienceId: string, kind: 'quote' | '
   }
 }
 
+/** 0564: Guapd moved the shoot date: tell the brand's members (in-app + email). */
+export async function notifyBrandShootDateChanged(experienceId: string, date: string): Promise<void> {
+  try {
+    const e = await experienceTitle(experienceId)
+    if (!e) return
+    const when = new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+    const { data: members } = await createAdminClient().from('brand_members').select('user_id, users(email)').eq('brand_id', e.brandId)
+    const body = `The shoot for ${e.title} has moved to ${when}.`
+    const emails: string[] = []
+    for (const m of (members ?? []) as unknown as { user_id: string; users: { email: string | null } | { email: string | null }[] | null }[]) {
+      await createNotification({ userId: m.user_id, dealId: null, type: 'experience_shoot_date_changed', body })
+      const u = Array.isArray(m.users) ? m.users[0] : m.users
+      if (isPlausibleEmail(u?.email) && !isSyntheticEmail(u?.email)) emails.push(u!.email as string)
+    }
+    if (emails.length) {
+      const { html, text } = renderNoticeEmail({ heading: 'The shoot date changed', body: [body], ctaUrl: `${siteBase()}/experiences/${e.id}`, ctaLabel: 'See your Experience' })
+      const r = await sendDealEmail({ to: emails, subject: `${e.title}: the shoot date changed`, html, text, idempotencyKey: `xp-shoot-date-${e.id}-${date}` })
+      if (!r.ok) console.warn(`[experience-brand] brand email not sent experience=${e.id}`)
+    }
+  } catch (err) {
+    console.error(`[experience-brand] shoot date notification failed experience=${experienceId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 /** 0550: Guapd wrote in the brand thread: tell the brand's members (in-app + email, never the text). */
 export async function notifyBrandGuapdMessage(experienceId: string): Promise<void> {
   try {

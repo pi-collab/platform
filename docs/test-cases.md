@@ -7574,3 +7574,18 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Console, The shoot (Shoot scheduled, from the shoot date): a creator whose deal is **Paid** (0551) shows "Did they shoot?" with **Shot** / **Did not shoot**, the same as an Accepted one
 - [ ] Before the shoot date both buttons stay greyed out with "From <date>." for Accepted and Paid creators alike
 - [ ] A creator who has not answered the offer still has no outcome buttons (withdraw instead)
+
+---
+
+## 134. Change the shoot date (migration 0564)
+
+- [ ] Console, The shoot: **Change date** shows while the Experience is Choosing creators, Confirmed or Shoot scheduled, and only until any creator's outcome is recorded
+- [ ] The dialog says the current date and how many creators (offer out, accepted or paid) and the brand will be told; the date picker allows today up to a year ahead
+- [ ] Saving moves the date everywhere: console header, the creator's deal ("Shoot" / deliver-by), the brand's Experience page
+- [ ] Moving the date to today unlocks **Shot / Did not shoot** straight away
+- [ ] Refused: a past date, more than a year ahead, the same date, no date, a reason under 3 characters, any other status, once an outcome is recorded ("Undo them first")
+- [ ] Creators with a live deal get an in-app notification and an email ("The shoot date changed"); a stub creator with no login gets nothing; declined or withdrawn deals get nothing
+- [ ] The brand's members get an in-app notification and an email
+- [ ] Each change adds a row to experience_shoot_date_changes (from, to, reason, who) and an audit `experience.shoot_date_changed` (before, after, reason length, creators told)
+- [ ] Operational staff only: finance-only staff, brands, creators and anonymous cannot call experience_console_shoot_date_set
+- [ ] SECURITY: experience_shoot_date_changes has RLS on and no grants (no direct read or write for anon or authenticated)

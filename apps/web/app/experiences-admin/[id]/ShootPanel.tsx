@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import type { ConsoleDeliverables, ConsoleShootLeg } from '@/lib/experience-console-server'
-import { scheduleShoot, setShootOutcome, undoShoot, withdrawLeg } from '../actions'
+import { changeShootDate, scheduleShoot, setShootOutcome, undoShoot, withdrawLeg } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 
 /**
@@ -16,6 +16,9 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  *
  * "Did not shoot" takes that creator out of the counted P&L creators. No
  * money is shown here.
+ *
+ * 0564: the date can be moved (with a reason) until any outcome is recorded;
+ * the creators with a live deal and the brand are told.
  */
 const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
   negotiating: { label: 'Awaiting creator', tone: 'amber' },
@@ -25,7 +28,7 @@ const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
   cancelled:   { label: 'Withdrawn', tone: 'neutral' },
 }
 
-type Ask = { kind: 'confirm' } | { kind: 'no_shoot' | 'undo' | 'withdraw'; leg: ConsoleShootLeg }
+type Ask = { kind: 'confirm' } | { kind: 'date' } | { kind: 'no_shoot' | 'undo' | 'withdraw'; leg: ConsoleShootLeg }
 
 export default function ShootPanel({ experienceId, data, shootCity }: { experienceId: string; data: ConsoleDeliverables; shootCity: string | null }) {
   const router = useRouter()
@@ -33,13 +36,14 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
   const [error, setError] = useState<string | null>(null)
   const [ask, setAsk] = useState<Ask | null>(null)
   const [reason, setReason] = useState('')
+  const [newDate, setNewDate] = useState('')
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
     setError(null)
     start(async () => {
       const r = await fn()
       if (!r.ok) { setError(r.error ?? 'Something went wrong'); return }
-      setAsk(null); setReason(''); router.refresh()
+      setAsk(null); setReason(''); setNewDate(''); router.refresh()
     })
   }
 
@@ -53,6 +57,9 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
   const canWithdraw = status === 'confirmed' || status === 'shoot_scheduled'
   const outcomesOpen = status === 'shoot_scheduled'
   const undoOpen = status === 'shoot_scheduled' || status === 'shoot_done'
+  const canMoveDate = ['rostering', 'confirmed', 'shoot_scheduled'].includes(status) && !legs.some((l) => l.shoot_outcome)
+  const maxDate = (() => { const d = new Date(`${data.today}T00:00:00`); d.setDate(d.getDate() + 365); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+  const live = legs.filter((l) => ['negotiating', 'agreed', 'paid'].includes(l.deal_status)).length
 
   const headline =
     status === 'confirmed' ? (accepted.length ? `${accepted.length} accepted, ${awaiting.length} still to answer. Confirm the shoot when you are ready.` : 'Waiting for creators to accept their deals.')
@@ -66,11 +73,18 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
           <h2 className="sect-head">The shoot <span style={{ color: 'var(--wg-500)', fontWeight: 500, marginLeft: 6 }}>{date}{shootCity ? ` · ${shootCity}` : ''}</span></h2>
           <div className="sect-rule" />
         </div>
-        {status === 'confirmed' && (
-          <button type="button" className="neonbtn" style={neonBtn} disabled={pending || accepted.length === 0} onClick={() => { setError(null); setAsk({ kind: 'confirm' }) }}>
-            Confirm the shoot
-          </button>
-        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {canMoveDate && (
+            <button type="button" style={pillBtn} disabled={pending} onClick={() => { setError(null); setReason(''); setNewDate(''); setAsk({ kind: 'date' }) }}>
+              Change date
+            </button>
+          )}
+          {status === 'confirmed' && (
+            <button type="button" className="neonbtn" style={neonBtn} disabled={pending || accepted.length === 0} onClick={() => { setError(null); setAsk({ kind: 'confirm' }) }}>
+              Confirm the shoot
+            </button>
+          )}
+        </div>
       </div>
       <p className="t-body" style={{ margin: '14px 0 0', fontSize: 13.5 }}>{headline}</p>
       {error && !ask && <div role="alert" style={{ ...formError, marginTop: 12 }}>{error}</div>}
@@ -122,8 +136,20 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
         detail={error ? <div role="alert" style={{ ...formError, marginTop: 10 }}>{error}</div> : undefined}
         confirmLabel="Confirm the shoot" busy={pending} onConfirm={() => run(() => scheduleShoot(experienceId))} onCancel={() => setAsk(null)} />
 
-      <ConfirmDialog open={!!ask && ask.kind !== 'confirm'} tone={ask?.kind === 'no_shoot' || ask?.kind === 'withdraw' ? 'danger' : undefined}
-        title={ask && ask.kind !== 'confirm' ? (ask.kind === 'no_shoot' ? `${ask.leg.full_name} did not shoot` : ask.kind === 'undo' ? `Undo ${ask.leg.full_name}'s outcome` : `Withdraw ${ask.leg.full_name}'s offer`) : ''}
+      <ConfirmDialog open={ask?.kind === 'date'} title="Change the shoot date"
+        body={`Now ${date}. ${live ? `The ${live} creator${live === 1 ? '' : 's'} with a deal and the brand are told the new date.` : 'The brand is told the new date.'}`}
+        detail={<div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+          <div><label style={fieldLabel} htmlFor="shoot-date">New date</label>
+            <input id="shoot-date" type="date" className="dinput" min={data.today} max={maxDate} value={newDate} onChange={(e) => setNewDate(e.target.value)} /></div>
+          <div><label style={fieldLabel} htmlFor="shoot-date-why">Why</label>
+            <input id="shoot-date-why" className="dinput" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="The studio moved the booking" /></div>
+          {error && <div role="alert" style={formError}>{error}</div>}</div>}
+        confirmLabel="Change date" busy={pending}
+        onConfirm={() => { if (!newDate || reason.trim().length < 3) { setError('Pick the new date and say why.'); return } run(() => changeShootDate(experienceId, newDate, reason)) }}
+        onCancel={() => setAsk(null)} />
+
+      <ConfirmDialog open={!!ask && ask.kind !== 'confirm' && ask.kind !== 'date'} tone={ask?.kind === 'no_shoot' || ask?.kind === 'withdraw' ? 'danger' : undefined}
+        title={ask && ask.kind !== 'confirm' && ask.kind !== 'date' ? (ask.kind === 'no_shoot' ? `${ask.leg.full_name} did not shoot` : ask.kind === 'undo' ? `Undo ${ask.leg.full_name}'s outcome` : `Withdraw ${ask.leg.full_name}'s offer`) : ''}
         body={ask?.kind === 'no_shoot' ? 'They are taken out of the creators Guapd pays on this Experience. You can undo this until their content is shared with the brand.'
           : ask?.kind === 'undo' ? 'Clears the outcome so it can be recorded again. If the shoot was marked done, it goes back to Scheduled.'
           : 'The creator is told the offer is withdrawn. The offer cannot be re-sent yet.'}
@@ -133,7 +159,7 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
           {error && <div role="alert" style={{ ...formError, marginTop: 10 }}>{error}</div>}</div>}
         confirmLabel={ask?.kind === 'withdraw' ? 'Withdraw' : ask?.kind === 'undo' ? 'Undo' : 'Record'} busy={pending}
         onConfirm={() => {
-          if (!ask || ask.kind === 'confirm') return
+          if (!ask || ask.kind === 'confirm' || ask.kind === 'date') return
           const l = ask.leg
           if (ask.kind === 'no_shoot') run(() => setShootOutcome(experienceId, l.roster_id, 'did_not_shoot', reason))
           else if (ask.kind === 'undo') run(() => undoShoot(experienceId, l.roster_id, reason))

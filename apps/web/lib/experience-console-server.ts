@@ -669,6 +669,12 @@ export async function scheduleConsoleShoot(experienceId: string): Promise<Result
   return error ? fail(error) : { ok: true, data: null }
 }
 
+/** 0564: move the shoot date (operational, with a reason). Returns the live creator deals to tell. */
+export async function setConsoleShootDate(experienceId: string, date: string, reason: string): Promise<Result<string[]>> {
+  const { data, error } = await createClient().rpc('experience_console_shoot_date_set', { p_experience_id: experienceId, p_date: date, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as string[] }
+}
+
 export async function recordShootOutcome(rosterId: string, outcome: 'done' | 'did_not_shoot', reason: string | null): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_leg_shoot_outcome', { p_roster_id: rosterId, p_outcome: outcome, p_reason: reason })
   return error ? fail(error) : { ok: true, data: data as string }

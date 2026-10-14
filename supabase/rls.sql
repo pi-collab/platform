@@ -1624,3 +1624,10 @@ REVOKE ALL ON experience_collab_posts FROM PUBLIC, anon, authenticated;
 -- _close / _payout_request / experience_console_affiliates (operational), experience_console_affiliate_bill (finance). All authenticated only,
 -- revoked from PUBLIC/anon. experience_creator_invoices.follow_on_id and vendor_payouts reason 'follow_on' ride the existing table RLS.
 
+
+-- ═════ 0564: change the shoot date ═════
+-- experience_shoot_date_changes (the history: from, to, reason, who). RLS on, NO policies,
+-- no grants: written only by experience_console_shoot_date_set (SECURITY DEFINER,
+-- operational staff, checked inside), authenticated only, revoked from PUBLIC/anon.
+ALTER TABLE experience_shoot_date_changes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
