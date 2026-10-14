@@ -40,13 +40,21 @@ export default function ConfirmDialog({
   onCancel: () => void
 }) {
   const confirmRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Callers pass a fresh onCancel on every render. Read it through a ref so the
+  // effect below runs only when the dialog opens: re-running it on each render
+  // pulled focus out of any field in `detail` after every keystroke.
+  const cancelRef = useRef(onCancel)
+  useEffect(() => { cancelRef.current = onCancel }, [onCancel])
 
-  /* Focus lands on the confirm button, and Escape cancels. A dialog you have
-     to reach for with the mouse is a dialog that interrupts twice. */
+  /* Focus lands on the first field in the dialog if it has one (a reason to
+     type), else on the confirm button; Escape cancels. A dialog you have to
+     reach for with the mouse is a dialog that interrupts twice. */
   useEffect(() => {
     if (!open) return
-    confirmRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+    const field = dialogRef.current?.querySelector<HTMLElement>('input, textarea, select')
+    ;(field ?? confirmRef.current)?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') cancelRef.current() }
     window.addEventListener('keydown', onKey)
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -54,7 +62,7 @@ export default function ConfirmDialog({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
     }
-  }, [open, onCancel])
+  }, [open])
 
   if (!open) return null
 
@@ -70,6 +78,7 @@ export default function ConfirmDialog({
       }}
     >
       <div
+        ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"

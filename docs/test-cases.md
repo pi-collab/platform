@@ -7566,3 +7566,35 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Audited: affiliate_claimed_by_creator, affiliate_approved, affiliate_turned_down, affiliate_closed, payout_requested (follow_on), invoice_drafted (follow_on)
 - [ ] Tests: `scripts/test-experience-collab.ts` (89 checks, commission included)
 
+
+---
+
+## 133. Shoot outcome for a paid creator deal (console)
+
+- [ ] Console, The shoot (Shoot scheduled, from the shoot date): a creator whose deal is **Paid** (0551) shows "Did they shoot?" with **Yes, shot** / **No, didn't shoot**, the same as an Accepted one
+- [ ] Both answer buttons are outlined (neither looks already chosen); before the shoot date both are faded and disabled; once answered, the row shows a Shot / Did not shoot chip instead
+- [ ] Before the shoot date both buttons stay greyed out with "From <date>." for Accepted and Paid creators alike
+- [ ] A creator who has not answered the offer still has no outcome buttons (withdraw instead)
+
+---
+
+## 134. Change the shoot date (migration 0564)
+
+- [ ] Console, The shoot: **Change date** shows while the Experience is Choosing creators, Confirmed or Shoot scheduled, and only until any creator's outcome is recorded
+- [ ] The dialog says the current date and how many creators (offer out, accepted or paid) and the brand will be told; the date picker allows earlier or later dates, from 90 days back to a year ahead
+- [ ] Saving moves the date everywhere: console header, the creator's deal ("Shoot" / deliver-by), the brand's Experience page
+- [ ] Moving the date to today unlocks **Shot / Did not shoot** straight away
+- [ ] Moving it earlier works, including to a past date (a shoot that happened before the date on file): Shot / Did not shoot unlock at once
+- [ ] Refused: more than 90 days back, more than a year ahead, the same date, no date, a reason under 3 characters, any other status, once an outcome is recorded ("Undo them first")
+- [ ] Creators with a live deal get an in-app notification and an email ("The shoot date changed"); a stub creator with no login gets nothing; declined or withdrawn deals get nothing
+- [ ] The brand's members get an in-app notification and an email
+- [ ] Each change adds a row to experience_shoot_date_changes (from, to, reason, who) and an audit `experience.shoot_date_changed` (before, after, reason length, creators told)
+- [ ] Operational staff only: finance-only staff, brands, creators and anonymous cannot call experience_console_shoot_date_set
+- [ ] SECURITY: experience_shoot_date_changes has RLS on and no grants (no direct read or write for anon or authenticated)
+
+---
+
+## 135. Typing in a confirm dialog keeps focus (shared ConfirmDialog)
+
+- [ ] Console dialogs with a field (Change date "Why", Did not shoot, Undo, Withdraw offer, payouts, invoices, deliverables, completion, costs, P&L, prospects): type a full sentence without the cursor jumping to the action button
+- [ ] On open, focus lands in the first field when the dialog has one, else on the action button; Escape still cancels

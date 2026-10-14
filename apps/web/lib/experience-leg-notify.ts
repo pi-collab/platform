@@ -140,6 +140,24 @@ export async function notifyCreatorsBriefChanged(dealIds: string[]): Promise<voi
   }
 }
 
+/** 0564: the shoot moved to a new date. Every creator with a live deal (offer out, accepted or paid). In-app + email. */
+export async function notifyCreatorsShootDateChanged(dealIds: string[], date: string): Promise<void> {
+  const when = new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+  for (const dealId of dealIds) {
+    try {
+      const c = await legCreator(dealId)
+      if (!c?.userId) continue
+      const body = `The ${c.brand} shoot has moved to ${when}.`
+      await createNotification({ userId: c.userId, dealId, type: 'experience_shoot_date_changed', body })
+      await emailCreator(c, `${c.brand} · Managed by Guapd: the shoot date changed`, 'The shoot date changed',
+        [`Hi ${c.first}, the ${c.brand} shoot has moved to ${when}.`, 'Open your deal for the details. Reply there if the new date does not work for you.'],
+        'Open your deal', `leg-shoot-date-${dealId}-${date}`)
+    } catch (err) {
+      console.error(`[experience-leg] shoot date notification failed deal=${dealId}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+}
+
 /** 0546: Guapd wrote to the creator on their deal. In-app + email (never the message text in email). */
 export async function notifyCreatorGuapdMessage(dealId: string): Promise<void> {
   try {

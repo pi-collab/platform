@@ -8,7 +8,7 @@ import {
   listConsoleLegs, legDraft, legSend, setCreatorDayRateAsStaff, setCreatorBrief,
   saveSharedBrief, saveOwnBrief, legRescope, legBroadcast, sendBrandMessageAsGuapd, briefUploadSlot, getConsoleBrief, sendLegMessageAsGuapd, getLegThread, type BriefDoc, type BriefAttachment,
   addConsoleCost, updateConsoleCost, removeConsoleCost, completeConsoleExperience, reopenConsoleExperience,
-  scheduleConsoleShoot, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
+  scheduleConsoleShoot, setConsoleShootDate, recordShootOutcome, undoShootOutcome, withdrawConsoleLeg,
   itemUploadSlot, attachConsoleItem, reviewConsoleItem, consoleItemFile,
   releaseConsoleItems, withdrawConsoleRelease, decideConsoleRelease,
   setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
@@ -26,12 +26,12 @@ import {
 } from '@/lib/experience-console-server'
 import { notifyCreatorVideoSent, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
-import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
+import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorsShootDateChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
 import { notifyBrandInvoiceIssued, notifyCreatorPaid, notifyStaffPayoutToApprove, notifyCreatorInvoiceVoided } from '@/lib/experience-money-notify'
 import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
-import { notifyBrandWaiting, notifyBrandGuapdMessage } from '@/lib/experience-brand-notify'
+import { notifyBrandWaiting, notifyBrandGuapdMessage, notifyBrandShootDateChanged } from '@/lib/experience-brand-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
@@ -624,6 +624,20 @@ export async function setShootOutcome(experienceId: string, rosterId: string, ou
   if (!r.ok) return r
   revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
   return r
+}
+
+/** 0564: move the shoot date. The creators with a live deal and the brand are told (in-app + email). */
+export async function changeShootDate(experienceId: string, date: string, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId)) return { ok: false, error: 'Unknown Experience.' }
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: 'Pick the new shoot date.' }
+  const reasonText = why(reason); if (!reasonText) return { ok: false, error: 'Say why the date is changing.' }
+  const r = await setConsoleShootDate(experienceId, date, reasonText)
+  if (!r.ok) return r
+  await notifyCreatorsShootDateChanged(r.data, date)
+  await notifyBrandShootDateChanged(experienceId, date)
+  revalidatePath(`${BASE}/${experienceId}`); revalidatePath(BASE)
+  return { ok: true, data: null }
 }
 
 export async function undoShoot(experienceId: string, rosterId: string, reason: string): Promise<Out<string>> {
