@@ -2,7 +2,9 @@
 --   The date is set from the accepted quote (experience_quote_accept_apply) and,
 --   until now, nothing could move it. Shoots get rescheduled.
 --   experience_console_shoot_date_set: operational staff, while creators are
---   being chosen, confirmed or the shoot is scheduled, with a reason. Refused
+--   being chosen, confirmed or the shoot is scheduled, with a reason. Earlier or
+--   later: up to 90 days back (a shoot that happened before the date on file)
+--   and up to a year ahead. Refused
 --   once any shoot outcome is recorded (outcomes depend on the date; undo them
 --   first). Every change is kept in experience_shoot_date_changes and audited.
 --   Returns the creator deals still live (offer out, accepted or paid) so the
@@ -40,7 +42,7 @@ BEGIN
     RAISE EXCEPTION 'The shoot date can be changed while creators are being chosen, confirmed or the shoot is scheduled';
   END IF;
   IF p_date IS NULL THEN RAISE EXCEPTION 'Pick the new shoot date'; END IF;
-  IF p_date < v_today THEN RAISE EXCEPTION 'The new date cannot be in the past'; END IF;
+  IF p_date < v_today - 90 THEN RAISE EXCEPTION 'The new date can be at most 90 days back'; END IF;
   IF p_date > v_today + 365 THEN RAISE EXCEPTION 'The new date must be within a year'; END IF;
   IF p_date IS NOT DISTINCT FROM v_date THEN RAISE EXCEPTION 'That is already the shoot date'; END IF;
   IF length(coalesce(v_reason, '')) NOT BETWEEN 3 AND 300 THEN RAISE EXCEPTION 'Say why the date is changing (3 to 300 characters)'; END IF;

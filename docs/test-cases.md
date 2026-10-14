@@ -7580,10 +7580,11 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 ## 134. Change the shoot date (migration 0564)
 
 - [ ] Console, The shoot: **Change date** shows while the Experience is Choosing creators, Confirmed or Shoot scheduled, and only until any creator's outcome is recorded
-- [ ] The dialog says the current date and how many creators (offer out, accepted or paid) and the brand will be told; the date picker allows today up to a year ahead
+- [ ] The dialog says the current date and how many creators (offer out, accepted or paid) and the brand will be told; the date picker allows earlier or later dates, from 90 days back to a year ahead
 - [ ] Saving moves the date everywhere: console header, the creator's deal ("Shoot" / deliver-by), the brand's Experience page
 - [ ] Moving the date to today unlocks **Shot / Did not shoot** straight away
-- [ ] Refused: a past date, more than a year ahead, the same date, no date, a reason under 3 characters, any other status, once an outcome is recorded ("Undo them first")
+- [ ] Moving it earlier works, including to a past date (a shoot that happened before the date on file): Shot / Did not shoot unlock at once
+- [ ] Refused: more than 90 days back, more than a year ahead, the same date, no date, a reason under 3 characters, any other status, once an outcome is recorded ("Undo them first")
 - [ ] Creators with a live deal get an in-app notification and an email ("The shoot date changed"); a stub creator with no login gets nothing; declined or withdrawn deals get nothing
 - [ ] The brand's members get an in-app notification and an email
 - [ ] Each change adds a row to experience_shoot_date_changes (from, to, reason, who) and an audit `experience.shoot_date_changed` (before, after, reason length, creators told)

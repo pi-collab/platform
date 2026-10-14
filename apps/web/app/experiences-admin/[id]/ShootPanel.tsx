@@ -17,7 +17,7 @@ import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
  * "Did not shoot" takes that creator out of the counted P&L creators. No
  * money is shown here.
  *
- * 0564: the date can be moved (with a reason) until any outcome is recorded;
+ * 0564: the date can be moved earlier or later (with a reason) until any outcome is recorded;
  * the creators with a live deal and the brand are told.
  */
 const ANSWER: Record<string, { label: string; tone: ChipTone }> = {
@@ -58,7 +58,7 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
   const outcomesOpen = status === 'shoot_scheduled'
   const undoOpen = status === 'shoot_scheduled' || status === 'shoot_done'
   const canMoveDate = ['rostering', 'confirmed', 'shoot_scheduled'].includes(status) && !legs.some((l) => l.shoot_outcome)
-  const maxDate = (() => { const d = new Date(`${data.today}T00:00:00`); d.setDate(d.getDate() + 365); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })()
+  const shiftDay = (days: number) => { const d = new Date(`${data.today}T00:00:00`); d.setDate(d.getDate() + days); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
   const live = legs.filter((l) => ['negotiating', 'agreed', 'paid'].includes(l.deal_status)).length
 
   const headline =
@@ -140,7 +140,7 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
         body={`Now ${date}. ${live ? `The ${live} creator${live === 1 ? '' : 's'} with a deal and the brand are told the new date.` : 'The brand is told the new date.'}`}
         detail={<div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
           <div><label style={fieldLabel} htmlFor="shoot-date">New date</label>
-            <input id="shoot-date" type="date" className="dinput" min={data.today} max={maxDate} value={newDate} onChange={(e) => setNewDate(e.target.value)} /></div>
+            <input id="shoot-date" type="date" className="dinput" min={shiftDay(-90)} max={shiftDay(365)} value={newDate} onChange={(e) => setNewDate(e.target.value)} /></div>
           <div><label style={fieldLabel} htmlFor="shoot-date-why">Why</label>
             <input id="shoot-date-why" className="dinput" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="The studio moved the booking" /></div>
           {error && <div role="alert" style={formError}>{error}</div>}</div>}
