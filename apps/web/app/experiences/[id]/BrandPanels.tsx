@@ -349,7 +349,8 @@ export function DeliverableReview({ experienceId, items }: { experienceId: strin
   const [why, setWhy] = useState('')
   if (items.length === 0) return <p className="bx-empty">Nothing shared yet. Guapd will email you when the first deliverables are ready.</p>
   const groups = new Map<string, BrandItem[]>()
-  for (const i of items) groups.set(i.creator_name ?? 'Creator', [...(groups.get(i.creator_name ?? 'Creator') ?? []), i])
+  // Number order within a creator (video 2 before video 10), not text order.
+  for (const i of [...items].sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))) groups.set(i.creator_name ?? 'Creator', [...(groups.get(i.creator_name ?? 'Creator') ?? []), i])
   return (
     <div>
       {Array.from(groups.entries()).map(([creator, list]) => (

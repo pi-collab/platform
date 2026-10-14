@@ -166,30 +166,30 @@ export default function DeliverablesPanel({ experienceId, data }: { experienceId
             <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>{l.full_name}</span>
             <span style={{ ...kpiLabel, fontSize: 10.5 }}>{l.items.filter((i) => i.item_status === 'approved').length} of {l.items.length} approved</span>
           </div>
-          {l.items.map((i) => {
+          {/* Number order (video 2 before video 10), not text order. */}
+          {[...l.items].sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true })).map((i) => {
             const st = ITEM[i.item_status] ?? ITEM.pending
             const rel = i.release ? BRAND[i.release.brand_decision ?? 'none'] : null
             const canAttach = writable && owner === 'guapd' && i.item_status !== 'approved'
             const canReview = writable && (i.item_status === 'submitted' || (i.item_status === 'approved' && i.release?.brand_decision !== 'approved'))
             return (
-              <div key={i.id} style={{ borderTop: '1px solid var(--hairline)', padding: '12px 4px' }}>
-                <div className="xp-drow" style={{ display: 'grid', gridTemplateColumns: '18px minmax(0, 1.2fr) minmax(0, 1.6fr) minmax(0, 1.3fr)', gap: 12, alignItems: 'start' }}>
+              <div key={i.id} style={{ borderTop: '1px solid var(--hairline)', padding: '10px 4px' }}>
+                <div className="xp-drow" style={{ display: 'grid', gridTemplateColumns: '18px minmax(0, 1.7fr) minmax(0, 1.5fr) auto', gap: 12, alignItems: 'center' }}>
                   <input type="checkbox" aria-label={`Share ${i.label}`} disabled={!shareable(i)} checked={sel.includes(i.id)} onChange={() => toggle(i.id)}
                     style={{ width: 18, height: 18, marginTop: 3, accentColor: 'var(--lime-600, #6E8F12)', visibility: sharing ? 'visible' : 'hidden' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>
+                  <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 14, color: 'var(--ink)', marginRight: 2 }}>
                       {i.label}{i.version > 1 ? <span style={{ fontWeight: 500, color: 'var(--ink-faint)' }}> · v{i.version}</span> : null}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      <StatusChip label={st.label} tone={st.tone} />
-                      {rel && <StatusChip label={rel.label} tone={rel.tone} />}
-                      {i.affiliate_link && <StatusChip label="Affiliate link" tone="violet" />}
-                    </div>
+                    </span>
+                    <StatusChip compact label={st.label} tone={st.tone} />
+                    {rel && <StatusChip compact label={rel.label} tone={rel.tone} />}
+                    {/* A term of the video, not a status: quieter than the chips. */}
+                    {i.affiliate_link && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 600, color: '#6E5BB3', letterSpacing: '.02em' }}>· Affiliate link</span>}
                   </div>
                   <div className="t-body" style={{ fontSize: 13, color: 'var(--ink-soft)', minWidth: 0 }}>
                     {i.external_url && <a href={i.external_url} target="_blank" rel="noreferrer noopener" style={{ color: 'var(--ink)', wordBreak: 'break-all' }}>{i.external_url}</a>}
                     {i.has_file && <button type="button" onClick={() => openFile(i)} style={{ ...pillBtn, height: 30, fontSize: 12.5 }}>Open {i.file_name}</button>}
-                    {!i.external_url && !i.has_file && <span>{owner === 'guapd' ? 'Nothing attached yet.' : 'The creator has not submitted yet.'}</span>}
+                    {!i.external_url && !i.has_file && owner !== 'guapd' && <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>The creator has not submitted yet.</span>}
                     {i.submitted_at && <div style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 4 }}>{i.submitted_via === 'creator' ? 'Submitted by the creator' : 'Attached by Guapd'} {fmt(i.submitted_at)}</div>}
                     {i.note && i.item_status === 'revision' && <div style={{ fontSize: 12.5, color: '#9C4147', marginTop: 4 }}>Asked: {i.note}</div>}
                     {i.release && (

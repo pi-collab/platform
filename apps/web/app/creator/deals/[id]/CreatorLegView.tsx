@@ -70,7 +70,8 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   const noShoot = ctx.shoot_outcome === 'did_not_shoot'
   // 0551: Guapd paying the creator fee moves the deal itself to paid.
   const paid = ctx.status === 'paid' || ctx.payout?.status === 'paid'
-  const items = ctx.items ?? []
+  // Number order (video 2 before video 10), not text order.
+  const items = [...(ctx.items ?? [])].sort((a, b) => a.label.localeCompare(b.label, 'en', { numeric: true }))
   const brand = ctx.brand_name ?? 'A brand'
   const managed = `${brand} · Managed by Guapd`
   const brief = ctx.brief_detail

@@ -7608,3 +7608,12 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] "Your post" has **Change** while the post can still be edited; it opens the link field and hides the tile until saved
 - [ ] Brand, Experience page, Collab posts: each video shows its title, Posted date and Live / Ad complete chip on one line, then "<Creator>'s post" and "Your affiliate link" tiles (Open, Copy; "Added via Guapd" when Guapd recorded it); Add / Change affiliate link and Ad complete stay below
 - [ ] Console, Posting: under each sent video, "Post" (date, by the creator or recorded via a channel) and "Brand's affiliate link" (added by the brand or recorded) tiles with Open and Copy; the action buttons stay on the video's line
+
+---
+
+## 137. Deliverable lists: number order and a compact console row
+
+- [ ] Console Deliverables, the brand's Deliverables and the creator's deal list videos in number order: UGC video 1, 2, … 9, 10 (never 1, 10, 2)
+- [ ] Console Deliverables: each video is one line: name (· vN), a small status chip, the brand's chip once shared, and a quiet "· Affiliate link" tag for videos that carry it; the file / link and its notes in the middle; the actions on the right
+- [ ] An empty video Guapd prepares shows only "Waiting for content" and **Attach** (no "Nothing attached yet."); one the creator submits still says "The creator has not submitted yet."
+- [ ] Mobile (≤720px): the file and actions wrap under the name
