@@ -93,14 +93,14 @@ export default function ShootPanel({ experienceId, data, shootCity }: { experien
                 {l.shoot_outcome === 'done' && (l.work_complete
                   ? <div>Their part is done: they can be paid (see Creator payouts).</div>
                   : <div>Shot. Their part is done once Guapd approves their deliverables.</div>)}
-                {!l.shoot_outcome && l.deal_status === 'agreed' && <div>{outcomesOpen ? (dateReached ? 'Did they shoot?' : `From ${date}.`) : 'Recorded after the shoot is confirmed.'}</div>}
+                {!l.shoot_outcome && (l.deal_status === 'agreed' || l.deal_status === 'paid') && <div>{outcomesOpen ? (dateReached ? 'Did they shoot?' : `From ${date}.`) : 'Recorded after the shoot is confirmed.'}</div>}
                 {l.deal_status === 'negotiating' && <div>Has not answered the offer.</div>}
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {l.deal_status === 'negotiating' && canWithdraw && (
                   <button type="button" style={{ ...pillBtn, height: 34 }} onClick={() => { setReason(''); setError(null); setAsk({ kind: 'withdraw', leg: l }) }}>Withdraw offer</button>
                 )}
-                {l.deal_status === 'agreed' && !l.shoot_outcome && outcomesOpen && (
+                {(l.deal_status === 'agreed' || l.deal_status === 'paid') && !l.shoot_outcome && outcomesOpen && (
                   <>
                     <button type="button" style={{ ...pillBtn, height: 34 }} disabled={pending || !dateReached}
                       onClick={() => { setReason(''); setError(null); setAsk({ kind: 'no_shoot', leg: l }) }}>Did not shoot</button>

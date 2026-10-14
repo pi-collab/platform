@@ -7566,3 +7566,11 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Audited: affiliate_claimed_by_creator, affiliate_approved, affiliate_turned_down, affiliate_closed, payout_requested (follow_on), invoice_drafted (follow_on)
 - [ ] Tests: `scripts/test-experience-collab.ts` (89 checks, commission included)
 
+
+---
+
+## 133. Shoot outcome for a paid creator deal (console)
+
+- [ ] Console, The shoot (Shoot scheduled, from the shoot date): a creator whose deal is **Paid** (0551) shows "Did they shoot?" with **Shot** / **Did not shoot**, the same as an Accepted one
+- [ ] Before the shoot date both buttons stay greyed out with "From <date>." for Accepted and Paid creators alike
+- [ ] A creator who has not answered the offer still has no outcome buttons (withdraw instead)
