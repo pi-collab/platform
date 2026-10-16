@@ -7659,3 +7659,16 @@ Design rule: forgiving below the bought total, strict at it.
 - [ ] Sent counts are re-split only while Confirmed (the re-split button is hidden once the shoot is scheduled)
 - [ ] Not changed: adding creators after the shoot is done (needs a second shoot day; use an extra)
 - [ ] Staging check (rolled back): all of the above ran on Diwali UGC Shoot (1673b8e0) on 2026-10-16
+
+## 142. Brand marks payments against Guapd's invoice (migration 0568)
+
+A brand's mark is a REPORT, never a receipt: it never settles the invoice, never touches service_invoice_payments, payouts, costs or P&L.
+- [ ] Brand page, issued invoice: Invoice / Received by Guapd / Balance; brand ADMIN sees **Mark as paid** and a disabled **Pay online · coming soon**; a member sees the figures and "An admin on your brand account marks payments."
+- [ ] Mark ₹50,000 + ₹1,000 TDS (bank transfer, UTR): "Marked, being checked" shows ₹51,000, Balance drops by ₹51,000; the line reads "Guapd is checking"; staff get the "marked a payment" notification
+- [ ] A second part payment up to exactly the balance is accepted; one paisa more is refused "That is more than the balance on this invoice"
+- [ ] Refused: the same reference twice (any case), NULL/zero amount, a future date, no reference, a non-admin, another brand ("Not found")
+- [ ] Console Invoices: each brand mark shows under its invoice; **Confirm against receipt…** lists only this invoice's unreversed receipts not already linked; confirming makes the brand line "Received"; **Not received** needs a reason, which the brand sees ("Not found" + reason)
+- [ ] Confirm with no receipt picked / a receipt on another invoice / a reversed one / one already linked: refused; deciding twice: refused
+- [ ] The invoice itself (status, received total, receipts) is unchanged by any brand mark (staging check 2026-10-16, rolled back)
+- [ ] SECURITY: service_invoice_payment_reports has RLS on, no policies, no grants (functions only); experience_console_payment_reports and _decide need finance access ("Financial access required" for a brand); the brand's view carries only amount, TDS, date, method, reference, status and a rejection reason
+- [ ] Every brand mark and finance decision writes an ops_events row (before/after balance, status)

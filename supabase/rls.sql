@@ -1638,3 +1638,8 @@ REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
 -- REVOKED from PUBLIC/anon/authenticated. No new table, no policy change.
 -- 0567: experience_roster_reconcile, experience_console_roster_lock/_add, experience_console_leg_draft/_send recreated
 -- (partial roster); CREATE OR REPLACE keeps their grants. No new table, no policy change.
+-- 0568: service_invoice_payment_reports (brand-marked payments): RLS on, NO policies, no grants to anon/authenticated.
+-- Read and written only through SECURITY DEFINER functions: brand_experience_payment_report (brand admin of that
+-- Experience's brand), brand_experience_invoices (brand member), experience_console_payment_reports/_decide (finance).
+ALTER TABLE service_invoice_payment_reports ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;

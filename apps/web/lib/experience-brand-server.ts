@@ -59,6 +59,14 @@ export interface BrandInvoice {
   invoice_id: string; number: string; issue_date: string; due_date: string | null; description: string
   subtotal_paise: number; gst_paise: number; total_paise: number; paid_paise: number
   status: 'due' | 'part_paid' | 'paid'; has_pdf: boolean
+  /** 0568: what the brand marked paid that Guapd has not confirmed yet, and what is left after both. */
+  reported_paise?: number; balance_paise?: number
+  reports?: BrandPaymentReport[]
+}
+/** 0568: a payment the brand marked against Guapd's invoice. Never settles it on its own. */
+export interface BrandPaymentReport {
+  amount_paise: number; tds_paise: number; paid_on: string; method: string; reference: string
+  status: 'reported' | 'confirmed' | 'rejected' | 'withdrawn'; reason: string | null
 }
 export interface BrandReport {
   title: string; brand_name: string; requested_at: string | null; shoot_date: string | null; shoot_city: string | null
@@ -98,7 +106,12 @@ export async function getBrandDeliverables(id: string): Promise<Result<{ items: 
   return error ? fail(error) : { ok: true, data: data as { items: BrandItem[] } }
 }
 
-const invoiceNums = (i: BrandInvoice): BrandInvoice => ({ ...i, subtotal_paise: Number(i.subtotal_paise), gst_paise: Number(i.gst_paise), total_paise: Number(i.total_paise), paid_paise: Number(i.paid_paise) })
+const invoiceNums = (i: BrandInvoice): BrandInvoice => ({
+  ...i, subtotal_paise: Number(i.subtotal_paise), gst_paise: Number(i.gst_paise), total_paise: Number(i.total_paise), paid_paise: Number(i.paid_paise),
+  reported_paise: i.reported_paise == null ? undefined : Number(i.reported_paise),
+  balance_paise: i.balance_paise == null ? undefined : Number(i.balance_paise),
+  reports: (i.reports ?? []).map((r) => ({ ...r, amount_paise: Number(r.amount_paise), tds_paise: Number(r.tds_paise) })),
+})
 
 export async function getBrandInvoices(id: string): Promise<Result<BrandInvoice[]>> {
   const { data, error } = await createClient().rpc('brand_experience_invoices', { p_experience_id: id })
@@ -113,6 +126,14 @@ export async function getBrandReport(id: string): Promise<Result<BrandReport>> {
 }
 
 // ── Writes ──
+/** 0568: the brand marks a payment it made against Guapd's invoice (admins only, checked in the database). */
+export async function brandReportPayment(v: { invoiceId: string; amountPaise: number; tdsPaise: number; paidOn: string; method: string; reference: string; note: string | null }): Promise<Result<{ report_id: string; balance_paise: number }>> {
+  const { data, error } = await createClient().rpc('brand_experience_payment_report', {
+    p_invoice_id: v.invoiceId, p_amount_paise: v.amountPaise, p_tds_paise: v.tdsPaise, p_paid_on: v.paidOn,
+    p_method: v.method, p_reference: v.reference, p_note: v.note,
+  })
+  return error ? fail(error) : { ok: true, data: data as { report_id: string; balance_paise: number } }
+}
 export async function brandRequestExperience(v: RequestInput): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('brand_experience_request', requestArgs(v))
   return error ? fail(error) : { ok: true, data: data as string }

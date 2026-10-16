@@ -765,6 +765,18 @@ export interface ConsoleInvoice {
 export interface ConsoleInvoices {
   experience_id: string; status: string; title: string; brand_id: string; brand_name: string; agreed_paise: number | null
   settings: FinanceSettings | null; billing: BrandBilling | null; invoices: ConsoleInvoice[]
+  /** 0568: payments the brand marked; finance confirms each against a receipt, or rejects it. */
+  reports?: ConsolePaymentReport[]
+}
+export interface ConsolePaymentReport {
+  report_id: string; invoice_id: string; invoice_number: string; amount_paise: number; tds_paise: number
+  paid_on: string; method: string; reference: string; note: string | null
+  status: 'reported' | 'confirmed' | 'rejected' | 'withdrawn'; reported_at: string; reported_by: string | null
+  payment_id: string | null; decided_at: string | null; decided_reason: string | null
+}
+export async function decideConsolePaymentReport(reportId: string, decision: 'confirmed' | 'rejected', paymentId: string | null, reason: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payment_report_decide', { p_report_id: reportId, p_decision: decision, p_payment_id: paymentId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
 }
 export interface InvoiceDraftInput {
   kind: 'initial' | 'additional'; source: 'existing_footage' | 'new_shoot' | null; description: string
@@ -773,8 +785,15 @@ export interface InvoiceDraftInput {
 }
 
 export async function getConsoleInvoices(experienceId: string): Promise<Result<ConsoleInvoices>> {
-  const { data, error } = await createClient().rpc('experience_console_invoices', { p_experience_id: experienceId })
-  return error ? fail(error) : { ok: true, data: data as ConsoleInvoices }
+  const sb = createClient()
+  const [{ data, error }, rep] = await Promise.all([
+    sb.rpc('experience_console_invoices', { p_experience_id: experienceId }),
+    sb.rpc('experience_console_payment_reports', { p_experience_id: experienceId }),
+  ])
+  if (error) return fail(error)
+  // Reports are extra: before 0568 the function is missing, and the panel works without them.
+  const reports = rep.error ? [] : ((rep.data ?? []) as ConsolePaymentReport[]).map((r) => ({ ...r, amount_paise: Number(r.amount_paise), tds_paise: Number(r.tds_paise) }))
+  return { ok: true, data: { ...(data as ConsoleInvoices), reports } }
 }
 export async function setFinanceSettings(s: { legalName: string; address: string; state: string; gstin: string | null; gstRegistered: boolean; pan: string | null; paymentInstructions: string | null }): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_set_finance_settings', {

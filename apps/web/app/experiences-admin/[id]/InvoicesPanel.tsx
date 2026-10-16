@@ -8,7 +8,7 @@ import { formatRupees } from '@/lib/experience-request'
 import type { ConsoleInvoice, ConsoleInvoices } from '@/lib/experience-console-server'
 import {
   createInvoicePdf, discardInvoice, draftInvoice, editInvoice, issueInvoice, recordInvoicePayment,
-  reverseInvoicePaymentAction, saveBrandBilling, saveFinanceSettings, voidInvoice,
+  reverseInvoicePaymentAction, decidePaymentReport, saveBrandBilling, saveFinanceSettings, voidInvoice,
   type InvoiceForm,
 } from '../actions'
 import { openFinanceFileInTab, uploadFinanceFile } from './finance-upload'
@@ -42,6 +42,7 @@ type Ask =
   | { kind: 'discard'; inv: ConsoleInvoice }
   | { kind: 'void'; inv: ConsoleInvoice }
   | { kind: 'reverse'; paymentId: string }
+  | { kind: 'reject_report'; reportId: string }
 
 export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
   const router = useRouter()
@@ -165,6 +166,34 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                 </div>
               )}
 
+              {/* 0568: payments the brand marked. A report, never a receipt: confirm it
+                  against a receipt recorded above (with proof), or reject it. */}
+              {(data.reports ?? []).filter((r) => r.invoice_id === inv.id).length > 0 && (
+                <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+                  {(data.reports ?? []).filter((r) => r.invoice_id === inv.id).map((r) => {
+                    const linked = new Set((data.reports ?? []).map((x) => x.payment_id).filter(Boolean))
+                    const receipts = inv.payments.filter((p) => !p.reversed_at && !linked.has(p.id))
+                    return (
+                      <div key={r.report_id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontFamily: 'var(--font-ui)', fontSize: 12.5,
+                        padding: '6px 10px', borderRadius: 10, background: r.status === 'reported' ? '#FCF6E4' : '#F7F7F3', color: r.status === 'rejected' ? 'var(--ink-faint)' : 'var(--ink)' }}>
+                        <span>Brand marked {formatRupees(r.amount_paise)}{r.tds_paise ? ` + TDS ${formatRupees(r.tds_paise)}` : ''} · {METHOD[r.method] ?? r.method} · ref {r.reference} · paid {fmtDate(r.paid_on)}{r.note ? ` · “${r.note}”` : ''}</span>
+                        <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          {r.status === 'reported' ? (receipts.length > 0
+                            ? <select aria-label="Confirm against a receipt" defaultValue="" disabled={pending} style={{ ...smallBtn, height: 30 }}
+                                onChange={(ev) => { const id = ev.target.value; if (id) run(() => decidePaymentReport(data.experience_id, r.report_id, 'confirmed', id, ''), () => setNotice('Confirmed. The brand sees it as received.')) }}>
+                                <option value="">Confirm against receipt…</option>
+                                {receipts.map((p) => <option key={p.id} value={p.id}>{fmtDate(p.received_on)} · ref {p.reference} · {formatRupees(p.amount_paise)}</option>)}
+                              </select>
+                            : <span style={{ color: 'var(--ink-soft)' }}>Record the receipt to confirm it</span>)
+                            : <span>{r.status === 'confirmed' ? 'Confirmed' : r.status === 'rejected' ? `Rejected: ${r.decided_reason ?? ''}` : 'Withdrawn'}</span>}
+                          {r.status === 'reported' && <button type="button" style={{ ...linkBtn, color: '#9C4147' }} onClick={() => { setReason(''); setAsk({ kind: 'reject_report', reportId: r.report_id }) }}>Not received</button>}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
               {editing === inv.id && (
                 <InvoiceEditor initial={inv} registered={registered} busy={pending} onCancel={() => setEditing(null)}
                   onSave={(f) => run(() => editInvoice(data.experience_id, inv.id, f), () => setEditing(null))} />
@@ -210,6 +239,11 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
           <input id="inv-why" className="dinput" maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Wrong amount; reissued as the next number" /></div>}
         confirmLabel="Void invoice" busy={pending}
         onConfirm={() => ask?.kind === 'void' && run(() => voidInvoice(data.experience_id, ask.inv.id, reason), () => setAsk(null))} onCancel={() => setAsk(null)} />
+      <ConfirmDialog open={ask?.kind === 'reject_report'} title="The brand's payment is not in the bank" tone="danger"
+        confirmLabel="Reject it" busy={pending}
+        body="The brand sees it as not found, with your reason. Nothing is recorded as received."
+        detail={<textarea className="dinput" rows={3} maxLength={300} value={reason} onChange={(ev) => setReason(ev.target.value)} placeholder="Not in our account as of today; please share the UTR screenshot" style={{ width: '100%' }} />}
+        onConfirm={() => ask?.kind === 'reject_report' && run(() => decidePaymentReport(data.experience_id, ask.reportId, 'rejected', null, reason), () => setAsk(null))} onCancel={() => setAsk(null)} />
       <ConfirmDialog open={ask?.kind === 'reverse'} title="Reverse this payment" tone="danger"
         body="It stops counting toward the invoice (a paid invoice goes back to due). The record is kept with your reason."
         detail={<div style={{ marginTop: 12 }}><label style={fieldLabel} htmlFor="pay-why">Why</label>
