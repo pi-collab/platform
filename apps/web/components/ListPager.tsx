@@ -17,6 +17,23 @@ const numBtn = (cur: boolean): React.CSSProperties => ({ minWidth: 34, height: 3
 const Prev = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
 const Next = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
 
+/**
+ * Which page buttons to draw: all of them up to 7 pages; beyond that the first,
+ * the last, and the current page with its neighbours, gaps between. A 69-page
+ * list drew 69 buttons over three rows before this.
+ */
+function pageWindow(page: number, last: number): (number | 'gap')[] {
+  if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1)
+  const out: (number | 'gap')[] = [1]
+  const start = Math.max(2, Math.min(page - 1, last - 4))
+  const end = Math.min(last - 1, Math.max(page + 1, 5))
+  if (start > 2) out.push('gap')
+  for (let i = start; i <= end; i++) out.push(i)
+  if (end < last - 1) out.push('gap')
+  out.push(last)
+  return out
+}
+
 export default function ListPager({ page, total, noun, pageSize = LIST_PAGE_SIZE, onPage, hrefFor, style }: {
   page: number
   total: number
@@ -44,11 +61,11 @@ export default function ListPager({ page, total, noun, pageSize = LIST_PAGE_SIZE
         Showing {from}&ndash;{to} of {total} {noun}{total !== 1 ? 's' : ''}
       </span>
       {totalPages > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: '#FFFFFF', border: '1px solid var(--border-hairline)', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: '#FFFFFF', border: '1px solid var(--border-hairline)', flexWrap: 'nowrap', maxWidth: '100%', overflowX: 'auto' }}>
           <Btn n={cur - 1} label="Previous page" on={cur > 1} cs={arrowBtn(cur > 1)}><Prev /></Btn>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-            <Btn key={n} n={n} on={n !== cur} cs={numBtn(n === cur)}>{n}</Btn>
-          ))}
+          {pageWindow(cur, totalPages).map((n, i) => n === 'gap'
+            ? <span key={`gap-${i}`} aria-hidden="true" style={{ minWidth: 20, textAlign: 'center', color: 'var(--ink-faint)', fontSize: 13 }}>…</span>
+            : <Btn key={n} n={n} on={n !== cur} cs={numBtn(n === cur)}>{n}</Btn>)}
           <Btn n={cur + 1} label="Next page" on={cur < totalPages} cs={arrowBtn(cur < totalPages)}><Next /></Btn>
         </div>
       )}

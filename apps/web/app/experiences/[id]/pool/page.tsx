@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
 import { getBrandExperience } from '@/lib/experience-brand-server'
 import { listBrandPoolPage, type BrandPoolFilters } from '@/lib/brand-creator-search'
-import { LIST_PAGE_SIZE } from '@/lib/list-page'
+import { POOL_PAGE_SIZE } from '@/lib/list-page'
 import BrandPoolClient from './BrandPoolClient'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +34,7 @@ export default async function BrandExperiencePoolPage({ params, searchParams }: 
     band: band === 'u50' || band === '50-150' || band === '150+' ? band : null,
   }
   const pageNo = Math.max(1, Number.parseInt(one(searchParams.page) ?? '1', 10) || 1)
-  const pool = await listBrandPoolPage(e.id, filters, LIST_PAGE_SIZE, (pageNo - 1) * LIST_PAGE_SIZE)
+  const pool = await listBrandPoolPage(e.id, filters, POOL_PAGE_SIZE, (pageNo - 1) * POOL_PAGE_SIZE)
   if (!pool) notFound()
   return (
     <BrandPoolClient experienceId={e.id} title={e.title} editable={e.status === 'rostering' || e.status === 'confirmed'}

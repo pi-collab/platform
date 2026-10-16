@@ -4,3 +4,9 @@
  * client reference ({}), not a number.
  */
 export const LIST_PAGE_SIZE = 8
+
+/**
+ * Card grids (the creator pools) page by full rows of three. Eight cards left a
+ * half-empty last row and 547 creators came to 69 pages.
+ */
+export const POOL_PAGE_SIZE = 24

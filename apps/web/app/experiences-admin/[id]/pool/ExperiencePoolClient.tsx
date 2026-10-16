@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import ListPager from '@/components/ListPager'
+import { POOL_PAGE_SIZE } from '@/lib/list-page'
 import type { PoolPageFilters } from '@/lib/experience-console-server'
 import CreatorPoolCard, { inr, PoolSelect } from '@/components/CreatorPoolCard'
 import { CHANNELS } from '@/lib/experience-request'
@@ -194,10 +195,8 @@ export default function ExperiencePoolClient({
 
         {/* ===== FILTERS ===== */}
         <div className="filterbar surface" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, padding: '22px 26px', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 220px', minWidth: 200 }}>
-            <span className="mono-label">Search</span>
-            <input className="dinput" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or @handle" aria-label="Search creators by name or handle" maxLength={100} style={{ height: 40 }} />
-          </label>
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or @handle" aria-label="Search creators by name or handle" maxLength={100}
+            style={{ minWidth: 0, boxSizing: 'border-box', padding: '8px 9px', flex: '2 1 220px', border: '1px solid var(--border-edge, rgba(24,28,36,.14))', borderRadius: 10, background: '#FFFFFF', fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', outline: 'none' }} />
           <PoolSelect label="Niche" value={filters.niche ?? 'all'} onChange={(v) => go({ niche: v })} options={[{ value: 'all', label: 'All niches' }, ...niches.map((n) => ({ value: n, label: n }))]} />
           <PoolSelect label="Followers" value={filters.band ?? 'all'} onChange={(v) => go({ band: v })} options={FOLLOWER_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
           <PoolSelect label="Location" value={filters.location ?? 'all'} onChange={(v) => go({ location: v })} options={[{ value: 'all', label: 'All locations' }, ...locations.map((l) => ({ value: l, label: l }))]} />
@@ -248,7 +247,7 @@ export default function ExperiencePoolClient({
           </div>
         )}
 
-        <ListPager page={page} total={total} noun="creator" hrefFor={hrefFor} style={{ marginBottom: 96 }} />
+        <ListPager page={page} total={total} noun="creator" pageSize={POOL_PAGE_SIZE} hrefFor={hrefFor} style={{ marginBottom: 96 }} />
       </div>
 
       {/* ===== STICKY BAR ===== */}
