@@ -171,9 +171,9 @@ async function run() {
   ok('audited and on the deal timeline', ((await admin.from('ops_events').select('id').eq('action', 'experience.collab_sent').eq('target_id', P1)).data ?? []).length === 1
     && ((await admin.from('events').select('id').eq('deal_id', legOf(G)).eq('event_type', 'experience.collab_sent')).data ?? []).length === 2)
 
-  group("the creator's main invoice waits for the collab post")
+  group("the creator's main invoice no longer waits for the collab post (0566)")
   let ctx = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
-  ok('G cannot invoice yet: 1 collab post to go', ctx.can_invoice === false && ctx.collab_waiting === 1, JSON.stringify({ i: ctx.can_invoice, w: ctx.collab_waiting }))
+  ok('G can invoice once shot, with 1 collab post still to go', ctx.can_invoice === true && ctx.collab_waiting === 1, JSON.stringify({ i: ctx.can_invoice, w: ctx.collab_waiting }))
   const mine = (await cG.rpc('creator_collab_posts', { p_deal_id: legOf(G) })).data as any[]
   ok('G sees both: the collab to post and the shared one', mine?.length === 2 && mine.some((p) => p.id === P1 && p.kind === 'collab' && p.can_post) && mine.some((p) => p.id === P2 && p.kind === 'share' && !p.can_post))
   ok("D cannot read G's posts or file", refused(await cD.rpc('creator_collab_posts', { p_deal_id: legOf(G) })) && refused(await cD.rpc('creator_collab_file', { p_post_id: P1 })))

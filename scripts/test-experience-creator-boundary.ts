@@ -242,7 +242,8 @@ async function run() {
   const { data: e3 } = await admin.from('experiences').select('agreed_plan').eq('id', E3).single()
   const plan = { ...(e3!.agreed_plan as any) }; delete plan.videos_sold
   await admin.from('experiences').update({ agreed_plan: plan }).eq('id', E3)
-  ok('roster lock when the plan has no "videos sold": refused (was ok-by-default)', said(await op.rpc('experience_console_roster_lock', { p_experience_id: E3 }), /does not add up/))
+  // 0567: a partial roster may lock, but never against an unknown "videos sold".
+  ok('roster lock when the plan has no "videos sold": refused (was ok-by-default)', said(await op.rpc('experience_console_roster_lock', { p_experience_id: E3 }), /does not add up|No agreed plan/))
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {

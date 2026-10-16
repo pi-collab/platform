@@ -192,7 +192,8 @@ async function run() {
   const bv = await brand.rpc('brand_experience_invoices', { p_experience_id: E })
   const bi = ((bv.data as any)?.invoices ?? []) as any[]
   ok('the brand sees exactly the two issued invoices (not the draft)', !bv.error && bi.length === 2 && !bi.some((x) => x.invoice_id === I3), bv.error?.message ?? String(bi.length))
-  const KEYS = ['description', 'due_date', 'gst_paise', 'has_pdf', 'invoice_id', 'issue_date', 'number', 'paid_paise', 'status', 'subtotal_paise', 'total_paise'].join(',')
+  // 0568: + what the brand marked paid (being checked), the balance, and its own marks.
+  const KEYS = ['balance_paise', 'description', 'due_date', 'gst_paise', 'has_pdf', 'invoice_id', 'issue_date', 'number', 'paid_paise', 'reported_paise', 'reports', 'status', 'subtotal_paise', 'total_paise'].join(',')
   ok('each carries exactly: number, dates, description, amounts, status, PDF flag', bi.every((x) => Object.keys(x).sort().join(',') === KEYS), Object.keys(bi[0] ?? {}).sort().join(','))
   ok('nothing about creators, payouts, costs, margin or notes', !/creator|payout|cost|margin|note|void|reason|reference|gstin/i.test(JSON.stringify(bv.data)))
   for (const [n, s] of [['another brand', brand2], ['the creator', creator], ['finance staff (not a member)', fin], ['anonymous', anon], ['service role', admin]] as const) {
