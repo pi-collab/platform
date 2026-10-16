@@ -16,7 +16,7 @@ import InstagramReconnectBanner from '@/components/creator/InstagramReconnectBan
 import CreatorTaskCard from '@/components/creator/CreatorTaskCard'
 import { getConnection } from '@/lib/instagram-sync'
 import { hasCreatorEmail } from '@/lib/creator-contact'
-import { growthCta, GROWTH_READY_LINE } from '@/lib/growth-cta'
+import { growthCta, growthButton, GROWTH_READY_LINE } from '@/lib/growth-cta'
 import { creatorTasks } from '@/lib/creator-tasks'
 import { compactNumber } from '@/lib/compact-number'
 import Link from 'next/link'
@@ -323,7 +323,7 @@ export default async function CreatorDashboardPage({
   const mobileEmpty = showMobileEmpty ? (
     <div className="creator-empty-mobile">
       <CreatorDashboardEmpty
-        growthCta={gCta}
+        growthCta={growthButton(isGrowth, gCta)}
         firstName={firstName}
         handleLine={emptyHandleLine}
         alert={alertNode}
@@ -571,7 +571,7 @@ export default async function CreatorDashboardPage({
         populated dashboard rendering with nothing in it. */}
     {showMobileEmpty && (
       <div className="creator-empty-desktop">
-        <CreatorDashboardEmptyDesktop alert={alertNode} tasks={tasksNode} growthCta={gCta} />
+        <CreatorDashboardEmptyDesktop alert={alertNode} tasks={tasksNode} growthCta={growthButton(isGrowth, gCta)} />
       </div>
     )}
     {!showMobileEmpty && (

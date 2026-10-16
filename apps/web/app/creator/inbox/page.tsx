@@ -8,6 +8,7 @@ import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
 import CreatorEmptyState from '@/components/creator/CreatorEmptyState'
 import { creatorGrowthState } from '@/lib/creator-growth-state'
+import { growthButton } from '@/lib/growth-cta'
 import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
 import { unreadNotificationCount } from '@/lib/unread'
@@ -153,7 +154,7 @@ export default async function CreatorInboxPage({ searchParams }: {
       {/* Desktop's own drawing. The phone version above is UNCHANGED, it is only
           gated by width now instead of rendering at all of them. */}
       <main className="creator-empty-desktop" style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorInboxEmptyDesktop growthCta={growth.cta} />
+        <CreatorInboxEmptyDesktop growthCta={growthButton(growth.isGrowth, growth.cta)} />
       </main>
       </>
     )

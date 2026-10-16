@@ -7637,3 +7637,10 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] The affiliate commission is still claimed later, once the brand marks the collab ads complete (0563), on its own invoice
 - [ ] Staging check: the three Holiday shoot legs (ad rights 1, 2, 6; posts waiting 1, 2, 5) went from work complete false to true when 0566 was applied
 - [ ] SECURITY: experience_leg_work_complete stays REVOKED from PUBLIC/anon/authenticated
+
+## 140. A Growth creator is never sent to the locked shopfront from an empty state
+
+- [ ] Growth creator with packages set and Instagram connected, no deals: Deals (mobile and desktop), the deals table header, Inbox (desktop) and Dashboard (mobile and desktop) empty states show **View your packages** → /creator/packages, never "Set up your shopfront"
+- [ ] Dashboard desktop "No brand deals yet" reads "Brands can book you through your packages…" (no shopfront wording); Inbox desktop reads "Brands can book you now; your first brief lands here."
+- [ ] Growth creator still setting up: the same slots say **Set your packages**, then **Connect Instagram** (unchanged)
+- [ ] Deals (vetted) creator: unchanged, still the shopfront buttons
