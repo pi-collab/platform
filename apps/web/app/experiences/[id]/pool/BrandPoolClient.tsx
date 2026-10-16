@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import ListPager from '@/components/ListPager'
 import CreatorPoolCard, { PoolSelect } from '@/components/CreatorPoolCard'
-import type { BrandPoolCreator } from '@/lib/brand-creator-search'
+import type { BrandPoolCreator, BrandPoolFilters } from '@/lib/brand-creator-search'
 import { addRosterCreators } from '../../actions'
 
 const FOLLOWER_BANDS = [
@@ -20,12 +21,20 @@ const FOLLOWER_BANDS = [
  * brand's pick, still to review (0559); the brand accepts, holds or rejects it
  * on the roster itself. Guapd checks they are free, confirms and sends the offer.
  */
-export default function BrandPoolClient({ experienceId, title, editable, creatorsPlanned, creators }: {
+export default function BrandPoolClient({ experienceId, title, editable, creatorsPlanned, creators, filters, page, total, niches, locations, acceptedCount, toReviewCount }: {
   experienceId: string
   title: string
   editable: boolean
   creatorsPlanned: number | null
+  /** 0570: this page of the searched, filtered pool (the server does the work). */
   creators: BrandPoolCreator[]
+  filters: BrandPoolFilters
+  page: number
+  total: number
+  niches: string[]
+  locations: string[]
+  acceptedCount: number
+  toReviewCount: number
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -33,34 +42,38 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
   const [error, setError] = useState<string | null>(null)
   const [justAdded, setJustAdded] = useState<string | null>(null)
 
-  const [niche, setNiche] = useState('all')
-  const [band, setBand] = useState('all')
-  const [location, setLocation] = useState('all')
-  const [platform, setPlatform] = useState('all')
-
-  const niches = useMemo(() => Array.from(new Set(creators.flatMap((c) => c.niches))).sort(), [creators])
-  const locations = useMemo(() => Array.from(new Set(creators.map((c) => c.location).filter((l): l is string => !!l))).sort(), [creators])
-
-  const shown = useMemo(() => creators.filter((c) => {
-    if (niche !== 'all' && !c.niches.includes(niche)) return false
-    if (location !== 'all' && c.location !== location) return false
-    if (platform !== 'all' && !c.platforms.includes(platform)) return false
-    if (band !== 'all') {
-      const rule = FOLLOWER_BANDS.find((b) => b.value === band)
-      if (!rule || !('test' in rule) || c.followers == null || !rule.test(c.followers)) return false
-    }
-    return true
-  }), [creators, niche, band, location, platform])
+  const pathname = usePathname()
+  const params = useSearchParams()
+  const go = (next: Record<string, string | null>) => {
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    for (const [k, v] of Object.entries(next)) { if (v && v !== 'all') sp.set(k, v); else sp.delete(k) }
+    sp.delete('page')
+    startTransition(() => router.push(`${pathname}?${sp.toString()}`, { scroll: false }))
+  }
+  const hrefFor = (n: number) => {
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    if (n > 1) sp.set('page', String(n)); else sp.delete('page')
+    return `${pathname}?${sp.toString()}`
+  }
+  const [q, setQ] = useState(filters.q ?? '')
+  useEffect(() => {
+    if ((filters.q ?? '') === q.trim()) return
+    const t = setTimeout(() => go({ q: q.trim() || null }), 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
+  const shown = creators
+  const filtered = !!(filters.q || filters.niche || filters.location || filters.platform || filters.band)
 
   // 0559: an added creator is a pick to review, not an acceptance; only accepted (and confirmed) ones fill the plan.
-  const counted = creators.filter((c) => c.rosterState === 'accepted' || c.rosterState === 'locked')
-  const toReview = creators.filter((c) => c.rosterState === 'added' || c.rosterState === 'on_hold').length
+  const accepted = acceptedCount
+  const toReview = toReviewCount
   const need = creatorsPlanned ?? 0
-  const pct = need > 0 ? Math.min(100, Math.round((counted.length / need) * 100)) : 0
-  const progressLabel = (need ? `${counted.length} of ${need} accepted` : `${counted.length} accepted`) + (toReview ? ` · ${toReview} to review` : '')
+  const pct = need > 0 ? Math.min(100, Math.round((accepted / need) * 100)) : 0
+  const progressLabel = (need ? `${accepted} of ${need} accepted` : `${accepted} accepted`) + (toReview ? ` · ${toReview} to review` : '')
   const floatHint = !need ? 'No plan to count against'
-    : counted.length >= need ? (counted.length > need ? `${counted.length - need} over plan` : 'Plan filled')
-    : `${need - counted.length} more to go`
+    : accepted >= need ? (accepted > need ? `${accepted - need} over plan` : 'Plan filled')
+    : `${need - accepted} more to go`
 
   function add(c: BrandPoolCreator) {
     if (busyId || c.rosterState) return
@@ -113,10 +126,14 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
 
         {/* ===== FILTERS ===== */}
         <div className="filterbar surface" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, padding: '22px 26px', flexWrap: 'wrap' }}>
-          <PoolSelect label="Niche" value={niche} onChange={setNiche} options={[{ value: 'all', label: 'All niches' }, ...niches.map((n) => ({ value: n, label: n }))]} />
-          <PoolSelect label="Followers" value={band} onChange={setBand} options={FOLLOWER_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
-          <PoolSelect label="Location" value={location} onChange={setLocation} options={[{ value: 'all', label: 'All locations' }, ...locations.map((l) => ({ value: l, label: l }))]} />
-          <PoolSelect label="Platform" value={platform} onChange={setPlatform} options={[{ value: 'all', label: 'All platforms' }, { value: 'instagram', label: 'Instagram' }, { value: 'youtube', label: 'YouTube' }]} />
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 220px', minWidth: 200 }}>
+            <span className="mono-label">Search</span>
+            <input className="dinput" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or @handle" aria-label="Search creators by name or handle" maxLength={100} style={{ height: 40 }} />
+          </label>
+          <PoolSelect label="Niche" value={filters.niche ?? 'all'} onChange={(v) => go({ niche: v })} options={[{ value: 'all', label: 'All niches' }, ...niches.map((n) => ({ value: n, label: n }))]} />
+          <PoolSelect label="Followers" value={filters.band ?? 'all'} onChange={(v) => go({ band: v })} options={FOLLOWER_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
+          <PoolSelect label="Location" value={filters.location ?? 'all'} onChange={(v) => go({ location: v })} options={[{ value: 'all', label: 'All locations' }, ...locations.map((l) => ({ value: l, label: l }))]} />
+          <PoolSelect label="Platform" value={filters.platform ?? 'all'} onChange={(v) => go({ platform: v })} options={[{ value: 'all', label: 'All platforms' }, { value: 'instagram', label: 'Instagram' }, { value: 'youtube', label: 'YouTube' }]} />
         </div>
 
         {!editable && (
@@ -151,14 +168,15 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 24px', borderRadius: 24, border: '1px dashed var(--border-hairline, #EAEAE3)', marginTop: 22 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16 }}>
-              {creators.length === 0 ? 'No bookable creators yet' : 'No creators match those filters'}
+              {!filtered && total === 0 ? 'No bookable creators yet' : 'No creators match that search'}
             </div>
             <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '8px 0 0' }}>
-              {creators.length === 0 ? 'No creators are listed yet.' : 'Try widening the niche, follower range or location.'}
+              {!filtered && total === 0 ? 'No creators are listed yet.' : 'Try another name, or widen the niche, follower range or location.'}
             </p>
           </div>
         )}
 
+        <ListPager page={page} total={total} noun="creator" hrefFor={hrefFor} style={{ marginBottom: 96 }} />
       </div>
 
       {/* ===== STICKY BAR ===== */}
@@ -175,7 +193,7 @@ export default function BrandPoolClient({ experienceId, title, editable, creator
           </div>
           <Link href={`/experiences/${experienceId}`} className="inkbtn"
                 style={{ flexShrink: 0, height: 42, padding: '0 20px', borderRadius: 999, background: 'var(--ink)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            {counted.length + toReview > 0 ? 'Review on your roster' : 'Back to the Experience'}
+            {accepted + toReview > 0 ? 'Review on your roster' : 'Back to the Experience'}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </Link>
         </div>

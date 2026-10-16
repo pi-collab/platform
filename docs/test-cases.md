@@ -7685,3 +7685,12 @@ Two lists, two sources: ops searches the FULL bookable directory; the brand sear
 - [ ] NULL / out-of-range page size or offset, unknown band/track/rate: refused
 - [ ] Campaigns list still pages 8 at a time with the same pager (now shared)
 - [ ] Gotcha: LIST_PAGE_SIZE lives in lib/list-page.ts. Imported from the 'use client' ListPager into a server page it arrives as {} and the RPC fails ("invalid input syntax for type integer")
+
+## 144. Brand "Add creators" pool: search + server-side pages (migration 0570)
+
+- [ ] /experiences/[id]/pool (brand): a Search box (name or @handle) beside Niche / Followers / Location / Platform; each is a URL param; any change returns page 1; "Showing 1–8 of N creators" with the shared pager (8 per page)
+- [ ] Same creators as /browse shows every brand (staging 18 = 18); pages cover them once (18 rows, 18 distinct); search "aarav" → 1; nothing matching → "No creators match that search"
+- [ ] No price of any kind in a row (no paise/price/rate/fee/margin/payout keys or values)
+- [ ] Roster state comes only from rows SHARED with this brand: a creator on Guapd's internal shortlist is findable but shows no roster state
+- [ ] Progress ("N of M accepted · K to review") counts the brand's whole shared roster, not the page
+- [ ] Another brand: "Not found"; NULL page size: refused
