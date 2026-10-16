@@ -7644,3 +7644,18 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] Dashboard desktop "No brand deals yet" reads "Brands can book you through your packages…" (no shopfront wording); Inbox desktop reads "Brands can book you now; your first brief lands here."
 - [ ] Growth creator still setting up: the same slots say **Set your packages**, then **Connect Instagram** (unchanged)
 - [ ] Deals (vetted) creator: unchanged, still the shopfront buttons
+
+## 141. Partial roster: lock and send below what was bought, place the rest later (migration 0567)
+
+Design rule: forgiving below the bought total, strict at it.
+- [ ] Brand bought 70; plans 25 + 25 + 10 = 60: the roster strip reads "10 videos held for later", **Lock roster** is enabled, locking succeeds and the Experience goes Confirmed; the audit row has `partial: true`, `videos_placed: 60`
+- [ ] Each locked creator's deal can be prepared (deliverables editable) and sent; terms freeze on send (unchanged)
+- [ ] Shoot scheduled: **Add creators** still works; a new creator planned for the held 10 can be accepted, locked, prepared and sent (70 of 70)
+- [ ] The deal already sent before the late creator is byte-identical before and after (status, price, updated_at, creator terms)
+- [ ] One more creator with 1 video (71 of 70): lock refused "Locking these creators would place more than the brand bought: 71 of 70 videos. More scope is a new brand invoice"; that creator stays unlocked
+- [ ] Planned above bought before any lock: the strip reads "More than the brand bought" (red) and Lock is disabled with the add-on hint
+- [ ] An Experience with no agreed plan: lock refused "No agreed plan to lock against"
+- [ ] Held videos to an EXISTING creator after the shoot: an extra (0555), still capped at what was bought
+- [ ] Sent counts are re-split only while Confirmed (the re-split button is hidden once the shoot is scheduled)
+- [ ] Not changed: adding creators after the shoot is done (needs a second shoot day; use an extra)
+- [ ] Staging check (rolled back): all of the above ran on Diwali UGC Shoot (1673b8e0) on 2026-10-16

@@ -53,7 +53,8 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   const e = exp.data
   // The roster exists once the price is agreed (Building roster onward).
   const hasRoster = !['draft', 'requested', 'cancelled'].includes(e.status)
-  const rosterEditable = e.status === 'rostering' || e.status === 'confirmed'
+  // 0567: the roster keeps changing until the shoot is done (place the rest of what was bought later).
+  const rosterEditable = e.status === 'rostering' || e.status === 'confirmed' || e.status === 'shoot_scheduled'
   const [roster, reconcile, prospects, suggestionsRes] = hasRoster
     ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), listConsoleProspects(e.id), listConsoleSuggestions(e.id)])
     : [null, null, null, null]
@@ -217,7 +218,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
       {hasLegs && (
         <div style={{ marginTop: 20 }}>
           {legs?.ok && legsReconcile?.ok
-            ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
+            ? <CreatorLegsPanel experienceId={e.id} editable={e.status === 'confirmed' || e.status === 'shoot_scheduled'} canRescope={e.status === 'confirmed'} legs={legs.data} reconcile={legsReconcile.data}
                 affiliateSold={e.request_affiliate === true} adRightsSold={e.request_ad_rights === true} boostSold={e.request_boost === true}
                 boughtPer={{ affiliate: e.agreed_plan?.affiliate_per_creator ?? null, adRights: e.agreed_plan?.ad_rights_per_creator ?? null, boost: e.agreed_plan?.boost_per_creator ?? null }}
                 counters={counters?.ok ? counters.data.counters : []} canRaise={counters?.ok ? counters.data.can_raise : false} />

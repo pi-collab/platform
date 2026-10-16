@@ -1636,3 +1636,5 @@ REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
 -- experience_console_leg_threads (operational staff, checked inside), whose grants are unchanged.
 -- 0566: experience_leg_work_complete(uuid) recreated without the collab-post wait; still internal,
 -- REVOKED from PUBLIC/anon/authenticated. No new table, no policy change.
+-- 0567: experience_roster_reconcile, experience_console_roster_lock/_add, experience_console_leg_draft/_send recreated
+-- (partial roster); CREATE OR REPLACE keeps their grants. No new table, no policy change.

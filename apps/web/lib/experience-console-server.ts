@@ -227,6 +227,8 @@ export interface ConsoleRosterRow {
 
 export interface ConsoleReconcile {
   ok: boolean
+  /** 0567: past what the brand bought on some line (unknown counts as over). Locking below it is fine. */
+  over?: boolean
   reason?: 'no_agreed_plan'
   videos_sold?: number
   videos_planned?: number

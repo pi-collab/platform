@@ -76,7 +76,7 @@ export default async function ExperiencePoolPage({ params, searchParams }: {
       experienceId={e.id}
       title={e.title}
       brandName={e.brand_name}
-      editable={e.status === 'rostering' || e.status === 'confirmed'}
+      editable={e.status === 'rostering' || e.status === 'confirmed' || e.status === 'shoot_scheduled'}
       creatorsPlanned={e.agreed_plan?.creator_count ?? e.request_creator_count ?? null}
       videosSold={reconcile.ok ? reconcile.data.videos_sold ?? null : null}
       creators={creators}
