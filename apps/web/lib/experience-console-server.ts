@@ -242,6 +242,17 @@ export async function listConsoleCreators(): Promise<Result<ConsoleCreatorOption
   return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleCreatorOption[] }
 }
 
+/** 0571: each roster creator's shoot day rate (staff only). Empty when the function is missing, so the list still works. */
+export type RosterDayRates = Record<string, { day_rate_paise: number | null; paused_rate_paise: number | null }>
+export async function getConsoleRosterDayRates(experienceId: string): Promise<RosterDayRates> {
+  const { data, error } = await createClient().rpc('experience_console_roster_day_rates', { p_experience_id: experienceId })
+  if (error || !data) return {}
+  const out: RosterDayRates = {}
+  for (const [k, v] of Object.entries(data as Record<string, { day_rate_paise: unknown; paused_rate_paise: unknown }>)) {
+    out[k] = { day_rate_paise: v?.day_rate_paise == null ? null : Number(v.day_rate_paise), paused_rate_paise: v?.paused_rate_paise == null ? null : Number(v.paused_rate_paise) }
+  }
+  return out
+}
 export async function listConsoleRoster(experienceId: string): Promise<Result<ConsoleRosterRow[]>> {
   const { data, error } = await createClient().rpc('experience_console_roster', { p_experience_id: experienceId })
   return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleRosterRow[] }

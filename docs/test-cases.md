@@ -7694,3 +7694,9 @@ Two lists, two sources: ops searches the FULL bookable directory; the brand sear
 - [ ] Roster state comes only from rows SHARED with this brand: a creator on Guapd's internal shortlist is findable but shows no roster state
 - [ ] Progress ("N of M accepted · K to review") counts the brand's whole shared roster, not the page
 - [ ] Another brand: "Not found"; NULL page size: refused
+
+## 145. Day rate on the console Roster list (migration 0571)
+
+- [ ] Console Experience → Roster: each creator shows "Day rate ₹X" under the plan, or "No day rate yet" / "Day rate paused (was ₹X)" in amber; visible as soon as they are added, before the lock
+- [ ] Same access as the pool and Creator deals (operational staff); a brand calling experience_console_roster_day_rates is refused; the brand Experience page never mentions a day rate (staging check 2026-10-16: 0 matches)
+- [ ] Before 0571 is applied the Roster list still loads, just without the rate
