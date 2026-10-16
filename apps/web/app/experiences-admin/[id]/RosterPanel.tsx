@@ -6,7 +6,8 @@ import Link from 'next/link'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { CHANNELS, DELIVERABLE_TYPES, channelLabel, countOf } from '@/lib/experience-request'
-import type { ConsoleReconcile, ConsoleRosterRow } from '@/lib/experience-console-server'
+import type { ConsoleReconcile, ConsoleRosterRow, RosterDayRates } from '@/lib/experience-console-server'
+import { formatPaiseINR } from '@/lib/money'
 import { lockRoster, recordRosterDecision, releaseRosterCreator, removeFromRoster, setRosterNote, setRosterPlan, shareRosterWithBrand } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 import type { ConsoleProspect, ConsoleSuggestion } from '@/lib/experience-console-server'
@@ -31,10 +32,12 @@ const DECISION: Record<string, { label: string; tone: ChipTone }> = {
 }
 const COLS = ROSTER_COLS
 
-export default function RosterPanel({ experienceId, editable, roster, reconcile, prospects, linkable, suggestions }: {
+export default function RosterPanel({ experienceId, editable, roster, dayRates = {}, reconcile, prospects, linkable, suggestions }: {
   experienceId: string
   /** Building roster or Confirmed: creators can still be added (add-after-lock). */
   editable: boolean
+  /** 0571: each creator's shoot day rate (staff only), keyed by creator id. */
+  dayRates?: RosterDayRates
   roster: ConsoleRosterRow[]
   reconcile: ConsoleReconcile | null
   /** 0541: creators not on Guapd yet, listed under the roster (not on it until linked). */
@@ -189,6 +192,14 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
                   </div>
                   <div className="t-body" style={{ fontSize: 13.5, minWidth: 0 }}>
                     {(r.planned_deliverables ?? []).length ? r.planned_deliverables.map((x) => countOf(Number(x.count), x.type)).join(' · ') : 'Nothing planned'}
+                    {/* 0571: the shoot day rate, staff only (never shown to brands). */}
+                    {(() => {
+                      const dr = dayRates[r.creator_id]
+                      if (!dr) return null
+                      return dr.day_rate_paise != null
+                        ? <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--ink-soft)', marginTop: 3 }}>Day rate {formatPaiseINR(dr.day_rate_paise)}</div>
+                        : <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#8C6417', marginTop: 3 }}>{dr.paused_rate_paise != null ? `Day rate paused (was ${formatPaiseINR(dr.paused_rate_paise)})` : 'No day rate yet'}</div>
+                    })()}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
                     {r.locked ? <StatusChip label="Locked" tone="green" />

@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, listConsoleCollabPosts, listConsoleAffiliates } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -55,9 +55,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   const hasRoster = !['draft', 'requested', 'cancelled'].includes(e.status)
   // 0567: the roster keeps changing until the shoot is done (place the rest of what was bought later).
   const rosterEditable = e.status === 'rostering' || e.status === 'confirmed' || e.status === 'shoot_scheduled'
-  const [roster, reconcile, prospects, suggestionsRes] = hasRoster
-    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), listConsoleProspects(e.id), listConsoleSuggestions(e.id)])
-    : [null, null, null, null]
+  const [roster, reconcile, prospects, suggestionsRes, dayRates] = hasRoster
+    ? await Promise.all([listConsoleRoster(e.id), getConsoleReconcile(e.id), listConsoleProspects(e.id), listConsoleSuggestions(e.id), getConsoleRosterDayRates(e.id)])
+    : [null, null, null, null, {}]
   // 0558: creators the brand suggested that are not on Guapd yet.
   const suggestions = suggestionsRes?.ok ? suggestionsRes.data : []
   // Not-on-Guapd entries list under the roster; linking one needs the vetted
@@ -209,7 +209,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
       {hasRoster && (
         <div style={{ marginTop: 20 }}>
           {roster?.ok && reconcile?.ok
-            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} reconcile={reconcile.data} prospects={prospectRows} linkable={linkable} suggestions={suggestions} />
+            ? <RosterPanel experienceId={e.id} editable={rosterEditable} roster={roster.data} dayRates={dayRates ?? {}} reconcile={reconcile.data} prospects={prospectRows} linkable={linkable} suggestions={suggestions} />
             : <Failed inline message={(roster && !roster.ok && roster.error) || (reconcile && !reconcile.ok && reconcile.error) || 'Could not load the roster'} />}
         </div>
       )}

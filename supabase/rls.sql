@@ -1647,3 +1647,4 @@ REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;
 -- pages the output of brand_experience_roster, so shared creators only). Functions only; no table or policy change.
 -- 0570: brand_experience_pool_page (brand member of THIS Experience's brand; bookable directory with no price,
 -- roster state from shared rows only). Function only; no table or policy change.
+-- 0571: experience_console_roster_day_rates (operational staff, via experience_console_require). Function only.
