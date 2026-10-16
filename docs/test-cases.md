@@ -7672,3 +7672,16 @@ A brand's mark is a REPORT, never a receipt: it never settles the invoice, never
 - [ ] The invoice itself (status, received total, receipts) is unchanged by any brand mark (staging check 2026-10-16, rolled back)
 - [ ] SECURITY: service_invoice_payment_reports has RLS on, no policies, no grants (functions only); experience_console_payment_reports and _decide need finance access ("Financial access required" for a brand); the brand's view carries only amount, TDS, date, method, reference, status and a rejection reason
 - [ ] Every brand mark and finance decision writes an ops_events row (before/after balance, status)
+
+## 143. Roster search + server-side pages, ops and brand (migration 0569, components/ListPager)
+
+Two lists, two sources: ops searches the FULL bookable directory; the brand searches ONLY the creators Guapd shared with it on this Experience.
+- [ ] Ops pool (/experiences-admin/[id]/pool): Search (name or @handle) + Niche / Followers / Location / Platform / Track / Shoot day rate are URL params; each change returns page 1 of the filtered result; "Showing 1–8 of N creators" with the campaigns pager (8 per page); page links keep the search and filters
+- [ ] Ops: directory total equals the old pool (staging 18 = 18); pages cover the filtered set once with no repeats (16 rows, 16 distinct); a creator on Guapd's internal shortlist is findable; day rate shows on cards (staff only, as before)
+- [ ] Ops header totals (on the roster, day rates combined, missing rate) are the roster's own, not the page's
+- [ ] Brand Experience page, Creators: a search box (when there is more than one creator) and the same pager; "No creator on your roster matches “…”." when nothing matches
+- [ ] ISOLATION (brand): across every page and 8 searches the brand got 13 rows, 0 outside its shared roster; searching an internal-shortlist creator's exact name returns 0; "%" matches nothing; another brand gets "Not found"; the brand calling the ops directory gets "Operational access required"
+- [ ] Brand rows carry only roster_id, full_name, handle, profile_url, photo_url, planned_deliverables, added_by, decision, decided_at, decided_on_guapd, locked (no day rate, fee, payout or margin)
+- [ ] NULL / out-of-range page size or offset, unknown band/track/rate: refused
+- [ ] Campaigns list still pages 8 at a time with the same pager (now shared)
+- [ ] Gotcha: LIST_PAGE_SIZE lives in lib/list-page.ts. Imported from the 'use client' ListPager into a server page it arrives as {} and the RPC fails ("invalid input syntax for type integer")

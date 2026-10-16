@@ -1643,3 +1643,5 @@ REVOKE ALL ON experience_shoot_date_changes FROM PUBLIC, anon, authenticated;
 -- Experience's brand), brand_experience_invoices (brand member), experience_console_payment_reports/_decide (finance).
 ALTER TABLE service_invoice_payment_reports ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;
+-- 0569: experience_console_creator_pool_page (operational staff) and brand_experience_roster_page (brand member;
+-- pages the output of brand_experience_roster, so shared creators only). Functions only; no table or policy change.

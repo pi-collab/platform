@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleReconcile, listConsoleCreatorPool, listConsoleRoster } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleReconcile, listConsoleCreatorPoolPage, listConsoleRoster, type PoolPageFilters } from '@/lib/experience-console-server'
+import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import { compactNumber } from '@/lib/compact-number'
 import NoAccess from '../../NoAccess'
 import ExperiencePoolClient, { type ExperiencePoolCreator } from './ExperiencePoolClient'
@@ -20,24 +21,41 @@ export const metadata = { title: 'Creator pool · Guapd Experiences' }
  *
  * `?as=brand&via=<channel>` adds the brand's picks (recorded with the channel)
  * instead of Guapd's.
+ *
+ * 0569: the whole directory is searched (name or handle) and filtered in the
+ * database and comes back one page at a time; `?q=&niche=&band=&location=
+ * &platform=&track=&rate=&page=` are real URLs.
  */
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() || null
+function poolFilters(sp: Record<string, string | string[] | undefined>): PoolPageFilters {
+  const pick = <T extends string>(v: string | null, ok: readonly T[]) => (v && (ok as readonly string[]).includes(v) ? v as T : null)
+  return {
+    q: one(sp.q)?.slice(0, 100) ?? null,
+    niche: one(sp.niche), location: one(sp.location), platform: pick(one(sp.platform), ['instagram', 'youtube'] as const),
+    track: pick(one(sp.track), ['growth', 'deals'] as const), band: pick(one(sp.band), ['u50', '50-150', '150+'] as const),
+    rate: pick(one(sp.rate), ['set', 'unset'] as const),
+  }
+}
 export default async function ExperiencePoolPage({ params, searchParams }: {
   params: { id: string }
-  searchParams: { as?: string; via?: string }
+  searchParams: Record<string, string | string[] | undefined>
 }) {
   const gate = await experienceStaffGate()
   if (!gate.ok) return <NoAccess reason={gate.reason} />
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
 
+  const filters = poolFilters(searchParams)
+  const pageNo = Math.max(1, Number.parseInt(one(searchParams.page) ?? '1', 10) || 1)
   const [exp, roster, pool, reconcile] = await Promise.all([
-    getConsoleExperience(params.id), listConsoleRoster(params.id), listConsoleCreatorPool(), getConsoleReconcile(params.id),
+    getConsoleExperience(params.id), listConsoleRoster(params.id),
+    listConsoleCreatorPoolPage(params.id, filters, LIST_PAGE_SIZE, (pageNo - 1) * LIST_PAGE_SIZE), getConsoleReconcile(params.id),
   ])
   if (!exp.ok || !exp.data) notFound()
   if (!roster.ok || !pool.ok) throw new Error((!roster.ok && roster.error) || (!pool.ok && pool.error) || 'Could not load the pool')
   const e = exp.data
 
   const onRoster = new Map(roster.data.map((r) => [r.creator_id, r]))
-  const creators: ExperiencePoolCreator[] = pool.data.map((c) => {
+  const creators: ExperiencePoolCreator[] = pool.data.rows.map((c) => {
     const typedFollowers = Array.isArray(c.social_accounts)
       ? (c.social_accounts as { follower_count?: number }[])
           .map((s) => s.follower_count).filter((n): n is number => typeof n === 'number').sort((a, b) => b - a)[0]
@@ -80,8 +98,14 @@ export default async function ExperiencePoolPage({ params, searchParams }: {
       creatorsPlanned={e.agreed_plan?.creator_count ?? e.request_creator_count ?? null}
       videosSold={reconcile.ok ? reconcile.data.videos_sold ?? null : null}
       creators={creators}
-      initialMode={searchParams.as === 'brand' ? 'brand' : 'guapd'}
-      initialChannel={typeof searchParams.via === 'string' ? searchParams.via : ''}
+      initialMode={one(searchParams.as) === 'brand' ? 'brand' : 'guapd'}
+      initialChannel={one(searchParams.via) ?? ''}
+      filters={filters}
+      page={pageNo}
+      total={pool.data.total}
+      niches={pool.data.niches}
+      locations={pool.data.locations}
+      rosterSummary={pool.data.roster}
     />
   )
 }

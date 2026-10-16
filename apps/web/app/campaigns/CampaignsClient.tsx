@@ -1,5 +1,6 @@
 'use client'
 
+import ListPager, { LIST_PAGE_SIZE } from '@/components/ListPager'
 import { useState } from 'react'
 import NewCampaignFields, { parseBudget } from '@/components/NewCampaignFields'
 import { useRouter } from 'next/navigation'
@@ -107,15 +108,13 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
     const t = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     return sortNewest ? t : -t
   })
-  const PAGE_SIZE = 8
+  const PAGE_SIZE = LIST_PAGE_SIZE
   const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE))
   /* Clamped rather than reset: a brand on page 3 who narrows the filter should
      land on the last page that still has rows, not silently back at the top. */
   const safePage = Math.min(page, totalPages)
   const start = (safePage - 1) * PAGE_SIZE
   const pageItems = ordered.slice(start, start + PAGE_SIZE)
-  const rangeFrom = ordered.length === 0 ? 0 : start + 1
-  const rangeTo = start + pageItems.length
 
   async function handleCreate() {
     if (!formName.trim()) { setError('Name is required'); return }
@@ -424,28 +423,7 @@ export default function CampaignsClient({ campaigns, canGrowth = false }: {
       </div>
 
       {/* ===== RESULT COUNT + PAGES ===== */}
-      {filtered.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 22, padding: '0 4px', flexWrap: 'wrap' as const }}>
-          <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>
-            Showing {rangeFrom}&ndash;{rangeTo} of {filtered.length} campaign{filtered.length !== 1 ? 's' : ''}
-          </span>
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4, borderRadius: 999, background: '#FFFFFF', border: '1px solid var(--border-hairline)' }}>
-              <button onClick={() => setPage(Math.max(1, safePage - 1))} aria-label="Previous page" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: safePage > 1 ? 1 : 0.35, cursor: safePage > 1 ? 'pointer' : 'default' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                <button key={n} onClick={() => setPage(n)} aria-current={n === safePage ? 'page' : undefined} style={{ minWidth: 34, height: 34, padding: '0 6px', borderRadius: 999, border: 'none', background: n === safePage ? 'var(--ink)' : 'transparent', color: n === safePage ? '#FFFFFF' : 'var(--ink-soft)', fontFamily: 'var(--font-num, var(--font-ui))', fontSize: 13, fontWeight: n === safePage ? 700 : 500, cursor: 'pointer' }}>
-                  {n}
-                </button>
-              ))}
-              <button onClick={() => setPage(Math.min(totalPages, safePage + 1))} aria-label="Next page" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: safePage < totalPages ? 1 : 0.35, cursor: safePage < totalPages ? 'pointer' : 'default' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {filtered.length > 0 && <ListPager page={safePage} total={filtered.length} noun="campaign" pageSize={PAGE_SIZE} onPage={setPage} />}
 
       {/* ===== EMPTY STATE ===== */}
       {filtered.length === 0 && (

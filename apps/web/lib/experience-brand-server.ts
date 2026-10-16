@@ -113,6 +113,14 @@ const invoiceNums = (i: BrandInvoice): BrandInvoice => ({
   reports: (i.reports ?? []).map((r) => ({ ...r, amount_paise: Number(r.amount_paise), tds_paise: Number(r.tds_paise) })),
 })
 
+/** 0569: the creators Guapd shared with this brand, searched and paged in the database. Never anyone else. */
+export async function getBrandRosterPage(id: string, q: string | null, limit: number, offset: number): Promise<Result<{ can_decide: boolean; total_all: number; total: number; creators: BrandRosterCreator[] }>> {
+  const { data, error } = await createClient().rpc('brand_experience_roster_page', { p_experience_id: id, p_q: q, p_limit: limit, p_offset: offset })
+  if (error) return fail(error)
+  const d = data as { can_decide: boolean; total_all: number; total: number; creators: BrandRosterCreator[] }
+  return { ok: true, data: { can_decide: !!d.can_decide, total_all: Number(d.total_all ?? 0), total: Number(d.total ?? 0), creators: d.creators ?? [] } }
+}
+
 export async function getBrandInvoices(id: string): Promise<Result<BrandInvoice[]>> {
   const { data, error } = await createClient().rpc('brand_experience_invoices', { p_experience_id: id })
   return error ? fail(error) : { ok: true, data: (((data as { invoices: BrandInvoice[] } | null)?.invoices) ?? []).map(invoiceNums) }

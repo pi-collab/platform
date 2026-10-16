@@ -986,6 +986,33 @@ export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreato
   })) }
 }
 
+/** 0569: the directory, searched and filtered in the database, one page at a time. */
+export interface PoolPageFilters {
+  q: string | null; niche: string | null; location: string | null; platform: string | null
+  track: 'growth' | 'deals' | null; band: 'u50' | '50-150' | '150+' | null; rate: 'set' | 'unset' | null
+}
+export interface PoolPage {
+  total: number; rows: ConsolePoolCreator[]; niches: string[]; locations: string[]
+  roster: { on_roster: number; day_rate_total_paise: number; missing_rate: number }
+}
+export async function listConsoleCreatorPoolPage(experienceId: string, f: PoolPageFilters, limit: number, offset: number): Promise<Result<PoolPage>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_pool_page', {
+    p_experience_id: experienceId, p_q: f.q, p_niche: f.niche, p_location: f.location, p_platform: f.platform,
+    p_track: f.track, p_band: f.band, p_rate: f.rate, p_limit: limit, p_offset: offset,
+  })
+  if (error) return fail(error)
+  const d = data as { total: number; rows: Record<string, unknown>[]; niches: string[]; locations: string[]; roster: PoolPage['roster'] }
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: {
+    total: Number(d.total ?? 0), niches: d.niches ?? [], locations: d.locations ?? [],
+    roster: { on_roster: Number(d.roster?.on_roster ?? 0), day_rate_total_paise: Number(d.roster?.day_rate_total_paise ?? 0), missing_rate: Number(d.roster?.missing_rate ?? 0) },
+    rows: (d.rows ?? []).map((r) => ({
+      ...(r as unknown as ConsolePoolCreator),
+      day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
+    })),
+  } }
+}
+
 // ── 0541: creators not on Guapd yet, on the roster's "Add creators" page ───
 // Staff only (operational). Not on the roster until linked to their account.
 

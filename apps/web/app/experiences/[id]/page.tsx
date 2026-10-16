@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRoster, getBrandSuggestions, getBrandCollabPosts, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRosterPage, getBrandSuggestions, getBrandCollabPosts, type BrandInvoice } from '@/lib/experience-brand-server'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -10,6 +10,8 @@ import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import InvoicePayments from './InvoicePayments'
+import { RosterPager, RosterSearchBox } from './RosterSearch'
+import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import ViewFile from './ViewFile'
 import { CollabReview, RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
@@ -31,7 +33,7 @@ export const dynamic = 'force-dynamic'
  * member; sign-off: admins). Guapd can still record the same decisions from a
  * WhatsApp or email; the latest stands.
  */
-export default async function BrandExperiencePage({ params, searchParams }: { params: { id: string }; searchParams?: { chat?: string } }) {
+export default async function BrandExperiencePage({ params, searchParams }: { params: { id: string }; searchParams?: { chat?: string; rq?: string; rpage?: string } }) {
   const brand = await verifyBrand()
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
   const exp = await getBrandExperience(params.id)
@@ -44,8 +46,11 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   const addonsRes = hasRoster ? await getBrandAddons(e.id) : null
   const addons = addonsRes?.ok ? addonsRes.data.addons : []
   const openAddon = addons.find((a) => a.status === 'open') ?? null
+  // 0569: the brand's creators are searched and paged in the database, over the shared roster only.
+  const rosterQ = (searchParams?.rq ?? '').trim().slice(0, 100)
+  const rosterPage = Math.max(1, Number.parseInt(searchParams?.rpage ?? '1', 10) || 1)
   const [roster, deliverables, invoices, report, guapdThread] = await Promise.all([
-    hasRoster ? getBrandRoster(e.id) : Promise.resolve(null),
+    hasRoster ? getBrandRosterPage(e.id, rosterQ || null, LIST_PAGE_SIZE, (rosterPage - 1) * LIST_PAGE_SIZE) : Promise.resolve(null),
     hasDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
     getBrandInvoices(e.id),
     e.status === 'complete' ? getBrandReport(e.id) : Promise.resolve(null),
@@ -200,7 +205,11 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
           {(roster.data.can_decide || suggestions.length > 0) && (
             <RosterAdd experienceId={e.id} suggestions={suggestions} canAdd={roster.data.can_decide} />
           )}
-          <RosterReview experienceId={e.id} creators={roster.data.creators} canDecide={roster.data.can_decide} />
+          {(roster.data.total_all > 1 || rosterQ) && <RosterSearchBox initial={rosterQ} />}
+          {rosterQ && roster.data.total === 0
+            ? <p className="bx-note">No creator on your roster matches “{rosterQ}”.</p>
+            : <RosterReview experienceId={e.id} creators={roster.data.creators} canDecide={roster.data.can_decide} />}
+          <RosterPager page={rosterPage} total={roster.data.total} />
         </section>
       )}
 
