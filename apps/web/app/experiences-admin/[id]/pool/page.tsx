@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { getConsoleExperience, getConsoleReconcile, listConsoleCreatorPoolPage, listConsoleRoster, type PoolPageFilters } from '@/lib/experience-console-server'
-import { LIST_PAGE_SIZE } from '@/lib/list-page'
+import { POOL_PAGE_SIZE } from '@/lib/list-page'
 import { compactNumber } from '@/lib/compact-number'
 import NoAccess from '../../NoAccess'
 import ExperiencePoolClient, { type ExperiencePoolCreator } from './ExperiencePoolClient'
@@ -48,7 +48,7 @@ export default async function ExperiencePoolPage({ params, searchParams }: {
   const pageNo = Math.max(1, Number.parseInt(one(searchParams.page) ?? '1', 10) || 1)
   const [exp, roster, pool, reconcile] = await Promise.all([
     getConsoleExperience(params.id), listConsoleRoster(params.id),
-    listConsoleCreatorPoolPage(params.id, filters, LIST_PAGE_SIZE, (pageNo - 1) * LIST_PAGE_SIZE), getConsoleReconcile(params.id),
+    listConsoleCreatorPoolPage(params.id, filters, POOL_PAGE_SIZE, (pageNo - 1) * POOL_PAGE_SIZE), getConsoleReconcile(params.id),
   ])
   if (!exp.ok || !exp.data) notFound()
   if (!roster.ok || !pool.ok) throw new Error((!roster.ok && roster.error) || (!pool.ok && pool.error) || 'Could not load the pool')
