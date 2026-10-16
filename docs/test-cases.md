@@ -7637,3 +7637,51 @@ Palak, 2026-10-13: a new genuine brand waiting for approval before it can see an
 - [ ] The affiliate commission is still claimed later, once the brand marks the collab ads complete (0563), on its own invoice
 - [ ] Staging check: the three Holiday shoot legs (ad rights 1, 2, 6; posts waiting 1, 2, 5) went from work complete false to true when 0566 was applied
 - [ ] SECURITY: experience_leg_work_complete stays REVOKED from PUBLIC/anon/authenticated
+
+## 140. A Growth creator is never sent to the locked shopfront from an empty state
+
+- [ ] Growth creator with packages set and Instagram connected, no deals: Deals (mobile and desktop), the deals table header, Inbox (desktop) and Dashboard (mobile and desktop) empty states show **View your packages** → /creator/packages, never "Set up your shopfront"
+- [ ] Dashboard desktop "No brand deals yet" reads "Brands can book you through your packages…" (no shopfront wording); Inbox desktop reads "Brands can book you now; your first brief lands here."
+- [ ] Growth creator still setting up: the same slots say **Set your packages**, then **Connect Instagram** (unchanged)
+- [ ] Deals (vetted) creator: unchanged, still the shopfront buttons
+
+## 141. Partial roster: lock and send below what was bought, place the rest later (migration 0567)
+
+Design rule: forgiving below the bought total, strict at it.
+- [ ] Brand bought 70; plans 25 + 25 + 10 = 60: the roster strip reads "10 videos held for later", **Lock roster** is enabled, locking succeeds and the Experience goes Confirmed; the audit row has `partial: true`, `videos_placed: 60`
+- [ ] Each locked creator's deal can be prepared (deliverables editable) and sent; terms freeze on send (unchanged)
+- [ ] Shoot scheduled: **Add creators** still works; a new creator planned for the held 10 can be accepted, locked, prepared and sent (70 of 70)
+- [ ] The deal already sent before the late creator is byte-identical before and after (status, price, updated_at, creator terms)
+- [ ] One more creator with 1 video (71 of 70): lock refused "Locking these creators would place more than the brand bought: 71 of 70 videos. More scope is a new brand invoice"; that creator stays unlocked
+- [ ] Planned above bought before any lock: the strip reads "More than the brand bought" (red) and Lock is disabled with the add-on hint
+- [ ] An Experience with no agreed plan: lock refused "No agreed plan to lock against"
+- [ ] Held videos to an EXISTING creator after the shoot: an extra (0555), still capped at what was bought
+- [ ] Sent counts are re-split only while Confirmed (the re-split button is hidden once the shoot is scheduled)
+- [ ] Not changed: adding creators after the shoot is done (needs a second shoot day; use an extra)
+- [ ] Staging check (rolled back): all of the above ran on Diwali UGC Shoot (1673b8e0) on 2026-10-16
+
+## 142. Brand marks payments against Guapd's invoice (migration 0568)
+
+A brand's mark is a REPORT, never a receipt: it never settles the invoice, never touches service_invoice_payments, payouts, costs or P&L.
+- [ ] Brand page, issued invoice: Invoice / Received by Guapd / Balance; brand ADMIN sees **Mark as paid** and a disabled **Pay online · coming soon**; a member sees the figures and "An admin on your brand account marks payments."
+- [ ] Mark ₹50,000 + ₹1,000 TDS (bank transfer, UTR): "Marked, being checked" shows ₹51,000, Balance drops by ₹51,000; the line reads "Guapd is checking"; staff get the "marked a payment" notification
+- [ ] A second part payment up to exactly the balance is accepted; one paisa more is refused "That is more than the balance on this invoice"
+- [ ] Refused: the same reference twice (any case), NULL/zero amount, a future date, no reference, a non-admin, another brand ("Not found")
+- [ ] Console Invoices: each brand mark shows under its invoice; **Confirm against receipt…** lists only this invoice's unreversed receipts not already linked; confirming makes the brand line "Received"; **Not received** needs a reason, which the brand sees ("Not found" + reason)
+- [ ] Confirm with no receipt picked / a receipt on another invoice / a reversed one / one already linked: refused; deciding twice: refused
+- [ ] The invoice itself (status, received total, receipts) is unchanged by any brand mark (staging check 2026-10-16, rolled back)
+- [ ] SECURITY: service_invoice_payment_reports has RLS on, no policies, no grants (functions only); experience_console_payment_reports and _decide need finance access ("Financial access required" for a brand); the brand's view carries only amount, TDS, date, method, reference, status and a rejection reason
+- [ ] Every brand mark and finance decision writes an ops_events row (before/after balance, status)
+
+## 143. Roster search + server-side pages, ops and brand (migration 0569, components/ListPager)
+
+Two lists, two sources: ops searches the FULL bookable directory; the brand searches ONLY the creators Guapd shared with it on this Experience.
+- [ ] Ops pool (/experiences-admin/[id]/pool): Search (name or @handle) + Niche / Followers / Location / Platform / Track / Shoot day rate are URL params; each change returns page 1 of the filtered result; "Showing 1–8 of N creators" with the campaigns pager (8 per page); page links keep the search and filters
+- [ ] Ops: directory total equals the old pool (staging 18 = 18); pages cover the filtered set once with no repeats (16 rows, 16 distinct); a creator on Guapd's internal shortlist is findable; day rate shows on cards (staff only, as before)
+- [ ] Ops header totals (on the roster, day rates combined, missing rate) are the roster's own, not the page's
+- [ ] Brand Experience page, Creators: a search box (when there is more than one creator) and the same pager; "No creator on your roster matches “…”." when nothing matches
+- [ ] ISOLATION (brand): across every page and 8 searches the brand got 13 rows, 0 outside its shared roster; searching an internal-shortlist creator's exact name returns 0; "%" matches nothing; another brand gets "Not found"; the brand calling the ops directory gets "Operational access required"
+- [ ] Brand rows carry only roster_id, full_name, handle, profile_url, photo_url, planned_deliverables, added_by, decision, decided_at, decided_on_guapd, locked (no day rate, fee, payout or margin)
+- [ ] NULL / out-of-range page size or offset, unknown band/track/rate: refused
+- [ ] Campaigns list still pages 8 at a time with the same pager (now shared)
+- [ ] Gotcha: LIST_PAGE_SIZE lives in lib/list-page.ts. Imported from the 'use client' ListPager into a server page it arrives as {} and the RPC fails ("invalid input syntax for type integer")

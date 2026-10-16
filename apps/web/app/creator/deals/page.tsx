@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import CreatorDealsTable from './CreatorDealsTable'
 import CreatorDealsMobile from '@/components/CreatorDealsMobile'
 import { creatorGrowthState } from '@/lib/creator-growth-state'
+import { growthButton } from '@/lib/growth-cta'
 import CreatorDealsEmpty from './CreatorDealsEmpty'
 import CreatorDealsEmptyDesktop from './CreatorDealsEmptyDesktop'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -112,7 +113,7 @@ export default async function CreatorDealsPage() {
     {isEmpty && (
       <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="My deals" backHref="/creator/dashboard" />
-        <CreatorDealsEmpty growthCta={growth.cta} />
+        <CreatorDealsEmpty growthCta={growthButton(growth.isGrowth, growth.cta)} />
       </main>
     )}
     {/* Desktop has its own drawn empty state now. It used to fall through to
@@ -120,7 +121,7 @@ export default async function CreatorDealsPage() {
         column headers and seven filters around nothing at all. */}
     {isEmpty ? (
       <main className="creator-empty-desktop" style={{ position: 'relative', zIndex: 1 }}>
-        <CreatorDealsEmptyDesktop growthCta={growth.cta} />
+        <CreatorDealsEmptyDesktop growthCta={growthButton(growth.isGrowth, growth.cta)} />
       </main>
     ) : (
       <>
@@ -129,7 +130,7 @@ export default async function CreatorDealsPage() {
         <CreatorDealsMobile deals={all} unreadNotifications={unreadNotifs} />
         <main className="cdeals-desktop" style={wrapper}>
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <CreatorDealsTable deals={all} growthCta={growth.cta} />
+            <CreatorDealsTable deals={all} growthCta={growthButton(growth.isGrowth, growth.cta)} />
           </div>
         </main>
       </>

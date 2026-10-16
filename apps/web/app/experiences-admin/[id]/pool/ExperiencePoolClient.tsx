@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import ListPager from '@/components/ListPager'
+import type { PoolPageFilters } from '@/lib/experience-console-server'
 import CreatorPoolCard, { inr, PoolSelect } from '@/components/CreatorPoolCard'
 import { CHANNELS } from '@/lib/experience-request'
 import { addToRoster, removeFromRoster } from '../../actions'
@@ -45,6 +47,7 @@ const FOLLOWER_BANDS = [
  */
 export default function ExperiencePoolClient({
   experienceId, title, brandName, editable, creatorsPlanned, videosSold, creators, initialMode, initialChannel,
+  filters, page, total, niches, locations, rosterSummary,
 }: {
   experienceId: string
   title: string
@@ -55,6 +58,13 @@ export default function ExperiencePoolClient({
   creators: ExperiencePoolCreator[]
   initialMode: 'guapd' | 'brand'
   initialChannel: string
+  /** 0569: the directory is searched, filtered and paged on the server; these describe this page. */
+  filters: PoolPageFilters
+  page: number
+  total: number
+  niches: string[]
+  locations: string[]
+  rosterSummary: { on_roster: number; day_rate_total_paise: number; missing_rate: number }
 }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -63,39 +73,40 @@ export default function ExperiencePoolClient({
   const [mode, setMode] = useState<'guapd' | 'brand'>(initialMode)
   const [channel, setChannel] = useState(initialChannel)
 
-  const [niche, setNiche] = useState('all')
-  const [band, setBand] = useState('all')
-  const [location, setLocation] = useState('all')
-  const [platform, setPlatform] = useState('all')
-  const [track, setTrack] = useState('all')
-  const [rate, setRate] = useState('all')
+  const pathname = usePathname()
+  const params = useSearchParams()
+  /* Every filter is a URL: change one and the server returns page one of the
+     new result. Search waits for a pause in typing. */
+  const go = (next: Record<string, string | null>) => {
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    for (const [k, v] of Object.entries(next)) { if (v && v !== 'all') sp.set(k, v); else sp.delete(k) }
+    if (!('page' in next)) sp.delete('page')
+    startTransition(() => router.push(`${pathname}?${sp.toString()}`, { scroll: false }))
+  }
+  const hrefFor = (n: number) => {
+    const sp = new URLSearchParams(params?.toString() ?? '')
+    if (n > 1) sp.set('page', String(n)); else sp.delete('page')
+    return `${pathname}?${sp.toString()}`
+  }
+  const [q, setQ] = useState(filters.q ?? '')
+  useEffect(() => {
+    if ((filters.q ?? '') === q.trim()) return
+    const t = setTimeout(() => go({ q: q.trim() || null }), 350)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q])
 
-  const niches = useMemo(() => Array.from(new Set(creators.flatMap((c) => c.niches))).sort(), [creators])
-  const locations = useMemo(() => Array.from(new Set(creators.map((c) => c.location).filter((l): l is string => !!l))).sort(), [creators])
-
-  const shown = useMemo(() => creators.filter((c) => {
-    if (niche !== 'all' && !c.niches.includes(niche)) return false
-    if (location !== 'all' && c.location !== location) return false
-    if (platform !== 'all' && !c.platforms.includes(platform)) return false
-    if (track !== 'all' && c.track !== track) return false
-    if (rate === 'set' && c.dayRatePaise == null) return false
-    if (rate === 'unset' && c.dayRatePaise != null) return false
-    if (band !== 'all') {
-      const rule = FOLLOWER_BANDS.find((b) => b.value === band)
-      if (!rule || !('test' in rule) || c.followers == null || !rule.test(c.followers)) return false
-    }
-    return true
-  }), [creators, niche, band, location, platform, track, rate])
-
-  const counted = creators.filter((c) => c.rosterState === 'on' || c.rosterState === 'locked')
-  const dayRateTotal = counted.reduce((sum, c) => sum + (c.dayRatePaise ?? 0), 0)
-  const missingRate = counted.filter((c) => c.dayRatePaise == null).length
+  const shown = creators
+  const countedN = rosterSummary.on_roster
+  const dayRateTotal = rosterSummary.day_rate_total_paise
+  const missingRate = rosterSummary.missing_rate
+  const filtered = !!(filters.q || filters.niche || filters.location || filters.platform || filters.track || filters.band || filters.rate)
   const need = creatorsPlanned ?? 0
-  const pct = need > 0 ? Math.min(100, Math.round((counted.length / need) * 100)) : 0
-  const progressLabel = need ? `${counted.length} of ${need} on the roster` : `${counted.length} on the roster`
+  const pct = need > 0 ? Math.min(100, Math.round((countedN / need) * 100)) : 0
+  const progressLabel = need ? `${countedN} of ${need} on the roster` : `${countedN} on the roster`
   const floatHint = !need ? 'No plan to count against'
-    : counted.length >= need ? (counted.length > need ? `${counted.length - need} over plan` : 'Plan filled')
-    : `${need - counted.length} more to go`
+    : countedN >= need ? (countedN > need ? `${countedN - need} over plan` : 'Plan filled')
+    : `${need - countedN} more to go`
 
   function toggle(c: ExperiencePoolCreator) {
     if (busyId) return
@@ -183,12 +194,16 @@ export default function ExperiencePoolClient({
 
         {/* ===== FILTERS ===== */}
         <div className="filterbar surface" style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, padding: '22px 26px', flexWrap: 'wrap' }}>
-          <PoolSelect label="Niche" value={niche} onChange={setNiche} options={[{ value: 'all', label: 'All niches' }, ...niches.map((n) => ({ value: n, label: n }))]} />
-          <PoolSelect label="Followers" value={band} onChange={setBand} options={FOLLOWER_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
-          <PoolSelect label="Location" value={location} onChange={setLocation} options={[{ value: 'all', label: 'All locations' }, ...locations.map((l) => ({ value: l, label: l }))]} />
-          <PoolSelect label="Platform" value={platform} onChange={setPlatform} options={[{ value: 'all', label: 'All platforms' }, { value: 'instagram', label: 'Instagram' }, { value: 'youtube', label: 'YouTube' }]} />
-          <PoolSelect label="Track" value={track} onChange={setTrack} options={[{ value: 'all', label: 'Growth and Deals' }, { value: 'growth', label: 'Growth (30%)' }, { value: 'deals', label: 'Deals (15%)' }]} />
-          <PoolSelect label="Shoot day rate" value={rate} onChange={setRate} options={[{ value: 'all', label: 'Any day rate' }, { value: 'set', label: 'Day rate set' }, { value: 'unset', label: 'No day rate yet' }]} />
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 220px', minWidth: 200 }}>
+            <span className="mono-label">Search</span>
+            <input className="dinput" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or @handle" aria-label="Search creators by name or handle" maxLength={100} style={{ height: 40 }} />
+          </label>
+          <PoolSelect label="Niche" value={filters.niche ?? 'all'} onChange={(v) => go({ niche: v })} options={[{ value: 'all', label: 'All niches' }, ...niches.map((n) => ({ value: n, label: n }))]} />
+          <PoolSelect label="Followers" value={filters.band ?? 'all'} onChange={(v) => go({ band: v })} options={FOLLOWER_BANDS.map((b) => ({ value: b.value, label: b.label }))} />
+          <PoolSelect label="Location" value={filters.location ?? 'all'} onChange={(v) => go({ location: v })} options={[{ value: 'all', label: 'All locations' }, ...locations.map((l) => ({ value: l, label: l }))]} />
+          <PoolSelect label="Platform" value={filters.platform ?? 'all'} onChange={(v) => go({ platform: v })} options={[{ value: 'all', label: 'All platforms' }, { value: 'instagram', label: 'Instagram' }, { value: 'youtube', label: 'YouTube' }]} />
+          <PoolSelect label="Track" value={filters.track ?? 'all'} onChange={(v) => go({ track: v })} options={[{ value: 'all', label: 'Growth and Deals' }, { value: 'growth', label: 'Growth (30%)' }, { value: 'deals', label: 'Deals (15%)' }]} />
+          <PoolSelect label="Shoot day rate" value={filters.rate ?? 'all'} onChange={(v) => go({ rate: v })} options={[{ value: 'all', label: 'Any day rate' }, { value: 'set', label: 'Day rate set' }, { value: 'unset', label: 'No day rate yet' }]} />
         </div>
 
         {!editable && (
@@ -225,14 +240,15 @@ export default function ExperiencePoolClient({
         ) : (
           <div style={{ textAlign: 'center', padding: '60px 24px', borderRadius: 24, border: '1px dashed var(--border-hairline, #EAEAE3)', marginTop: 22 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16 }}>
-              {creators.length === 0 ? 'No bookable creators yet' : 'No creators match those filters'}
+              {!filtered && total === 0 ? 'No bookable creators yet' : 'No creators match that search'}
             </div>
             <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '8px 0 0' }}>
-              {creators.length === 0 ? 'Creators show up here once they are vetted.' : 'Try widening the niche, follower range or day rate.'}
+              {!filtered && total === 0 ? 'Creators show up here once they are vetted.' : 'Try another name, or widen the niche, follower range or day rate.'}
             </p>
           </div>
         )}
 
+        <ListPager page={page} total={total} noun="creator" hrefFor={hrefFor} style={{ marginBottom: 96 }} />
       </div>
 
       {/* ===== STICKY BAR ===== */}
@@ -249,7 +265,7 @@ export default function ExperiencePoolClient({
           </div>
           <Link href={`/experiences-admin/${experienceId}`} className="inkbtn"
                 style={{ flexShrink: 0, height: 42, padding: '0 20px', borderRadius: 999, background: 'var(--ink)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            {counted.length > 0 ? 'Done adding' : 'Back to the Experience'}
+            {countedN > 0 ? 'Done adding' : 'Back to the Experience'}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
           </Link>
         </div>

@@ -3,10 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff, brandCollabAct } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff, brandCollabAct, brandReportPayment } from '@/lib/experience-brand-server'
 import { notifyCreatorAffiliateAdded } from '@/lib/experience-collab-notify'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 import { registerExperienceRequestReview } from '@/lib/send-gate'
+import { rupeesToPaise } from '@/lib/experience-request'
 
 /**
  * The brand's own Experience actions (0544). Each passes verifyBrand (a
@@ -172,3 +173,26 @@ export async function actOnCollab(experienceId: string, postId: string, action: 
   return r
 }
 
+/**
+ * 0568: the brand marks a payment it made against Guapd's invoice: amount, TDS
+ * it deducted, the date, how, and the reference. A report, not a receipt:
+ * Guapd confirms it against its bank before it counts as received.
+ */
+const PAY_METHODS = ['bank_transfer', 'upi', 'cheque', 'cash', 'other'] as const
+export async function reportPayment(experienceId: string, invoiceId: string, f: { amount: string; tds: string; paidOn: string; method: string; reference: string; note: string }): Promise<Out<{ balance_paise: number }>> {
+  await verifyBrand()
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Not found.' }
+  const amountPaise = rupeesToPaise(String(f.amount ?? ''))
+  const tdsPaise = String(f.tds ?? '').trim() === '' ? 0 : rupeesToPaise(String(f.tds))
+  if (amountPaise == null || amountPaise < 0 || tdsPaise == null || tdsPaise < 0 || amountPaise + tdsPaise <= 0) return { ok: false, error: 'Enter the amount you paid (and any TDS you deducted).' }
+  const paidOn = typeof f.paidOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.paidOn) ? f.paidOn : null
+  if (!paidOn) return { ok: false, error: 'Enter the date you paid.' }
+  if (!(PAY_METHODS as readonly string[]).includes(f.method)) return { ok: false, error: 'Say how you paid.' }
+  const reference = note(f.reference, 100)
+  if (!reference || reference.length < 3) return { ok: false, error: 'Enter the payment reference (UTR or cheque number).' }
+  const r = await brandReportPayment({ invoiceId, amountPaise, tdsPaise, paidOn, method: f.method, reference, note: note(f.note, 300) })
+  if (!r.ok) return r
+  done(experienceId)
+  await notifyStaffBrandActed(experienceId, 'marked a payment against an invoice')
+  return { ok: true, data: { balance_paise: Number(r.data.balance_paise) } }
+}

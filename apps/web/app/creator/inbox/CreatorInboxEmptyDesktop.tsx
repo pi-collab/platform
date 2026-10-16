@@ -42,7 +42,7 @@ const GHOSTS = [
 
 export default function CreatorInboxEmptyDesktop({ growthCta }: {
   /** See CreatorDealsEmpty — same swap. */
-  growthCta?: { label: string; href: string } | null
+  growthCta?: { label: string; href: string; ready?: boolean } | null
 } = {}) {
   return (
     <div className="cinbox-desk">
@@ -97,7 +97,7 @@ export default function CreatorInboxEmptyDesktop({ growthCta }: {
               <div style={{ height: '100%', minHeight: '560px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', overflow: 'hidden', borderRadius: '20px', background: 'var(--card)', border: '1px solid var(--frost-edge)', boxShadow: '0 26px 54px -34px rgba(40,45,25,.42),inset 0 1px 0 rgba(255,255,255,.9)' }}>
                 <div className="t-headline" style={{ position: 'relative' }}>No messages yet</div>
                 <div style={{ position: 'relative', fontFamily: 'var(--font-ui)', fontSize: '13.5px', color: 'var(--ink-faint)', marginTop: '8px', maxWidth: '300px', lineHeight: '1.55' }}>
-                  This is where your brand chats will live. {growthCta ? `${growthCta.label} so brands can find you and send the first brief.` : 'Set up your shopfront so brands can find you and send the first brief.'}
+                  This is where your brand chats will live. {growthCta?.ready ? 'Brands can book you now; your first brief lands here.' : growthCta ? `${growthCta.label} so brands can find you and send the first brief.` : 'Set up your shopfront so brands can find you and send the first brief.'}
                 </div>
                 <a href={growthCta?.href ?? "/creator/storefront"} className="hbtn-neon" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '7px', marginTop: '22px', padding: '12px 24px', borderRadius: 'var(--radius-pill)', backgroundColor: 'var(--neon)', border: 'none', fontWeight: '700', fontSize: '14px', color: 'var(--ink)', textDecoration: 'none', boxShadow: '0 14px 28px -8px rgba(180,210,60,.9)' }}>
                   {growthCta?.label ?? 'Set up your shopfront'}

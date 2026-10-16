@@ -227,6 +227,8 @@ export interface ConsoleRosterRow {
 
 export interface ConsoleReconcile {
   ok: boolean
+  /** 0567: past what the brand bought on some line (unknown counts as over). Locking below it is fine. */
+  over?: boolean
   reason?: 'no_agreed_plan'
   videos_sold?: number
   videos_planned?: number
@@ -763,6 +765,18 @@ export interface ConsoleInvoice {
 export interface ConsoleInvoices {
   experience_id: string; status: string; title: string; brand_id: string; brand_name: string; agreed_paise: number | null
   settings: FinanceSettings | null; billing: BrandBilling | null; invoices: ConsoleInvoice[]
+  /** 0568: payments the brand marked; finance confirms each against a receipt, or rejects it. */
+  reports?: ConsolePaymentReport[]
+}
+export interface ConsolePaymentReport {
+  report_id: string; invoice_id: string; invoice_number: string; amount_paise: number; tds_paise: number
+  paid_on: string; method: string; reference: string; note: string | null
+  status: 'reported' | 'confirmed' | 'rejected' | 'withdrawn'; reported_at: string; reported_by: string | null
+  payment_id: string | null; decided_at: string | null; decided_reason: string | null
+}
+export async function decideConsolePaymentReport(reportId: string, decision: 'confirmed' | 'rejected', paymentId: string | null, reason: string | null): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_payment_report_decide', { p_report_id: reportId, p_decision: decision, p_payment_id: paymentId, p_reason: reason })
+  return error ? fail(error) : { ok: true, data: null }
 }
 export interface InvoiceDraftInput {
   kind: 'initial' | 'additional'; source: 'existing_footage' | 'new_shoot' | null; description: string
@@ -771,8 +785,15 @@ export interface InvoiceDraftInput {
 }
 
 export async function getConsoleInvoices(experienceId: string): Promise<Result<ConsoleInvoices>> {
-  const { data, error } = await createClient().rpc('experience_console_invoices', { p_experience_id: experienceId })
-  return error ? fail(error) : { ok: true, data: data as ConsoleInvoices }
+  const sb = createClient()
+  const [{ data, error }, rep] = await Promise.all([
+    sb.rpc('experience_console_invoices', { p_experience_id: experienceId }),
+    sb.rpc('experience_console_payment_reports', { p_experience_id: experienceId }),
+  ])
+  if (error) return fail(error)
+  // Reports are extra: before 0568 the function is missing, and the panel works without them.
+  const reports = rep.error ? [] : ((rep.data ?? []) as ConsolePaymentReport[]).map((r) => ({ ...r, amount_paise: Number(r.amount_paise), tds_paise: Number(r.tds_paise) }))
+  return { ok: true, data: { ...(data as ConsoleInvoices), reports } }
 }
 export async function setFinanceSettings(s: { legalName: string; address: string; state: string; gstin: string | null; gstRegistered: boolean; pan: string | null; paymentInstructions: string | null }): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_set_finance_settings', {
@@ -963,6 +984,33 @@ export async function listConsoleCreatorPool(): Promise<Result<ConsolePoolCreato
     ...(r as unknown as ConsolePoolCreator),
     day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
   })) }
+}
+
+/** 0569: the directory, searched and filtered in the database, one page at a time. */
+export interface PoolPageFilters {
+  q: string | null; niche: string | null; location: string | null; platform: string | null
+  track: 'growth' | 'deals' | null; band: 'u50' | '50-150' | '150+' | null; rate: 'set' | 'unset' | null
+}
+export interface PoolPage {
+  total: number; rows: ConsolePoolCreator[]; niches: string[]; locations: string[]
+  roster: { on_roster: number; day_rate_total_paise: number; missing_rate: number }
+}
+export async function listConsoleCreatorPoolPage(experienceId: string, f: PoolPageFilters, limit: number, offset: number): Promise<Result<PoolPage>> {
+  const { data, error } = await createClient().rpc('experience_console_creator_pool_page', {
+    p_experience_id: experienceId, p_q: f.q, p_niche: f.niche, p_location: f.location, p_platform: f.platform,
+    p_track: f.track, p_band: f.band, p_rate: f.rate, p_limit: limit, p_offset: offset,
+  })
+  if (error) return fail(error)
+  const d = data as { total: number; rows: Record<string, unknown>[]; niches: string[]; locations: string[]; roster: PoolPage['roster'] }
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return { ok: true, data: {
+    total: Number(d.total ?? 0), niches: d.niches ?? [], locations: d.locations ?? [],
+    roster: { on_roster: Number(d.roster?.on_roster ?? 0), day_rate_total_paise: Number(d.roster?.day_rate_total_paise ?? 0), missing_rate: Number(d.roster?.missing_rate ?? 0) },
+    rows: (d.rows ?? []).map((r) => ({
+      ...(r as unknown as ConsolePoolCreator),
+      day_rate_paise: n(r.day_rate_paise), ig_followers: n(r.ig_followers), ig_reach_30: n(r.ig_reach_30), ig_interactions_30: n(r.ig_interactions_30),
+    })),
+  } }
 }
 
 // ── 0541: creators not on Guapd yet, on the roster's "Add creators" page ───

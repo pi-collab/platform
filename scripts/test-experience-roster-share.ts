@@ -180,8 +180,9 @@ async function run() {
   ok('K2 (locked, no deal yet) can be released too', !refused(await op.rpc('experience_console_roster_release', { p_roster_id: R2, p_reason: 'Changed plans' })))
   ok('a released creator can then be removed', !refused(await op.rpc('experience_console_roster_remove', { p_roster_id: R2 })))
   const rec2 = (await op.rpc('experience_console_reconcile', { p_experience_id: E })).data as any
-  ok('the roster now shows the gap: 1 of 2 videos, so the lock waits for a replacement', rec2?.videos_planned === 1 && rec2?.ok === false
-    && said(await op.rpc('experience_console_roster_lock', { p_experience_id: E }), /does not add up/))
+  // 0567: the gap shows, and the roster may still lock BELOW what was bought (the rest is placed later).
+  ok('the roster now shows the gap: 1 of 2 videos (not over)', rec2?.videos_planned === 1 && rec2?.ok === false && rec2?.over === false)
+  ok('…and it can lock below what was bought (0567)', !refused(await op.rpc('experience_console_roster_lock', { p_experience_id: E })))
   for (const d of legDeals) { await admin.from('events').delete().eq('deal_id', d); await admin.from('experience_leg_counters').delete().eq('deal_id', d) }
   globalLegDeals.push(...legDeals)
 }

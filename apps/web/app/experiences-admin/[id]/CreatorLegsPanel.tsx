@@ -43,10 +43,12 @@ type Row = { type: string; count: string }
 const offBtn = { opacity: 0.4, cursor: 'not-allowed', boxShadow: 'none' } as const
 const hint = { fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' } as const
 
-export default function CreatorLegsPanel({ experienceId, editable, legs, reconcile, affiliateSold, adRightsSold = false, boostSold = false, boughtPer = { affiliate: null, adRights: null, boost: null }, counters = [], canRaise = false }: {
+export default function CreatorLegsPanel({ experienceId, editable, canRescope = editable, legs, reconcile, affiliateSold, adRightsSold = false, boostSold = false, boughtPer = { affiliate: null, adRights: null, boost: null }, counters = [], canRaise = false }: {
   experienceId: string
   /** Confirmed: legs can be drafted and sent. */
   editable: boolean
+  /** Sent counts are re-split only while Confirmed (frozen once the shoot is scheduled). */
+  canRescope?: boolean
   legs: ConsoleLegRow[]
   reconcile: ConsoleLegsReconcile | null
   /** Did the brand buy affiliate links at all? */
@@ -234,7 +236,7 @@ export default function CreatorLegsPanel({ experienceId, editable, legs, reconci
                     {answer ? <StatusChip label={answer.label} tone={answer.tone} /> : <StatusChip label="Not sent" tone="neutral" />}
                     {sent && l.deal_ref && <span style={{ fontFamily: 'var(--font-ui)', fontSize: 11, color: 'var(--ink-faint)' }}>{l.deal_ref}</span>}
                     {/* 0547: sent, shoot not confirmed: a re-split of labels only, never above what was bought. */}
-                    {editable && sent && (l.deal_status === 'negotiating' || l.deal_status === 'agreed') && (affiliateSold || adRightsSold || boostSold) && resplitFor !== l.roster_id && (
+                    {canRescope && sent && (l.deal_status === 'negotiating' || l.deal_status === 'agreed') && (affiliateSold || adRightsSold || boostSold) && resplitFor !== l.roster_id && (
                       <button type="button" style={{ ...pillBtn, height: 32 }} onClick={() => { setError(null); setResplitFor(l.roster_id); setRs({ affiliate: String(l.leg_affiliate_count ?? 0), adRights: String(l.leg_ad_rights_count ?? 0), boost: String(l.leg_boost_count ?? 0) }) }}>Re-split</button>
                     )}
                     {editable && !sent && (

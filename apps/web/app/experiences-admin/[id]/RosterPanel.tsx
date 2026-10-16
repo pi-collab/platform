@@ -82,7 +82,7 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
   const internal = roster.filter((r) => !r.shared_with_brand_at && r.brand_decision !== 'rejected')
   const toLock = unlocked.filter((r) => r.brand_decision === 'accepted').length
   const lockBlocked = reconcile?.reason === 'no_agreed_plan' ? 'No agreed plan to lock against.'
-    : !reconcile?.ok ? 'The roster does not add up to what the brand bought yet.'
+    : reconcile?.over !== false ? 'The roster plans more than the brand bought. Cut a creator’s plan, or sell an add-on first.'
     : pendingCount ? `Record the brand's decision on ${pendingCount} creator${pendingCount === 1 ? '' : 's'} first.`
     : !toLock ? 'No newly accepted creators to lock.' : null
 
@@ -109,10 +109,13 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
       {reconcile && reconcile.ok !== undefined && reconcile.reason !== 'no_agreed_plan' && (
         <div role="status" style={{
           marginTop: 18, padding: '14px 16px', borderRadius: 14,
-          background: reconcile.ok ? '#F4FBDC' : '#FCF6E4', border: `1px solid ${reconcile.ok ? '#8FAF1F40' : '#C89A3C40'}`,
+          background: reconcile.ok ? '#F4FBDC' : reconcile.over !== false ? '#FDF0F0' : '#FCF6E4',
+          border: `1px solid ${reconcile.ok ? '#8FAF1F40' : reconcile.over !== false ? '#C4494F40' : '#C89A3C40'}`,
         }}>
           <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
-            {reconcile.ok ? 'Adds up to what the brand bought' : 'Does not add up to what the brand bought'}
+            {reconcile.ok ? 'Adds up to what the brand bought'
+              : reconcile.over !== false ? 'More than the brand bought'
+              : `${(reconcile.videos_sold ?? 0) - (reconcile.videos_planned ?? 0)} videos held for later`}
             <span style={{ fontWeight: 500, color: 'var(--ink-soft)', marginLeft: 8 }}>{reconcile.videos_planned} of {reconcile.videos_sold} videos planned</span>
           </div>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -122,7 +125,11 @@ export default function RosterPanel({ experienceId, editable, roster, reconcile,
               </span>
             ))}
           </div>
-          {!reconcile.ok && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#8C6417', marginTop: 6 }}>Adjust a creator&apos;s plan, add or remove creators until the totals match. One creator may do more if another does fewer.</div>}
+          {!reconcile.ok && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#8C6417', marginTop: 6 }}>
+            {reconcile.over !== false
+              ? 'Cut a creator’s plan or remove a creator to come back under. More than the brand bought is a new brand invoice (an add-on) first.'
+              : 'You can lock and send now. The rest stays unassigned: add a creator later (until the shoot is done), or give an existing creator an extra.'}
+          </div>}
         </div>
       )}
 

@@ -13,7 +13,7 @@ import {
   releaseConsoleItems, withdrawConsoleRelease, decideConsoleRelease,
   setFinanceSettings, setBrandBilling, financeUploadSlot, consoleFinanceFile,
   draftConsoleInvoice, updateConsoleInvoice, discardConsoleInvoice, issueConsoleInvoice, consoleInvoiceDoc,
-  consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment,
+  consoleInvoicePdfPath, setConsoleInvoicePdf, voidConsoleInvoice, addInvoicePayment, reverseInvoicePayment, decideConsolePaymentReport,
   getConsolePayouts, sendExtra, withdrawExtra, requestExtraPayout, sendAddon, recordAddonAnswer, withdrawAddon, requestPayout, setPayoutTds, approvePayout, markPayoutPaid, cancelPayout, voidCreatorInvoice,
   recordBrandSignoff, clearBrandSignoff,
   addProspect, resolveSuggestion, updateProspect, setProspectStatus, decideProspect, dropProspect, linkProspect, type ProspectInput,
@@ -933,6 +933,20 @@ export async function recordInvoicePayment(experienceId: string, invoiceId: stri
   if (!r.ok) return r
   refresh(experienceId)
   return { ok: true, data: { settled: r.data.settled } }
+}
+
+/** 0568: confirm a payment the brand marked (against a receipt recorded here, with proof) or reject it, saying why. */
+export async function decidePaymentReport(experienceId: string, reportId: string, decision: 'confirmed' | 'rejected', paymentId: string | null, reason: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(reportId)) return { ok: false, error: 'Unknown report.' }
+  if (decision !== 'confirmed' && decision !== 'rejected') return { ok: false, error: 'Confirm or reject it.' }
+  if (decision === 'confirmed' && !isUuid(paymentId)) return { ok: false, error: 'Pick the receipt it matches (record it first).' }
+  const why = cleanText(reason, 300)
+  if (decision === 'rejected' && (!why || why.length < 3)) return { ok: false, error: 'Say why; the brand sees it.' }
+  const r = await decideConsolePaymentReport(reportId, decision, decision === 'confirmed' ? paymentId : null, why)
+  if (!r.ok) return r
+  refresh(experienceId)
+  return { ok: true, data: null }
 }
 
 export async function reverseInvoicePaymentAction(experienceId: string, paymentId: string, reason: string): Promise<Out> {

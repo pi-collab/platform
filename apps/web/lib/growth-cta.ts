@@ -27,6 +27,8 @@ export interface GrowthSetupState {
 export interface GrowthCta {
   label: string
   href: string
+  /** Set on GROWTH_READY_CTA: nothing left to set up. */
+  ready?: boolean
 }
 
 export function growthCta(s: GrowthSetupState): GrowthCta | null {
@@ -37,3 +39,15 @@ export function growthCta(s: GrowthSetupState): GrowthCta | null {
 
 /** Shown in place of a CTA once there is nothing left to set up. */
 export const GROWTH_READY_LINE = 'You’re ready — brands can book you'
+
+/**
+ * The button for a Growth creator with nothing left to set up, on screens whose
+ * empty state needs a button. Without it those screens fell back to "Set up your
+ * shopfront", a page Growth creators cannot open.
+ */
+export const GROWTH_READY_CTA: GrowthCta = { label: 'View your packages', href: '/creator/packages', ready: true }
+
+/** A Growth creator always gets a Growth button (their next step, or the ready one); others get null. */
+export function growthButton(isGrowth: boolean, cta: GrowthCta | null): GrowthCta | null {
+  return isGrowth ? cta ?? GROWTH_READY_CTA : null
+}
