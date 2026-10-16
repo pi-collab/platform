@@ -1,5 +1,5 @@
 import 'server-only'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import { compactNumber } from '@/lib/compact-number'
 
 /**
@@ -9,9 +9,8 @@ import { compactNumber } from '@/lib/compact-number'
  * the Growth pool). NO price of any kind: an Experience creator is paid a shoot
  * day rate, which never reaches a brand, so no creator_products row is read.
  *
- * CALLERS MUST HAVE PASSED THE BRAND GATE for this Experience first (the page
- * reads brand_experience, which refuses anyone else): the roster state below is
- * read with the service role.
+ * 0570: read only through brand_experience_pool_page, with the brand's own
+ * session (no service role); the database checks the brand gate.
  */
 export interface BrandPoolCreator {
   id: string; name: string; handle: string; photo: string | null; niches: string[]; location: string | null
@@ -21,53 +20,46 @@ export interface BrandPoolCreator {
   rosterState: 'added' | 'accepted' | 'on_hold' | 'locked' | 'rejected' | null
 }
 
-export async function listBrandPoolCreators(experienceId: string): Promise<BrandPoolCreator[]> {
-  const admin = createAdminClient()
-  const [{ data: creators }, { data: roster }] = await Promise.all([
-    admin.from('creators')
-      .select('id, full_name, handle, profile_photo_url, niches, location, city, state, social_accounts')
-      .eq('is_bookable', true)
-      .eq('is_guapd', false)
-      .order('full_name'),
-    // Only rows the brand can already see (shared with it), never Guapd's private shortlist.
-    admin.from('experience_roster')
-      .select('creator_id, locked, brand_decision')
-      .eq('experience_id', experienceId)
-      .not('shared_with_brand_at', 'is', null),
-  ])
-  const ids = (creators ?? []).map((c) => c.id as string)
-  const { data: connections } = ids.length
-    ? await admin.from('creator_instagram_connections').select('creator_id, status, snapshot').in('creator_id', ids)
-    : { data: [] as { creator_id: string; status: string; snapshot: unknown }[] }
-  const snapOf = new Map<string, { followersCount?: number; reachLast30?: number; interactionsLast30?: number }>()
-  for (const c of connections ?? []) if (c.status === 'connected' && c.snapshot) snapOf.set(c.creator_id as string, c.snapshot as Record<string, number>)
-  const onRoster = new Map((roster ?? []).map((r) => [r.creator_id as string, r]))
+/**
+ * 0570: the same pool, searched (name or @handle) and filtered in the database,
+ * one page at a time, with the brand's own session (brand_experience_pool_page
+ * checks membership of THIS Experience's brand). Still no price of any kind.
+ */
+export interface BrandPoolFilters { q: string | null; niche: string | null; location: string | null; platform: string | null; band: 'u50' | '50-150' | '150+' | null }
+export interface BrandPoolPage { total: number; creators: BrandPoolCreator[]; niches: string[]; locations: string[]; accepted: number; toReview: number }
 
-  return (creators ?? []).map((c) => {
-    const snap = snapOf.get(c.id as string)
-    const social = Array.isArray(c.social_accounts) ? (c.social_accounts as { platform?: string; follower_count?: number }[]) : []
-    const typed = social.map((s) => s.follower_count).filter((n): n is number => typeof n === 'number').sort((a, b) => b - a)[0]
-    const followers = snap?.followersCount ?? typed ?? null
-    // Engagement only when both figures came from the same snapshot.
-    const engagement = snap?.interactionsLast30 != null && snap.followersCount
-      ? Math.round((snap.interactionsLast30 / snap.followersCount) * 1000) / 10 : null
-    const r = onRoster.get(c.id as string)
-    const handle = (c.handle as string | null) ?? ''
-    return {
-      id: c.id as string,
-      name: (c.full_name as string) ?? 'Creator',
-      handle: handle ? (handle.startsWith('@') ? handle : `@${handle}`) : '',
-      photo: (c.profile_photo_url as string | null) ?? null,
-      niches: (c.niches as string[] | null) ?? [],
-      location: [c.city, c.state].filter(Boolean).join(', ') || (c.location as string | null) || null,
-      platforms: Array.from(new Set(social.map((s) => String(s.platform ?? '').toLowerCase()).filter(Boolean))),
-      followers,
-      followersLabel: followers != null ? compactNumber(followers) : null,
-      verified: Boolean(snap),
-      avgReachLabel: snap?.reachLast30 != null ? compactNumber(snap.reachLast30) : null,
-      engagementLabel: engagement != null ? `${engagement}%` : null,
-      interactionsLabel: snap?.interactionsLast30 != null ? compactNumber(snap.interactionsLast30) : null,
-      rosterState: !r ? null : r.locked ? 'locked' : r.brand_decision === 'rejected' ? 'rejected' : r.brand_decision === 'accepted' ? 'accepted' : r.brand_decision === 'on_hold' ? 'on_hold' : 'added',
-    }
+export async function listBrandPoolPage(experienceId: string, f: BrandPoolFilters, limit: number, offset: number): Promise<BrandPoolPage | null> {
+  const { data, error } = await createClient().rpc('brand_experience_pool_page', {
+    p_experience_id: experienceId, p_q: f.q, p_niche: f.niche, p_location: f.location, p_platform: f.platform, p_band: f.band,
+    p_limit: limit, p_offset: offset,
   })
+  if (error || !data) return null
+  const d = data as { total: number; rows: Record<string, unknown>[]; niches: string[]; locations: string[]; roster: { accepted: number; to_review: number } }
+  const n = (v: unknown) => (v == null ? null : Number(v))
+  return {
+    total: Number(d.total ?? 0), niches: d.niches ?? [], locations: d.locations ?? [],
+    accepted: Number(d.roster?.accepted ?? 0), toReview: Number(d.roster?.to_review ?? 0),
+    creators: (d.rows ?? []).map((r) => {
+      const social = Array.isArray(r.social_accounts) ? (r.social_accounts as { platform?: string }[]) : []
+      const followers = n(r.followers), igF = n(r.ig_followers), reach = n(r.ig_reach_30), inter = n(r.ig_interactions_30)
+      const engagement = inter != null && igF ? Math.round((inter / igF) * 1000) / 10 : null
+      const handle = (r.handle as string | null) ?? ''
+      return {
+        id: r.id as string,
+        name: (r.full_name as string) ?? 'Creator',
+        handle: handle ? (handle.startsWith('@') ? handle : `@${handle}`) : '',
+        photo: (r.profile_photo_url as string | null) ?? null,
+        niches: (r.niches as string[] | null) ?? [],
+        location: (r.place as string | null) ?? null,
+        platforms: Array.from(new Set(social.map((x) => String(x.platform ?? '').toLowerCase()).filter(Boolean))),
+        followers,
+        followersLabel: followers != null ? compactNumber(followers) : null,
+        verified: r.verified === true,
+        avgReachLabel: reach != null ? compactNumber(reach) : null,
+        engagementLabel: engagement != null ? `${engagement}%` : null,
+        interactionsLabel: inter != null ? compactNumber(inter) : null,
+        rosterState: (r.roster_state as BrandPoolCreator['rosterState']) ?? null,
+      }
+    }),
+  }
 }

@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
 import { getBrandExperience } from '@/lib/experience-brand-server'
-import { listBrandPoolCreators } from '@/lib/brand-creator-search'
+import { listBrandPoolPage, type BrandPoolFilters } from '@/lib/brand-creator-search'
+import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import BrandPoolClient from './BrandPoolClient'
 
 export const dynamic = 'force-dynamic'
@@ -17,15 +18,28 @@ export const metadata = { title: 'Add creators · Guapd Experiences' }
  * getBrandExperience runs the brand gate (a member of THIS Experience's brand)
  * before anything is read with the service role.
  */
-export default async function BrandExperiencePoolPage({ params }: { params: { id: string } }) {
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim() || null
+
+export default async function BrandExperiencePoolPage({ params, searchParams }: { params: { id: string }; searchParams: Record<string, string | string[] | undefined> }) {
   await verifyBrand()
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
   const exp = await getBrandExperience(params.id)
   if (!exp.ok) notFound()
   const e = exp.data
-  const creators = await listBrandPoolCreators(e.id)
+  // 0570: search + filters + pages run in the database (brand gate inside).
+  const band = one(searchParams.band)
+  const filters: BrandPoolFilters = {
+    q: one(searchParams.q)?.slice(0, 100) ?? null, niche: one(searchParams.niche), location: one(searchParams.location),
+    platform: ['instagram', 'youtube'].includes(one(searchParams.platform) ?? '') ? one(searchParams.platform) : null,
+    band: band === 'u50' || band === '50-150' || band === '150+' ? band : null,
+  }
+  const pageNo = Math.max(1, Number.parseInt(one(searchParams.page) ?? '1', 10) || 1)
+  const pool = await listBrandPoolPage(e.id, filters, LIST_PAGE_SIZE, (pageNo - 1) * LIST_PAGE_SIZE)
+  if (!pool) notFound()
   return (
     <BrandPoolClient experienceId={e.id} title={e.title} editable={e.status === 'rostering' || e.status === 'confirmed'}
-      creatorsPlanned={e.request.creator_count ?? null} creators={creators} />
+      creatorsPlanned={e.request.creator_count ?? null} creators={pool.creators}
+      filters={filters} page={pageNo} total={pool.total} niches={pool.niches} locations={pool.locations}
+      acceptedCount={pool.accepted} toReviewCount={pool.toReview} />
   )
 }

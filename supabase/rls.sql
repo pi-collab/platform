@@ -1645,3 +1645,5 @@ ALTER TABLE service_invoice_payment_reports ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;
 -- 0569: experience_console_creator_pool_page (operational staff) and brand_experience_roster_page (brand member;
 -- pages the output of brand_experience_roster, so shared creators only). Functions only; no table or policy change.
+-- 0570: brand_experience_pool_page (brand member of THIS Experience's brand; bookable directory with no price,
+-- roster state from shared rows only). Function only; no table or policy change.
