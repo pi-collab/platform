@@ -21,10 +21,10 @@ import {
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
-  consoleCollabSend, consoleCollabInstructions, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
+  consoleCollabSend, consoleCollabInstructions, consoleCollabAdCode, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
   consoleAffiliateReview, consoleAffiliateClose, consoleAffiliatePayoutRequest, consoleAffiliateBill,
 } from '@/lib/experience-console-server'
-import { notifyCreatorVideoSent, notifyCreatorInstructionsUpdated, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
+import { notifyBrandAdCode, notifyCreatorVideoSent, notifyCreatorInstructionsUpdated, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorsShootDateChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
@@ -1348,6 +1348,18 @@ export async function sendVideoToCreator(experienceId: string, releaseId: string
   const r = await consoleCollabSend(releaseId, kind, note)
   if (!r.ok) return r
   await notifyCreatorVideoSent(r.data)
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function recordCollabAdCode(experienceId: string, postId: string, code: string, channel: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(postId)) return { ok: false, error: 'Unknown video.' }
+  if (typeof code !== 'string' || !code.trim()) return { ok: false, error: 'Paste the ad code.' }
+  if (!['whatsapp', 'email', 'call', 'in_person'].includes(channel)) return { ok: false, error: 'Say how the creator sent the ad code.' }
+  const r = await consoleCollabAdCode(postId, code.trim().slice(0, 300), channel)
+  if (!r.ok) return r
+  if (r.data) await notifyBrandAdCode(postId)
   collabPaths(experienceId)
   return { ok: true, data: null }
 }

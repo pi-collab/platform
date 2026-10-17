@@ -8,7 +8,7 @@ import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyStaffCreatorInvoiced } from '@/lib/experience-money-notify'
-import { notifyCollabPosted, notifyStaffCommissionClaimed } from '@/lib/experience-collab-notify'
+import { notifyCollabPosted, notifyBrandAdCode, notifyStaffCommissionClaimed } from '@/lib/experience-collab-notify'
 
 /**
  * The creator's actions on a Guapd Experience creator leg: accept or
@@ -231,6 +231,19 @@ export async function submitCollabPostLink(dealId: string, postId: string, url: 
   if (error) return { ok: false, message: /Instagram post link/i.test(error.message) ? 'Paste the link to your Instagram post or reel (https://www.instagram.com/…).'
     : /final/i.test(error.message) ? 'The brand marked the ad complete; the link is final.' : /closed/i.test(error.message) ? 'This Experience is closed.' : 'Could not save the link. Please try again.' }
   if (first) await notifyCollabPosted(postId, 'creator')
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: null }
+}
+
+// 0574: the creator's partnership ad code for the brand (after the post link).
+export async function submitCollabAdCode(dealId: string, postId: string, code: string): Promise<LegOut<null>> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (!isId(dealId) || !isId(postId) || typeof code !== 'string') return { ok: false, message: 'Something went wrong.' }
+  const { data, error } = await createClient().rpc('creator_collab_ad_code', { p_post_id: postId, p_code: code.trim().slice(0, 300) })
+  if (error) return { ok: false, message: /no spaces/i.test(error.message) ? 'Paste the ad code from Instagram, without spaces.'
+    : /post link first/i.test(error.message) ? 'Add your post link first. The code can change until the ad is complete.'
+    : /closed/i.test(error.message) ? 'This Experience is closed.' : 'Could not save the ad code. Please try again.' }
+  if (data === true) await notifyBrandAdCode(postId)
   revalidatePath(`/creator/deals/${dealId}`)
   return { ok: true, data: null }
 }

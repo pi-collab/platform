@@ -226,6 +226,8 @@ export interface BrandCollabPost {
   sent_at: string; post_url: string | null; posted_at: string | null
   affiliate_url: string | null; affiliate_at: string | null; affiliate_on_guapd: boolean | null
   ad_complete_at: string | null; ad_complete_on_guapd: boolean | null; can_act: boolean
+  /** 0574: the creator's partnership ad code. */
+  ad_code: string | null; ad_code_at: string | null
 }
 export async function getBrandCollabPosts(experienceId: string): Promise<Result<BrandCollabPost[]>> {
   const { data, error } = await createClient().rpc('brand_experience_collab_posts', { p_experience_id: experienceId })

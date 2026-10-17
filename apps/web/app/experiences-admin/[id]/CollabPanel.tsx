@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import { CHANNELS, channelLabel } from '@/lib/experience-request'
 import type { ConsoleCollabPost, ConsoleDeliverables } from '@/lib/experience-console-server'
-import { recordCollabForBrand, recordCollabPost, sendVideoToCreator, setCollabInstructions, takeVideoBack } from '../actions'
+import { recordCollabAdCode, recordCollabForBrand, recordCollabPost, sendVideoToCreator, setCollabInstructions, takeVideoBack } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
-import LinkTile, { LinkTiles } from '@/components/LinkTile'
+import LinkTile, { CodeTile, LinkTiles } from '@/components/LinkTile'
 
 /**
  * Posting (0561, operational). Once the brand approves a video Guapd shared,
@@ -17,6 +17,7 @@ import LinkTile, { LinkTiles } from '@/components/LinkTile'
  * adds its affiliate link and marks the ad complete on Guapd; staff record
  * either for someone only when it reached Guapd another way.
  * 0566: the creator's main invoice no longer waits for these; it opens once their shoot is done.
+ * 0574: the creator's partnership ad code (they add it; staff record it when it came another way).
  * 0573: posting instructions (caption, tags, timing) go with the video, and can
  * be added or changed while it is live. The creator sees them; the brand does not.
  */
@@ -33,6 +34,7 @@ const STATE: Record<ConsoleCollabPost['status'], { label: string; tone: ChipTone
 type Ask =
   | { kind: 'post'; post: ConsoleCollabPost }
   | { kind: 'affiliate'; post: ConsoleCollabPost }
+  | { kind: 'ad_code'; post: ConsoleCollabPost }
   | { kind: 'ad_complete'; post: ConsoleCollabPost }
   | { kind: 'cancel'; post: ConsoleCollabPost }
   | { kind: 'instructions'; post: ConsoleCollabPost }
@@ -120,6 +122,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                       {p && writable && p.status === 'posted' && (
                         <>
                           <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(p.affiliate_url ?? ''); setAsk({ kind: 'affiliate', post: p }) }}>{p.affiliate_url ? 'Change affiliate link' : 'Record affiliate link'}</button>
+                          <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(p.ad_code ?? ''); setAsk({ kind: 'ad_code', post: p }) }}>{p.ad_code ? 'Change ad code' : 'Record ad code'}</button>
                           <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(''); setAsk({ kind: 'ad_complete', post: p }) }}>Record ad complete</button>
                         </>
                       )}
@@ -168,26 +171,31 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                       </div>
                     </div>
                   )}
-                  {p && (p.post_url || p.affiliate_url) && (
+                  {p && p.kind === 'collab' && p.status === 'posted' && !p.ad_code && (
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: '#8C6417', marginTop: 6 }}>Waiting for the creator&rsquo;s ad code (the brand needs it to run the ad).</div>
+                  )}
+                  {p && (p.post_url || p.affiliate_url || p.ad_code) && (
                     <LinkTiles>
                       {p.post_url && <LinkTile label="Post" url={p.post_url}
                         meta={`${fmt(p.posted_at)}${p.post_channel && p.post_channel !== 'portal' ? ` · recorded (${channelLabel(p.post_channel)})` : ' · by the creator'}`} />}
                       {p.affiliate_url && <LinkTile label="Brand’s affiliate link" url={p.affiliate_url}
                         meta={p.affiliate_channel && p.affiliate_channel !== 'portal' ? `Recorded (${channelLabel(p.affiliate_channel)})` : 'Added by the brand'} />}
+                      {p.ad_code && <CodeTile label="Creator’s ad code" code={p.ad_code}
+                        meta={`${fmt(p.ad_code_at)}${p.ad_code_channel && p.ad_code_channel !== 'portal' ? ` · recorded (${channelLabel(p.ad_code_channel)})` : ' · by the creator'}`} />}
                     </LinkTiles>
                   )}
                   {ask && p && ask.kind !== 'send' && ask.kind !== 'instructions' && ask.post.id === p.id && (
                     <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: '#F7F7F4', display: 'grid', gap: 10 }}>
                       {ask.kind !== 'ad_complete' && (
                         <div>
-                          <label style={fieldLabel} htmlFor={`cp-${p.id}`}>{ask.kind === 'post' ? 'Instagram post link' : ask.kind === 'affiliate' ? 'The brand’s affiliate link' : 'Why take it back (the creator is not told the reason)'}</label>
+                          <label style={fieldLabel} htmlFor={`cp-${p.id}`}>{ask.kind === 'post' ? 'Instagram post link' : ask.kind === 'affiliate' ? 'The brand’s affiliate link' : ask.kind === 'ad_code' ? 'The creator’s partnership ad code' : 'Why take it back (the creator is not told the reason)'}</label>
                           <input id={`cp-${p.id}`} className="dinput" value={text} maxLength={ask.kind === 'cancel' ? 300 : 500} onChange={(e) => setText(e.target.value)}
-                            placeholder={ask.kind === 'post' ? 'https://www.instagram.com/reel/…' : ask.kind === 'affiliate' ? 'https://…' : 'Wrong cut sent'} />
+                            placeholder={ask.kind === 'post' ? 'https://www.instagram.com/reel/…' : ask.kind === 'affiliate' ? 'https://…' : ask.kind === 'ad_code' ? 'Paste the ad code' : 'Wrong cut sent'} />
                         </div>
                       )}
                       {ask.kind !== 'cancel' && (
                         <div>
-                          <label style={fieldLabel} htmlFor={`cc-${p.id}`}>{ask.kind === 'post' ? 'The creator sent it via' : 'The brand told us via'}</label>
+                          <label style={fieldLabel} htmlFor={`cc-${p.id}`}>{ask.kind === 'post' || ask.kind === 'ad_code' ? 'The creator sent it via' : 'The brand told us via'}</label>
                           <select id={`cc-${p.id}`} className="dinput" value={channel} onChange={(e) => setChannel(e.target.value)}>
                             {CHANNELS.map(([k, lbl]) => <option key={k} value={k}>{lbl}</option>)}
                           </select>
@@ -200,6 +208,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                           onClick={() => run(() => ask.kind === 'post' ? recordCollabPost(experienceId, p.id, text, channel)
                             : ask.kind === 'affiliate' ? recordCollabForBrand(experienceId, p.id, 'affiliate', text, channel)
                             : ask.kind === 'ad_complete' ? recordCollabForBrand(experienceId, p.id, 'ad_complete', null, channel)
+                            : ask.kind === 'ad_code' ? recordCollabAdCode(experienceId, p.id, text, channel)
                             : takeVideoBack(experienceId, p.id, text))}>
                           {pending ? 'Saving…' : ask.kind === 'cancel' ? 'Take it back' : 'Record'}
                         </button>

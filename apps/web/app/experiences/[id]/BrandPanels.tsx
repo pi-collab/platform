@@ -8,7 +8,7 @@ import type { BrandCollabPost, BrandSuggestion } from '@/lib/experience-brand-se
 import Link from 'next/link'
 import { actOnCollab, suggestCreator, answerAddon, answerQuote, decideDeliverable, decideRosterCreator, acceptRosterCreators, signOffExperience } from '../actions'
 import ViewFile from './ViewFile'
-import LinkTile, { LinkTiles } from '@/components/LinkTile'
+import LinkTile, { LinkTiles, CodeTile } from '@/components/LinkTile'
 
 /**
  * The brand's own decisions on an Experience (0544). Each button calls a
@@ -431,10 +431,14 @@ export function CollabReview({ experienceId, posts }: { experienceId: string; po
                     : <span className="bx-chip bx-hold">Not posted yet</span>}
                 </div>
               </div>
+              {p.status === 'posted' && !p.ad_code && (
+                <p className="bx-note" style={{ margin: '8px 0 0' }}>Waiting for {creator}&rsquo;s ad code to run this as a partnership ad.</p>
+              )}
               {(p.post_url || p.affiliate_url) && (
                 <LinkTiles>
                   {p.post_url && <LinkTile label={`${creator}\u2019s post`} url={p.post_url} />}
                   {p.affiliate_url && <LinkTile label="Your affiliate link" url={p.affiliate_url} meta={p.affiliate_on_guapd === false ? 'Added via Guapd' : undefined} />}
+                  {p.ad_code && <CodeTile label={`${creator}\u2019s ad code`} code={p.ad_code} hint="Paste it in Ads Manager to run this post as a partnership ad." />}
                 </LinkTiles>
               )}
               {p.ad_complete_at && <p className="bx-when bx-item-note">{p.ad_complete_on_guapd ? 'You marked the ad complete' : 'Marked complete (via Guapd)'} on {fmt(p.ad_complete_at)}.</p>}
