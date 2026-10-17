@@ -310,6 +310,12 @@ export default function CreatorOfferMobile({
             Partly posted still shows them: there is a card left to fill. */}
         {stage === 'approved' && !allPosted && postNode}
 
+        {/* Experience creator deals stay "agreed" through the shoot, videos and
+            invoice; their videos, commission and invoice arrive as invoiceNode.
+            Marketplace deals never pass one in this stage (page.tsx), so this
+            only shows for Experiences. */}
+        {stage === 'agreed' && invoiceNode}
+
         {/* PAID. The one screen that celebrates rather than instructs, so it
             leads with the fact and the figure and then gets out of the way. */}
         {stage === 'complete' && (
