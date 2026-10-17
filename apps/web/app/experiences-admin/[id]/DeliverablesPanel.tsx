@@ -58,7 +58,8 @@ export default function DeliverablesPanel({ experienceId, data }: { experienceId
   const legs = data.legs.filter((l) => l.shoot_outcome === 'done')
   const skipped = data.legs.filter((l) => l.shoot_outcome === 'did_not_shoot')
   const writable = ['shoot_scheduled', 'shoot_done', 'delivering'].includes(status)
-  const sharing = status === 'shoot_done' || status === 'delivering'
+  // 0572: per creator, as soon as they have shot (the database checks each item).
+  const sharing = status === 'shoot_scheduled' || status === 'shoot_done' || status === 'delivering'
 
   const done = (msg?: string) => { setAsk(null); setText(''); setAttachFor(null); setLink(''); setFile(null); if (msg) setNotice(msg); router.refresh() }
   const run = (fn: () => Promise<{ ok: boolean; error?: string; data?: unknown }>, after?: (d: unknown) => void) => {

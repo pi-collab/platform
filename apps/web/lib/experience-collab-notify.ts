@@ -67,6 +67,16 @@ export async function notifyCreatorVideoSent(postId: string): Promise<void> {
   }
 }
 
+/** 0573: Guapd added or changed the posting instructions on a video already sent. */
+export async function notifyCreatorInstructionsUpdated(postId: string): Promise<void> {
+  try {
+    await tellCreator(postId, 'experience_collab_instructions', 'Posting instructions from Guapd',
+      (brand, label) => `Guapd updated how to post your ${label} for ${brand}. Check the instructions on your deal before you post.`, 'collab-instructions')
+  } catch (err) {
+    console.error(`[experience-collab] creator notification failed post=${postId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 /** The brand added its affiliate link to a collab post. */
 export async function notifyCreatorAffiliateAdded(postId: string): Promise<void> {
   try {

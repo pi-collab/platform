@@ -21,10 +21,10 @@ import {
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
-  consoleCollabSend, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
+  consoleCollabSend, consoleCollabInstructions, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
   consoleAffiliateReview, consoleAffiliateClose, consoleAffiliatePayoutRequest, consoleAffiliateBill,
 } from '@/lib/experience-console-server'
-import { notifyCreatorVideoSent, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
+import { notifyCreatorVideoSent, notifyCreatorInstructionsUpdated, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
 import { creatorLegTerms, costLineTotalPaise } from '@/lib/experience-money'
 import { notifyCreatorLegOffer, notifyCreatorsBriefChanged, notifyCreatorsShootDateChanged, notifyCreatorGuapdMessage, notifyCreatorScopeChanged, notifyCreatorExtraOffer } from '@/lib/experience-leg-notify'
 import { notifyBrandDeliverablesShared, notifyCreatorItemReviewed, notifyCreatorLegWithdrawn } from '@/lib/experience-deliverables-notify'
@@ -1331,13 +1331,35 @@ export async function requestExtraPayoutAction(experienceId: string, extraId: st
 // complete only when it reached Guapd another way, with the channel.
 const collabPaths = (experienceId: string) => { revalidatePath(`${BASE}/${experienceId}`); revalidatePath(`/experiences/${experienceId}`) }
 
-export async function sendVideoToCreator(experienceId: string, releaseId: string, kind: 'collab' | 'share'): Promise<Out> {
+// 0573: posting instructions keep their line breaks (a caption is laid out).
+const instructionsText = (v: unknown): string | null | false => {
+  if (v == null) return null
+  if (typeof v !== 'string') return false
+  const t = v.replace(/\r\n?/g, '\n').trim()
+  return !t ? null : t.length > 2000 ? false : t
+}
+
+export async function sendVideoToCreator(experienceId: string, releaseId: string, kind: 'collab' | 'share', instructions: string | null = null): Promise<Out> {
   const refused = await gate(); if (refused) return refused
   if (!isUuid(experienceId) || !isUuid(releaseId)) return { ok: false, error: 'Unknown video.' }
   if (kind !== 'collab' && kind !== 'share') return { ok: false, error: 'Post as a collab, or share.' }
-  const r = await consoleCollabSend(releaseId, kind)
+  const note = instructionsText(instructions)
+  if (note === false) return { ok: false, error: 'Instructions are at most 2,000 characters.' }
+  const r = await consoleCollabSend(releaseId, kind, note)
   if (!r.ok) return r
   await notifyCreatorVideoSent(r.data)
+  collabPaths(experienceId)
+  return { ok: true, data: null }
+}
+
+export async function setCollabInstructions(experienceId: string, postId: string, instructions: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(postId)) return { ok: false, error: 'Unknown video.' }
+  const note = instructionsText(instructions)
+  if (note === false) return { ok: false, error: 'Instructions are at most 2,000 characters.' }
+  const r = await consoleCollabInstructions(postId, note)
+  if (!r.ok) return r
+  if (r.data) await notifyCreatorInstructionsUpdated(postId)
   collabPaths(experienceId)
   return { ok: true, data: null }
 }

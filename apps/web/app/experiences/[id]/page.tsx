@@ -42,6 +42,8 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   const quoteToAnswer = e.quote?.status === 'open' && e.quote.proposed_by === 'guapd'
   const hasRoster = !['requested', 'cancelled'].includes(e.status)
   const hasDeliverables = ['shoot_done', 'delivering', 'complete'].includes(e.status)
+  // 0572: Guapd can share a creator's work while the shoot is still scheduled.
+  const showDeliverables = hasDeliverables || e.status === 'shoot_scheduled'
   // 0554: add-ons to the agreed price.
   const addonsRes = hasRoster ? await getBrandAddons(e.id) : null
   const addons = addonsRes?.ok ? addonsRes.data.addons : []
@@ -51,7 +53,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   const rosterPage = Math.max(1, Number.parseInt(searchParams?.rpage ?? '1', 10) || 1)
   const [roster, deliverables, invoices, report, guapdThread] = await Promise.all([
     hasRoster ? getBrandRosterPage(e.id, rosterQ || null, LIST_PAGE_SIZE, (rosterPage - 1) * LIST_PAGE_SIZE) : Promise.resolve(null),
-    hasDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
+    showDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
     getBrandInvoices(e.id),
     e.status === 'complete' ? getBrandReport(e.id) : Promise.resolve(null),
     getBrandGuapdThread(e.id),
@@ -76,7 +78,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   const reviewing = ['shoot_done', 'delivering'].includes(e.status)
   const reviewBlock = (
     <>
-      {hasDeliverables && deliverables?.ok && e.status !== 'complete' && (
+      {showDeliverables && deliverables?.ok && e.status !== 'complete' && (deliverables.data.items.length > 0 || hasDeliverables) && (
         <section className="surface bx-card" aria-labelledby="bx-deliv">
           <h2 id="bx-deliv" className="bx-h2">Deliverables</h2>
           <p className="bx-note">What Guapd has shared with you. Approve each one, or tell Guapd what to change.</p>

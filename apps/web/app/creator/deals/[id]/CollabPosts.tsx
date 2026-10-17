@@ -12,7 +12,25 @@ import LinkTile, { LinkTiles, tileBtn } from '@/components/LinkTile'
  * Collab: post it on Instagram as a collab with the brand, then paste the post
  * link (0566: their invoice no longer waits for it); the brand's affiliate link shows here once
  * added. Shared: theirs to post if they like, nothing asked.
+ * 0573: Guapd's posting instructions (caption, tags, timing) show above the links, with Copy.
  */
+function Instructions({ text, at }: { text: string; at: string | null }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard blocked: the text is still selectable */ }
+  }
+  return (
+    <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 14, background: 'var(--sec-2, #F7F7F4)', border: '1px solid var(--border-hairline, #EAEAE3)', borderLeft: '3px solid var(--neon-deep, #8FAF1F)', fontFamily: 'var(--font-ui)', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint, #8A8F98)' }}>How to post · from Guapd</span>
+        {at && <span style={{ fontSize: 11, color: 'var(--ink-faint, #8A8F98)' }}>updated {fmt(at)}</span>}
+        <button type="button" onClick={copy} style={{ ...tileBtn, marginLeft: 'auto' }} aria-label="Copy the posting instructions">{copied ? 'Copied' : 'Copy'}</button>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 13.5, lineHeight: 1.55, color: 'var(--ink)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{text}</div>
+    </div>
+  )
+}
+
 const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
 function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabPost; brand: string; last: boolean }) {
   const router = useRouter()
@@ -57,6 +75,7 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
           ? `Posted ${fmt(p.posted_at)}. ${brand} runs it as an ad on the agreed terms and marks it complete.`
           : `${brand} marked the ad complete on ${fmt(p.ad_complete_at)}.`}
       </p>
+      {p.instructions && <Instructions text={p.instructions} at={p.instructions_at} />}
       {((p.post_url && !editing) || p.affiliate_url) && (
         <LinkTiles>
           {p.post_url && !editing && <LinkTile label="Your post" url={p.post_url}
