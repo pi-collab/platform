@@ -59,7 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
-  feeMode = 'deducted', shipmentNode, reviewNode,
+  feeMode = 'deducted', shipmentNode, reviewNode, offerExtraNode, isPosted = false,
   stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
   hideItemPrices = false, totalLabel = 'Deal total', extraTermRows = [], summaryRows = [], stageCopy, messageLabel = 'Message brand',
 }: {
@@ -143,6 +143,10 @@ export default function CreatorOfferMobile({
   shipmentNode?: React.ReactNode
   /** Rate the brand, once the deal is done (same card as desktop). */
   reviewNode?: React.ReactNode
+  /** Offer: add-on breakdown and the negotiation history (desktop parity). */
+  offerExtraNode?: React.ReactNode
+  /** Something is posted: the analytics link shows from then on, as on desktop. */
+  isPosted?: boolean
   /** Whether every deliverable has a live URL yet. */
   allPosted?: boolean
   /** The invoice card, once there is content posted to invoice for. */
@@ -243,7 +247,7 @@ export default function CreatorOfferMobile({
               : stage === 'approved'
               ? (approvedAt ? `Approved ${approvedAt}` : 'Approved')
               : stage === 'revision'
-              ? (reviewedAt ? `Reviewed ${reviewedAt}` : 'Reviewed')
+              ? `${reviewedAt ? `Reviewed ${reviewedAt}` : 'Reviewed'}${deliverBy ? ` \u00B7 resubmit by ${deliverBy}` : ''}`
               : stage === 'submitted'
               ? (submittedAt ? `Submitted ${submittedAt}` : 'Submitted')
               : stage === 'agreed'
@@ -317,6 +321,14 @@ export default function CreatorOfferMobile({
             invoice, restating what the Deliverables fold already records.
             Partly posted still shows them: there is a card left to fill. */}
         {(stage === 'approved' || stage === 'invoiced' || stage === 'complete') && !allPosted && postNode}
+
+        {/* How the post did: from the first post on, as desktop's header link (complete has its own). */}
+        {isPosted && analyticsHref && stage !== 'complete' && stage !== 'offer' && (
+          <Link href={analyticsHref} className="offer-m__card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', textDecoration: 'none', color: 'var(--ink)', fontWeight: 700, fontSize: 14 }}>
+            How your post did
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+          </Link>
+        )}
 
         {/* Product shipment, once agreed (desktop parity: address, status, tracking). */}
         {stage !== 'offer' && shipmentNode}
@@ -605,6 +617,7 @@ export default function CreatorOfferMobile({
               here too, and telling one of those creators their free deal came
               from a storefront referral is a specific false claim about how
               they were found — and about whether the next one is charged. */}
+          {offerExtraNode}
           {zeroFeeNote(feePercent, feeBasis, 'creator') ? (
             <div className="offer-m__feerow offer-m__feerow--free">
               <span>Platform fee</span>

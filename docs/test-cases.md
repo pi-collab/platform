@@ -7745,3 +7745,21 @@ Rolled-back SQL on staging (Holiday shoot post 25d2f686, posted):
 | 8 | Internal setter experience_collab_set_ad_code | Not executable by authenticated | Pass |
 
 UI checked: creator "Share your ad code" prompt after posting, "Your ad code" tile with Copy/Change, optional code field next to the post link; brand tile with Copy and a "waiting for ad code" line; console tile, Record/Change ad code.
+
+## 149. Creator mobile parity (Experience + marketplace deals, inbox, dashboard, payments)
+
+Checked on staging at 390px (iframe) with real staging deals:
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Experience leg, agreed, on a phone | Your videos (download, instructions, post link, ad code) and Raise your invoice visible | Pass |
+| 2 | Experience leg per-video state on the phone | Ready / Being edited · Affiliate link on the terms rows | Pass |
+| 3 | Marketplace deal with product shipment, agreed, phone | Product shipment card with status and carrier (fb37a4a8) | Pass |
+| 4 | on_top fee deal, complete, phone | "Platform fee (10%), paid by the brand ₹6,000"; You receive ₹60,000 (bf5e46fe) | Pass |
+| 5 | Completed deal, phone | "How was working with …" rating card | Pass |
+| 6 | Negotiating deal, phone | Accept/Decline present; deliverable detail shows the handle | Pass |
+| 7 | Creator inbox thread, phone | Header shows deal title · status · amount | Pass |
+| 8 | Desktop dashboard track record | Real on-time / response / completion (no hardcoded 100% / ~4h) | Typecheck; same source as phone |
+| 9 | Desktop payments | Export CSV button when there is history | Typecheck |
+
+Not visually exercised (no staging data): deals with no line items (submit + deal-level post on the phone), withdrawn / did-not-shoot Experience legs.

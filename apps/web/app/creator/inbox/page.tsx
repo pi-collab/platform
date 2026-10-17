@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { unreadByDeal } from '@/lib/unread'
 import InboxListMobile from '@/components/InboxListMobile'
 import InboxThreadMobile from '@/components/InboxThreadMobile'
-import { resolveStatus } from '@/lib/deal-stage'
+import { resolveStatus, formatRupees } from '@/lib/deal-stage'
 import { verifyCreator } from '@/lib/creator-auth'
 import CreatorInboxView from './CreatorInboxView'
 import CreatorPageHeader from '@/components/creator/CreatorPageHeader'
@@ -11,6 +11,12 @@ import { creatorGrowthState } from '@/lib/creator-growth-state'
 import { growthButton } from '@/lib/growth-cta'
 import CreatorInboxEmptyDesktop from './CreatorInboxEmptyDesktop'
 import type { Metadata } from 'next'
+
+// The desktop thread header's status words (CreatorInboxView), for the phone header.
+const threadStatusLabel = (status: string): string =>
+  status === 'declined' || status === 'cancelled' ? 'Declined'
+  : status === 'complete' || status === 'paid' ? 'Completed'
+  : status.charAt(0).toUpperCase() + status.slice(1)
 import { unreadNotificationCount } from '@/lib/unread'
 
 export const metadata: Metadata = { title: 'Inbox · Guapd Creator' }
@@ -195,6 +201,7 @@ export default async function CreatorInboxPage({ searchParams }: {
         <InboxThreadMobile
           dealId={selectedThread.dealId}
           name={selectedThread.brandName}
+          subline={[selectedThread.dealTitle, threadStatusLabel(selectedThread.dealStatus), selectedThread.amountPaise > 0 ? formatRupees(selectedThread.amountPaise) : null].filter(Boolean).join(' \u00B7 ')}
           initials={selectedThread.brandInitials}
           logoUrl={selectedThread.brandLogo}
           messages={selectedMessages}
