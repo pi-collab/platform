@@ -1207,14 +1207,21 @@ export interface ConsoleCollabPost {
   affiliate_url: string | null; affiliate_at: string | null; affiliate_channel: string | null
   ad_complete_at: string | null; ad_complete_channel: string | null
   cancelled_at: string | null; cancel_reason: string | null
+  /** 0573: Guapd's posting instructions to the creator (never shown to the brand). */
+  instructions: string | null; instructions_at: string | null
 }
 export async function listConsoleCollabPosts(experienceId: string): Promise<Result<ConsoleCollabPost[]>> {
   const { data, error } = await createClient().rpc('experience_console_collab_posts', { p_experience_id: experienceId })
   return error ? fail(error) : { ok: true, data: (data ?? []) as ConsoleCollabPost[] }
 }
-export async function consoleCollabSend(releaseId: string, kind: 'collab' | 'share'): Promise<Result<string>> {
-  const { data, error } = await createClient().rpc('experience_console_collab_send', { p_release_id: releaseId, p_kind: kind })
+export async function consoleCollabSend(releaseId: string, kind: 'collab' | 'share', instructions: string | null): Promise<Result<string>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_send_with_instructions', { p_release_id: releaseId, p_kind: kind, p_instructions: instructions })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+/** 0573: set, change or clear (blank) the posting instructions; true when there are some now. */
+export async function consoleCollabInstructions(postId: string, text: string | null): Promise<Result<boolean>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_instructions', { p_post_id: postId, p_text: text })
+  return error ? fail(error) : { ok: true, data: data === true }
 }
 export async function consoleCollabCancel(postId: string, reason: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_collab_cancel', { p_post_id: postId, p_reason: reason })

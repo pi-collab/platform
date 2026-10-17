@@ -162,6 +162,8 @@ export interface CreatorCollabPost {
   sent_at: string; file_name: string | null; has_link: boolean
   post_url: string | null; posted_at: string | null; affiliate_url: string | null; ad_complete_at: string | null
   can_post: boolean
+  /** 0573: Guapd's posting instructions (caption and the like). */
+  instructions: string | null; instructions_at: string | null
 }
 
 /** 0563: the creator's affiliate commission (experience_affiliate_for_creator, their own deal only). */

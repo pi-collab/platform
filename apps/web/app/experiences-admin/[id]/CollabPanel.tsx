@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import { CHANNELS, channelLabel } from '@/lib/experience-request'
 import type { ConsoleCollabPost, ConsoleDeliverables } from '@/lib/experience-console-server'
-import { recordCollabForBrand, recordCollabPost, sendVideoToCreator, takeVideoBack } from '../actions'
+import { recordCollabForBrand, recordCollabPost, sendVideoToCreator, setCollabInstructions, takeVideoBack } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 import LinkTile, { LinkTiles } from '@/components/LinkTile'
 
@@ -17,7 +17,12 @@ import LinkTile, { LinkTiles } from '@/components/LinkTile'
  * adds its affiliate link and marks the ad complete on Guapd; staff record
  * either for someone only when it reached Guapd another way.
  * 0566: the creator's main invoice no longer waits for these; it opens once their shoot is done.
+ * 0573: posting instructions (caption, tags, timing) go with the video, and can
+ * be added or changed while it is live. The creator sees them; the brand does not.
  */
+const noteBox = { marginTop: 10, padding: '10px 12px', borderRadius: 10, background: '#FBFBF8', border: '1px solid var(--hairline)' } as const
+const noteText = { fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 4 } as const
+
 const STATE: Record<ConsoleCollabPost['status'], { label: string; tone: ChipTone }> = {
   sent:        { label: 'With the creator', tone: 'amber' },
   posted:      { label: 'Posted', tone: 'blue' },
@@ -30,6 +35,8 @@ type Ask =
   | { kind: 'affiliate'; post: ConsoleCollabPost }
   | { kind: 'ad_complete'; post: ConsoleCollabPost }
   | { kind: 'cancel'; post: ConsoleCollabPost }
+  | { kind: 'instructions'; post: ConsoleCollabPost }
+  | { kind: 'send'; releaseId: string; send: 'collab' | 'share' }
 
 export default function CollabPanel({ experienceId, data, posts, adRights }: {
   experienceId: string
@@ -44,6 +51,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
   const [ask, setAsk] = useState<Ask | null>(null)
   const [text, setText] = useState('')
   const [channel, setChannel] = useState('whatsapp')
+  const [note, setNote] = useState('')
   const writable = ['shoot_scheduled', 'shoot_done', 'delivering'].includes(data.status)
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) => {
@@ -51,7 +59,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
     start(async () => {
       const r = await fn()
       if (!r.ok) { setError(r.error ?? 'Something went wrong'); return }
-      setAsk(null); setText(''); router.refresh()
+      setAsk(null); setText(''); setNote(''); router.refresh()
     })
   }
   const live = posts.filter((p) => p.status !== 'cancelled')
@@ -98,8 +106,8 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                         <>
                           <button type="button" style={pillBtn} disabled={pending || collabs.length >= need}
                             title={collabs.length >= need ? 'All of this creator’s ad-rights videos are already sent as collabs' : undefined}
-                            onClick={() => run(() => sendVideoToCreator(experienceId, i.release!.id, 'collab'))}>Send to post as a collab</button>
-                          <button type="button" style={pillBtn} disabled={pending} onClick={() => run(() => sendVideoToCreator(experienceId, i.release!.id, 'share'))}>Share with the creator</button>
+                            onClick={() => { setError(null); setNote(''); setAsk({ kind: 'send', releaseId: i.release!.id, send: 'collab' }) }}>Send to post as a collab</button>
+                          <button type="button" style={pillBtn} disabled={pending} onClick={() => { setError(null); setNote(''); setAsk({ kind: 'send', releaseId: i.release!.id, send: 'share' }) }}>Share with the creator</button>
                         </>
                       )}
                       {p && writable && p.status === 'sent' && p.kind === 'collab' && (
@@ -110,6 +118,9 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                           <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(p.affiliate_url ?? ''); setAsk({ kind: 'affiliate', post: p }) }}>{p.affiliate_url ? 'Change affiliate link' : 'Record affiliate link'}</button>
                           <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(''); setAsk({ kind: 'ad_complete', post: p }) }}>Record ad complete</button>
                         </>
+                      )}
+                      {p && writable && (p.status === 'sent' || p.status === 'posted') && (
+                        <button type="button" style={pillBtn} disabled={pending} onClick={() => { setError(null); setNote(p.instructions ?? ''); setAsk({ kind: 'instructions', post: p }) }}>{p.instructions ? 'Edit instructions' : 'Add instructions'}</button>
                       )}
                       {p && writable && p.status === 'sent' && (
                         <button type="button" style={pillBtn} disabled={pending} onClick={() => { setText(''); setAsk({ kind: 'cancel', post: p }) }}>Take back</button>
@@ -122,6 +133,34 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                       {p.ad_complete_at && <span>Ad complete {fmt(p.ad_complete_at)}{p.ad_complete_channel && p.ad_complete_channel !== 'portal' ? ` · recorded (${channelLabel(p.ad_complete_channel)})` : ' · by the brand'}</span>}
                     </div>
                   )}
+                  {p && p.instructions && !(ask?.kind === 'instructions' && ask.post.id === p.id) && (
+                    <div style={noteBox}>
+                      <div style={{ ...kpiLabel, fontSize: 10 }}>Posting instructions · seen by the creator</div>
+                      <div style={noteText}>{p.instructions}</div>
+                    </div>
+                  )}
+                  {((ask?.kind === 'send' && !p && ask.releaseId === i.release!.id) || (ask?.kind === 'instructions' && p && ask.post.id === p.id)) && (
+                    <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: '#F7F7F4', display: 'grid', gap: 10 }}>
+                      <div>
+                        <label style={fieldLabel} htmlFor={`ci-${i.id}`}>Posting instructions <span style={{ fontWeight: 500, color: 'var(--ink-faint)' }}>(optional)</span></label>
+                        <textarea id={`ci-${i.id}`} className="dinput" value={note} maxLength={2000} rows={5} onChange={(e) => setNote(e.target.value)}
+                          placeholder={'Caption, tags and anything to do while posting. For example:\nCaption: Festive glow with @brand ✨ #ad\nTag @brand, post by Friday 7 pm'}
+                          style={{ width: '100%', height: 'auto', minHeight: 116, padding: '10px 12px', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 4, fontFamily: 'var(--font-ui)', fontSize: 11.5, color: 'var(--ink-faint)' }}>
+                          <span>The creator sees this on their deal. The brand does not.</span>
+                          <span>{note.length} / 2,000</span>
+                        </div>
+                      </div>
+                      {error && <div role="alert" style={formError}>{error}</div>}
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <button type="button" style={pillBtn} disabled={pending} onClick={() => { setAsk(null); setError(null) }}>Cancel</button>
+                        <button type="button" className="neonbtn" style={{ ...neonBtn, height: 38 }} disabled={pending}
+                          onClick={() => run(() => ask.kind === 'send' ? sendVideoToCreator(experienceId, ask.releaseId, ask.send, note) : setCollabInstructions(experienceId, (ask as { post: ConsoleCollabPost }).post.id, note))}>
+                          {pending ? 'Saving…' : ask.kind === 'send' ? (ask.send === 'collab' ? 'Send to post as a collab' : 'Share with the creator') : 'Save instructions'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {p && (p.post_url || p.affiliate_url) && (
                     <LinkTiles>
                       {p.post_url && <LinkTile label="Post" url={p.post_url}
@@ -130,7 +169,7 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                         meta={p.affiliate_channel && p.affiliate_channel !== 'portal' ? `Recorded (${channelLabel(p.affiliate_channel)})` : 'Added by the brand'} />}
                     </LinkTiles>
                   )}
-                  {ask && p && ask.post.id === p.id && (
+                  {ask && p && ask.kind !== 'send' && ask.kind !== 'instructions' && ask.post.id === p.id && (
                     <div style={{ marginTop: 12, padding: 14, borderRadius: 12, background: '#F7F7F4', display: 'grid', gap: 10 }}>
                       {ask.kind !== 'ad_complete' && (
                         <div>

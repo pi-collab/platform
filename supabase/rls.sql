@@ -1648,3 +1648,9 @@ REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;
 -- 0570: brand_experience_pool_page (brand member of THIS Experience's brand; bookable directory with no price,
 -- roster state from shared rows only). Function only; no table or policy change.
 -- 0571: experience_console_roster_day_rates (operational staff, via experience_console_require). Function only.
+-- 0572: experience_console_release and experience_shoot_rollup recreated (share per creator from Shoot scheduled);
+-- grants kept. No table or policy change.
+-- 0573: experience_collab_posts gains instructions, instructions_at (RLS on, still no grants). New functions
+-- experience_console_collab_instructions and experience_console_collab_send_with_instructions (operational staff,
+-- via experience_console_require). creator_collab_posts (own deal only) and experience_console_collab_posts return
+-- the instructions; brand_experience_collab_posts does not.

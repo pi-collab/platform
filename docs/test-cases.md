@@ -7700,3 +7700,31 @@ Two lists, two sources: ops searches the FULL bookable directory; the brand sear
 - [ ] Console Experience → Roster: each creator shows "Day rate ₹X" under the plan, or "No day rate yet" / "Day rate paused (was ₹X)" in amber; visible as soon as they are added, before the lock
 - [ ] Same access as the pool and Creator deals (operational staff); a brand calling experience_console_roster_day_rates is refused; the brand Experience page never mentions a day rate (staging check 2026-10-16: 0 matches)
 - [ ] Before 0571 is applied the Roster list still loads, just without the rate
+
+## 146. Share a creator's work before every creator has accepted (migration 0572)
+
+Rolled-back SQL on staging (Test Experience 73205d67, shoot scheduled):
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Share an approved item from a creator whose deal is agreed and shoot is marked shot, while another creator's deal is still negotiating | Shared; Experience stays Shoot scheduled | Pass |
+| 2 | Share an item from the creator who has not accepted | Refused: "Only deliverables from creators who shot can be shared" | Pass |
+| 3 | Brand reads its deliverables while Shoot scheduled | Sees the shared item | Pass |
+| 4 | The rest accept and are marked shot, work already shared | Roll-up goes straight to Delivering (never stalls at Shoot done) | Pass |
+
+Console: the Share button and tick boxes show from Shoot scheduled. Brand page: the Deliverables card shows during Shoot scheduled once something is shared.
+
+## 147. Posting instructions on a video sent to a creator (migration 0573)
+
+Rolled-back SQL on staging (Holiday shoot post 25d2f686):
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Staff set multi-line instructions | Saved, line breaks kept, audited | Pass |
+| 2 | Over 2,000 characters | Refused | Pass |
+| 3 | Brand admin or the creator tries to set them | "Operational access required" | Pass |
+| 4 | The creator reads their posts | Instructions present | Pass |
+| 5 | Brand collab-posts view | No instructions key (Guapd to creator only) | Pass |
+| 6 | Blank text | Clears text and timestamp | Pass |
+
+Send with instructions is one transaction (experience_console_collab_send_with_instructions). Editing later notifies the creator. UI checked: console Posting panel (send panel, Add/Edit instructions, shown read-only) and the creator's "How to post · from Guapd" box with Copy.
