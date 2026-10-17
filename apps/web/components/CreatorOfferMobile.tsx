@@ -160,7 +160,8 @@ export default function CreatorOfferMobile({
                   screen uses. Nothing left to weigh up, so nothing opens. */}
               {items.map((it) => (
                 <div className="offer-m__termrow" key={it.id}>
-                  <span>{it.label}</span>{!hideItemPrices && <span>{inr(it.pricePaise)}</span>}
+                  <span style={hideItemPrices ? { whiteSpace: 'nowrap' } : undefined}>{it.label}</span>{!hideItemPrices ? <span>{inr(it.pricePaise)}</span>
+                    : it.detail ? <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--ink-soft)', textAlign: 'right' }}>{it.detail}</span> : null}
                 </div>
               ))}
               {totalPaise !== null && (
