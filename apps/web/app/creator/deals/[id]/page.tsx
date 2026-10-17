@@ -520,8 +520,24 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           id: i.id,
           label: i.label,
           pricePaise: i.price_paise ?? 0,
-          detail: null,
+          // The terms on each deliverable, as the desktop chips say them.
+          detail: [
+            i.handle ? (i.handle.startsWith('@') ? i.handle : `@${i.handle}`) : null,
+            i.reel_type ? (i.reel_type === 'collab' ? 'Collab' : 'Non-collab') : null,
+            i.boosting_rights ? `Boosting ${i.boosting_duration_months ? `${i.boosting_duration_months} months` : 'no end date'}` : null,
+          ].filter(Boolean).join(' \u00B7 ') || null,
         }))}
+        extraTermRows={[
+          ...(goLiveDateStr ? [{ label: 'Go live', value: formatDate(goLiveDateStr) }] : []),
+          ...(deal.usage_rights_end_date ? [{ label: 'Rights expire', value: formatDate(deal.usage_rights_end_date + 'T00:00:00') }] : []),
+        ]}
+        offerExtraNode={(isNegotiating && showNegotiationHistory) || hasAddons(itemsForBreakdown) ? (
+          <div style={{ display: 'grid', gap: 12, margin: '12px 0' }}>
+            {hasAddons(itemsForBreakdown) && <DealBreakdown items={itemsForBreakdown} totalPaise={deal.price_paise} />}
+            {isNegotiating && showNegotiationHistory && <NegotiationHistory events={negotiationEvents} variant="creator" brandName={brand} />}
+          </div>
+        ) : null}
+        isPosted={!!deal.is_posted}
         briefPitch={pitch}
         guidelines={splitLines(guidelines)}
         avoid={splitLines(avoid)}

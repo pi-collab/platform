@@ -105,6 +105,18 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
   const periodSumPaise = visibleHistory.reduce((a, h) => a + h.amountPaise, 0)
   const periodName = filter === 'month' ? 'this month' : filter === '3m' ? 'last 3 months' : 'all time'
 
+  // Same export the phone has (CreatorPaymentsMobile): the paid history, as a CSV built in the browser.
+  function exportCsv() {
+    const cell = (v: string | number) => { const t = String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t }
+    const lines = [['Paid on', 'Brand', 'Deal', 'Amount (INR)'], ...history.map((h) => [h.paidDate, h.brandName, h.dealTitle, (h.amountPaise / 100).toFixed(2)])]
+    const url = URL.createObjectURL(new Blob([lines.map((r) => r.map(cell).join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `guapd-payments-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleRemind(id: string) {
     setRemindedIds((prev) => ({ ...prev, [id]: true }))
     const result = await sendPaymentReminder(id)
@@ -120,6 +132,11 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(26px,3vw,34px)', lineHeight: 1.05, letterSpacing: '-0.025em', margin: 0 }}>
           Payments
         </h1>
+        {history.length > 0 && (
+          <button type="button" onClick={exportCsv} style={{ height: 40, padding: '0 18px', borderRadius: 999, border: '1px solid var(--border-hairline, #EAEAE3)', background: 'var(--card)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, color: 'var(--ink)', cursor: 'pointer' }}>
+            Export CSV
+          </button>
+        )}
       </div>
 
       <div className="pay-grid">

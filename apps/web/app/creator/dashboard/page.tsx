@@ -697,7 +697,7 @@ export default async function CreatorDashboardPage({
             <KpiCell label="Total earned" value={fmt(totalEarned)} sub={`${completedDeals.length + paidInvoices.length} deals`} large />
             <KpiCell label="Pending" value={fmt(pendingAmount)} sub={pendingAmount === 0 ? 'All caught up' : 'Awaiting payment'} border />
             <KpiCell label="Active deals" value={String(activeDeals.length)} sub="In progress" border />
-            <KpiCell label="Completed" value={String(completedDeals.length)} sub={completedDeals.length > 0 ? '100% paid out' : 'No deals yet'} border />
+            <KpiCell label="Completed" value={String(completedDeals.length)} sub={completedDeals.length > 0 ? 'Delivered and closed' : 'No deals yet'} border />
           </div>
         </section>
 
@@ -835,9 +835,10 @@ export default async function CreatorDashboardPage({
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--wg-500)' }}>deals completed</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginTop: 22 }}>
-                <TrackRow label="On-time delivery" value={completedDeals.length > 0 ? '100%' : '-'} />
-                <TrackRow label="Avg response" value={completedDeals.length > 0 ? '~4h' : '-'} />
-                <TrackRow label="Completion rate" value={completedDeals.length > 0 ? '100%' : '-'} />
+                {/* The real figures (computeTrackRecord), as the phone shows them; these were hardcoded. */}
+                <TrackRow label="On-time delivery" value={track.onTimePct === null ? '-' : `${track.onTimePct}%`} />
+                <TrackRow label="Avg response" value={formatResponse(track.responseHours)} />
+                <TrackRow label="Completion rate" value={track.completionPct === null ? '-' : `${track.completionPct}%`} />
               </div>
             </div>
           </section>

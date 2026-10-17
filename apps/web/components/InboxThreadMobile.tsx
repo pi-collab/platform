@@ -50,10 +50,12 @@ function timeLabel(iso: string): string {
 }
 
 export default function InboxThreadMobile({
-  dealId, name, initials, logoUrl, messages, me, backHref, dealHref, closedNotice, hasTabBar = false,
+  dealId, name, initials, logoUrl, messages, me, backHref, dealHref, closedNotice, hasTabBar = false, subline,
 }: {
   dealId: string
   name: string
+  /** Which deal this thread is (title · status · amount): two deals with one brand must not look identical. */
+  subline?: string | null
   initials: string
   /** The brand's logo, when set. Same box, picture instead of letters. */
   logoUrl?: string | null
@@ -203,6 +205,7 @@ export default function InboxThreadMobile({
         <BrandMark name={name} logoUrl={logoUrl} initials={initials} className="ithread-m__avatar" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="ithread-m__name">{name}</div>
+          {subline && <div style={{ fontSize: 11.5, color: 'var(--ink-soft)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subline}</div>}
         </div>
         <Link href={dealHref} className="ithread-m__viewdeal">View deal</Link>
       </header>
