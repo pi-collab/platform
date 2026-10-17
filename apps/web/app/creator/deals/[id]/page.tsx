@@ -302,6 +302,121 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     typeof v === 'string'
       ? v.split('\n').map((l) => l.replace(/^\s*[-•\d.)]+\s*/, '').trim()).filter(Boolean)
       : []
+  // Shared by both renderings (the phone used to show only "The brand will ship product").
+  const shipmentCard = deal.requires_shipment && !['declined', 'cancelled'].includes(deal.status) ? (
+                    <div id="shipment" className="surface" style={{ padding: '22px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                        <h3 style={sectionHeading}>Product shipment</h3>
+                        {(!deal.shipment_status || deal.shipment_status === 'pending') && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
+                            {!deal.shipment_status ? 'Included in this deal' : 'Not shipped yet'}
+                          </span>
+                        )}
+                        {deal.shipment_status === 'shipped' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--info, #5AA9E6)' }} />
+                            Shipped{deal.shipped_at && ` ${formatDate(deal.shipped_at)}`}
+                          </span>
+                        )}
+                        {deal.shipment_status === 'delivered' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success, #1F9D6B)' }} />
+                            Delivered
+                          </span>
+                        )}
+                      </div>
+                      {(!deal.shipment_status || deal.shipment_status === 'pending') && (
+                        <>
+                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
+                            {!deal.shipment_status
+                              ? 'This deal includes a product kit. The brand will ship it to you once the deal is agreed.'
+                              : 'The brand is preparing a product kit to send to you. Send your address so they know where to ship.'}
+                          </p>
+                          <ShippingAddressForm dealId={deal.id} existingAddress={(deal as Record<string, unknown>).shipping_address as string | null} />
+                        </>
+                      )}
+                      {deal.shipment_status === 'shipped' && (
+                        <>
+                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
+                            Your product kit is on its way. Keep an eye out for the delivery.
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 20 }}>
+                            {deal.carrier_note && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 999, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                                {deal.carrier_note}
+                              </div>
+                            )}
+                            {deal.tracking_link && (
+                              <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                                Track shipment
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
+                              </a>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      {deal.shipment_status === 'delivered' && (
+                        <>
+                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
+                            Product delivered. You can start creating content now.
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+                            {deal.carrier_note && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 999, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                                {deal.carrier_note}
+                              </div>
+                            )}
+                            {deal.tracking_link && (
+                              <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
+                                Tracking link
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
+                              </a>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+  ) : null
+  // A deal with no line items: one deliverable, versioned. Shared by both renderings.
+  const legacyDeliverables = (
+                    <div className="surface" style={{ padding: '22px 24px' }}>
+                      <h3 style={sectionHeading}>Deliverables</h3>
+                      {deliverables && deliverables.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                          {deliverables.map((d) => (
+                            <div key={d.id} style={{ padding: 12, border: '1px solid var(--border-hairline, #EAEAE3)', borderRadius: 14, background: 'var(--card)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>v{d.version}</span>
+                                  {d.note && <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>, {d.note}</span>}
+                                </div>
+                                <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{formatDate(d.created_at)}</span>
+                              </div>
+                              {d.external_url && (
+                                <a href={d.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563eb', wordBreak: 'break-all', marginTop: 4, display: 'block' }}>
+                                  {d.external_url.length > 60 ? d.external_url.slice(0, 60) + '...' : d.external_url}
+                                </a>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {(!deliverables || deliverables.length === 0) && !canSubmit && (
+                        <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>No deliverables submitted yet.</p>
+                      )}
+                      {canSubmit && <SubmitDeliverable dealId={deal.id} />}
+                    </div>
+  )
+  // Rating the brand once the deal is done. Shared by both renderings.
+  const reviewCard = isCompleted ? (
+    <CreatorReviewCard dealId={deal.id} brandName={brand} existingRating={existingReview?.rating} existingNote={existingReview?.note} />
+  ) : null
+
   return (
     <>
     {showMobileScreen && (
@@ -313,7 +428,10 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           const e = (events ?? []).filter((x: any) => x.event_type === 'deal.status_changed' && (x.detail?.to === 'approved' || x.detail?.new_status === 'approved')).pop()
           return e ? formatDate(e.created_at) : (deal.agreed_at ? null : null)
         })()}
-        allPosted={!!items && items.length > 0 && items.every((i) => !!(i as Record<string, unknown>).posted_url)}
+        allPosted={items && items.length > 0 ? items.every((i) => !!(i as Record<string, unknown>).posted_url) : !!deal.is_posted}
+        feeMode={feeMode}
+        shipmentNode={shipmentCard}
+        reviewNode={reviewCard}
         paidAt={invoice?.paid_at ? formatDate(invoice.paid_at) : (deal.completed_at ? formatDate(deal.completed_at) : null)}
         analyticsHref={`/creator/deals/${deal.id}/analytics`}
         invoiceAccepted={invoice?.status === 'accepted'}
@@ -333,16 +451,18 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
             issuedAt={invoice?.issued_at ? formatDate(invoice.issued_at) : null}
             dueLabel={formatDueStatus(invoice?.due_date ?? null)?.text ?? null}
             dueUrgent={formatDueStatus(invoice?.due_date ?? null)?.urgent ?? false}
+            feeMode={feeMode}
             basePaise={invoice ? invoice.base_paise : deal.price_paise}
             feePaise={invoice ? invoice.fee_paise : (fee?.fee_paise ?? null)}
             feePercent={invoice ? invoice.fee_percent : (deal.fee_percent ?? null)}
             receivesPaise={invoice ? invoice.creator_receives_paise : creatorReceives}
           />
         ) : null}
-        postNode={isApprovedMobile && items && items.length > 0 ? (
+        postNode={(isApprovedMobile || isCompleteMobile) ? (
           <PostedCard
             dealId={deal.id}
-            items={items.map((i) => ({
+            /* No line items: one deal-level post, as on desktop. */
+            items={!items || items.length === 0 ? undefined : items.map((i) => ({
               id: i.id,
               label: i.label,
               platform: i.platform,
@@ -367,9 +487,11 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           : null}
         submitDone={items ? items.filter((i) => i.submitted_at != null).length : 0}
         submitTotal={items ? items.length : 0}
-        submitNode={(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile) && items && items.length > 0 ? (
-          <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
-        ) : null}
+        submitNode={!(isAgreedMobile || isSubmittedMobile || isRevisionMobile || isApprovedMobile || isCompleteMobile) ? null
+          : items && items.length > 0
+            ? <DeliverableItems dealId={deal.id} items={items} canSubmit={canSubmit} dealStatus={deal.status} brandName={brand} hideStatusBanner compact completed={isCompleteMobile} />
+            /* No line items: the versioned single deliverable and its upload, as on desktop. */
+            : legacyDeliverables}
         brandName={brand}
         dealTitle={deal.title ?? 'Untitled deal'}
         receivesPaise={creatorReceives}
@@ -769,85 +891,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
 
                 case 'shipment':
                   if (!showShipment) return null
-                  return (
-                    <div key="shipment" id="shipment" className="surface" style={{ padding: '22px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                        <h3 style={sectionHeading}>Product shipment</h3>
-                        {(!deal.shipment_status || deal.shipment_status === 'pending') && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--warning)' }} />
-                            {!deal.shipment_status ? 'Included in this deal' : 'Not shipped yet'}
-                          </span>
-                        )}
-                        {deal.shipment_status === 'shipped' && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--info, #5AA9E6)' }} />
-                            Shipped{deal.shipped_at && ` ${formatDate(deal.shipped_at)}`}
-                          </span>
-                        )}
-                        {deal.shipment_status === 'delivered' && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--success, #1F9D6B)' }} />
-                            Delivered
-                          </span>
-                        )}
-                      </div>
-                      {(!deal.shipment_status || deal.shipment_status === 'pending') && (
-                        <>
-                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-                            {!deal.shipment_status
-                              ? 'This deal includes a product kit. The brand will ship it to you once the deal is agreed.'
-                              : 'The brand is preparing a product kit to send to you. Send your address so they know where to ship.'}
-                          </p>
-                          <ShippingAddressForm dealId={deal.id} existingAddress={(deal as Record<string, unknown>).shipping_address as string | null} />
-                        </>
-                      )}
-                      {deal.shipment_status === 'shipped' && (
-                        <>
-                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-                            Your product kit is on its way. Keep an eye out for the delivery.
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 20 }}>
-                            {deal.carrier_note && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 999, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
-                                {deal.carrier_note}
-                              </div>
-                            )}
-                            {deal.tracking_link && (
-                              <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
-                                Track shipment
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
-                              </a>
-                            )}
-                          </div>
-                        </>
-                      )}
-                      {deal.shipment_status === 'delivered' && (
-                        <>
-                          <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--ink-soft)', margin: '14px 0 0', maxWidth: 640 }}>
-                            Product delivered. You can start creating content now.
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
-                            {deal.carrier_note && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 999, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                                {deal.carrier_note}
-                              </div>
-                            )}
-                            {deal.tracking_link && (
-                              <a href={deal.tracking_link} target="_blank" rel="noopener noreferrer" className="pill-hover" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, height: 48, padding: '0 22px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border-hairline, #EAEAE3)', boxShadow: '0 1px 2px rgba(22,23,15,.03), 0 8px 16px rgba(22,23,15,.04)', fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)', cursor: 'pointer', textDecoration: 'none' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16V4H2v12h14zM16 8h4l2 4v4h-6" /><circle cx="5.5" cy="18.5" r="2" /><circle cx="18.5" cy="18.5" r="2" /></svg>
-                                Tracking link
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M17 7H7m10 0v10" /></svg>
-                              </a>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )
+                  return <div key="shipment">{shipmentCard}</div>
 
                 case 'deliverables':
                   if (isNegotiating) return null
@@ -916,35 +960,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
                       </div>
                     )
                   }
-                  return (
-                    <div key="deliverables" className="surface" style={{ padding: '22px 24px' }}>
-                      <h3 style={sectionHeading}>Deliverables</h3>
-                      {deliverables && deliverables.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                          {deliverables.map((d) => (
-                            <div key={d.id} style={{ padding: 12, border: '1px solid var(--border-hairline, #EAEAE3)', borderRadius: 14, background: 'var(--card)' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)' }}>v{d.version}</span>
-                                  {d.note && <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>, {d.note}</span>}
-                                </div>
-                                <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{formatDate(d.created_at)}</span>
-                              </div>
-                              {d.external_url && (
-                                <a href={d.external_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#2563eb', wordBreak: 'break-all', marginTop: 4, display: 'block' }}>
-                                  {d.external_url.length > 60 ? d.external_url.slice(0, 60) + '...' : d.external_url}
-                                </a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {(!deliverables || deliverables.length === 0) && !canSubmit && (
-                        <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>No deliverables submitted yet.</p>
-                      )}
-                      {canSubmit && <SubmitDeliverable dealId={deal.id} />}
-                    </div>
-                  )
+                  return <div key="deliverables">{legacyDeliverables}</div>
 
                 case 'posted':
                   if (!showPosted) return null
@@ -1100,14 +1116,7 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
           )}
 
           {/* ── Review card (only on completed deals) ── */}
-          {isCompleted && (
-            <CreatorReviewCard
-              dealId={deal.id}
-              brandName={brand}
-              existingRating={existingReview?.rating}
-              existingNote={existingReview?.note}
-            />
-          )}
+          {reviewCard}
 
         </div>
       </div>
