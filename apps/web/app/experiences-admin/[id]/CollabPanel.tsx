@@ -84,6 +84,10 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
         const collabs = mine.filter((p) => p.kind === 'collab')
         const need = adRights[l.deal_id] ?? 0
         const posted = collabs.filter((p) => p.status !== 'sent').length
+        // Why a collab cannot go: said on screen (a tooltip never shows on a phone).
+        const collabFull = collabs.length < need ? null
+          : need === 0 ? 'No ad-rights videos on this creator’s deal, so a collab cannot be sent. Share it with them instead.'
+          : `All ${need} of this creator’s ad-rights videos are already sent as collabs.`
         return (
           <div key={l.roster_id} style={{ marginTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -104,8 +108,8 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {!p && writable && (
                         <>
-                          <button type="button" style={pillBtn} disabled={pending || collabs.length >= need}
-                            title={collabs.length >= need ? 'All of this creator’s ad-rights videos are already sent as collabs' : undefined}
+                          <button type="button" style={{ ...pillBtn, ...(collabs.length >= need ? { opacity: 0.4, cursor: 'not-allowed' } : null) }} disabled={pending || collabs.length >= need}
+                            title={collabFull ?? undefined}
                             onClick={() => { setError(null); setNote(''); setAsk({ kind: 'send', releaseId: i.release!.id, send: 'collab' }) }}>Send to post as a collab</button>
                           <button type="button" style={pillBtn} disabled={pending} onClick={() => { setError(null); setNote(''); setAsk({ kind: 'send', releaseId: i.release!.id, send: 'share' }) }}>Share with the creator</button>
                         </>
@@ -132,6 +136,9 @@ export default function CollabPanel({ experienceId, data, posts, adRights }: {
                       <span>Sent {fmt(p.sent_at)}{p.kind === 'share' ? ' · no link needed' : ''}</span>
                       {p.ad_complete_at && <span>Ad complete {fmt(p.ad_complete_at)}{p.ad_complete_channel && p.ad_complete_channel !== 'portal' ? ` · recorded (${channelLabel(p.ad_complete_channel)})` : ' · by the brand'}</span>}
                     </div>
+                  )}
+                  {!p && writable && collabFull && (
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: '#8C6417', marginTop: 6 }}>{collabFull}</div>
                   )}
                   {p && p.instructions && !(ask?.kind === 'instructions' && ask.post.id === p.id) && (
                     <div style={noteBox}>
