@@ -173,9 +173,18 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         {ctx.payout.tds_paise ? <div className="offer-m__termrow"><span>TDS withheld</span><span>−{formatPaiseINR(ctx.payout.tds_paise)}</span></div> : null}
         <div className="offer-m__termrow"><span>{paid ? 'Paid to you' : 'To be paid to you'}</span><span>{formatPaiseINR(ctx.payout.paid_paise)}</span></div>
         {paid && ctx.payout.reference && <div className="offer-m__termrow"><span>Bank reference</span><span>{ctx.payout.reference}</span></div>}
+        {invoice && <div className="offer-m__termrow"><span>Your invoice</span><span><a href={`/creator/deals/${dealId}/invoice`} target="_blank" rel="noopener noreferrer">{invoice.number} (PDF)</a></span></div>}
       </div>
     </section>
   ) : null
+  // An extra offer waiting for an answer leads on the phone, as the desktop flags it at the top.
+  const extraOpen = !open && (ctx.extras ?? []).some((x) => x.status === 'open')
+  const mobileClosed = (
+    <section className="offer-m__card">
+      <div className="offer-m__label">Status</div>
+      <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', margin: '6px 0 0' }}>{noShoot ? 'This shoot did not go ahead for you.' : ctx.status === 'cancelled' ? 'Guapd withdrew this offer.' : 'You declined this offer.'}</p>
+    </section>
+  )
 
   return (
     <>
@@ -198,7 +207,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         paymentIn={creatorSubmits ? 'After approval' : 'After the shoot'}
         deliverBy={short(ctx.shoot_date)}
         waitingLabel={sentAt ? `Received ${short(sentAt)}` : 'Received'}
-        items={items.map((i) => ({ id: i.id, label: i.label, pricePaise: 0, detail: i.affiliate_link ? 'Carries the brand’s affiliate link' : null }))}
+        items={items.map((i) => ({ id: i.id, label: i.label, pricePaise: 0, detail: [accepted && shot && !creatorSubmits ? (i.item_status === 'approved' ? 'Ready' : 'Being edited') : null, i.affiliate_link ? 'Affiliate link' : null].filter(Boolean).join(' · ') || null }))}
         hideItemPrices
         briefPitch={brief?.pitch ?? null}
         guidelines={(brief?.guidelines ?? '').split('\n').map((l) => l.trim()).filter(Boolean)}
@@ -222,14 +231,14 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         decision={answer(true)}
         stage={mStage}
         stageCopy={{
-          line: paid ? `Paid${ctx.payout?.paid_on ? ` ${short(ctx.payout.paid_on)}` : ''}` : open ? (sentAt ? `Received ${short(sentAt)}` : 'Received') : shootDate ? `Shoot ${short(ctx.shoot_date)}${ctx.shoot_city ? ` · ${ctx.shoot_city}` : ''}` : 'Agreed',
-          label: stages[paid ? stages.length - 1 : idx],
+          line: declined || noShoot ? statusLabel : paid ? `Paid${ctx.payout?.paid_on ? ` ${short(ctx.payout.paid_on)}` : ''}` : open ? (sentAt ? `Received ${short(sentAt)}` : 'Received') : shootDate ? `Shoot ${short(ctx.shoot_date)}${ctx.shoot_city ? ` · ${ctx.shoot_city}` : ''}` : 'Agreed',
+          label: declined || noShoot ? statusLabel : stages[paid ? stages.length - 1 : idx],
           next: paid ? 'Complete' : `Next: ${(stages[idx + 1] ?? 'paid').toLowerCase()}`,
           lit,
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={(statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0)) || (accepted && shot && !!ctx.commission)) ? <>{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{accepted && shot && ctx.commission && <div style={{ marginBottom: 12 }}><AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} /></div>}{statement ?? mobileInvoice}{(ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
+        invoiceNode={(declined || noShoot) ? mobileClosed : (statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0)) || (accepted && shot && !!ctx.commission)) ? <>{extraOpen && <div style={{ marginBottom: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{accepted && shot && ctx.commission && <div style={{ marginBottom: 12 }}><AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} /></div>}{statement ?? mobileInvoice}{!extraOpen && (ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
