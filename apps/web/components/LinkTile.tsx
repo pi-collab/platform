@@ -55,4 +55,24 @@ export default function LinkTile({ label, url, meta, hint, actions }: {
   )
 }
 
+/** 0574: a code with Copy (the partnership ad code), styled like a link tile. */
+export function CodeTile({ label, code, meta, hint, actions }: { label: string; code: string; meta?: string; hint?: string; actions?: React.ReactNode }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600) } catch { /* clipboard blocked: the code is still selectable */ }
+  }
+  return (
+    <div style={{ padding: '12px 14px', borderRadius: 14, background: 'var(--sec-2, #F7F7F4)', border: '1px solid var(--border-hairline, #EAEAE3)', minWidth: 0, fontFamily: 'var(--font-ui)' }}>
+      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint, #8A8F98)' }}>{label}</div>
+      <div title={code} style={{ marginTop: 6, fontSize: 13.5, fontWeight: 700, color: 'var(--ink)', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', userSelect: 'all' }}>{code}</div>
+      {meta && <div style={{ fontSize: 11.5, color: 'var(--ink-soft, #565C68)', marginTop: 4 }}>{meta}</div>}
+      {hint && <div style={{ fontSize: 11.5, color: 'var(--ink-soft, #565C68)', marginTop: 4, lineHeight: 1.45 }}>{hint}</div>}
+      <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+        <button type="button" onClick={copy} style={tileBtn} aria-label={`Copy ${label.toLowerCase()}`}>{copied ? 'Copied' : 'Copy'}</button>
+        {actions}
+      </div>
+    </div>
+  )
+}
+
 export { tileBtn }

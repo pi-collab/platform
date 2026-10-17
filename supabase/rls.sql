@@ -1654,3 +1654,6 @@ REVOKE ALL ON service_invoice_payment_reports FROM PUBLIC, anon, authenticated;
 -- experience_console_collab_instructions and experience_console_collab_send_with_instructions (operational staff,
 -- via experience_console_require). creator_collab_posts (own deal only) and experience_console_collab_posts return
 -- the instructions; brand_experience_collab_posts does not.
+-- 0574: experience_collab_posts gains ad_code, ad_code_at, ad_code_channel (still no grants). New:
+-- experience_collab_set_ad_code (internal, REVOKED from authenticated), creator_collab_ad_code (own post only),
+-- experience_console_collab_ad_code (operational staff). Creator, console and brand collab views return the code.

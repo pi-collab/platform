@@ -67,6 +67,30 @@ export async function notifyCreatorVideoSent(postId: string): Promise<void> {
   }
 }
 
+/** 0574: the creator's partnership ad code is in: the brand can run the ad. */
+export async function notifyBrandAdCode(postId: string): Promise<void> {
+  try {
+    const p = await postContext(postId)
+    if (!p || p.kind !== 'collab' || !p.brandId) return
+    const admin = createAdminClient()
+    const body = `${p.creatorName ?? 'A creator'} shared the ad code for their ${p.label} collab on ${p.title}. Copy it on Guapd to run the ad.`
+    const emails: string[] = []
+    const { data: members } = await admin.from('brand_members').select('user_id, users(email)').eq('brand_id', p.brandId)
+    for (const m of (members ?? []) as unknown as { user_id: string; users: { email: string | null } | { email: string | null }[] | null }[]) {
+      await createNotification({ userId: m.user_id, dealId: null, type: 'experience_collab_ad_code', body })
+      const u = Array.isArray(m.users) ? m.users[0] : m.users
+      if (isPlausibleEmail(u?.email) && !isSyntheticEmail(u?.email)) emails.push(u!.email as string)
+    }
+    if (emails.length) {
+      const { html, text } = renderNoticeEmail({ heading: 'Ad code ready', body: [body], ctaUrl: `${siteBase()}/experiences/${p.experienceId}#bx-collabs`, ctaLabel: 'Copy the ad code' })
+      const r = await sendDealEmail({ to: emails, subject: `${p.title}: ad code ready`, html, text, idempotencyKey: `xp-collab-adcode-${postId}` })
+      if (!r.ok) console.warn(`[experience-collab] brand ad-code email not sent post=${postId}`)
+    }
+  } catch (err) {
+    console.error(`[experience-collab] brand ad-code notification failed post=${postId}: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 /** 0573: Guapd added or changed the posting instructions on a video already sent. */
 export async function notifyCreatorInstructionsUpdated(postId: string): Promise<void> {
   try {

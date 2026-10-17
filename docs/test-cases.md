@@ -7728,3 +7728,20 @@ Rolled-back SQL on staging (Holiday shoot post 25d2f686):
 | 6 | Blank text | Clears text and timestamp | Pass |
 
 Send with instructions is one transaction (experience_console_collab_send_with_instructions). Editing later notifies the creator. UI checked: console Posting panel (send panel, Add/Edit instructions, shown read-only) and the creator's "How to post · from Guapd" box with Copy.
+
+## 148. Partnership ad code on collab posts (migration 0574)
+
+Rolled-back SQL on staging (Holiday shoot post 25d2f686, posted):
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Creator adds a code on their posted collab | Saved; returns true (first time, brand notified) | Pass |
+| 2 | Creator changes it | Saved; returns false (no second notice) | Pass |
+| 3 | Code with a space | Refused | Pass |
+| 4 | Another user on the creator's post | "Not found" | Pass |
+| 5 | Staff record with channel "portal" | Refused (portal = creator only) | Pass |
+| 6 | Staff record via WhatsApp | Saved with channel | Pass |
+| 7 | Creator, console and brand views | All show the code; brand view has no instructions key | Pass |
+| 8 | Internal setter experience_collab_set_ad_code | Not executable by authenticated | Pass |
+
+UI checked: creator "Share your ad code" prompt after posting, "Your ad code" tile with Copy/Change, optional code field next to the post link; brand tile with Copy and a "waiting for ad code" line; console tile, Record/Change ad code.

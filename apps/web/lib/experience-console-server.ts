@@ -1209,6 +1209,8 @@ export interface ConsoleCollabPost {
   cancelled_at: string | null; cancel_reason: string | null
   /** 0573: Guapd's posting instructions to the creator (never shown to the brand). */
   instructions: string | null; instructions_at: string | null
+  /** 0574: the creator's partnership ad code (channel 'portal' = they added it). */
+  ad_code: string | null; ad_code_at: string | null; ad_code_channel: string | null
 }
 export async function listConsoleCollabPosts(experienceId: string): Promise<Result<ConsoleCollabPost[]>> {
   const { data, error } = await createClient().rpc('experience_console_collab_posts', { p_experience_id: experienceId })
@@ -1217,6 +1219,11 @@ export async function listConsoleCollabPosts(experienceId: string): Promise<Resu
 export async function consoleCollabSend(releaseId: string, kind: 'collab' | 'share', instructions: string | null): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_collab_send_with_instructions', { p_release_id: releaseId, p_kind: kind, p_instructions: instructions })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+/** 0574: record the creator's ad code (it reached Guapd another way); true the first time. */
+export async function consoleCollabAdCode(postId: string, code: string, channel: string): Promise<Result<boolean>> {
+  const { data, error } = await createClient().rpc('experience_console_collab_ad_code', { p_post_id: postId, p_code: code, p_channel: channel })
+  return error ? fail(error) : { ok: true, data: data === true }
 }
 /** 0573: set, change or clear (blank) the posting instructions; true when there are some now. */
 export async function consoleCollabInstructions(postId: string, text: string | null): Promise<Result<boolean>> {

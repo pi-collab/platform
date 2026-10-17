@@ -3,15 +3,16 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CreatorCollabPost } from '@/lib/creator-leg-money'
-import { openCollabVideo, submitCollabPostLink } from './leg-actions'
+import { openCollabVideo, submitCollabAdCode, submitCollabPostLink } from './leg-actions'
 import { metaLabel, sectionHeading } from './deal-shell'
-import LinkTile, { LinkTiles, tileBtn } from '@/components/LinkTile'
+import LinkTile, { CodeTile, LinkTiles, tileBtn } from '@/components/LinkTile'
 
 /**
  * 0561: the videos Guapd sent this creator, on the deal page's card design.
  * Collab: post it on Instagram as a collab with the brand, then paste the post
  * link (0566: their invoice no longer waits for it); the brand's affiliate link shows here once
  * added. Shared: theirs to post if they like, nothing asked.
+ * 0574: after posting, the creator shares their partnership ad code (with the link, or later).
  * 0573: Guapd's posting instructions (caption, tags, timing) show above the links, with Copy.
  */
 function Instructions({ text, at }: { text: string; at: string | null }) {
@@ -37,6 +38,9 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
   const [pending, start] = useTransition()
   const [editing, setEditing] = useState(p.can_post && !p.post_url)
   const [url, setUrl] = useState(p.post_url ?? '')
+  const [code, setCode] = useState('')
+  const canCode = p.kind === 'collab' && p.can_post && (p.status === 'posted' || editing)
+  const [codeEditing, setCodeEditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const open = async () => {
     setError(null)
@@ -50,7 +54,20 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
     start(async () => {
       const r = await submitCollabPostLink(dealId, p.id, url)
       if (!r.ok) { setError(r.message); return }
-      setEditing(false); router.refresh()
+      // The ad code rides along when they have it already; the link is saved either way.
+      if (code.trim()) {
+        const c = await submitCollabAdCode(dealId, p.id, code)
+        if (!c.ok) { setEditing(false); setCodeEditing(true); setError(c.message); router.refresh(); return }
+      }
+      setEditing(false); setCode(''); router.refresh()
+    })
+  }
+  const saveCode = () => {
+    setError(null)
+    start(async () => {
+      const r = await submitCollabAdCode(dealId, p.id, code)
+      if (!r.ok) { setError(r.message); return }
+      setCodeEditing(false); setCode(''); router.refresh()
     })
   }
   const pill = p.kind === 'share' ? 'Yours to post' : p.status === 'ad_complete' ? 'Ad complete' : p.status === 'posted' ? 'Posted' : 'To post'
@@ -76,10 +93,12 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
           : `${brand} marked the ad complete on ${fmt(p.ad_complete_at)}.`}
       </p>
       {p.instructions && <Instructions text={p.instructions} at={p.instructions_at} />}
-      {((p.post_url && !editing) || p.affiliate_url) && (
+      {((p.post_url && !editing) || p.affiliate_url || (p.ad_code && !codeEditing)) && (
         <LinkTiles>
           {p.post_url && !editing && <LinkTile label="Your post" url={p.post_url}
             actions={p.can_post ? <button type="button" onClick={() => setEditing(true)} style={tileBtn}>Change</button> : undefined} />}
+          {p.ad_code && !codeEditing && <CodeTile label="Your ad code" code={p.ad_code} hint={`${brand} uses it to run your post as a partnership ad.`}
+            actions={canCode && p.status === 'posted' ? <button type="button" onClick={() => { setCode(p.ad_code ?? ''); setCodeEditing(true) }} style={tileBtn}>Change</button> : undefined} />}
           {p.affiliate_url && <LinkTile label={`${brand}\u2019s affiliate link`} url={p.affiliate_url} hint="Use it wherever you share this post (caption, bio, stories)." />}
         </LinkTiles>
       )}
@@ -87,10 +106,31 @@ function PostRow({ dealId, p, brand, last }: { dealId: string; p: CreatorCollabP
         <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <input className="dinput" aria-label={`Instagram post link for ${p.label}`} placeholder="https://www.instagram.com/reel/…" value={url} maxLength={500}
             onChange={(e) => setUrl(e.target.value)} style={{ flex: '1 1 240px', height: 42 }} />
+          {p.kind === 'collab' && !p.ad_code && (
+            <input className="dinput" aria-label={`Partnership ad code for ${p.label} (optional)`} placeholder="Ad code (optional, add it later if you need)" value={code} maxLength={300}
+              onChange={(e) => setCode(e.target.value.replace(/\s/g, ''))} style={{ flex: '1 1 240px', height: 42 }} />
+          )}
           <button type="button" className="neonbtn" disabled={pending || !url.trim()} onClick={save}
             style={{ height: 42, padding: '0 18px', borderRadius: 999, border: 'none', background: 'var(--neon)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: pending || !url.trim() ? 0.6 : 1 }}>
             {pending ? 'Saving…' : 'Save post link'}
           </button>
+        </div>
+      )}
+      {!editing && p.kind === 'collab' && p.can_post && p.status === 'posted' && (codeEditing || !p.ad_code) && (
+        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 14, border: '1px dashed var(--border-hairline, #D9DACF)', fontFamily: 'var(--font-ui)' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{p.ad_code ? 'Change your ad code' : `Share your ad code with ${brand}`}</div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 3, lineHeight: 1.45 }}>
+            In Instagram, open the post → ⋯ → Partnership label and ads → turn on Allow brand partner to boost → Copy ad code. Paste it here.
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <input className="dinput" aria-label={`Partnership ad code for ${p.label}`} placeholder="Paste the ad code" value={code} maxLength={300}
+              onChange={(e) => setCode(e.target.value.replace(/\s/g, ''))} style={{ flex: '1 1 240px', height: 42 }} />
+            {codeEditing && <button type="button" onClick={() => { setCodeEditing(false); setCode(''); setError(null) }} style={{ ...tileBtn, height: 42, padding: '0 16px' }}>Cancel</button>}
+            <button type="button" className="neonbtn" disabled={pending || !code.trim()} onClick={saveCode}
+              style={{ height: 42, padding: '0 18px', borderRadius: 999, border: 'none', background: 'var(--neon)', color: 'var(--ink)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: pending || !code.trim() ? 0.6 : 1 }}>
+              {pending ? 'Saving…' : 'Save ad code'}
+            </button>
+          </div>
         </div>
       )}
       {error && <p role="alert" style={{ fontSize: 12.5, color: '#9B3030', margin: '8px 0 0' }}>{error}</p>}
