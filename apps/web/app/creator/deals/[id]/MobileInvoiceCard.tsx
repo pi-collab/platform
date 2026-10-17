@@ -17,8 +17,10 @@ import { generateInvoice, issueInvoice } from './actions'
  */
 export default function MobileInvoiceCard({
   dealId, dealRef, hasDraft, issued, accepted, paid, issuedAt, acceptedAt, paidAt, dueLabel, dueUrgent,
-  basePaise, feePaise, feePercent, receivesPaise,
+  basePaise, feePaise, feePercent, receivesPaise, feeMode = 'deducted',
 }: {
+  /** Who bears the fee: on_top = the brand pays it on top, nothing comes off the creator. */
+  feeMode?: 'on_top' | 'deducted'
   dealId: string
   dealRef: string | null
   hasDraft: boolean
@@ -74,8 +76,8 @@ export default function MobileInvoiceCard({
         )}
         {feePaise !== null && feePaise > 0 && (
           <div className="offer-m__termrow">
-            <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
-            <span>&minus;{inr(feePaise)}</span>
+            <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}{feeMode === 'on_top' ? ', paid by the brand' : ''}</span>
+            <span>{feeMode === 'on_top' ? '' : '\u2212'}{inr(feePaise)}</span>
           </div>
         )}
         {receivesPaise !== null && (

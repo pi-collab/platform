@@ -59,6 +59,7 @@ export default function CreatorOfferMobile({
   paymentTerms, paymentIn, deliverBy, waitingLabel, items, briefPitch, guidelines,
   avoid, attachments, usageRights, counter, revisionLimit, extraRevisionPaise,
   requiresShipment, unreadNotifications, decision, messageHref,
+  feeMode = 'deducted', shipmentNode, reviewNode,
   stage = 'offer', agreedAt, rightsConfirmedAt, submitNode, submitDone = 0, submitTotal = 0, submittedAt, reviewedAt, approvedAt, postNode, allPosted = false, invoiceNode, invoiceAccepted = false, invoiceDueLabel, paidAt, analyticsHref,
   hideItemPrices = false, totalLabel = 'Deal total', extraTermRows = [], summaryRows = [], stageCopy, messageLabel = 'Message brand',
 }: {
@@ -136,6 +137,12 @@ export default function CreatorOfferMobile({
   approvedAt?: string | null
   /** PostedCard in compact mode: one card per deliverable. */
   postNode?: React.ReactNode
+  /** Who bears the fee (on_top: the brand pays it; nothing comes off the creator). */
+  feeMode?: 'on_top' | 'deducted'
+  /** Product shipment: address form, shipped/delivered, tracking (same card as desktop). */
+  shipmentNode?: React.ReactNode
+  /** Rate the brand, once the deal is done (same card as desktop). */
+  reviewNode?: React.ReactNode
   /** Whether every deliverable has a live URL yet. */
   allPosted?: boolean
   /** The invoice card, once there is content posted to invoice for. */
@@ -169,8 +176,8 @@ export default function CreatorOfferMobile({
               )}
               {feePaise !== null && feePaise > 0 && (
                 <div className="offer-m__termrow">
-                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
-                  <span>&minus;{inr(feePaise)}</span>
+                  <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}{feeMode === 'on_top' ? ', paid by the brand' : ''}</span>
+                  <span>{feeMode === 'on_top' ? '' : '\u2212'}{inr(feePaise)}</span>
                 </div>
               )}
               {extraTermRows.map((r) => <div className="offer-m__termrow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
@@ -309,7 +316,10 @@ export default function CreatorOfferMobile({
             all - leaving them up meant a column of "Posted ✓" buttons above the
             invoice, restating what the Deliverables fold already records.
             Partly posted still shows them: there is a card left to fill. */}
-        {stage === 'approved' && !allPosted && postNode}
+        {(stage === 'approved' || stage === 'invoiced' || stage === 'complete') && !allPosted && postNode}
+
+        {/* Product shipment, once agreed (desktop parity: address, status, tracking). */}
+        {stage !== 'offer' && shipmentNode}
 
         {/* Experience creator deals stay "agreed" through the shoot, videos and
             invoice; their videos, commission and invoice arrive as invoiceNode.
@@ -354,6 +364,9 @@ export default function CreatorOfferMobile({
             </div>
           </section>
         )}
+
+        {/* Rate the brand (desktop parity). */}
+        {stage === 'complete' && reviewNode}
 
         {/* Open on complete: the export makes it a plain surface there, not a
             fold - the work is the record of what was paid for. */}
@@ -599,13 +612,13 @@ export default function CreatorOfferMobile({
             </div>
           ) : feePaise !== null && feePaise > 0 ? (
             <div className="offer-m__feerow">
-              <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
-              <span>&minus;{inr(feePaise)}</span>
+              <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}{feeMode === 'on_top' ? ', paid by the brand' : ''}</span>
+              <span>{feeMode === 'on_top' ? '' : '\u2212'}{inr(feePaise)}</span>
             </div>
           ) : null}
           {summaryRows.map((r) => <div className="offer-m__feerow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
 
-          {counter?.lastBy !== 'creator' && <div className="offer-m__decision">{decision}</div>}
+          <div className="offer-m__decision">{decision}</div>
         </section>
         )}
 
@@ -707,8 +720,8 @@ export default function CreatorOfferMobile({
             )}
             {feePaise !== null && feePaise > 0 && (
               <div className="offer-m__termrow">
-                <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}</span>
-                <span>&minus;{inr(feePaise)}</span>
+                <span>Platform fee{feePercent ? ` (${feePercent}%)` : ''}{feeMode === 'on_top' ? ', paid by the brand' : ''}</span>
+                <span>{feeMode === 'on_top' ? '' : '\u2212'}{inr(feePaise)}</span>
               </div>
             )}
             {extraTermRows.map((r) => <div className="offer-m__termrow" key={r.label}><span>{r.label}</span><span>{r.value}</span></div>)}
