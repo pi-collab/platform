@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { PreviewTag } from '@/components/MarketingPreview'
 
 /**
  * The "For Creators" marketing page, ported from the design export.
@@ -22,11 +23,10 @@ declare module 'react' {
   }
 }
 
-const SHOW_BRAND_LOGOS = false
-/** The creator roster ("Made for creators like you") shows invented creators. */
-const SHOW_CREATOR_ROSTER = false
+// The brand logos and the creator roster ("Made for creators like you") show
+// invented brands and creators: rendered on staging only, behind `preview`.
 
-export default function CreatorsPageClient() {
+export default function CreatorsPageClient({ preview = false }: { preview?: boolean }) {
   const router = useRouter()
   /** The hero CTA is a dead button in the export; creators sign up here. */
   const goToSignup = () => router.push('/signup/creator')
@@ -267,7 +267,7 @@ export default function CreatorsPageClient() {
               <div className="card sr sr-rot" style={{'--sr-delay': '.1s', '--sr-rot': '-1.4deg', order: '1', borderRadius: '18px', background: 'var(--card)', border: '1px solid var(--border-hairline)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', overflow: 'hidden', transition: 'transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s cubic-bezier(.22,1,.36,1)'}}>
                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 18px', borderBottom: '1px solid var(--border-hairline)'}}><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px'}}>Deliverable upload</span><span style={{display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}><span style={{width: '6px', height: '6px', borderRadius: '50%', background: '#E0A23C'}}></span>In review</span></div>
                 <div style={{padding: '18px'}}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', paddingBottom: '11px', fontSize: '13.5px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}>brand</span><span style={{fontWeight: '600'}}>Groww</span></div>
+                  <div style={{display: 'flex', justifyContent: 'space-between', paddingBottom: '11px', fontSize: '13.5px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}>brand</span><span style={{fontWeight: '600'}}>Glow Labs</span></div>
                   <div style={{display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderTop: '1px solid var(--border-hairline)', fontSize: '13.5px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}>deliverable</span><span style={{fontWeight: '600'}}>1 Instagram Reel</span></div>
                   <div style={{padding: '13px 0', borderTop: '1px solid var(--border-hairline)'}}><div style={{display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', marginBottom: '9px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)'}}>revisions</span><span style={{fontWeight: '600'}}>1 of 2 used</span></div><div style={{display: 'flex', gap: '5px'}}><div style={{flex: '1', height: '7px', borderRadius: 'var(--radius-pill)', background: 'var(--neon-deep)', transformOrigin: 'left', animation: 'barGrow 1.4s cubic-bezier(.22,1,.36,1) forwards'}}></div><div style={{flex: '1', height: '7px', borderRadius: 'var(--radius-pill)', background: 'rgba(24,28,36,.1)'}}></div></div></div>
                   <div style={{marginTop: '6px', border: '1.6px dashed rgba(24,28,36,.18)', borderRadius: '14px', padding: '22px 16px', textAlign: 'center', background: '#FAFBFD'}}><span style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(232,255,102,.35)', marginBottom: '10px'}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4"></path><path d="m6 10 6-6 6 6"></path><path d="M4 20h16"></path></svg></span><div style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '13.5px'}}>Drop file or click to upload</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '11.5px', color: 'var(--ink-faint)', marginTop: '4px'}}>v2 replaces your previous upload</div></div>
@@ -410,9 +410,10 @@ export default function CreatorsPageClient() {
           </div>
         </section>
 
-        {SHOW_CREATOR_ROSTER && (<>
+        {preview && (<>
       {/* ============ CREATORS & BRANDS ============ */}
         <section style={{padding: '0 clamp(20px,5vw,72px) clamp(56px,6vw,88px)'}}>
+          <div style={{textAlign: 'center', marginBottom: '14px'}}><PreviewTag /></div>
           <div className="gx">
             <div style={{textAlign: 'center', maxWidth: '620px', margin: '0 auto clamp(36px,4.5vw,56px)'}}>
               <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Creators we work with</span>
@@ -429,14 +430,15 @@ export default function CreatorsPageClient() {
 
   
       </>)}
-      {SHOW_BRAND_LOGOS && (<>
+      {preview && (<>
       {/* ============ BRANDS WE WORK WITH ============ */}
         <section style={{padding: '0 clamp(20px,5vw,72px) clamp(56px,6vw,88px)'}}>
+          <div style={{textAlign: 'center', marginBottom: '14px'}}><PreviewTag /></div>
           <div className="sr gx" style={{border: '1.2px solid var(--hairline)', borderRadius: '24px', background: 'var(--card)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', padding: 'clamp(32px,4.5vw,56px) clamp(20px,4vw,48px)', textAlign: 'center'}}>
             <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Brands on guapd</span>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(24px,3.2vw,34px)', color: 'var(--ink)'}}>Work with brands you already <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>know</span></h2>
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', alignItems: 'center', justifyContent: 'center', gap: '14px'}}>
-              <div style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)'}}><span id="b1" style={{width: '38px', height: '38px', borderRadius: '19px', background: '#E7F1FC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0', fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>F</span><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Groww</span></div>
+              <div style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)'}}><span id="b1" style={{width: '38px', height: '38px', borderRadius: '19px', background: '#E7F1FC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0', fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>F</span><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Glow Labs</span></div>
               <div style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)'}}><span id="b2" style={{width: '38px', height: '38px', borderRadius: '19px', background: '#E9F7F0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0', fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>V</span><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Vaultly</span></div>
               <div style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)'}}><span id="b3" style={{width: '38px', height: '38px', borderRadius: '19px', background: '#F0EAFD', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0', fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>P</span><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Pebble</span></div>
               <div style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)'}}><span id="b4" style={{width: '38px', height: '38px', borderRadius: '19px', background: '#FCF6E4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: '0', fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', color: 'var(--ink)'}}>S</span><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Statuz</span></div>

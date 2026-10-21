@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { MobileBrandLogos, MobileBrandTestimonials, MobileCreatorRoster } from '@/components/MarketingPreview'
 
 /**
  * For Brands, mobile layout — ported from the "GUAPD For Brands - Mobile"
@@ -28,7 +29,7 @@ const GHOST_LINES = [
   '1 YouTube Short, budget \u20B980K, live in 14 days',
 ]
 
-export default function BrandsMobileClient() {
+export default function BrandsMobileClient({ preview = false }: { preview?: boolean }) {
   const [ghost, setGhost] = useState('')
   const [typed, setTyped] = useState(false)
 
@@ -214,12 +215,15 @@ export default function BrandsMobileClient() {
         <div style={{padding: '20px 24px 36px'}}><img src="/brands-mobile/5c79c248.webp" alt="Glass campaign overview dashboard" style={{width: '100%', aspectRatio: '1060/1484', display: 'block'}} decoding="async" loading="lazy" /></div>
 
         {/* CREATORS */}
+        {preview && <MobileCreatorRoster />}
   
 
         {/* BRANDS WE WORK WITH */}
+        {preview && <MobileBrandLogos />}
   
 
         {/* TESTIMONIALS */}
+        {preview && <MobileBrandTestimonials />}
   
 
   

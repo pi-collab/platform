@@ -7763,3 +7763,17 @@ Checked on staging at 390px (iframe) with real staging deals:
 | 9 | Desktop payments | Export CSV button when there is history | Typecheck |
 
 Not visually exercised (no staging data): deals with no line items (submit + deal-level post on the phone), withdrawn / did-not-shoot Experience legs.
+
+## 150. Placeholder marketing sections shown on staging only
+
+Recent deals, featured campaigns, the creator roster, brand logos (homepage, /creators, /brands) and brand testimonials (/brands) hold invented content. They render only where `showMarketingPreview()` is true (`VERCEL_ENV !== 'production'`: staging previews and local dev), each with a yellow "Staging preview · placeholder content · hidden on live site" tag. Desktop and phone layouts both carry them.
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Local dev / staging, `/` | 4 tagged sections on desktop, 4 on the phone layout | Pass (8 tags in HTML) |
+| 2 | Local dev / staging, `/creators` | Creator roster + brand logos, desktop and phone | Pass (4 tags) |
+| 3 | Local dev / staging, `/brands` | Brand logos + testimonials on desktop; creators, logos, testimonials on phone | Pass (5 tags) |
+| 4 | Production (`VERCEL_ENV=production`) | None of the sections or tags in the HTML | Check after the next prod deploy: view-source has no "Staging preview" |
+| 5 | Placeholder names | No real brand names (invented: Glow Labs, Wander Co, Bawa Labs, Vaultly, Novapay, Bluemint, Cliqfin, Loopwear) | Pass |
+
+To go live with real content: replace the placeholder data in `components/MarketingPreview.tsx` and the inline desktop markup, then render the section unconditionally.

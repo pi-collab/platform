@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import BookDemoModal from '@/components/BookDemoModal'
 import { initLandingEffects } from '@/app/landing-effects'
 import { FAQ } from '@/app/LandingPageClient'
+import { MobileBrandLogos, MobileCampaigns, MobileCreatorRoster, MobileRecentDeals } from '@/components/MarketingPreview'
 
 /**
  * The landing page, mobile layout — ported from the "GUAPD Landing - Mobile"
@@ -19,7 +20,7 @@ import { FAQ } from '@/app/LandingPageClient'
  * Every heading is h2 or lower — the desktop layout owns the page's single h1,
  * and both are in the DOM at once.
  */
-export default function LandingMobileClient() {
+export default function LandingMobileClient({ preview = false }: { preview?: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const [demoOpen, setDemoOpen] = useState(false)
   const [openFaq, setOpenFaq] = useState(0)
@@ -209,15 +210,19 @@ export default function LandingMobileClient() {
         </section>
 
         {/* DEALS ON GUAPD */}
+        {preview && <MobileRecentDeals />}
   
 
         {/* FEATURED CAMPAIGNS */}
+        {preview && <MobileCampaigns />}
   
 
         {/* CREATORS ON GUAPD */}
+        {preview && <MobileCreatorRoster />}
   
 
         {/* BRANDS WE WORK WITH */}
+        {preview && <MobileBrandLogos title={<>Brands you <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400}}>know</span></>} />}
   
 
         {/* FAQ */}
