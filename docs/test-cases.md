@@ -7846,3 +7846,13 @@ Experience → **Analytics** tab: Experience totals (reach, views, interactions,
 | 9 | Phone, 390px | Both tabs fit, no horizontal scroll; Experience tab bar scrolls if it ever overflows | Pass |
 
 Prod (2026-10-23): 0576 + 0577 run by PJ; check returned 5 functions, 6 posted collab posts, 6 linked for analytics. App released (main 09b9950); public pages 200, portals redirect to login. Numbers fill on the next nightly run or on Re-check.
+
+## 154. Brand dashboard for an Experience-only brand
+
+The brand dashboard's first-run empty state now requires zero deals AND zero Experiences. Kiro (prod) had only an Experience, so it saw the empty state and never the reach panel its 6 verified collab posts feed.
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Brand with an Experience, no deals (staging "CJ") | Full dashboard with "Your collabs' reach" | Pass |
+| 2 | Brand with neither | First-run empty state, unchanged | By construction |
+| 3 | Kiro login on prod: brand_experience_posts_overview | 6 posts, same brand | Pass (PJ, 2026-10-23, rolled-back check) |

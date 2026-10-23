@@ -16,7 +16,7 @@ import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter } from './DashboardControls'
 import { periodToDateRange } from './period-utils'
-import { getBrandExperiencePostsOverview } from '@/lib/experience-brand-server'
+import { getBrandExperiencePostsOverview, listBrandExperiences } from '@/lib/experience-brand-server'
 import type { Period } from './period-utils'
 
 interface DealRow {
@@ -476,7 +476,12 @@ export default async function DashboardPage({
     .neq('status', 'cancelled')
     .neq('status', 'declined')
 
-  if ((dealsEverCount ?? 0) === 0) {
+  // An Experience is account history too (0576): a brand whose only work with
+  // Guapd is an Experience has posts and reach to show, not a first-run screen.
+  const exps = (dealsEverCount ?? 0) === 0 ? await listBrandExperiences() : null
+  const experiencesEver = exps?.ok ? exps.data.experiences.length : 0
+
+  if ((dealsEverCount ?? 0) === 0 && experiencesEver === 0) {
     return (
       <main style={{ position: 'relative', zIndex: 1, padding: 'clamp(20px, 3vw, 40px) clamp(18px, 4vw, 44px) clamp(56px, 6vw, 90px)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
