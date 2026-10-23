@@ -7828,3 +7828,19 @@ Brand reads: `brand_experience_post_performance(experience)` and `brand_experien
 | 17 | A link that is not the creator's own post | Resolves `not_found`, never another account's numbers | By construction (resolver reads only the leg creator's own media) |
 
 Test data: the Holiday shoot collab post was given test numbers for the E2E and restored afterwards.
+
+## 153. Ops console Analytics tabs (migration 0577)
+
+Experience → **Analytics** tab: Experience totals (reach, views, interactions, engagement), then one card per creator deal (reach, views, engagement, posted / verified / without numbers / waiting for a link), each opening that deal's **Analytics** tab: per-post numbers (same component as the brand page) with **Re-check numbers**. Reads `experience_console_post_performance` (operational access, performance only); Re-check calls `experience_console_post_recheck` (operational, audited to ops_events) then the same resolver a creator's save runs.
+
+| # | Case | Expected | Result (staging, 2026-10-23) |
+|---|---|---|---|
+| 1 | Staff reads the Experience | Posts with deal ids, metrics; waiting-for-link per deal | Pass |
+| 2 | Payload | No paise / price / fee / margin / day rate / cost / payout | Pass |
+| 3 | Re-check | One `experience.post_insights_recheck` ops_events row; resolver runs | Pass (status → not_connected for a creator without Instagram) |
+| 4 | Brand / creator call the console reads | 42501 | Pass |
+| 5 | NULL Experience | 42501 | Pass |
+| 6 | E2E staff: Experience Analytics tab | Totals + "By creator" card | Pass |
+| 7 | E2E staff: deal Analytics tab | Per-post numbers + Re-check button; Deal tab unchanged | Pass |
+| 8 | E2E brand / creator open the console tabs | No numbers (NoAccess) | Pass |
+| 9 | Phone, 390px | Both tabs fit, no horizontal scroll; Experience tab bar scrolls if it ever overflows | Pass |

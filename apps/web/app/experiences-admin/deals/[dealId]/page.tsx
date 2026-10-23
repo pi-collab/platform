@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleExperience, getConsoleExtras, getLegThread, listConsoleLegs } from '@/lib/experience-console-server'
+import { getConsoleExperience, getConsoleExtras, getLegThread, listConsoleLegs, consolePostPerformance } from '@/lib/experience-console-server'
+import ExperiencePostPerformance from '@/components/ExperiencePostPerformance'
+import RecheckPostButton from '../../RecheckPostButton'
 import { countOf } from '@/lib/experience-request'
 import { formatPaiseINR } from '@/lib/money'
 import CreatorStepper from '@/app/creator/deals/[id]/CreatorStepper'
@@ -29,7 +31,7 @@ const LABEL: Record<string, string> = { negotiating: 'Offer sent', agreed: 'Acce
  * creator's pay shown here is what operational staff already see on the
  * Experience; never the brand price or margin.
  */
-export default async function ConsoleDealPage({ params, searchParams }: { params: { dealId: string }; searchParams?: { chat?: string } }) {
+export default async function ConsoleDealPage({ params, searchParams }: { params: { dealId: string }; searchParams?: { chat?: string; tab?: string } }) {
   const gate = await experienceStaffGate()
   if (!gate.ok) return <NoAccess reason={gate.reason} />
   if (!/^[0-9a-f-]{36}$/i.test(params.dealId)) notFound()
@@ -40,6 +42,11 @@ export default async function ConsoleDealPage({ params, searchParams }: { params
   const extras = extrasRes.ok ? extrasRes.data.filter((x) => x.deal_id === th.deal_id) : []
   const e = exp.ok ? exp.data : null
   const leg = legs.ok ? legs.data.find((l) => l.leg_deal_id === th.deal_id) ?? null : null
+  // 0577: this creator's collab posts and their numbers, on the Analytics tab.
+  const tab = searchParams?.tab === 'analytics' ? 'analytics' : 'deal'
+  const perf = tab === 'analytics' ? await consolePostPerformance(th.experience_id) : null
+  const myPosts = perf?.ok ? perf.data.posts.filter((p) => p.deal_id === th.deal_id) : []
+  const myWaiting = perf?.ok ? perf.data.waiting_for_link[th.deal_id] ?? 0 : 0
 
   const open = th.status === 'negotiating'
   const paid = th.status === 'paid' || th.status === 'complete'
@@ -75,6 +82,27 @@ export default async function ConsoleDealPage({ params, searchParams }: { params
               statusLine={<>{leg?.leg_sent_at ? `Sent ${short(leg.leg_sent_at)}` : ''}{e?.shoot_date ? <> &middot; shoot on <b style={{ color: 'var(--ink)' }}>{short(e.shoot_date)}</b>{e.shoot_city ? ` in ${e.shoot_city}` : ''}</> : ''}</>}
               backHref="/experiences-admin/deals" backLabel="Back to deals" />
 
+            <nav className="xp-dtabs" aria-label="Deal sections">
+              <Link href={`/experiences-admin/deals/${th.deal_id}`} className={tab === 'deal' ? 'on' : ''} aria-current={tab === 'deal' ? 'page' : undefined}>Deal</Link>
+              <Link href={`/experiences-admin/deals/${th.deal_id}?tab=analytics`} className={tab === 'analytics' ? 'on' : ''} aria-current={tab === 'analytics' ? 'page' : undefined}>Analytics</Link>
+            </nav>
+            <style>{`.xp-dtabs { display: flex; gap: 6px; padding: 4px; border-radius: 14px; background: #F2F2EC; width: fit-content; max-width: 100%; }
+              .xp-dtabs a { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 10px; font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; color: var(--ink-soft); text-decoration: none; }
+              .xp-dtabs a.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(22,23,15,.08); }`}</style>
+
+            {tab === 'analytics' && (
+              <section className="surface" style={{ padding: '22px 24px' }} aria-labelledby="xp-deal-analytics">
+                <h2 id="xp-deal-analytics" style={{ fontFamily: 'var(--font-display)', fontSize: 20, margin: 0 }}>How {th.creator_name}&apos;s posts did</h2>
+                <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '8px 0 0', lineHeight: 1.5 }}>Read from {th.creator_name}&apos;s own Instagram and refreshed daily. {th.creator_name} and the brand see the same numbers.{myWaiting > 0 ? ` ${myWaiting} collab ${myWaiting === 1 ? 'video is' : 'videos are'} still waiting for a link.` : ''}</p>
+                {perf && !perf.ok
+                  ? <p style={{ fontSize: 13, color: '#C4494F', margin: '12px 0 0' }}>{perf.error}</p>
+                  : myPosts.length > 0
+                    ? <ExperiencePostPerformance posts={myPosts} action={(postId) => <RecheckPostButton experienceId={th.experience_id} dealId={th.deal_id} postId={postId} />} />
+                    : <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '12px 0 0' }}>No collab post links yet. Numbers appear once {th.creator_name} posts and adds the link.</p>}
+              </section>
+            )}
+
+            {tab === 'deal' && <>
             {!closed && <CreatorStepper dealStatus={th.status} events={[]} track={{ stages, index: idx, allDone: paid, dates: {}, footer: paid ? 'Deal complete' : `Next · ${stages[idx + 1]?.toLowerCase() ?? 'paid'}` }} />}
 
             <TermsCard heading={open ? 'Offer terms' : 'Agreed terms'}
@@ -107,6 +135,7 @@ export default async function ConsoleDealPage({ params, searchParams }: { params
               <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Counters, brief, shoot outcome, deliverables and payout are managed on the Experience.</span>
               <Link href={`/experiences-admin/${th.experience_id}?tab=deals&deal=${th.deal_id}`} className="neonbtn" style={{ display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 18px', borderRadius: 11, background: 'var(--neon)', fontFamily: 'var(--font-ui)', fontWeight: 800, fontSize: 12.5, color: 'var(--ink)', textDecoration: 'none' }}>Open the Experience</Link>
             </div>
+            </>}
           </div>
         </div>
       </main>

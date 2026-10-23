@@ -1767,3 +1767,8 @@ GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
 -- brand_experience_posts_overview (definer, brand membership checked in
 -- Postgres, NULL denies): performance keys only, no ids, no money. Executable
 -- by authenticated only; experience_post_metrics is internal.
+
+-- ── Console Analytics (0577) ────────────────────────────────────────────────
+-- experience_console_post_performance (operational staff; performance keys and
+-- deal ids only, no money) and experience_console_post_recheck (operational,
+-- audited through experience_console_audit). No new tables or policies.

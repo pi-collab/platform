@@ -13,7 +13,7 @@ import InvoicePayments from './InvoicePayments'
 import { RosterPager, RosterSearchBox } from './RosterSearch'
 import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import ViewFile from './ViewFile'
-import PostPerformance from './PostPerformance'
+import ExperiencePostPerformance from '@/components/ExperiencePostPerformance'
 import { CollabReview, RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
 
@@ -102,7 +102,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
         <section id="performance" className="surface bx-card" aria-labelledby="bx-perf">
           <h2 id="bx-perf" className="bx-h2">How the posts did</h2>
           <p className="bx-note">Reach and engagement on the collab posts, read from each creator&apos;s Instagram and refreshed daily.</p>
-          <PostPerformance posts={performance} />
+          <ExperiencePostPerformance posts={performance} />
         </section>
       )}
 
