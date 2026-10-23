@@ -28,7 +28,11 @@ export default function ExperiencePostPerformance({ posts, action, showTotals = 
   showTotals?: boolean
 }) {
   const verified = posts.filter((p) => p.match_status === 'resolved' && p.metrics && Object.values(p.metrics).some((v) => typeof v === 'number'))
-  const sum = (k: 'reach' | 'views' | 'totalInteractions') => verified.reduce((n, p) => n + (p.metrics?.[k] ?? 0), 0)
+  const sum = (k: keyof PostMetrics) => verified.reduce((n, p) => n + (p.metrics?.[k] ?? 0), 0)
+  // Shown only if at least one verified post reported it: a metric Instagram
+  // gave for no post is "—", not a confident zero.
+  const has = (k: keyof PostMetrics) => verified.some((p) => typeof p.metrics?.[k] === 'number')
+  const fmtSum = (k: keyof PostMetrics) => (has(k) ? compactNumber(sum(k)) : '—')
   const reach = sum('reach')
   const views = sum('views')
   const interactions = sum('totalInteractions')
@@ -41,6 +45,12 @@ export default function ExperiencePostPerformance({ posts, action, showTotals = 
         <Total label="Views" value={views > 0 ? compactNumber(views) : '—'} />
         <Total label="Interactions" value={interactions > 0 ? compactNumber(interactions) : '—'} />
         <Total label="Engagement" value={rate != null ? `${rate.toFixed(1)}%` : '—'} />
+      </div>
+      <div className="bx-perf-totals bx-perf-totals--minor">
+        <Total label="Likes" value={fmtSum('likes')} small />
+        <Total label="Comments" value={fmtSum('comments')} small />
+        <Total label="Shares" value={fmtSum('shares')} small />
+        <Total label="Saves" value={fmtSum('saved')} small />
       </div>
       <p className="bx-perf-note">
         Verified across {verified.length} of {posts.length} {posts.length === 1 ? 'post' : 'posts'}, from each creator&apos;s own Instagram account.
@@ -78,10 +88,10 @@ export default function ExperiencePostPerformance({ posts, action, showTotals = 
   )
 }
 
-function Total({ label, value }: { label: string; value: string }) {
+function Total({ label, value, small = false }: { label: string; value: string; small?: boolean }) {
   return (
     <div>
-      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, letterSpacing: '-0.02em', color: 'var(--ink)' }}>{value}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: small ? 17 : 22, letterSpacing: '-0.02em', color: 'var(--ink)' }}>{value}</div>
       <div style={{ fontSize: 11.5, color: 'var(--ink-faint)', marginTop: 2 }}>{label}</div>
     </div>
   )
