@@ -7797,6 +7797,6 @@ Probe (rolled back): as anon, a real brand, a real creator and service_role, try
 | 9 | Caller-rights functions writing to tables | None (all 45 invoker functions are read-only) | Pass |
 | 10 | App code doing a closed action with a user client | None (80 hits, all `admin`; test-rls insert still refused) | Pass |
 | 11 | Public pages, logged-out private pages | 200 / redirect to login | Pass |
-| 12 | Prod | Same probe outcome after the prod run | Pending |
+| 12 | Prod | Grants identical to staging after the run | Pass (2026-10-23): pre-check 0 rows, post-check 0 rows; public pages 200, private pages redirect to login |
 
 New tables: follow the New-table checklist in `supabase/migrations/README.md`.
