@@ -5,6 +5,7 @@ import BrandsMobileClient from './BrandsMobileClient'
 import Footer from '@/components/Footer'
 import '../brands-page.css'
 import '../brands-mobile.css'
+import { showMarketingPreview } from '@/components/MarketingPreview'
 
 export const metadata: Metadata = {
   // Just 'For brands' — layout.tsx appends "| Guapd" via its title template,
@@ -40,12 +41,13 @@ export const metadata: Metadata = {
  * `display: none` keeps the hidden one out of the accessibility tree.
  */
 export default function BrandsPage() {
+  const preview = showMarketingPreview()
   return (
     <>
       <MarketingNav audience="brand" />
       <main>
-        <BrandsPageClient />
-        <BrandsMobileClient />
+        <BrandsPageClient preview={preview} />
+        <BrandsMobileClient preview={preview} />
       </main>
       <Footer />
     </>

@@ -7763,3 +7763,40 @@ Checked on staging at 390px (iframe) with real staging deals:
 | 9 | Desktop payments | Export CSV button when there is history | Typecheck |
 
 Not visually exercised (no staging data): deals with no line items (submit + deal-level post on the phone), withdrawn / did-not-shoot Experience legs.
+
+## 150. Placeholder marketing sections shown on staging only
+
+Recent deals, featured campaigns, the creator roster, brand logos (homepage, /creators, /brands) and brand testimonials (/brands) hold invented content. They render only where `showMarketingPreview()` is true (`VERCEL_ENV !== 'production'`: staging previews and local dev), each with a yellow "Staging preview · placeholder content · hidden on live site" tag. Desktop and phone layouts both carry them.
+
+| # | Case | Expected | Result |
+|---|---|---|---|
+| 1 | Local dev / staging, `/` | 4 tagged sections on desktop, 4 on the phone layout | Pass (8 tags in HTML) |
+| 2 | Local dev / staging, `/creators` | Creator roster + brand logos, desktop and phone | Pass (4 tags) |
+| 3 | Local dev / staging, `/brands` | Brand logos + testimonials on desktop; creators, logos, testimonials on phone | Pass (5 tags) |
+| 4 | Production (`VERCEL_ENV=production`) | None of the sections or tags in the HTML | Check after the next prod deploy: view-source has no "Staging preview" |
+| 5 | Placeholder names | No real brand names (invented: Glow Labs, Wander Co, Bawa Labs, Vaultly, Novapay, Bluemint, Cliqfin, Loopwear) | Pass |
+
+To go live with real content: replace the placeholder data in `components/MarketingPreview.tsx` and the inline desktop markup, then render the section unconditionally.
+
+## 151. Explicit Data API grants (migration 0575)
+
+Supabase stops auto-granting anon / authenticated / service_role on new `public` tables from 2026-10-30. 0575 states every table's grants explicitly at today's effective access (also the last block of `rls.sql`).
+
+Probe (rolled back): as anon, a real brand, a real creator and service_role, try SELECT count / INSERT default values / UPDATE first column / DELETE on all 71 tables, each in its own savepoint. Outcome = rows touched, `rls`, `denied` (no privilege) or an error past the privilege check.
+
+| # | Case | Expected | Result (staging, 2026-10-23) |
+|---|---|---|---|
+| 1 | Before vs after, all 1,136 checks | No rows gained anywhere; no rows lost anywhere | Pass: 871 identical, 265 went from "allowed, touches 0 rows / RLS-blocked" to `denied`, 0 other changes |
+| 2 | service_role on every table | Unchanged (SELECT/INSERT/UPDATE/DELETE) | Pass |
+| 3 | Visitor (anon) | Only `job_roles` (published) readable | Pass (2 rows); deals/creators/creator_private → permission denied |
+| 4 | Brand via API | Own deals 57, brands, members, campaigns, notifications, invoices, events, messages, items, creators (column allowlist) | Pass; brand_billing_profiles / experiences → denied |
+| 5 | Creator via API | Own deals 41, creators, users, products, storefront, own Experience terms | Pass; creator_private / vendor_payout_details / ops_events → denied |
+| 6 | Bank details through the gated function | `creator_payout_details`, `creator_payouts` RPCs work | Pass |
+| 7 | Column grants | creators SELECT 23 cols, users UPDATE 9 cols, deal_follow_ons 19, experience_creator_terms 12, experience_quotes extras (authenticated) | Pass |
+| 8 | RLS on every granted table | All 71 tables RLS on | Pass |
+| 9 | Caller-rights functions writing to tables | None (all 45 invoker functions are read-only) | Pass |
+| 10 | App code doing a closed action with a user client | None (80 hits, all `admin`; test-rls insert still refused) | Pass |
+| 11 | Public pages, logged-out private pages | 200 / redirect to login | Pass |
+| 12 | Prod | Grants identical to staging after the run | Pass (2026-10-23): pre-check 0 rows, post-check 0 rows; public pages 200, private pages redirect to login |
+
+New tables: follow the New-table checklist in `supabase/migrations/README.md`.

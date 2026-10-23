@@ -8,6 +8,7 @@ import './landing-page.css'
 import './landing-mobile.css'
 
 import type { Metadata } from 'next'
+import { showMarketingPreview } from '@/components/MarketingPreview'
 
 export const metadata: Metadata = {
   title: `${BRAND_NAME} · Creator deals without the chaos`,
@@ -38,12 +39,13 @@ export const metadata: Metadata = {
  * restyled by it.
  */
 export default function HomePage() {
+  const preview = showMarketingPreview()
   return (
     <>
       <MarketingNav audience="home" />
       <main>
-        <LandingPageClient />
-        <LandingMobileClient />
+        <LandingPageClient preview={preview} />
+        <LandingMobileClient preview={preview} />
       </main>
       <Footer />
     </>

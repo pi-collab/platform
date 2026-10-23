@@ -5,6 +5,7 @@ import CreatorsMobileClient from './CreatorsMobileClient'
 import Footer from '@/components/Footer'
 import '../creators-page.css'
 import '../creators-mobile.css'
+import { showMarketingPreview } from '@/components/MarketingPreview'
 
 export const metadata: Metadata = {
   title: 'For creators',
@@ -36,12 +37,13 @@ export const metadata: Metadata = {
  * screen reader is never read the page twice.
  */
 export default function CreatorsPage() {
+  const preview = showMarketingPreview()
   return (
     <>
       <MarketingNav audience="creator" />
       <main>
-        <CreatorsPageClient />
-        <CreatorsMobileClient />
+        <CreatorsPageClient preview={preview} />
+        <CreatorsMobileClient preview={preview} />
       </main>
       <Footer />
     </>

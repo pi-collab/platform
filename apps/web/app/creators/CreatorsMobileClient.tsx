@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { MobileBrandLogos, MobileCreatorRoster } from '@/components/MarketingPreview'
 
 /**
  * For Creators, mobile layout — ported from the "GUAPD For Creators - Mobile"
@@ -23,7 +24,7 @@ import { useEffect, useState } from 'react'
  * Every heading here is h2 or lower. The desktop layout owns the page's single
  * h1, and since both are in the DOM a second one would give the page two.
  */
-export default function CreatorsMobileClient() {
+export default function CreatorsMobileClient({ preview = false }: { preview?: boolean }) {
   // The two accordion rows. 0 means none is open, which is the state the export
   // starts in; clicking the open one closes it.
   const [openRow, setOpenRow] = useState(0)
@@ -206,9 +207,11 @@ export default function CreatorsMobileClient() {
         <div style={{padding: '20px 24px 36px'}}><img src="/creators-mobile/a1a47f79.webp" alt="Earnings dashboard showing total earnings and monthly breakdown" style={{width: '100%', aspectRatio: '947/1661', objectFit: 'cover', objectPosition: 'top', display: 'block', borderRadius: '16px'}} decoding="async" loading="lazy" /></div>
 
         {/* CREATORS WE WORK WITH */}
+        {preview && <MobileCreatorRoster label="Creators we work with" title={<>Made for creators like <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400}}>you</span></>} />}
   
 
         {/* BRANDS ON GUAPD */}
+        {preview && <MobileBrandLogos label="Brands on guapd" title={<>Work with brands you already <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400}}>know</span></>} />}
   
 
         {/* TESTIMONIALS */}

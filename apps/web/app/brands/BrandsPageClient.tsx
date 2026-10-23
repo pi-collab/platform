@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BookDemoModal from '@/components/BookDemoModal'
+import { PREVIEW_BRAND_QUOTES, PreviewTag } from '@/components/MarketingPreview'
 
 /**
  * The export sets CSS custom properties inline (--sr-delay, --oh-delay,
@@ -26,11 +27,11 @@ declare module 'react' {
  * port silently stops being pixel-perfect. The shared design tokens and the
  * animation classes live in app/brands-page.css, scoped to .brands-page.
  *
- * Two sections ship structurally complete but hidden: brand logos and
- * testimonials, whose content is not real yet. Flip the flags when it is.
+ * Two sections ship structurally complete but hidden on the live site: brand
+ * logos and testimonials, whose content is not real yet. They render only with
+ * `preview` (staging and dev, see showMarketingPreview) until it is.
  */
 
-const SHOW_BRAND_LOGOS = false
 
 /** Placeholder text that types itself into the deal builder when idle. */
 const GHOST_LINES = [
@@ -39,7 +40,7 @@ const GHOST_LINES = [
   '1 YouTube Short, budget \u20B980K, live in 14 days',
 ]
 
-export default function BrandsPageClient() {
+export default function BrandsPageClient({ preview = false }: { preview?: boolean }) {
   const router = useRouter()
   const [demoOpen, setDemoOpen] = useState(false)
   const openDemo = () => setDemoOpen(true)
@@ -533,10 +534,31 @@ export default function BrandsPageClient() {
           </div>
         </section>
 
+        {/* Brand testimonials: placeholder quotes, staging only. */}
+        {preview && (
+          <section style={{background: '#fff', padding: 'clamp(28px,3vw,44px) clamp(24px,5vw,72px) clamp(56px,6vw,88px)'}}>
+            <div style={{textAlign: 'center', marginBottom: '20px'}}><PreviewTag /></div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 'clamp(20px,3vw,40px)', maxWidth: '1200px', margin: '0 auto'}}>
+              {PREVIEW_BRAND_QUOTES.map((q, i) => (
+                <div key={q.title} className="card" style={{background: i % 2 ? '#fff' : 'rgba(43,51,36,.92)', border: '1px solid var(--hairline)', borderRadius: '20px', padding: '24px 28px', display: 'flex', flexDirection: 'column'}}>
+                  <span style={{color: 'var(--neon-deep)', fontSize: '12px', letterSpacing: '2px'}}>★★★★★</span>
+                  <h3 style={{fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '20px', letterSpacing: '-0.02em', margin: '8px 0 0', color: i % 2 ? 'var(--ink)' : '#fff'}}>{q.title}</h3>
+                  <p style={{fontFamily: 'var(--font-ui)', fontSize: '13px', lineHeight: '1.5', color: i % 2 ? 'var(--ink-soft)' : 'rgba(255,255,255,.72)', margin: '8px 0 0'}}>{q.quote}</p>
+                  <div style={{marginTop: 'auto', paddingTop: '14px', borderTop: i % 2 ? '1px solid var(--border-hairline)' : '1px solid rgba(255,255,255,.16)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                    <span style={{fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: '14px', color: i % 2 ? 'var(--ink)' : '#fff'}}>{q.who}</span>
+                    <span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', color: i % 2 ? 'var(--ink-faint)' : 'rgba(255,255,255,.6)'}}>{q.org}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-        {SHOW_BRAND_LOGOS && (<>
+
+        {preview && (<>
       {/* ============ BRANDS WE WORK WITH ============ */}
         <section style={{padding: '0 clamp(20px,5vw,72px) clamp(56px,6vw,88px)', background: '#fff'}}>
+          <div style={{textAlign: 'center', marginBottom: '14px'}}><PreviewTag /></div>
           <div style={{maxWidth: '1200px', margin: '0 auto', border: '1.2px solid var(--hairline)', borderRadius: '24px', background: 'var(--card)', boxShadow: '0 20px 44px -28px rgba(40,45,25,.16)', padding: 'clamp(32px,4.5vw,56px) clamp(20px,4vw,48px)', textAlign: 'center'}}>
             <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Brands we work with</span>
             <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(24px,3.2vw,34px)', color: 'var(--ink)'}}>Brands you already know</h2>

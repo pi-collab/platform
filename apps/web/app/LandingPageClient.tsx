@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { initLandingEffects } from '@/app/landing-effects'
 import BookDemoModal from '@/components/BookDemoModal'
+import { PreviewTag } from '@/components/MarketingPreview'
 
 /**
  * The landing page, ported from the "Landing - desktop" design export.
@@ -135,7 +136,7 @@ export const FAQ: { q: string; a: React.ReactNode }[] = [
   },
 ]
 
-export default function LandingPageClient() {
+export default function LandingPageClient({ preview = false }: { preview?: boolean }) {
   const [openFaq, setOpenFaq] = useState(0)
   const [demoOpen, setDemoOpen] = useState(false)
 
@@ -550,7 +551,7 @@ export default function LandingPageClient() {
               <div style={{position: 'absolute', left: '0', right: '0', top: '0', background: '#fff', borderRadius: '12px', padding: '12px 14px', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) infinite'}}><span style={{fontWeight: '700'}}>Glow Labs</span><span style={{color: 'var(--ink-faint)'}}>&#8377;45,000</span></div>
               <div style={{position: 'absolute', left: '0', right: '0', top: '56px', background: '#fff', borderRadius: '12px', padding: '12px 14px', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) .12s infinite'}}><span style={{fontWeight: '700'}}>Move Athletics</span><span style={{color: 'var(--ink-faint)'}}>&#8377;60,000</span></div>
               <div style={{position: 'absolute', left: '0', right: '0', top: '112px', background: '#fff', borderRadius: '12px', padding: '12px 14px', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) .24s infinite'}}><span style={{fontWeight: '700'}}>Bawa Labs</span><span style={{color: 'var(--ink-faint)'}}>&#8377;35,000</span></div>
-              <div style={{position: 'absolute', left: '0', right: '0', top: '168px', background: '#fff', borderRadius: '12px', padding: '12px 14px', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) .36s infinite'}}><span style={{fontWeight: '700'}}>CRED</span><span style={{color: 'var(--ink-faint)'}}>&#8377;52,000</span></div>
+              <div style={{position: 'absolute', left: '0', right: '0', top: '168px', background: '#fff', borderRadius: '12px', padding: '12px 14px', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) .36s infinite'}}><span style={{fontWeight: '700'}}>Cliqfin</span><span style={{color: 'var(--ink-faint)'}}>&#8377;52,000</span></div>
               <div style={{position: 'absolute', left: '0', right: '0', top: '224px', background: '#FBFAEF', border: '1.5px solid var(--neon-deep)', boxShadow: '0 16px 34px -20px rgba(40,45,25,.3)', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', color: 'var(--ink)', animation: 'snapIn 8s cubic-bezier(.34,1.5,.4,1) .48s infinite'}}><span>4 need you today</span><span style={{color: 'var(--ink)'}}>&rarr;</span></div>
             </div>
             <div style={{order: '2'}}>
@@ -583,23 +584,100 @@ export default function LandingPageClient() {
         </section>
 
         {/* PRODUCT SHOWCASE */}
-  
+        {preview && (<>
+        <section style={{padding: 'clamp(64px,7vw,100px) clamp(20px,5vw,72px) clamp(32px,4vw,52px)'}}>
+          <div style={{textAlign: 'center', padding: '12px 0 0'}}><PreviewTag /></div>
+
+          <div className="gx" style={{textAlign: 'center'}}>
+            <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Deals on guapd</span>
+            <h2 className="t-title" style={{fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(20px,2.4vw,30px)'}}>Recent deals on <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>guapd</span></h2>
+            <div className="sf-exprow" style={{gap: '20px'}}>
+              <div className="sf-exp">
+                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Skincare routine</div></div>
+                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Skincare routine</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Glow Labs · Jun 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>2.4M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>8.1%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>34K</b></div></div></div></div>
+              </div>
+              <div className="sf-exp">
+                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Goa on ₹5k</div></div>
+                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Goa on ₹5k</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Wander Co · May 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.1M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>6.4%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>21K</b></div></div></div></div>
+              </div>
+              <div className="sf-exp">
+                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">Get ready with me</div></div>
+                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>Get ready with me</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Bawa Labs · May 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.7M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>7.2%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>28K</b></div></div></div></div>
+              </div>
+              <div className="sf-exp">
+                <div className="sf-vid"><span style={{position: 'absolute', left: '11px', top: '11px', zIndex: '3', fontFamily: 'var(--font-ui)', fontWeight: '600', fontSize: '9.5px', letterSpacing: '.05em', textTransform: 'uppercase', background: 'rgba(255,255,255,.92)', color: 'var(--ink)', borderRadius: '999px', padding: '3px 9px'}}>Reel</span><span className="sf-play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#E8FF66"><path d="M8 5v14l11-7z" /></svg></span><div className="sf-vlab">SIP explained</div></div>
+                <div className="sf-side"><div className="sf-side-in"><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '14px', letterSpacing: '-0.01em', lineHeight: '1.25', color: 'var(--ink)'}}>SIP explained</div><div style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', marginTop: '6px'}}>Vaultly · Apr 2026</div><div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '9px'}}><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Views</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>1.1M</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Engagement</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>6.4%</b></div><div className="sf-srow"><span style={{fontFamily: 'var(--font-ui)', fontSize: '10px', letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink-faint)'}}>Saves</span><b style={{fontFamily: 'var(--font-ui)', fontWeight: '700', fontSize: '15px', color: 'var(--ink)'}}>22K</b></div></div></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </>)}
 
         {/* CAMPAIGNS */}
-  
-
-
-
+        {preview && (<>
+        <section id="campaigns" style={{background: 'var(--card)', padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
+          <div style={{textAlign: 'center', padding: '12px 0 0'}}><PreviewTag /></div>
+          <div className="gx">
+          <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', textAlign: 'center', fontSize: 'clamp(28px,3.8vw,48px)', margin: '0 0 40px', color: 'var(--ink)'}}>Featured <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>campaigns</span></h2>
+          {campaigns.map((p, i) => (
+            <div className="pcard" data-pcard style={{top: `${p.top}px`, marginBottom: '28px', height: '85vh', maxWidth: '1080px', marginLeft: 'auto', marginRight: 'auto', padding: 'clamp(16px,2vw,32px)', background: 'var(--card)', border: '1px solid var(--hairline)', borderRadius: '40px', boxShadow: 'var(--sh-2)', position: 'sticky'}}>
+              <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap'}}>
+                <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
+                  <span className="t-meta" style={{color: 'var(--sec-ink)', width: '28px'}}>{p.num}</span>
+                  <div>
+                    <div className="t-meta" style={{color: 'var(--ink-faint)'}}>Brand &middot; {p.category}</div>
+                    <div style={{color: 'var(--ink)', fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.02em', fontSize: 'clamp(18px,2.2vw,26px)', marginTop: '4px'}}>{p.name}</div>
+                  </div>
+                </div>
+                <a href="#" className="g-btn-secondary" style={{padding: '11px 26px'}}>{p.deliverables} deliverables</a>
+              </div>
+              <div style={{display: 'flex', gap: '24px', marginTop: '24px', height: 'calc(100% - 100px)'}}>
+                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
+                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
+                <div aria-hidden="true" data-placeholder="Campaign image" style={{...{flex: '1', minWidth: '0', height: '100%'}, background: 'var(--paper-2, #EDF0F5)', borderRadius: '28px'}} />
+              </div>
+            </div>
+          ))}
+          </div>
+        </section>
+        </>)}
 
         {/* ============ FAQ ============ */}
         {/* CREATORS & BRANDS (borrowed from For Brands page) */}
-  
+        {preview && (<>
+        <section className="sr" style={{padding: 'clamp(36px,4vw,56px) clamp(20px,5vw,72px)'}}>
+          <div style={{textAlign: 'center', padding: '12px 0 0'}}><PreviewTag /></div>
+          <div className="gx">
+            <div style={{textAlign: 'center', maxWidth: '620px', margin: '0 auto clamp(36px,4.5vw,56px)'}}>
+              <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Creators on guapd</span>
+              <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '12px 0 0', color: 'var(--ink)'}}>Find vetted <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>creators</span></h2>
+            </div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 'clamp(16px,2.4vw,34px)', maxWidth: '980px', margin: '0 auto'}}>
+              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@aisha.fin</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Finance</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>180K followers</span></div></div></div>
+              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@rohan.tech</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Tech</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>92K followers</span></div></div></div>
+              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@priya.career</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Careers</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>95K followers</span></div></div></div>
+              <div className="card" style={{background: 'var(--card)', border: '1.2px solid var(--hairline)', borderRadius: '24px', padding: '14px', boxShadow: '0 22px 50px -28px rgba(40,45,25,.34)'}}><div style={{width: '100%', height: 'auto', aspectRatio: '1/1', display: 'block', borderRadius: '16px', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><div style={{padding: '16px 6px 6px'}}><div style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', letterSpacing: '-0.01em', color: 'var(--ink)'}}>@maya.money</div><div style={{display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px'}}><span style={{fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: '600', color: 'var(--ink)', background: '#FFFFFF', border: '1px solid var(--hairline)', borderRadius: 'var(--radius-pill)', padding: '3px 10px'}}>Lifestyle</span><span style={{fontFamily: 'var(--font-ui)', fontSize: '12.5px', color: 'var(--ink-faint)'}}>210K followers</span></div></div></div>
+            </div>
+          </div>
+        </section>
+        </>)}
 
         {/* BRANDS WE WORK WITH (borrowed from For Brands page) */}
-  
-  
-
-
+        {preview && (<>
+        <section className="sr" style={{padding: 'clamp(56px,6vw,88px) clamp(20px,5vw,72px)'}}>
+          <div style={{textAlign: 'center', padding: '12px 0 0'}}><PreviewTag /></div>
+          <div style={{maxWidth: '980px', margin: '0 auto', border: '1.2px solid var(--hairline)', borderRadius: '24px', background: 'var(--card)', boxShadow: '0 22px 50px -34px rgba(40,45,25,.3)', padding: 'clamp(32px,4.5vw,56px) clamp(20px,4vw,48px)', textAlign: 'center'}}>
+            <span className="t-meta" style={{display: 'inline-block', color: 'var(--ink-faint)'}}>Brands we work with</span>
+      <h2 style={{fontFamily: 'var(--font-display)', fontWeight: '700', letterSpacing: '-0.035em', lineHeight: '1.04', fontSize: 'clamp(28px,3.8vw,48px)', margin: '10px 0 clamp(24px,3.2vw,34px)', color: 'var(--ink)'}}>Brands you <span style={{fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: '400'}}>know</span></h2>
+            <div id="brandPillRow" className="brand-pill-row" style={{display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '14px', overflow: 'hidden'}}>
+              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Vaultly</span></div>
+              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Novapay</span></div>
+              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Bluemint</span></div>
+              <div className="brand-pill" style={{display: 'flex', alignItems: 'center', gap: '11px', background: 'var(--card)', border: '1px solid var(--frost-edge)', borderRadius: '16px', padding: '12px 18px 12px 12px', boxShadow: '0 12px 30px -22px rgba(40,45,25,.3)', flexShrink: '0'}}><div style={{width: '38px', height: '38px', display: 'block', flexShrink: '0', borderRadius: '50%', border: '1px solid var(--hairline)', background: '#FFFFFF'}}></div><span style={{fontFamily: 'var(--font-display)', fontWeight: '700', fontSize: '16px', color: 'var(--ink)'}}>Cliqfin</span></div>
+            </div>
+          </div>
+        </section>
+        </>)}
 
         <section style={{padding: 'clamp(32px,4vw,52px) clamp(20px,5vw,72px)'}}>
           <div className="sr gx" style={{background: 'var(--card)', borderRadius: '28px', border: '1px solid var(--hairline)', boxShadow: '0 24px 54px -36px rgba(40,45,25,.24)', padding: 'clamp(40px,5.5vw,56px) clamp(28px,5vw,48px)'}}>
