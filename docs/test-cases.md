@@ -7844,3 +7844,5 @@ Experience → **Analytics** tab: Experience totals (reach, views, interactions,
 | 7 | E2E staff: deal Analytics tab | Per-post numbers + Re-check button; Deal tab unchanged | Pass |
 | 8 | E2E brand / creator open the console tabs | No numbers (NoAccess) | Pass |
 | 9 | Phone, 390px | Both tabs fit, no horizontal scroll; Experience tab bar scrolls if it ever overflows | Pass |
+
+Prod (2026-10-23): 0576 + 0577 run by PJ; check returned 5 functions, 6 posted collab posts, 6 linked for analytics. App released (main 09b9950); public pages 200, portals redirect to login. Numbers fill on the next nightly run or on Re-check.
