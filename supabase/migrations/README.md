@@ -119,6 +119,28 @@ Step 5 is what gives the database migration tracking; without it the schema is
 correct but `schema_migrations` is empty. After it, `db push` reports
 "Local database is up to date" and stays usable for future migrations.
 
+## New-table checklist (Data API grants, from 2026-10-30)
+
+Supabase stops auto-granting anon / authenticated / service_role on new tables
+in `public` from 30 Oct 2026. Every migration that creates a table MUST, in the
+same migration:
+
+1. `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` and its policies (also in `rls.sql`).
+2. An explicit grant at the level the table is meant to be reachable:
+   - server-only / gated-function tables (money, bank, notes, staff, ops):
+     `REVOKE ALL ON t FROM PUBLIC, anon, authenticated;`
+     `GRANT SELECT, INSERT, UPDATE, DELETE ON t TO service_role;`
+   - app tables: `service_role` as above, plus `authenticated` ONLY the commands
+     its RLS policies allow, plus `anon` only if a policy is meant for visitors.
+   - never a blanket `GRANT ALL ... TO anon, authenticated`. A grant without RLS
+     is an open door.
+3. The same grant lines appended to the 0575 block at the END of `rls.sql`
+   (a rebuild runs `rls.sql` last).
+4. A sequence the table uses: `GRANT USAGE, SELECT, UPDATE ON SEQUENCE ... TO service_role`
+   (and to `authenticated` only if signed-in users insert rows directly).
+
+Check after applying: `docs/test-cases.md` §151 probe (anon / authenticated / service_role).
+
 ## Known schema debt
 
 - **`deals.campaign_id` FK missing** — both prod and staging lack the FK to `campaigns(id)`. Migration 002 added the column as bare uuid; migration 015's `ADD COLUMN IF NOT EXISTS` with FK silently skipped because column existed. Add FK to both environments together after verifying no dangling campaign_id values.
