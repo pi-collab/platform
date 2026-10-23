@@ -95,3 +95,4 @@
   .bx-roster-row.bx-has-pick { grid-template-columns: 20px 44px minmax(0, 1fr); }
   .bx-has-pick .bx-roster-state, .bx-has-pick .bx-roster-actions { grid-column: 3; }
 }
+

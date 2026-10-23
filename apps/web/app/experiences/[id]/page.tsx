@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRosterPage, getBrandSuggestions, getBrandCollabPosts, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRosterPage, getBrandSuggestions, getBrandCollabPosts, getBrandPostPerformance, type BrandInvoice } from '@/lib/experience-brand-server'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
@@ -13,6 +13,7 @@ import InvoicePayments from './InvoicePayments'
 import { RosterPager, RosterSearchBox } from './RosterSearch'
 import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import ViewFile from './ViewFile'
+import ExperiencePostPerformance from '@/components/ExperiencePostPerformance'
 import { CollabReview, RosterAdd, AddonCard, AddonHistory, AgreedTotal, DeliverableReview, QuoteCard, RosterReview, SignOffCard } from './BrandPanels'
 import './brand-experience.css'
 
@@ -64,6 +65,9 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   // 0561: collab posts (once Guapd sends approved videos to their creators).
   const collabRes = hasDeliverables ? await getBrandCollabPosts(e.id) : null
   const collabs = collabRes?.ok ? collabRes.data : []
+  // 0576: verified numbers for collab posts that have a link.
+  const perfRes = collabs.some((c) => c.post_url) ? await getBrandPostPerformance(e.id) : null
+  const performance = perfRes?.ok ? perfRes.data : []
   const st = brandStage(e.status, quoteToAnswer)
   const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : null
   const date = fmt(e.shoot_date)
@@ -91,6 +95,14 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
           <h2 id="bx-collabs" className="bx-h2">Collab posts</h2>
           <p className="bx-note">Videos your creators post as a collab with you. Add your affiliate link once a post is live, run the ad on the agreed terms, then mark it complete.</p>
           <CollabReview experienceId={e.id} posts={collabs} />
+        </section>
+      )}
+
+      {performance.length > 0 && (
+        <section id="performance" className="surface bx-card" aria-labelledby="bx-perf">
+          <h2 id="bx-perf" className="bx-h2">How the posts did</h2>
+          <p className="bx-note">Reach and engagement on the collab posts, read from each creator&apos;s Instagram and refreshed daily.</p>
+          <ExperiencePostPerformance posts={performance} />
         </section>
       )}
 

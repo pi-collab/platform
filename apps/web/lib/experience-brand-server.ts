@@ -238,3 +238,25 @@ export async function brandCollabAct(postId: string, action: 'affiliate' | 'ad_c
   return error ? fail(error) : { ok: true, data: null }
 }
 
+
+/** 0576: a collab post's verified numbers (performance only: no pay, cost or margin exists in it). */
+export type PostMetrics = { reach?: number; views?: number; likes?: number; comments?: number; saved?: number; shares?: number; totalInteractions?: number }
+export type BrandPostPerformance = {
+  post_id: string; creator_name: string; handle: string | null; label: string
+  post_url: string; posted_at: string
+  match_status: 'pending' | 'resolved' | 'not_found' | 'not_connected' | 'unsupported'
+  metrics: PostMetrics | null; thumbnail_url: string | null; synced_at: string | null
+}
+export async function getBrandPostPerformance(experienceId: string): Promise<Result<BrandPostPerformance[]>> {
+  const { data, error } = await createClient().rpc('brand_experience_post_performance', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandPostPerformance[] }
+}
+export type BrandExperiencePostOverview = {
+  experience_id: string; experience_title: string | null; creator_name: string; label: string
+  posted_at: string; metrics: PostMetrics | null; thumbnail_url: string | null
+}
+/** 0576: verified Experience posts across the brand, posted in [from, to]. */
+export async function getBrandExperiencePostsOverview(fromISO: string, toISO: string): Promise<Result<BrandExperiencePostOverview[]>> {
+  const { data, error } = await createClient().rpc('brand_experience_posts_overview', { p_from: fromISO, p_to: toISO })
+  return error ? fail(error) : { ok: true, data: (data ?? []) as BrandExperiencePostOverview[] }
+}

@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates, consolePostPerformance } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -16,6 +16,8 @@ import CostSheetPanel from './CostSheetPanel'
 import PnlPanel from './PnlPanel'
 import ShootPanel from './ShootPanel'
 import CollabPanel from './CollabPanel'
+import AnalyticsByDeal from './AnalyticsByDeal'
+import ExperiencePostPerformance from '@/components/ExperiencePostPerformance'
 import CommissionPanel from './CommissionPanel'
 import DeliverablesPanel from './DeliverablesPanel'
 import InvoicesPanel from './InvoicesPanel'
@@ -76,7 +78,9 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   // 0546: Overview | Deals. Deals lists every SENT creator deal with its
   // status, any open counter and the Guapd ↔ creator thread.
   const threadRows = threads?.ok ? threads.data : []
-  const tab = hasLegs && searchParams?.tab === 'deals' ? 'deals' : 'overview'
+  const tab = hasLegs && searchParams?.tab === 'deals' ? 'deals' : hasLegs && searchParams?.tab === 'analytics' ? 'analytics' : 'overview'
+  // 0577: read only on the Analytics tab.
+  const analytics = tab === 'analytics' ? await consolePostPerformance(e.id) : null
   // Old links to one deal on this tab now open the deal's own page.
   if (tab === 'deals' && searchParams?.deal && /^[0-9a-f-]{36}$/i.test(searchParams.deal) && threadRows.some((t) => t.deal_id === searchParams.deal)) redirect(`/experiences-admin/deals/${searchParams.deal}`)
   const unreadAll = threadRows.reduce((n, t) => n + Number(t.unread ?? 0), 0)
@@ -169,7 +173,24 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
           <Link href={`/experiences-admin/${e.id}?tab=deals`} className={tab === 'deals' ? 'on' : ''} aria-current={tab === 'deals' ? 'page' : undefined}>
             Deals <span className="xp-tab-n">{threadRows.length}</span>{unreadAll > 0 && <span className="xp-tab-badge" aria-label={`${unreadAll} unread`}>{unreadAll}</span>}
           </Link>
+          <Link href={`/experiences-admin/${e.id}?tab=analytics`} className={tab === 'analytics' ? 'on' : ''} aria-current={tab === 'analytics' ? 'page' : undefined}>Analytics</Link>
         </nav>
+      )}
+
+      {tab === 'analytics' && (
+        <section className="surface" style={{ ...card, marginTop: 16 }} aria-labelledby="xp-analytics">
+          <h2 id="xp-analytics" className="sect-head">Analytics</h2>
+          <div className="sect-rule" />
+          <p className="t-body" style={{ margin: '12px 0 0', fontSize: 13 }}>How the collab posts did, read from each creator&apos;s own Instagram and refreshed daily. {e.brand_name} sees the same numbers. Open a creator for each post.</p>
+          {analytics?.ok
+            ? <>
+                {analytics.data.posts.length > 0 && <ExperiencePostPerformance posts={analytics.data.posts} showPosts={false} />}
+                <h3 className="t-meta" style={{ margin: '22px 0 0', color: 'var(--ink-faint)' }}>By creator</h3>
+                <AnalyticsByDeal posts={analytics.data.posts} waiting={analytics.data.waiting_for_link}
+                  names={Object.fromEntries(threadRows.map((t) => [t.deal_id, t.creator_name]))} />
+              </>
+            : <Failed inline message={analytics?.ok === false ? analytics.error : 'Could not load analytics.'} />}
+        </section>
       )}
 
       {tab === 'deals' && (
@@ -372,7 +393,8 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
 
       <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 860px) { .xp-cols { grid-template-columns: 1fr !important; } }
-        .xp-tabs { display: flex; gap: 6px; margin-top: 20px; padding: 4px; border-radius: 14px; background: #F2F2EC; width: fit-content; max-width: 100%; }
+        .xp-tabs { display: flex; gap: 6px; margin-top: 20px; padding: 4px; border-radius: 14px; background: #F2F2EC; width: fit-content; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+        .xp-tabs a { flex-shrink: 0; }
         .xp-tabs a { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 16px; border-radius: 10px; font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; color: var(--ink-soft); text-decoration: none; }
         .xp-tabs a.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(22,23,15,.08); }
         .xp-tab-n { color: var(--ink-faint); font-weight: 500; }

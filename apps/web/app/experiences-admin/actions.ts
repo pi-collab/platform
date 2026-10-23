@@ -21,7 +21,7 @@ import {
   type FinanceUploadKind, type FinanceFileKind, type InvoiceDraftInput,
   type CostInput,
   type ConsoleDeliverable, type ConsoleLegsReconcile,
-  consoleCollabSend, consoleCollabInstructions, consoleCollabAdCode, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
+  consoleCollabSend, consoleCollabInstructions, consoleCollabAdCode, consolePostRecheck, consoleCollabCancel, consoleCollabPostLink, consoleCollabAct, setAgreedAffiliatePct,
   consoleAffiliateReview, consoleAffiliateClose, consoleAffiliatePayoutRequest, consoleAffiliateBill,
 } from '@/lib/experience-console-server'
 import { notifyBrandAdCode, notifyCreatorVideoSent, notifyCreatorInstructionsUpdated, notifyCreatorAffiliateAdded, notifyCollabPosted, notifyCreatorCommissionReviewed } from '@/lib/experience-collab-notify'
@@ -1478,3 +1478,15 @@ export async function billAffiliates(experienceId: string, followOnIds: string[]
   return r
 }
 
+
+// 0577: read a collab post's Instagram numbers again (audited in Postgres).
+export async function recheckPostNumbers(experienceId: string, dealId: string, postId: string): Promise<Out> {
+  const refused = await gate(); if (refused) return refused
+  if (!isUuid(experienceId) || !isUuid(dealId) || !isUuid(postId)) return { ok: false, error: 'Unknown post.' }
+  const r = await consolePostRecheck(postId)
+  if (!r.ok) return r
+  collabPaths(experienceId)
+  revalidatePath(`${BASE}/deals/${dealId}`)
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true, data: null }
+}

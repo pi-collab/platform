@@ -7800,3 +7800,47 @@ Probe (rolled back): as anon, a real brand, a real creator and service_role, try
 | 12 | Prod | Grants identical to staging after the run | Pass (2026-10-23): pre-check 0 rows, post-check 0 rows; public pages 200, private pages redirect to login |
 
 New tables: follow the New-table checklist in `supabase/migrations/README.md`.
+
+## 152. Experience collab posts in post analytics (migration 0576)
+
+Reuses the deal post pipeline: saving a collab post link (creator `creator_collab_post_link` or staff `experience_console_collab_post_link`, both through `experience_collab_set_post`) stamps the creator leg's item (`posted_url`, `posted_at`, `ig_match_status = pending`, old numbers cleared on a NEW link), then `storeCollabPostInsights` resolves it against the leg creator's own Instagram, exactly like `markItemPosted`. The nightly cron refreshes it like any deal post and now also retries posted links still `pending`. Only `kind = 'collab'` posts have links (the creator's own handle); `share` never does. Brand-posted content (e.g. Kiro's own channels) is not read.
+
+Brand reads: `brand_experience_post_performance(experience)` and `brand_experience_posts_overview(from, to)`. Performance keys only (reach, views, likes, comments, saved, shares, totalInteractions); no deal / creator / item ids, no money. The brand-wide dashboard adds Experience reach and interactions to its totals and top posts, but NOT to spend or cost per 1,000 reach.
+
+| # | Case | Expected | Result (staging, 2026-10-23) |
+|---|---|---|---|
+| 1 | Backfill | Already-posted collab post stamps its leg item (`pending`) | Pass |
+| 2 | Kiro reads the Experience's performance | Reach etc. per post | Pass (1000) |
+| 3 | Brand payload | Keys: creator_name, handle, label, match_status, metrics, post_id, post_url, posted_at, synced_at, thumbnail_url. No paise/price/fee/margin/day rate/cost/pay/ids, even with a junk `creator_pay_paise` key in the stored insights | Pass |
+| 4 | Brand-wide overview | Kiro: 1 post; another brand: 0 | Pass |
+| 5 | Another brand / a creator / anon call the brand read | 42501 | Pass |
+| 6 | NULL window on the overview | 42501 (deny on NULL) | Pass |
+| 7 | Owner creator reads their own item's numbers (RLS) | Sees them | Pass |
+| 8 | Another creator reads that item | 0 rows | Pass |
+| 9 | Creator replaces the link | Item re-stamped `pending`, old numbers cleared; brand sees `pending`, no stale metrics | Pass |
+| 10 | E2E: owner creator `/creator/deals/<leg>/analytics` | Numbers shown | Pass |
+| 11 | E2E: owner leg page | "How your post did" link (phone + desktop) once a collab post has a link | Pass |
+| 12 | E2E: owner creator dashboard | Experience post is the top post by views; folded into engagement and average views | Pass |
+| 13 | E2E: another creator | Leg analytics shows no numbers; their dashboard excludes the post | Pass |
+| 14 | E2E: Kiro `/experiences/<id>` | "How the posts did" with reach / views / interactions / engagement and per-post stats; no ₹, fee, margin, payout or day rate in the section | Pass |
+| 15 | E2E: Kiro `/dashboard` | Total reach includes the Experience post; cost per 1,000 reach uses deal reach only | Pass |
+| 16 | Phone, 390px | Section fits, no horizontal scroll | Pass |
+| 17 | A link that is not the creator's own post | Resolves `not_found`, never another account's numbers | By construction (resolver reads only the leg creator's own media) |
+
+Test data: the Holiday shoot collab post was given test numbers for the E2E and restored afterwards.
+
+## 153. Ops console Analytics tabs (migration 0577)
+
+Experience → **Analytics** tab: Experience totals (reach, views, interactions, engagement), then one card per creator deal (reach, views, engagement, posted / verified / without numbers / waiting for a link), each opening that deal's **Analytics** tab: per-post numbers (same component as the brand page) with **Re-check numbers**. Reads `experience_console_post_performance` (operational access, performance only); Re-check calls `experience_console_post_recheck` (operational, audited to ops_events) then the same resolver a creator's save runs.
+
+| # | Case | Expected | Result (staging, 2026-10-23) |
+|---|---|---|---|
+| 1 | Staff reads the Experience | Posts with deal ids, metrics; waiting-for-link per deal | Pass |
+| 2 | Payload | No paise / price / fee / margin / day rate / cost / payout | Pass |
+| 3 | Re-check | One `experience.post_insights_recheck` ops_events row; resolver runs | Pass (status → not_connected for a creator without Instagram) |
+| 4 | Brand / creator call the console reads | 42501 | Pass |
+| 5 | NULL Experience | 42501 | Pass |
+| 6 | E2E staff: Experience Analytics tab | Totals + "By creator" card | Pass |
+| 7 | E2E staff: deal Analytics tab | Per-post numbers + Re-check button; Deal tab unchanged | Pass |
+| 8 | E2E brand / creator open the console tabs | No numbers (NoAccess) | Pass |
+| 9 | Phone, 390px | Both tabs fit, no horizontal scroll; Experience tab bar scrolls if it ever overflows | Pass |

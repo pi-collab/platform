@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { storeCollabPostInsights } from '@/lib/post-insights-store'
 
 /**
  * Reads for the Guapd Experiences STAFF console. Each goes through a database
@@ -1236,7 +1237,10 @@ export async function consoleCollabCancel(postId: string, reason: string): Promi
 }
 export async function consoleCollabPostLink(postId: string, url: string, channel: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_collab_post_link', { p_post_id: postId, p_url: url, p_channel: channel })
-  return error ? fail(error) : { ok: true, data: null }
+  if (error) return fail(error)
+  // 0576: verified numbers, as for a link the creator saves themselves.
+  try { await storeCollabPostInsights(postId) } catch { /* retried by the cron */ }
+  return { ok: true, data: null }
 }
 export async function consoleCollabAct(postId: string, action: 'affiliate' | 'ad_complete', url: string | null, channel: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_collab_act', { p_post_id: postId, p_action: action, p_url: url, p_channel: channel })
@@ -1288,3 +1292,26 @@ export async function consoleAffiliateBill(experienceId: string, followOnIds: st
   return error ? fail(error) : { ok: true, data: data as string }
 }
 
+
+/** 0577: the Analytics tabs. Performance only (no pay, cost or margin): operational access. */
+export type ConsolePerformancePost = {
+  post_id: string; deal_id: string; creator_name: string; handle: string | null; label: string
+  post_url: string; posted_at: string; status: 'posted' | 'ad_complete'
+  match_status: 'pending' | 'resolved' | 'not_found' | 'not_connected' | 'unsupported'
+  metrics: { reach?: number; views?: number; likes?: number; comments?: number; saved?: number; shares?: number; totalInteractions?: number } | null
+  thumbnail_url: string | null; synced_at: string | null
+}
+export type ConsolePerformance = { posts: ConsolePerformancePost[]; waiting_for_link: Record<string, number> }
+export async function consolePostPerformance(experienceId: string): Promise<Result<ConsolePerformance>> {
+  const { data, error } = await createClient().rpc('experience_console_post_performance', { p_experience_id: experienceId })
+  if (error) return fail(error)
+  const d = (data ?? {}) as Partial<ConsolePerformance>
+  return { ok: true, data: { posts: d.posts ?? [], waiting_for_link: d.waiting_for_link ?? {} } }
+}
+/** 0577: read a post's numbers again. Postgres checks access and audits; the resolver then runs. */
+export async function consolePostRecheck(postId: string): Promise<Result<null>> {
+  const { error } = await createClient().rpc('experience_console_post_recheck', { p_post_id: postId })
+  if (error) return fail(error)
+  await storeCollabPostInsights(postId)
+  return { ok: true, data: null }
+}

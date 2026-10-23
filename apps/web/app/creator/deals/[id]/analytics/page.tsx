@@ -41,7 +41,7 @@ export default async function CreatorDealAnalyticsPage({ params }: { params: { i
   // creator_id check is the boundary rather than a formality.
   const { data: deal } = await admin
     .from('deals')
-    .select('id, deal_ref, title, creator_id, brands(name)')
+    .select('id, deal_ref, title, creator_id, leg_role, experience_brand_name, brands(name)')
     .eq('id', params.id)
     .eq('creator_id', ctx.creatorId)
     .maybeSingle()
@@ -56,7 +56,9 @@ export default async function CreatorDealAnalyticsPage({ params }: { params: { i
 
   const items = (itemRows ?? []) as ItemRow[]
   const posted = items.filter((i) => i.posted_url)
-  const brandName = (deal as unknown as { brands?: { name?: string } }).brands?.name ?? 'the brand'
+  // An Experience creator leg is held by Guapd; the brand is the Experience's.
+  const d = deal as unknown as { brands?: { name?: string }; leg_role?: string | null; experience_brand_name?: string | null }
+  const brandName = (d.leg_role === 'creator_leg' ? d.experience_brand_name : d.brands?.name) ?? 'the brand'
 
   return (
     <main style={{ maxWidth: 860, margin: '0 auto', padding: 'clamp(20px,4vw,40px) clamp(16px,4vw,28px)' }}>

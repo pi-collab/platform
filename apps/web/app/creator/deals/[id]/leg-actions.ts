@@ -8,6 +8,7 @@ import { notifyStaffItemSubmitted } from '@/lib/experience-deliverables-notify'
 import { notifyStaffCreatorCountered } from '@/lib/experience-counter-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyStaffCreatorInvoiced } from '@/lib/experience-money-notify'
+import { storeCollabPostInsights } from '@/lib/post-insights-store'
 import { notifyCollabPosted, notifyBrandAdCode, notifyStaffCommissionClaimed } from '@/lib/experience-collab-notify'
 
 /**
@@ -231,7 +232,11 @@ export async function submitCollabPostLink(dealId: string, postId: string, url: 
   if (error) return { ok: false, message: /Instagram post link/i.test(error.message) ? 'Paste the link to your Instagram post or reel (https://www.instagram.com/…).'
     : /final/i.test(error.message) ? 'The brand marked the ad complete; the link is final.' : /closed/i.test(error.message) ? 'This Experience is closed.' : 'Could not save the link. Please try again.' }
   if (first) await notifyCollabPosted(postId, 'creator')
+  // 0576: the same verified-numbers lookup a deal post gets. A failure here
+  // never fails saving the link; the nightly job retries a pending post.
+  try { await storeCollabPostInsights(postId) } catch { /* retried by the cron */ }
   revalidatePath(`/creator/deals/${dealId}`)
+  revalidatePath(`/creator/deals/${dealId}/analytics`)
   return { ok: true, data: null }
 }
 
