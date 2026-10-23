@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectionsDueForSync, refreshAndSync, connectionsDueForReminder } from '@/lib/instagram-sync'
 import { remindConnectionBroken } from '@/lib/instagram-break-notify'
 import { postsDueForRefresh, refreshOnePost } from '@/lib/deal-post-insights'
+import { resolvePendingPosts } from '@/lib/post-insights-store'
 
 /**
  * Daily Instagram refresh and re-sync.
@@ -91,5 +92,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ synced, failed, considered: rows.length, posts, reminded })
+  // Posted links never looked up yet (0576 backfill, or a failed first lookup).
+  let resolved = 0
+  if (Date.now() - started < 255_000) resolved = await resolvePendingPosts(50, started + 270_000)
+
+  return NextResponse.json({ synced, failed, considered: rows.length, posts, resolved, reminded })
 }

@@ -1,73 +1,13 @@
 'use server'
 
-import { isCreatorLeg, CREATOR_LEG_REFUSAL } from '@/lib/creator-leg'
-
 import { revalidatePath } from 'next/cache'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { resolvePostedUrl, appendInsightPoint, readInsightHistory } from '@/lib/deal-post-insights'
-import { storePostThumbnail } from '@/lib/deal-post-thumbnails'
+import { storePostInsights } from '@/lib/post-insights-store'
 
-/**
- * Resolve a delivered post to verified numbers, and store the outcome.
- *
- * Called after the item is marked posted, and again by the "re-check" action
- * when a creator connects Instagram later or fixes a wrong link.
- *
- * Writes a status on EVERY path. "No numbers" has four meanings here and the
- * brand screen says which; collapsing them to null would leave that screen with
- * nothing true to show.
- */
+/** Resolve a delivered post to verified numbers, and store the outcome (lib/post-insights-store). */
 export async function resolveAndStorePostInsights(itemId: string, postedUrl: string): Promise<void> {
-  const admin = createAdminClient()
-
-  // The creator who owns the deal this item belongs to. Insights only exist for
-  // their own media, so this is also what decides whose token to use.
-  const { data: item } = await admin
-    .from('deal_deliverable_items')
-    .select('id, deal_id, deals(creator_id)')
-    .eq('id', itemId)
-    .maybeSingle()
-
-  const creatorId = (item as { deals?: { creator_id?: string } } | null)?.deals?.creator_id
-  if (!creatorId) return
-
-  const result = await resolvePostedUrl(creatorId, postedUrl)
-
-  // The first reading is the post's baseline, so it goes on the history too.
-  // Without it the chart would start at the first refresh and lose the shape of
-  // the first day, which is when a reel moves most.
-  let history: unknown
-  if (result.insights) {
-    const { data: current } = await admin
-      .from('deal_deliverable_items')
-      .select('ig_insight_history')
-      .eq('id', itemId)
-      .maybeSingle()
-    history = appendInsightPoint(
-      readInsightHistory((current as { ig_insight_history?: unknown } | null)?.ig_insight_history),
-      result.insights,
-    )
-  }
-
-  const patch: Record<string, unknown> = {
-    ig_match_status: result.status,
-    ig_media_id: result.mediaId ?? null,
-    ig_insights: result.insights ?? null,
-    ...(history ? { ig_insight_history: history } : {}),
-    ig_last_synced_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
-
-  // Copied into our bucket, never linked. Instagram's thumbnail URL is signed
-  // and expires, so a stored link would give the brand a broken image days
-  // after the deal completed.
-  if (result.status === 'resolved' && result.thumbnailSourceUrl && result.mediaId) {
-    const stored = await storePostThumbnail(creatorId, result.mediaId, result.thumbnailSourceUrl)
-    if (stored) patch.ig_thumbnail_url = stored
-  }
-
-  await admin.from('deal_deliverable_items').update(patch).eq('id', itemId)
+  await storePostInsights(itemId, postedUrl)
 }
 
 /**
@@ -81,7 +21,8 @@ export async function recheckPostInsights(
   dealId: string,
   itemId: string,
 ): Promise<{ ok: boolean; status?: string; message?: string }> {
-  if (await isCreatorLeg(dealId)) return { ok: false, message: CREATOR_LEG_REFUSAL }
+  // Allowed on an Experience creator leg too (0576): it only re-reads the
+  // numbers of the creator's own post; the link itself changes through Guapd.
   const ctx = await verifyCreator()
   const admin = createAdminClient()
 

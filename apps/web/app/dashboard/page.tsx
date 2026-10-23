@@ -16,6 +16,7 @@ import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter } from './DashboardControls'
 import { periodToDateRange } from './period-utils'
+import { getBrandExperiencePostsOverview } from '@/lib/experience-brand-server'
 import type { Period } from './period-utils'
 
 interface DealRow {
@@ -152,8 +153,18 @@ export default async function DashboardPage({
   const perf = allItems.filter((i) => i.ig_match_status === 'resolved')
   const verifiedPosts = perf.filter((p) => p.ig_insights && Object.values(p.ig_insights).some((v) => typeof v === 'number'))
 
-  const reachTotal = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.reach ?? 0), 0)
+  // 0576: verified Experience collab posts (on the creators' own handles)
+  // count toward reach, interactions and top posts exactly like deal posts.
+  // Performance only: the read carries no creator pay, so they never enter
+  // spend or cost per reach below.
+  const xpRes = await getBrandExperiencePostsOverview(periodFromISO, periodToISO)
+  const xpPosts = (xpRes.ok ? xpRes.data : []).filter((p) => p.metrics && Object.values(p.metrics).some((v) => typeof v === 'number'))
+
+  const dealReach = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.reach ?? 0), 0)
+  const reachTotal = dealReach + xpPosts.reduce((n, p) => n + (p.metrics?.reach ?? 0), 0)
   const interactionsTotal = verifiedPosts.reduce((n, p) => n + (p.ig_insights?.totalInteractions ?? 0), 0)
+    + xpPosts.reduce((n, p) => n + (p.metrics?.totalInteractions ?? 0), 0)
+  const verifiedCount = verifiedPosts.length + xpPosts.length
 
   // Interactions over reach, computed ONCE from the totals. Averaging each
   // post's rate would weight a 500-reach post the same as a 400,000 one.
@@ -165,7 +176,9 @@ export default async function DashboardPage({
   const spendOnVerifiedPaise = allDeals
     .filter((d) => verifiedPosts.some((p) => p.deal_id === d.id))
     .reduce((n, d) => n + (d.price_paise ?? 0), 0)
-  const cpmRupees = reachTotal > 0 ? (spendOnVerifiedPaise / 100) / (reachTotal / 1000) : null
+  // Deal reach only: Experience posts carry no spend here, so including their
+  // reach would understate the cost of every rupee spent on deals.
+  const cpmRupees = dealReach > 0 ? (spendOnVerifiedPaise / 100) / (dealReach / 1000) : null
 
   /* ── Top performing posts ───────────────────────────────────────────────
      Ranked by views, which is how a brand reads a post; reach is the fallback
@@ -178,15 +191,24 @@ export default async function DashboardPage({
     const c = (Array.isArray(d.creators) ? d.creators[0] : d.creators) as { full_name?: string } | null
     return [d.id, (c?.full_name ?? 'Creator').trim()] as const
   }))
-  const topPosts = verifiedPosts
-    .map((p) => ({
-      dealId: p.deal_id,
+  const topPosts = [
+    ...verifiedPosts.map((p) => ({
+      href: `/deals/${p.deal_id}/analytics`,
       creator: creatorNameOfDeal.get(p.deal_id) ?? 'Creator',
       label: (p.label ?? '').trim() || 'Post',
       thumbnail: p.ig_thumbnail_url,
       views: p.ig_insights?.views ?? null,
       reach: p.ig_insights?.reach ?? null,
-    }))
+    })),
+    ...xpPosts.map((p) => ({
+      href: `/experiences/${p.experience_id}#performance`,
+      creator: (p.creator_name ?? 'Creator').trim(),
+      label: (p.label ?? '').trim() || 'Post',
+      thumbnail: p.thumbnail_url,
+      views: p.metrics?.views ?? null,
+      reach: p.metrics?.reach ?? null,
+    })),
+  ]
     .filter((p) => (p.views ?? p.reach ?? 0) > 0)
     .sort((a, b) => (b.views ?? b.reach ?? 0) - (a.views ?? a.reach ?? 0))
     .slice(0, 4)
@@ -822,8 +844,8 @@ export default async function DashboardPage({
               <div className="postgrid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'clamp(12px, 1.4vw, 16px)' }}>
                 {topPosts.map((post, i) => (
                   <Link
-                    key={`${post.dealId}-${i}`}
-                    href={`/deals/${post.dealId}/analytics`}
+                    key={`${post.href}-${i}`}
+                    href={post.href}
                     className="lift posttile"
                     style={{ display: 'block', borderRadius: 14, border: '1px solid var(--line)', overflow: 'hidden', background: 'var(--card)', textDecoration: 'none', color: 'inherit' }}
                   >
@@ -868,8 +890,8 @@ export default async function DashboardPage({
                   connected contribute nothing, and a total that hides that
                   understates the brand's reach while looking complete. */}
               <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 12 }}>
-                {verifiedPosts.length > 0
-                  ? `Verified across ${verifiedPosts.length} ${verifiedPosts.length === 1 ? 'post' : 'posts'}`
+                {verifiedCount > 0
+                  ? `Verified across ${verifiedCount} ${verifiedCount === 1 ? 'post' : 'posts'}`
                   : 'No verified posts yet'}
               </div>
             </div>

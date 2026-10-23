@@ -1,5 +1,6 @@
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
+import { storeCollabPostInsights } from '@/lib/post-insights-store'
 
 /**
  * Reads for the Guapd Experiences STAFF console. Each goes through a database
@@ -1236,7 +1237,10 @@ export async function consoleCollabCancel(postId: string, reason: string): Promi
 }
 export async function consoleCollabPostLink(postId: string, url: string, channel: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_collab_post_link', { p_post_id: postId, p_url: url, p_channel: channel })
-  return error ? fail(error) : { ok: true, data: null }
+  if (error) return fail(error)
+  // 0576: verified numbers, as for a link the creator saves themselves.
+  try { await storeCollabPostInsights(postId) } catch { /* retried by the cron */ }
+  return { ok: true, data: null }
 }
 export async function consoleCollabAct(postId: string, action: 'affiliate' | 'ad_complete', url: string | null, channel: string): Promise<Result<null>> {
   const { error } = await createClient().rpc('experience_console_collab_act', { p_post_id: postId, p_action: action, p_url: url, p_channel: channel })

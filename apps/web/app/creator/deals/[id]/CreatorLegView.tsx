@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { formatPaiseINR } from '@/lib/money'
 import { countOf } from '@/lib/experience-request'
 import type { CreatorCollabPost, CreatorLegContext } from '@/lib/creator-leg-money'
@@ -186,9 +187,16 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
     </section>
   )
 
+  // 0576: a collab post on the creator's own handle has the same verified
+  // numbers as a deal post, on the same page. Only once one has a link.
+  const anyPosted = collabPosts.some((p) => !!p.post_url)
+  const analyticsHref = `/creator/deals/${dealId}/analytics`
+
   return (
     <>
       <CreatorOfferMobile
+        isPosted={anyPosted}
+        analyticsHref={anyPosted ? analyticsHref : undefined}
         brandName={brand}
         dealTitle={ctx.title ?? 'Shoot'}
         receivesPaise={total}
@@ -247,7 +255,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div className="frame reveal" style={{ width: '100%', maxWidth: 1200, display: 'flex', flexDirection: 'column', gap: 36 }}>
 
-            <DealHeroCard brand={brand} brandLogo={ctx.brand_logo_url} meta={<>{ctx.title ?? 'Shoot'}{ctx.deal_ref ? ` · ${ctx.deal_ref}` : ''}</>}
+            <DealHeroCard brand={brand} brandLogo={ctx.brand_logo_url} meta={<>{ctx.title ?? 'Shoot'}{ctx.deal_ref ? ` · ${ctx.deal_ref}` : ''}{anyPosted && <>{' · '}<Link href={analyticsHref} style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'none' }}>How your post did</Link></>}</>}
               headline={headline} subline={managed} chatLabel="Message Guapd"
               statusDot={dot} statusGlow={glow} statusLabel={statusLabel} statusLine={statusLine} />
 

@@ -1757,3 +1757,13 @@ $grant$;
 -- ── 4. Sequences: deal refs are assigned on server / definer inserts only. ─
 REVOKE ALL ON SEQUENCE deal_ref_seq FROM PUBLIC, anon, authenticated;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
+
+-- ── Experience post analytics (0576) ────────────────────────────────────────
+-- No new tables or policies. experience_collab_set_post (definer) now stamps the
+-- creator leg's deal_deliverable_items row with the collab post link, so the
+-- existing post pipeline resolves it against the leg creator's own Instagram.
+-- A creator reads those numbers through the existing items policy (own deal
+-- only). The brand reads them ONLY through brand_experience_post_performance /
+-- brand_experience_posts_overview (definer, brand membership checked in
+-- Postgres, NULL denies): performance keys only, no ids, no money. Executable
+-- by authenticated only; experience_post_metrics is internal.
