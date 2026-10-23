@@ -7856,3 +7856,21 @@ The brand dashboard's first-run empty state now requires zero deals AND zero Exp
 | 1 | Brand with an Experience, no deals (staging "CJ") | Full dashboard with "Your collabs' reach" | Pass |
 | 2 | Brand with neither | First-run empty state, unchanged | By construction |
 | 3 | Kiro login on prod: brand_experience_posts_overview | 6 posts, same brand | Pass (PJ, 2026-10-23, rolled-back check) |
+
+## 155. Brand dashboard sections include Experiences
+
+Every brand dashboard section now reads the brand's Experiences through brand-only reads (`brand_experiences`, `brand_experience_invoices`, `brand_experience_roster`): no creator pay, day rate, cost or margin.
+
+| Section | Experience input | Result (staging, 2026-10-23) |
+|---|---|---|
+| Total spent | Payments on the brand's Experience invoices in the window (confirmed report date, else invoice date) | Pass |
+| Pending payments | Open Experience invoice balances (any window) | Pass (₹1.4L, 1 invoice) |
+| Active campaigns | + Experiences not complete | Pass |
+| Do first | Price to answer, creators to review, videos to approve, invoices to pay, sign-off (from the list's own flags), linking to the Experience | Pass ("1 invoice to pay · Experience · Test brand") |
+| In motion | An Experience card: title, city, stage, next step, accepted creators, shoot date; no money | Pass (phone 390px, no overflow) |
+| Spend chart | Experience payments by month | Pass |
+| Creators you've worked with | Accepted / locked Experience creators by name, linking to the Experience; no money | Pass |
+| Your collabs' reach | Verified collab posts (0576) | Pass |
+| Your track record | Deals only (on-time payment / response / completion are deal measures) | Unchanged |
+
+Creator dashboard: already reflects Experience legs everywhere (Do first, Deals in motion, Active deals, Brands you've worked with, earnings from Guapd payouts once paid, reach). Checked with a leg-only staging creator; no change needed.

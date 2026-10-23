@@ -16,7 +16,8 @@ import { formatResponse } from '@/lib/creator-track-record'
 import RealtimeDashboardListener from '@/components/RealtimeDashboardListener'
 import { DateFilter } from './DashboardControls'
 import { periodToDateRange } from './period-utils'
-import { getBrandExperiencePostsOverview, listBrandExperiences } from '@/lib/experience-brand-server'
+import { getBrandExperiencePostsOverview, listBrandExperiences, getBrandInvoices, getBrandRoster, type BrandExperienceRow, type BrandInvoice } from '@/lib/experience-brand-server'
+import { brandStage, brandNext } from '@/lib/experience-brand-status'
 import type { Period } from './period-utils'
 
 interface DealRow {
@@ -157,6 +158,24 @@ export default async function DashboardPage({
   // count toward reach, interactions and top posts exactly like deal posts.
   // Performance only: the read carries no creator pay, so they never enter
   // spend or cost per reach below.
+  /* ── Experiences (brand reads only) ─────────────────────────────────────
+     The brand's Experiences, its own invoices on them, and the creators shared
+     with it. Nothing here carries creator pay, day rates, cost or margin: these
+     are the same reads the brand's Experience pages use. */
+  const xpList = await listBrandExperiences()
+  const xpRows = (xpList.ok ? xpList.data.experiences : []).filter((x) => x.status !== 'cancelled' && x.status !== 'draft')
+  const xpDetail = await Promise.all(xpRows.map(async (x) => {
+    const [inv, roster] = await Promise.all([getBrandInvoices(x.id), getBrandRoster(x.id)])
+    return {
+      x,
+      invoices: inv.ok ? inv.data : [],
+      creators: roster.ok ? roster.data.creators.filter((c) => c.locked || c.decision === 'accepted') : [],
+    }
+  }))
+  const xpPayments = experiencePayments(xpDetail.flatMap((d) => d.invoices))
+  const xpPaidBetween = (from: Date, to: Date) =>
+    xpPayments.reduce((n, p) => (p.at >= from && p.at <= to ? n + p.paise : n), 0)
+
   const xpRes = await getBrandExperiencePostsOverview(periodFromISO, periodToISO)
   const xpPosts = (xpRes.ok ? xpRes.data : []).filter((p) => p.metrics && Object.values(p.metrics).some((v) => typeof v === 'number'))
 
@@ -240,7 +259,18 @@ export default async function DashboardPage({
 
   const paymentsDueTotal = paymentsDue.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
   const overdueTotal = overdue.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
-  const attentionCount = invoicesToAccept.length + paymentsDue.length + overdue.length + submissionsToReview.length + awaitingApproval.length
+  const dealAttention = invoicesToAccept.length + paymentsDue.length + overdue.length + submissionsToReview.length + awaitingApproval.length
+  const xpAttention = xpRows.flatMap((x) => {
+    const href = `/experiences/${x.id}`
+    const rows: { key: string; label: string; sub: string; action: string; href: string }[] = []
+    if (x.quote_to_answer) rows.push({ key: `${x.id}-q`, label: 'A price to answer', sub: x.title, action: 'Review', href })
+    if (x.roster_to_review > 0) rows.push({ key: `${x.id}-r`, label: `${x.roster_to_review} creator${x.roster_to_review === 1 ? '' : 's'} to review`, sub: x.title, action: 'Review', href })
+    if (x.items_to_review > 0) rows.push({ key: `${x.id}-i`, label: `${x.items_to_review} video${x.items_to_review === 1 ? '' : 's'} to approve`, sub: x.title, action: 'Review', href })
+    if (x.invoices_due > 0) rows.push({ key: `${x.id}-v`, label: `${x.invoices_due} invoice${x.invoices_due === 1 ? '' : 's'} to pay`, sub: x.title, action: 'Pay', href: `${href}#invoices` })
+    if (x.signoff_due) rows.push({ key: `${x.id}-s`, label: 'Sign-off', sub: x.title, action: 'Sign off', href })
+    return rows
+  })
+  const attentionCount = dealAttention + xpAttention.length
 
   // ── ACTIVITY SUMMARY
   const ACTIVE_STATUSES = new Set(['negotiating', 'agreed', 'delivered', 'revision', 'approved'])
@@ -253,6 +283,7 @@ export default async function DashboardPage({
   const budgetSpent = allInvoices
     .filter((inv) => inv.status === 'paid')
     .reduce((sum, inv) => sum + (inv.brand_pays_paise ?? 0), 0)
+    + xpPaidBetween(periodFrom, periodTo)
 
   const uniqueCreators = new Set(allDeals.map((d) => d.creator_id))
 
@@ -334,6 +365,16 @@ export default async function DashboardPage({
       })
     }
   }
+  // Experience creators the brand accepted (shared with it, by name only).
+  const xpCreatorMap = new Map<string, { key: string; name: string; handle: string | null; photo: string | null; expId: string; expTitle: string; live: boolean }>()
+  for (const d of xpDetail) {
+    for (const c of d.creators) {
+      const key = `${(c.handle ?? '').toLowerCase()}|${c.full_name}`
+      if (!xpCreatorMap.has(key)) xpCreatorMap.set(key, { key, name: c.full_name, handle: c.handle, photo: c.photo_url, expId: d.x.id, expTitle: d.x.title, live: d.x.status !== 'complete' })
+    }
+  }
+  const xpCreators = Array.from(xpCreatorMap.values()).slice(0, 4)
+
   const topCreators = Array.from(creatorAgg.values())
     .sort((a, b) => b.dealCount - a.dealCount || (b.paidPaise + b.activePaise) - (a.paidPaise + a.activePaise))
     .slice(0, 4)
@@ -342,11 +383,18 @@ export default async function DashboardPage({
      Owed, not spent: an invoice the brand has accepted but not paid, plus the
      ones waiting to be accepted. Both are money already committed, which is
      the number a brand is looking for when they ask what is outstanding. */
+  // Experience invoices still open count as owed whatever the window: an
+  // unpaid invoice is outstanding now, not in the month it was issued.
+  const xpOpen = xpDetail.flatMap((d) => d.invoices).filter((i) => i.status !== 'paid')
+  const xpOwedPaise = xpOpen.reduce((n, i) => n + Math.max(0, Number(i.balance_paise ?? (i.total_paise - i.paid_paise))), 0)
   const pendingPayoutPaise = paymentsDueTotal + overdueTotal
     + invoicesToAccept.reduce((sum, ds) => sum + (ds.invoice?.brand_pays_paise ?? 0), 0)
-  const pendingInvoiceCount = paymentsDue.length + overdue.length + invoicesToAccept.length
+    + xpOwedPaise
+  const pendingInvoiceCount = paymentsDue.length + overdue.length + invoicesToAccept.length + xpOpen.length
 
-  const activeCampaignCount = ((campaigns ?? []) as CampaignRow[]).filter((c) => c.status === 'active').length
+  // An Experience in progress is a campaign in motion.
+  const xpActive = xpRows.filter((x) => x.status !== 'complete')
+  const activeCampaignCount = ((campaigns ?? []) as CampaignRow[]).filter((c) => c.status === 'active').length + xpActive.length
 
   /* Spend against the previous window of the same length. Null when that
      window was empty: a percentage off a zero base is not a number, and this
@@ -359,7 +407,7 @@ export default async function DashboardPage({
       const t = new Date(inv.paid_at).getTime()
       if (t < prevFrom.getTime() || t >= periodFrom.getTime()) return sum
       return sum + (inv.brand_pays_paise ?? 0)
-    }, 0)
+    }, 0) + xpPaidBetween(prevFrom, new Date(periodFrom.getTime() - 1))
     return prev > 0 ? Math.round(((budgetSpent - prev) / prev) * 100) : null
   })()
 
@@ -459,7 +507,7 @@ export default async function DashboardPage({
   const brandFirstName = brand.brandName?.split(' ')[0] ?? 'there'
 
   // ── MONTHLY SPEND (for chart)
-  const monthlySpend = computeMonthlySpend(allInvoices)
+  const monthlySpend = addExperienceSpend(computeMonthlySpend(allInvoices), xpPayments)
 
   /* ── EMPTY STATE ──────────────────────────────────────────────────────────
      Counted WITHOUT the period filter. `deals` above is bounded by the selected
@@ -478,8 +526,7 @@ export default async function DashboardPage({
 
   // An Experience is account history too (0576): a brand whose only work with
   // Guapd is an Experience has posts and reach to show, not a first-run screen.
-  const exps = (dealsEverCount ?? 0) === 0 ? await listBrandExperiences() : null
-  const experiencesEver = exps?.ok ? exps.data.experiences.length : 0
+  const experiencesEver = xpRows.length
 
   if ((dealsEverCount ?? 0) === 0 && experiencesEver === 0) {
     return (
@@ -680,6 +727,17 @@ export default async function DashboardPage({
                   first={overdue.length === 0 && submissionsToReview.length === 0 && awaitingApproval.length === 0 && paymentsDue.length === 0}
                 />
               )}
+              {xpAttention.map((r, i) => (
+                <AttentionRow
+                  key={r.key}
+                  icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="14" height="12" rx="2" /><path d="m16 10 6-3v10l-6-3" /></svg>}
+                  label={r.label}
+                  sublabel={<span>Experience &middot; {r.sub}</span>}
+                  action={r.action}
+                  href={r.href}
+                  first={dealAttention === 0 && i === 0}
+                />
+              ))}
             </div>
           </section>
         )}
@@ -688,11 +746,11 @@ export default async function DashboardPage({
             A card per deal, as drawn: who and which campaign, the amount, the
             state it is in, and a two-column footer answering the only two
             questions a brand has mid-deal — what are they making, and when. */}
-        {dealsInFlight.length > 0 && (
+        {(dealsInFlight.length > 0 || xpActive.length > 0) && (
           <section className="sr" style={{ marginTop: 'clamp(52px, 6vw, 80px)', borderRadius: 20, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 32px)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
               <h2 style={sectionH2Style}>
-                Deals in motion
+                {dealsInFlight.length > 0 ? 'Deals in motion' : 'In motion'}
                 <div aria-hidden="true" style={{ width: 40, height: 1, background: '#C9EB3C', marginTop: 16 }} />
               </h2>
               <Link href="/deals" style={{ fontSize: 12, fontWeight: 600, color: 'var(--wg-600)', display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0, textDecoration: 'none' }}>
@@ -762,6 +820,9 @@ export default async function DashboardPage({
                   </Link>
                 )
               })}
+              {xpActive.slice(0, 3).map((x, i) => (
+                <ExperienceCard key={x.id} x={x} creators={xpDetail.find((d) => d.x.id === x.id)?.creators.length ?? 0} tint={DEAL_CARD_TINTS[(dealsInFlight.length + i) % DEAL_CARD_TINTS.length]} />
+              ))}
             </div>
           </section>
         )}
@@ -927,7 +988,7 @@ export default async function DashboardPage({
         </section>
 
         {/* ── CREATORS YOU'VE WORKED WITH ──────────────── */}
-        {topCreators.length > 0 && (
+        {(topCreators.length > 0 || xpCreators.length > 0) && (
           <section style={{ marginTop: 'clamp(52px, 6vw, 80px)' }}>
             <div style={{ borderRadius: 20, background: 'var(--card)', boxShadow: 'var(--sh-2)', padding: 'clamp(24px, 3vw, 32px)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 28 }}>
@@ -1006,6 +1067,31 @@ export default async function DashboardPage({
                           <div style={creatorStatVal}>{c.dealCount}</div>
                           <div className="t-meta" style={{ color: 'var(--meta)', marginTop: 6 }}>{c.dealCount === 1 ? 'deal' : 'deals'}</div>
                         </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+                {xpCreators.map((c) => {
+                  const initials = c.name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+                  return (
+                    <Link key={c.key} href={`/experiences/${c.expId}`} className="brandc lift" style={{ display: 'block', borderRadius: 14, background: 'var(--card)', border: '1px solid rgba(24,28,36,.08)', padding: '18px 20px', textDecoration: 'none', color: 'inherit' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+                        {c.photo ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={c.photo} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' as const, flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0, background: 'var(--sec-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--wg-500)' }}>{initials}</div>
+                        )}
+                        <div style={{ minWidth: 0, flex: '1 1 0%' }}>
+                          <div style={{ fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: c.live ? 600 : 400, color: c.live ? 'var(--lime-700)' : 'var(--wg-500)', marginTop: 4, maxWidth: '100%', overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis' }}>
+                            {c.live && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--lime-700)', flexShrink: 0 }} />}
+                            Experience &middot; {c.expTitle}
+                          </span>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--wg-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="m9 18 6-6-6-6" />
+                        </svg>
                       </div>
                     </Link>
                   )
@@ -1491,5 +1577,68 @@ function TrackRow({ label, value }: { label: string; value: string }) {
         {value}
       </span>
     </div>
+  )
+}
+
+/* ── Experiences on the brand dashboard ─────────────────────────────────────
+   Brand-side money only: what the brand paid Guapd on its own invoices. A
+   confirmed payment report carries the date it was paid; anything settled
+   without one (finance recorded it directly) is dated by the invoice. */
+function experiencePayments(invoices: BrandInvoice[]): { at: Date; paise: number }[] {
+  const out: { at: Date; paise: number }[] = []
+  for (const inv of invoices) {
+    const confirmed = (inv.reports ?? []).filter((r) => r.status === 'confirmed')
+    let dated = 0
+    for (const r of confirmed) {
+      const paise = Number(r.amount_paise ?? 0) + Number(r.tds_paise ?? 0)
+      out.push({ at: new Date(r.paid_on), paise })
+      dated += paise
+    }
+    const rest = Number(inv.paid_paise ?? 0) - dated
+    if (rest > 0) out.push({ at: new Date(inv.issue_date), paise: rest })
+  }
+  return out
+}
+
+function addExperienceSpend(months: { label: string; total: number }[], payments: { at: Date; paise: number }[]): { label: string; total: number }[] {
+  const now = new Date()
+  for (const p of payments) {
+    for (let mi = 0; mi < months.length; mi++) {
+      const ref = new Date(now.getFullYear(), now.getMonth() - (months.length - 1 - mi), 1)
+      if (p.at.getFullYear() === ref.getFullYear() && p.at.getMonth() === ref.getMonth()) {
+        months[mi]!.total += p.paise
+        break
+      }
+    }
+  }
+  return months
+}
+
+/** An Experience in progress, beside the deals in motion. No money on it. */
+function ExperienceCard({ x, tint, creators }: { x: BrandExperienceRow; tint: string; creators: number }) {
+  const stage = brandStage(x.status, x.quote_to_answer)
+  const next = brandNext(x.status, x.quote_to_answer)
+  const when = x.shoot_date ? new Date(x.shoot_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : null
+  return (
+    <Link href={`/experiences/${x.id}`} className="deal" style={{ display: 'flex', flexDirection: 'column' as const, borderRadius: 14, background: tint, overflow: 'hidden', textDecoration: 'none' }}>
+      <div style={{ padding: '20px 22px 0', minWidth: 0 }}>
+        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 600, fontSize: 15, color: 'var(--ink)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.title}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--wg-500)', marginTop: 1 }}>Experience{x.shoot_city ? ` \u00B7 ${x.shoot_city}` : ''}</div>
+      </div>
+      <div style={{ padding: '22px 22px 24px', flex: 1 }}>
+        <div style={{ fontFamily: 'var(--font-num, var(--font-ui))', fontWeight: 600, fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--ink)' }}>{stage.label}</div>
+        {next && <div style={{ fontSize: 12.5, color: 'var(--wg-600)', marginTop: 12, lineHeight: 1.45 }}>{next}</div>}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid rgba(24,28,36,.08)' }}>
+        <div style={{ padding: '14px 22px', borderRight: '1px solid rgba(24,28,36,.08)' }}>
+          <div style={footLabel}>Creators</div>
+          <div style={footValue}>{creators > 0 ? creators : (x.creator_count ?? '\u2014')}</div>
+        </div>
+        <div style={{ padding: '14px 22px' }}>
+          <div style={footLabel}>Shoot</div>
+          <div style={footValue}>{when ?? 'To be confirmed'}</div>
+        </div>
+      </div>
+    </Link>
   )
 }
