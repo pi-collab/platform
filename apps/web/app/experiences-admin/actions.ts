@@ -33,7 +33,7 @@ import { renderInvoicePdf, type InvoiceDoc } from '@/lib/invoice-pdf'
 import { notifyCreatorCounter } from '@/lib/experience-counter-notify'
 import { notifyBrandWaiting, notifyBrandGuapdMessage, notifyBrandShootDateChanged } from '@/lib/experience-brand-notify'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise } from '@/lib/experience-request'
+import { DELIVERABLE_TYPES, isChannel, isVideoType, rupeesToPaise, scheduleProblem, type StageMoment } from '@/lib/experience-request'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
 
 /**
@@ -120,6 +120,8 @@ export interface QuoteForm {
   deliverables: { type: string; count: number | string }[]
   /** 0560: affiliate commission %, when the brand asked for affiliate links. */
   affiliatePct?: string
+  /** 0579: payment stages; empty = the whole amount on acceptance. */
+  stages?: { label: string; pct: string; on: string }[]
 }
 
 export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
@@ -139,12 +141,15 @@ export async function submitQuote(f: QuoteForm): Promise<Out<string>> {
   const affRaw = (f.affiliatePct ?? '').replace('%', '').trim()
   const affiliatePct = affRaw ? Number(affRaw) : null
   if (affiliatePct !== null && (!Number.isFinite(affiliatePct) || affiliatePct <= 0 || affiliatePct > 100)) return { ok: false, error: 'Affiliate commission: a % above 0 and at most 100.' }
+  const paymentSchedule = (f.stages ?? []).map((s) => ({ label: String(s.label ?? '').trim().slice(0, 40), pct: Number(String(s.pct ?? '').replace('%', '').trim()), on: s.on as StageMoment }))
+  const stageErr = scheduleProblem(paymentSchedule)
+  if (stageErr) return { ok: false, error: stageErr }
 
   const r = await addConsoleQuote({
     experienceId: f.experienceId, proposedBy: f.proposedBy, perVideoPaise: perVideo, deliverableCount: count,
     miscPaise: misc, extras: lines, deliverables: deliverables(f.deliverables) ?? [], shootDate: isoDate(f.shootDate),
     shootCity: cleanText(f.shootCity, 120), message: cleanText(f.message, 2000), channel,
-    affiliatePct,
+    affiliatePct, paymentSchedule,
   })
   if (!r.ok) return r
   revalidatePath(`${BASE}/${f.experienceId}`)

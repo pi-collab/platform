@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { DatePill } from '@/components/DealOptionPills'
-import { CHANNELS, QUOTE_STATUS, channelLabel, formatRupees, rupeesToPaise } from '@/lib/experience-request'
+import { CHANNELS, QUOTE_STATUS, channelLabel, formatRupees, rupeesToPaise, stageAmounts, stageMomentLabel, type PaymentStage } from '@/lib/experience-request'
 import type { ConsoleDeliverable, ConsoleQuote } from '@/lib/experience-console-server'
 import { acceptQuote, recordAgreedAffiliatePct, submitQuote } from '../actions'
 import { card, fieldLabel, formError, kpiLabel, neonBtn, pillBtn } from '../ui'
 import ExtrasEditor from '../ExtrasEditor'
+import StagesEditor, { type StageRow } from '../StagesEditor'
 
 /**
  * The negotiation with the brand: Guapd's quotes and the brand's counters, as
@@ -18,7 +19,9 @@ import ExtrasEditor from '../ExtrasEditor'
  * through. The database enforces the rules (one open quote, totals, quotes
  * closed once one is accepted); this component only collects input.
  */
-export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice, quotes, requested, defaults, planVideos, planLabel, affiliate, needsAgreedPct = false }: {
+export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice, quotes, requested, defaults, planVideos, planLabel, affiliate, needsAgreedPct = false, schedules = {} }: {
+  /** 0579: each quote's payment stages, by quote id ([] = in full on acceptance). */
+  schedules?: Record<string, PaymentStage[]>
   experienceId: string
   /** 0560: the brand asked for affiliate links, so every quote states the commission %. */
   affiliate: boolean
@@ -53,6 +56,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
   const [affPct, setAffPct] = useState('')
   const [agreedPct, setAgreedPct] = useState('')
   const [agreedCh, setAgreedCh] = useState('')
+  const [stages, setStages] = useState<StageRow[]>([])
 
   const openComposer = (m: 'guapd' | 'brand') => {
     setError(null)
@@ -66,6 +70,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
       setDate(latest.shoot_date ?? defaults.date)
       setCity(latest.shoot_city ?? defaults.city)
       setAffPct(latest.affiliate_pct != null ? String(latest.affiliate_pct) : '')
+      setStages((schedules[latest.id] ?? []).map((x) => ({ label: x.label, pct: String(x.pct), on: x.on })))
     }
     setMessage('')
     setChannel('')
@@ -81,7 +86,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
     if (!mode) return
     setError(null)
     start(async () => {
-      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc: '', extras: filled, shootDate: date, shootCity: city, message, channel, deliverables: requested, affiliatePct: affiliate ? affPct : '' })
+      const r = await submitQuote({ experienceId, proposedBy: mode, perVideo, count, misc: '', extras: filled, shootDate: date, shootCity: city, message, channel, deliverables: requested, affiliatePct: affiliate ? affPct : '', stages })
       if (r.ok) { setMode(null); router.refresh() } else setError(r.error)
     })
   }
@@ -167,6 +172,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
             <span style={fieldLabel}>Extras (optional)</span>
             <ExtrasEditor rows={extras} onChange={setExtras} />
           </div>
+          {/* 0579: how the brand pays the one invoice. */}
+          <div style={{ marginTop: 14 }}>
+            <span style={fieldLabel}>How the brand pays</span>
+            <StagesEditor rows={stages} onChange={setStages} totalPaise={preview} />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, flexWrap: 'wrap' }}>
             <div style={{ fontFamily: 'var(--font-ui)', fontSize: 14, color: 'var(--ink)' }}>
               Total <b style={{ fontFamily: 'var(--font-display)', fontSize: 20, marginLeft: 6 }}>{preview != null ? formatRupees(preview) : '—'}</b>
@@ -225,6 +235,11 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
                   {(q.shoot_date || q.shoot_city) && <> · {[q.shoot_city, q.shoot_date ? fmt(q.shoot_date) : null].filter(Boolean).join(', ')}</>}
                   {q.affiliate_pct != null && <> · {Number(q.affiliate_pct)}% affiliate commission</>}
                 </div>
+                {(schedules[q.id] ?? []).length > 0 && (
+                  <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>
+                    Paid in stages: {(() => { const st = schedules[q.id] ?? []; const amts = q.total_paise != null ? stageAmounts(q.total_paise, st) : null; return st.map((x, k) => `${x.label} ${Number(x.pct)}%${amts ? ` (${formatRupees(amts[k])})` : ''} ${stageMomentLabel(x.on).toLowerCase()}`).join(' · ') })()}
+                  </div>
+                )}
                 {q.message && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>“{q.message}”</p>}
                 {q.brand_note && <p className="t-body" style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', color: '#8C6417' }}>The brand: “{q.brand_note}”</p>}
                 <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--wg-500)', marginTop: 8 }}>
@@ -249,7 +264,7 @@ export default function QuotePanel({ experienceId, open: quotesOpen, canSeePrice
       <ConfirmDialog
         open={confirming && !!current}
         title={brandAccepts ? 'Record that the brand accepted' : "Accept the brand's counter"}
-        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${(current.extras ?? []).length > 0 ? (current.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(' + ') : formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} ${current.affiliate_pct != null ? ` with ${Number(current.affiliate_pct)}% affiliate commission` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
+        body={current && current.total_paise != null && current.per_video_paise != null ? `This locks ${formatRupees(current.total_paise)} (${current.deliverable_count} × ${formatRupees(current.per_video_paise)}${current.misc_paise ? ` + ${(current.extras ?? []).length > 0 ? (current.extras ?? []).map((x) => `${x.label} ${formatRupees(x.amount_paise)}`).join(' + ') : formatRupees(current.misc_paise)}` : ''})${current.shoot_city ? `, ${current.shoot_city}` : ''}${current.shoot_date ? `, ${fmt(current.shoot_date)}` : ''} ${current.affiliate_pct != null ? ` with ${Number(current.affiliate_pct)}% affiliate commission` : ''}${(schedules[current.id] ?? []).length ? `, paid in stages (${(schedules[current.id] ?? []).map((x) => `${x.label} ${Number(x.pct)}%`).join(', ')})` : ''} as the agreed price, closes quoting and moves the Experience to Building roster.` : ''}
         detail={brandAccepts ? (
           <div style={{ marginTop: 12 }}>
             <label style={fieldLabel} htmlFor="acc-ch">They accepted via</label>

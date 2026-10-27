@@ -1,3 +1,4 @@
+import type { InvoiceStages, PaymentStage } from '@/lib/experience-request'
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { requestArgs, type RequestInput } from '@/lib/experience-request-validate'
@@ -141,6 +142,12 @@ export async function brandReportPayment(v: { invoiceId: string; amountPaise: nu
     p_method: v.method, p_reference: v.reference, p_note: v.note,
   })
   return error ? fail(error) : { ok: true, data: data as { report_id: string; balance_paise: number } }
+}
+/** 0579: the stages on the brand's open or accepted quote, and each issued invoice's stages and amount due now. */
+export interface BrandPaymentStages { quotes: Record<string, PaymentStage[]>; invoices: Record<string, InvoiceStages> }
+export async function getBrandPaymentStages(id: string): Promise<Result<BrandPaymentStages>> {
+  const { data, error } = await createClient().rpc('brand_experience_payment_stages', { p_experience_id: id })
+  return error ? fail(error) : { ok: true, data: (data ?? { quotes: {}, invoices: {} }) as BrandPaymentStages }
 }
 /** 0578: what is due online on one invoice (admin only), and an unpaid order for exactly that amount, if one exists. */
 export interface BrandPayinQuote {

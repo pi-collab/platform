@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { formatRupees } from '@/lib/experience-request'
+import { formatRupees, stageMomentLabel, type InvoiceStages } from '@/lib/experience-request'
 import type { BrandInvoice } from '@/lib/experience-brand-server'
 import { checkOnlinePayment, reportPayment, startOnlinePayment } from '../actions'
 import { neonBtn, pillBtn } from './BrandPanels'
@@ -63,7 +63,7 @@ const ICONS = {
   retry: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" /></svg>,
 }
 
-export default function InvoicePayments({ experienceId, invoice, isAdmin, onlineEnabled = false }: { experienceId: string; invoice: BrandInvoice; isAdmin: boolean; onlineEnabled?: boolean }) {
+export default function InvoicePayments({ experienceId, invoice, isAdmin, onlineEnabled = false, stages = null }: { experienceId: string; invoice: BrandInvoice; isAdmin: boolean; onlineEnabled?: boolean; stages?: InvoiceStages | null }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [open, setOpen] = useState(false)
@@ -75,6 +75,12 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
   const balance = invoice.balance_paise ?? Math.max(invoice.total_paise - invoice.paid_paise, 0)
   const reports = invoice.reports ?? []
   const settled = invoice.status === 'paid'
+  // 0579: paid in stages, the online amount is what is DUE NOW (the database
+  // works it out; the order is re-checked against it). Otherwise the balance.
+  const scheduled = stages?.scheduled === true
+  const dueNow = scheduled ? Number(stages!.due_now_paise) : balance
+  const dueStage = scheduled ? stages!.stages.find((x) => x.state === 'due')?.label ?? null : null
+  const nextStage = scheduled ? stages!.stages.find((x) => x.state === 'upcoming') ?? null : null
   const [online, setOnline] = useState<Online>({ kind: 'idle' })
   const polls = useRef(0)
 
@@ -155,7 +161,27 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
         <div><div style={fig}>Received by Guapd</div><div style={val}>{formatRupees(invoice.paid_paise)}</div></div>
         {reported > 0 && <div><div style={fig}>Marked, being checked</div><div style={val}>{formatRupees(reported)}</div></div>}
         <div><div style={fig}>Balance</div><div style={{ ...val, color: balance > 0 ? 'var(--ink)' : '#3B6A12' }}>{formatRupees(balance)}</div></div>
+        {scheduled && !settled && <div><div style={fig}>Due now</div><div style={val}>{formatRupees(dueNow)}</div></div>}
       </div>
+
+      {scheduled && (
+        <ol style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 6 }}>
+          {stages!.stages.map((x, i) => (
+            <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+              <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 999, display: 'grid', placeItems: 'center', flex: 'none', fontSize: 11, fontWeight: 700,
+                background: x.state === 'paid' ? '#E6F6DC' : x.state === 'due' ? 'var(--neon)' : 'var(--sec-2, #F7F7F4)', color: x.state === 'paid' ? '#3B6A12' : 'var(--ink)', border: x.state === 'upcoming' ? '1px solid var(--border-hairline, #EAEAE3)' : 'none' }}>
+                {x.state === 'paid' ? '✓' : i + 1}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}><b style={{ color: 'var(--ink)', fontWeight: 600 }}>{x.label}</b> · {Number(x.pct)}% · {stageMomentLabel(x.on).toLowerCase()}</span>
+              <span style={{ color: 'var(--ink)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{formatRupees(x.amount_paise)}</span>
+              {x.state === 'paid' ? <span className="bx-chip bx-ok">Paid</span>
+                : x.state === 'checking' ? <span className="bx-chip bx-new">Being checked</span>
+                : x.state === 'due' ? <span className="bx-chip bx-chg">Due</span>
+                : <span className="bx-chip bx-new">Not due yet</span>}
+            </li>
+          ))}
+        </ol>
+      )}
 
       {reports.length > 0 && (
         <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 6, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -176,10 +202,13 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
           {isAdmin && balance > 0 && !open && (
             <button type="button" className="bx-btn" onClick={() => { setOpen(true); setError(null) }}>Mark as paid</button>
           )}
-          {isAdmin && onlineEnabled && balance >= 100 && !open && (
+          {isAdmin && onlineEnabled && dueNow >= 100 && !open && (
             <button type="button" className="bx-cta-sm" disabled={online.kind === 'opening' || online.kind === 'confirming'} onClick={payOnline}>
-              {online.kind === 'opening' ? 'Opening…' : online.kind === 'confirming' ? 'Confirming…' : `Pay ${formatRupees(balance)} online`}
+              {online.kind === 'opening' ? 'Opening…' : online.kind === 'confirming' ? 'Confirming…' : `Pay ${formatRupees(dueNow)}${dueStage ? ` · ${dueStage}` : ''} online`}
             </button>
+          )}
+          {isAdmin && onlineEnabled && scheduled && dueNow === 0 && balance > 0 && nextStage && !open && (
+            <span className="bx-note" style={{ margin: 0 }}>Nothing due now. {nextStage.label} ({formatRupees(nextStage.amount_paise)}) is due {stageMomentLabel(nextStage.on).toLowerCase()}.</span>
           )}
           {!onlineEnabled && (
             <button type="button" className="bx-btn" disabled aria-disabled="true" title="Online payment is coming soon" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
@@ -222,8 +251,8 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
           </div>
         </div>
       )}
-      {isAdmin && onlineEnabled && balance >= 100 && online.kind === 'idle' && !settled && (
-        <p className="bx-note" style={{ marginTop: 6 }}>Paying online settles the balance in full. If you deduct TDS, pay by bank transfer and mark it as paid instead.</p>
+      {isAdmin && onlineEnabled && dueNow >= 100 && online.kind === 'idle' && !settled && (
+        <p className="bx-note" style={{ marginTop: 6 }}>{scheduled ? 'Paying online pays the amount due now in full.' : 'Paying online settles the balance in full.'} If you deduct TDS, pay by bank transfer and mark it as paid instead.</p>
       )}
 
       {isAdmin && open && (

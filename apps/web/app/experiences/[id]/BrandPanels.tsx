@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { countOf, formatRupees } from '@/lib/experience-request'
+import { countOf, formatRupees, stageAmounts, stageMomentLabel, type PaymentStage } from '@/lib/experience-request'
 import type { BrandAddon, BrandItem, BrandQuote, BrandRosterCreator } from '@/lib/experience-brand-server'
 import type { BrandCollabPost, BrandSuggestion } from '@/lib/experience-brand-server'
 import Link from 'next/link'
@@ -60,7 +60,7 @@ const overlayStyle: React.CSSProperties = {
 }
 const Tick = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
 
-export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { experienceId: string; quote: BrandQuote | null; isAdmin: boolean; agreedTotal: number | null }) {
+export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal, stages = [] }: { experienceId: string; quote: BrandQuote | null; isAdmin: boolean; agreedTotal: number | null; stages?: PaymentStage[] }) {
   const { pending, error, run } = useRun()
   const [declining, setDeclining] = useState(false)
   const [why, setWhy] = useState('')
@@ -96,6 +96,24 @@ export function QuoteCard({ experienceId, quote, isAdmin, agreedTotal }: { exper
             ))
           : quote.misc_paise > 0 && <div style={lineRow}><span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>Extras</span><b style={{ fontSize: 14 }}>{formatRupees(quote.misc_paise)}</b></div>}
         <div style={{ ...lineRow, borderBottom: 'none' }}><span style={{ fontSize: 13, fontWeight: 600 }}>Total</span><b style={{ fontSize: 16 }}>{formatRupees(quote.total_paise)}</b></div>
+      </div>
+
+      {/* 0579: how the brand pays the one invoice, agreed with the price. */}
+      <div style={{ marginTop: 16, padding: '14px 16px', borderRadius: 14, background: 'var(--sec-2, #F7F7F4)' }}>
+        <div style={metaLabel}>How you pay</div>
+        {stages.length === 0 ? (
+          <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 6 }}>In full, once you accept. Guapd sends one invoice.</div>
+        ) : (<>
+          <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', marginTop: 6 }}>One invoice for {formatRupees(quote.total_paise)} before GST, paid in {stages.length} stages as each falls due.</div>
+          <div style={{ display: 'grid', gap: 0, marginTop: 6 }}>
+            {(() => { const amts = stageAmounts(quote.total_paise, stages); return stages.map((s, i) => (
+              <div key={i} style={{ ...lineRow, borderBottom: i === stages.length - 1 ? 'none' : lineRow.borderBottom, padding: '9px 0' }}>
+                <span style={{ fontSize: 13, color: 'var(--ink)' }}><b style={{ fontWeight: 700 }}>{s.label}</b> <span style={{ color: 'var(--ink-soft)' }}>· {Number(s.pct)}% · {stageMomentLabel(s.on).toLowerCase()}</span></span>
+                <b style={{ fontSize: 14 }}>{formatRupees(amts[i])}</b>
+              </div>
+            )) })()}
+          </div>
+        </>)}
       </div>
 
       {quote.affiliate_pct != null && (

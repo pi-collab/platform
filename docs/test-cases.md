@@ -7906,3 +7906,38 @@ Money IN only (brand -> Guapd, Leg 1). Staging, Razorpay TEST keys. No creator p
 **Environment**
 - Needs `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-only; never `NEXT_PUBLIC_`). Webhook in Razorpay Dashboard (Test mode) -> Settings -> Webhooks: URL `https://<staging host>/api/razorpay/webhook`, event `payment.captured`, the same secret. Payments must be auto-captured (Razorpay default for orders); an authorised-but-not-captured payment records nothing.
 - Staging ledger: 0578 hand-run and repaired as applied. (Staging's ledger has no rows for 0556–0577, which were hand-run without repair; unrelated to this change.)
+
+## 157. Payment stages on one Experience invoice (migration 0579)
+
+Automated: `scripts/test-experience-payment-stages.ts` (staging). Also re-run §156's `scripts/test-razorpay-payin.ts`: a quote with no stages must behave exactly as before.
+
+**The quote**
+- [ ] Composer "How the brand pays": presets Pay in full / 50 / 50 / 70 / 10 / 20; add up to 6 stages; each shows its rupee amount from the total
+- [ ] The database refuses: not 100%, a single stage, out of order (acceptance → shoot → sign-off), unknown moment, more than 2 decimals, a 0% stage, a name under 2 or over 40 characters, more than 6 stages, extra keys, a % sent as text
+- [ ] A quote sent with no stages = the whole amount on acceptance (every quote before 0579 reads this way)
+- [ ] A quote's stages cannot be edited, even with the service role (trigger); a new schedule is a new quote
+- [ ] Brand quote card shows "How you pay" with each stage's amount before GST; console quote history shows "Paid in stages"; the accept confirmation names the stages
+
+**The one invoice**
+- [ ] Finance issues ONE invoice (kind initial) for the whole amount; the stages come from the accepted quote
+- [ ] Due now = the stages reached so far − received − marked paid (pending), never more than the balance
+- [ ] On acceptance → the acceptance stages are due; status shoot_done / delivering / complete → the shoot stages; brand sign-off (or complete) → the sign-off stages. Delivering alone is NOT sign-off
+- [ ] Rounding: cumulative, to the paisa, the last stage takes the remainder; stages sum to exactly the invoice total and the composer preview matches the database
+- [ ] A brand "marked paid" covering a stage shows it "Being checked" and nothing is due online; rejected → due again
+- [ ] Additional invoices (add-ons, extras) ignore the stages: due in full
+- [ ] The invoice turns Paid only when the last stage is in; in between it stays issued / Part paid
+
+**Online payment (0578 with 0579)**
+- [ ] Pay button reads "Pay ₹X · <stage> online" for exactly the amount due now
+- [ ] Nothing due yet: no Pay button, "Nothing due now. <next stage> (₹X) is due after …"; the quote function says "Nothing is due on this invoice yet"
+- [ ] An order for anything but the amount due now is refused
+- [ ] Mark as paid still accepts any amount (paying ahead is a finance-confirmed report)
+
+**Access / security**
+- [ ] `brand_experience_payment_stages`: any member of the brand; another brand, a creator, anon, NULL refused
+- [ ] `experience_console_payment_stages`: staff only; quote stages for all staff, invoice figures for finance only (operational sees `{}`)
+- [ ] `experience_invoice_stages`, `experience_schedule_valid`: not executable by anon / authenticated
+- [ ] Nothing reads or writes creator pay, payouts, costs or margin
+
+**Environment**
+- 0579 needs 0578 first (it redefines `experience_payin_due_paise` and `brand_experience_payin_quote`). Hand-run on staging, then `supabase migration repair --status applied 0579 --linked`. `experience_console_quote` gains a 13th parameter with a DEFAULT; the 12-parameter version is dropped, so no ambiguous overload remains.
