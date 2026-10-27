@@ -10,6 +10,7 @@ import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import InvoicePayments from './InvoicePayments'
+import { razorpayConfigured } from '@/lib/razorpay-payin'
 import { RosterPager, RosterSearchBox } from './RosterSearch'
 import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import ViewFile from './ViewFile'
@@ -229,7 +230,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
 
       {!reviewing && reviewBlock}
 
-      {invoiceList.length > 0 && <Invoices experienceId={e.id} isAdmin={e.is_admin} invoices={invoiceList} fmt={fmt} />}
+      {invoiceList.length > 0 && <Invoices experienceId={e.id} isAdmin={e.is_admin} invoices={invoiceList} fmt={fmt} onlineEnabled={razorpayConfigured()} />}
 
       {guapdThread.ok && <GuapdChat experienceId={e.id} messages={guapdThread.data} autoOpen={searchParams?.chat === '1'} />}
 
@@ -247,7 +248,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   )
 }
 
-function Invoices({ experienceId, isAdmin, invoices, fmt }: { experienceId: string; isAdmin: boolean; invoices: BrandInvoice[]; fmt: (iso: string | null) => string | null }) {
+function Invoices({ experienceId, isAdmin, invoices, fmt, onlineEnabled }: { experienceId: string; isAdmin: boolean; invoices: BrandInvoice[]; fmt: (iso: string | null) => string | null; onlineEnabled: boolean }) {
   return (
     <section className="surface bx-card" aria-labelledby="bx-inv">
       <h2 id="bx-inv" className="bx-h2">Invoices</h2>
@@ -271,7 +272,7 @@ function Invoices({ experienceId, isAdmin, invoices, fmt }: { experienceId: stri
               : <span className="bx-chip bx-chg">Due</span>}
           </div>
         </div>
-        <InvoicePayments experienceId={experienceId} invoice={i} isAdmin={isAdmin} />
+        <InvoicePayments experienceId={experienceId} invoice={i} isAdmin={isAdmin} onlineEnabled={onlineEnabled} />
         </div>
       ))}
     </section>

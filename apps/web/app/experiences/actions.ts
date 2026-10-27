@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { verifyBrand } from '@/lib/brand-auth'
 import { parseExperienceRequest, type RequestFormFields } from '@/lib/experience-request-validate'
-import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff, brandCollabAct, brandReportPayment } from '@/lib/experience-brand-server'
+import { brandSendToGuapd, getBrandGuapdThread, brandAcceptRosterMany, brandAddRosterCreators, brandSuggestCreator, brandAnswerQuote, brandAnswerAddon, brandDecideRelease, brandDecideRoster, brandRequestExperience, brandSignOff, brandCollabAct, brandReportPayment, brandPayinQuote } from '@/lib/experience-brand-server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { checkoutSignatureValid, createRazorpayOrder, razorpayKeyId } from '@/lib/razorpay-payin'
 import { notifyCreatorAffiliateAdded } from '@/lib/experience-collab-notify'
 import { notifyStaffBrandActed, notifyStaffBrandMessage } from '@/lib/experience-brand-notify'
 import { registerExperienceRequestReview } from '@/lib/send-gate'
@@ -195,4 +197,52 @@ export async function reportPayment(experienceId: string, invoiceId: string, f: 
   done(experienceId)
   await notifyStaffBrandActed(experienceId, 'marked a payment against an invoice')
   return { ok: true, data: { balance_paise: Number(r.data.balance_paise) } }
+}
+
+/**
+ * 0578: pay a Guapd invoice online (Razorpay Standard Checkout). Admin only,
+ * checked again in Postgres. The amount is the invoice's balance worked out in
+ * the database (brand_experience_payin_quote); nothing the browser sends sets
+ * it. The order is filed by razorpay_payin_order_record, which works the
+ * balance out again and refuses if it moved. Recording the money is the
+ * webhook's job, never this one's.
+ */
+export type OnlinePayment = { keyId: string; orderId: string; amountPaise: number; currency: 'INR'; invoiceNumber: string; brandName: string }
+export async function startOnlinePayment(experienceId: string, invoiceId: string): Promise<Out<OnlinePayment>> {
+  const brand = await verifyBrand()
+  if (!isUuid(experienceId) || !isUuid(invoiceId)) return { ok: false, error: 'Not found.' }
+  const keyId = razorpayKeyId()
+  if (!keyId) return { ok: false, error: 'Online payment is not available yet.' }
+  const q = await brandPayinQuote(invoiceId)
+  if (!q.ok) return q
+  if (q.data.experience_id !== experienceId) return { ok: false, error: 'Not found.' }
+  const base = { keyId, amountPaise: q.data.amount_paise, currency: 'INR' as const, invoiceNumber: q.data.number, brandName: brand.brandName }
+  // A second click or tab reuses the unpaid order for the same amount.
+  if (q.data.order_id) return { ok: true, data: { ...base, orderId: q.data.order_id } }
+
+  const order = await createRazorpayOrder({ amountPaise: q.data.amount_paise, receipt: q.data.number, notes: { invoice_id: invoiceId, experience_id: experienceId } })
+  if (!order.ok) return { ok: false, error: order.error }
+  const { error } = await createAdminClient().rpc('razorpay_payin_order_record', {
+    p_razorpay_order_id: order.orderId, p_invoice_id: invoiceId, p_amount_paise: q.data.amount_paise,
+    p_receipt: q.data.number, p_created_by: brand.profileId,
+  })
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, data: { ...base, orderId: order.orderId } }
+}
+
+/**
+ * 0578: the checkout says it succeeded. Checks the signature and nothing more:
+ * a valid signature is not money received. The invoice changes only when
+ * Razorpay's signed webhook arrives; the screen shows "confirming" until then.
+ */
+export async function checkOnlinePayment(experienceId: string, v: { orderId: unknown; paymentId: unknown; signature: unknown }): Promise<Out<'processing'>> {
+  await verifyBrand()
+  if (!isUuid(experienceId)) return { ok: false, error: 'Not found.' }
+  const orderId = typeof v.orderId === 'string' ? v.orderId : ''
+  const paymentId = typeof v.paymentId === 'string' ? v.paymentId : ''
+  const signature = typeof v.signature === 'string' ? v.signature : ''
+  if (!orderId || !paymentId || !signature) return { ok: false, error: 'The payment details are incomplete.' }
+  if (!checkoutSignatureValid(orderId, paymentId, signature)) return { ok: false, error: 'We could not verify this payment. If money left your account, contact Guapd with the Razorpay payment ID ' + paymentId.slice(0, 40) + '.' }
+  done(experienceId)
+  return { ok: true, data: 'processing' }
 }

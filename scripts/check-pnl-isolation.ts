@@ -28,6 +28,11 @@ const RULES: { what: string; pattern: RegExp; allowed: string[] }[] = [
   { what: 'reads cost lines directly', pattern: /from\(\s*['"]experience_cost_lines['"]\s*\)/, allowed: [] },
   // 0540: invoices, payments, payouts and billing details are reached only through the access-checked database functions.
   { what: 'touches invoice / payment / payout / billing tables directly', pattern: /from\(\s*['"](service_invoices|service_invoice_payments|service_invoice_counters|vendor_payouts|vendors|vendor_payout_details|brand_billing_profiles|guapd_billing_settings)['"]\s*\)/, allowed: [] },
+  // 0578: Razorpay pay-in. Its tables only through the functions; the capture only from the signed webhook; the order record only from the brand action.
+  { what: 'touches the Razorpay pay-in tables directly', pattern: /from\(\s*['"]razorpay_payin_(orders|payments)['"]\s*\)/, allowed: [] },
+  { what: 'records a Razorpay payment outside the webhook', pattern: /rpc\(\s*['"]razorpay_payin_capture['"]/, allowed: ['app/api/razorpay/webhook/route.ts'] },
+  { what: 'files a Razorpay order outside the brand payment action', pattern: /rpc\(\s*['"]razorpay_payin_order_record['"]/, allowed: ['app/experiences/actions.ts'] },
+  { what: 'reads the Razorpay key secret outside the Razorpay module', pattern: /RAZORPAY_(KEY_SECRET|WEBHOOK_SECRET)/, allowed: ['lib/razorpay-payin.ts'] },
   { what: 'calls the finance upload / file functions', pattern: /rpc\(\s*['"]experience_finance_[a-z_]+['"]/, allowed: ['lib/experience-console-server.ts'] },
   { what: 'asks for financial access outside the P&L module', pattern: /has_experience_access['"]\s*,\s*\{\s*p_kind:\s*['"]financial/, allowed: ['lib/experience-pnl-server.ts'] },
 ]
