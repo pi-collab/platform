@@ -96,3 +96,9 @@
   .bx-has-pick .bx-roster-state, .bx-has-pick .bx-roster-actions { grid-column: 3; }
 }
 
+/* 0578: the online payment result dialog */
+@keyframes bxSpin { to { transform: rotate(360deg); } }
+@keyframes bxPop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
+.bx-pay-dialog { animation: bxPop .28s cubic-bezier(.22,1,.36,1); }
+.bx-spin { animation: bxSpin .9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .bx-pay-dialog, .bx-spin { animation: none; } }
