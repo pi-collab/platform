@@ -155,9 +155,11 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                   {inv.payments.map((p) => (
                     <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontFamily: 'var(--font-ui)', fontSize: 12.5,
                       color: p.reversed_at ? 'var(--ink-faint)' : 'var(--ink)', textDecoration: p.reversed_at ? 'line-through' : 'none', padding: '6px 10px', borderRadius: 10, background: '#F7F7F3' }}>
-                      <span>{fmtDate(p.received_on)} · {METHOD[p.method] ?? p.method} · ref {p.reference} · {formatRupees(p.amount_paise)}{Number(p.tds_paise) ? ` + TDS ${formatRupees(p.tds_paise)}` : ''}</span>
+                      <span>{fmtDate(p.received_on)} · {p.method === 'razorpay' ? 'Razorpay (online)' : METHOD[p.method] ?? p.method} · ref {p.reference} · {formatRupees(p.amount_paise)}{Number(p.tds_paise) ? ` + TDS ${formatRupees(p.tds_paise)}` : ''}</span>
                       <span style={{ display: 'flex', gap: 10, textDecoration: 'none' }}>
-                        <button type="button" style={linkBtn} onClick={async () => { const e = await openFinanceFileInTab('invoice-payment', p.id); if (e) setError(e) }}>Proof</button>
+                        {p.method === 'razorpay'
+                          ? <span title="Proof is Razorpay's signed webhook; see the payment in the Razorpay dashboard">Verified by Razorpay</span>
+                          : <button type="button" style={linkBtn} onClick={async () => { const e = await openFinanceFileInTab('invoice-payment', p.id); if (e) setError(e) }}>Proof</button>}
                         {!p.reversed_at && open && <button type="button" style={{ ...linkBtn, color: '#9C4147' }} onClick={() => { setReason(''); setAsk({ kind: 'reverse', paymentId: p.id }) }}>Reverse</button>}
                         {p.reversed_at && <span>Reversed: {p.reversed_reason}</span>}
                       </span>

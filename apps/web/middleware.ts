@@ -29,6 +29,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 const BASIC_AUTH_EXEMPT = new Set([
   '/api/instagram/deauthorize',
   '/api/instagram/data-deletion',
+  // 0578: Razorpay's webhook, same reasoning: server to server, and it
+  // verifies X-Razorpay-Signature against the webhook secret before acting.
+  '/api/razorpay/webhook',
 ])
 
 function isExemptFromBasicAuth(pathname: string): boolean {

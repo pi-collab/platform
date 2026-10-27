@@ -142,6 +142,16 @@ export async function brandReportPayment(v: { invoiceId: string; amountPaise: nu
   })
   return error ? fail(error) : { ok: true, data: data as { report_id: string; balance_paise: number } }
 }
+/** 0578: what is due online on one invoice (admin only), and an unpaid order for exactly that amount, if one exists. */
+export interface BrandPayinQuote {
+  invoice_id: string; experience_id: string; number: string; amount_paise: number; currency: 'INR'; order_id: string | null
+}
+export async function brandPayinQuote(invoiceId: string): Promise<Result<BrandPayinQuote>> {
+  const { data, error } = await createClient().rpc('brand_experience_payin_quote', { p_invoice_id: invoiceId })
+  if (error) return fail(error)
+  const d = data as BrandPayinQuote
+  return { ok: true, data: { ...d, amount_paise: Number(d.amount_paise) } }
+}
 export async function brandRequestExperience(v: RequestInput): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('brand_experience_request', requestArgs(v))
   return error ? fail(error) : { ok: true, data: data as string }

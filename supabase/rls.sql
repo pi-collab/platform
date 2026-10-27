@@ -1772,3 +1772,14 @@ GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
 -- experience_console_post_performance (operational staff; performance keys and
 -- deal ids only, no money) and experience_console_post_recheck (operational,
 -- audited through experience_console_audit). No new tables or policies.
+
+-- ── Razorpay pay-in (0578) ──────────────────────────────────────────────────
+-- razorpay_payin_orders, razorpay_payin_payments: server only. RLS on, no
+-- policies; reached through brand_experience_payin_quote (brand admin, definer),
+-- razorpay_payin_order_record and razorpay_payin_capture (service_role only).
+-- service_invoice_payments now accepts method 'razorpay' with no proof file
+-- (the signed webhook is the proof); every other method still needs proof.
+ALTER TABLE razorpay_payin_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE razorpay_payin_payments ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON razorpay_payin_orders, razorpay_payin_payments FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON razorpay_payin_orders, razorpay_payin_payments TO service_role;

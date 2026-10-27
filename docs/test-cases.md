@@ -7874,3 +7874,35 @@ Every brand dashboard section now reads the brand's Experiences through brand-on
 | Your track record | Deals only (on-time payment / response / completion are deal measures) | Unchanged |
 
 Creator dashboard: already reflects Experience legs everywhere (Do first, Deals in motion, Active deals, Brands you've worked with, earnings from Guapd payouts once paid, reach). Checked with a leg-only staging creator; no change needed.
+
+## 156. Razorpay Standard Checkout: brand pays a Guapd Experience invoice (migration 0578)
+
+Money IN only (brand -> Guapd, Leg 1). Staging, Razorpay TEST keys. No creator pay, payouts, costs or margin read or written. Automated: `scripts/test-razorpay-payin.ts` (staging, real sessions, the real webhook route with a test secret; one real Razorpay test order).
+
+**Money integrity**
+- [ ] (a) Checkout success with a valid signature but NO webhook: invoice NOT paid; received and balance unchanged; screen shows "Confirming…", then "still being confirmed… no need to pay again" after ~1 minute
+- [ ] (b) The same payment.captured delivered twice (and twice concurrently, and with a new event id): ONE `service_invoice_payments` row, ONE `razorpay_payin_payments` row; the brand's received figure does not double
+- [ ] (c) The amount is the server's: the action takes no amount; an order for anything but the database balance is refused ("balance changed"); a captured amount that differs from our order, another currency, an order Guapd never created, or a second payment on a paid order is filed as `needs_review` and never touches the invoice
+- [ ] (d) Webhook with a wrong / missing / malformed signature, or a body changed after signing: 400, nothing recorded. No webhook secret configured: 500, nothing verifies
+- [ ] (e) Part payments: ₹50,000 received offline on a ₹1,00,000 invoice -> online amount ₹50,000; a pending brand report of ₹10,000 drops it to ₹40,000 (nothing paid twice); after capture: ₹1,00,000 received, ₹0 balance, Paid
+- [ ] A verified capture writes a ledger row with method `razorpay`, reference = Razorpay payment id, TDS 0, no proof file; settles the invoice only when it clears the balance; marks the order paid; finance sees "Razorpay (online) · Verified by Razorpay" (no Proof button)
+
+**Access / SECURITY**
+- [ ] Only a brand ADMIN gets a quote; a member of the same brand, another brand, a creator, anonymous: refused. NULL / made-up invoice refused
+- [ ] `razorpay_payin_order_record` and `razorpay_payin_capture`: service_role only (brand, finance staff, anonymous refused)
+- [ ] `razorpay_payin_orders`, `razorpay_payin_payments`: not readable by any signed-in user or visitor (RLS on, no policies, grants service_role only)
+- [ ] A filed Razorpay payment cannot be edited, even by the service role; deleted only by the service role (test clean-up)
+- [ ] Key secret and webhook secret only in `lib/razorpay-payin.ts` (enforced by `scripts/check-pnl-isolation.ts`); the browser gets the key ID only
+- [ ] `/api/razorpay/webhook` is exempt from staging Basic Auth (exact path), gated by its HMAC
+- [ ] checkout.js loads only when an admin clicks Pay, never on page load
+
+**Brand screen**
+- [ ] Admin with a balance >= ₹1 and keys set: "Pay ₹X online" + note that online settles the balance in full (TDS -> pay by bank and mark as paid)
+- [ ] Closing the Razorpay window: "Payment cancelled. Nothing was charged."
+- [ ] Test card failure (payment.failed): the reason + "Nothing was recorded against the invoice. You can try again."
+- [ ] Member (non-admin): no Pay button; keys not set: "Pay online · coming soon" as before
+- [ ] Paid invoice: no Pay button
+
+**Environment**
+- Needs `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (server-only; never `NEXT_PUBLIC_`). Webhook in Razorpay Dashboard (Test mode) -> Settings -> Webhooks: URL `https://<staging host>/api/razorpay/webhook`, event `payment.captured`, the same secret. Payments must be auto-captured (Razorpay default for orders); an authorised-but-not-captured payment records nothing.
+- Staging ledger: 0578 hand-run and repaired as applied. (Staging's ledger has no rows for 0556–0577, which were hand-run without repair; unrelated to this change.)
