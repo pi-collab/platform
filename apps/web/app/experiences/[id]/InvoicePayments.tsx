@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { formatRupees } from '@/lib/experience-request'
 import type { BrandInvoice } from '@/lib/experience-brand-server'
 import { checkOnlinePayment, reportPayment, startOnlinePayment } from '../actions'
+import { neonBtn, pillBtn } from './BrandPanels'
 
 /**
  * 0568: the money on one Guapd invoice, as the brand sees it: the total, what
@@ -47,7 +48,20 @@ function loadCheckout(): Promise<boolean> {
 }
 
 type Online = { kind: 'idle' } | { kind: 'opening' } | { kind: 'cancelled' } | { kind: 'failed'; message: string }
-  | { kind: 'confirming'; paidBefore: number; paymentId: string } | { kind: 'received' } | { kind: 'slow'; paymentId: string }
+  | { kind: 'confirming'; paidBefore: number; paymentId: string; amountPaise: number }
+  | { kind: 'received'; paymentId: string; amountPaise: number } | { kind: 'slow'; paymentId: string }
+
+const overlay: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(22,23,15,.45)', backdropFilter: 'blur(4px)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+}
+const badge = (bg: string, fg: string): React.CSSProperties => ({ width: 64, height: 64, borderRadius: 999, display: 'grid', placeItems: 'center', margin: '0 auto', background: bg, color: fg })
+const ICONS = {
+  ok: <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>,
+  fail: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>,
+  wait: <svg className="bx-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56" /></svg>,
+  retry: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" /></svg>,
+}
 
 export default function InvoicePayments({ experienceId, invoice, isAdmin, onlineEnabled = false }: { experienceId: string; invoice: BrandInvoice; isAdmin: boolean; onlineEnabled?: boolean }) {
   const router = useRouter()
@@ -67,7 +81,7 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
   // Waiting for the webhook: refresh until Guapd's received figure moves, for about a minute.
   useEffect(() => {
     if (online.kind !== 'confirming') return
-    if (invoice.paid_paise > online.paidBefore || invoice.status === 'paid') { setOnline({ kind: 'received' }); return }
+    if (invoice.paid_paise > online.paidBefore || invoice.status === 'paid') { setOnline({ kind: 'received', paymentId: online.paymentId, amountPaise: online.amountPaise }); return }
     if (polls.current >= 15) { setOnline({ kind: 'slow', paymentId: online.paymentId }); return }
     const t = setTimeout(() => { polls.current += 1; router.refresh() }, 4000)
     return () => clearTimeout(t)
@@ -90,17 +104,38 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
       modal: { ondismiss: () => setOnline((o) => (o.kind === 'opening' ? { kind: 'cancelled' } : o)) },
       handler: async (resp: RzpResponse) => {
         polls.current = 0
-        setOnline({ kind: 'confirming', paidBefore: invoice.paid_paise, paymentId: resp.razorpay_payment_id })
+        setOnline({ kind: 'confirming', paidBefore: invoice.paid_paise, paymentId: resp.razorpay_payment_id, amountPaise: r.data.amountPaise })
         const c = await checkOnlinePayment(experienceId, { orderId: resp.razorpay_order_id, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature })
         if (!c.ok) setOnline({ kind: 'failed', message: c.error })
         else router.refresh()
       },
     })
     rzp.on('payment.failed', (f: RzpFailure) => {
-      setOnline({ kind: 'failed', message: `${f.error?.description ?? 'The payment did not go through.'} Nothing was recorded against the invoice. You can try again.` })
+      setOnline({ kind: 'failed', message: f.error?.description ?? 'The payment did not go through.' })
     })
     rzp.open()
   }
+
+  const closeDialog = () => setOnline({ kind: 'idle' })
+  useEffect(() => {
+    if (online.kind !== 'received' && online.kind !== 'failed') return
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setOnline({ kind: 'idle' }) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [online.kind])
+
+  const dialog = online.kind === 'confirming' ? {
+    badge: badge('var(--sec-2, #F7F7F4)', 'var(--ink)'), icon: ICONS.wait, title: 'Confirming your payment', amount: formatRupees(online.amountPaise),
+    body: 'Razorpay is confirming it with Guapd. This usually takes a few seconds; please keep this page open.', rows: [] as [string, string][],
+  } : online.kind === 'received' ? {
+    badge: badge('var(--neon)', 'var(--ink)'), icon: ICONS.ok, title: 'Payment received', amount: formatRupees(online.amountPaise),
+    body: settled ? `Invoice ${invoice.number} is paid in full. Thank you.` : `Received against invoice ${invoice.number}. Thank you.`,
+    rows: [['Invoice', invoice.number], ['Payment ID', online.paymentId]] as [string, string][],
+  } : online.kind === 'failed' ? {
+    badge: badge('#FDF0F0', '#9C4147'), icon: ICONS.fail, title: 'Payment didn’t go through', amount: null,
+    body: `${online.message} Nothing was recorded against the invoice, and you can try again.`,
+    rows: [['Invoice', invoice.number], ['Balance', formatRupees(balance)]] as [string, string][],
+  } : null
 
   const submit = () => {
     setError(null)
@@ -155,14 +190,37 @@ export default function InvoicePayments({ experienceId, invoice, isAdmin, online
         </div>
       )}
 
-      {online.kind !== 'idle' && online.kind !== 'opening' && (
-        <p className={online.kind === 'failed' ? 'bx-err' : 'bx-note'} role={online.kind === 'failed' ? 'alert' : 'status'} style={{ marginTop: 8 }}>
-          {online.kind === 'cancelled' && 'Payment cancelled. Nothing was charged.'}
-          {online.kind === 'failed' && online.message}
-          {online.kind === 'confirming' && 'Payment made. Confirming it with Razorpay; this usually takes a few seconds.'}
-          {online.kind === 'received' && 'Payment received. Thank you.'}
-          {online.kind === 'slow' && `Your payment (${online.paymentId}) is still being confirmed. It will show here once Razorpay confirms it; no need to pay again.`}
-        </p>
+      {online.kind === 'cancelled' && <p className="bx-note" role="status" style={{ marginTop: 8 }}>Payment cancelled. Nothing was charged.</p>}
+      {online.kind === 'slow' && <p className="bx-note" role="status" style={{ marginTop: 8 }}>Your payment ({online.paymentId}) is still being confirmed. It will show here once Razorpay confirms it; no need to pay again.</p>}
+      {dialog && (
+        <div style={overlay} onClick={(ev) => { if (ev.target === ev.currentTarget && online.kind !== 'confirming') closeDialog() }}>
+          <div className="surface bx-pay-dialog" role={online.kind === 'failed' ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby="bx-pay-h" aria-describedby="bx-pay-d"
+            style={{ width: '100%', maxWidth: 420, padding: '30px 26px 24px', textAlign: 'center' }}>
+            <div style={dialog.badge}>{dialog.icon}</div>
+            <h3 id="bx-pay-h" style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', margin: '18px 0 0' }}>{dialog.title}</h3>
+            {dialog.amount && <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', marginTop: 8 }}>{dialog.amount}</div>}
+            <p id="bx-pay-d" style={{ fontFamily: 'var(--font-ui)', fontSize: 13.5, lineHeight: 1.5, color: 'var(--ink-soft)', margin: '10px auto 0', maxWidth: 330 }}>{dialog.body}</p>
+            {dialog.rows.length > 0 && (
+              <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, background: 'var(--sec-2, #F7F7F4)', display: 'grid', gap: 6, textAlign: 'left' }}>
+                {dialog.rows.map(([k, v]) => (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontFamily: 'var(--font-ui)', fontSize: 12.5 }}>
+                    <span style={{ color: 'var(--ink-faint)' }}>{k}</span><span style={{ color: 'var(--ink)', fontWeight: 600, wordBreak: 'break-all', textAlign: 'right' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {online.kind !== 'confirming' && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+                {online.kind === 'failed' ? (<>
+                  <button type="button" className="pill-hover" style={pillBtn} onClick={closeDialog}>Close</button>
+                  <button type="button" className="neonbtn" style={neonBtn} autoFocus onClick={() => { closeDialog(); void payOnline() }}>{ICONS.retry} Try again</button>
+                </>) : (
+                  <button type="button" className="neonbtn" style={{ ...neonBtn, minWidth: 160 }} autoFocus onClick={closeDialog}>Done</button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       {isAdmin && onlineEnabled && balance >= 100 && online.kind === 'idle' && !settled && (
         <p className="bx-note" style={{ marginTop: 6 }}>Paying online settles the balance in full. If you deduct TDS, pay by bank transfer and mark it as paid instead.</p>
