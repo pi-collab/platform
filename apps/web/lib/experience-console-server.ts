@@ -1,3 +1,4 @@
+import type { InvoiceStages, PaymentStage } from '@/lib/experience-request'
 import 'server-only'
 import { createClient } from '@/lib/supabase/server'
 import { storeCollabPostInsights } from '@/lib/post-insights-store'
@@ -183,6 +184,8 @@ export interface QuoteInput {
   channel: string | null
   /** 0560: affiliate commission, % of sales; required when the brand asked for affiliate links, else null. */
   affiliatePct: number | null
+  /** 0579: payment stages; [] = the whole amount on acceptance. */
+  paymentSchedule: PaymentStage[]
 }
 
 export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
@@ -190,9 +193,16 @@ export async function addConsoleQuote(p: QuoteInput): Promise<Result<string>> {
     p_experience_id: p.experienceId, p_proposed_by: p.proposedBy, p_per_video_paise: p.perVideoPaise,
     p_deliverable_count: p.deliverableCount, p_misc_paise: p.miscPaise, p_deliverables: p.deliverables,
     p_shoot_date: p.shootDate, p_shoot_city: p.shootCity, p_message: p.message, p_channel: p.channel, p_extras: p.extras,
-    p_affiliate_pct: p.affiliatePct,
+    p_affiliate_pct: p.affiliatePct, p_payment_schedule: p.paymentSchedule,
   })
   return error ? fail(error) : { ok: true, data: data as string }
+}
+
+/** 0579: each quote's payment stages, and (finance only) each issued invoice's stages and amount due now. */
+export interface ConsolePaymentStages { quotes: Record<string, PaymentStage[]>; invoices: Record<string, InvoiceStages> }
+export async function getConsolePaymentStages(id: string): Promise<Result<ConsolePaymentStages>> {
+  const { data, error } = await createClient().rpc('experience_console_payment_stages', { p_experience_id: id })
+  return error ? fail(error) : { ok: true, data: (data ?? { quotes: {}, invoices: {} }) as ConsolePaymentStages }
 }
 
 export async function acceptConsoleQuote(quoteId: string, channel: string | null): Promise<Result<null>> {

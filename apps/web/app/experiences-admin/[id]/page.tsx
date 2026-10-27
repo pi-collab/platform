@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates, consolePostPerformance, getConsoleGuapdRatings } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, getConsolePaymentStages, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates, consolePostPerformance, getConsoleGuapdRatings } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -50,7 +50,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   if (!gate.ok) return <NoAccess reason={gate.reason} />
   if (!/^[0-9a-f-]{36}$/i.test(params.id)) notFound()
 
-  const [exp, quotes] = await Promise.all([getConsoleExperience(params.id), listConsoleQuotes(params.id)])
+  const [exp, quotes, stages] = await Promise.all([getConsoleExperience(params.id), listConsoleQuotes(params.id), getConsolePaymentStages(params.id)])
   if (!exp.ok) return <Failed message={exp.error} />
   if (!exp.data) notFound()
   const e = exp.data
@@ -279,7 +279,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
         : <div style={{ marginTop: 20 }}><Failed inline message={affiliates.error} /></div>)}
       {payouts && <div style={{ marginTop: 20 }}>{payouts.ok ? <PayoutsPanel experienceId={e.id} data={payouts.data} /> : <Failed inline message={payouts.error} />}</div>}
       {ratings && <div style={{ marginTop: 20 }}>{ratings.ok ? <GuapdRatingsPanel data={ratings.data} /> : <Failed inline message={ratings.error} />}</div>}
-      {invoices && <div style={{ marginTop: 20 }}>{invoices.ok ? <InvoicesPanel data={invoices.data} /> : <Failed inline message={invoices.error} />}</div>}
+      {invoices && <div style={{ marginTop: 20 }}>{invoices.ok ? <InvoicesPanel data={invoices.data} stages={stages.ok ? stages.data.invoices : {}} /> : <Failed inline message={invoices.error} />}</div>}
       {completion && <div style={{ marginTop: 20 }}>{completion.ok ? <CompletionPanel experienceId={e.id} data={completion.data} /> : <Failed inline message={completion.error} />}</div>}
 
       {/* ══════ COSTS + P&L ══════ */}
@@ -306,6 +306,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
             needsAgreedPct={e.request_affiliate === true && !!e.agreed_plan && e.agreed_plan.affiliate_pct == null && ['rostering', 'confirmed'].includes(e.status)}
             defaults={{ count: e.plan_videos_total, city: e.request_location ?? '', date: e.request_date_from ?? '' }}
             planVideos={e.plan_videos_total}
+            schedules={stages.ok ? stages.data.quotes : {}}
             planLabel={`${creators} creator${creators === 1 ? '' : 's'} × ${e.plan_videos_per_creator} video${e.plan_videos_per_creator === 1 ? '' : 's'}`}
           />
         ) : <Failed message={quotes.error} inline />}

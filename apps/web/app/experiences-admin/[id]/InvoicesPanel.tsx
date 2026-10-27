@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { formatRupees } from '@/lib/experience-request'
+import { formatRupees, stageMomentLabel, type InvoiceStages } from '@/lib/experience-request'
 import type { ConsoleInvoice, ConsoleInvoices } from '@/lib/experience-console-server'
 import {
   createInvoicePdf, discardInvoice, draftInvoice, editInvoice, issueInvoice, recordInvoicePayment,
@@ -44,7 +44,7 @@ type Ask =
   | { kind: 'reverse'; paymentId: string }
   | { kind: 'reject_report'; reportId: string }
 
-export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
+export default function InvoicesPanel({ data, stages = {} }: { data: ConsoleInvoices; stages?: Record<string, InvoiceStages> }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -127,6 +127,15 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                   {(inv.status === 'issued' || inv.status === 'paid') && (
                     <div style={{ color: inv.outstanding_paise > 0 ? '#8C6417' : 'var(--ink-soft)', fontSize: 12 }}>
                       Received {formatRupees(inv.paid_paise)} · due {formatRupees(inv.outstanding_paise)}
+                    </div>
+                  )}
+                  {/* 0579: paid in stages: what is due now, and each stage. */}
+                  {stages[inv.id]?.scheduled && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-soft)' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Due now {formatRupees(stages[inv.id].due_now_paise)}{stages[inv.id].next_stage && stages[inv.id].due_now_paise === 0 && inv.status === 'issued' ? ` · next: ${stages[inv.id].next_stage}` : ''}</div>
+                      {stages[inv.id].stages.map((x) => (
+                        <div key={x.label}>{x.label} {Number(x.pct)}% · {formatRupees(x.amount_paise)} · {stageMomentLabel(x.on).toLowerCase()} · {x.state === 'paid' ? 'received' : x.state === 'checking' ? 'marked paid, to check' : x.state === 'due' ? 'due' : 'not due yet'}</div>
+                      ))}
                     </div>
                   )}
                 </div>
