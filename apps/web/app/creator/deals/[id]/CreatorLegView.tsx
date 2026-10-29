@@ -47,7 +47,7 @@ const short = (iso: string | null | undefined) => {
   return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0, creatorName = '', collabPosts = [] }: {
+export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messages = [], events = [], autoOpenChat = false, unread = 0, creatorName = '', collabPosts = [], bankOnFile = true }: {
   dealId: string
   ctx: CreatorLegContext
   /** 0561: the videos Guapd sent to post as collabs or to share. */
@@ -59,6 +59,8 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
   unread?: number
   /** Prefills the invoice form (0552). */
   creatorName?: string
+  /** 0580: the creator's bank account is on file (needed before any invoice). */
+  bankOnFile?: boolean
 }) {
   const m = creatorLegMoney(ctx)
   const allowance = Number(ctx.allowance_paise ?? 0)
@@ -152,7 +154,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
     <section className="offer-m__card">
       <div className="offer-m__label">Raise your invoice</div>
       <p style={{ fontSize: 13, color: 'var(--ink-soft)', margin: '6px 0 12px' }}>Guapd marked your shoot done. Confirm it and raise your invoice to get paid.</p>
-      <LegInvoiceForm dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} compact />
+      <LegInvoiceForm bankOnFile={bankOnFile} dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} compact />
     </section>
   ) : invoice && !ctx.payout ? (
     <section className="offer-m__card">
@@ -246,7 +248,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
         }}
         agreedAt={short(agreedAt)}
         submitNode={creatorSubmits && accepted && items.length > 0 ? <LegDeliverables dealId={dealId} items={items} canSubmit={!!ctx.can_submit} /> : undefined}
-        invoiceNode={(declined || noShoot) ? mobileClosed : (statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0)) || (accepted && shot && !!ctx.commission)) ? <>{extraOpen && <div style={{ marginBottom: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{accepted && shot && ctx.commission && <div style={{ marginBottom: 12 }}><AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} /></div>}{statement ?? mobileInvoice}{!extraOpen && (ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
+        invoiceNode={(declined || noShoot) ? mobileClosed : (statement || mobileInvoice || (ctx.extras ?? []).length > 0 || (accepted && (collabPosts.length > 0 || Number(ctx.collab_waiting ?? 0) > 0)) || (accepted && shot && !!ctx.commission)) ? <>{extraOpen && <div style={{ marginBottom: 12 }}><ExtraOffers bankOnFile={bankOnFile} dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}{accepted && <div style={{ marginBottom: 12 }}><CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} /></div>}{accepted && shot && ctx.commission && <div style={{ marginBottom: 12 }}><AffiliateCommission bankOnFile={bankOnFile} dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} /></div>}{statement ?? mobileInvoice}{!extraOpen && (ctx.extras ?? []).length > 0 && <div style={{ display: 'grid', gap: 12, marginTop: 12 }}><ExtraOffers bankOnFile={bankOnFile} dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} /></div>}</> : undefined}
         paidAt={short(ctx.payout?.paid_on)}
       />
 
@@ -316,10 +318,10 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
             {/* 0561: the videos to post as collabs or shared to post (0566: the invoice does not wait for them). */}
             {accepted && <CollabPosts dealId={dealId} posts={collabPosts} brand={brand} waiting={Number(ctx.collab_waiting ?? 0)} />}
             {/* 0563: the affiliate commission, once the collab ads have run. */}
-            {accepted && shot && ctx.commission && <AffiliateCommission dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} />}
+            {accepted && shot && ctx.commission && <AffiliateCommission bankOnFile={bankOnFile} dealId={dealId} c={ctx.commission} brand={brand} defaultName={creatorName} />}
 
             {/* 0555: extra deliverables on this deal, each with its own invoice and payment. */}
-            <ExtraOffers dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} />
+            <ExtraOffers bankOnFile={bankOnFile} dealId={dealId} extras={ctx.extras ?? []} defaultName={creatorName} />
 
             {hasBrief && brief && (
               <div className="surface" style={{ padding: '26px 24px' }}>
@@ -357,7 +359,7 @@ export default function CreatorLegView({ dealId, ctx, attachmentUrls = {}, messa
                   receiveSub={paid ? null : payRule}
                   side={side} paidBar={paid}
                   footer={ctx.can_invoice && total != null
-                    ? <LegInvoiceForm dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} />
+                    ? <LegInvoiceForm bankOnFile={bankOnFile} dealId={dealId} payablePaise={total} payableLabel={formatPaiseINR(total)} shootLabel={shootDate ? `on ${shootDate}` : 'for this deal'} defaultName={creatorName} />
                     : paid ? <><span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Paid{p?.paid_on ? ` on ${short(p.paid_on)}` : ''}{p?.reference ? ` \u00B7 bank reference ${p.reference}` : ''}. This deal is wrapped.</span>{invoiceLink}</>
                     : invoiceLink ? <><span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>Your invoice to Guapd</span>{invoiceLink}</> : undefined} />
               )

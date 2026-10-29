@@ -12,6 +12,8 @@ import { inr } from '@/lib/invoice-pdf'
 export interface CreatorInvoiceDoc {
   number: string; status: string; issued_at: string; shoot_confirmed_at: string
   billing_name: string; gstin: string | null
+  /** 0581: the PAN the invoice was raised with (masked for operational staff); null on invoices before 0581. */
+  pan?: string | null
   day_rate_paise: number; days: number; gross_paise: number; platform_pct: number
   platform_fee_paise: number; net_paise: number; allowance_paise: number; payable_paise: number
   deal_ref: string | null; experience_title: string; brand_name: string | null; shoot_date: string | null; shoot_city: string | null
@@ -48,7 +50,7 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
     }
     return yy
   }
-  const left = block(L, y, 'FROM', [d.billing_name, d.gstin ? `GSTIN: ${d.gstin}` : null])
+  const left = block(L, y, 'FROM', [d.billing_name, d.pan ? `PAN: ${d.pan}` : null, d.gstin ? `GSTIN: ${d.gstin}` : null])
   const right = block(L + W / 2 + 12, y, 'INVOICE', [
     `Invoice no: ${d.number}`, `Invoice date: ${date(d.issued_at)}`,
     d.deal_ref ? `Deal: ${d.deal_ref}` : null,

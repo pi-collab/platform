@@ -1,4 +1,5 @@
 'use client'
+import BankDetailsFirst from './BankDetailsFirst'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -23,7 +24,7 @@ function salesToPaise(v: string): number | null {
   return m ? Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0')) : null
 }
 
-export default function AffiliateCommission({ dealId, c, brand, defaultName }: { dealId: string; c: CreatorCommission; brand: string; defaultName: string }) {
+export default function AffiliateCommission({ dealId, c, brand, defaultName, bankOnFile = true }: { dealId: string; c: CreatorCommission; brand: string; defaultName: string; bankOnFile?: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [sales, setSales] = useState('')
@@ -82,6 +83,7 @@ export default function AffiliateCommission({ dealId, c, brand, defaultName }: {
       )}
 
       {!live && c.can_claim && (
+        !bankOnFile ? <div style={{ marginTop: 14 }}><BankDetailsFirst dealId={dealId} /></div> :
         <div style={{ display: 'grid', gap: 14, marginTop: 14 }}>
           <div>
             <span style={label}>Sales through your affiliate link (₹)</span>

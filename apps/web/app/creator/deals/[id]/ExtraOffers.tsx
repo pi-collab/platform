@@ -19,7 +19,7 @@ import { metaLabel, sectionHeading } from './deal-shell'
  */
 const fmt = (iso: string | null) => iso ? new Date(iso.length === 10 ? `${iso}T00:00:00` : iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''
 
-function ExtraCard({ dealId, x, defaultName }: { dealId: string; x: CreatorLegExtra; defaultName: string }) {
+function ExtraCard({ dealId, x, defaultName, bankOnFile }: { dealId: string; x: CreatorLegExtra; defaultName: string; bankOnFile: boolean }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [declining, setDeclining] = useState(false)
@@ -88,7 +88,7 @@ function ExtraCard({ dealId, x, defaultName }: { dealId: string; x: CreatorLegEx
       {x.status === 'accepted' && (
         <CardActions>
           {x.can_invoice
-            ? <LegInvoiceForm dealId={dealId} extraId={x.id} payablePaise={Number(x.net_paise)} payableLabel={formatPaiseINR(Number(x.net_paise))} shootLabel="" defaultName={defaultName} />
+            ? <LegInvoiceForm bankOnFile={bankOnFile} dealId={dealId} extraId={x.id} payablePaise={Number(x.net_paise)} payableLabel={formatPaiseINR(Number(x.net_paise))} shootLabel="" defaultName={defaultName} />
             : (
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -107,8 +107,8 @@ function ExtraCard({ dealId, x, defaultName }: { dealId: string; x: CreatorLegEx
   )
 }
 
-export default function ExtraOffers({ dealId, extras, defaultName }: { dealId: string; extras: CreatorLegExtra[]; defaultName: string }) {
+export default function ExtraOffers({ dealId, extras, defaultName, bankOnFile = true }: { dealId: string; extras: CreatorLegExtra[]; defaultName: string; bankOnFile?: boolean }) {
   if (extras.length === 0) return null
   const ordered = [...extras].sort((a, b) => (a.status === 'open' ? -1 : 0) - (b.status === 'open' ? -1 : 0) || b.number - a.number)
-  return <>{ordered.map((x) => <ExtraCard key={x.id} dealId={dealId} x={x} defaultName={defaultName} />)}</>
+  return <>{ordered.map((x) => <ExtraCard key={x.id} dealId={dealId} x={x} defaultName={defaultName} bankOnFile={bankOnFile} />)}</>
 }

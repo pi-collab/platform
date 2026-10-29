@@ -19,6 +19,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
+import { ensureTestBank, ensureTestBankForDeal, removeTestBank } from './lib/test-bank'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 import { fixtureInvoice } from './fixture-invoice'
@@ -209,6 +210,7 @@ async function run() {
   ok('D cannot invoice G\'s extra', refused(await creatorD.rpc('creator_leg_extra_invoice_raise', { p_extra_id: x2.data, p_confirmed: true, p_billing_name: 'D', p_gstin: null, p_expected_payable_paise: g3.creatorNetPaise })))
   ok('without the confirmation: refused', refused(await creator.rpc('creator_leg_extra_invoice_raise', { p_extra_id: x2.data, p_confirmed: false, p_billing_name: 'G', p_gstin: null, p_expected_payable_paise: g3.creatorNetPaise })))
   ok('a stale total: refused', said(await creator.rpc('creator_leg_extra_invoice_raise', { p_extra_id: x2.data, p_confirmed: true, p_billing_name: 'G', p_gstin: null, p_expected_payable_paise: 1 }), /changed/))
+  await ensureTestBankForDeal(admin, creator, legOf(G))
   const xi = await creator.rpc('creator_leg_extra_invoice_raise', { p_extra_id: x2.data, p_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: g3.creatorNetPaise })
   const gRef = (await admin.from('deals').select('deal_ref').eq('id', legOf(G)).single()).data!.deal_ref
   ok('G raises it: numbered CI-<ref>-X2, for the extra net', !xi.error && (xi.data as any)?.number === `CI-${gRef}-X2`, xi.error?.message ?? JSON.stringify(xi.data))
@@ -245,6 +247,7 @@ async function run() {
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
+  ok('test bank details removed', (await removeTestBank(admin)) === 0)
   if (uploaded.length) await admin.storage.from('finance-docs').remove(uploaded)
   for (const E of exps) {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)

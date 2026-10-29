@@ -24,6 +24,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
+import { ensureTestBank, ensureTestBankForDeal, removeTestBank } from './lib/test-bank'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 import { fixtureInvoice } from './fixture-invoice'
@@ -167,6 +168,11 @@ async function run() {
   const g0 = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   const gPayable = Number(g0.total_to_creator_paise)
   ok("G's page offers it (shot, accepted, part complete) and shows no invoice yet", g0.can_invoice === true && g0.invoice === null, JSON.stringify({ c: g0.can_invoice, i: g0.invoice }))
+  // 0580: no bank account on file, no invoice (only checkable when G has none of their own).
+  if ((await creator.rpc('creator_payout_details')).data?.on_file !== true) {
+    ok('0580 without bank details the invoice is refused', said(await creator.rpc('creator_leg_invoice_raise', { p_deal_id: legOf(G), p_shoot_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: gPayable }), /bank details/))
+  }
+  await ensureTestBankForDeal(admin, creator, legOf(G)); await ensureTestBankForDeal(admin, creatorD, legOf(D))
   const raise = (s: SupabaseClient, deal: string, o: Record<string, unknown> = {}) => s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: '', p_expected_payable_paise: gPayable, ...o })
   ok('another creator cannot raise it for G', refused(await raise(creatorD, legOf(G))))
   for (const [n, s] of [['operational staff', op], ['brand', brand], ['anonymous', anon]] as const) ok(`${n} cannot raise a creator invoice`, refused(await raise(s as SupabaseClient, legOf(G))))
@@ -381,6 +387,7 @@ async function run() {
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
+  ok('test bank details removed', (await removeTestBank(admin)) === 0)
   if (uploaded.length) await admin.storage.from('finance-docs').remove(uploaded)
   for (const E of exps) {
     await admin.from('vendor_payouts').delete().eq('experience_id', E)

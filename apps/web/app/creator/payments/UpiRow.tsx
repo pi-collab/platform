@@ -50,7 +50,7 @@ export default function UpiRow({ initialUpiId }: { initialUpiId: string | null }
                 <span style={{ color: 'var(--wg-400)' }}>not verified yet</span>
               </>
             ) : (
-              'No payout method yet'
+              'No UPI ID yet'
             )}
           </span>
 
@@ -70,7 +70,7 @@ export default function UpiRow({ initialUpiId }: { initialUpiId: string | null }
               cursor: 'pointer',
             }}
           >
-            {saved ? 'Change' : 'Add UPI ID'}
+            {saved ? 'Change' : 'Add'}
           </button>
         </div>
       </div>

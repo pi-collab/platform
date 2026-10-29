@@ -7,7 +7,7 @@ import type { Metadata } from 'next'
 import PaymentsClient from './PaymentsClient'
 import CreatorPaymentsMobile from '@/components/CreatorPaymentsMobile'
 import { unreadNotificationCount } from '@/lib/unread'
-import GuapdPayoutsSection, { type GuapdPayout } from './GuapdPayoutsSection'
+import type { GuapdPayout } from './GuapdPayoutsSection'
 import type { PayoutDetailsView } from './payout-details-actions'
 
 export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
@@ -20,12 +20,15 @@ export const metadata: Metadata = { title: 'Payments · Guapd Creator' }
  * caller states its own return in `?from=`, which keeps CreatorPageHeader's
  * rule that a back arrow never guesses.
  */
-function backFrom(from: string | undefined) {
+function backFrom(from: string | undefined, deal?: string) {
+  // 0580: sent here from a deal to add bank details before invoicing: back goes to that deal.
+  if (deal && /^[0-9a-f-]{36}$/i.test(deal)) return `/creator/deals/${deal}`
   return from === 'profile' ? '/creator/profile' : '/creator/dashboard'
 }
 
-export default async function CreatorPaymentsPage({ searchParams }: { searchParams?: { from?: string } }) {
-  const backHref = backFrom(searchParams?.from)
+export default async function CreatorPaymentsPage({ searchParams }: { searchParams?: { from?: string; deal?: string } }) {
+  const backHref = backFrom(searchParams?.from, searchParams?.deal)
+  const fromDeal = !!searchParams?.deal && backHref.startsWith('/creator/deals/')
   const ctx = await verifyCreator()
   const supabase = createClient()
 
@@ -52,16 +55,14 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
   // Summary
   // 0542: Guapd-managed shoots. Their own payouts and their masked bank
   // details, each through a definer function that returns only their own.
-  const [{ data: guapdPayoutsRaw }, { data: payoutDetailsRaw }, { count: legCount }] = await Promise.all([
+  const [{ data: guapdPayoutsRaw }, { data: payoutDetailsRaw }] = await Promise.all([
     supabase.rpc('creator_payouts'),
     supabase.rpc('creator_payout_details'),
-    supabase.from('deals').select('id', { count: 'exact', head: true }).eq('leg_role', 'creator_leg'),
   ])
   const guapdPayouts = ((guapdPayoutsRaw ?? []) as GuapdPayout[]).map((p) => ({ ...p, net_paise: Number(p.net_paise), allowance_paise: Number(p.allowance_paise ?? 0), tds_paise: Number(p.tds_paise), paid_paise: Number(p.paid_paise) }))
   // 0546: what Guapd pays for a shoot = net after the fee + any allowance (no fee on it).
   const dueOf = (p: { net_paise: number; allowance_paise?: number }) => p.net_paise + (p.allowance_paise ?? 0)
   const payoutDetails = (payoutDetailsRaw ?? { on_file: false }) as PayoutDetailsView
-  const showGuapd = (legCount ?? 0) > 0 || guapdPayouts.length > 0 || payoutDetails.on_file
 
   // Earned = paid invoices + what Guapd paid them for shoots, at their NET
   // (the figure on their statement; TDS withheld is still their income).
@@ -141,8 +142,26 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
       paidDate,
       paidAt: inv.paid_at,
       paidMonthsAgo: monthsDiff,
+      byGuapd: false,
     }
-  })
+  }).concat(guapdPayouts.filter((p) => p.status === 'paid').map((p, i) => {
+    // Experiences: Guapd paid the creator for a shoot. Same history, marked as Guapd's;
+    // the row opens the deal, where the invoice PDF and the payout statement are.
+    const paidAt = p.paid_on ? new Date(`${p.paid_on.slice(0, 10)}T00:00:00`) : now
+    return {
+      id: `guapd-paid-${p.deal_id}-${i}`,
+      dealId: p.deal_id,
+      dealTitle: p.title || 'Guapd shoot',
+      brandName: p.brand_label,
+      brandInitials: getInitials(p.brand_label),
+      brandLogo: null,
+      amountPaise: p.paid_paise,
+      paidDate: paidAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      paidAt: paidAt.toISOString(),
+      paidMonthsAgo: (now.getFullYear() - paidAt.getFullYear()) * 12 + (now.getMonth() - paidAt.getMonth()),
+      byGuapd: true,
+    }
+  })).sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? ''))
 
   /* Deals the creator can invoice but has not.
      This screen is driven entirely by invoices, so a creator whose deals are
@@ -201,7 +220,7 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
     {isEmpty && (
       <main className="creator-empty-mobile" style={{ position: 'relative', zIndex: 1 }}>
         <CreatorPageHeader title="Payments" backHref={backHref} />
-        <CreatorPaymentsEmpty upiId={upiId} totalEarnedPaise={totalEarnedPaise} />
+        <CreatorPaymentsEmpty upiId={upiId} totalEarnedPaise={totalEarnedPaise} payoutDetails={payoutDetails} bankReturnTo={fromDeal ? backHref : null} />
       </main>
     )}
     {!isEmpty && (
@@ -212,6 +231,8 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         history={history}
         readyToInvoice={readyToInvoice}
         unreadNotifications={unreadNotifs}
+        payoutDetails={payoutDetails}
+        bankReturnTo={fromDeal ? backHref : null}
       />
     )}
     <main className={isEmpty ? 'creator-empty-desktop' : 'cpay-desktop'} style={{ flex: 1, minWidth: 0, padding: 'clamp(18px,2.4vw,30px) clamp(22px,4vw,56px) clamp(48px,5vw,80px)' }}>
@@ -223,9 +244,10 @@ export default async function CreatorPaymentsPage({ searchParams }: { searchPara
         history={history}
         readyToInvoice={readyToInvoice}
         upiId={upiId}
+        payoutDetails={payoutDetails}
+        bankReturnTo={fromDeal ? backHref : null}
       />
     </main>
-    {showGuapd && <GuapdPayoutsSection payouts={guapdPayouts} details={payoutDetails} />}
     </>
   )
 }
