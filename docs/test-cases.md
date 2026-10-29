@@ -7990,6 +7990,10 @@ Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two lo
 - [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the filter row wraps
 - [ ] No hydration error in dev on /browse
 - [ ] After an AI search, the notes (creators with a field missing, "Not used" terms) are collapsed under one "How Guapd matched this · N ruled out" line; clicking it opens them, the chevron turns
+- [ ] Run an AI search, open a creator, press back: the same query, results, chips and notes are there, with no new AI call (session storage `guapd.browse.ai`, this tab only, 1 hour)
+- [ ] "Clear AI search" or turning AI off forgets it: back on /browse shows all creators
+- [ ] A new tab, or the same tab after an hour, starts with an empty AI box
+- [ ] Storage blocked (private mode): the page works, the search just is not kept
 
 **Header**
 - [ ] The brand nav link reads "Browse" (was "Browse creators")

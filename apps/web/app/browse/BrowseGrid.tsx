@@ -93,6 +93,11 @@ const AI_EXAMPLES = [
   'finance creators on YouTube',
 ]
 
+const AI_SEARCH_KEY = 'guapd.browse.ai'
+/** An AI search is restored for an hour: long enough to look through
+ *  creators, short enough that a stale result does not greet a new session. */
+const AI_SEARCH_TTL_MS = 60 * 60 * 1000
+
 function useAnimatedPlaceholder() {
   const phrases = [
     'Search name or @handle',
@@ -294,6 +299,31 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   }, [aiOutcome])
 
   const aiActive = aiMode && Boolean(aiOutcome?.ok)
+
+  /* Keep the last AI search for this tab, so opening a creator and coming
+     back shows the same results instead of an empty box. Session storage: per
+     tab, gone when the tab closes, never read by anyone else. Restoring costs
+     no AI call; the results are what the brand already saw. */
+  const aiRestored = useRef(false)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(AI_SEARCH_KEY)
+      const saved = raw ? JSON.parse(raw) as { q?: unknown; outcome?: SearchOutcome; at?: number } : null
+      if (aiConfigured && saved?.outcome?.ok && typeof saved.q === 'string' && Date.now() - (saved.at ?? 0) < AI_SEARCH_TTL_MS) {
+        setAiMode(true)
+        setSearch(saved.q)
+        setAiOutcome(saved.outcome)
+      }
+    } catch { /* storage blocked: start fresh */ }
+    aiRestored.current = true
+  }, [aiConfigured])
+  useEffect(() => {
+    if (!aiRestored.current) return
+    try {
+      if (aiMode && aiOutcome?.ok) sessionStorage.setItem(AI_SEARCH_KEY, JSON.stringify({ q: search, outcome: aiOutcome, at: Date.now() }))
+      else sessionStorage.removeItem(AI_SEARCH_KEY)
+    } catch { /* storage blocked: nothing to keep */ }
+  }, [aiMode, aiOutcome, search])
 
   /* The header's Guapd AI icon lands here with ?ai=1: AI on, cursor in the box.
      Keyed on the param so it also works when already on /browse. */
