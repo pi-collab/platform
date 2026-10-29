@@ -7990,3 +7990,11 @@ Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two lo
 - [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the row wraps and the input drops below the switch
 - [ ] No hydration error in dev on /browse
 
+
+## 161. Niches start with a capital letter (migration 0582, 2026-10-29)
+
+- [ ] A niche typed under Other ("dentistry") is saved as "Dentistry"; only the first letter changes ("SaaS", "MBA" stay as written); double spaces collapse
+- [ ] Typing "storytelling" when "Storytelling" is already in the list does not add a second one
+- [ ] Niches from the list are unchanged ("Fitness, Sports & Bodybuilding")
+- [ ] 0582 on an environment: no niche in `creators.niches` starts with a lowercase letter; `creators.niche` = `niches[1]`; every storefront's `categories` equals `creators.niches`. Idempotent: a second run changes nothing
+- [ ] /browse "All niches" dropdown shows one entry per niche, not "storytelling" and "Storytelling"

@@ -180,17 +180,25 @@ export function canonicalNiche(raw: string | null | undefined): Niche | null {
   return NICHE_ALIASES[key] ?? LEGACY_SPLITS[key]?.[0] ?? null
 }
 
+/** A creator's own niche, as typed, with a capital first letter ("dentistry"
+ *  -> "Dentistry"). Only the first letter: "SaaS" and "MBA" stay as written. */
+export function capitaliseNiche(raw: string): string {
+  const t = raw.trim().replace(/\s+/g, ' ')
+  return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
 /**
  * Clean a list of typed niches: canonicalise what we recognise, keep what we
- * do not, drop blanks and duplicates, preserve order.
+ * do not (first letter capitalised), drop blanks and duplicates (ignoring
+ * case, so "storytelling" and "Storytelling" are one), preserve order.
  */
 export function canonicalNiches(raw: (string | null | undefined)[]): string[] {
   const out: string[] = []
   for (const v of raw) {
     const trimmed = (v ?? '').trim()
     if (!trimmed) continue
-    const resolved = LEGACY_SPLITS[nicheKey(trimmed)] ?? [canonicalNiche(trimmed) ?? trimmed]
-    for (const r of resolved) if (!out.includes(r)) out.push(r)
+    const resolved = LEGACY_SPLITS[nicheKey(trimmed)] ?? [canonicalNiche(trimmed) ?? capitaliseNiche(trimmed)]
+    for (const r of resolved) if (!out.some(o => o.toLowerCase() === r.toLowerCase())) out.push(r)
   }
   return out
 }
