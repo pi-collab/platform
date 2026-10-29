@@ -126,7 +126,6 @@ export function rankCandidates(
   const withPastBrands = coverage(candidates, c => c.pastBrands.length > 0)
   const withPlatforms = coverage(candidates, c => c.platforms.length > 0)
 
-  const pct = (n: number) => `${Math.round(n * 100)}%`
   const countOf = (n: number) => Math.round(n * total)
 
   /** Creators with the field empty are kept after the matches; the brand is
@@ -137,7 +136,7 @@ export function rankCandidates(
     if (missing <= 0) return
     softened.push({
       label,
-      reason: `${missing} of ${total} creators have no ${field} on file (${pct(1 - cov)}). Anyone whose ${field} does not match is ruled out; those with none are shown after the matches`,
+      reason: `${missing} of ${total} creators have no ${field} on file, so they are shown after the matches`,
     })
   }
 

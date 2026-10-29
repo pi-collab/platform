@@ -7989,6 +7989,12 @@ Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two lo
 - [ ] Without the key: no switch, name search only, as before
 - [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the filter row wraps
 - [ ] No hydration error in dev on /browse
+- [ ] After an AI search, the notes (creators with a field missing, "Not used" terms) are collapsed under one "How Guapd matched this · N ruled out" line; clicking it opens them, the chevron turns
+
+**Header**
+- [ ] The brand nav link reads "Browse" (was "Browse creators")
+- [ ] A Guapd AI sparkle icon (outline, transparent; fills Guapd green on hover) sits before the inbox and bell (desktop) and before the bell (mobile); it opens /browse with AI on and the cursor in the search box, also when already on /browse
+- [ ] No Guapd AI icon without `ANTHROPIC_API_KEY`, for a user with no brand, or in the Guapd console (/experiences-admin)
 
 
 ## 161. Niches start with a capital letter (migration 0582, 2026-10-29)

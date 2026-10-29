@@ -81,7 +81,7 @@ interface NotifCreatorMap {
   [dealId: string]: { name: string; photo: string | null }
 }
 
-export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole = false, consoleMode = false, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {} }: { brandName: string | null; hasBrand?: boolean; guapdConsole?: boolean; /** 0546: on /experiences-admin: the bell and inbox are Guapd staff's, not the brand's. */ consoleMode?: boolean; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
+export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole = false, consoleMode = false, brandLogoUrl = null, userEmail, unreadCount: initialUnread = 0, unreadInbox = 0, recentNotifications = [], notifCreatorMap = {}, guapdAi = false }: { brandName: string | null; /** Guapd AI: the header icon that opens Browse with AI search on. */ guapdAi?: boolean; hasBrand?: boolean; guapdConsole?: boolean; /** 0546: on /experiences-admin: the bell and inbox are Guapd staff's, not the brand's. */ consoleMode?: boolean; brandLogoUrl?: string | null; userEmail?: string | null; unreadCount?: number; unreadInbox?: number; recentNotifications?: NotifItem[]; notifCreatorMap?: NotifCreatorMap }) {
   /* Guapd staff often belong to no brand. For them the brand tabs, inbox,
      bell and brand menu would only bounce to /ops, so they see the staff
      console alone. A staff member who also belongs to a brand sees both. */
@@ -190,7 +190,7 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
                   whiteSpace: 'nowrap', flexShrink: 0,
                 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={browseActive ? 'var(--ink)' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                  Browse creators
+                  Browse
                 </Link>
               )
             })()}
@@ -198,6 +198,12 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
 
           {/* Right: inbox + bell + avatar */}
           <div style={rightGroup}>
+            {/* Guapd AI: opens Browse with the AI search on and the cursor in it */}
+            {guapdAi && (
+              <Link href="/browse?ai=1" className="guapd-ai-btn" style={iconBtnStyle} title="Guapd AI" aria-label="Guapd AI">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" /><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg>
+              </Link>
+            )}
             {showBell && <>{/* Inbox / Messages */}
             <Link href={inboxHref} style={iconBtnStyle} title={consoleMode ? 'Creator messages' : 'Inbox'}>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
@@ -417,10 +423,13 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
           <span style={hamLine} /><span style={{ ...hamLine, marginTop: 4 }} /><span style={{ ...hamLine, marginTop: 4 }} />
         </button>
         <Link href={homeHref} style={{ ...logoText, fontSize: 16, textDecoration: 'none' }}>guapd</Link>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {guapdAi && <Link href="/browse?ai=1" aria-label="Guapd AI" style={{ padding: 4, color: '#1a1b16', display: 'inline-flex' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" /><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg></Link>}
         {showBell ? <Link href={notificationsHref} style={{ position: 'relative', padding: 4, color: '#1a1b16' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
           {unreadCount > 0 && <span style={bellBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
         </Link> : <span style={{ width: 28 }} />}
+        </span>
       </header>
 
       {/* ── Mobile drawer ─────────────────────────────── */}
@@ -463,6 +472,10 @@ export default function BrandSidebar({ brandName, hasBrand = true, guapdConsole 
       )}
 
       <style>{`
+        /* Guapd AI: transparent at rest, Guapd green on hover */
+        .guapd-ai-btn { transition: background .15s ease, border-color .15s ease; }
+        .guapd-ai-btn:hover, .guapd-ai-btn:focus-visible { background: var(--neon) !important; border-color: var(--neon-deep) !important; }
+        .guapd-ai-btn:hover svg, .guapd-ai-btn:focus-visible svg { stroke: var(--ink); fill: var(--ink); }
         @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-33.33%); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes menuIn { from { opacity: 0; transform: translateY(-8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }

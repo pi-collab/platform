@@ -5,6 +5,7 @@ import AnalyticsIdentify from '@/components/AnalyticsIdentify'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
 import { STAFF_NOTIFICATION_TYPES } from '@/lib/experience-staff-notifications'
 import { consoleUnreadMessages } from '@/lib/experience-console-server'
+import { aiSearchConfigured } from '@/lib/ai-search/parse'
 
 /**
  * mode 'guapd' (0546): rendered by /experiences-admin. The bell shows Guapd
@@ -123,7 +124,7 @@ export default async function BrandNav({ mode = 'brand' }: { mode?: 'brand' | 'g
     <>
       {/* UUID only — never email/phone/name. No-op until consent is granted. */}
       {profileId && <AnalyticsIdentify userId={profileId} role="brand" />}
-      <BrandSidebar brandName={brandName} hasBrand={hasBrand} guapdConsole={guapdConsole} consoleMode={consoleMode} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} />
+      <BrandSidebar brandName={brandName} hasBrand={hasBrand} guapdConsole={guapdConsole} consoleMode={consoleMode} brandLogoUrl={brandLogoUrl} userEmail={user?.email ?? null} unreadCount={unreadCount} unreadInbox={unreadInbox} recentNotifications={recentNotifications} notifCreatorMap={notifCreatorMap} guapdAi={!consoleMode && hasBrand && aiSearchConfigured()} />
     </>
   )
 }

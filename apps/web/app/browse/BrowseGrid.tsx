@@ -5,7 +5,7 @@ import { aiCreatorSearch, rerankWithFilters } from './ai-search-actions'
 import type { SearchFilters, SearchOutcome } from '@/lib/ai-search/types'
 import NewCampaignFields, { EMPTY_CAMPAIGN_DRAFT, parseBudget, type CampaignDraft } from '@/components/NewCampaignFields'
 import Toast from '@/components/Toast'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import FilterDropdown from '@/components/FilterDropdown'
 import TrackTag from '@/components/track/TrackTag'
 import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilter'
@@ -295,6 +295,15 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
   const aiActive = aiMode && Boolean(aiOutcome?.ok)
 
+  /* The header's Guapd AI icon lands here with ?ai=1: AI on, cursor in the box.
+     Keyed on the param so it also works when already on /browse. */
+  const aiParam = useSearchParams()?.get('ai')
+  useEffect(() => {
+    if (aiParam !== '1' || !aiConfigured) return
+    setAiMode(true)
+    searchRef.current?.focus()
+  }, [aiParam, aiConfigured])
+
   function runAiSearch(text?: string) {
     const q = (text ?? search).trim()
     if (!q || aiPending) return
@@ -468,6 +477,9 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
         @media (hover: none) {
           .card-tick { opacity: 1; }
         }
+        .bx-how summary::-webkit-details-marker { display: none; }
+        .bx-how-chev { transition: transform .15s ease; }
+        .bx-how[open] .bx-how-chev { transform: rotate(90deg); }
         .bx-search:focus-within { border-color: var(--ink) !important; box-shadow: 0 8px 24px -16px rgba(22,23,15,.35); }
         .bx-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(40,45,25,.2); border-top-color: var(--ink); animation: bx-spin .7s linear infinite; }
         @keyframes bx-spin { to { transform: rotate(360deg); } }
@@ -769,24 +781,28 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             {!aiPending && aiOutcome && !aiOutcome.ok && (
               <p role="status" style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>{aiOutcome.message}</p>
             )}
-            {!aiPending && aiOutcome?.ok && (
-              <>
-                {aiOutcome.filters.unusedTerms.length > 0 && (
-                  <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
-                    Not used: {aiOutcome.filters.unusedTerms.join(', ')}. We only match on what creators have filled in or verified.
-                  </p>
-                )}
-                {aiOutcome.softened.map((sf) => (
-                  <p key={sf.label} style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
-                    <strong style={{ color: 'var(--ink)' }}>{sf.label}:</strong> {sf.reason}.
-                  </p>
-                ))}
-                {aiOutcome.excludedCount > 0 && (
-                  <p style={{ margin: 0, fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>
-                    {aiOutcome.excludedCount} creator{aiOutcome.excludedCount === 1 ? '' : 's'} ruled out by your search.
-                  </p>
-                )}
-              </>
+            {/* Collapsed by default: the results come first, the working is one
+                click away for anyone who wants to check it. */}
+            {!aiPending && aiOutcome?.ok && (aiOutcome.softened.length > 0 || aiOutcome.filters.unusedTerms.length > 0 || aiOutcome.excludedCount > 0) && (
+              <details className="bx-how" style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-soft)' }}>
+                <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--ink-soft)' }}>
+                  <svg className="bx-how-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                  How Guapd matched this
+                  {aiOutcome.excludedCount > 0 && <span style={{ fontWeight: 500, color: 'var(--ink-faint)' }}>· {aiOutcome.excludedCount} ruled out</span>}
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '8px 0 0 18px' }}>
+                  {aiOutcome.softened.map((sf) => (
+                    <p key={sf.label} style={{ margin: 0 }}>
+                      <strong style={{ color: 'var(--ink)' }}>{sf.label}:</strong> {sf.reason}.
+                    </p>
+                  ))}
+                  {aiOutcome.filters.unusedTerms.length > 0 && (
+                    <p style={{ margin: 0 }}>
+                      <strong style={{ color: 'var(--ink)' }}>Not used:</strong> {aiOutcome.filters.unusedTerms.join(', ')}. We only match on what creators have filled in or verified.
+                    </p>
+                  )}
+                </div>
+              </details>
             )}
           </div>
         )}
