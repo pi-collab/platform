@@ -3,13 +3,16 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { raiseExtraInvoice, raiseLegInvoice } from './leg-actions'
+import BankDetailsFirst from './BankDetailsFirst'
 
 /**
  * 0552: after Guapd marks the shoot done, the creator confirms it and raises
  * their invoice to Guapd. Nothing here sets an amount: the database copies the
  * locked figures; the total shown is only checked against them on submit.
  */
-export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, shootLabel, defaultName, compact = false, extraId = null }: {
+export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, shootLabel, defaultName, compact = false, extraId = null, bankOnFile = true }: {
+  /** 0580: no bank account on file = no invoice yet; the form is replaced by the step to add one. */
+  bankOnFile?: boolean
   dealId: string
   payablePaise: number
   payableLabel: string
@@ -42,6 +45,7 @@ export default function LegInvoiceForm({ dealId, payablePaise, payableLabel, sho
   }
   const label: React.CSSProperties = { fontSize: 10, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ink-faint)', display: 'block', marginBottom: 6 }
   const ready = confirmed && name.trim().length >= 2 && !pending
+  if (!bankOnFile) return <BankDetailsFirst dealId={dealId} />
 
   return (
     <div style={{ width: '100%', display: 'grid', gap: 14 }}>

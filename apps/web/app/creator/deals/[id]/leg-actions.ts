@@ -159,6 +159,7 @@ export async function raiseLegInvoice(dealId: string, input: { confirmed: boolea
       : /changed/i.test(m) ? 'These figures have changed. Refresh the page and check them again.'
       : /approval/i.test(m) ? 'Your deliverables need Guapd\u2019s approval before you invoice.'
       : /marks your shoot done/i.test(m) ? 'You can raise your invoice once Guapd marks your shoot done.'
+      : /bank details/i.test(m) ? 'Add your bank details and PAN on the Payments page before you raise your invoice.'
       : 'Could not raise your invoice. Please try again.' }
   }
   const out = data as { id: string; number: string }
@@ -198,6 +199,7 @@ export async function raiseExtraInvoice(dealId: string, extraId: string, input: 
       : /name to invoice/i.test(m) ? 'Enter the name to invoice from.'
       : /changed/i.test(m) ? 'These figures have changed. Refresh the page and check them again.'
       : /complete|shoot is done/i.test(m) ? 'You can invoice this once your part is complete.'
+      : /bank details/i.test(m) ? 'Add your bank details and PAN on the Payments page before you raise your invoice.'
       : 'Could not raise your invoice. Please try again.' }
   }
   const out = data as { id: string; number: string }
@@ -271,7 +273,7 @@ export async function claimAffiliateCommission(dealId: string, input: { salesRup
   if (error) return { ok: false, message: /Confirm/i.test(error.message) ? 'Confirm the sales figure first.' : /changed/i.test(error.message) ? 'These figures have changed. Refresh the page and check them again.'
     : /GSTIN/i.test(error.message) ? 'That GSTIN is not valid.' : /name to invoice/i.test(error.message) ? 'Enter the name to invoice from.'
     : /already claimed/i.test(error.message) ? 'You have already claimed this commission.' : /ads complete/i.test(error.message) ? 'You can claim once the brand marks your collab ads complete.'
-    : /no commission|more than zero/i.test(error.message) ? 'Enter a sales amount that earns a commission.' : 'Could not raise your invoice. Please try again.' }
+    : /bank details/i.test(error.message) ? 'Add your bank details and PAN on the Payments page before you raise your invoice.' : /no commission|more than zero/i.test(error.message) ? 'Enter a sales amount that earns a commission.' : 'Could not raise your invoice. Please try again.' }
   const out = data as { id: string; number: string }
   await notifyStaffCommissionClaimed(out.id)
   revalidatePath(`/creator/deals/${dealId}`)

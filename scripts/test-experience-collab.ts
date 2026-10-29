@@ -19,6 +19,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
+import { ensureTestBank, ensureTestBankForDeal, removeTestBank } from './lib/test-bank'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 import { percentOfPaise } from '../apps/web/lib/money-round'
@@ -231,6 +232,7 @@ async function run() {
   ok('the 10% from the quote is locked on G\'s deal', Number(tG.affiliate_pct) === 10)
   const SALES = 12_345_789
   const gross = percentOfPaise(SALES, Number(tG.affiliate_pct)), fee = percentOfPaise(gross, Number(tG.platform_pct)), net = gross - fee
+  await ensureTestBankForDeal(admin, cG, legOf(G))
   const claim = (s: SupabaseClient, o: Record<string, unknown> = {}) => s.rpc('creator_affiliate_claim', { p_deal_id: legOf(G), p_sales_paise: SALES, p_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: net, ...o })
   let ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   ok('G can claim: every collab ad is complete', ctx3.commission?.can_claim === true && Number(ctx3.commission?.affiliate_pct) === 10)
@@ -248,6 +250,7 @@ async function run() {
   ok('claiming twice is refused', said(await claim(cG), /already claimed/))
   ctx3 = (await cG.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   ok("the commission invoice is not G's main invoice", ctx3.invoice === null && ctx3.commission?.claim?.status === 'sales_entered')
+  ok('0581 the commission invoice carries the creator\'s PAN, in full to them', /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(String(((await cG.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })).data as any)?.pan ?? '')))
   const mainInv = await cG.rpc('creator_leg_invoice_raise', { p_deal_id: legOf(G), p_shoot_confirmed: true, p_billing_name: 'Test Creator G', p_gstin: null, p_expected_payable_paise: Number(tG.creator_net_paise) + Number(tG.allowance_paise) })
   ok('…the main invoice is still raised on its own', !mainInv.error, mainInv.error?.message ?? '')
   ok('nobody else reads the commission invoice', refused(await cD.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })) && refused(await brand.rpc('creator_affiliate_invoice_doc', { p_follow_on_id: F1 })))
@@ -315,6 +318,7 @@ async function run() {
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
+  ok('test bank details removed', (await removeTestBank(admin)) === 0)
   if (uploaded.length) await admin.storage.from('finance-docs').remove(uploaded)
   for (const E of exps) {
     await admin.from('experience_collab_posts').delete().eq('experience_id', E)

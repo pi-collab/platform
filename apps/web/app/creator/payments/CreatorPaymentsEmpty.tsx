@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import UpiRow from './UpiRow'
+import BankRow from './BankRow'
+import type { PayoutDetailsView } from './payout-details-actions'
 
 /**
  * Creator payments — empty state.
@@ -14,8 +16,12 @@ import UpiRow from './UpiRow'
 export default function CreatorPaymentsEmpty({
   upiId,
   totalEarnedPaise = 0,
+  payoutDetails,
+  bankReturnTo = null,
 }: {
   upiId: string | null
+  payoutDetails: PayoutDetailsView
+  bankReturnTo?: string | null
   totalEarnedPaise?: number
 }) {
   return (
@@ -114,7 +120,10 @@ export default function CreatorPaymentsEmpty({
         </Link>
       </div>
 
-      <UpiRow initialUpiId={upiId} />
+      <div>
+        <UpiRow initialUpiId={upiId} />
+        <BankRow details={payoutDetails} returnTo={bankReturnTo} />
+      </div>
     </div>
   )
 }

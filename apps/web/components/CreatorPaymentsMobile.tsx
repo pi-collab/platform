@@ -5,6 +5,8 @@ import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import { sendPaymentReminder } from '@/app/creator/payments/actions'
 import UpiRow from '@/app/creator/payments/UpiRow'
+import BankRow from '@/app/creator/payments/BankRow'
+import type { PayoutDetailsView } from '@/app/creator/payments/payout-details-actions'
 
 /**
  * Creator payments, mobile — built to "Creator Payments - Mobile Standalone".
@@ -64,6 +66,8 @@ export interface HistoryRow {
   amountPaise: number
   paidDate: string
   paidAt: string | null
+  /** Experiences: paid by Guapd for a shoot (the deal page has the invoice PDF). */
+  byGuapd?: boolean
 }
 
 const PAGE_SIZE = 4
@@ -84,8 +88,10 @@ function csvCell(v: string | number): string {
 }
 
 export default function CreatorPaymentsMobile({
-  totalEarnedPaise, upiId, pending, history, readyToInvoice = [], unreadNotifications = 0,
+  totalEarnedPaise, upiId, pending, history, readyToInvoice = [], unreadNotifications = 0, payoutDetails, bankReturnTo = null,
 }: {
+  payoutDetails: PayoutDetailsView
+  bankReturnTo?: string | null
   totalEarnedPaise: number
   upiId: string | null
   pending: PendingRow[]
@@ -182,6 +188,7 @@ export default function CreatorPaymentsMobile({
               money. UpiRow says "not verified yet" and means it. */}
           <div className="cpay-m__payout">
             <UpiRow initialUpiId={upiId} />
+            <BankRow details={payoutDetails} returnTo={bankReturnTo} />
           </div>
         </section>
 
@@ -268,7 +275,7 @@ export default function CreatorPaymentsMobile({
                       <BrandMark name={h.brandName} logoUrl={h.brandLogo} initials={h.brandInitials} className="cpay-m__davatar" />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="cpay-m__dbrand">{h.brandName}</div>
-                        <div className="cpay-m__dsub">{h.dealTitle} &middot; {h.paidDate}</div>
+                        <div className="cpay-m__dsub">{h.dealTitle} &middot; {h.byGuapd ? 'Paid by Guapd \u00b7 ' : ''}{h.paidDate}</div>
                       </div>
                       <span className="cpay-m__damount tnum">{inr(h.amountPaise)}</span>
                     </Link>

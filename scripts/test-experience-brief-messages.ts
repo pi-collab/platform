@@ -30,6 +30,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
+import { ensureTestBank, ensureTestBankForDeal, removeTestBank } from './lib/test-bank'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms, experienceMargin } from '../apps/web/lib/experience-money'
 
@@ -49,6 +50,7 @@ async function postCollabsFixture(exp: string, deal: string, n: number) {
 }
 
 async function invoiceAs(s: any, deal: string) {
+  await ensureTestBankForDeal(admin, s, deal)
   const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
   return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
 }
@@ -383,6 +385,7 @@ async function run() {
 }
 
 run().catch((e) => { console.error(e); failed++ }).finally(async () => {
+  ok('test bank details removed', (await removeTestBank(admin)) === 0)
   for (const E of exps) {
     await admin.from('experience_collab_posts').delete().eq('experience_id', E)
     await admin.from('vendor_payouts').delete().eq('experience_id', E)

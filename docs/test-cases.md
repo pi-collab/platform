@@ -7874,3 +7874,29 @@ Every brand dashboard section now reads the brand's Experiences through brand-on
 | Your track record | Deals only (on-time payment / response / completion are deal measures) | Unchanged |
 
 Creator dashboard: already reflects Experience legs everywhere (Do first, Deals in motion, Active deals, Brands you've worked with, earnings from Guapd payouts once paid, reach). Checked with a leg-only staging creator; no change needed.
+## 158. A creator invoice needs bank details on file (migration 0580)
+
+Automated: `scripts/test-experience-payouts.ts` (refused without bank details, when the test creator has none of their own), and every suite that raises a creator invoice saves TEST bank details through the creator's own session first (`scripts/lib/test-bank.ts`) and removes only those afterwards.
+
+- [ ] Database: any insert into `experience_creator_invoices` (deal fee, extra, affiliate commission) is refused without a bank account on file: "Add your bank details on the Payments page before you raise your invoice"
+- [ ] Invoices already issued are untouched; a void + re-raise needs bank details
+- [ ] Creator deal page: without bank details, every invoice form (deal, extra, commission; desktop and mobile) is replaced by "Add your bank details first" → `/creator/payments?deal=<id>`
+- [ ] Payments page from a deal: the bank form opens straight away; Back and Save both return to that deal
+- [ ] Payments page, "Payout method": UPI row and Bank account row together, for EVERY creator (desktop rail, mobile, empty state); bank shown masked (••••1234 · IFSC · PAN ••••)
+- [ ] "Paid by Guapd" list sits in the main column and appears only once there is a payout
+- [ ] Staff Payouts panel: invoice number and "View PDF" both open the creator invoice PDF; creator deal page: "Your invoice CI-… (PDF)"
+- [ ] PAN stays optional (TDS still with the CA)
+
+**Environment**
+- 0580 hand-run on staging and repaired as applied. Visual fixtures (`fixture-money-visual`, `fixture-phase5-visual`) do not add bank details (their create and --cleanup are separate runs); raise invoices in them only for creators with details on file. Several Experience suites currently stop at "missing test actors" on staging (pre-existing, unrelated: staging data drift).
+
+## 159. PAN required with the bank account, printed on the creator invoice (migration 0581)
+
+Automated: `scripts/test-creator-pan-required.ts` (staging, a creator with no details of their own; removed after), and `scripts/test-experience-collab.ts` (the raised invoice carries the PAN).
+
+- [ ] Saving a bank account with no PAN on file: refused ("Enter your PAN. It is needed for TDS…"); wrong format refused; any case accepted
+- [ ] Re-saving with the PAN box empty KEEPS the PAN on file (before 0581 it erased it), and is not recorded as a PAN change
+- [ ] Bank form: PAN label without "optional"; note with the Instant e-PAN link and contact@guapd.com; bank row shows "PAN missing" + "Add PAN" for creators saved before 0581
+- [ ] A creator invoice needs bank account AND PAN (0580 extended); deal page step reads "Add your bank details and PAN first"
+- [ ] The invoice stores the PAN it was raised with (encrypted); later PAN changes do not rewrite it; it cannot be edited (guard)
+- [ ] Invoice PDF "FROM": PAN in full for the creator and finance, ••••••1234 for operational-only staff; invoices before 0581 show none

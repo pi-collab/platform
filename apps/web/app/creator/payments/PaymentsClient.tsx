@@ -4,6 +4,8 @@ import { useState } from 'react'
 import BrandMark from '@/components/BrandMark'
 import Link from 'next/link'
 import UpiRow from './UpiRow'
+import BankRow from './BankRow'
+import type { PayoutDetailsView } from './payout-details-actions'
 import { sendPaymentReminder } from './actions'
 
 // ── Types ──────────────────────────────────────────────────────
@@ -33,6 +35,8 @@ interface HistoryPayment {
   amountPaise: number
   paidDate: string
   paidMonthsAgo: number
+  /** Experiences: paid by Guapd for a shoot (the deal page has the invoice PDF). */
+  byGuapd?: boolean
 }
 
 interface ReadyToInvoice {
@@ -46,6 +50,9 @@ interface ReadyToInvoice {
 }
 
 interface Props {
+  /** 0580: the bank account, under UPI. */
+  payoutDetails: PayoutDetailsView
+  bankReturnTo?: string | null
   totalEarnedPaise: number
   pendingAmountPaise: number
   pendingCount: number
@@ -87,7 +94,7 @@ const FILTER_DEFS: [FilterKey, string][] = [['all', 'All'], ['month', 'This mont
 
 const PAGE_SIZE = 5
 
-export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, pendingCount, pending, history, readyToInvoice = [], upiId = null }: Props) {
+export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, pendingCount, pending, history, readyToInvoice = [], upiId = null, payoutDetails, bankReturnTo = null }: Props) {
   const [filter, setFilter] = useState<FilterKey>('all')
   const [remindedIds, setRemindedIds] = useState<Record<string, boolean>>({})
   const [historyPage, setHistoryPage] = useState(0)
@@ -351,7 +358,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                         </span>
                       </div>
                       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 4 }}>
-                        {h.brandName} · paid {h.paidDate}
+                        {h.brandName} · {h.byGuapd ? 'paid by Guapd' : 'paid'} {h.paidDate}{h.byGuapd ? ' · invoice on the deal' : ''}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -534,6 +541,7 @@ export default function PaymentsClient({ totalEarnedPaise, pendingAmountPaise, p
                 be paid at all. */}
             <div style={{ marginTop: 15 }}>
               <UpiRow initialUpiId={upiId} />
+              <BankRow details={payoutDetails} returnTo={bankReturnTo} />
             </div>
             <Link
               href="/creator/settings"

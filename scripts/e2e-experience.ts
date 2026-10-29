@@ -27,6 +27,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../apps/web/.env.loc
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 if (!URL.includes('dswlplxyizvljzaihmjw')) { console.error('ABORT: not staging'); process.exit(1) }
 
+import { ensureTestBank, ensureTestBankForDeal, removeTestBank } from './lib/test-bank'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { creatorLegTerms } from '../apps/web/lib/experience-money'
 const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!)
@@ -65,6 +66,7 @@ const BRAND_FORBIDDEN = /rate|gross|net_|_net|pct|payout|cost|margin|fee|allowan
 
 /** 0552: the creator confirms the shoot and raises their invoice before Guapd requests the payout. */
 async function invoiceAs(s: any, deal: string) {
+  await ensureTestBankForDeal(admin, s, deal)
   const c = (await s.rpc('creator_leg_context', { p_deal_id: deal })).data as any
   return s.rpc('creator_leg_invoice_raise', { p_deal_id: deal, p_shoot_confirmed: true, p_billing_name: 'Test Creator', p_gstin: null, p_expected_payable_paise: Number(c?.total_to_creator_paise) })
 }
@@ -351,6 +353,7 @@ if (process.argv.includes('--cleanup')) {
   cleanup().then(() => console.log(failed ? 'cleanup FAILED' : 'cleanup done'))
 } else {
   run().catch((e) => { console.error('STOPPED:', e instanceof Error ? e.message : e); failed++ }).finally(async () => {
+    ok('test bank details removed', (await removeTestBank(admin)) === 0)
     save()
     if (!KEEP || failed) await cleanup()
     else console.log(`\nKEPT for the visual check: ${JSON.stringify(visual)}\nRemove with --cleanup.`)

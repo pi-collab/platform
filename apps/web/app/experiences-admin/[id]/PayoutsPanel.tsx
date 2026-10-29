@@ -119,6 +119,7 @@ export default function PayoutsPanel({ experienceId, data }: { experienceId: str
                   {inv && <span>
                     Creator invoice <a href={`/experiences-admin/creator-invoice/${inv.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700 }}>{inv.number}</a>
                     {' '}· raised {fmtDate(inv.issued_at.slice(0, 10))} · {formatRupees(inv.payable_paise)}{inv.gstin ? ` · GSTIN ${inv.gstin}` : ''}
+                    {' '}· <a href={`/experiences-admin/creator-invoice/${inv.id}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ink)', fontWeight: 700, textDecoration: 'underline' }}>View PDF</a>
                     {!p && open && !l.commissionId && voiding !== inv.id && <> · <button type="button" onClick={() => { setVoiding(inv.id); setVoidReason('') }} style={{ background: 'none', border: 0, padding: 0, color: '#9C4147', fontWeight: 600, cursor: 'pointer', fontSize: 12.5 }}>Void</button></>}
                   </span>}
                   {inv && voiding === inv.id && (
