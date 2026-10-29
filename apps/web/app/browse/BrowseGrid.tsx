@@ -88,9 +88,9 @@ const PAGE_SIZE = 9
 /** Shown under an empty AI search. Each is a query the parser handles fully
  *  (niche, followers, city, budget, platform), so the first try works. */
 const AI_EXAMPLES = [
-  'Beauty creators under 50k followers',
-  'Fitness creators in Mumbai, budget ₹40,000',
-  'Finance creators on YouTube',
+  'find beauty creators under 50k followers',
+  'fitness creators in Mumbai, budget ₹40,000',
+  'finance creators on YouTube',
 ]
 
 function useAnimatedPlaceholder() {
@@ -468,11 +468,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
         @media (hover: none) {
           .card-tick { opacity: 1; }
         }
-        .bx-search:focus-within { border-color: var(--ink) !important; }
-        @media (max-width: 560px) {
-          .bx-search { flex-wrap: wrap; }
-          .bx-search input { order: 3; flex-basis: 100% !important; }
-        }
+        .bx-search:focus-within { border-color: var(--ink) !important; box-shadow: 0 8px 24px -16px rgba(22,23,15,.35); }
+        .bx-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(40,45,25,.2); border-top-color: var(--ink); animation: bx-spin .7s linear infinite; }
+        @keyframes bx-spin { to { transform: rotate(360deg); } }
+
       `}</style>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
@@ -568,63 +567,52 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             Browse <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 36 }}>creators</span>
           </h1>
 
-          {/* ── Search. The main way in: one wide box, AI first. Describe who
-              you want, or switch to Name to find someone you already know. ── */}
+          {/* ── Search. The main way in: one wide box. AI on, describe who you
+              want and send; AI off, it finds a name or @handle as you type. ── */}
           <div className="bx-search" style={{
             display: 'flex', alignItems: 'center', gap: 10, marginTop: 22,
-            padding: '7px 7px 7px 8px', borderRadius: 18,
-            border: `1.5px solid ${aiMode ? 'var(--ink)' : 'var(--border-hairline)'}`,
-            background: '#fff',
-            boxShadow: aiMode ? '0 10px 30px -18px rgba(22,23,15,.35)' : 'none',
+            height: 56, padding: '0 8px 0 10px', borderRadius: 16,
+            border: '1px solid var(--border-hairline)', background: '#fff',
           }}>
-            {aiConfigured && (
-              <div role="group" aria-label="Search by" style={{ display: 'flex', flexShrink: 0, padding: 3, borderRadius: 12, background: 'rgba(40,45,25,.06)' }}>
-                {([['ai', 'Ask AI'], ['name', 'Name']] as const).map(([k, label]) => {
-                  const on = (k === 'ai') === aiMode
-                  return (
-                    <button
-                      key={k}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (on) return
-                        setAiMode(k === 'ai')
-                        setAiOutcome(null)
-                        setSearch('')
-                        setShown(PAGE_SIZE)
-                        searchRef.current?.focus()
-                      }}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 12px',
-                        borderRadius: 9, border: 'none', cursor: on ? 'default' : 'pointer',
-                        background: on ? (k === 'ai' ? 'var(--ink)' : '#fff') : 'transparent',
-                        color: on ? (k === 'ai' ? 'var(--neon)' : 'var(--ink)') : 'var(--ink-soft)',
-                        boxShadow: on && k === 'name' ? '0 1px 2px rgba(22,23,15,.12)' : 'none',
-                        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {k === 'ai'
-                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" /><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg>
-                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
-                      <span className="bx-mode-label">{label}</span>
-                    </button>
-                  )
-                })}
-              </div>
+            {aiConfigured ? (
+              <button
+                type="button"
+                aria-pressed={aiMode}
+                title={aiMode ? 'Turn AI off to search by name' : 'Turn AI on to describe who you need'}
+                onClick={() => {
+                  setAiMode(!aiMode)
+                  setAiOutcome(null)
+                  setSearch('')
+                  setShown(PAGE_SIZE)
+                  searchRef.current?.focus()
+                }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, height: 34, padding: '0 12px',
+                  borderRadius: 999, cursor: 'pointer',
+                  border: `1px solid ${aiMode ? 'var(--ink)' : 'var(--border-hairline)'}`,
+                  background: aiMode ? 'var(--ink)' : 'transparent',
+                  color: aiMode ? '#fff' : 'var(--ink-soft)',
+                  fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill={aiMode ? 'var(--neon)' : 'currentColor'} aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" /><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg>
+                AI
+              </button>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 6, flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
             )}
-            {!aiConfigured && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8, flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
             <input
               ref={searchRef}
               type={aiMode ? 'text' : 'search'}
-              aria-label={aiMode ? 'Describe the creators you are looking for' : 'Search by name or handle'}
+              aria-label={aiMode ? 'Ask Guapd who you are looking for' : 'Search by name or handle'}
               value={search}
               onChange={(e) => { setSearch(e.target.value); if (!aiMode) setShown(PAGE_SIZE) }}
               onKeyDown={(e) => { if (aiMode && e.key === 'Enter') runAiSearch() }}
               maxLength={aiMode ? 400 : undefined}
-              placeholder={aiMode ? 'Describe who you need: niche, city, followers, budget' : ph}
+              placeholder={aiMode ? 'Ask Guapd… beauty creators in Mumbai under 50k followers' : ph}
               style={{
                 flex: 1, minWidth: 0, height: 40, border: 'none', padding: '0 4px',
-                fontFamily: 'var(--font-ui)', fontSize: 15.5, fontWeight: 500,
+                fontFamily: 'var(--font-ui)', fontSize: 15, fontWeight: 500,
                 outline: 'none', background: 'none', color: 'var(--ink)',
               }}
             />
@@ -634,7 +622,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 aria-label="Clear search"
                 style={{
                   flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 26, height: 26, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
+                  width: 24, height: 24, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
                   border: 'none', cursor: 'pointer',
                 }}
               >
@@ -646,16 +634,18 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 type="button"
                 onClick={() => runAiSearch()}
                 disabled={aiPending || search.trim().length === 0}
+                aria-label={aiPending ? 'Searching' : 'Ask Guapd'}
                 style={{
-                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
-                  height: 42, padding: '0 18px', borderRadius: 12, border: 'none',
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 40, height: 40, borderRadius: '50%', border: 'none',
                   background: search.trim() && !aiPending ? 'var(--ink)' : 'rgba(40,45,25,.08)',
-                  fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 700,
                   color: search.trim() && !aiPending ? '#fff' : 'var(--ink-faint)',
                   cursor: search.trim() && !aiPending ? 'pointer' : 'default',
                 }}
               >
-                {aiPending ? 'Searching…' : <>Search <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></>}
+                {aiPending
+                  ? <span className="bx-spin" aria-hidden="true" />
+                  : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
               </button>
             )}
           </div>
@@ -664,7 +654,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
               can understand. Each one runs as it is. */}
           {aiMode && !aiOutcome && !aiPending && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>Try</span>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>Hey Guapd,</span>
               {AI_EXAMPLES.map((ex) => (
                 <button
                   key={ex}

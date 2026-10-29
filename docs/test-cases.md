@@ -7983,11 +7983,11 @@ Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two lo
 - [ ] Growth creators can come back from AI search (candidates are is_bookable)
 
 **Search box (app/browse/BrowseGrid.tsx)**
-- [ ] With `ANTHROPIC_API_KEY` set, the page opens in AI mode: wide box, "Ask AI | Name" switch inside it, "Search →" button, "Try" examples below
-- [ ] Clicking an example fills the box and runs it; the examples hide once a search has run
-- [ ] "Name" switches back to name/@handle search, filtering as you type; the examples are hidden
+- [ ] With `ANTHROPIC_API_KEY` set, the page opens with AI on: wide box, an "AI" toggle (sparkle icon) inside it, placeholder "Ask Guapd…", a round arrow button to send (spinner while searching), and "Hey Guapd," suggestions below
+- [ ] Clicking a suggestion fills the box and runs it; the suggestions hide once a search has run
+- [ ] Turning AI off switches to name/@handle search, filtering as you type; no arrow, no suggestions
 - [ ] Without the key: no switch, name search only, as before
-- [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the row wraps and the input drops below the switch
+- [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the filter row wraps
 - [ ] No hydration error in dev on /browse
 
 
