@@ -7900,3 +7900,10 @@ Automated: `scripts/test-creator-pan-required.ts` (staging, a creator with no de
 - [ ] A creator invoice needs bank account AND PAN (0580 extended); deal page step reads "Add your bank details and PAN first"
 - [ ] The invoice stores the PAN it was raised with (encrypted); later PAN changes do not rewrite it; it cannot be edited (guard)
 - [ ] Invoice PDF "FROM": PAN in full for the creator and finance, ••••••1234 for operational-only staff; invoices before 0581 show none
+## 161. Niches start with a capital letter (migration 0582, 2026-10-29)
+
+- [ ] A niche typed under Other ("dentistry") is saved as "Dentistry"; only the first letter changes ("SaaS", "MBA" stay as written); double spaces collapse
+- [ ] Typing "storytelling" when "Storytelling" is already in the list does not add a second one
+- [ ] Niches from the list are unchanged ("Fitness, Sports & Bodybuilding")
+- [ ] 0582 on an environment: no niche in `creators.niches` starts with a lowercase letter; `creators.niche` = `niches[1]`; every storefront's `categories` equals `creators.niches`. Idempotent: a second run changes nothing
+- [ ] /browse "All niches" dropdown shows one entry per niche, not "storytelling" and "Storytelling"
