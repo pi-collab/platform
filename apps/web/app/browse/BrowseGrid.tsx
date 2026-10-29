@@ -85,6 +85,14 @@ const SORT_OPTIONS = [
 const PAGE_SIZE = 9
 
 /* ── Animated placeholder hook ───────────────────────────────────── */
+/** Shown under an empty AI search. Each is a query the parser handles fully
+ *  (niche, followers, city, budget, platform), so the first try works. */
+const AI_EXAMPLES = [
+  'Beauty creators under 50k followers',
+  'Fitness creators in Mumbai, budget ₹40,000',
+  'Finance creators on YouTube',
+]
+
 function useAnimatedPlaceholder() {
   const phrases = [
     'Search name or @handle',
@@ -145,7 +153,8 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
      tick the ones they want, and the campaign bar at the foot is the same bar.
      A separate AI panel would have meant a second set of results that could
      not be selected from, which is where the brand was going all along. */
-  const [aiMode, setAiMode] = useState(false)
+  // AI first when it is switched on: describing who you want is the main way in.
+  const [aiMode, setAiMode] = useState(aiConfigured)
   const [aiOutcome, setAiOutcome] = useState<SearchOutcome | null>(null)
   const [aiPending, startAi] = useTransition()
   // An array, empty meaning no niche filter. A creator's storefront can carry
@@ -286,9 +295,10 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
   const aiActive = aiMode && Boolean(aiOutcome?.ok)
 
-  function runAiSearch() {
-    const q = search.trim()
+  function runAiSearch(text?: string) {
+    const q = (text ?? search).trim()
     if (!q || aiPending) return
+    if (text !== undefined) setSearch(text)
     startAi(async () => setAiOutcome(await aiCreatorSearch(q)))
   }
 
@@ -302,7 +312,6 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
   function clearAi() {
     setAiOutcome(null)
-    setAiMode(false)
     setSearch('')
   }
 
@@ -436,9 +445,9 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
           transform: translateY(-2px);
         }
         /* The select tick is quiet until it is reached for, and it takes no
-           space in the card's layout - it is positioned over the photo rather
+           space in the card layout - it is positioned over the photo rather
            than sitting beside it. Reserving a slot left a gap on every card at
-           rest and pushed the photo off the grid's left edge, which is worse
+           rest and pushed the photo off the left edge of the grid, which is worse
            than the checkbox it was reserving room for. */
         .card-tick {
           position: absolute;
@@ -458,6 +467,11 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
            a control that does not exist. */
         @media (hover: none) {
           .card-tick { opacity: 1; }
+        }
+        .bx-search:focus-within { border-color: var(--ink) !important; }
+        @media (max-width: 560px) {
+          .bx-search { flex-wrap: wrap; }
+          .bx-search input { order: 3; flex-basis: 100% !important; }
         }
       `}</style>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -554,91 +568,125 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
             Browse <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 400, fontSize: 36 }}>creators</span>
           </h1>
 
-          {/* ── Filter bar ── */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, marginTop: 20,
-            paddingTop: 18, borderTop: '1px solid var(--border-hairline)', flexWrap: 'nowrap',
+          {/* ── Search. The main way in: one wide box, AI first. Describe who
+              you want, or switch to Name to find someone you already know. ── */}
+          <div className="bx-search" style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginTop: 22,
+            padding: '7px 7px 7px 8px', borderRadius: 18,
+            border: `1.5px solid ${aiMode ? 'var(--ink)' : 'var(--border-hairline)'}`,
+            background: '#fff',
+            boxShadow: aiMode ? '0 10px 30px -18px rgba(22,23,15,.35)' : 'none',
           }}>
-            {/* Search. One box, two modes: type a name, or describe who you
-                want and let the AI read it. The toggle sits inside the box
-                rather than beside it, because it changes what the box means. */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--ink-faint)', flex: '1 1 240px', minWidth: 150 }}>
-              {aiConfigured && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !aiMode
-                    setAiMode(next)
-                    setAiOutcome(null)
-                    setSearch('')
-                    setShown(PAGE_SIZE)
-                    searchRef.current?.focus()
-                  }}
-                  aria-pressed={aiMode}
-                  title={aiMode ? 'Back to searching by name' : 'Describe who you are looking for'}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-                    padding: '4px 9px', borderRadius: 999, cursor: 'pointer',
-                    border: `1px solid ${aiMode ? 'var(--ink)' : 'var(--border-hairline)'}`,
-                    background: aiMode ? 'var(--ink)' : 'transparent',
-                    fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
-                    color: aiMode ? 'var(--card)' : 'var(--ink)', whiteSpace: 'nowrap',
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></svg>
-                  AI
-                </button>
-              )}
-              {!aiMode && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
-              <input
-                ref={searchRef}
-                type={aiMode ? 'text' : 'search'}
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); if (!aiMode) setShown(PAGE_SIZE) }}
-                onKeyDown={(e) => { if (aiMode && e.key === 'Enter') runAiSearch() }}
-                maxLength={aiMode ? 400 : undefined}
-                placeholder={aiMode ? 'Fitness creators in Mumbai, 50k+ followers, budget ₹40,000' : ph}
+            {aiConfigured && (
+              <div role="group" aria-label="Search by" style={{ display: 'flex', flexShrink: 0, padding: 3, borderRadius: 12, background: 'rgba(40,45,25,.06)' }}>
+                {([['ai', 'Ask AI'], ['name', 'Name']] as const).map(([k, label]) => {
+                  const on = (k === 'ai') === aiMode
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        if (on) return
+                        setAiMode(k === 'ai')
+                        setAiOutcome(null)
+                        setSearch('')
+                        setShown(PAGE_SIZE)
+                        searchRef.current?.focus()
+                      }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 12px',
+                        borderRadius: 9, border: 'none', cursor: on ? 'default' : 'pointer',
+                        background: on ? (k === 'ai' ? 'var(--ink)' : '#fff') : 'transparent',
+                        color: on ? (k === 'ai' ? 'var(--neon)' : 'var(--ink)') : 'var(--ink-soft)',
+                        boxShadow: on && k === 'name' ? '0 1px 2px rgba(22,23,15,.12)' : 'none',
+                        fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 700, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {k === 'ai'
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" /><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z" /></svg>
+                        : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
+                      <span className="bx-mode-label">{label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {!aiConfigured && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 8, flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>}
+            <input
+              ref={searchRef}
+              type={aiMode ? 'text' : 'search'}
+              aria-label={aiMode ? 'Describe the creators you are looking for' : 'Search by name or handle'}
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); if (!aiMode) setShown(PAGE_SIZE) }}
+              onKeyDown={(e) => { if (aiMode && e.key === 'Enter') runAiSearch() }}
+              maxLength={aiMode ? 400 : undefined}
+              placeholder={aiMode ? 'Describe who you need: niche, city, followers, budget' : ph}
+              style={{
+                flex: 1, minWidth: 0, height: 40, border: 'none', padding: '0 4px',
+                fontFamily: 'var(--font-ui)', fontSize: 15.5, fontWeight: 500,
+                outline: 'none', background: 'none', color: 'var(--ink)',
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
                 style={{
-                  flex: 1, minWidth: 0, border: 'none',
-                  fontFamily: 'var(--font-ui)', fontSize: 13, fontWeight: 500,
-                  outline: 'none', background: 'none', color: 'var(--ink)',
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 26, height: 26, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
+                  border: 'none', cursor: 'pointer',
                 }}
-              />
-              {aiMode && (
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            )}
+            {aiMode && (
+              <button
+                type="button"
+                onClick={() => runAiSearch()}
+                disabled={aiPending || search.trim().length === 0}
+                style={{
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7,
+                  height: 42, padding: '0 18px', borderRadius: 12, border: 'none',
+                  background: search.trim() && !aiPending ? 'var(--ink)' : 'rgba(40,45,25,.08)',
+                  fontFamily: 'var(--font-ui)', fontSize: 13.5, fontWeight: 700,
+                  color: search.trim() && !aiPending ? '#fff' : 'var(--ink-faint)',
+                  cursor: search.trim() && !aiPending ? 'pointer' : 'default',
+                }}
+              >
+                {aiPending ? 'Searching…' : <>Search <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></>}
+              </button>
+            )}
+          </div>
+
+          {/* Examples until the first search: a blank box does not say what it
+              can understand. Each one runs as it is. */}
+          {aiMode && !aiOutcome && !aiPending && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 12, fontWeight: 600, color: 'var(--ink-faint)' }}>Try</span>
+              {AI_EXAMPLES.map((ex) => (
                 <button
+                  key={ex}
                   type="button"
-                  onClick={runAiSearch}
-                  disabled={aiPending || search.trim().length === 0}
+                  onClick={() => runAiSearch(ex)}
                   style={{
-                    flexShrink: 0, padding: '5px 12px', borderRadius: 999, border: 'none',
-                    background: search.trim() && !aiPending ? 'var(--ink)' : 'rgba(40,45,25,.08)',
-                    fontFamily: 'var(--font-ui)', fontSize: 11.5, fontWeight: 700,
-                    color: search.trim() && !aiPending ? 'var(--card)' : 'var(--ink-faint)',
-                    cursor: search.trim() && !aiPending ? 'pointer' : 'default',
+                    padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+                    border: '1px solid var(--border-hairline)', background: 'transparent',
+                    fontFamily: 'var(--font-ui)', fontSize: 12.5, fontWeight: 500, color: 'var(--ink-soft)',
                   }}
                 >
-                  {aiPending ? 'Searching…' : 'Search'}
+                  {ex}
                 </button>
-              )}
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  aria-label="Clear search"
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 22, height: 22, borderRadius: '50%', background: 'rgba(40,45,25,.08)',
-                    border: 'none', cursor: 'pointer',
-                  }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-                </button>
-              )}
+              ))}
             </div>
+          )}
 
-            <div style={{ width: 1, height: 20, background: 'var(--border-hairline)' }} />
-
-            {/* Platform toggles + dropdowns */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '0 1 auto', minWidth: 0 }}>
+          {/* ── Filters, on their own row under the search ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 18,
+            paddingTop: 16, borderTop: '1px solid var(--border-hairline)',
+          }}>
               {/* Platform toggle pill */}
               <div style={{
                 display: 'flex', alignItems: 'stretch', flexShrink: 0,
@@ -705,15 +753,16 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
                 minWidth={190}
               />
 
-              <FilterDropdown
-                placeholder="Sort"
-                value={sort}
-                onChange={setSort}
-                options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-                align="right"
-                minWidth={190}
-              />
-            </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <FilterDropdown
+                  placeholder="Sort"
+                  value={sort}
+                  onChange={setSort}
+                  options={SORT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  align="right"
+                  minWidth={190}
+                />
+              </div>
           </div>
         </div>
 

@@ -5090,8 +5090,8 @@ and its cases travel together.
 **Ranking (no model, pure function — `lib/ai-search/score.ts`)**
 - [ ] Follower and budget filters EXCLUDE: a creator below the follower floor, or whose published starting rate is above the budget, does not appear
 - [ ] A creator just outside the follower range (within 20%) still appears, labelled "just outside your range"
-- [ ] Location, category, audience and past brands only RANK while coverage is under 80% — nobody is excluded for a blank field, and each softened filter is named above the results with the real counts ("only 17 of 118 creators have a city on file")
-- [ ] The 80% rule is coverage-driven, not hardcoded: with a test set where every creator has a city, location becomes a hard filter and the softened note disappears. This is what makes it improve as profiles fill in
+- [ ] (Changed 2026-10-29, §160) A KNOWN mismatch excludes on every field but past brands: a filled-in niche, follower count, platform, city, rate or audience that does not match rules the creator out. The old "under 80% coverage only ranks" rule is gone: it let "beauty under 50k" return every creator
+- [ ] A BLANK field never excludes: the creator is kept after the matches, and the note above the results names how many have none on file ("5 of 18 creators have no niche on file")
 - [ ] A creator with no data for a requested field is shown with a gap line ("no city on file"), never silently ranked as if it matched
 - [ ] Every "why matched" item corresponds to a stored value: follower count, category, rate, city, audience split, past brand, completed deals. Nothing is generated prose
 - [ ] Verified follower counts say "verified from Instagram"; typed ones do not claim it
@@ -5105,7 +5105,7 @@ and its cases travel together.
 
 **SECURITY / access**
 - [ ] `aiCreatorSearch` is behind `verifyBrand` — a creator session, a logged-out session and a rejected brand cannot call it
-- [ ] Only `is_vetted` creators are ever candidates. The `.eq('is_vetted', true)` in `loadCandidates` is load bearing: the admin client bypasses RLS
+- [ ] Only `is_bookable` creators are ever candidates (the same gate as the /browse list; is_vetted until 2026-10-29, which left Growth creators out of AI results). The `.eq('is_bookable', true)` in `loadCandidates` is load bearing: the admin client bypasses RLS
 - [ ] No phone, contact_email, upi_id or rate_card ever leaves `loadCandidates` — check the returned payload in the browser devtools, not just the code
 - [ ] RLS on `ai_search_queries`: a brand reads only its own rows; INSERT, UPDATE and DELETE are denied to every client role (a brand must not be able to forge a row and reset its own cap)
 - [ ] One brand cannot see another brand's searches anywhere in the product; ops sees all via the service role
@@ -7968,3 +7968,25 @@ Automated: `scripts/test-creator-pan-required.ts` (staging, a creator with no de
 - [ ] A creator invoice needs bank account AND PAN (0580 extended); deal page step reads "Add your bank details and PAN first"
 - [ ] The invoice stores the PAN it was raised with (encrypted); later PAN changes do not rewrite it; it cannot be edited (guard)
 - [ ] Invoice PDF "FROM": PAN in full for the creator and finance, ••••••1234 for operational-only staff; invoices before 0581 show none
+
+## 160. Browse: AI search first, and it filters what it understood (2026-10-29)
+
+Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two logged staging queries against live creators).
+
+**Filtering (lib/ai-search/score.ts)**
+- [ ] "Beauty creators under 50k": no creator with a known non-beauty niche, and none with a known follower count above 62.5k (the 25% near-miss band); before this fix it returned all 16
+- [ ] A creator with no niche / follower count / city on file is kept, ranked after the matches, with the gap shown
+- [ ] "Mumbai" rules out a creator whose city is Pune; a region ("metros", "south India") rules no city out
+- [ ] YouTube rules out an Instagram-only creator; a platform match ranks above a creator with no platform
+- [ ] Audience: ruled out only on a dimension the creator's data covers (asking an age band does not drop a creator who has only gender data)
+- [ ] Past brands only boost, never exclude
+- [ ] Growth creators can come back from AI search (candidates are is_bookable)
+
+**Search box (app/browse/BrowseGrid.tsx)**
+- [ ] With `ANTHROPIC_API_KEY` set, the page opens in AI mode: wide box, "Ask AI | Name" switch inside it, "Search →" button, "Try" examples below
+- [ ] Clicking an example fills the box and runs it; the examples hide once a search has run
+- [ ] "Name" switches back to name/@handle search, filtering as you type; the examples are hidden
+- [ ] Without the key: no switch, name search only, as before
+- [ ] Filters (platform, Deals/Growth, niche, rate) sit on their own row under the search, sort on the right; on a phone the row wraps and the input drops below the switch
+- [ ] No hydration error in dev on /browse
+

@@ -16,20 +16,18 @@ import {
  * approximated from the prompt, which is precisely the thing this product sells
  * against. It is also free, instant and reproducible, which a re-rank is not.
  *
- * ── Hard filter or soft signal: decided by COVERAGE ─────────────────────────
- * Most fields are empty for most creators today: 17 of 118 vetted creators have
- * a city, 31 have a category, 1 has verified audience data. A hard filter on a
- * field that thin returns an empty page and reads as a broken feature, so a
- * filter only EXCLUDES when the field is present for most of the set; below
- * that it reorders instead, and the caller tells the brand it did.
+ * ── A known mismatch excludes; a missing value does not ─────────────────────
+ * Most fields are empty for many creators (few have a city, fewer verified
+ * audience data). A creator whose field is EMPTY is kept, ranked after the
+ * matches and labelled with the gap: a blank is not evidence they do not fit.
+ * A creator whose field is FILLED and does not match is ruled out: "beauty
+ * under 50k" must never show a 500k fashion creator.
  *
- * That threshold is the design's self-improving part: nothing needs rewriting
- * when creators fill their profiles in or connect Instagram. Location becomes a
- * real filter on the day enough creators have one.
+ * Before this, a thin field (under 80% coverage) did not filter at all, so a
+ * known 500k creator survived "under 50k" and searches returned everyone.
+ * Past brands stay a boost only: worked_with is a partial list, so a brand
+ * missing from it proves nothing.
  */
-
-/** A filter may exclude only when this share of candidates has the field. */
-const COVERAGE_FOR_HARD_FILTER = 0.8
 
 /* Weights. Only the filters a brand actually asked for are counted, so a query
    naming one thing is not diluted by the eight it did not mention. */
@@ -39,6 +37,7 @@ const W = {
   budget: 20,
   audience: 15,
   location: 10,
+  platform: 10,
   pastBrands: 10,
   /** Ready, and zero for everyone until deals complete. Deliberately left in:
    *  reliability then starts working without a code change. */
@@ -85,6 +84,10 @@ const mentions = (topic: string, text: string | null): boolean => {
   return words.every(w => new RegExp(`\\b${w.replace(/s$/, '')}`).test(hay))
 }
 
+/** A region ("metros", "south India") cannot be checked against one city, so
+ *  a city that does not contain it is not a mismatch. */
+const REGION = /\b(metro|metros|tier|india|north|south|east|west|central|pan)\b/i
+
 const coverage = (candidates: SearchCandidate[], has: (c: SearchCandidate) => boolean): number =>
   candidates.length === 0 ? 0 : candidates.filter(has).length / candidates.length
 
@@ -126,34 +129,26 @@ export function rankCandidates(
   const pct = (n: number) => `${Math.round(n * 100)}%`
   const countOf = (n: number) => Math.round(n * total)
 
-  /** A filter excludes only where the field is mostly present. Otherwise it is
-   *  recorded as softened, and the brand is told, in the same breath as the
-   *  results rather than in a tooltip nobody opens. */
-  function hard(wants: boolean, cov: number, label: string, field: string): boolean {
-    if (!wants) return false
-    if (cov >= COVERAGE_FOR_HARD_FILTER) return true
+  /** Creators with the field empty are kept after the matches; the brand is
+   *  told how many, in the same breath as the results. */
+  function note(wants: boolean, cov: number, label: string, field: string) {
+    if (!wants) return
+    const missing = total - countOf(cov)
+    if (missing <= 0) return
     softened.push({
       label,
-      reason: `only ${countOf(cov)} of ${total} creators have ${field} on file (${pct(cov)}), so this ranked them instead of filtering them out`,
+      reason: `${missing} of ${total} creators have no ${field} on file (${pct(1 - cov)}). Anyone whose ${field} does not match is ruled out; those with none are shown after the matches`,
     })
-    return false
   }
 
-  const hardFollowers = hard(wantsFollowers, withFollowers, 'Followers', 'a follower count')
-  const hardPlatform = hard(wantsPlatform, withPlatforms, 'Platform', 'a platform')
-  const hardNiche = hard(wantsNiche, withCategories, 'Category', 'a category')
-  const hardLocation = hard(wantsLocation, withLocation, 'Location', 'a city')
-  const hardAudience = hard(wantsAudience, withAudience, 'Audience', 'verified audience data')
-  const hardPastBrands = hard(wantsPastBrands, withPastBrands, 'Past brands', 'past brands')
-
-  if (wantsBudget) {
-    const withPrice = coverage(candidates, c => c.startingRatePaise !== null)
-    if (withPrice < COVERAGE_FOR_HARD_FILTER) {
-      softened.push({
-        label: 'Budget',
-        reason: `${countOf(withPrice)} of ${total} creators publish a starting rate (${pct(withPrice)}); anyone priced above your budget is excluded, the rest are ranked`,
-      })
-    }
+  note(wantsFollowers, withFollowers, 'Followers', 'follower count')
+  note(wantsPlatform, withPlatforms, 'Platform', 'platform')
+  note(wantsNiche, withCategories, 'Niche', 'niche')
+  note(wantsLocation, withLocation, 'Location', 'city')
+  note(wantsAudience, withAudience, 'Audience', 'verified audience data')
+  note(wantsBudget, coverage(candidates, c => c.startingRatePaise !== null), 'Budget', 'published rate')
+  if (wantsPastBrands && withPastBrands < 1) {
+    softened.push({ label: 'Past brands', reason: 'used to rank, not to rule anyone out: past brand lists are incomplete' })
   }
 
   let excludedCount = 0
@@ -171,7 +166,6 @@ export function rankCandidates(
       applicable += W.followers
       if (c.followers === null) {
         gaps.push('no follower count on file')
-        if (hardFollowers) excluded = true
       } else {
         const min = filters.followersMin ?? 0
         const max = filters.followersMax ?? Number.MAX_SAFE_INTEGER
@@ -185,7 +179,7 @@ export function rankCandidates(
         } else if (near) {
           earned += W.followers * 0.4
           reasons.push(`${fmtFollowers(c.followers)} followers, just outside your range`)
-        } else if (hardFollowers) {
+        } else {
           excluded = true
         }
       }
@@ -195,8 +189,11 @@ export function rankCandidates(
 
     /* ── Platform ── */
     if (wantsPlatform) {
+      applicable += W.platform
       const hit = c.platforms.some(p => filters.platforms.includes(p))
-      if (!hit && c.platforms.length > 0 && hardPlatform) excluded = true
+      if (hit) earned += W.platform
+      if (!hit && c.platforms.length > 0) excluded = true
+      if (c.platforms.length === 0) gaps.push('no platform on file')
       if (hit) reasons.push(c.platforms.filter(p => filters.platforms.includes(p)).join(' and '))
     }
 
@@ -204,8 +201,7 @@ export function rankCandidates(
     if (wantsNiche) {
       applicable += W.niche
       if (c.categories.length === 0) {
-        gaps.push('no category on file')
-        if (hardNiche) excluded = true
+        gaps.push('no niche on file')
       } else {
         const hits = c.categories.filter(cat => nicheTerms.some(n => looseMatch(n, cat)))
         // An unlisted niche ("astrology") may live only in the bio.
@@ -216,7 +212,7 @@ export function rankCandidates(
         } else if (bioHits.length > 0) {
           earned += W.niche
           reasons.push(`bio mentions ${bioHits.join(', ')}`)
-        } else if (hardNiche) {
+        } else {
           excluded = true
         }
       }
@@ -234,7 +230,7 @@ export function rankCandidates(
         reasons.push(`from ${fmtRupees(c.startingRatePaise)}, within your budget`)
       } else {
         excluded = true
-        }
+      }
     } else if (c.startingRatePaise !== null) {
       reasons.push(`from ${fmtRupees(c.startingRatePaise)}`)
     }
@@ -244,11 +240,10 @@ export function rankCandidates(
       applicable += W.location
       if (!c.location) {
         gaps.push('no city on file')
-        if (hardLocation) excluded = true
       } else if (filters.locations.some(l => looseMatch(l, c.location as string))) {
         earned += W.location
         reasons.push(c.location)
-      } else if (hardLocation) {
+      } else if (!filters.locations.some(l => REGION.test(l))) {
         excluded = true
       }
     }
@@ -258,10 +253,14 @@ export function rankCandidates(
       applicable += W.audience
       if (!c.audience) {
         gaps.push('no verified audience data')
-        if (hardAudience) excluded = true
       } else {
         let hit = false
+        // Ruled out only on a dimension the creator's data actually covers.
+        let known = false
         const { genderSkew, ageBands, cities } = filters.audience
+        if (genderSkew && c.audience.womenPct !== null) known = true
+        if (ageBands.length > 0 && c.audience.topAgeBand) known = true
+        if (cities.length > 0 && c.audience.topCities.length > 0) known = true
         if (genderSkew && c.audience.womenPct !== null) {
           const pctWanted = genderSkew === 'women' ? c.audience.womenPct : 100 - c.audience.womenPct
           if (pctWanted >= 55) {
@@ -281,7 +280,7 @@ export function rankCandidates(
           }
         }
         if (hit) earned += W.audience
-        else if (hardAudience) excluded = true
+        else if (known) excluded = true
       }
     }
 
@@ -290,7 +289,6 @@ export function rankCandidates(
       applicable += W.pastBrands
       if (c.pastBrands.length === 0) {
         gaps.push('no past brands on file')
-        if (hardPastBrands) excluded = true
       } else {
         const hits = c.pastBrands.filter(b => filters.pastBrandCategories.some(w => looseMatch(w, b)))
         if (hits.length > 0) {

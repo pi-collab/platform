@@ -12,8 +12,10 @@ import { AGE_BANDS } from './types'
  * withholds rate_card, phone and contact_email from the authenticated roles, so
  * a brand-scoped client cannot assemble this. The service role bypasses RLS,
  * which makes two things load bearing here rather than incidental:
- *   1. `.eq('is_vetted', true)` is WRITTEN OUT. RLS was the thing enforcing it,
- *      and without it this would search the entire unvetted roster.
+ *   1. `.eq('is_bookable', true)` is WRITTEN OUT, the same gate /browse lists
+ *      by. RLS was the thing enforcing it, and without it this would search the
+ *      entire unvetted roster. It was is_vetted until 2026-10-29, which left
+ *      Growth creators (bookable, not vetted) out of every AI result.
  *   2. Columns are listed explicitly. No phone, no contact_email, no upi_id.
  * Only the fields below ever leave this function.
  *
@@ -63,7 +65,7 @@ export async function loadCandidates(): Promise<SearchCandidate[]> {
       admin
         .from('creators')
         .select('id, full_name, handle, profile_photo_url, bio, niche, niches, location, follower_band, primary_platform, social_accounts, worked_with')
-        .eq('is_vetted', true)
+        .eq('is_bookable', true)
         .eq('is_guapd', false), // the Guapd house account is never a search result
       admin
         .from('creator_storefronts')
