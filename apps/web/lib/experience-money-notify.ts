@@ -74,7 +74,7 @@ export async function notifyCreatorPaid(dealId: string, paid: { paidPaise: numbe
       const first = (creator.full_name ?? '').split(' ')[0] || 'there'
       const { html, text } = renderNoticeEmail({
         heading: 'Guapd paid you',
-        body: [`Hi ${first}, Guapd paid you ${formatRupees(paid.paidPaise)} for ${brand}.`, `Bank reference: ${paid.reference}. Your payout statement is on your deal page.`],
+        body: [`Hi ${first}, Guapd paid you ${formatRupees(paid.paidPaise)} for ${brand}.`, `Bank reference: ${paid.reference}. Your payout statement is on your deal page, where you can also rate how working with Guapd went.`],
         ctaUrl: `${siteBase()}/creator/deals/${dealId}`,
         ctaLabel: 'Open your statement',
       })

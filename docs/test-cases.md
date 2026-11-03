@@ -8008,3 +8008,32 @@ Automated: `scripts/test-ai-search-ranking.ts` (pure ranking checks, plus two lo
 - [ ] Niches from the list are unchanged ("Fitness, Sports & Bodybuilding")
 - [ ] 0582 on an environment: no niche in `creators.niches` starts with a lowercase letter; `creators.niche` = `niches[1]`; every storefront's `categories` equals `creators.niches`. Idempotent: a second run changes nothing
 - [ ] /browse "All niches" dropdown shows one entry per niche, not "storytelling" and "Storytelling"
+
+## 162. The creator invoice prints the bank account to pay into (migration 0583, 2026-10-30)
+
+Before 0583 the creator's invoice to Guapd had no bank details; staff opened the payout's **Bank details** to find them. Now it carries a PAY TO block, the same way Guapd's own invoice to the brand does.
+
+- [ ] Raising an invoice stores the bank account on file with it: holder, IFSC in the clear, account number encrypted with the payout key, last 4 in the clear
+- [ ] Invoice PDF "PAY TO": account holder, account number, IFSC. Full number for the creator and for finance; ••••1234 for operational-only staff
+- [ ] Changing bank details on the Payments page after invoicing does NOT change the issued invoice (it keeps the account it was raised with); the payout still flags the change and pays from the current account after finance confirms
+- [ ] An issued invoice's stored account cannot be edited by anyone, the service role included (only voided); a re-raised invoice after a void takes the account on file then
+- [ ] Issued invoices raised before 0583 were filled once from the account on file at migration time; void invoices and creators with no account on file show no PAY TO
+- [ ] Bank details never appear in audit rows, deal events or notifications
+- Automated: `scripts/test-experience-bank-details.ts` (group "0583", 68 checks, staging). That script's creator now falls back to any creator with a login when no Growth creator is free on staging.
+- 0583 hand-run on staging and repaired as applied. Prod: `supabase/prod-run-0583.sql`, run BEFORE the code release (old code ignores the new `bank` field, so the order is safe).
+
+## 163. A paid creator rates Guapd on an Experience (migration 0584, 2026-11-03)
+
+On an Experience the creator works with Guapd, not the brand, so they rate Guapd. It reuses `deal_reviews` (one creator review per deal, 1–5 stars plus an optional note).
+
+- [ ] Creator deal page (Experience), desktop AND mobile: once their payout is marked paid, a card "How was working with Guapd on <brand>?" appears below the payment / payout statement
+- [ ] Not shown before payment, on a declined leg, or when the shoot did not go ahead
+- [ ] Stars 1–5, optional note (max 1000 characters, trimmed; empty = no note); "Only the Guapd team sees this"
+- [ ] After submitting: thanks state with the stars and "Change rating"; changing keeps ONE rating per deal
+- [ ] Database gate: `creator_leg_rate_guapd` refuses before a payout on the leg is paid ("You can rate Guapd once you are paid"), another creator's leg, 0/6/NULL stars; the brand, staff and anonymous cannot rate
+- [ ] The creator policies on `deal_reviews` no longer cover creator legs, so a direct table write cannot skip the paid gate (marketplace deal reviews are unchanged)
+- [ ] Only the creator reads their own rating; other creators and the brand cannot
+- [ ] Console → Experience page: "Creators rate Guapd" panel (after Creator payouts): average, "N of M paid creators rated", each creator's stars, note and date. Operational and financial staff only; creators, brands, other staff refused
+- [ ] The "Guapd paid you" email mentions they can rate Guapd on the deal page
+- Automated: `scripts/test-experience-payouts.ts` group "0584" (18 checks; 147 in the suite, staging). The suite's creator G now falls back to any creator with a login when no Growth creator is free, and the fee checks follow G's tier (Growth 30%, vetted 15%).
+- 0584 hand-run on staging and repaired as applied; policies mirrored in `rls.sql`. Prod: `supabase/prod-run-0584.sql`, run BEFORE the code release (the new card calls the new function).

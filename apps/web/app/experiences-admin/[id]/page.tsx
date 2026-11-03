@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import { experienceStaffGate } from '@/lib/experience-staff-auth'
-import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, getConsolePaymentStages, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates, consolePostPerformance } from '@/lib/experience-console-server'
+import { getConsoleAddons, getConsoleCompletion, getConsoleCounters, getConsoleDeliverables, getConsoleExperience, getConsoleInvoices, getConsolePayouts, getConsoleReconcile, getConsoleBrief, getLegsReconcile, listLegThreads, getLegThread, getBrandThread, listConsoleCosts, listConsoleCreatorPool, listConsoleLegs, listConsoleProspects, listConsoleSuggestions, listConsoleQuotes, getConsolePaymentStages, listConsoleRoster, getConsoleRosterDayRates, listConsoleCollabPosts, listConsoleAffiliates, consolePostPerformance, getConsoleGuapdRatings } from '@/lib/experience-console-server'
 import { canSeePnl, getExperiencePnl } from '@/lib/experience-pnl-server'
 import { EXPERIENCE_STATUSES, experienceStatus } from '@/lib/experience-status'
 import { channelLabel, countOf, formatRupees } from '@/lib/experience-request'
@@ -22,6 +22,7 @@ import CommissionPanel from './CommissionPanel'
 import DeliverablesPanel from './DeliverablesPanel'
 import InvoicesPanel from './InvoicesPanel'
 import PayoutsPanel from './PayoutsPanel'
+import GuapdRatingsPanel from './GuapdRatingsPanel'
 import CompletionPanel from './CompletionPanel'
 import BriefPanel from './BriefPanel'
 import LegThreadList from '../LegThreadList'
@@ -102,10 +103,11 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
   // 0554: add-ons to the agreed price, once it is agreed (amounts financial only, decided in Postgres).
   const addons = hasRoster ? await getConsoleAddons(e.id) : null
   const acceptedAddons = addons?.ok ? addons.data.addons.filter((a) => a.status === 'accepted') : []
-  const [invoices, payouts, completion] = await Promise.all([
+  const [invoices, payouts, completion, ratings] = await Promise.all([
     hasRoster && financial ? getConsoleInvoices(e.id) : Promise.resolve(null),
     hasDeliverables ? getConsolePayouts(e.id) : Promise.resolve(null),
     e.status === 'delivering' || e.status === 'complete' ? getConsoleCompletion(e.id) : Promise.resolve(null),
+    hasDeliverables ? getConsoleGuapdRatings(e.id) : Promise.resolve(null), // 0584
   ])
   const st = experienceStatus(e.status)
   const stepIndex = Math.max(0, STAGES.indexOf(e.status as (typeof STAGES)[number]))
@@ -276,6 +278,7 @@ export default async function ExperienceDetailPage({ params, searchParams }: { p
             registered={invoices?.ok ? invoices.data.settings?.gst_registered === true : false} />
         : <div style={{ marginTop: 20 }}><Failed inline message={affiliates.error} /></div>)}
       {payouts && <div style={{ marginTop: 20 }}>{payouts.ok ? <PayoutsPanel experienceId={e.id} data={payouts.data} /> : <Failed inline message={payouts.error} />}</div>}
+      {ratings && <div style={{ marginTop: 20 }}>{ratings.ok ? <GuapdRatingsPanel data={ratings.data} /> : <Failed inline message={ratings.error} />}</div>}
       {invoices && <div style={{ marginTop: 20 }}>{invoices.ok ? <InvoicesPanel data={invoices.data} stages={stages.ok ? stages.data.invoices : {}} /> : <Failed inline message={invoices.error} />}</div>}
       {completion && <div style={{ marginTop: 20 }}>{completion.ok ? <CompletionPanel experienceId={e.id} data={completion.data} /> : <Failed inline message={completion.error} />}</div>}
 

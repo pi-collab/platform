@@ -106,7 +106,8 @@ async function run() {
   const pool = (cr ?? []) as any[]
   // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
   { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
-  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
+  // A Growth creator when staging has one free; any creator with a login otherwise (the checks do not depend on tier).
+  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id) ?? pool.find((c) => c.users?.auth_id)
   const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
   const X = pool.find((c) => c.id !== G?.id && c.id !== D?.id && c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
@@ -216,7 +217,7 @@ async function run() {
   ok('operational staff request G\'s payout with ₹700 TDS', !rq.error, rq.error?.message ?? '')
   const PG = rq.data as string
   let pr = (await admin.from('vendor_payouts').select('status, reason, gross_paise, platform_pct, platform_fee_paise, amount_paise, tds_paise, net_amount_paise, idempotency_key, created_by').eq('id', PG).single()).data as any
-  ok('the statement is G\'s locked terms: gross → 30% → net, then TDS', Number(pr.gross_paise) === Number(gTerms.creator_gross_paise) && Number(pr.platform_pct) === 30
+  ok('the statement is G\'s locked terms: gross → tier fee (Growth 30%, vetted 15%) → net, then TDS', Number(pr.gross_paise) === Number(gTerms.creator_gross_paise) && Number(pr.platform_pct) === Number(gTerms.platform_pct ?? (G.vetting_status === 'growth' ? 30 : 15))
     && Number(pr.amount_paise) === Number(gTerms.creator_net_paise) && Number(pr.platform_fee_paise) === Number(gTerms.creator_gross_paise) - Number(gTerms.creator_net_paise)
     && Number(pr.net_amount_paise) === Number(gTerms.creator_net_paise) - 70000, JSON.stringify(pr))
   ok('its duplicate key names the deal and attempt 1', pr.idempotency_key === `creator_fee:${legOf(G)}:1`)
@@ -272,14 +273,37 @@ async function run() {
   const ctx = (await creator.rpc('creator_leg_context', { p_deal_id: legOf(G) })).data as any
   // 0546: the statement carries the fee-exempt allowance too.
   const PK = ['allowance_paise', 'gross_paise', 'net_paise', 'paid_on', 'paid_paise', 'platform_fee_paise', 'platform_pct', 'reference', 'status', 'tds_paise'].join(',')
-  ok('G sees exactly: gross → 30% fee → net → TDS → paid, the date and the reference', ctx.payout && Object.keys(ctx.payout).sort().join(',') === PK
-    && ctx.payout.status === 'paid' && Number(ctx.payout.platform_pct) === 30 && Number(ctx.payout.tds_paise) === 100000 && ctx.payout.reference === 'UTR-PAY-G1', JSON.stringify(ctx.payout))
+  ok('G sees exactly: gross → tier fee → net → TDS → paid, the date and the reference', ctx.payout && Object.keys(ctx.payout).sort().join(',') === PK
+    && ctx.payout.status === 'paid' && Number(ctx.payout.platform_pct) === (G.vetting_status === 'growth' ? 30 : 15) && Number(ctx.payout.tds_paise) === 100000 && ctx.payout.reference === 'UTR-PAY-G1', JSON.stringify(ctx.payout))
   ok('…never the proof, who requested or approved it, or the vendor', !/proof|approved_by|requested|vendor|payout-proof/.test(JSON.stringify(ctx)))
   ok("G cannot read D's leg (or payout)", refused(await creator.rpc('creator_leg_context', { p_deal_id: legOf(D) })))
   ok('D has no payout yet', ((await creatorD.rpc('creator_leg_context', { p_deal_id: legOf(D) })).data as any).payout === null)
   ok('the creator cannot open the proof', refused(await creator.rpc('experience_console_finance_file', { p_kind: 'payout-proof', p_id: PG })))
   ok('0542: finance opens it; operational staff cannot (a transfer proof can show bank details)', !refused(await fin.rpc('experience_console_finance_file', { p_kind: 'payout-proof', p_id: PG }))
     && refused(await op.rpc('experience_console_finance_file', { p_kind: 'payout-proof', p_id: PG })))
+
+  group('0584: a paid creator rates Guapd')
+  const rate = (s: any, deal: string, rating: any, note: string | null = null) => s.rpc('creator_leg_rate_guapd', { p_deal_id: deal, p_rating: rating, p_note: note })
+  ok('D (not paid yet) cannot rate', said(await rate(creatorD, legOf(D), 5), /once you are paid/))
+  ok('G cannot rate D\'s leg', refused(await rate(creator, legOf(D), 5)))
+  ok('0, 6 and NULL stars are refused', said(await rate(creator, legOf(G), 0), /1 to 5/) && said(await rate(creator, legOf(G), 6), /1 to 5/) && said(await rate(creator, legOf(G), null), /1 to 5/))
+  ok('a note over 1000 characters is refused', said(await rate(creator, legOf(G), 4, 'x'.repeat(1001)), /1000/))
+  for (const [n, s] of [['the brand', brand], ['operational staff', op], ['anonymous', anon]] as const) ok(`${n} cannot rate`, refused(await rate(s, legOf(G), 5)))
+  ok('the table cannot be written directly on a creator leg (skips the paid gate)', refused(await creator.from('deal_reviews').insert({ deal_id: legOf(D), reviewer_role: 'creator', rating: 5 }).select('id')))
+  const r1 = await rate(creator, legOf(G), 5, '  Smooth shoot, paid on time  ')
+  ok('G (paid) rates Guapd 5 with a note (trimmed)', !r1.error && r1.data?.rating === 5 && r1.data?.note === 'Smooth shoot, paid on time', r1.error?.message ?? '')
+  const r2 = await rate(creator, legOf(G), 4, '')
+  ok('G changes it to 4 and clears the note: still one rating', !r2.error && r2.data?.rating === 4 && r2.data?.note === null
+    && ((await admin.from('deal_reviews').select('id').eq('deal_id', legOf(G))).data ?? []).length === 1)
+  ok('G reads their own rating back', (await creator.from('deal_reviews').select('rating').eq('deal_id', legOf(G)).maybeSingle()).data?.rating === 4)
+  ok('D and the brand cannot read it', ((await creatorD.from('deal_reviews').select('id').eq('deal_id', legOf(G))).data ?? []).length === 0
+    && ((await brand.from('deal_reviews').select('id').eq('deal_id', legOf(G))).data ?? []).length === 0)
+  const gr = await op.rpc('experience_console_guapd_ratings', { p_experience_id: E })
+  ok('the console shows it: 1 of 1 paid creator rated, 4 stars, with the name', !gr.error && gr.data?.paid_creators === 1 && gr.data?.ratings?.length === 1
+    && gr.data.ratings[0].rating === 4 && !!gr.data.ratings[0].creator, JSON.stringify(gr.error ?? { paid: gr.data?.paid_creators, n: gr.data?.ratings?.length }))
+  ok('finance sees it too', !(await fin.rpc('experience_console_guapd_ratings', { p_experience_id: E })).error)
+  for (const [n, s] of [['the creator', creator], ['the brand', brand], ['staff without Experiences access', none], ['anonymous', anon]] as const)
+    ok(`${n}: the console ratings are refused`, refused(await s.rpc('experience_console_guapd_ratings', { p_experience_id: E })))
 
   group('0552: void a wrong creator invoice; the creator raises it again')
   const dPayable = Number(((await creatorD.rpc('creator_leg_context', { p_deal_id: legOf(D) })).data as any).total_to_creator_paise)

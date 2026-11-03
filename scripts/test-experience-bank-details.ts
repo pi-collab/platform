@@ -119,7 +119,8 @@ async function run() {
   const pool = (cr ?? []) as any[]
   // Creators with a day rate of their own (real staging data) are left alone: this run sets fresh rates.
   { const { data: rated } = await admin.from('creator_products').select('creator_id').eq('pricing_type', 'per_day'); const r = new Set((rated ?? []).map((x: any) => x.creator_id)); pool.splice(0, pool.length, ...pool.filter((c) => !r.has(c.id))) }
-  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id)
+  // A Growth creator when staging has one free; any creator with a login otherwise (the checks do not depend on tier).
+  const G = pool.find((c) => c.vetting_status === 'growth' && c.users?.auth_id) ?? pool.find((c) => c.users?.auth_id)
   const D = pool.find((c) => c.id !== G?.id && c.users?.auth_id)
   const { data: access } = await admin.from('staff_access').select('user_id')
   const busy = new Set([B?.user_id, G?.user_id, D?.user_id, ...(access ?? []).map((a) => a.user_id)])
@@ -223,10 +224,25 @@ async function run() {
   const acc = await fin.rpc('experience_console_payout_account', { p_payout_id: P })
   ok('financial staff get the full details to pay', !acc.error && acc.data?.account_number === ACCT && acc.data?.pan === PAN && acc.data?.ifsc === 'ICIC0004321' && acc.data?.changed_after_request === false, acc.error?.message ?? '')
 
+  group('0583: the invoice prints the bank account it was raised with')
+  const invId = ((await admin.from('experience_creator_invoices').select('id').eq('deal_id', gLeg).eq('status', 'issued').maybeSingle()).data as any)?.id as string
+  const docBank = async (s: SupabaseClient, viaConsole: boolean) => ((viaConsole
+    ? await s.rpc('experience_console_creator_invoice_doc', { p_invoice_id: invId })
+    : await s.rpc('creator_leg_invoice_doc', { p_deal_id: gLeg })).data as any)?.bank
+  const gBank = await docBank(cG as SupabaseClient, false)
+  ok('the creator sees their full account, holder and IFSC on the invoice', gBank?.account === ACCT && gBank?.ifsc === 'ICIC0004321' && gBank?.holder === 'Test Creator', JSON.stringify(gBank && { ...gBank, account: gBank.account?.slice(-4) }))
+  ok('finance sees the full account on the invoice', (await docBank(fin, true))?.account === ACCT)
+  const opBank = await docBank(op, true)
+  ok('operational staff see only ••••3221 on the invoice', opBank?.account === '••••3221' && !leaks(opBank))
+  ok('the stored account is encrypted, last 4 in the clear',
+    await (async () => { const r = (await admin.from('experience_creator_invoices').select('creator_account_enc, creator_account_last4').eq('id', invId).single()).data as any; return !!r?.creator_account_enc && r.creator_account_last4 === '3221' && !String(r.creator_account_enc).includes(ACCT) })())
+  ok('the issued invoice\'s account cannot be edited, even by the service role', refused(await admin.from('experience_creator_invoices').update({ creator_ifsc: 'HDFC0000001' }).eq('id', invId).select('id')))
+
   group('a change after the request blocks approval until confirmed')
   await new Promise((r) => setTimeout(r, 1100))
   await save(cG, { a: ACCT2 })
   ok('the payouts screen flags it', ((await screen(fin)).legs as any[]).find((l) => l.deal_id === gLeg)?.payout?.details_changed_after_request === true)
+  ok('0583: a later change does not rewrite the issued invoice (still the old account)', (await docBank(cG as SupabaseClient, false))?.account === ACCT)
   ok('finance approval without confirming is refused', said(await fin.rpc('experience_console_payout_approve', { p_payout_id: P }), /changed their bank details/))
   ok('NULL confirmation is not a yes', said(await fin.rpc('experience_console_payout_approve', { p_payout_id: P, p_confirm_details_changed: null }), /changed their bank details/))
   ok('ops cannot approve (confirmed or not)', said(await op.rpc('experience_console_payout_approve', { p_payout_id: P, p_confirm_details_changed: true }), /Financial access/))

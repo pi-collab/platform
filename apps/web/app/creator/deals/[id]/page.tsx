@@ -151,10 +151,13 @@ export default async function CreatorDealDetailPage({ params, searchParams }: {
     const { data: me } = await supabase.from('creators').select('full_name').eq('user_id', profileId).maybeSingle()
     // 0580: an invoice needs the bank account on file; the form asks for it first.
     const { data: payoutDetails } = await supabase.rpc('creator_payout_details')
+    // 0584: their own rating of Guapd on this deal (creator_read_own_review: their own row only).
+    const { data: guapdRating } = await supabase.from('deal_reviews').select('rating, note').eq('deal_id', params.id).eq('reviewer_role', 'creator').maybeSingle()
     return <CreatorLegView dealId={params.id} ctx={lc} attachmentUrls={legAttachmentUrls} collabPosts={(collabRows ?? []) as CreatorCollabPost[]} creatorName={(me?.full_name as string | undefined) ?? ''} bankOnFile={(payoutDetails as { on_file?: boolean; pan_masked?: string | null } | null)?.on_file === true && !!(payoutDetails as { pan_masked?: string | null } | null)?.pan_masked}
       messages={(messages ?? []).map((m) => ({ id: m.id as string, deal_id: m.deal_id as string, sender_party: m.sender_party as 'brand' | 'creator', body: m.body as string | null, created_at: m.created_at as string }))}
       events={(events ?? []) as { id: string; event_type: string; detail: any; created_at: string }[]}
       unread={await unreadNotificationCount(supabase, profileId)}
+      guapdRating={guapdRating ? { rating: Number(guapdRating.rating), note: (guapdRating.note as string | null) ?? null } : null}
       autoOpenChat={searchParams?.chat === '1'} />
   }
 
