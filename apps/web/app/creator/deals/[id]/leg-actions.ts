@@ -280,3 +280,17 @@ export async function claimAffiliateCommission(dealId: string, input: { salesRup
   return { ok: true, data: { number: out.number } }
 }
 
+
+/** 0584: the creator rates Guapd on their Experience deal, once they are paid. creator_leg_rate_guapd checks the leg is theirs and a payout on it is paid. */
+export async function rateGuapd(dealId: string, rating: number, note: string | null): Promise<{ ok: true } | { ok: false; message: string }> {
+  await verifyCreator(`/creator/deals/${dealId}`)
+  if (typeof dealId !== 'string' || !/^[0-9a-f-]{36}$/i.test(dealId) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return { ok: false, message: 'Pick 1 to 5 stars.' }
+  }
+  const { error } = await createClient().rpc('creator_leg_rate_guapd', {
+    p_deal_id: dealId, p_rating: rating, p_note: typeof note === 'string' ? note.slice(0, 1000) : null,
+  })
+  if (error) return { ok: false, message: /once you are paid/i.test(error.message) ? 'You can rate Guapd once you are paid.' : 'Could not save your rating. Please try again.' }
+  revalidatePath(`/creator/deals/${dealId}`)
+  return { ok: true }
+}

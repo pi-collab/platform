@@ -7,13 +7,16 @@ import { inr } from '@/lib/invoice-pdf'
  * from the issued row (creator_leg_invoice_doc / experience_console_creator_invoice_doc).
  * Every figure was copied from the locked terms by the database. No GST is
  * computed (CA to confirm the format); the creator's GSTIN is printed if given.
- * TDS is not on the invoice: Guapd deducts it at payment. No bank details.
+ * TDS is not on the invoice: Guapd deducts it at payment. 0583: the bank
+ * account it was raised with is printed under PAY TO.
  */
 export interface CreatorInvoiceDoc {
   number: string; status: string; issued_at: string; shoot_confirmed_at: string
   billing_name: string; gstin: string | null
   /** 0581: the PAN the invoice was raised with (masked for operational staff); null on invoices before 0581. */
   pan?: string | null
+  /** 0583: the bank account the invoice was raised with (full to the creator and finance, last 4 otherwise); null on old void invoices. */
+  bank?: { holder: string | null; account: string; ifsc: string | null } | null
   day_rate_paise: number; days: number; gross_paise: number; platform_pct: number
   platform_fee_paise: number; net_paise: number; allowance_paise: number; payable_paise: number
   deal_ref: string | null; experience_title: string; brand_name: string | null; shoot_date: string | null; shoot_city: string | null
@@ -61,6 +64,13 @@ export function renderCreatorInvoicePdf(d: CreatorInvoiceDoc): Uint8Array {
   y = block(L, y, 'BILL TO', b
     ? [b.legal_name, b.address, b.state ? `State: ${b.state}` : null, b.gstin ? `GSTIN: ${b.gstin}` : null, b.pan ? `PAN: ${b.pan}` : null]
     : ['Guapd']) + 18
+  if (d.bank) {
+    y = block(L, y, 'PAY TO', [
+      d.bank.holder ? `Account holder: ${d.bank.holder}` : null,
+      `Account number: ${d.bank.account}`,
+      d.bank.ifsc ? `IFSC: ${d.bank.ifsc}` : null,
+    ]) + 18
+  }
 
   pdf.box(L, y - 13, W, 20, 0.94)
   pdf.text(L + 8, y, 'Description', 9, 'bold')

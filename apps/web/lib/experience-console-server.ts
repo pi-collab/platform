@@ -922,6 +922,12 @@ export async function getConsolePayouts(experienceId: string): Promise<Result<Co
   const { data, error } = await createClient().rpc('experience_console_payouts', { p_experience_id: experienceId })
   return error ? fail(error) : { ok: true, data: data as ConsolePayouts }
 }
+/** 0584: how the paid creators on this Experience rated Guapd (operational access, checked in Postgres). */
+export interface ConsoleGuapdRatings { paid_creators: number; ratings: { deal_id: string; creator: string | null; rating: number; note: string | null; rated_at: string }[] }
+export async function getConsoleGuapdRatings(experienceId: string): Promise<Result<ConsoleGuapdRatings>> {
+  const { data, error } = await createClient().rpc('experience_console_guapd_ratings', { p_experience_id: experienceId })
+  return error ? fail(error) : { ok: true, data: data as ConsoleGuapdRatings }
+}
 export async function requestPayout(dealId: string, tdsPaise: number): Promise<Result<string>> {
   const { data, error } = await createClient().rpc('experience_console_payout_request', { p_deal_id: dealId, p_tds_paise: tdsPaise })
   return error ? fail(error) : { ok: true, data: data as string }

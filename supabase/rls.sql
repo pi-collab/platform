@@ -829,6 +829,8 @@ REVOKE ALL ON TABLE pipeline_feedback FROM anon, authenticated;
 -- ── deal_reviews ──────────────────────────────────────────────────
 -- Post-deal ratings. Each side can only see/write their OWN review.
 -- Ratings are PRIVATE — neither side sees the other's rating.
+-- 0584: on a Guapd Experience creator leg the creator rates GUAPD, only through
+-- creator_leg_rate_guapd (paid payouts only); the direct creator policies skip legs.
 
 DROP POLICY IF EXISTS brand_insert_review   ON deal_reviews;
 DROP POLICY IF EXISTS brand_update_review   ON deal_reviews;
@@ -865,7 +867,8 @@ CREATE POLICY creator_insert_review ON deal_reviews
     reviewer_role = 'creator'
     AND deal_id IN (
       SELECT d.id FROM deals d
-      WHERE d.creator_id = (
+      WHERE d.leg_role IS DISTINCT FROM 'creator_leg'  -- 0584: legs go through creator_leg_rate_guapd
+        AND d.creator_id = (
         SELECT c.id FROM creators c
         JOIN users u ON u.id = c.user_id
         WHERE u.auth_id = auth.uid()
@@ -879,7 +882,8 @@ CREATE POLICY creator_update_review ON deal_reviews
     reviewer_role = 'creator'
     AND deal_id IN (
       SELECT d.id FROM deals d
-      WHERE d.creator_id = (
+      WHERE d.leg_role IS DISTINCT FROM 'creator_leg'  -- 0584: legs go through creator_leg_rate_guapd
+        AND d.creator_id = (
         SELECT c.id FROM creators c
         JOIN users u ON u.id = c.user_id
         WHERE u.auth_id = auth.uid()
