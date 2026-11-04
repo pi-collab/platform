@@ -53,11 +53,14 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
   const takesOffers = data.rateCardItems.length > 0
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* The page's action bar. In the page, not fixed: a fixed bar at top 16
-          sat on top of BrandNav and covered "Browse creators". */}
+    <div style={{ position: 'relative', paddingBottom: 96 }}>
+      {/* The page's action bar, floating at the BOTTOM of the screen. At the
+          top it sat over BrandNav ("Browse creators") and in front of the
+          creator's name and stats; at the bottom it stays in reach without
+          covering either. */}
       <div style={{
-        width: 'fit-content', maxWidth: '100%', margin: '0 auto 20px',
+        position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 200,
+        maxWidth: 'calc(100vw - 32px)',
         display: 'flex', alignItems: 'center', gap: 10,
         background: 'var(--ink)', borderRadius: 999, padding: '8px 10px 8px 20px',
         boxShadow: '0 16px 40px -12px rgba(0,0,0,.4)',

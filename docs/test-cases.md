@@ -8045,4 +8045,4 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] A rate limit or Instagram outage still keeps `connected` and the last good snapshot, with the error in `sync_error`
 
 ### Browse storefront action bar
-- [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar sits in the page above the shopfront, not over the brand header; "Browse creators" in the header is fully visible and clickable
+- [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar floats at the bottom centre of the screen, not over the brand header or the creator's name and stats; scrolled to the end, the last section is not hidden behind it; on a phone it fits within the screen width
