@@ -8039,3 +8039,10 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] The "Guapd paid you" email mentions they can rate Guapd on the deal page
 - Automated: `scripts/test-experience-payouts.ts` group "0584" (18 checks; 147 in the suite, staging). The suite's creator G now falls back to any creator with a login when no Growth creator is free, and the fee checks follow G's tier (Growth 30%, vetted 15%).
 - 0584 hand-run on staging and repaired as applied; policies mirrored in `rls.sql`. Prod: `supabase/prod-run-0584.sql`, run BEFORE the code release (the new card calls the new function).
+
+### Instagram: a cancelled login asks the creator to reconnect
+- [ ] A connected creator whose token Instagram cancelled (Graph error 190: password changed, access removed, security check) is marked `needs_reconnect` on the next nightly sync, gets the reconnect WhatsApp/email/in-app notice once, and their storefront stops showing the stale figures as verified
+- [ ] A rate limit or Instagram outage still keeps `connected` and the last good snapshot, with the error in `sync_error`
+
+### Browse storefront action bar
+- [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar sits in the page above the shopfront, not over the brand header; "Browse creators" in the header is fully visible and clickable

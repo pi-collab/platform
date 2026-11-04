@@ -54,9 +54,10 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Floating top bar */}
+      {/* The page's action bar. In the page, not fixed: a fixed bar at top 16
+          sat on top of BrandNav and covered "Browse creators". */}
       <div style={{
-        position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200,
+        width: 'fit-content', maxWidth: '100%', margin: '0 auto 20px',
         display: 'flex', alignItems: 'center', gap: 10,
         background: 'var(--ink)', borderRadius: 999, padding: '8px 10px 8px 20px',
         boxShadow: '0 16px 40px -12px rgba(0,0,0,.4)',

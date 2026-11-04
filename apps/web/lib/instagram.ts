@@ -13,6 +13,20 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  * wherever it changed a decision.
  */
 
+/**
+ * Instagram no longer accepts the token (Graph error 190): the creator changed
+ * their password, removed Guapd's access, or Instagram put the account through
+ * a security check. Retrying cannot fix it; only reconnecting does. Thrown
+ * apart from other failures so the sync can tell this from a rate limit or an
+ * outage, where keeping the last good snapshot is right.
+ */
+export class IgTokenInvalidError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'IgTokenInvalidError'
+  }
+}
+
 const GRAPH = 'https://graph.instagram.com/v25.0'
 const OAUTH_TOKEN = 'https://api.instagram.com/oauth/access_token'
 
@@ -187,7 +201,11 @@ export async function fetchProfile(token: string): Promise<IgProfile> {
   const fields = 'user_id,username,account_type,followers_count,follows_count,media_count,name,biography,profile_picture_url'
   const res = await fetch(`${GRAPH}/me?fields=${fields}&access_token=${encodeURIComponent(token)}`)
   const json = await res.json()
-  if (!res.ok) throw new Error(`profile fetch failed: ${json?.error?.message ?? res.status}`)
+  if (!res.ok) {
+    const message = `profile fetch failed: ${json?.error?.message ?? res.status}`
+    if (json?.error?.code === 190) throw new IgTokenInvalidError(message)
+    throw new Error(message)
+  }
   return json as IgProfile
 }
 
