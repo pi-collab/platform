@@ -12,7 +12,7 @@ import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilt
 import { trackOfVettingStatus } from '@/lib/track'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
-import { NICHES } from '@/lib/niches'
+import { canonicalNiche, OTHER_NICHE } from '@/lib/niches'
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
@@ -153,17 +153,22 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   // which of them we happened to match on.
   const [nicheFilter, setNicheFilter] = useState<string[]>([])
 
-  // Built from the creators actually listed, not a fixed list. NICHES was a
-  // hardcoded set, so it offered options nobody matched and hid the ones
-  // creators had entered on their storefront.
+  // The standard list only (lib/niches.ts), and only niches some creator has,
+  // with a count. Niches typed under "Other" were each their own option, so
+  // the dropdown grew a long tail of one-creator entries; they now sit under
+  // one "Other". Search and AI search still match the typed text.
   const nicheOptions = useMemo(() => {
     const counts = new Map<string, number>()
     for (const c of creators) {
-      for (const n of c.niches ?? []) counts.set(n, (counts.get(n) ?? 0) + 1)
+      for (const b of Array.from(new Set((c.niches ?? []).map(nicheBucket)))) counts.set(b, (counts.get(b) ?? 0) + 1)
     }
-    return Array.from(counts.entries())
+    const other = counts.get(OTHER_NICHE)
+    counts.delete(OTHER_NICHE)
+    const opts = Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([label, n]) => ({ value: label, label, hint: String(n) }))
+    if (other) opts.push({ value: OTHER_NICHE, label: 'Other', hint: String(other) })
+    return opts
   }, [creators])
   const [platformFilter, setPlatformFilter] = useState<'all' | 'instagram' | 'youtube'>('all')
   /* All by default. This chip is what a global Deals/Growth mode would have
@@ -335,7 +340,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     if (nicheFilter.length > 0) {
       // ANY, not all: a brand picking Beauty and Fashion wants either, not
       // creators who happen to carry both.
-      list = list.filter((c) => (c.niches ?? []).some((n) => nicheFilter.includes(n)))
+      list = list.filter((c) => (c.niches ?? []).some((n) => nicheFilter.includes(nicheBucket(n))))
     }
 
     // Platform
@@ -407,7 +412,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
   // Active filter chips
   const chips: { label: string; onRemove: () => void }[] = []
   if (platformFilter !== 'all') chips.push({ label: platformFilter === 'instagram' ? 'Instagram' : 'YouTube', onRemove: () => setPlatformFilter('all') })
-  for (const n of nicheFilter) chips.push({ label: n, onRemove: () => setNicheFilter((prev) => prev.filter((x) => x !== n)) })
+  for (const n of nicheFilter) chips.push({ label: n === OTHER_NICHE ? 'Other' : n, onRemove: () => setNicheFilter((prev) => prev.filter((x) => x !== n)) })
   if (rateFilter !== 'any') chips.push({ label: RATE_FILTERS.find((r) => r.value === rateFilter)?.label ?? rateFilter, onRemove: () => setRateFilter('any') })
   const hasChips = chips.length > 0 || aiChips.length > 0
 
@@ -1481,4 +1486,10 @@ const selectStyle: React.CSSProperties = {
   color: '#5C5E52', outline: 'none',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+}
+
+/** The dropdown option a stored niche falls under: its standard niche, or
+ *  "Other" for anything a creator typed that is not on the list. */
+function nicheBucket(raw: string): string {
+  return canonicalNiche(raw) ?? OTHER_NICHE
 }
