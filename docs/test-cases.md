@@ -619,6 +619,7 @@ OTP endpoints are deliberately unused. All three entry points (signup, `sendLogi
 - [ ] `/privacy` link navigates to the privacy policy page.
 - [ ] `/terms` link navigates to the terms of service page.
 - [ ] "Cookie preferences" link in footer clears consent and re-shows the cookie banner.
+- [ ] Footer shows "Add Guapd as a preferred source on Google" under the social icons; it opens https://www.google.com/preferences/source?q=guapd.com in a new tab (no Google script loaded).
 - [ ] Authenticated app-shell pages (deals, dashboard, creator, campaigns) do NOT have the marketing Footer (by design — app nav pattern). Legal pages are accessible by direct URL.
 - [ ] Storefront `/c/[slug]` has its own "Powered by Guapd" footer; PitchPanel links to `/terms` and `/privacy` inline.
 
