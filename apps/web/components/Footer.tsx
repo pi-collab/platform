@@ -82,6 +82,20 @@ export default function Footer() {
                 </a>
               ))}
             </div>
+
+            {/* A plain link rather than Google's publisher.js button: same
+                destination, no third-party script on every marketing page. */}
+            <a
+              href={footer.preferredSource.href}
+              target="_blank"
+              rel="noreferrer"
+              className="gf-pref"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 2.5l2.94 5.96 6.56.95-4.75 4.63 1.12 6.54L12 17.5l-5.87 3.08 1.12-6.54L2.5 9.41l6.56-.95z" />
+              </svg>
+              {footer.preferredSource.label}
+            </a>
           </div>
 
           <div className="gfoot__grid">

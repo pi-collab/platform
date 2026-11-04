@@ -365,6 +365,13 @@ export const footer = {
     { label: 'LinkedIn', href: 'https://www.linkedin.com/company/guapd', icon: 'linkedin' as const },
   ],
 
+  // Google's "preferred sources": a reader who adds us sees Guapd more in Top
+  // Stories. Deeplink format from developers.google.com/search/docs/appearance/preferred-sources
+  preferredSource: {
+    label: 'Add Guapd as a preferred source on Google',
+    href: 'https://www.google.com/preferences/source?q=guapd.com',
+  },
+
   columns: [
     {
       heading: 'Product',
