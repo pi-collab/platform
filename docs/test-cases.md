@@ -7938,3 +7938,6 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] The "Guapd paid you" email mentions they can rate Guapd on the deal page
 - Automated: `scripts/test-experience-payouts.ts` group "0584" (18 checks; 147 in the suite, staging). The suite's creator G now falls back to any creator with a login when no Growth creator is free, and the fee checks follow G's tier (Growth 30%, vetted 15%).
 - 0584 hand-run on staging and repaired as applied; policies mirrored in `rls.sql`. Prod: `supabase/prod-run-0584.sql`, run BEFORE the code release (the new card calls the new function).
+
+### Browse storefront action bar
+- [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar floats at the bottom centre of the screen, not over the brand header or the creator's name and stats; scrolled to the end, the last section is not hidden behind it; on a phone it fits within the screen width
