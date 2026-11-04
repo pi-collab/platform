@@ -202,3 +202,24 @@ export function canonicalNiches(raw: (string | null | undefined)[]): string[] {
   }
   return out
 }
+
+/**
+ * The standard niches a stored niche counts under, for filtering. Creators
+ * often typed several into one box under Other ("Fashion | Fitness |
+ * Lifestyle", "Fashion beauty food fitness"); those count under each standard
+ * niche they name, so the creator is found under Fashion, Fitness and the rest.
+ * Tried in order: the whole value, its parts split on , | / ; + & or "and",
+ * then single words. Nothing recognised means [OTHER_NICHE]. The stored value
+ * is untouched; this only decides where it is counted.
+ */
+export function nicheBuckets(raw: string | null | undefined): string[] {
+  const whole = canonicalNiche(raw)
+  if (whole) return [whole]
+  const text = (raw ?? '').trim()
+  const found = (parts: string[]) =>
+    Array.from(new Set(parts.map((p) => canonicalNiche(p.trim())).filter((n): n is Niche => !!n)))
+  const byParts = found(text.split(/[,|/;+&]|\band\b/i))
+  if (byParts.length) return byParts
+  const byWords = found(text.split(/[^A-Za-z0-9]+/))
+  return byWords.length ? byWords : [OTHER_NICHE]
+}

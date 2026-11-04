@@ -12,7 +12,7 @@ import TrackFilter, { type TrackFilterValue } from '@/components/track/TrackFilt
 import { trackOfVettingStatus } from '@/lib/track'
 import Link from 'next/link'
 import type { BrowseCreator } from './page'
-import { canonicalNiche, OTHER_NICHE } from '@/lib/niches'
+import { nicheBuckets, OTHER_NICHE } from '@/lib/niches'
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
@@ -169,12 +169,13 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
 
   // The standard list only (lib/niches.ts), and only niches some creator has,
   // with a count. Niches typed under "Other" were each their own option, so
-  // the dropdown grew a long tail of one-creator entries; they now sit under
-  // one "Other". Search and AI search still match the typed text.
+  // the dropdown grew a long tail of one-creator entries. Now a typed value
+  // counts under the standard niches it names (nicheBuckets), and only what
+  // names none sits under one "Other". Search and AI search still match it.
   const nicheOptions = useMemo(() => {
     const counts = new Map<string, number>()
     for (const c of creators) {
-      for (const b of Array.from(new Set((c.niches ?? []).map(nicheBucket)))) counts.set(b, (counts.get(b) ?? 0) + 1)
+      for (const b of Array.from(new Set((c.niches ?? []).flatMap(nicheBuckets)))) counts.set(b, (counts.get(b) ?? 0) + 1)
     }
     const other = counts.get(OTHER_NICHE)
     counts.delete(OTHER_NICHE)
@@ -388,7 +389,7 @@ export default function BrowseGrid({ creators, storefrontSlugs = {}, verifiedFol
     if (nicheFilter.length > 0) {
       // ANY, not all: a brand picking Beauty and Fashion wants either, not
       // creators who happen to carry both.
-      list = list.filter((c) => (c.niches ?? []).some((n) => nicheFilter.includes(nicheBucket(n))))
+      list = list.filter((c) => (c.niches ?? []).some((n) => nicheBuckets(n).some((b) => nicheFilter.includes(b))))
     }
 
     // Platform
@@ -1571,10 +1572,4 @@ const selectStyle: React.CSSProperties = {
   color: '#5C5E52', outline: 'none',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-}
-
-/** The dropdown option a stored niche falls under: its standard niche, or
- *  "Other" for anything a creator typed that is not on the list. */
-function nicheBucket(raw: string): string {
-  return canonicalNiche(raw) ?? OTHER_NICHE
 }

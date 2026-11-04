@@ -6497,6 +6497,7 @@ Migration **0515** adds `creators.city`, `creators.state`, `creators.age_bracket
 ### A niche typed into Other is findable (follows §84)
 - [ ] A creator who types "Astrology" into Other has "Astrology" stored as typed
 - [ ] `/browse` niche filter lists only the standard niches some creator has, with counts, plus one "Other". A typed niche ("Astrology") is NOT its own option: picking "Other" shows that creator, and searching "astrology" finds them too
+- [ ] A creator whose typed niche names several ("Fashion | Fitness | Lifestyle", "Fashion beauty food fitness") is counted and found under each standard niche it names, not under Other
 - [ ] AI search "astrology creators in Mumbai": the parser returns `otherNiches: ["astrology"]` (NOT in unusedTerms), the astrology creator ranks with "Astrology" as a reason, and an "astrology" chip appears that can be removed
 - [ ] "premium creators" still goes to unusedTerms, never otherNiches (qualities are not categories)
 - [ ] A query a list niche covers ("makeup creators") uses `niches: ["Beauty & Skincare"]` and leaves otherNiches empty
