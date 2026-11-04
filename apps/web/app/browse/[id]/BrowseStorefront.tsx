@@ -58,9 +58,16 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
           top it sat over BrandNav ("Browse creators") and in front of the
           creator's name and stats; at the bottom it stays in reach without
           covering either. */}
-      <div style={{
+      {/* Phones: the four pills do not fit in 360px at desktop spacing, so
+          the spacing, separators and icons go and the labels stay whole. */}
+      <style>{`@media (max-width: 480px) {
+        .bsf-bar { gap: 6px !important; padding: 6px 6px 6px 14px !important; }
+        .bsf-bar .bsf-sep, .bsf-bar svg { display: none !important; }
+        .bsf-bar a, .bsf-bar button { padding: 7px 12px !important; font-size: 12.5px !important; }
+      }`}</style>
+      <div className="bsf-bar" style={{
         position: 'fixed', bottom: 'calc(20px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 200,
-        maxWidth: 'calc(100vw - 32px)',
+        maxWidth: 'calc(100vw - 32px)', whiteSpace: 'nowrap',
         display: 'flex', alignItems: 'center', gap: 10,
         background: 'var(--ink)', borderRadius: 999, padding: '8px 10px 8px 20px',
         boxShadow: '0 16px 40px -12px rgba(0,0,0,.4)',
@@ -73,7 +80,7 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
           Browse
         </Link>
-        <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,.15)' }} />
+        <span className="bsf-sep" style={{ width: 1, height: 20, background: 'rgba(255,255,255,.15)' }} />
         {creatorSlug && (
           <>
             <a href={`/c/${creatorSlug}`} target="_blank" rel="noopener noreferrer" style={{
@@ -86,7 +93,7 @@ export default function BrowseStorefront({ data, creatorId, creatorSlug, lastDea
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
               Storefront
             </a>
-            <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,.15)' }} />
+            <span className="bsf-sep" style={{ width: 1, height: 20, background: 'rgba(255,255,255,.15)' }} />
           </>
         )}
         {lastDealId && takesOffers && (
