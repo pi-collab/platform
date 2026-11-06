@@ -144,3 +144,25 @@ export async function updateCreatorAccount(data: AccountUpdate): Promise<{ error
   revalidatePath('/creator/settings')
   return {}
 }
+
+// ── Guapd AI search visibility (0585) ────────────────────────────
+
+/**
+ * Whether brands can find this creator in Guapd AI search. Off until the
+ * creator switches it on; the timestamp records when they agreed. Server
+ * written only, and only to the signed-in creator's own row.
+ */
+export async function setSearchVisibility(on: boolean): Promise<{ error?: string; optedInAt?: string | null }> {
+  const ctx = await verifyCreator()
+  const optedInAt = on ? new Date().toISOString() : null
+  const { error } = await createAdminClient()
+    .from('creators')
+    .update({ search_opt_in_at: optedInAt })
+    .eq('id', ctx.creatorId)
+  if (error) {
+    console.error(`[settings] search visibility failed creator=${ctx.creatorId}: ${error.message}`)
+    return { error: 'Could not save that. Try again.' }
+  }
+  revalidatePath('/creator/settings')
+  return { optedInAt }
+}

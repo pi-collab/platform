@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { displayEmail } from '@/lib/synthetic-email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorSettingsClient from './CreatorSettingsClient'
+import { creatorSearchEnabled } from '@/lib/ai/creator-search-flag'
 
 export default async function CreatorSettingsPage() {
   const ctx = await verifyCreator()
@@ -28,7 +29,7 @@ export default async function CreatorSettingsPage() {
   // Fetch creator details
   const { data: creator } = await admin
     .from('creators')
-    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email')
+    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email, search_opt_in_at')
     .eq('id', ctx.creatorId)
     .single()
 
@@ -57,6 +58,7 @@ export default async function CreatorSettingsPage() {
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}
       instagramConnection={instagramConnection}
+      searchVisibility={creatorSearchEnabled() ? { optedInAt: ((creator as Record<string, unknown>)?.search_opt_in_at as string | null) ?? null } : null}
       isGrowth={growth.isGrowth}
       creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
       userEmail={displayEmail(user?.email) ?? ''}

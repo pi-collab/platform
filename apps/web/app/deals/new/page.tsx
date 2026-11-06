@@ -30,7 +30,7 @@ export interface DealPrefill {
 
 const STEPS = ['Create offer', 'Agreed', 'Submitted', 'Approved', 'Invoice', 'Paid'] as const
 
-export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string; total?: string; back?: string } }) {
+export default async function NewDealPage({ searchParams }: { searchParams: { creator?: string; from?: string; items?: string; total?: string; back?: string; s?: string } }) {
   const brand = await verifyBrand()
   const supabase = createClient()
 
@@ -184,6 +184,11 @@ export default async function NewDealPage({ searchParams }: { searchParams: { cr
   const backTargets: Record<string, { href: string; label: string }> = {
     browse: { href: '/browse', label: 'Back to browse creators' },
     storefront: { href: `/browse/${creatorId}`, label: 'Back to storefront' },
+    // Guapd AI: back to the same saved search, when the id is a well-formed uuid.
+    ai: {
+      href: searchParams.s && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(searchParams.s) ? `/ai?s=${searchParams.s}` : '/ai',
+      label: 'Back to Guapd AI',
+    },
   }
   const back = searchParams.back ? backTargets[searchParams.back] : undefined
   const backHref = back?.href ?? '/deals'

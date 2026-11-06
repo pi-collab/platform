@@ -1776,3 +1776,17 @@ GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
 -- experience_console_post_performance (operational staff; performance keys and
 -- deal ids only, no money) and experience_console_post_recheck (operational,
 -- audited through experience_console_audit). No new tables or policies.
+
+-- ── Guapd AI creator search (0585) ──────────────────────────────────────────
+-- brand_creator_searches: server only (RLS on, no policies, no client grants);
+-- read and written by /api/creators/search and /ai with the service role,
+-- always scoped to the signed-in brand's own brand_id in code.
+-- creator_search_pool(): service_role only; writes out its own gates (opted
+-- in, bookable, not rejected, not the house account) and returns only fields a
+-- brand may see before a deal. creators.search_opt_in_at: no client SELECT
+-- grant (the column allowlist leaves it out); written by the server only.
+ALTER TABLE brand_creator_searches ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_creator_searches FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_creator_searches TO service_role;
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
