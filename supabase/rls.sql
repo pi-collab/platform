@@ -1781,7 +1781,8 @@ GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
 -- brand_creator_searches: server only (RLS on, no policies, no client grants);
 -- read and written by /api/creators/search and /ai with the service role,
 -- always scoped to the signed-in brand's own brand_id in code.
--- creator_search_pool(): service_role only; writes out its own gates (opted
+-- creator_search_pool(): service_role only; writes out its own gates (since
+-- 0588: /browse's rule minus hidden creators; 0585 had an opt-in
 -- in, bookable, not rejected, not the house account) and returns only fields a
 -- brand may see before a deal. creators.search_opt_in_at: no client SELECT
 -- grant (the column allowlist leaves it out); written by the server only.
@@ -1810,3 +1811,28 @@ ALTER TABLE brand_meta_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE brand_creator_invites ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON brand_meta_connections, brand_creator_invites FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON brand_meta_connections, brand_creator_invites TO service_role;
+
+-- ── Guapd AI: /browse visibility + "Your visibility" (0588, 0589) ──────────
+-- 0588: creators.search_hidden_at / search_notice_dismissed_at (no client
+-- SELECT grant; server written); creator_search_pool recreated with /browse's
+-- rule (is_bookable = true AND is_guapd = false) minus hidden creators;
+-- search_opt_in_at dropped. Same service_role-only EXECUTE.
+-- 0589: brand_search_interactions (server only) and creator_search_visibility
+-- (service_role only).
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+ALTER TABLE brand_search_interactions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_search_interactions FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_search_interactions TO service_role;
+REVOKE EXECUTE ON FUNCTION creator_search_visibility(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_visibility(uuid) TO service_role;
+
+-- ── Guapd AI onboarding, Coming soon notes, Meta states, consent (0590) ─────
+-- All server only: RLS on, no policies, no client grants.
+ALTER TABLE brand_user_ai_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_feature_interest ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_meta_eligibility ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_consent_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log TO service_role;
+-- creators.whatsapp_updates_consent_at: no client SELECT grant; server written.

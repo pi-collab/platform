@@ -87,7 +87,7 @@ async function main() {
   const matchUser = String(guapdCreator!.handle).replace(/^@+/, '').toLowerCase()
   const NOT_ON = 'notonguapd_creator'
 
-  const stub = { scope: '', marketplaceHits: 0, lastQuery: null as URLSearchParams | null, tokens: [] as string[] }
+  const stub = { scope: '', marketplaceHits: 0, lastQuery: null as URLSearchParams | null, tokens: [] as string[], accounts: 'ok' as 'ok' | 'none' | 'noig', marketplaceError: 0 }
   const server = http.createServer((req, res) => {
     const u = new globalThis.URL(req.url!, 'http://localhost:4599')
     const send = (j: unknown) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(j)) }
@@ -99,9 +99,14 @@ async function main() {
     if (u.pathname === '/graph/oauth/access_token') return send(u.searchParams.get('code') ? { access_token: 'short-user-token' } : { access_token: 'long-user-token', expires_in: 5184000 })
     if (u.pathname === '/graph/me') return send({ id: 'fb-user-test-1' })
     if (u.pathname === '/graph/me/permissions') return send({ data: ['instagram_basic', 'pages_show_list', 'pages_manage_metadata', 'business_management', 'instagram_creator_marketplace_discovery'].map((permission) => ({ permission, status: 'granted' })) })
-    if (u.pathname === '/graph/me/accounts') return send({ data: [{ id: 'page-1', name: 'Test Brand Page', access_token: 'page-token-secret', instagram_business_account: { id: 'ig-biz-1', username: 'testbrand' } }] })
+    if (u.pathname === '/graph/me/accounts') {
+      if (stub.accounts === 'none') return send({ data: [] })
+      if (stub.accounts === 'noig') return send({ data: [{ id: 'page-2', name: 'Page without Instagram', access_token: 'page-token-2' }] })
+      return send({ data: [{ id: 'page-1', name: 'Test Brand Page', access_token: 'page-token-secret', instagram_business_account: { id: 'ig-biz-1', username: 'testbrand' } }] })
+    }
     if (u.pathname === '/graph/ig-biz-1/creator_marketplace_creators') {
       stub.marketplaceHits++; stub.lastQuery = u.searchParams
+      if (stub.marketplaceError) { res.writeHead(400, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: { message: 'Application does not have permission for this action', code: stub.marketplaceError } })) }
       if (u.searchParams.get('access_token') !== 'page-token-secret') { res.writeHead(400); return res.end('{"error":{"message":"bad token","code":190}}') }
       return send({ data: [
         { id: '1', username: matchUser, biography: 'Home and decor', country: 'IN', category: 'Home', email: 'onguapd@example.com', profile_picture_url: 'https://example.com/a.jpg', onboarded_status: 'ONBOARDED', insights: { data: [{ name: 'total_followers', values: [{ value: 12000 }] }] } },
@@ -229,6 +234,32 @@ async function main() {
     const { count: notes } = await admin.from('notifications').select('id', { count: 'exact', head: true }).eq('type', 'creator_invite_accepted').gte('created_at', made.startedAt)
     ok('the brand is told in-app', (notes ?? 0) > 0)
 
+    // Not eligible (Graph error 10), no Facebook Page, no linked Instagram.
+    stub.marketplaceError = 10
+    const e10 = await post('/api/meta/creator-search', { searchId: made.searchId, options: { ...DEFAULT_META_OPTIONS, verifiedAccount: true } })
+    const e10j = await e10.json()
+    ok('Meta error 10: plain "not eligible" explanation', e10.status === 403 && e10j.kind === 'not_eligible' && /not eligible/.test(e10j.message))
+    ok('error 10 is recorded for the brand', (await admin.from('brand_meta_eligibility').select('state').eq('brand_id', brandId).single()).data?.state === 'not_eligible')
+    const hits10 = stub.marketplaceHits
+    await post('/api/meta/creator-search', { searchId: made.searchId, options: { ...DEFAULT_META_OPTIONS, hasPublicContactEmail: true } })
+    ok('once not eligible, Meta is not called again', stub.marketplaceHits === hits10)
+    stub.marketplaceError = 0
+    await admin.from('brand_meta_eligibility').delete().eq('brand_id', brandId)
+    const connectWith = async (accounts: 'none' | 'noig') => {
+      stub.accounts = accounts
+      const c = await fetch(`${APP}/api/meta/connect`, { headers: { cookie: brandCookie }, redirect: 'manual' })
+      const sc = c.headers.getSetCookie().map((x) => x.split(';')[0]).join('; ')
+      const d = await fetch(c.headers.get('location')!, { redirect: 'manual' })
+      const cb = await fetch(d.headers.get('location')!, { headers: { cookie: `${brandCookie}; ${sc}` }, redirect: 'manual' })
+      return cb.headers.get('location') ?? ''
+    }
+    ok('no Facebook Page: back with meta=no_page', (await connectWith('none')).includes('meta=no_page'))
+    ok('no Facebook Page: recorded', (await admin.from('brand_meta_eligibility').select('state').eq('brand_id', brandId).single()).data?.state === 'no_page')
+    ok('a Page without Instagram: back with meta=no_instagram', (await connectWith('noig')).includes('meta=no_instagram'))
+    ok('a Page without Instagram: recorded', (await admin.from('brand_meta_eligibility').select('state').eq('brand_id', brandId).single()).data?.state === 'no_instagram')
+    stub.accounts = 'ok'
+    await admin.from('brand_meta_eligibility').delete().eq('brand_id', brandId)
+
     // Deauthorize: a bad signature is ignored, a good one deletes the connection.
     const b64 = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
     const payload = b64(Buffer.from(JSON.stringify({ algorithm: 'HMAC-SHA256', user_id: 'fb-user-test-1', issued_at: Math.floor(Date.now() / 1000) })))
@@ -243,6 +274,7 @@ async function main() {
     if (made.igRowFor) await admin.from('creator_instagram_connections').delete().eq('creator_id', made.igRowFor).eq('ig_user_id', 'test-ig')
     await admin.from('notifications').delete().eq('type', 'creator_invite_accepted').gte('created_at', made.startedAt)
     await admin.from('brand_meta_connections').delete().eq('brand_id', brandId).eq('fb_user_id', 'fb-user-test-1')
+    await admin.from('brand_meta_eligibility').delete().eq('brand_id', brandId)
     if (made.searchId) await admin.from('brand_creator_searches').delete().eq('id', made.searchId)
     const left = await Promise.all([
       admin.from('brand_creator_invites').select('id', { count: 'exact', head: true }).eq('brand_id', brandId),

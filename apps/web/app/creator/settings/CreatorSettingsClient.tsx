@@ -14,6 +14,8 @@ import AvatarUpload from '@/components/AvatarUpload'
 
 import { CONTENT_LANGUAGES } from '@/lib/ai/creator-search-types'
 import SearchVisibility from './SearchVisibility'
+import WhatsAppUpdatesToggle from './WhatsAppUpdatesToggle'
+import { FIELDS_HINT } from '@/lib/ai/search-visibility-copy'
 import ConnectedAccounts from './ConnectedAccounts'
 import type { IgConnectionView } from '@/lib/instagram-sync'
 import './connected-accounts.css'
@@ -30,12 +32,14 @@ interface Props {
   creatorNiches: string[]
   creatorPlace: { city: string; state: string; ageBracket: string }
   creatorLanguages: string[]
+  /** Product updates on WhatsApp consent time; null = not given. */
+  whatsappUpdatesAt: string | null
   creatorPrimaryPlatform: string
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
   instagramConnection: IgConnectionView
-  /** Guapd AI search opt-in; null when CREATOR_SEARCH is off. */
-  searchVisibility: { optedInAt: string | null } | null
+  /** Guapd AI search visibility; null when the creator side is off. */
+  searchVisibility: { hiddenAt: string | null } | null
   /** Growth creators have no shopfront, so the "View shopfront" pill is
    *  hidden rather than opening a locked page. */
   isGrowth?: boolean
@@ -80,6 +84,7 @@ export default function CreatorSettingsClient({
   creatorNiches: initialNiches,
   creatorPlace: initialPlace,
   creatorLanguages: initialLanguages,
+  whatsappUpdatesAt,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
   creatorPhotoUrl,
@@ -368,11 +373,12 @@ export default function CreatorSettingsClient({
                 <ConnectedAccounts connection={instagramConnection} />
                 {searchVisibility && (
                   <div id="guapd-ai">
-                    <SearchVisibility optedInAt={searchVisibility.optedInAt} />
+                    <SearchVisibility hiddenAt={searchVisibility.hiddenAt} />
                     {/* The same fields as Profile, on the same form state, so
                         editing here or there is one edit and one Save. */}
                     <div style={{ marginTop: 16 }}>
                       <div style={eyebrowStyle}>Help brands find you <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(all optional)</span></div>
+                      <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>{FIELDS_HINT}</p>
                       <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
                         <FieldInput label="City" value={city} onChange={v => { setCity(v); markDirty() }} placeholder="Mumbai" />
                         <FieldSelect label="State" value={placeState} options={[...INDIAN_STATES]} onChange={v => { setPlaceState(v); markDirty() }} placeholder="Select state" />
@@ -436,6 +442,7 @@ export default function CreatorSettingsClient({
                   <FieldSelect label="Language" value={language} options={['English', 'हिन्दी']} onChange={v => { setLanguage(v); markDirty() }} />
                   <FieldSelect label="Timezone" value={timezone} options={['IST (GMT+5:30)', 'GMT', 'PST']} onChange={v => { setTimezone(v); markDirty() }} />
                 </div>
+                <WhatsAppUpdatesToggle consentAt={whatsappUpdatesAt} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22 }}>
                   {/* Auth row */}

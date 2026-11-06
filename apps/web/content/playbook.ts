@@ -352,7 +352,7 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - **Deliver work** — submit deliverables as links (Drive, YouTube, Loom, anything hosted), track multiple deliverables per deal, respond to revision requests, and mark content posted with the live URL.
 - **Get paid, cleanly** — raise an invoice, track payment status, see total earned and what's outstanding, send a polite reminder, and store your UPI payout ID so brands know where to send money. The fee split is always shown clearly.
 - **Show verified numbers** — connect Instagram for verified follower count, reach, and audience demographics, plus analytics on your own delivered content.
-- **Get found by Guapd AI (in testing)** — switch on "Show me in Guapd AI search" and you can be suggested when a brand describes the creators they want. Brands see your name, photo, handle, city, niches and numbers, never your phone or email. Adding your city, languages and niches helps you show up for the right briefs.
+- **Found by Guapd AI (in testing)** — when a brand describes the creators they want, you can be suggested, the same as being on Browse. Brands see your name, photo, handle, city, niches and numbers, never your phone or email. Adding your city, languages and niches helps you show up for the right briefs, and "Your visibility" on your home shows how often brands saw you. You can turn it off in Settings.
 - **Guapd Growth** — a track for emerging and UGC creators, with the full workflow: brands book you on your packages and your verified Instagram numbers, and you run the deal, deliver and get paid like anyone else. No public storefront, and a 30% platform fee deducted from what you earn.
 
 ---
@@ -382,7 +382,7 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - What was read, as editable chips in four groups: must match (city, language, followers, engagement, budget), must have, nice to have, exclude
 - Editing or removing a chip re-runs the search instantly
 - Exclusions remove creators who match them, including creators who have worked with a named competitor
-- Ranked results from Guapd's own creators who have opted in: photo, name, city, niches, a Verified label with followers and engagement where Instagram is connected (self-reported numbers labelled as such), and a one-line reason
+- Ranked results from the same creators brands see on Browse (creators can turn Guapd AI search off): photo, name, city, niches, a Verified label with followers and engagement where Instagram is connected (self-reported numbers labelled as such), and a one-line reason
 - Ranking uses the brief, verified engagement, completed deals, on-time delivery and reply rate; weak matches are left out rather than shown
 - Says plainly when nothing or little matches, and suggests one filter to loosen
 - Send offer from a result opens the normal offer builder; searches are saved and can be reopened
@@ -460,10 +460,11 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - Rejected creators can appeal and have the decision reversed
 
 **Guapd AI search (in testing)**
-- "Show me in Guapd AI search" switch in Settings → Connected accounts, off until the creator switches it on
+- Every creator on Browse is searchable; "Show me in Guapd AI search" in Settings → Connected accounts is on by default, and turning it off asks first and says exactly what changes
 - Optional city, state, languages and niches right under the switch (the same fields as Profile)
 - Brands see name, photo, handle, city, niches and numbers (verified where Instagram is connected); never phone or email
-- A card on the creator home asks them to switch it on, with a one-tap link to the switch
+- A one-time notice on the creator home says brands can now find them this way and where the switch is
+- "Your visibility" on the creator home: times shown to a brand, profile opens and offers started from Guapd AI search in the last 7 days (each brand counted once a day; never which brand or what was searched)
 
 **Campaign invites (in testing, requires Meta access)**
 - A brand can invite a creator it found on Instagram with a link: the page shows the brand and the brief, then sign up with phone OTP, connect Instagram, accept

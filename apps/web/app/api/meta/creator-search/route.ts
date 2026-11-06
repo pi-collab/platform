@@ -4,7 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { validateFilters } from '@/lib/ai/creator-search-types'
 import { brandForApi, jsonFail } from '@/lib/meta/api-auth'
 import { metaMarketplaceEnabled, metaQueryMode } from '@/lib/meta/config'
-import { MetaTokenInvalidError } from '@/lib/meta/graph'
+import { MetaNotEligibleError, MetaTokenInvalidError } from '@/lib/meta/graph'
+import { ELIGIBILITY_TEXT } from '@/lib/meta/eligibility-copy'
 import { DEFAULT_META_OPTIONS, MetaOptionsSchema, buildMetaParams } from '@/lib/meta/marketplace-params'
 import { loadBrandConnection, searchMarketplace } from '@/lib/meta/marketplace'
 
@@ -35,6 +36,8 @@ export async function POST(request: NextRequest) {
   let parsed: z.infer<typeof Body>
   try { const r = Body.safeParse(JSON.parse(raw)); if (!r.success) return jsonFail(400, 'That request could not be read.'); parsed = r.data } catch { return jsonFail(400, 'That request could not be read.') }
 
+  const { data: elig } = await createAdminClient().from('brand_meta_eligibility').select('state').eq('brand_id', brand.brandId).maybeSingle()
+  if (elig?.state === 'not_eligible') return NextResponse.json({ ok: false, kind: 'not_eligible', message: ELIGIBILITY_TEXT.not_eligible }, { status: 403 })
   const conn = await loadBrandConnection(brand.brandId)
   if (!conn) return NextResponse.json({ ok: false, kind: 'not_connected', message: 'Connect Facebook to search Instagram Creator Marketplace.' }, { status: 409 })
 
@@ -59,6 +62,7 @@ export async function POST(request: NextRequest) {
     console.info(`[meta] marketplace search brand=${brand.brandId} search=${row.id} results=${creators.length} cached=${cached} mode=${metaQueryMode()}`)
     return NextResponse.json({ ok: true, creators, sentQuery: params.query ?? null })
   } catch (err) {
+    if (err instanceof MetaNotEligibleError) return NextResponse.json({ ok: false, kind: 'not_eligible', message: ELIGIBILITY_TEXT.not_eligible }, { status: 403 })
     if (err instanceof MetaTokenInvalidError) return NextResponse.json({ ok: false, kind: 'not_connected', message: 'Facebook stopped accepting Guapd\'s access. Reconnect to search Instagram.' }, { status: 409 })
     console.error(`[meta] marketplace search failed brand=${brand.brandId}: ${err instanceof Error ? err.message : String(err)}`)
     return jsonFail(502, 'Instagram Creator Marketplace did not answer. Try again in a moment.')

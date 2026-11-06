@@ -1,7 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptToken } from '@/lib/instagram-token'
-import { fetchMarketplaceCreators, MetaTokenInvalidError } from './graph'
+import { fetchMarketplaceCreators, MetaNotEligibleError, MetaTokenInvalidError } from './graph'
 import { PAGE_LIMIT, type MetaParams } from './marketplace-params'
 
 /**
@@ -63,22 +63,29 @@ function shape(raw: any): Omit<MarketplaceCreator, 'guapd'> | null {
 }
 
 /** Bookable Guapd creators by Instagram username (their own handle, or the
- *  username of a connected Instagram). */
-export async function matchGuapd(usernames: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>()
+ *  username of a connected Instagram). Creators who turned off "Show me in
+ *  Guapd AI search" are returned in `hidden` instead: they are left out of
+ *  Instagram results shown inside Guapd AI, the same as Guapd results. */
+export async function matchGuapd(usernames: string[]): Promise<Map<string, string> & { hidden?: Set<string> }> {
+  const out = new Map<string, string>() as Map<string, string> & { hidden?: Set<string> }
+  out.hidden = new Set<string>()
   if (!usernames.length) return out
   const admin = createAdminClient()
   const variants = Array.from(new Set(usernames.flatMap((u) => [u, `@${u}`])))
   const [{ data: byHandle }, { data: byIg }] = await Promise.all([
-    admin.from('creators').select('id, handle').eq('is_bookable', true).eq('is_guapd', false).in('handle', variants),
+    admin.from('creators').select('id, handle, search_hidden_at').eq('is_bookable', true).eq('is_guapd', false).in('handle', variants),
     admin.from('creator_instagram_connections').select('creator_id, username').in('username', usernames),
   ])
-  for (const r of byHandle ?? []) out.set(clean(r.handle), r.id)
+  for (const r of byHandle ?? []) (r.search_hidden_at ? out.hidden!.add(clean(r.handle)) : out.set(clean(r.handle), r.id))
   const igIds = (byIg ?? []).map((r) => r.creator_id)
   if (igIds.length) {
-    const { data: ok } = await admin.from('creators').select('id').in('id', igIds).eq('is_bookable', true).eq('is_guapd', false)
-    const bookable = new Set((ok ?? []).map((r) => r.id))
-    for (const r of byIg ?? []) if (bookable.has(r.creator_id)) out.set(clean(r.username), r.creator_id)
+    const { data: ok } = await admin.from('creators').select('id, search_hidden_at').in('id', igIds).eq('is_bookable', true).eq('is_guapd', false)
+    const bookable = new Set((ok ?? []).filter((r) => !r.search_hidden_at).map((r) => r.id))
+    const hiddenIds = new Set((ok ?? []).filter((r) => r.search_hidden_at).map((r) => r.id))
+    for (const r of byIg ?? []) {
+      if (bookable.has(r.creator_id)) out.set(clean(r.username), r.creator_id)
+      else if (hiddenIds.has(r.creator_id)) out.hidden!.add(clean(r.username))
+    }
   }
   return out
 }
@@ -109,6 +116,10 @@ export async function searchMarketplace(conn: BrandMetaConnection, params: MetaP
       const raw = await fetchMarketplaceCreators(conn.igUserId, conn.pageToken, params, PAGE_LIMIT)
       rows = raw.map(shape).filter((r): r is Omit<MarketplaceCreator, 'guapd'> => r !== null)
     } catch (err) {
+      if (err instanceof MetaNotEligibleError) {
+        await createAdminClient().from('brand_meta_eligibility')
+          .upsert({ brand_id: conn.brandId, state: 'not_eligible', checked_at: new Date().toISOString() }, { onConflict: 'brand_id' })
+      }
       if (err instanceof MetaTokenInvalidError) {
         await createAdminClient().from('brand_meta_connections')
           .update({ status: 'needs_reconnect', last_error: 'token no longer accepted', updated_at: new Date().toISOString() })
@@ -120,7 +131,12 @@ export async function searchMarketplace(conn: BrandMetaConnection, params: MetaP
     cache.set(key, { at: Date.now(), rows })
   }
   const matches = await matchGuapd(rows.map((r) => r.username))
-  return { creators: rows.map((r) => ({ ...r, guapd: matches.has(r.username) ? { creatorId: matches.get(r.username)! } : null })), cached }
+  return {
+    creators: rows
+      .filter((r) => !matches.hidden?.has(r.username))
+      .map((r) => ({ ...r, guapd: matches.has(r.username) ? { creatorId: matches.get(r.username)! } : null })),
+    cached,
+  }
 }
 
 /** For tests: forget cached results. */

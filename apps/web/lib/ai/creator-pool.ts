@@ -8,8 +8,8 @@ import type { PoolCreator } from './rank-creators'
  *
  * One fixed RPC whose only inputs are typed numbers taken from VALIDATED
  * filters, so nothing from a brief reaches SQL as text. The function itself
- * writes out the hard gates (opted in, bookable, not rejected, not the Guapd
- * house account) and returns only fields a brand may see before a deal.
+ * writes out the hard gates (the /browse rule, is_bookable and not the Guapd
+ * house account, minus creators hidden from Guapd AI search) and returns only fields a brand may see before a deal.
  * Executable by service_role only.
  */
 

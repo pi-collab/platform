@@ -2,9 +2,11 @@
  * Guapd AI search, end to end against a running site with STAGING data:
  *   A. real briefs and injection briefs through the model (needs the site to
  *      have ANTHROPIC_API_KEY; a 503 means it does not, and A is skipped)
- *   B. the creator "Show me in Guapd AI search" switch, clicked in a browser at
- *      phone and desktop width: on → the creator appears in a brand's search,
- *      off → they are gone
+ *   B. the creator side in a browser at phone and desktop width: the one-time
+ *      notice; "Show me in Guapd AI search" on by default, the warning shown
+ *      BEFORE it turns off (Keep me visible / Turn off), hidden creators gone
+ *      from a brand's search and back when on; the "Your visibility" card and
+ *      its counting
  *
  * Target: GUAPD_BASE_URL (default http://localhost:3000, run with
  * CREATOR_SEARCH=1). For the deployed staging site, its basic-auth login is
@@ -91,9 +93,9 @@ async function main() {
   const forget = async () => { if (made.length) await admin.from('brand_creator_searches').delete().in('id', made) }
 
   // ── Creator for the switch test ──
-  const { data: creators } = await admin.from('creators').select('id, full_name, niches, search_opt_in_at, users(auth_id)').eq('is_bookable', true).eq('is_guapd', false).not('user_id', 'is', null)
+  const { data: creators } = await admin.from('creators').select('id, full_name, niches, search_hidden_at, search_notice_dismissed_at, users(auth_id)').eq('is_bookable', true).eq('is_guapd', false).not('user_id', 'is', null)
   const creator = (creators ?? []).find((c: any) => Array.isArray(c.niches) && c.niches.length > 0)!
-  const originalOptIn = creator.search_opt_in_at as string | null
+  const original = { hidden: creator.search_hidden_at as string | null, notice: creator.search_notice_dismissed_at as string | null }
 
   try {
     console.log('\n== A. briefs through the model')
@@ -150,8 +152,8 @@ async function main() {
     const over = await api({ brief: 'a'.repeat(6001) })
     ok('6,001 characters: 400 with the count', over.status === 400 && /6,001/.test(over.j?.message ?? ''), over.j?.message)
 
-    console.log('\n== B. the creator switch, in a browser')
-    await admin.from('creators').update({ search_opt_in_at: null }).eq('id', creator.id)
+    console.log('\n== B. the creator switch, notice and visibility card, in a browser')
+    await admin.from('creators').update({ search_hidden_at: null, search_notice_dismissed_at: null }).eq('id', creator.id)
     const niche = (creator.niches as string[])[0]
     const { data: saved } = await admin.from('brand_creator_searches').insert({
       brand_id: brandId, brief: `Creators for ${niche}`, filters: {
@@ -162,50 +164,110 @@ async function main() {
     }).select('id, filters').single()
     made.push(saved!.id)
     const appears = async () => { const r = await api({ searchId: saved!.id, filters: saved!.filters }); return (r.j.results ?? []).some((x: any) => x.id === creator.id) }
+    const hiddenInDb = async () => !!(await admin.from('creators').select('search_hidden_at').eq('id', creator.id).single()).data?.search_hidden_at
 
-    ok('before: a creator who has not opted in is not in results', !(await appears()))
+    ok('visible by default: the creator is in a brand\'s search with no opt-in', await appears())
     const creatorEmail = await emailOf((creator as any).users.auth_id)
     const creatorJar = await sessionCookies(creatorEmail!)
     const host = new globalThis.URL(BASE).hostname
     const b = await chromium.launch({ channel: 'chrome' })
     try {
-      for (const [name, w, h, turnOn] of [['phone', 390, 844, true], ['desktop', 1280, 900, false]] as const) {
+      for (const [name, w, h] of [['phone', 390, 844], ['desktop', 1280, 900]] as const) {
         const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, ...(basic ? { httpCredentials: basic } : {}) })
         await ctx.addCookies(creatorJar.map((c) => ({ name: c.name, value: c.value, domain: host, path: '/', secure: BASE.startsWith('https') })))
         const p = await ctx.newPage()
         const errors: string[] = []
         p.on('pageerror', (e) => errors.push(e.message))
-        await p.goto(`${BASE}/creator/settings?tab=connected#guapd-ai`, { waitUntil: 'networkidle' })
+
+        if (name === 'phone') {
+          // The one-time notice, and the visibility card (brand search is on).
+          await p.goto(`${BASE}/creator/dashboard`, { waitUntil: 'networkidle' })
+          await p.getByRole('button', { name: /decline/i }).click({ timeout: 3000 }).catch(() => {})
+          ok('phone: the creator home shows the one-time notice', await p.getByText('Brands can now find you through Guapd AI search').first().isVisible())
+          ok('phone: the notice says where the switch is', await p.getByText(/turn this off in Settings/).first().isVisible())
+          if (SHOTS) await p.screenshot({ path: `${SHOTS}/home-notice-phone.png`, fullPage: false })
+          await p.getByRole('status').filter({ hasText: 'Brands can now find you' }).getByRole('button', { name: 'Dismiss' }).click()
+          await p.waitForTimeout(800)
+          await p.reload({ waitUntil: 'networkidle' })
+          ok('phone: dismissed once, it stays gone', (await p.getByText('Brands can now find you through Guapd AI search').count()) === 0)
+          // Behind CREATOR_VISIBILITY_CARD (off by default): say which you expect.
+          const cardOn = process.env.GUAPD_VISIBILITY_CARD === '1'
+          const cardCount = await p.getByRole('region', { name: 'Your visibility' }).count()
+          ok(`phone: "Your visibility" card ${cardOn ? 'shown' : 'hidden (flag off)'}`, cardOn ? cardCount > 0 : cardCount === 0)
+        }
+
+        if (name === 'phone') {
+          // Product updates on WhatsApp: optional, unticked, logged both ways.
+          await admin.from('creators').update({ whatsapp_updates_consent_at: null }).eq('id', creator.id)
+          await p.goto(`${BASE}/creator/settings?tab=account`, { waitUntil: 'networkidle' })
+          const box = p.getByRole('checkbox', { name: /Product updates on WhatsApp/ })
+          ok('phone: "Product updates on WhatsApp" is unticked by default', (await box.count()) === 1 && !(await box.isChecked()))
+          const since = new Date().toISOString()
+          await box.check(); await p.waitForTimeout(900)
+          const c1 = (await admin.from('creators').select('whatsapp_updates_consent_at').eq('id', creator.id).single()).data?.whatsapp_updates_consent_at
+          await box.uncheck(); await p.waitForTimeout(900)
+          const c2 = (await admin.from('creators').select('whatsapp_updates_consent_at').eq('id', creator.id).single()).data?.whatsapp_updates_consent_at
+          const { data: log } = await admin.from('creator_consent_log').select('granted, source').eq('creator_id', creator.id).gte('created_at', since).order('created_at')
+          ok('phone: ticking stores a time, unticking clears it (easy opt-out)', !!c1 && c2 === null)
+          ok('phone: both changes are logged from Settings', JSON.stringify((log ?? []).map((r) => [r.granted, r.source])) === '[[true,"settings"],[false,"settings"]]')
+          await admin.from('creator_consent_log').delete().eq('creator_id', creator.id).gte('created_at', since)
+        }
+
+        await p.goto(`${BASE}/creator/settings?tab=connected&ai=1`, { waitUntil: 'networkidle' })
         await p.getByRole('button', { name: /decline/i }).click({ timeout: 3000 }).catch(() => {})
         const sw = p.getByRole('switch', { name: 'Show me in Guapd AI search' })
         ok(`${name}: the switch is on the Connected accounts screen`, (await sw.count()) === 1)
-        ok(`${name}: copy says what brands can and cannot see`, (await p.getByText('Brands never see:').count()) === 1 && (await p.getByText(/your phone number or email/).count()) === 1)
-        ok(`${name}: city, state, languages and niches shown as optional`, (await p.getByText('Help brands find you').count()) === 1 && (await p.getByRole('group', { name: 'Languages you make content in' }).count()) >= 1)
-        const before = await sw.getAttribute('aria-checked')
-        ok(`${name}: switch starts ${turnOn ? 'off' : 'on'}`, before === (turnOn ? 'false' : 'true'), before ?? '')
-        await sw.scrollIntoViewIfNeeded()
-        if (SHOTS) await p.screenshot({ path: `${SHOTS}/switch-${name}-before.png`, fullPage: false })
-        await sw.click()
-        await p.waitForFunction((want) => document.querySelector('[role="switch"]')?.getAttribute('aria-checked') === want, turnOn ? 'true' : 'false')
-        await p.waitForTimeout(800)
-        const { data: row } = await admin.from('creators').select('search_opt_in_at').eq('id', creator.id).single()
-        ok(`${name}: clicking ${turnOn ? 'on' : 'off'} saves it`, turnOn ? !!row?.search_opt_in_at : row?.search_opt_in_at === null)
-        ok(`${name}: the creator ${turnOn ? 'now appears in' : 'has gone from'} the brand's search`, (await appears()) === turnOn)
+        ok(`${name}: the line under it`, (await p.getByText('Brands use Guapd AI search to find creators for their briefs. Keep this on to be suggested.').count()) === 1)
+        ok(`${name}: what brands can and cannot see`, (await p.getByText('Brands never see:').count()) === 1)
+        ok(`${name}: city, state, languages and niches shown as optional`, (await p.getByText('Help brands find you').count()) === 1)
+
+        if (name === 'phone') {
+          ok('phone: on by default', (await sw.getAttribute('aria-checked')) === 'true')
+          await sw.click()
+          const dialog = p.getByRole('alertdialog')
+          ok('phone: turning off shows the warning first', await dialog.isVisible() && (await dialog.textContent() ?? '').includes("you won't be suggested when brands search for creators with Guapd AI"))
+          ok('phone: the switch has not turned off yet, and nothing is saved', (await sw.getAttribute('aria-checked')) === 'true' && !(await hiddenInDb()))
+          if (SHOTS) await p.screenshot({ path: `${SHOTS}/switch-confirm-phone.png`, fullPage: false })
+          ok('phone: "Keep me visible" is the default (focused)', await p.getByRole('button', { name: 'Keep me visible' }).evaluate((el) => el === document.activeElement))
+          await p.getByRole('button', { name: 'Keep me visible' }).click()
+          ok('phone: Keep me visible leaves it on', (await sw.getAttribute('aria-checked')) === 'true' && !(await hiddenInDb()) && await appears())
+          await sw.click()
+          await p.getByRole('button', { name: 'Turn off' }).click()
+          await p.waitForFunction(() => document.querySelector('[role="switch"]')?.getAttribute('aria-checked') === 'false')
+          await p.waitForTimeout(800)
+          ok('phone: Turn off saves it', await hiddenInDb())
+          ok('phone: the creator is gone from the brand\'s search', !(await appears()))
+        } else {
+          ok('desktop: starts off (from the phone run)', (await sw.getAttribute('aria-checked')) === 'false')
+          await sw.click()
+          await p.waitForFunction(() => document.querySelector('[role="switch"]')?.getAttribute('aria-checked') === 'true')
+          await p.waitForTimeout(800)
+          ok('desktop: turning on needs no confirmation and saves', !(await hiddenInDb()) && (await p.getByRole('alertdialog').count()) === 0)
+          ok('desktop: the creator is back in the brand\'s search', await appears())
+        }
         await p.reload({ waitUntil: 'networkidle' })
-        ok(`${name}: the setting survives a reload`, (await p.getByRole('switch', { name: 'Show me in Guapd AI search' }).getAttribute('aria-checked')) === (turnOn ? 'true' : 'false'))
-        if (SHOTS) { await p.getByRole('switch').scrollIntoViewIfNeeded(); await p.screenshot({ path: `${SHOTS}/switch-${name}-after.png`, fullPage: false }) }
+        ok(`${name}: the setting survives a reload`, (await p.getByRole('switch', { name: 'Show me in Guapd AI search' }).getAttribute('aria-checked')) === (name === 'phone' ? 'false' : 'true'))
         const sw2 = await p.evaluate(() => document.documentElement.scrollWidth)
         ok(`${name}: no horizontal scroll`, sw2 <= w, `${sw2}px`)
         ok(`${name}: no page errors`, errors.length === 0, errors.join(' | '))
         await ctx.close()
       }
     } finally { await b.close() }
+
+    // A brand opening the profile from search is counted, once per brand a day.
+    const before = (await admin.rpc('creator_search_visibility', { p_creator_id: creator.id })).data as any
+    for (let k = 0; k < 3; k++) await fetch(`${BASE}/api/creators/search/interaction`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie, ...authHeader }, body: JSON.stringify({ searchId: saved!.id, creatorId: creator.id, kind: 'profile_open' }) })
+    const after = (await admin.rpc('creator_search_visibility', { p_creator_id: creator.id })).data as any
+    ok('a profile open from search is counted once, however often it is sent', after.opened_profile - before.opened_profile <= 1 && after.opened_profile >= 1, `${before.opened_profile} → ${after.opened_profile}`)
+    const forged = await fetch(`${BASE}/api/creators/search/interaction`, { method: 'POST', headers: { 'Content-Type': 'application/json', cookie, ...authHeader }, body: JSON.stringify({ searchId: saved!.id, creatorId: '00000000-0000-4000-8000-000000000000', kind: 'offer_started' }) })
+    ok('a click for a creator who was not in the results is refused', forged.status === 404)
   } finally {
     await forget()
-    await admin.from('creators').update({ search_opt_in_at: originalOptIn }).eq('id', creator.id)
-    const { data: back } = await admin.from('creators').select('search_opt_in_at').eq('id', creator.id).single()
+    await admin.from('brand_search_interactions').delete().in('search_id', made.length ? made : ['00000000-0000-0000-0000-000000000000'])
+    await admin.from('creators').update({ search_hidden_at: original.hidden, search_notice_dismissed_at: original.notice }).eq('id', creator.id)
+    const { data: back } = await admin.from('creators').select('search_hidden_at, search_notice_dismissed_at').eq('id', creator.id).single()
     const { count } = await admin.from('brand_creator_searches').select('id', { count: 'exact', head: true }).in('id', made.length ? made : ['00000000-0000-0000-0000-000000000000'])
-    ok('teardown: opt-in restored, test searches deleted', (back?.search_opt_in_at ?? null) === originalOptIn && (count ?? 0) === 0)
+    ok('teardown: switch and notice restored, test searches deleted', (back?.search_hidden_at ?? null) === original.hidden && (back?.search_notice_dismissed_at ?? null) === original.notice && (count ?? 0) === 0)
   }
   console.log(`\n${passed} passed, ${failed} failed${skipped ? `, ${skipped} group skipped` : ''}`)
   process.exit(failed ? 1 : 0)

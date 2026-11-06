@@ -7,13 +7,24 @@ import { whatsappUrl } from '@/lib/meta/invite-links'
 import { DEFAULT_META_OPTIONS, type MetaOptions } from '@/lib/meta/marketplace-params'
 
 /**
- * Instagram Creator Marketplace, under the Guapd results. Runs only when the
- * brand asks (each run is a Meta call). Cards say whether the creator is on
+ * Instagram Creator Marketplace results, for a CONNECTED brand with the
+ * Instagram or Both source picked. Runs only when the brand asks (each run is
+ * a Meta call). Connecting is offered by the banner under the box, not here. Cards say whether the creator is on
  * Guapd: Send offer if so, Send invite if not. Invites go by hand (copy,
  * Instagram, WhatsApp to a number the brand types; the number is not saved).
  */
 
-export interface MetaState { connected: boolean; needsReconnect: boolean; igUsername: string | null; notice: string | null }
+export interface MetaState {
+  connected: boolean
+  needsReconnect: boolean
+  igUsername: string | null
+  /** Why Creator Marketplace cannot be used, if known (0590). */
+  eligibility: 'no_page' | 'no_instagram' | 'missing_permission' | 'not_eligible' | null
+  /** Text to show after a Facebook login round trip. */
+  notice: string | null
+  /** The callback's ?meta= value, for the connect events. */
+  connectResult: string | null
+}
 
 interface MetaCreator {
   igId: string; username: string; biography: string | null; country: string | null; category: string | null
@@ -29,26 +40,12 @@ export default function MetaSection({ searchId, meta }: { searchId: string; meta
   const [rows, setRows] = useState<MetaCreator[] | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [needConnect, setNeedConnect] = useState(!meta.connected || meta.needsReconnect)
-
-  if (needConnect) {
-    return (
-      <section className="gai-ig">
-        <div className="gai-group-title">Instagram Creator Marketplace</div>
-        {meta.notice && <p className="gai-notes">{meta.notice}</p>}
-        <p className="gai-summary">{meta.needsReconnect ? 'Facebook stopped accepting Guapd\'s access. Reconnect to search Instagram too.' : 'Also search creators who are not on Guapd yet, from Instagram\'s Creator Marketplace. Needs your brand\'s Instagram business account, linked to a Facebook Page.'}</p>
-        <a className="gai-loosen" href={`/api/meta/connect?s=${searchId}`}>{meta.needsReconnect ? 'Reconnect Facebook' : 'Connect Facebook'}</a>
-      </section>
-    )
-  }
-
   async function run() {
     setPending(true); setError(null)
     const res = await fetch('/api/meta/creator-search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ searchId, options: opts }) }).catch(() => null)
     const j = await res?.json().catch(() => null)
     setPending(false)
     if (j?.ok) { setRows(j.creators); trackEvent('meta_search_run', { result_count: j.creators.length }) }
-    else if (j?.kind === 'not_connected') setNeedConnect(true)
     else setError(j?.message ?? 'Instagram did not answer. Try again.')
   }
 
@@ -59,7 +56,6 @@ export default function MetaSection({ searchId, meta }: { searchId: string; meta
   return (
     <section className="gai-ig">
       <div className="gai-group-title">Instagram Creator Marketplace{meta.igUsername ? ` · as @${meta.igUsername}` : ''}</div>
-      {meta.notice && <p className="gai-notes">{meta.notice}</p>}
       <div className="gai-opts">
         <label className="gai-opt">
           Posted in
