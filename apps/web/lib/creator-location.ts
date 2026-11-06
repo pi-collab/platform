@@ -74,12 +74,17 @@ export type LocationInput = { city: string; state: string; ageBracket: string }
  * an error a creator can act on. All three are required wherever this is asked:
  * a half answer is the thing the dashboard prompt exists to chase.
  */
-export function validateLocation(input: LocationInput):
-  | { ok: true; row: { city: string; state: string; age_bracket: AgeBracket; location: string | null } }
+export function validateLocation(input: LocationInput, opts: { ageOptional?: boolean } = {}):
+  | { ok: true; row: { city: string; state: string; age_bracket?: AgeBracket; location: string | null } }
   | { ok: false; error: string } {
   const city = cleanCity(input.city)
   if (!isIndianState(input.state)) return { ok: false, error: 'Select your state.' }
   if (!city) return { ok: false, error: 'Enter your city.' }
+  // Settings (ageOptional): city and state can be saved on their own, and a
+  // blank age leaves any stored one alone. Everywhere else asks all three.
+  if (opts.ageOptional && !input.ageBracket) {
+    return { ok: true, row: { city, state: input.state, location: locationLine(city, input.state) } }
+  }
   if (!isAgeBracket(input.ageBracket)) return { ok: false, error: 'Select your age bracket.' }
   return { ok: true, row: { city, state: input.state, age_bracket: input.ageBracket, location: locationLine(city, input.state) } }
 }

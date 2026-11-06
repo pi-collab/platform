@@ -3,10 +3,10 @@ import { isRedirectError } from 'next/dist/client/components/redirect'
 import { z } from 'zod'
 import { verifyBrand } from '@/lib/brand-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { BriefUnreadableError, MAX_BRIEF, briefParserConfigured, briefToFilters } from '@/lib/ai/brief-filters'
+import { BriefUnreadableError, briefParserConfigured, briefToFilters, cleanBrief } from '@/lib/ai/brief-filters'
 import { creatorSearchEnabled } from '@/lib/ai/creator-search-flag'
 import { runCreatorSearch } from '@/lib/ai/run-creator-search'
-import { validateFilters, type BriefFilters, type CreatorSearchError, type CreatorSearchResponse } from '@/lib/ai/creator-search-types'
+import { MAX_BRIEF, validateFilters, type BriefFilters, type CreatorSearchError, type CreatorSearchResponse } from '@/lib/ai/creator-search-types'
 
 /**
  * POST /api/creators/search: Guapd AI creator search.
@@ -28,7 +28,7 @@ import { validateFilters, type BriefFilters, type CreatorSearchError, type Creat
 const BRIEFS_PER_5_MIN = 6
 const BRIEFS_PER_DAY = 40
 const RERUNS_PER_SEARCH = 40
-const MAX_BODY = 6_000
+const MAX_BODY = 40_000
 
 const Body = z.union([
   z.object({ brief: z.string() }).strict(),
@@ -98,9 +98,11 @@ export async function POST(request: NextRequest) {
   }
 
   // ── A new brief ──
-  const brief = body.data.brief.replace(/\s+/g, ' ').trim()
-  if (brief.length < 3) return fail(400, 'bad_request', 'Describe the creators you want.')
-  if (brief.length > MAX_BRIEF) return fail(400, 'bad_request', `Keep the brief under ${MAX_BRIEF} characters.`)
+  // Length is checked on the trimmed text, before any cleaning shortens it.
+  const trimmed = body.data.brief.trim()
+  if (trimmed.length < 3) return fail(400, 'bad_request', 'Describe the creators you want.')
+  if (trimmed.length > MAX_BRIEF) return fail(400, 'bad_request', `Keep the brief to ${MAX_BRIEF.toLocaleString('en-IN')} characters. Yours is ${trimmed.length.toLocaleString('en-IN')}.`)
+  const brief = cleanBrief(trimmed)
   if (!briefParserConfigured()) return fail(503, 'off', 'Guapd AI is not switched on yet.')
 
   const now = Date.now()
@@ -125,6 +127,9 @@ export async function POST(request: NextRequest) {
     console.error(`[creator-search] parse failed brand=${brand.brandId}: ${err instanceof Error ? err.message : String(err)}`)
     return fail(502, 'failed', 'Could not read that brief just now. Try again.')
   }
+
+  // Cost, per search: token counts and ids only, never the brief.
+  console.info(`[creator-search] parsed brand=${brand.brandId} model=${reading.model} in=${reading.inputTokens} out=${reading.outputTokens} chars=${brief.length}`)
 
   try {
     const out = await runCreatorSearch(filters)

@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { setCreatorNiches } from '@/lib/creator-niches-server'
 import { validateLocation } from '@/lib/creator-location'
+import { CONTENT_LANGUAGES } from '@/lib/ai/creator-search-types'
 
 // ── Update Creator Profile ───────────────────────────────────────
 
@@ -18,6 +19,8 @@ interface ProfileUpdate {
   city?: string
   state?: string
   ageBracket?: string
+  /** Content languages, optional, from CONTENT_LANGUAGES. */
+  languages?: string[]
   primaryPlatform?: string
   contactEmail?: string
   socials?: Array<{ platform: string; handle: string }>
@@ -32,6 +35,11 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
   if (data.handle !== undefined) update.handle = data.handle || null
   if (data.primaryPlatform !== undefined) update.primary_platform = data.primaryPlatform || null
   if (data.contactEmail !== undefined) update.contact_email = data.contactEmail || null
+  if (data.languages !== undefined) {
+    const picked = Array.from(new Set(data.languages)).filter((l) => (CONTENT_LANGUAGES as readonly string[]).includes(l))
+    if (picked.length > 5) return { error: 'Pick up to 5 languages.' }
+    update.languages = picked.length ? picked : null
+  }
   if (data.socials !== undefined) {
     const cleaned = data.socials
       .map(s => ({ platform: s.platform.trim(), handle: s.handle.trim().replace(/^@/, '') }))
@@ -55,7 +63,9 @@ export async function updateCreatorProfile(data: ProfileUpdate): Promise<{ error
   const placeGiven = [data.city, data.state, data.ageBracket].some(v => (v ?? '').trim())
   let placeRow: Record<string, unknown> | null = null
   if (placeGiven) {
-    const place = validateLocation({ city: data.city ?? '', state: data.state ?? '', ageBracket: data.ageBracket ?? '' })
+    // Age is optional here (0586): city and state help brands find a creator
+    // on their own, and a creator should not be blocked from adding them.
+    const place = validateLocation({ city: data.city ?? '', state: data.state ?? '', ageBracket: data.ageBracket ?? '' }, { ageOptional: true })
     if (!place.ok) return { error: place.error }
     placeRow = place.row
   }

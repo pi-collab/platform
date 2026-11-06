@@ -29,6 +29,8 @@ import CreatorDashboardEmpty from './CreatorDashboardEmpty'
 import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
 import { overlayCreatorLegs } from '@/lib/creator-leg-list'
+import GuapdAiOptInBanner from '@/components/creator/GuapdAiOptInBanner'
+import { creatorSearchEnabled } from '@/lib/ai/creator-search-flag'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
@@ -317,7 +319,17 @@ export default async function CreatorDashboardPage({
 
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
-  const alertNode = <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
+  // Guapd AI search opt-in ask: only with the flag on and until they opt in.
+  const { data: optInRow } = creatorSearchEnabled()
+    ? await createAdminClient().from('creators').select('search_opt_in_at').eq('id', creatorId).maybeSingle()
+    : { data: null }
+  const askAiOptIn = creatorSearchEnabled() && !optInRow?.search_opt_in_at
+  const alertNode = (
+    <>
+      <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
+      {askAiOptIn && <GuapdAiOptInBanner />}
+    </>
+  )
   const tasksNode = <CreatorTaskCard tasks={tasks} />
 
   const mobileEmpty = showMobileEmpty ? (
