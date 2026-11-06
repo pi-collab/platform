@@ -12,6 +12,7 @@ import AvatarUpload from '@/components/AvatarUpload'
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
+import SearchVisibility from './SearchVisibility'
 import ConnectedAccounts from './ConnectedAccounts'
 import type { IgConnectionView } from '@/lib/instagram-sync'
 import './connected-accounts.css'
@@ -31,6 +32,8 @@ interface Props {
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
   instagramConnection: IgConnectionView
+  /** Guapd AI search opt-in; null when CREATOR_SEARCH is off. */
+  searchVisibility: { optedInAt: string | null } | null
   /** Growth creators have no shopfront, so the "View shopfront" pill is
    *  hidden rather than opening a locked page. */
   isGrowth?: boolean
@@ -79,6 +82,7 @@ export default function CreatorSettingsClient({
   creatorPhotoUrl,
   creatorSocials: initialSocials,
   instagramConnection,
+  searchVisibility,
   userEmail: initialEmail,
   userPhone: initialPhone,
   userLanguage: initialLanguage,
@@ -343,6 +347,7 @@ export default function CreatorSettingsClient({
                   </p>
                 </div>
                 <ConnectedAccounts connection={instagramConnection} />
+                {searchVisibility && <SearchVisibility optedInAt={searchVisibility.optedInAt} />}
 
                 {/* The typed handles, in the same place as the connection.
                     They were in two different settings sections: a creator linked

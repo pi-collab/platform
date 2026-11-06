@@ -8046,3 +8046,38 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 
 ### Browse storefront action bar
 - [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar floats at the bottom centre of the screen, not over the brand header or the creator's name and stats; scrolled to the end, the last section is not hidden behind it; on a phone it fits within the screen width
+
+## 164. Guapd AI: brief-based creator search (migration 0585, behind CREATOR_SEARCH=1)
+
+**Flag off (default):** `/ai` and `POST /api/creators/search` return 404; the Guapd AI icon is hidden in the brand nav; the creator opt-in toggle is hidden in Settings.
+
+**Brand, flag on:**
+- [ ] Nav: the sparkle icon (desktop header and phone bar) opens `/ai`. Page title "Guapd AI", subtitle "Find creators for your brief"
+- [ ] Empty state: one large box ("Describe the creators you want"), three example briefs, one submit button, nothing else. An example fills the box and searches
+- [ ] Submit shows "Finding creators..." then the list below; the box stays on top with the brief in it; the URL becomes `/ai?s=<id>`
+- [ ] Chips under the box show what was read (niche, keyword, city, country, language, followers, engagement, budget). × removes a chip and re-runs; tapping a chip edits it (followers/budget accept `10k-50k`, `50k+`, `under 1L`; niche is a list); an unreadable edit says so and changes nothing. Re-runs do not call the model
+- [ ] Language chips are dashed and say "not checked" (no creator languages stored); "Not used: …" lists asks that could not be expressed
+- [ ] Cards: photo (or initials), name, @handle (never "@@"), city, niche tags; **Verified** label with followers and engagement only for a connected Instagram synced in the last 10 days; otherwise **Not verified** with "N followers, self-reported". Never both on one card
+- [ ] Reason line built from stored facts only, e.g. "matches: home, fragrance; verified 4.2% engagement; 6 deals completed"; "Not checked: …" names what was blank
+- [ ] Send offer → `/deals/new?creator=…&back=ai&s=…` (the existing offer flow); "Back to Guapd AI" returns to the same search. Clicking the name or photo opens `/browse/[id]`
+- [ ] Empty or thin (under 3) results say so plainly and offer one "Remove '…' to see N" (never the last niche or keyword); the list is never padded with non-matches
+- [ ] A minimum engagement hides unverified creators and says how many may fit but are not verified
+- [ ] A country other than India: "Creators on Guapd are based in India…"
+- [ ] `/ai?s=<id>` reopens a brand's own saved search with its last filters, re-ranked; another brand's id shows the empty page
+- [ ] Phone (390px): no horizontal scroll; desktop: two-column cards
+- [ ] PostHog (with consent): `search_run`, `filter_edited`, `result_clicked`, `offer_started_from_search`; no brief text in the properties
+
+**Creator:**
+- [ ] Settings → Connected accounts: "Show me in Guapd AI search" switch, off by default, saves on toggle. Off = never in results; on = can appear
+
+**Limits:** 6 new briefs per 5 minutes and 40 per day per brand (429 with a plain message; editing chips still works); 40 re-runs per saved search; results capped at 20; briefs 3–500 characters.
+
+**SECURITY:**
+- [ ] `brand_creator_searches`: anon and signed-in brands get permission denied for select/insert/update/delete; service_role only (mirrored in `rls.sql`)
+- [ ] `creator_search_pool()`: anon and authenticated get permission denied; returns only opted-in, bookable, non-rejected, non-house creators; no phone, email, rate card, UPI, token or snapshot columns
+- [ ] `creators.search_opt_in_at`: not readable by a signed-in brand (column allowlist)
+- [ ] API: 401 without a brand session; 403 for a cross-site Origin; 400 for an unknown body shape, an extra filter key, markup or SQL-ish text in a term, a reversed range; 404 for another brand's search id
+- [ ] The brief is passed to the model only as data inside `<brief>` with no tools; the model's output is re-validated by the strict schema and rejected if it fails (422 "Could not read that brief"). An injection brief yields at worst odd keywords
+- [ ] Server logs carry ids and error messages only: never a brief, token or key
+- Automated: `scripts/test-creator-search.ts` (47 checks: schema, ranking, live staging grants with teardown; the model checks run only when ANTHROPIC_API_KEY is set).
+- 0585 applied on staging by hand (`supabase db query --linked`) and ledgered. Prod: not yet.
