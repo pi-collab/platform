@@ -124,6 +124,15 @@ async function main() {
   ok('an unreadable edit is refused', applyEdit(cf, 'hard:followers', 'lots') === null)
   ok('an edited chip still passes the strict check', validateFilters(applyEdit(cf, 'must:keyword:candles', 'home fragrance')) !== null)
 
+  console.log('\n== 2c. wording')
+  const { CARD_NOT_VERIFIED, CARD_SELF_REPORTED, BRANDS_SEE, BRANDS_NEVER_SEE } = await import('../apps/web/lib/ai/opt-in-copy')
+  const drafts = fs.readFileSync(path.resolve(__dirname, '../docs/whatsapp-templates-draft.md'), 'utf8')
+  const reconnect = drafts.slice(drafts.indexOf('## 2. `instagram_reconnect_verified`'), drafts.indexOf('## In-app copy'))
+  ok('reconnect message quotes the card\'s exact labels', reconnect.includes(`"${CARD_NOT_VERIFIED}"`) && reconnect.includes(`"${CARD_SELF_REPORTED}"`))
+  const card = fs.readFileSync(path.resolve(__dirname, '../apps/web/app/ai/GuapdAiClient.tsx'), 'utf8')
+  ok('the card renders those same labels', card.includes('{CARD_NOT_VERIFIED}') && card.includes('${CARD_SELF_REPORTED}'))
+  ok('opt-in copy names phone and email as never shown', BRANDS_NEVER_SEE.includes('phone') && BRANDS_NEVER_SEE.includes('email') && !/phone|email/.test(BRANDS_SEE))
+
   console.log('\n== 3. staging, live')
   const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   if (!URL.includes('dswlplxyizvljzaihmjw')) throw new Error('not staging')

@@ -332,6 +332,7 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - **Get set up** — create a brand profile, add your team with admin and member roles, invite colleagues by link.
 - **Find creators** — browse a hand-vetted roster, filter by follower band, niche, category and platform, and search by name or handle. Every creator has a full storefront: work samples, rate card, past collaborations, and audience stats.
 - **Guapd AI (in testing, not yet live for brands)** — describe the creators you want, in a sentence or a full campaign brief, and get a ranked list of creators on Guapd. You see how the brief was read and can correct it with one tap, and each match comes with a plain reason: what matched, verified engagement where Instagram is connected, and their record on Guapd. Send an offer straight from the result.
+- **Instagram Creator Marketplace and creator invites (in testing, requires Meta access, not live for brands)** — connect your brand's Facebook and Instagram business account and the same brief also searches Instagram's Creator Marketplace. Creators already on Guapd show as On Guapd with Send offer; anyone else gets Send invite, a tracked link to a page with your brief that walks them through joining Guapd, connecting Instagram and accepting. You send it yourself by message, Instagram or WhatsApp, and see when it is opened, signed up and accepted.
 - **Make a structured offer** — build an offer from the creator's rate card, not a chat message: per-item pricing, quantities, delivery dates, collab and boosting add-ons, usage rights, revision limits, and a live running total with a transparent fee breakdown. Send it to a creator on Guapd, or as a secure link to one who isn't yet.
 - **Run the deal** — negotiate in a structured thread (accept, counter with line-item prices, or decline), review submitted work, approve or request revisions against the agreed limit, track product shipments, and see a full timestamped record of everything.
 - **Message in context** — deal-scoped chat with each creator, so every conversation stays tied to its deal instead of scattered across DMs. An inbox across all your deals, with unread counts and filters for active and completed. Messaging stays open for 30 days after a deal is paid or completed.
@@ -385,6 +386,16 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - Ranking uses the brief, verified engagement, completed deals, on-time delivery and reply rate; weak matches are left out rather than shown
 - Says plainly when nothing or little matches, and suggests one filter to loosen
 - Send offer from a result opens the normal offer builder; searches are saved and can be reopened
+
+**Instagram Creator Marketplace and invites (in testing, requires Meta access, not live for brands)**
+- Connect the brand's Facebook (Instagram business account linked to a Facebook Page) from Guapd AI
+- Run a saved brief against Instagram's Creator Marketplace, with options: posted recently, verified accounts only, hide creators already messaged, has a public email
+- Only the brief's filters and a short keyword phrase go to Instagram; never the full brief, budget, dates or competitor names
+- Each result says On Guapd (Send offer) or Not on Guapd yet (Send invite)
+- Creator emails from Instagram are never shown or stored; Instagram results are not saved
+- Send invite: a tracked link per creator per brief, opening a page with the brand and the brief; sent by the brand via Copy message, Open on Instagram, or WhatsApp to a number they enter (not saved)
+- Invite tracking: sent, opened, signed up, accepted; only the invited Instagram account can accept, and the brand is notified
+- Email invites: not yet (waiting on the email provider and sending domain)
 
 **Making an offer**
 - Structured offer builder, not a chat message
@@ -453,6 +464,10 @@ The one-line version for a pitch: **Guapd started by fixing how the deal happens
 - Optional city, state, languages and niches right under the switch (the same fields as Profile)
 - Brands see name, photo, handle, city, niches and numbers (verified where Instagram is connected); never phone or email
 - A card on the creator home asks them to switch it on, with a one-tap link to the switch
+
+**Campaign invites (in testing, requires Meta access)**
+- A brand can invite a creator it found on Instagram with a link: the page shows the brand and the brief, then sign up with phone OTP, connect Instagram, accept
+- Only the invited Instagram account can accept; the invite also shows on the creator's home after signup
 
 **Storefront**
 - Public page at guapd.com/c/their-handle — shareable in a bio, DM or email

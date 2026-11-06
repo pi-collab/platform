@@ -3,6 +3,7 @@ import { isRedirectError } from 'next/dist/client/components/redirect'
 import { verifyCreator } from '@/lib/creator-auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createNotification } from '@/lib/notifications'
+import { creatorInvitesEnabled } from '@/lib/meta/config'
 import { INVITE_TOKEN } from '@/lib/meta/invites'
 
 /**
@@ -11,6 +12,7 @@ import { INVITE_TOKEN } from '@/lib/meta/invites'
  * The brand's members are told in-app, to send an offer.
  */
 export async function POST(request: NextRequest) {
+  if (!creatorInvitesEnabled()) return NextResponse.json({ ok: false }, { status: 404 })
   const origin = request.headers.get('origin')
   if (origin && new URL(origin).host !== request.nextUrl.host) return NextResponse.json({ ok: false, message: 'Not allowed.' }, { status: 403 })
   let ctx: Awaited<ReturnType<typeof verifyCreator>>

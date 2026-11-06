@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { setSearchVisibility } from './actions'
+import { BRANDS_NEVER_SEE, BRANDS_SEE, OPT_IN_SWITCH } from '@/lib/ai/opt-in-copy'
 
 /**
  * Guapd AI search opt-in. Creators are hidden from brand search until they
@@ -24,14 +25,14 @@ export default function SearchVisibility({ optedInAt }: { optedInAt: string | nu
   return (
     <div style={{ marginTop: 22, paddingTop: 22, borderTop: '1px solid var(--border-hairline)', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>Show me in Guapd AI search</div>
+        <div style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 14 }}>{OPT_IN_SWITCH.label}</div>
         <p style={{ margin: '4px 0 0', fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-faint)', lineHeight: 1.5 }}>
-          Brands describe the creators they want and Guapd suggests matches. When this is on, you can be suggested.
+          {OPT_IN_SWITCH.body}
         </p>
         <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
-          <strong style={{ fontWeight: 600 }}>Brands see:</strong> your name, photo, handle, city, niches, and your numbers, marked verified if your Instagram is connected.
+          <strong style={{ fontWeight: 600 }}>Brands see:</strong> {BRANDS_SEE}.
           <br />
-          <strong style={{ fontWeight: 600 }}>Brands never see:</strong> your phone number or email.
+          <strong style={{ fontWeight: 600 }}>Brands never see:</strong> {BRANDS_NEVER_SEE}.
         </p>
         {error && <p role="alert" style={{ margin: '6px 0 0', fontSize: 12.5, color: '#9A2B2B' }}>{error}</p>}
       </div>
@@ -39,7 +40,7 @@ export default function SearchVisibility({ optedInAt }: { optedInAt: string | nu
         type="button"
         role="switch"
         aria-checked={on}
-        aria-label="Show me in Guapd AI search"
+        aria-label={OPT_IN_SWITCH.label}
         disabled={pending}
         onClick={toggle}
         style={{
